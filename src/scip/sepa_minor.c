@@ -166,13 +166,13 @@ SCIP_RETCODE getMinorVars(
    assert(auxvarxy != NULL);
 
    if( x != NULL )
-      *x = sepadata->minors[5 * sepadata->nminors];
+      *x = sepadata->minors[5 * idx];
    if( y != NULL )
-      *y = sepadata->minors[5 * sepadata->nminors + 1];
+      *y = sepadata->minors[5 * idx + 1];
 
-   *auxvarxx = sepadata->minors[5 * sepadata->nminors + 2];
-   *auxvaryy = sepadata->minors[5 * sepadata->nminors + 3];
-   *auxvarxy = sepadata->minors[5 * sepadata->nminors + 4];
+   *auxvarxx = sepadata->minors[5 * idx + 2];
+   *auxvaryy = sepadata->minors[5 * idx + 3];
+   *auxvarxy = sepadata->minors[5 * idx + 4];
 
    return SCIP_OKAY;
 }
@@ -426,9 +426,9 @@ SCIP_RETCODE separatePoint(
 
    for( i = 0; i < sepadata->nminors && (*result != SCIP_CUTOFF); ++i )
    {
-      SCIP_VAR* xx;
-      SCIP_VAR* yy;
-      SCIP_VAR* xy;
+      SCIP_VAR* xx = NULL;
+      SCIP_VAR* yy = NULL;
+      SCIP_VAR* xy = NULL;
       SCIP_Real solxx;
       SCIP_Real solyy;
       SCIP_Real solxy;
