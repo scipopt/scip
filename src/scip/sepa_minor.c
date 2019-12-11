@@ -154,8 +154,8 @@ static
 SCIP_RETCODE getMinorVars(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    int                   idx,                /**< index of the stored minor */
-   SCIP_VAR**            x,                  /**< pointer to store x variable (might be NULL) */
-   SCIP_VAR**            y,                  /**< pointer to store x variable (might be NULL) */
+   SCIP_VAR**            x,                  /**< pointer to store x variable */
+   SCIP_VAR**            y,                  /**< pointer to store x variable */
    SCIP_VAR**            auxvarxx,           /**< pointer to store auxiliary variable for x*x */
    SCIP_VAR**            auxvaryy,           /**< pointer to store auxiliary variable for y*y */
    SCIP_VAR**            auxvarxy            /**< pointer to store auxiliary variable for x*y */
@@ -167,11 +167,8 @@ SCIP_RETCODE getMinorVars(
    assert(auxvaryy != NULL);
    assert(auxvarxy != NULL);
 
-   if( x != NULL )
-      *x = sepadata->minors[5 * idx];
-   if( y != NULL )
-      *y = sepadata->minors[5 * idx + 1];
-
+   *x = sepadata->minors[5 * idx];
+   *y = sepadata->minors[5 * idx + 1];
    *auxvarxx = sepadata->minors[5 * idx + 2];
    *auxvaryy = sepadata->minors[5 * idx + 3];
    *auxvarxy = sepadata->minors[5 * idx + 4];
@@ -396,9 +393,9 @@ SCIP_RETCODE getEigenValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             x,                  /**< solution value of x */
    SCIP_Real             y,                  /**< solution value of y */
-   SCIP_Real             xx,                 /**< solution value of x * x */
-   SCIP_Real             yy,                 /**< solution value of y * y */
-   SCIP_Real             xy,                 /**< solution value of x * y */
+   SCIP_Real             xx,                 /**< solution value of x*x */
+   SCIP_Real             yy,                 /**< solution value of y*y */
+   SCIP_Real             xy,                 /**< solution value of x*y */
    SCIP_Real*            eigenvals,          /**< array to store eigenvalues (at least of size 3) */
    SCIP_Real*            eigenvecs,          /**< array to store eigenvalues (at least of size 9) */
    SCIP_Bool*            success             /**< pointer to store whether eigenvalue computation was successful */
@@ -433,7 +430,88 @@ SCIP_RETCODE getEigenValues(
    return SCIP_OKAY;
 }
 
-/** separates cuts for stored minors */
+/** helper generate and add a cut */
+static
+SCIP_RETCODE addCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
+   SCIP_VAR*             x,                  /**< x variable */
+   SCIP_VAR*             y,                  /**< y variable */
+   SCIP_VAR*             xx,                 /**< auxiliary variable for x*x */
+   SCIP_VAR*             yy,                 /**< auxiliary variable for y*y */
+   SCIP_VAR*             xy,                 /**< auxiliary variable for x*y */
+   SCIP_Real*            eigenvec,           /**< array containing an eigenvector */
+   SCIP_Real             eigenval,           /**< eigenvalue */
+   SCIP_Real             mincutviol,         /**< minimal required violation */
+   SCIP_RESULT*          result              /**< pointer to update the result */
+   )
+{
+   SCIP_VAR* vars[5] = {x, y, xx, yy, xy};
+   SCIP_Real coefs[5];
+   SCIP_Real constant;
+   SCIP_ROWPREP* rowprep;
+   SCIP_Bool success;
+
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(xx != NULL);
+   assert(yy != NULL);
+   assert(xy != NULL);
+   assert(eigenvec != NULL);
+   assert(mincutviol >= 0.0);
+   assert(result != NULL);
+
+   /* check whether the resulting cut is violated enough */
+   if( !SCIPisFeasLT(scip, eigenval, -mincutviol) )
+      return SCIP_OKAY;
+
+    /* the resulting cut reads as v_0^2 + 2v_0v_1 * x + 2v_0v_2 * y + v_1^2 * xx + v_2^2 * yy + 2v_1v_2 * xy */
+    constant = SQR(eigenvec[0]);
+    coefs[0] = 2.0 * eigenvec[0] * eigenvec[1];
+    coefs[1] = 2.0 * eigenvec[0] * eigenvec[2];
+    coefs[2] = SQR(eigenvec[1]);
+    coefs[3] = SQR(eigenvec[2]);
+    coefs[4] = 2.0 * eigenvec[1] * eigenvec[2];
+
+   /* create rowprep */
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
+   SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 5, vars, coefs) );
+   SCIPaddRowprepConstant(rowprep, constant);
+   SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
+   SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviol);
+
+   /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
+
+   /* check cut violation */
+   if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > mincutviol )
+   {
+      SCIP_ROW* row;
+      SCIP_Bool infeasible;
+      char name[SCIP_MAXSTRLEN];
+
+      /* set name of rowprep */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "minor_%s_%s_%s", SCIPvarGetName(xx), SCIPvarGetName(yy),
+         SCIPvarGetName(xy));
+      memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
+
+      /* create, add, and release row */
+      SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+      /* update result pointer */
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   }
+
+   /* free rowprep */
+   SCIPfreeRowprep(scip, &rowprep);
+
+   return SCIP_OKAY;
+}
+
+/** separates cuts for stored principal minors */
 static
 SCIP_RETCODE separatePoint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -461,112 +539,48 @@ SCIP_RETCODE separatePoint(
 
    for( i = 0; i < sepadata->nminors && (*result != SCIP_CUTOFF); ++i )
    {
-      SCIP_VAR* xx = NULL;
-      SCIP_VAR* yy = NULL;
-      SCIP_VAR* xy = NULL;
+      SCIP_Real eigenvals[3];
+      SCIP_Real eigenvecs[9];
+      SCIP_VAR* x;
+      SCIP_VAR* y;
+      SCIP_VAR* xx;
+      SCIP_VAR* yy;
+      SCIP_VAR* xy;
+      SCIP_Real solx;
+      SCIP_Real soly;
       SCIP_Real solxx;
       SCIP_Real solyy;
       SCIP_Real solxy;
       SCIP_Real determinant;
+      SCIP_Bool success;
+      int k;
 
       /* get variables of the i-th minor */
-      SCIP_CALL( getMinorVars(sepadata, i, NULL, NULL, &xx, &yy, &xy) );
+      SCIP_CALL( getMinorVars(sepadata, i, &x, &y, &xx, &yy, &xy) );
+      assert(x != NULL);
+      assert(y != NULL);
       assert(xx != NULL);
       assert(yy != NULL);
       assert(xy != NULL);
 
       /* get current solution values */
+      solx = SCIPgetSolVal(scip, sol, x);
+      soly = SCIPgetSolVal(scip, sol, y);
       solxx = SCIPgetSolVal(scip, sol, xx);
       solyy = SCIPgetSolVal(scip, sol, yy);
       solxy = SCIPgetSolVal(scip, sol, xy);
+      SCIPdebugMsg(scip, "solution values (x,y,xx,yy,xy)=(%g,%g,%g,%g,%g)\n", solx, soly, solxx, solyy, solxy);
 
-      determinant = solxx * solyy - SQR(solxy);
-      SCIPdebugMsg(scip, "(%s,%s,%s) = (%g,%g,%g) implies determinant = %g\n", SCIPvarGetName(xx), SCIPvarGetName(yy),
-         SCIPvarGetName(xy), solxx, solyy, solxy, determinant);
+      /* compute eigenvalues and eigenvectors */
+      SCIP_CALL( getEigenValues(scip, solx, soly, solxx, solyy, solxy, eigenvals, eigenvecs, &success) );
+      if( !success )
+         continue;
 
-      /* check whether minor is positive semi-definit in the current solution */
-      if( SCIPisFeasLT(scip, determinant, -sepadata->mincutviol) )
+      /* try to generate a cut for each negative eigenvalue */
+      for( k = 0; k < 3 && (*result != SCIP_CUTOFF); ++k )
       {
-         SCIP_Real eigenvals[2];
-         SCIP_Real matrix[4];
-         int k;
-
-         matrix[0] = solxx;
-         matrix[1] = solxy;
-         matrix[2] = solxy;
-         matrix[3] = solyy;
-
-         /* use LAPACK to compute the eigenvalues and eigenvectors */
-         if( LapackDsyev(TRUE, 2, matrix, eigenvals) != SCIP_OKAY )
-         {
-            SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
-            continue;
-         }
-
-         /* at least one eigenvalue needs to be negative */
-         assert(SCIPisLT(scip, eigenvals[0], 0.0) || SCIPisLT(scip, eigenvals[1], 0.0));
-
-         SCIPdebugMsg(scip, "eigenvec[0] = (%g,%g) with eigenvalue[0] = %g\n", matrix[0], matrix[1], eigenvals[0]);
-         assert(SCIPisRelEQ(scip, solxx * matrix[0] + solxy * matrix[1], eigenvals[0] * matrix[0]));
-         assert(SCIPisRelEQ(scip, solxy * matrix[0] + solyy * matrix[1], eigenvals[0] * matrix[1]));
-
-         SCIPdebugMsg(scip, "eigenvec[1] = (%g,%g) with eigenvalue[1] = %g\n", matrix[2], matrix[3], eigenvals[1]);
-         assert(SCIPisRelEQ(scip, solxx * matrix[2] + solxy * matrix[3], eigenvals[1] * matrix[2]));
-         assert(SCIPisRelEQ(scip, solxy * matrix[2] + solyy * matrix[3], eigenvals[1] * matrix[3]));
-
-         /* try to generate a cut for every negative eigenvalue */
-         for( k = 0; k < 2 && (*result != SCIP_CUTOFF); ++k )
-         {
-            SCIP_ROWPREP* rowprep;
-            SCIP_VAR* vars[3];
-            SCIP_Real coefs[3];
-            SCIP_Bool success;
-
-            if( !SCIPisFeasLT(scip, eigenvals[k], -sepadata->mincutviol) )
-               continue;
-
-            /* create rowprep */
-            SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
-
-            /* cuts reads as v_1^2 X_ii + 2 v_1 v_2 X_ij + v_2^2 X_jj >= 0 */
-            vars[0] = xx;
-            coefs[0] = SQR(matrix[2*k]);
-            vars[1] = xy;
-            coefs[1] = 2.0 * matrix[2*k] * matrix[2*k + 1];
-            vars[2] = yy;
-            coefs[2] = SQR(matrix[2*k+1]);
-
-            SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 3, vars, coefs) );
-            SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
-            SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), sepadata->mincutviol);
-
-            /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
-            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
-
-            /* check cut violation */
-            if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > sepadata->mincutviol )
-            {
-               SCIP_ROW* row;
-               SCIP_Bool infeasible;
-               char name[SCIP_MAXSTRLEN];
-
-               /* set name of rowprep */
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "minor_%s_%s_%s", SCIPvarGetName(xx), SCIPvarGetName(yy),
-                  SCIPvarGetName(xy));
-               memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
-
-               /* create, add, and release row */
-               SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
-               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-               /* update result pointer */
-               *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-            }
-
-            /* free rowprep */
-            SCIPfreeRowprep(scip, &rowprep);
-         }
+         SCIPdebugMsg(scip, "eigenvalue = %g  eigenvector = (%g,%g,%g)\n", eigenvals[k], eigenvecs[3*k], eigenvecs[3*k + 1], eigenvecs[3*k + 2]);
+         SCIP_CALL( addCut(scip, sepa, sol, x, y, xx, yy, xy, &eigenvecs[3*k], eigenvals[k], sepadata->mincutviol, result) );
       }
    }
 
