@@ -16,7 +16,7 @@
 /**@file   sepa_aggregation.h
  * @ingroup SEPARATORS
  * @brief  flow cover and complemented mixed integer rounding cuts separator (Marchand's version)
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Kati Wolter
  * @author Tobias Achterberg
  *

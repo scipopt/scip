@@ -63,7 +63,9 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{ /*lint --e{715}*/
+{
+   SCIP_UNUSED(signum);
+
    ninterrupts++;
    if( ninterrupts >= 5 )
    {

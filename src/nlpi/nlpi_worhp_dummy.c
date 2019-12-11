@@ -21,7 +21,7 @@
 
 #include "nlpi/nlpi_worhp.h"
 
-/** create solver interface for Worhp solver */
+/** create solver interface for Worhp solver */ /*lint -e715*/
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */

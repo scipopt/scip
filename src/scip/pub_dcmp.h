@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_decomp.h
+/**@file   pub_dcmp.h
  * @ingroup TODO
  * @brief  public methods for decompositions
  * @author Gregor Hendel
@@ -79,7 +79,7 @@ int SCIPdecompGetNBlocks(
 
 /** gets area score of this decomposition */
 SCIP_EXPORT
-SCIP_Real SCIPdecompGetAreascore(
+SCIP_Real SCIPdecompGetAreaScore(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 

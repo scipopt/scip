@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
+#include "scip/type_decomp.h"
 #include "scip/type_message.h"
 #include "scip/type_misc.h"
 #include "scip/type_result.h"
@@ -137,7 +138,7 @@ SCIP_RETCODE SCIPbendersActivate(
    );
 
 /** deactivates Benders' decomposition such that it is no longer called in LP solving loop */
-void SCIPbendersDeactivate(
+SCIP_RETCODE SCIPbendersDeactivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -184,7 +185,8 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnum             /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
@@ -207,12 +209,11 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    );
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
-SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
+SCIP_Bool SCIPbendersSubproblemIsOptimal(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /** returns the value of the auxiliary variable value in a master problem solution */
@@ -252,6 +253,14 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
                                                   corresponding newly created constraints, or NULL */
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
+   );
+
+/** Applies a Benders' decomposition to the problem based upon the decomposition selected from the storage */
+extern
+SCIP_RETCODE SCIPbendersApplyDecomposition(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
    );
 
 /** sets priority of Benders' decomposition */
@@ -331,6 +340,12 @@ void SCIPbendersSetSolvesub(
 void SCIPbendersSetPostsolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of Benders' decomposition */
+   );
+
+/** sets post-solve callback of Benders' decomposition */
+void SCIPbendersSetSubproblemComp(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
    );
 
 /** sets free subproblem callback of Benders' decomposition */

@@ -62,6 +62,7 @@ void readError(
    const char*           errormsg            /**< error message */
    )
 {
+   assert( scip != NULL );
    SCIPerrorMessage("read error in line <%d>: %s\n", linecount, errormsg);
 }
 

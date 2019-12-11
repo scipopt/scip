@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -68,6 +68,7 @@
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
+#include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
@@ -642,9 +643,6 @@ SCIP_RETCODE exitPresolve(
    SCIP_Bool*            infeasible          /**< pointer to store if the clique clean up detects an infeasibility */
    )
 {
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -665,6 +663,10 @@ SCIP_RETCODE exitPresolve(
 
    if( !solved )
    {
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
       /* flatten all variables */
       vars = SCIPgetFixedVars(scip);
       nvars = SCIPgetNFixedVars(scip);
@@ -683,7 +685,7 @@ SCIP_RETCODE exitPresolve(
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
 	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
 	    multvars = SCIPvarGetMultaggrVars(var);
@@ -2025,21 +2027,6 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
-   /* @todo if a variable was removed from the problem during solving, its locks were not reduced;
-    *       we might want to remove locks also in that case
-    */
-   /* remove var locks set to avoid dual reductions */
-   if( scip->set->reopt_enable || !scip->set->misc_allowstrongdualreds )
-   {
-      int v;
-
-      /* unlock all variables */
-      for(v = 0; v < scip->transprob->nvars; v++)
-      {
-         SCIP_CALL( SCIPaddVarLocksType(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
-      }
-   }
-
    if( !reducedfree )
    {
       /* clear the conflict store
@@ -2573,6 +2560,16 @@ SCIP_RETCODE SCIPsolve(
 
    /* initialize presolving flag (may be modified in SCIPpresolve()) */
    scip->stat->performpresol = FALSE;
+
+   /* if a decomposition exists and Benders' decomposition has been enabled, then a decomposition is performed */
+   if( scip->set->stage == SCIP_STAGE_PROBLEM && SCIPdecompstoreGetNOrigDecomps(scip->decompstore) > 0
+      && scip->set->decomp_applybenders && SCIPgetNActiveBenders(scip) == 0 )
+   {
+      int decompindex = 0;
+
+      /* applying the Benders' decomposition */
+      SCIP_CALL( SCIPapplyBendersDecomposition(scip, decompindex) );
+   }
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);

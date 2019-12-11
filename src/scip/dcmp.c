@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dcmp.c
- * @brief  methods for working with decompositions
+ * @brief  internal methods for decompositions and the decomposition store
  * @author Gregor Hendel
  */
 
@@ -79,6 +79,7 @@ SCIP_RETCODE SCIPdecompCreate(
    (*decomp)->maxdegree = 0;
    (*decomp)->ncomponents = 0;
    (*decomp)->narticulations = 0;
+   (*decomp)->statscomplete = FALSE;
 
    return SCIP_OKAY;
 }
@@ -274,7 +275,7 @@ int SCIPdecompGetNBlocks(
 }
 
 /** gets area score of this decomposition */
-SCIP_Real SCIPdecompGetAreascore(
+SCIP_Real SCIPdecompGetAreaScore(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    )
 {
@@ -378,9 +379,12 @@ char* SCIPdecompPrintStats(
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Modularity: %.3f, Area Score: %.3f\n",
             decomp->modularity, decomp->areascore);
+
    (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
-            "Constraint Block Graph: %d edges, %d articulation points, %d connected components, %d min., %d max. degree\n",
-            decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
+      "Constraint Block Graph: %d edges, %d articulation points, %d connected components, %d min., %d max. degree%s\n",
+      decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree,
+      decomp->statscomplete ? "" :
+               "(approximately: graph construction hit size limit)");
 
    return strbuf;
 }

@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -733,7 +733,7 @@ SCIP_RETCODE SCIPfreeProb(
       /* deactivate all Benders' decomposition */
       for( i = scip->set->nactivebenders-1; i >= 0; --i )
       {
-         SCIPbendersDeactivate(scip->set->benders[i], scip->set);
+         SCIP_CALL( SCIPbendersDeactivate(scip->set->benders[i], scip->set) );
       }
       assert(scip->set->nactivebenders == 0);
 
@@ -2841,7 +2841,7 @@ SCIP_RETCODE SCIPdelCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {

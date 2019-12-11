@@ -3836,6 +3836,9 @@ SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
    assert(!SCIPbdchginfoIsRedundant(bdchginfo1));
    assert(!SCIPbdchginfoIsRedundant(bdchginfo2));
 
+   if( bdchginfo1 == bdchginfo2 )
+      return 0;
+
    if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
@@ -7477,7 +7480,7 @@ SCIP_RETCODE separateAlternativeProofs(
       {
          proofsetFree(&alternativeproofset, blkmem);
       }
-   }
+   }  /*lint !e438*/
 
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
