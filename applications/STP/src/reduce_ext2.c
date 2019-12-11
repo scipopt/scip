@@ -407,6 +407,11 @@ void removeEdge(
    const int tail = graph->tail[edge];
    const int head = graph->head[edge];
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("remove edge ");
+   graph_edge_printInfo(graph, edge);
+#endif
+
    graph_edge_delFull(scip, graph, edge, TRUE);
    reduce_distDataDeleteEdge(scip, graph, edge, distdata);
 
@@ -2203,15 +2208,14 @@ SCIP_RETCODE reduce_extendedEdge2(
    int*                  nelims              /**< number of eliminations */
 )
 {
-   const int nedges = graph->edges;
-   const int nnodes = graph->knots;
+   const int nedges = graph_get_nEdges(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Real* const redcost = redcostdata->redEdgeCost;
 
    DISTDATA distdata;
    EXTPERMA extpermanent;
 
-   assert(scip && graph && redcostdata && edgedeletable);
+   assert(scip && redcostdata && edgedeletable);
    assert(!pcmw || !graph->extended);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
 
@@ -2293,7 +2297,7 @@ SCIP_RETCODE reduce_extendedEdge2(
    graph_free_dcsr(scip, graph);
 
 #ifndef NDEBUG
-   for( int k = 0; k < nnodes; k++ )
+   for( int k = 0; k < graph->knots; k++ )
       if( graph->grad[k] == 0 && k != redcostdata->redCostRoot && !Is_term(graph->term[k]) )
          assert(!graph->mark[k]);
 #endif
