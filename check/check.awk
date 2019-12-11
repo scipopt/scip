@@ -652,7 +652,8 @@ BEGIN {
       db = objlimit;
       feasible = 1;
    }
-   else if( $4 == "infeasible" || $4 == "infeasible\r" ) {
+   else if( $4 == "infeasible" || $4 == "infeasible\r" )
+   {
       if( ($5 == "(objective" && $6 == "limit" && $7 == "reached)") )
       {
 	 pb = objlimit;
@@ -685,10 +686,13 @@ BEGIN {
    }
 }
 /^  Dual Bound       :/ {
-   if( $4 != "-" && $4 != "-\r" )
+   if( dbset == 0 )
    {
-      db = $4;
-      dbset = 1;
+      if( $4 != "-" && $4 != "-\r" )
+      {
+	 db = $4;
+	 dbset = 1;
+      }
    }
 }
 /^Dual Bound         :/ {
