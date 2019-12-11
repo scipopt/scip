@@ -390,6 +390,49 @@ SCIP_RETCODE detectMinors(
    return SCIP_OKAY;
 }
 
+/** helper method to compute eigenvectors and eigenvalues */
+static
+SCIP_RETCODE getEigenValues(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x,                  /**< solution value of x */
+   SCIP_Real             y,                  /**< solution value of y */
+   SCIP_Real             xx,                 /**< solution value of x * x */
+   SCIP_Real             yy,                 /**< solution value of y * y */
+   SCIP_Real             xy,                 /**< solution value of x * y */
+   SCIP_Real*            eigenvals,          /**< array to store eigenvalues (at least of size 3) */
+   SCIP_Real*            eigenvecs,          /**< array to store eigenvalues (at least of size 9) */
+   SCIP_Bool*            success             /**< pointer to store whether eigenvalue computation was successful */
+   )
+{
+   int i;
+
+   assert(eigenvals != NULL);
+   assert(eigenvecs != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   /* construct matrix */
+   eigenvecs[0] = 1.0;
+   eigenvecs[1] = x;
+   eigenvecs[2] = y;
+   eigenvecs[3] = x;
+   eigenvecs[4] = xx;
+   eigenvecs[5] = xy;
+   eigenvecs[6] = y;
+   eigenvecs[7] = xy;
+   eigenvecs[8] = yy;
+
+   /* use LAPACK to compute the eigenvalues and eigenvectors */
+   if( LapackDsyev(TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
+   {
+      SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
+      *success = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** separates cuts for stored minors */
 static
 SCIP_RETCODE separatePoint(

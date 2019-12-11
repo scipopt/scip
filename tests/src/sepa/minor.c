@@ -122,3 +122,33 @@ Test(minor, detect, .init = setup, .fini = teardown)
    cr_expect(sepadata->detectedminors);
    cr_expect(sepadata->nminors == 2, "nminors = %d (expected 2)", sepadata->nminors);
 }
+
+/** tests the eigenvalue and eigenvector computation */
+Test(minor, eigenvals, .init = setup, .fini = teardown)
+{
+   SCIP_Real eigenvals[3];
+   SCIP_Real eigenvecs[9];
+   SCIP_Real x = 1.5;
+   SCIP_Real y = 2.0;
+   SCIP_Real xx = -3.0;
+   SCIP_Real yy = 5.0;
+   SCIP_Real xy = -1.0;
+   SCIP_Bool success;
+   int i;
+
+   /* LAPACK not available -> skip test */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
+
+   /* compute eigenvalues and eigenvectors */
+   SCIP_CALL( getEigenValues(scip, x, y, xx, yy, xy, eigenvals, eigenvecs, &success) );
+   cr_assert(success);
+
+   /* check whether A v_i = lambda_i v_i holds */
+   for( i = 0; i < 1; ++i )
+   {
+      cr_assert(SCIPisFeasEQ(scip, 1.0 * eigenvecs[3*i] +  x * eigenvecs[3*i + 1] +  y * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
+      cr_assert(SCIPisFeasEQ(scip,   x * eigenvecs[3*i] + xx * eigenvecs[3*i + 1] + xy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
+      cr_assert(SCIPisFeasEQ(scip,   y * eigenvecs[3*i] + xy * eigenvecs[3*i + 1] + yy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
+   }
+}
