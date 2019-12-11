@@ -433,7 +433,7 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
    int* edgemark = NULL;
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, g->edges / 2) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &edgemark, g->edges / 2) );
     for( int e = 0; e < g->edges / 2; e++ )
        edgemark[e] = FALSE;
 
@@ -453,7 +453,7 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
 
       }
 #endif
-   SCIPfreeBufferArrayNull(scip, &edgemark);
+   SCIPfreeMemoryArrayNull(scip, &edgemark);
 
    return SCIP_OKAY;
 }
@@ -499,7 +499,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
    SCIP_CALL( SCIPallocBufferArray(scip, &prededge, nnodes) );
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, g->edges / 2) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &edgemark, g->edges / 2) );
    for( int e = 0; e < g->edges / 2; e++ )
       edgemark[e] = FALSE;
 
@@ -586,7 +586,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
 
    dijkdata->nvisits = nvisits;
 
-   SCIPfreeBufferArrayNull(scip, &edgemark);
+   SCIPfreeMemoryArrayNull(scip, &edgemark);
    SCIPfreeBufferArray(scip, &prededge);
 
    /* sort close nodes according to their index */
@@ -669,7 +669,7 @@ SCIP_RETCODE reduce_distDataInit(
 
    range_closenodes = distdata->closenodes_range;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &closenodes_edges, distdata->closenodes_totalsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &closenodes_edges, distdata->closenodes_totalsize) );
 
    /* compute close nodes to each not yet deleted node */
    for( int k = 0; k < nnodes; k++ )
@@ -710,7 +710,7 @@ SCIP_RETCODE reduce_distDataInit(
    SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
    distdata->dheap = dheap;
 
-   SCIPfreeBufferArray(scip, &closenodes_edges);
+   SCIPfreeMemoryArray(scip, &closenodes_edges);
 
    return SCIP_OKAY;
 }
@@ -831,4 +831,114 @@ void reduce_distDataFreeMembers(
    graph_dijkLimited_freeMembers(scip, distdata->dijkdata);
 
    SCIPfreeMemory(scip, &(distdata->dijkdata));
+}
+
+
+/** initialize permanent extension data struct */
+SCIP_RETCODE reduce_extPermaInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed */
+   EXTPERMA*             extperm             /**< (uninitialized) extension data */
+)
+{
+   SCIP_Bool* isterm = NULL;
+   SCIP_Real* bottleneckDistNode = NULL;
+   SCIP_Real* pcSdToNode = NULL;
+   int* tree_deg = NULL;
+   const int nnodes = graph_get_nNodes(graph);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+
+   assert(scip && edgedeleted && extperm);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tree_deg, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &bottleneckDistNode, nnodes) );
+
+   if( pcmw )
+      SCIP_CALL( SCIPallocMemoryArray(scip, &pcSdToNode, nnodes) );
+
+   extperm->edgedeleted = edgedeleted;
+   extperm->isterm = isterm;
+   extperm->bottleneckDistNode = bottleneckDistNode;
+   extperm->pcSdToNode = pcSdToNode;
+   extperm->tree_deg = tree_deg;
+   extperm->nnodes = nnodes;
+
+   if( pcmw )
+   {
+      assert(pcSdToNode);
+
+      for( int k = 0; k < nnodes; k++ )
+         pcSdToNode[k] = -1.0;
+   }
+
+   graph_get_isTerm(graph, isterm);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      bottleneckDistNode[k] = -1.0;
+
+      if( graph->mark[k] )
+         tree_deg[k] = 0;
+      else
+         tree_deg[k] = -1;
+   }
+
+   assert(reduce_extPermaIsClean(graph, extperm));
+
+   return SCIP_OKAY;
+}
+
+
+/** initialize permanent extension data struct */
+SCIP_Bool reduce_extPermaIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTPERMA*       extperm             /**< extension data */
+)
+{
+   const SCIP_Real* bottleneckDistNode = NULL;
+   const SCIP_Real* pcSdToNode = NULL;
+   const int* tree_deg = NULL;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(extperm);
+
+   bottleneckDistNode = extperm->bottleneckDistNode;
+   pcSdToNode = extperm->pcSdToNode;
+   tree_deg = extperm->tree_deg;
+
+   if( nnodes != extperm->nnodes )
+      return FALSE;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !(tree_deg[i] == 0 || tree_deg[i] == -1) )
+         return FALSE;
+
+      if( bottleneckDistNode[i] > -0.5 )
+         return FALSE;
+
+      if( pcSdToNode && pcSdToNode[i] > -0.5 )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+
+/** frees members of extension data */
+void reduce_extPermaFreeMembers(
+   SCIP*                 scip,               /**< SCIP */
+   EXTPERMA*             extperm             /**< extension data */
+)
+{
+   assert(scip && extperm);
+
+   SCIPfreeMemoryArrayNull(scip, &(extperm->pcSdToNode));
+   SCIPfreeMemoryArray(scip, &(extperm->bottleneckDistNode));
+   SCIPfreeMemoryArray(scip, &(extperm->tree_deg));
+   SCIPfreeMemoryArray(scip, &(extperm->isterm));
+
+   extperm->nnodes = -1;
 }

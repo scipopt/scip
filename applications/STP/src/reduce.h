@@ -78,6 +78,18 @@ typedef struct reduce_costs_parameters
 } RPDA;
 
 
+/** permanent extension data */
+typedef struct extension_data_permanent
+{
+   const STP_Bool*       edgedeleted;        /**< edge array to mark which directed edge can be removed */
+   SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
+   SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
+   SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
+   int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
+   int                   nnodes;             /**< number of nodes */
+} EXTPERMA;
+
+
 /* reduce.c
  */
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
@@ -150,7 +162,7 @@ extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCI
  */
 extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, SCIP_Real*, int*, SCIP_Bool*);
-extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, const STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, SCIP_Real*, int*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
 /* reduce_test.c
  */
@@ -187,6 +199,9 @@ extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, 
 extern SCIP_Real       reduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void            reduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void            reduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
+extern SCIP_RETCODE    reduce_extPermaInit(SCIP*, const GRAPH*, const STP_Bool*, EXTPERMA*);
+extern SCIP_Bool       reduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
+extern void            reduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

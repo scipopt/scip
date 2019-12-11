@@ -92,6 +92,7 @@ typedef struct extension_data
 } EXTDATA;
 
 
+/** clean extension data struct */
 static inline
 void extdataClean(
    EXTDATA*              extdata             /**< extension data */
@@ -107,6 +108,7 @@ void extdataClean(
 
 
 #ifndef NDEBUG
+/** is the extension data clean? */
 static
 SCIP_Bool extdataIsClean(
    const GRAPH*          graph,              /**< graph data structure */
@@ -162,6 +164,7 @@ SCIP_Bool extdataIsClean(
 }
 
 
+/** is the reduction data clean? */
 static
 SCIP_Bool reddataIsClean(
    const GRAPH*          graph,              /**< graph data structure */
@@ -180,6 +183,7 @@ SCIP_Bool reddataIsClean(
 
    return TRUE;
 }
+
 
 /** is current tree flawed? */
 static
@@ -2092,18 +2096,14 @@ SCIP_RETCODE reduce_extendedCheckEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
-   const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    int                   edge,               /**< edge to be checked */
    SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
    DISTDATA*             distdata,           /**< data for distance computations */
-   SCIP_Real*            bottleneckDistNode, /**< needs to be set to -1.0 (size nnodes) */
-   SCIP_Real*            pcSdToNode,         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
-   int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise;
-                                                      in method: position ( > 0) for nodes in tree */
-   SCIP_Bool*            deletable           /**< is edge deletable? */
+   EXTPERMA*             extpermanent,       /**< extension data */
+   SCIP_Bool*            edgeIsDeletable     /**< is edge deletable? */
 )
 {
+   const SCIP_Bool* isterm = extpermanent->isterm;
    const int root = redcostdata->redCostRoot;
    const SCIP_Real* redcost = redcostdata->redEdgeCost;
    const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
@@ -2112,13 +2112,14 @@ SCIP_RETCODE reduce_extendedCheckEdge(
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
 
-   assert(scip && graph && redcost && rootdist && nodeToTermpaths && deletable && distdata && tree_deg && bottleneckDistNode);
+   assert(scip && graph && redcost && rootdist && nodeToTermpaths && edgeIsDeletable && distdata && extpermanent);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
    assert(graph_isMarked(graph));
+   assert(reduce_extPermaIsClean(graph, extpermanent));
 
-   *deletable = FALSE;
+   *edgeIsDeletable = FALSE;
 
    /* can we extend from 'edge'? */
    if( extLeafIsExtendable(graph, isterm, tail) || extLeafIsExtendable(graph, isterm, head) )
@@ -2149,35 +2150,33 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 
       {
          REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
-            .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = edgedeleted,
+            .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
-            .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
-            .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
+            .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
+            .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = pcSdToNode,
+            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = extpermanent->pcSdToNode,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          /* can we extend from head? */
          if( extLeafIsExtendable(graph, isterm, head) )
-            extCheckArc(scip, graph, edge, &extdata, deletable);
+            extCheckArc(scip, graph, edge, &extdata, edgeIsDeletable);
 
          /* try to extend from tail? */
-         if( !(*deletable) && extLeafIsExtendable(graph, isterm, tail) )
+         if( !(*edgeIsDeletable) && extLeafIsExtendable(graph, isterm, tail) )
          {
             extdataClean(&extdata);
-            extCheckArc(scip, graph, flipedge(edge), &extdata, deletable);
+            extCheckArc(scip, graph, flipedge(edge), &extdata, edgeIsDeletable);
          }
       }
 
       for( int i = 0; i < nnodes; i++ )
-      {
          assert(pseudoancestor_mark[i] == 0);
-         assert(tree_deg[i] == 0 || tree_deg[i] == -1);
-         assert(bottleneckDistNode[i] == -1.0);
-      }
+
+      assert(reduce_extPermaIsClean(graph, extpermanent));
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
@@ -2204,16 +2203,13 @@ SCIP_RETCODE reduce_extendedEdge2(
    int*                  nelims              /**< number of eliminations */
 )
 {
-   SCIP_Bool* isterm;
-   int* tree_deg;
-   SCIP_Real* bottleneckDist;
-   SCIP_Real* pcSdToNode = NULL;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Real* const redcost = redcostdata->redEdgeCost;
 
    DISTDATA distdata;
+   EXTPERMA extpermanent;
 
    assert(scip && graph && redcostdata && edgedeletable);
    assert(!pcmw || !graph->extended);
@@ -2228,30 +2224,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDist, nnodes) );
-
-   if( pcmw )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
-
-      for( int k = 0; k < nnodes; k++ )
-         pcSdToNode[k] = -1.0;
-   }
-
-   graph_get_isTerm(graph, isterm);
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      bottleneckDist[k] = -1.0;
-
-      if( graph->mark[k] )
-         tree_deg[k] = 0;
-      else
-         tree_deg[k] = -1;
-   }
+   SCIP_CALL( reduce_extPermaInit(scip, graph, edgedeletable, &extpermanent) );
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -2297,8 +2270,7 @@ SCIP_RETCODE reduce_extendedEdge2(
             deletable = (deletable && erevdeletable);
          }
 #else
-         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, redcostdata, edgedeletable,
-               isterm, e, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &deletable) );
+         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, redcostdata, e, allowequality, &distdata, &extpermanent, &deletable) );
 #endif
 
          if( deletable )
@@ -2316,11 +2288,7 @@ SCIP_RETCODE reduce_extendedEdge2(
       edgedeletable[e] = FALSE;
 #endif
 
-   SCIPfreeBufferArrayNull(scip, &pcSdToNode);
-   SCIPfreeBufferArray(scip, &bottleneckDist);
-   SCIPfreeBufferArray(scip, &tree_deg);
-   SCIPfreeBufferArray(scip, &isterm);
-
+   reduce_extPermaFreeMembers(scip, &extpermanent);
    reduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
