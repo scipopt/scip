@@ -2402,7 +2402,9 @@ void SCIPnodeSetEstimate(
    assert(set != NULL);
    assert(SCIPsetIsRelGE(set, newestimate, node->lowerbound));
 
-   node->estimate = newestimate;
+   /* due to numerical reasons we need this check, see https://git.zib.de/integer/scip/issues/2866 */
+   if( node->lowerbound <= newestimate )
+      node->estimate = newestimate;
 }
 
 /** propagates implications of binary fixings at the given node triggered by the implication graph and the clique table */
