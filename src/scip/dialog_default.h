@@ -342,6 +342,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 
+/** dialog execution method for the set emphasis numerics command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics);
+
 /** dialog execution method for the set limits objective command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);

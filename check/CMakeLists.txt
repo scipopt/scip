@@ -50,6 +50,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+    "emphasis_numerics"
 
     #constraints
     "indicatorlogicorsepa"
@@ -107,6 +108,7 @@ set(settings_fastMIP
     "vbcvisualization"
   )
 set(settings_MINLP
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"
@@ -177,7 +179,7 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-   
+
 #
 # Indicator instances
 #

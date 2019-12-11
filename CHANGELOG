@@ -370,7 +370,7 @@ Interface changes
   branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
   parameters only have effect if the lnscheck parameter is set to TRUE.
 
-- Added parameter cons/linear/maxmultiaggrquot to limit the maximum coefficient dynamism of an equation on which
+- Added parameter cons/linear/maxmultaggrquot to limit the maximum coefficient dynamism of an equation on which
   multiaggregation is performed. This replaces a compiler define of the same name.
   Default value is 1000, smaller values make multiaggregations numerically more stable.
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
@@ -430,6 +430,9 @@ Interface changes
 
 - new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
+- new parameter constraints/linear/extractcliques to turn clique extraction off
+
+- new emphasis setting emphasis/numerics to increase numerical stability of (mostly) presolving operations such as (multi-)aggregations at the cost of performance.
 
 ### Data structures
 
