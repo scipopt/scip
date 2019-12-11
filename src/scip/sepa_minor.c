@@ -581,6 +581,7 @@ SCIP_RETCODE separatePoint(
       {
          SCIPdebugMsg(scip, "eigenvalue = %g  eigenvector = (%g,%g,%g)\n", eigenvals[k], eigenvecs[3*k], eigenvecs[3*k + 1], eigenvecs[3*k + 2]);
          SCIP_CALL( addCut(scip, sepa, sol, x, y, xx, yy, xy, &eigenvecs[3*k], eigenvals[k], sepadata->mincutviol, result) );
+         SCIPdebugMsg(scip, "result: %u\n", *result);
       }
    }
 
