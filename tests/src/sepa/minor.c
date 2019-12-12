@@ -79,7 +79,6 @@ Test(minor, detect, .init = setup, .fini = teardown)
       "[expr] <c2>: -0.5 <= <x> * <y> + <y> * <z> <= 0.5", "[expr] <c3>: -0.5 <= <z> * <z> <= 0.5"};
    SCIP_SEPA* sepa;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    SCIP_Bool success;
@@ -102,8 +101,6 @@ Test(minor, detect, .init = setup, .fini = teardown)
    cr_assert(SCIPgetNConss(scip) == NCONSS);
 
    /* call the detection of the nonlinear handlers to create auxiliary variables */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
    cr_assert(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
    SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr),
       SCIPconshdlrGetNConss(conshdlr), &infeasible) );
@@ -128,11 +125,11 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
 {
    SCIP_Real eigenvals[3];
    SCIP_Real eigenvecs[9];
-   SCIP_Real x = 1.5;
-   SCIP_Real y = 2.0;
-   SCIP_Real xx = -3.0;
-   SCIP_Real yy = 5.0;
-   SCIP_Real xy = -1.0;
+   SCIP_Real xval = 1.5;
+   SCIP_Real yval = 2.0;
+   SCIP_Real xxval = -3.0;
+   SCIP_Real yyval = 5.0;
+   SCIP_Real xyval = -1.0;
    SCIP_Bool success;
    int i;
 
@@ -141,14 +138,14 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
       return;
 
    /* compute eigenvalues and eigenvectors */
-   SCIP_CALL( getEigenValues(scip, x, y, xx, yy, xy, eigenvals, eigenvecs, &success) );
+   SCIP_CALL( getEigenValues(scip, xval, yval, xxval, yyval, xyval, eigenvals, eigenvecs, &success) );
    cr_assert(success);
 
    /* check whether A v_i = lambda_i v_i holds */
    for( i = 0; i < 1; ++i )
    {
-      cr_assert(SCIPisRelEQ(scip, 1.0 * eigenvecs[3*i] +  x * eigenvecs[3*i + 1] +  y * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
-      cr_assert(SCIPisRelEQ(scip,   x * eigenvecs[3*i] + xx * eigenvecs[3*i + 1] + xy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
-      cr_assert(SCIPisRelEQ(scip,   y * eigenvecs[3*i] + xy * eigenvecs[3*i + 1] + yy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
+      cr_assert(SCIPisRelEQ(scip,  1.0 * eigenvecs[3*i] +  xval * eigenvecs[3*i + 1] +  yval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
+      cr_assert(SCIPisRelEQ(scip, xval * eigenvecs[3*i] + xxval * eigenvecs[3*i + 1] + xyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
+      cr_assert(SCIPisRelEQ(scip, yval * eigenvecs[3*i] + xyval * eigenvecs[3*i + 1] + yyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
    }
 }
