@@ -2539,18 +2539,26 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* exit if problem is linear and no binary variables are affected by symmetry */
-   if ( propdata->islinearproblem && ! propdata->binvaraffected )
+   if ( ! propdata->binvaraffected )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
-
-      /* free data and exit */
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n",
+         SCIPgetSolvingTime(scip));
 
       /* disable OF and symmetry handling constraints */
       propdata->ofenabled = FALSE;
-      propdata->symconsenabled = FALSE;
 
-      return SCIP_OKAY;
+      if( propdata->islinearproblem )
+      {
+         propdata->symconsenabled = FALSE;
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) -> problem is linear, so free symmetry data.\n",
+            SCIPgetSolvingTime(scip));
+
+         /* free data and exit */
+         SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+         return SCIP_OKAY;
+      }
    }
 
    assert( propdata->nperms > 0 );
