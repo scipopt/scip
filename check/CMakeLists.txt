@@ -53,6 +53,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+    "emphasis_numerics"
 
     #constraints
     "indicatorlogicorsepa"
@@ -111,6 +112,7 @@ set(settings_fastMIP
     "enable_treeprofile_regression_forest"
   )
 set(settings_MINLP
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"

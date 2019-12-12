@@ -3194,7 +3194,19 @@ SCIP_RETCODE SCIPtrySol(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted solution not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3293,7 +3305,19 @@ SCIP_RETCODE SCIPtrySolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3335,7 +3359,19 @@ SCIP_RETCODE SCIPtryCurrentSol(
    if( *stored )
    {
       if( bestsol != SCIPgetBestSol(scip) )
+      {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+         SCIP_Bool feasible;
+         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+         if( ! feasible )
+         {
+            SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+            SCIPABORT();
+         }
+#endif
          SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;
