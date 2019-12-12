@@ -1818,13 +1818,14 @@ void decompHorizonMarkInterval(
    int                   blockendpos         /**< current end position (inclusive) of interval */
    )
 {
-   assert(decomphorizon != NULL);
-   assert(heurdata != NULL);
    int nvarsinterval;
    int nvarsstartofinterval;
    int solstamppos;
    int b;
    SCIP_Real overlapcomplement;
+
+   assert(decomphorizon != NULL);
+   assert(heurdata != NULL);
 
    /* is the next block unsuitable or have we reached the end of the blocks? In those cases,
     * we mark all blocks of the current interval; we hence avoid to rerun on a subset of the current subproblem
