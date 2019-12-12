@@ -75,6 +75,8 @@
 #define HEUR_USESSUBSCIP      TRUE                  /**< does the heuristic use a secondary SCIP instance? */
 
 #define COUPLINGSIZE          3
+#define DEFAULT_MINNODES      50LL
+#define DEFAULT_MAXNODES      5000LL
 
 /*
  * Data structures
@@ -95,6 +97,7 @@ typedef struct Block
    SCIP_VAR**            slacksneg;          /**< negative slack variables */
    SCIP_CONS**           couplingcons;       /**< coupling contraints */
    int                   ncoupling;          /**< number of coupling contraints (equal to positive/negative slack variables) */
+   SCIP_Real             size;               /**< share of total problem */
 } BLOCK;
 
 /** data related to one problem */
@@ -159,6 +162,8 @@ SCIP_DECL_HASHKEYVAL(indexesHashval)
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in all subproblems */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in one subproblem */
    int                   admiterations;      /**< maximal number of ADM iterations in each penalty loop */
    int                   penaltyiterations;  /**< maximal number of penalty iterations */
    int                   timing;             /**< should the heuristic run before or after the processing of the node?
@@ -195,6 +200,7 @@ SCIP_RETCODE initBlock(
    block->slacksneg = NULL;
    block->couplingcons = NULL;
    block->ncoupling = 0;
+   block->size = 0;
 
    ++problem->nblocks;
 
@@ -430,6 +436,12 @@ SCIP_RETCODE blockCreateSubscip(
          block->nsubvars = nsubscipvars;
          for( i = 0; i < nsubscipvars; i++ )
             block->subvars[i] = subscipvars[i];
+
+         /* calculate size of sub-SCIP with focus on the number of integer variables
+          * we use this value to determine the nodelimit
+          */
+         block->size = (SCIP_Real)(SCIPgetNOrigVars(block->subscip) + SCIPgetNOrigIntVars(block->subscip) + SCIPgetNOrigBinVars(block->subscip)) /
+                        (SCIPgetNVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
       }
    }
    else
@@ -825,6 +837,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    int piter;
    int increasedslacks;
    int blockinfolistfill;
+   SCIP_Longint nodesleft;
    int i;
    int b;
    int k;
@@ -855,6 +868,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    blockinfolist = NULL;
    htable = NULL;
 
+   nodesleft = heurdata->maxnodes;
    gap = heurdata->gap;
 
    if( (heurtiming & SCIP_HEURTIMING_BEFORENODE) && heurdata->timing !=1 )
@@ -1275,14 +1289,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    istimeleft = TRUE;
 
    /* Penalty loop */
-   while( !solved && piter < heurdata->penaltyiterations && istimeleft)
+   while( !solved && piter < heurdata->penaltyiterations && istimeleft )
    {
       piter++;
       solutionsdiffer = TRUE;
       aiter = 0;
 
       /*  Alternating direction method loop */
-      while( solutionsdiffer && aiter < heurdata->admiterations && istimeleft)
+      while( solutionsdiffer && aiter < heurdata->admiterations && istimeleft )
       {
          aiter++;
          solutionsdiffer = FALSE;
@@ -1341,6 +1355,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
+               SCIP_Longint nnodes;
+               int iteration;
+
 #ifdef PADM_WRITE_PROBLEMS
                SCIPdebugMsg(scip, "write subscip of block %d in piter=%d and aiter=%d\n", b, piter, aiter);
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "blockproblem_%d_%d_%d.lp", b, piter, aiter);
@@ -1355,20 +1372,39 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* update time and memory limit of subproblem */
                SCIP_CALL( SCIPcopyLimits(scip, (problem->blocks[b]).subscip) );
 
+               /* stop if there are not enough nodes left */
+               if( nodesleft < DEFAULT_MINNODES )
+               {
+                  SCIPdebugMsg(scip, "Node limit reached.\n");
+                  goto TERMINATE;
+               }
+
+               /* update node limit of subproblem
+                * in the first iterations we have a smaller node limit
+                */
+               iteration = ((piter - 1) * heurdata->admiterations) + aiter;
+               nnodes = ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(0.8, iteration) ));
+               nnodes = MAX( DEFAULT_MINNODES, nnodes );
+               SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
+
                /* solve block */
                SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
-               /* check solution if one of the three cases occurs
+               /* subtract used nodes from the total nodelimit */
+               nodesleft -= SCIPgetNNodes((problem->blocks[b]).subscip);
+
+               /* check solution if one of the four cases occurs
                 * - solution is optimal
                 * - solution reached gaplimit
+                * - node limit reached
                 * - time limit is reached but best solution needs no slack variables (no dual solution available)
                 */
-               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || 
+               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || status == SCIP_STATUS_NODELIMIT ||
                    (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
                     SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
-                  SCIPdebugMsg(scip, "Block is optimal or reached gaplimit.\n");
+                  SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or nodelimit.\n");
 
                   if( status == SCIP_STATUS_TIMELIMIT )
                   {
@@ -1460,7 +1496,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
 
             }
-            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
+            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT && status != SCIP_STATUS_NODELIMIT &&
                    !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
                     SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
@@ -1771,6 +1807,14 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreePADM) );
 
    /* add padm primal heuristic parameters */
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
+      "maximum number of nodes to regard in all subproblems",
+      &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
+      "minimum number of nodes to regard in one subproblem",
+      &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
       "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 1, 100, NULL, NULL) );
 
