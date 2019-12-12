@@ -16,7 +16,7 @@
 
 /**@file   sepa_minor.c
  * @ingroup DEFPLUGINS_SEPA
- * @brief  minor separator
+ * @brief  principal minor separator
  * @author Benjamin Mueller
  */
 

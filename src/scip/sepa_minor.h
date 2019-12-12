@@ -15,7 +15,7 @@
 
 /**@file   sepa_minor.h
  * @ingroup SEPARATORS
- * @brief  minor separator
+ * @brief  principal minor separator
  * @author Benjamin Mueller
  */
 
