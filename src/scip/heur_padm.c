@@ -1392,7 +1392,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* subtract used nodes from the total nodelimit */
-               nodesleft -= SCIPgetNNodes((problem->blocks[b]).subscip);
+               nodesleft -= (SCIP_Longint)ceil(SCIPgetNNodes((problem->blocks[b]).subscip) * (problem->blocks[b]).size);
 
                /* check solution if one of the four cases occurs
                 * - solution is optimal
