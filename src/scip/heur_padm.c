@@ -66,7 +66,7 @@
 
 #define HEUR_NAME             "padm"
 #define HEUR_DESC             "penalty alternating direction method primal heuristic"
-#define HEUR_DISPCHAR         'D'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         70000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
