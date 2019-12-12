@@ -18,6 +18,9 @@ endif()
 
 add_dependencies(check scip_check)
 
+# copy data files to binary directory, so that they can be accessed with relative paths
+# in settings files
+file(COPY coverage/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/coverage)
 #
 # define the instance sets
 #
@@ -106,6 +109,7 @@ set(settings_fastMIP
     "presolving_off"
     "separating_off"
     "vbcvisualization"
+    "enable_treeprofile_regression_forest"
   )
 set(settings_MINLP
 #    "emphasis_numerics"
@@ -470,8 +474,7 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
-                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)

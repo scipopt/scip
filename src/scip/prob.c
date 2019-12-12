@@ -601,7 +601,7 @@ SCIP_RETCODE SCIPprobTransform(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
@@ -1485,6 +1485,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -1531,7 +1532,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
    }
 
    return SCIP_OKAY;
@@ -1602,6 +1603,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -1709,7 +1711,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
                }
             }
          }

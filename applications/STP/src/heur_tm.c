@@ -1793,7 +1793,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &vcount, nnodes) );
-      SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+      SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist, NULL) );
    }
    if( mode == TM_SP )
    {

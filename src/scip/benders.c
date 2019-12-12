@@ -2564,7 +2564,7 @@ SCIP_RETCODE SCIPbendersActivate(
 
       /* creating the priority queue for the subproblem solving status */
       SCIP_CALL( SCIPpqueueCreate(&benders->subprobqueue, benders->nsubproblems, 1.1,
-            benders->benderssubcomp == NULL ? benderssubcompdefault : benders->benderssubcomp) );
+            benders->benderssubcomp == NULL ? benderssubcompdefault : benders->benderssubcomp, NULL) );
 
 
       for( i = 0; i < benders->nsubproblems; i++ )

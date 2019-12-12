@@ -3885,9 +3885,9 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
 
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
