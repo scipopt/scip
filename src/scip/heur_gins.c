@@ -2561,6 +2561,9 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    do
    {
+      SCIP_SOL* oldincumbent;
+      SCIP_SOL* newincumbent;
+
       /* create a new problem, by fixing all variables except for a small neighborhood */
       SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata, rollinghorizon, decomphorizon, &success) );
 
@@ -2610,12 +2613,14 @@ SCIP_DECL_HEUREXEC(heurExecGins)
          SCIPgetSolvingTime(subscip), SCIPgetNTotalNodes(subscip), SCIPgetStatus(subscip));
 
       /* increase target nodes if a (stall) node limit was reached; this will immediately affect the next run */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_NODELIMIT || SCIPgetStatus(scip) == SCIP_STATUS_STALLNODELIMIT )
+      if( SCIPgetStatus(subscip) == SCIP_STATUS_NODELIMIT || SCIPgetStatus(subscip) == SCIP_STATUS_STALLNODELIMIT )
       {
-         heurdata->targetnodes = (SCIP_Longint)(1.05 * heurdata->targetnodes) + 10L;
+         heurdata->targetnodes = (SCIP_Longint)(1.05 * heurdata->targetnodes) + 5L;
 
          /* but not too far */
          heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes / 2);
+
+         SCIPdebugMsg(scip, "New target nodes after stalling: %" SCIP_LONGINT_FORMAT "\n", heurdata->targetnodes);
       }
 
       /* transfer variable statistics from sub-SCIP */
@@ -2627,16 +2632,20 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */
+      oldincumbent = SCIPgetBestSol(scip);
+
       SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
       if( success )
          *result = SCIP_FOUNDSOL;
+
+      newincumbent = SCIPgetBestSol(scip);
 
       /* free subproblem */
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
 
       /* check if we want to run another rolling horizon iteration */
-      runagain = success && heurdata->userollinghorizon;
+      runagain = success && (newincumbent != oldincumbent) && heurdata->userollinghorizon;
       if( runagain )
       {
          assert(rollinghorizon != NULL || decomphorizon != NULL);
