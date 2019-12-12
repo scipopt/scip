@@ -1383,7 +1383,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 * in the first iterations we have a smaller node limit
                 */
                iteration = ((piter - 1) * heurdata->admiterations) + aiter;
-               nnodes = ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(0.8, (double)iteration) ));
+               nnodes = (SCIP_Longint)ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(0.8, (double)iteration) ));
                nnodes = MAX( DEFAULT_MINNODES, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
