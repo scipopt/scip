@@ -105,7 +105,7 @@ void printNlhdlrExprData(
             SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
          SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
 
-         if( j < nlhdlrexprdata->nnonzeroes[i] - 1 )
+         if( j < startidx + nlhdlrexprdata->nnonzeroes[i] - 1 )
             SCIPinfoMessage(scip, NULL, " + ");
          else if( nlhdlrexprdata->offsets[i] != 0.0 )
             SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[i]);
@@ -127,7 +127,7 @@ void printNlhdlrExprData(
          SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
       SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
 
-      if( j < nlhdlrexprdata->nnonzeroes[nterms-1] - 1 )
+      if( j < nlhdlrexprdata->ntranscoefs - 1 )
          SCIPinfoMessage(scip, NULL, " + ");
       else if( nlhdlrexprdata->offsets[nterms-1] != 0.0 )
          SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[nterms-1]);
@@ -191,7 +191,7 @@ SCIP_RETCODE createNlhdlrExprData(
    }
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, NULL, "created nlhdlr data for the following soc expression:\n");
+      SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
       printNlhdlrExprData(scip, *nlhdlrexprdata);
 #endif
 
