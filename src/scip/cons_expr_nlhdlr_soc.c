@@ -29,6 +29,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_var.h"
+#include "scip/debug.h"
 #include "nlpi/nlpi_ipopt.h"
 
 
@@ -1640,6 +1641,49 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    SCIP_CALL( detectSOC(scip, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
+   /* create variables for cone disaggregation */
+   SCIP_CALL( createDisaggr(scip, conshdlr, expr, (*nlhdlrexprdata)) );
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_SOL* debugsol;
+      SCIP_Real rhsval;
+      int i;
+      int ndisaggvars;
+      int nterms;
+
+      SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+      nterms = (*nlhdlrexprdata)->nterms;
+      rhsval = (*nlhdlrexprdata)->coefs[nterms-1] * evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
+
+      if( debugsol != NULL )
+      {
+         ndisaggvars = SCIPisZero(scip, (*nlhdlrexprdata)->constant) ? nterms-1 : nterms;
+
+         for( i = 0; i < ndisaggvars; ++i )
+         {
+            SCIP_Real disvarval;
+            SCIP_Real lhsval;
+
+            if( SCIPisZero(scip, rhsval) )
+               disvarval = 0.0;
+            else
+            {
+               lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
+
+               disvarval = (*nlhdlrexprdata)->coefs[i] * SQR(lhsval) / rhsval;
+            }
+            /* store debug solution value of disaggregation variable
+            * assumes that expression has been evaluated in debug solution before
+            */
+            SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
+         }
+      }
+   }
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -1687,9 +1731,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
-
-   /* create variables for cone disaggregation */
-   SCIP_CALL( createDisaggr(scip, conshdlr, expr, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
