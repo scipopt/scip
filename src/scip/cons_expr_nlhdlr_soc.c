@@ -278,8 +278,8 @@ SCIP_RETCODE createDisaggr(
 
    assert(nlhdlrexprdata != NULL);
 
-   nrhsvars = nlhdlrexprdata->nnonzeroes[nlhdlrexprdata->nterms-1];
    nterms = nlhdlrexprdata->nterms;
+   nrhsvars = nlhdlrexprdata->nnonzeroes[nterms-1];
 
    /* check whether constant has a separate entry */
    size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms-1 : nterms;
@@ -317,20 +317,17 @@ SCIP_RETCODE createDisaggr(
    }
 
    /* consider RHS variables */
-   for( i = 0; i < nrhsvars; ++i)
+   for( i = nlhdlrexprdata->ntranscoefs - nrhsvars; i < nlhdlrexprdata->ntranscoefs; ++i )
    {
-      int idx;
-
-      idx = nlhdlrexprdata->ntranscoefs - i - 1;
-      vars[nvars] = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[idx]];
-      coefs[nvars] = -nlhdlrexprdata->transcoefs[idx] * nlhdlrexprdata->coefs[nterms-1];
+      vars[nvars] = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]];
+      coefs[nvars] = -nlhdlrexprdata->transcoefs[i] * nlhdlrexprdata->coefs[nterms-1];
       ++nvars;
    }
 
    /* create row */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%s", (void*) expr);
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
-         nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
+         nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
 
    /* free memory */
@@ -714,7 +711,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int* nnonzeroes;
    SCIP_Real constant;
    SCIP_Real sideconstant;
-   SCIP_Real signfactor;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nposquadterms;
@@ -842,8 +838,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
       if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
          return SCIP_OKAY;
 
-      signfactor = 1.0;
       specialtermidx = rhsidx;
+      sideconstant = constant - rhs;
    }
    else
    {
@@ -853,8 +849,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
       if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
          return SCIP_OKAY;
 
-      signfactor = -1.0;
       specialtermidx = lhsidx;
+      sideconstant = lhs - constant;
+
+      /* negate all coefficients */
+      for( i = 0; i < nchildren; ++i )
+         childcoefs[i] = -childcoefs[i];
    }
 
    if( ishyperbolic )
@@ -862,7 +862,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
       /* one of the expressions in the bilinear term is not non-negative -> no SOC */
       if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0
          || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]).inf < 0.0 )
+      {
          return SCIP_OKAY;
+      }
+
+      sideconstant *= 4.0 / -childcoefs[specialtermidx];
    }
    else
    {
@@ -871,12 +875,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
             return SCIP_OKAY;
    }
 
-   sideconstant = (signfactor == 1.0 ? constant - rhs : constant - lhs);
-
-   if( ishyperbolic )
-      sideconstant *= 4.0 / -childcoefs[specialtermidx] * signfactor;
-
-   if( SCIPisNegative(scip, sideconstant * signfactor) )
+   if( SCIPisNegative(scip, sideconstant) )
       return SCIP_OKAY;
 
    /**
@@ -902,7 +901,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       assert(childcoefs[specialtermidx] != 0.0);
 
-      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[specialtermidx] * signfactor : 1.0;
+      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[specialtermidx] : 1.0;
       transcoefsidx[i] = i;
       termbegins[i] = i;
       nnonzeroes[i] = 1;
@@ -925,7 +924,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
                SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
       }
 
-      coefs[nextentry] = childcoefs[i] * signfactor;
+      coefs[nextentry] = childcoefs[i];
 
       assert(vars[nextentry] != NULL);
       assert(coefs[nextentry] > 0.0);
@@ -935,15 +934,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    assert(nextentry == nchildren-1);
 
-   if (!ishyperbolic )
+   if( !ishyperbolic )
    {
       /* add data for the rhs variable */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
             SCIPgetConsExprExprChildren(children[specialtermidx])[0], &vars[nchildren-1]) );
       assert(vars[nchildren-1] != NULL);
 
-      assert(childcoefs[specialtermidx] * signfactor < 0.0);
-      coefs[nchildren-1] = SQRT(-childcoefs[specialtermidx] * signfactor);
+      assert(childcoefs[specialtermidx] < 0.0);
+      coefs[nchildren-1] = SQRT(-childcoefs[specialtermidx]);
    }
    else
    {
