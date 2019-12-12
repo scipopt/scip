@@ -58,7 +58,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   ntranscoefs;        /**< total number of entries in transcoefs */
 
    /* variables for cone disaggregation */
-   SCIP_VAR**            disvars;            /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
+   SCIP_VAR**            disvars;            /**< disaggregation variables for each expression; the last entry
+                                               *  corresponds to the constant term */
    SCIP_ROW*             row;                /**< disaggregation row */
 };
 
@@ -929,6 +930,14 @@ SCIP_RETCODE detectSocQuadraticSimple(
 /** Helper method to detect quadratic expressions that can be represented by soc constraints.
  *  This is sdone by computing and analyzing the Eigenvalue decomposition.
  *  Binary linear variables are interpreted as quadratic terms.
+ *
+ * @TODO: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by soc, Currently, the
+ * datastructure can only handle one soc. If this should appear more often, it could be worth to extend it,
+ * such that both sides can be handled (see e.g. instance chp_partload).
+ *
+ * @TODO: Since consexpr multiplies as many terms out as possible during presolving, some soc-representable
+ * structured cannot be detected (see e.g. instances bearing or wager). There is currently no obvious way
+ * to handle this.
  */
 static
 SCIP_RETCODE detectSocQuadraticComplex(
@@ -1210,6 +1219,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( !rhsissoc && !lhsissoc )
       goto CLEANUP;
 
+   /* @TODO: This is wrong, what do we do if both sides are possible? */
    assert(rhsissoc != lhsissoc);
 
    if( lhsissoc )
