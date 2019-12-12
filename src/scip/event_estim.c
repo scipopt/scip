@@ -39,7 +39,7 @@
 
 #include <string.h>
 #include "blockmemshell/memory.h"
-#include "scip/event_restart.h"
+#include "scip/event_estim.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"

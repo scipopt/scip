@@ -77,7 +77,7 @@ set(scipsources
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
-    scip/event_restart.c
+    scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
@@ -517,7 +517,7 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
-    scip/event_restart.h
+    scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
