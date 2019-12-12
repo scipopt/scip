@@ -34,7 +34,7 @@
 #define STP_RED_MAXNROUNDS 15
 #define STP_RED_EXFACTOR   2
 #define STP_RED_GLBFACTOR  1
-#define STP_RED_EDGELIMIT 200000
+#define STP_RED_EDGELIMIT 100000
 #define STP_BND_THRESHOLD 0.03
 
 #include <stdio.h>

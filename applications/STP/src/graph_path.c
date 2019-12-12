@@ -1688,9 +1688,11 @@ SCIP_Bool graph_sdWalksTriangle(
       {
          const int m = head_csr[e];
 
-         if( state[m] != CONNECT && m != start )
+         if( state[m] != CONNECT )
          {
             SCIP_Real distnew;
+
+            assert(m != start);
 
             if( stateprev && stateprev[m] == CONNECT )
                 continue;
@@ -1699,7 +1701,7 @@ SCIP_Bool graph_sdWalksTriangle(
 
             assert(g->mark[m]);
 
-            if( SCIPisGT(scip, distnew, distlimit) )
+            if( distnew > distlimit )
                continue;
 
             if( termmark[m] != 0 )
