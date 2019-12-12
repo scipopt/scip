@@ -1394,9 +1394,9 @@ SCIP_RETCODE branchUnbalancedCardinality(
       assert(cnt == nvars - (1 + branchnnonzero));
       assert(cnt > 0);
 
-      /* take the average of the individual estimates */
+      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
       if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest / (SCIP_Real) cnt;
+         objest = SCIPgetLocalTransEstimate(scip) + objest;
       else
          objest = SCIPgetLocalTransEstimate(scip);
 
@@ -1611,9 +1611,9 @@ SCIP_RETCODE branchBalancedCardinality(
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          }
 
-         /* take the average of the individual estimates */
+         /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
          if ( objest > 0.0 )
-            objest = SCIPgetLocalTransEstimate(scip) + objest/(SCIP_Real)(ind + 1);
+            objest = SCIPgetLocalTransEstimate(scip) + objest;
          else
             objest = SCIPgetLocalTransEstimate(scip);
 
@@ -1663,9 +1663,9 @@ SCIP_RETCODE branchBalancedCardinality(
          }
          assert(nbranchvars - (ind + 1) > 0);
 
-         /* take the average of the individual estimates */
+         /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
          if ( objest > 0.0 )
-            objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
+            objest = SCIPgetLocalTransEstimate(scip) + objest;
          else
             objest = SCIPgetLocalTransEstimate(scip);
 

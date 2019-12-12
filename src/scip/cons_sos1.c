@@ -5647,9 +5647,10 @@ SCIP_RETCODE enforceConflictgraph(
       objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-   /* estimated objective: local estimate + average of the individual pseudo cost estimates (if positive) */
+
+   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
    if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) nfixingsnode1);
+      objest = SCIPgetLocalTransEstimate(scip) + objest;
    else
       objest = SCIPgetLocalTransEstimate(scip);
 
@@ -5717,9 +5718,10 @@ SCIP_RETCODE enforceConflictgraph(
       objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-   /* estimated objective: local estimate + average of the individual pseudo cost estimates (if positive) */
+
+   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
    if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) nfixingsnode2);
+      objest = SCIPgetLocalTransEstimate(scip) + objest;
    else
       objest = SCIPgetLocalTransEstimate(scip);
 
@@ -6019,9 +6021,10 @@ SCIP_RETCODE enforceConssSOS1(
          objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
-      /* take the average of the individual estimates */
+
+      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
       if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest/(SCIP_Real)(ind + 1);
+         objest = SCIPgetLocalTransEstimate(scip) + objest;
       else
          objest = SCIPgetLocalTransEstimate(scip);
 
@@ -6044,9 +6047,10 @@ SCIP_RETCODE enforceConssSOS1(
          objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
-      /* take the average of the individual estimates */
+
+      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
       if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) (nvars - ind - 1));
+         objest = SCIPgetLocalTransEstimate(scip) + objest;
       else
          objest = SCIPgetLocalTransEstimate(scip);
 

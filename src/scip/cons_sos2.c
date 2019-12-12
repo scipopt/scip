@@ -1172,9 +1172,10 @@ SCIP_RETCODE enforceSOS2(
       objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-   /* take the average of the individual estimates */
+
+   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
    if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) maxInd);
+      objest = SCIPgetLocalTransEstimate(scip) + objest;
    else
       objest = SCIPgetLocalTransEstimate(scip);
 
@@ -1199,9 +1200,10 @@ SCIP_RETCODE enforceSOS2(
       objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-   /* take the average of the individual estimates */
+
+   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
    if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) (nvars - maxInd - 1));
+      objest = SCIPgetLocalTransEstimate(scip) + objest;
    else
       objest = SCIPgetLocalTransEstimate(scip);
 
