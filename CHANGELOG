@@ -129,6 +129,11 @@ Features
 - Benders' decomposition can be applied using decomposition supplied in the DEC format. To apply Benders' decomposition
   the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
 
+- Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
+  symmetries. Previously, some plugins were disabled, which is not necessary anymore.
+
+
+
 Performance improvements
 ------------------------
 
@@ -165,6 +170,12 @@ Performance improvements
 - performance improvement of adaptive large neighborhood search heuristic on merely continuous problems. The heuristic
   stops if presolving in the sub-SCIP fixes less than 50 % of the current target fixing rate over all variables
   (including continuous).
+
+- reduce memory usage in symmetry detection by a staggered allocation with decreasing overhead for larger instances
+
+- improved full orbitope propagation using a static implementation or a dynamic reordering of orbitope rows by a global rank function
+
+- improved detection of packing/partitioning orbitopes
 
 
 Examples and applications
