@@ -104,6 +104,11 @@ Features
 
 - Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
 
+- Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
+  available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
+  the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
+  decomposition subproblems. A priority queue has been added to help with load balancing.
+
 Performance improvements
 ------------------------
 
@@ -134,6 +139,8 @@ Performance improvements
 - restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
 
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
+- Improved domcol presolver to not require a complete representation of all constraints in the matrix
 
 
 Examples and applications
@@ -219,6 +226,13 @@ Interface changes
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
 
+- SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
+  Previously this result was returned through a parameter. The change was required to facilitate the integration with
+  the UG framework.
+
+- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
+
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -246,7 +260,12 @@ Interface changes
 - new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
   feasibility tolerance for the LP relaxation
 - new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
-
+- new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
+  decomposition subproblem solves. The comparison method is used to help with load balancing.
+- new API function SCIPgetRowObjParallelism to get the objective parallelism of a row
+- new API function SCIPcolGetAge to get the age of a column
+- added SCIPhashThree(), SCIPhashFive(), SCIPhashSix(), and SCIPhashSeven() that complement SCIPhashTwo(), SCIPhashFour() to combine 32bit integers to
+  a 32bit hash value
 
 ### Command line interface
 
@@ -346,6 +365,9 @@ Interface changes
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
 
+- new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
+  benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
+
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
@@ -360,6 +382,9 @@ Interface changes
 
 
 ### Data structures
+
+- small changes in constants of hash functions
+- added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
 
 ### Build system
 

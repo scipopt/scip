@@ -1,0 +1,19 @@
+STATISTICS
+  Problem name     : decomptest.cip
+  Variables        : 2 (0 binary, 2 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 1 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary]  <x1>: obj=1, original bounds=[0,1]
+  [binary]  <x2>: obj=1, original bounds=[0,1]
+  [binary]  <x3>: obj=1, original bounds=[0,1]
+  [binary]  <x4>: obj=1, original bounds=[0,1]
+  [continuous]  <y>: obj=-1, original bounds=[0,100]
+  [continuous]  <z1>: obj=1, original bounds=[0,100]
+  [continuous]  <z2>: obj=1, original bounds=[0,100]
+CONSTRAINTS
+  [linear] <linkingcons> : 10<x1> +20<x2> +30<x3> +40<x4> -1<y> >= 0;
+  [linear] <block1cons> : 1<x1> +<x2> +<z1> == 1;
+  [linear] <block2cons> : 1<x3> +<x4> +<z2> == 1;
+END
