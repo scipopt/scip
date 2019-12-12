@@ -129,6 +129,10 @@ Features
 - Benders' decomposition can be applied using decomposition supplied in the DEC format. To apply Benders' decomposition
   the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
 
+- new event handler event_estim.c/h that approximates search tree completion and estimates tree size
+  to (optionally) trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
+- new display column that reports approx. search tree completion during the search, and an overview in the statistics table
+
 Performance improvements
 ------------------------
 
@@ -183,6 +187,8 @@ Interface changes
 
 - callback `SCIP_DECL_CONSHDLRENFOLP` can now also return SCIP_SOLVELP as *result, which indicates to the SCIP core that the LP relaxation
   should be solved again because the primal feasibility tolerance of the LP has been tightened (using SCIPsetLPFeastol())
+
+- extension of SCIP_PQUEUE by a new callback SCIP_DECL_PQUEUEELEMCHGPOS to catch swaps as well as functionality to delete arbitrary elements from the priority queue.
 
 ### Deleted and changed API methods
 
@@ -245,7 +251,7 @@ Interface changes
   - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
-  
+
 - SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
   Previously this result was returned through a parameter. The change was required to facilitate the integration with
   the UG framework.
@@ -309,6 +315,11 @@ Interface changes
   decomposition master problem contains nonlinear constraints.
 - new API function SCIPapplyBendersDecomposition for applying Benders' decomposition given a decomposition in the DEC
   format
+- new API function SCIPwasNodeLastBranchParent to query if a node has been the parent of the most recent branching in the tree
+
+### Event system
+
+- new event type SCIP_EVENTTYPE_NODEDELETE to react on nodes that are about to be deleted from the tree
 
 ### Command line interface
 
@@ -430,11 +441,36 @@ Interface changes
 
 - new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
+- new parameters for tree size estimation and restarts:
+    - estimation/restarts/restartpolicy (default value n)
+    - estimation/method (default value c)
+    - estimation/restarts/restartlimit (default value 1)
+    - estimation/restarts/minnodes (default value 1000)
+    - estimation/restarts/countonlyleaves (default value FALSE)
+    - estimation/restarts/restartfactor (default value 2)
+    - estimation/coefmonoprog (default value 0.3667)
+    - estimation/coefmonossg (default value 0.6333)
+    - estimation/restarts/hitcounterlim (default value 50)
+    - estimation/reportfreq (default value -1)
+    - estimation/regforestfilename (default value "-")
+    - estimation/completiontype (default value a)
+    - estimation/treeprofile/enabled (default value FALSE)
+    - estimation/treeprofile/minnodesperdepth (default value 20)
+    - estimation/useleafts (default value TRUE)
+    - estimation/ssg/nmaxsubtrees (default value -1)
+    - estimation/ssg/nminnodeslastsplit (default value 0)
+
+
 
 ### Data structures
 
 - small changes in constants of hash functions
 - added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
+- extended SCIPpqueueCreate() by additional callback argument SCIP_DECL_PQUEUEELEMCHGPOS to catch position changes
+- new methods SCIPpqueueDelPos() to delete elements at a specific position in the priority queue and SCIPpqueueFind() to
+  find a specific position. It is recommended to track position changes using the new callback SCIP_DECL_PQUEUEELEMCHGPOS.
+  In contrast, using SCIPpqueueFind() can be slow because it needs to compare the element it searches for
+  with each slot in the queue.
 
 ### Build system
 
