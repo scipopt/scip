@@ -162,6 +162,10 @@ Performance improvements
 
 - Improved domcol presolver to not require a complete representation of all constraints in the matrix
 
+- performance improvement of adaptive large neighborhood search heuristic on merely continuous problems. The heuristic
+  stops if presolving in the sub-SCIP fixes less than 50 % of the current target fixing rate over all variables
+  (including continuous).
+
 
 Examples and applications
 -------------------------
@@ -245,7 +249,7 @@ Interface changes
   - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
-  
+
 - SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
   Previously this result was returned through a parameter. The change was required to facilitate the integration with
   the UG framework.
@@ -352,6 +356,10 @@ Interface changes
   checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided (only possible for non-model constraints)
+
+- new parameters heuristics/shiftandpropagate/minfixingratelp and heuristics/locks/minfixingratelp to stop the
+  heuristics after propagating integer fixings if no sufficient fixing of the all variables (including continuous)
+  could be achieved. These parameters help to avoid solving LP's that are comparable in hardness to the main root LP.
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
