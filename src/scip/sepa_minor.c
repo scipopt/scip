@@ -44,7 +44,8 @@
 #define DEFAULT_MAXMINORS           100 /**< default maximum number for minors (0: no limit) */
 #define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
 #define DEFAULT_RANDSEED            157 /**< default random seed */
-
+#define DEFAULT_MAXROUNDS            -1 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 /*
  * Data structures
  */
@@ -56,6 +57,8 @@ struct SCIP_SepaData
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
    int                   maxminors;          /**< maximum number for minors (0: no limit) */
+   int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             detectedminors;     /**< has the minor detection beeing called? */
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
@@ -677,13 +680,29 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolMinor)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 {  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   int ncalls;
+   int depth;
 
    /* need routine to compute eigenvalues/eigenvectors */
    if( !SCIPisIpoptAvailableIpopt() )
       return SCIP_OKAY;
 
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   depth = SCIPgetDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+   {
+      SCIPdebugMsg(scip, "reached round limit for node\n");
+      return SCIP_OKAY;
+   }
+
    /* try to detect minors */
-   SCIP_CALL( detectMinors(scip, SCIPsepaGetData(sepa)) );
+   SCIP_CALL( detectMinors(scip, sepadata) );
 
    /* call separation method */
    SCIP_CALL( separatePoint(scip, sepa, NULL, result) );
@@ -696,10 +715,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
 {  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   int ncalls;
+   int depth;
 
    /* need routine to compute eigenvalues/eigenvectors */
    if( !SCIPisIpoptAvailableIpopt() )
       return SCIP_OKAY;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   depth = SCIPgetDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   /* only call the separator a given number of times at each node */
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+   {
+      SCIPdebugMsg(scip, "reached round limit for node\n");
+      return SCIP_OKAY;
+   }
 
    /* try to detect minors */
    SCIP_CALL( detectMinors(scip, SCIPsepaGetData(sepa)) );
@@ -752,6 +788,16 @@ SCIP_RETCODE SCIPincludeSepaMinor(
          "separating/" SEPA_NAME "/mincutviol",
          "minimum required violation of a cut",
          &sepadata->mincutviol, FALSE, DEFAULT_MINCUTVIOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/maxrounds",
+         "maximal number of separation rounds per node (-1: unlimited)",
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/maxroundsroot",
+         "maximal number of separation rounds in the root node (-1: unlimited)",
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
