@@ -5639,14 +5639,19 @@ SCIP_RETCODE enforceConflictgraph(
    objest = 0.0;
    for (j = 0; j < nfixingsnode1; ++j)
    {
+      SCIP_Real varsol;
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      varsol = SCIPgetSolVal(scip, sol, var);
+      objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode1);
+   /* estimated objective: local estimate + average of the individual pseudo cost estimates (if positive) */
+   if ( objest > 0.0 )
+      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) nfixingsnode1);
+   else
+      objest = SCIPgetLocalTransEstimate(scip);
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5704,15 +5709,19 @@ SCIP_RETCODE enforceConflictgraph(
    objest = 0.0;
    for (j = 0; j < nfixingsnode2; ++j)
    {
+      SCIP_Real varsol;
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]);
+      varsol = SCIPgetSolVal(scip, sol, var);
+      objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode2);
+   /* estimated objective: local estimate + average of the individual pseudo cost estimates (if positive) */
+   if ( objest > 0.0 )
+      objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) nfixingsnode2);
+   else
+      objest = SCIPgetLocalTransEstimate(scip);
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6004,11 +6013,17 @@ SCIP_RETCODE enforceConssSOS1(
       objest = 0.0;
       for (j = 0; j <= ind; ++j)
       {
+         SCIP_Real varsol;
+
+         varsol = SCIPgetSolVal(scip, sol, vars[j]);
+         objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
       /* take the average of the individual estimates */
-      objest = objest/(SCIP_Real)(ind + 1.0);
+      if ( objest > 0.0 )
+         objest = SCIPgetLocalTransEstimate(scip) + objest/(SCIP_Real)(ind + 1);
+      else
+         objest = SCIPgetLocalTransEstimate(scip);
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -6023,11 +6038,17 @@ SCIP_RETCODE enforceConssSOS1(
       objest = 0.0;
       for (j = ind+1; j < nvars; ++j)
       {
+         SCIP_Real varsol;
+
+         varsol = SCIPgetSolVal(scip, sol, vars[j]);
+         objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
       /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) (nvars - ind - 1));
+      if ( objest > 0.0 )
+         objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real) (nvars - ind - 1));
+      else
+         objest = SCIPgetLocalTransEstimate(scip);
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );

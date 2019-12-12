@@ -1383,8 +1383,11 @@ SCIP_RETCODE branchUnbalancedCardinality(
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
+            SCIP_Real varsol;
+
+            varsol = SCIPgetSolVal(scip, sol, vars[j]);
+            objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
             ++cnt;
          }
       }
@@ -1392,7 +1395,10 @@ SCIP_RETCODE branchUnbalancedCardinality(
       assert(cnt > 0);
 
       /* take the average of the individual estimates */
-      objest = objest / (SCIP_Real) cnt;
+      if ( objest > 0.0 )
+         objest = SCIPgetLocalTransEstimate(scip) + objest / (SCIP_Real) cnt;
+      else
+         objest = SCIPgetLocalTransEstimate(scip);
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1598,12 +1604,18 @@ SCIP_RETCODE branchBalancedCardinality(
          /* calculate node selection and objective estimate for node */
          for( j = 0; j <= ind; ++j )
          {
+            SCIP_Real varsol;
+
+            varsol = SCIPgetSolVal(scip, sol, branchvars[j]);
+            objest += SCIPgetVarPseudocostVal(scip, branchvars[j], -varsol);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
 
          /* take the average of the individual estimates */
-         objest = objest/(SCIP_Real)(ind + 1.0);
+         if ( objest > 0.0 )
+            objest = SCIPgetLocalTransEstimate(scip) + objest/(SCIP_Real)(ind + 1);
+         else
+            objest = SCIPgetLocalTransEstimate(scip);
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1643,13 +1655,19 @@ SCIP_RETCODE branchBalancedCardinality(
          /* calculate node selection and objective estimate for node */
          for( j = ind+1; j < nbranchvars; ++j )
          {
+            SCIP_Real varsol;
+
+            varsol = SCIPgetSolVal(scip, sol, branchvars[j]);
+            objest += SCIPgetVarPseudocostVal(scip, branchvars[j], -varsol);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
          assert(nbranchvars - (ind + 1) > 0);
 
          /* take the average of the individual estimates */
-         objest = objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
+         if ( objest > 0.0 )
+            objest = SCIPgetLocalTransEstimate(scip) + objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
+         else
+            objest = SCIPgetLocalTransEstimate(scip);
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
