@@ -443,6 +443,7 @@ extern void   graph_pc_2org(SCIP*, GRAPH*);
 extern void   graph_pc_2trans(SCIP*, GRAPH*);
 extern void   graph_pc_2orgcheck(SCIP*, GRAPH*);
 extern void   graph_pc_2transcheck(SCIP*, GRAPH*);
+extern int    graph_pc_getNorgEdges(const GRAPH*);
 extern void   graph_pc_getOrgCosts(SCIP*, const GRAPH*, SCIP_Real*);
 extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);

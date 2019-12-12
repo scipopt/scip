@@ -1397,6 +1397,58 @@ void graph_pc_updateSubgraphEdge(
 }
 
 
+/** gets number of undeleted, original edges (not going to dummy terminals) */
+int graph_pc_getNorgEdges(
+   const GRAPH*          graph               /**< the graph */
+)
+{
+   int norgedges = 0;
+   const int nedges = graph_get_nEdges(graph);
+
+   for( int e = 0; e < nedges; ++e )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      /* edge deleted? */
+      if( graph->oeat[e] == EAT_FREE )
+         continue;
+
+      if( !graph_pc_knotIsDummyTerm(graph, tail) && !graph_pc_knotIsDummyTerm(graph, head) )
+      {
+         assert(LT(graph->cost[e], FARAWAY));
+
+         norgedges++;
+      }
+   }
+
+   return norgedges;
+}
+
+
+/** gets original edge costs, when in extended mode */
+void graph_pc_getOrgCosts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Real*            edgecosts           /**< original costs */
+)
+{
+   const int nedges = graph->edges;
+   const SCIP_Real* const cost_org = graph->cost_org_pc;
+
+   assert(scip && edgecosts);
+   assert(graph->extended && graph_pc_isPcMw(graph));
+
+   assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
+
+   BMScopyMemoryArray(edgecosts, graph->cost, nedges);
+
+   for( int e = 0; e < nedges; ++e )
+      if( !graph_edge_isBlocked(scip, graph, e) )
+         edgecosts[e] = cost_org[e];
+}
+
+
 /** mark original graph (without dummy terminals) */
 void graph_pc_markOrgGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1427,29 +1479,6 @@ void graph_pc_markOrgGraph(
 
    if( !graph_pc_isRootedPcMw(g) )
       g->mark[root] = FALSE;
-}
-
-
-/** gets original edge costs, when in extended mode */
-void graph_pc_getOrgCosts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< the graph */
-   SCIP_Real*            edgecosts           /**< original costs */
-)
-{
-   const int nedges = graph->edges;
-   const SCIP_Real* const cost_org = graph->cost_org_pc;
-
-   assert(scip && edgecosts);
-   assert(graph->extended && graph_pc_isPcMw(graph));
-
-   assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
-
-   BMScopyMemoryArray(edgecosts, graph->cost, nedges);
-
-   for( int e = 0; e < nedges; ++e )
-      if( !graph_edge_isBlocked(scip, graph, e) )
-         edgecosts[e] = cost_org[e];
 }
 
 
