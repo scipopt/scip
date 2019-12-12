@@ -95,7 +95,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, NULL, SCIPgetCutoffbound(scip),
          TRUE, TRUE) );
    SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 

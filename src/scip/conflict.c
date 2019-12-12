@@ -3836,6 +3836,9 @@ SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
    assert(!SCIPbdchginfoIsRedundant(bdchginfo1));
    assert(!SCIPbdchginfoIsRedundant(bdchginfo2));
 
+   if( bdchginfo1 == bdchginfo2 )
+      return 0;
+
    if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
@@ -3882,9 +3885,9 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
 
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;

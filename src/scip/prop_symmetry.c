@@ -2777,7 +2777,6 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata->nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( ncomponents > 0 );
 
    /* if components have not been computed */
    if ( ncomponents == -1 )

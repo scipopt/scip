@@ -59,6 +59,16 @@ enum SCIP_BendersSubStatus
 };
 typedef enum SCIP_BendersSubStatus SCIP_BENDERSSUBSTATUS;
 
+enum SCIP_BendersSubType
+{
+   SCIP_BENDERSSUBTYPE_CONVEXCONT      = 0,  /**< the subproblem has convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_CONVEXDIS       = 1,  /**< the subproblem has convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXCONT   = 2,  /**< the subproblem has non-convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXDIS    = 3,  /**< the subproblem has non-convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_UNKNOWN         = 4,  /**< the default type before the type is known */
+};
+typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solving statistics of the subproblems */
