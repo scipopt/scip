@@ -72,6 +72,73 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
+/** prints the  nlhdlr expression data */
+static
+void printNlhdlrExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
+   )
+{
+   int nterms;
+   int i;
+   int j;
+
+   nterms = nlhdlrexprdata->nterms;
+
+   SCIPinfoMessage(scip, NULL, "SQRT( ", nlhdlrexprdata->constant);
+   if( nlhdlrexprdata->constant != 0.0 )
+      SCIPinfoMessage(scip, NULL, "%f + ", nlhdlrexprdata->constant);
+
+   for( i = 0; i < nterms - 1; ++i )
+   {
+      int startidx;
+
+      if( nlhdlrexprdata->coefs[i] != 1.0 )
+         SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->coefs[i]);
+      SCIPinfoMessage(scip, NULL, "(", nlhdlrexprdata->coefs[i]);
+
+      startidx = nlhdlrexprdata->termbegins[i];
+
+      for( j = startidx; j < startidx + nlhdlrexprdata->nnonzeroes[i]; ++j )
+      {
+         if( nlhdlrexprdata->transcoefs[j] != 1.0 )
+            SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
+         SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
+
+         if( j < nlhdlrexprdata->nnonzeroes[i] - 1 )
+            SCIPinfoMessage(scip, NULL, " + ");
+         else if( nlhdlrexprdata->offsets[i] != 0.0 )
+            SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[i]);
+      }
+
+      SCIPinfoMessage(scip, NULL, ")^2");
+
+      if( i < nterms - 2 )
+         SCIPinfoMessage(scip, NULL, " + ");
+   }
+
+   SCIPinfoMessage(scip, NULL, " ) <= ");
+   if( nlhdlrexprdata->coefs[nterms-1] != 1.0 )
+      SCIPinfoMessage(scip, NULL, "%f*(", nlhdlrexprdata->coefs[nterms-1]);
+
+   for( j = nlhdlrexprdata->termbegins[nterms-1]; j < nlhdlrexprdata->ntranscoefs; ++j )
+   {
+      if( nlhdlrexprdata->transcoefs[j] != 1.0 )
+         SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
+      SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
+
+      if( j < nlhdlrexprdata->nnonzeroes[nterms-1] - 1 )
+         SCIPinfoMessage(scip, NULL, " + ");
+      else if( nlhdlrexprdata->offsets[nterms-1] != 0.0 )
+         SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[nterms-1]);
+   }
+
+   if( nlhdlrexprdata->coefs[nterms-1] != 1.0 )
+      SCIPinfoMessage(scip, NULL, ")");
+
+   SCIPinfoMessage(scip, NULL, "\n");
+}
+
 /** helper method to create nonlinear handler expression data */
 static
 SCIP_RETCODE createNlhdlrExprData(
@@ -122,6 +189,11 @@ SCIP_RETCODE createNlhdlrExprData(
 
       SCIP_CALL( SCIPcaptureVar(scip, vars[i]) );
    }
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, NULL, "created nlhdlr data for the following soc expression:\n");
+      printNlhdlrExprData(scip, *nlhdlrexprdata);
+#endif
 
    return SCIP_OKAY;
 }
@@ -591,16 +663,16 @@ SCIP_RETCODE detectSocNorm(
 
    *success = TRUE;
 
-   /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, constant, nvars, nvars, nvars, nlhdlrexprdata) );
-   assert(*nlhdlrexprdata != NULL);
-
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
    SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
 #endif
+
+   /* create and store nonlinear handler expression data */
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
+         termbegins, nnonzeroes, constant, nvars, nvars, nvars, nlhdlrexprdata) );
+   assert(*nlhdlrexprdata != NULL);
 
    /* free memory */
    SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
@@ -903,17 +975,16 @@ SCIP_RETCODE detectSocQuadraticSimple(
       coefs[nterms-1] = 1.0;
    }
 
-   /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, sideconstant * signfactor, nterms, nterms, ntranscoefs,
-         nlhdlrexprdata) );
-   assert(*nlhdlrexprdata != NULL);
-
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
+
+   /* create and store nonlinear handler expression data */
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
+         termbegins, nnonzeroes, sideconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+   assert(*nlhdlrexprdata != NULL);
 
    /* free memory */
    SCIPfreeBufferArray(scip, &nnonzeroes);
@@ -1395,18 +1466,18 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( SCIPisNegative(scip, lhsconstant) )
       goto CLEANUP;
 
-   /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, lhsconstant, nvars, npos + nneg, ntranscoefs, nlhdlrexprdata) );
-   assert(*nlhdlrexprdata != NULL);
-
    *success = TRUE;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p:\n", (void*)expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
+
+   /* create and store nonlinear handler expression data */
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
+         termbegins, nnonzeroes, lhsconstant, nvars, npos + nneg, ntranscoefs, nlhdlrexprdata) );
+   assert(*nlhdlrexprdata != NULL);
 
 CLEANUP:
    SCIPfreeBufferArrayNull(scip, &nnonzeroes);
