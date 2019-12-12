@@ -176,16 +176,7 @@ SCIP_RETCODE getMinorVars(
    return SCIP_OKAY;
 }
 
-/** method to detect and store minors; the cut generated in separatePoint() looks like
- *
- *    v_1^2 X_ii + 2 v_1 v_2 X_ij + v_2^2 X_jj >= 0
- *
- *  The cut is only useful if X_ii and X_jj are locked downwards. Depending on the sign of
- *  v_1 v_2, X_ij needs to be up- or down-locked.
- *
- *  @todo It is checked whether bilinear terms are locked in both directions. We can detect the
- *        expressions here and check their locks depending on sign(v_1 v_2) in separatePoints().
- */
+/** method to detect and store principal minors */
 static
 SCIP_RETCODE detectMinors(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -272,8 +263,7 @@ SCIP_RETCODE detectMinors(
          /* check for expr = (x)^2 */
          if( SCIPgetConsExprExprNChildren(expr) == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
             && SCIPgetConsExprExprPowExponent(expr) == 2.0
-            && SCIPisConsExprExprVar(children[0])
-            && SCIPgetConsExprExprNLocksNeg(expr) > 0 )
+            && SCIPisConsExprExprVar(children[0]) )
          {
             SCIP_VAR* quadvar;
 
@@ -293,8 +283,7 @@ SCIP_RETCODE detectMinors(
          }
          /* check for expr = x * y */
          else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
-            && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1])
-            && SCIPgetConsExprExprNLocksNeg(expr) > 0 && SCIPgetConsExprExprNLocksPos(expr) > 0 )
+            && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1]) )
          {
             assert(children[0] != NULL);
             assert(children[1] != NULL);
