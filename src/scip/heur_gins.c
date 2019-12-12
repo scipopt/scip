@@ -105,6 +105,7 @@
 #define DEFAULT_USEDECOMPROLLHORIZON FALSE  /**< should user decompositions be considered for initial selection in rolling horizon, if available? */
 #define DEFAULT_USESELFALLBACK  TRUE        /**< should random initial variable selection be used if decomposition was not successful? */
 #define DEFAULT_OVERLAP          0.0        /**< overlap of blocks between runs - 0.0: no overlap, 1.0: shift by only 1 block */
+#define DEFAULT_CONSECUTIVEBLOCKS TRUE      /**< should blocks be treated consecutively (sorted by ascending label?) */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #endif
@@ -142,11 +143,11 @@ struct DecompHorizon
    int*                  blocklabels;        /**< sorted block labels of all variable blocks that satisfy the requirements */
    int*                  varblockend;        /**< block end indices in sorted variables array (position of first variable of next block) */
    int*                  ndiscretevars;      /**< number of binary and integer variables in each block */
+   int*                  blockindices;       /**< block indices (from 0 to nblocks) with respect to sorting of blocks */
    int*                  nvars;              /**< number of variables (including continuous and implicit integers) in each block */
    SCIP_Bool*            suitable;           /**< TRUE if a block is suitable */
-   int                   iterations;         /**< the number of iterations with this decomp horizon */
    int                   nsuitableblocks;    /**< the total number of suitable blocks */
-   int                   lastblocklabel;     /**< label of last block used */
+   int                   lastblockpos;       /**< last remembered block position (in block indices, i.e., regarding sorting) */
    int                   nblocks;            /**< the number of available variable blocks, only available after initialization */
    int                   memsize;            /**< storage size of the used arrays */
    int                   varsmemsize;        /**< storage size of the vars array */
@@ -197,6 +198,7 @@ struct SCIP_HeurData
    int                   nneighborhoods;     /**< number of calculated neighborhoods */
    int                   nsubmips;           /**< counter for the number of sub-MIP's that can be higher than the number of
                                               *   calls of this heuristic */
+   SCIP_Bool             consecutiveblocks;  /**< should blocks be treated consecutively (sorted by ascending label?) */
    SCIP_Bool             relaxdenseconss;    /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                               *   ignored by connectivity graph? */
    SCIP_Bool             userollinghorizon;  /**< should the heuristic solve a sequence of sub-MIP's around the first
@@ -412,8 +414,9 @@ SCIP_RETCODE decompHorizonCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->nvars, memsize) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &decomphorizonptr->lastsolblock, memsize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->potential, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->blockindices, memsize) );
 
-   decomphorizonptr->lastblocklabel = INT_MIN; /* cannot use -1 because this is defined for linking variables */
+   decomphorizonptr->lastblockpos = INT_MIN; /* cannot use -1 because this is defined for linking variables */
 
    /* initialize data later */
    decomphorizonptr->init = FALSE;
@@ -449,6 +452,7 @@ void decompHorizonFree(
    SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->nvars, decomphorizonptr->memsize);
    SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->lastsolblock, decomphorizonptr->memsize);
    SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->potential, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->blockindices, decomphorizonptr->memsize);
 
    SCIPfreeBlockMemory(scip, decomphorizon);
 
@@ -465,7 +469,10 @@ SCIP_Bool decompHorizonRunAgain(
    assert(scip != NULL);
    assert(decomphorizon != NULL);
 
-   return decomphorizon->iterations < decomphorizon->nsuitableblocks;
+   assert(decomphorizon->lastblockpos >= 0);
+   assert(decomphorizon->lastblockpos < decomphorizon->nblocks);
+
+   return TRUE;
 }
 
 /** return TRUE if the decomposition horizon has already been initialized, FALSE otherwise */
@@ -477,6 +484,61 @@ SCIP_Bool decompHorizonIsInitialized(
    assert(decomphorizon != NULL);
 
    return decomphorizon->init;
+}
+
+/** compares two block indices
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(sortIndCompDecompHorizon)
+{
+   DECOMPHORIZON* decomphorizon = (DECOMPHORIZON*)dataptr;
+   SCIP_Real potentialbysize1;
+   SCIP_Real potentialbysize2;
+   assert(decomphorizon != NULL);
+   assert(ind1 >= 0);
+   assert(ind2 >= 0);
+   assert(ind1 < decomphorizon->nblocks);
+   assert(ind2 < decomphorizon->nblocks);
+
+
+   if( ind1 == ind2 )
+      return 0;
+
+   /* linking variables are always sorted up front */
+   if( decomphorizon->blocklabels[ind1] == SCIP_DECOMP_LINKVAR )
+      return -1;
+   else if( decomphorizon->blocklabels[ind2] == SCIP_DECOMP_LINKVAR )
+      return 1;
+
+   /* if one of the blocks is not suitable, return the other block */
+   if( ! (decomphorizon->suitable[ind1] && decomphorizon->suitable[ind2]) )
+   {
+      /* prefer the suitable block; break ties based on block position */
+      if( decomphorizon->suitable[ind1] )
+         return -1;
+      else if( decomphorizon->suitable[ind2] )
+         return 1;
+      else
+         return ind1 - ind2;
+   }
+
+   assert(decomphorizon->suitable[ind1] && decomphorizon->suitable[ind2]);
+
+   potentialbysize1 = decomphorizon->potential[ind1] / (SCIP_Real)(MAX(decomphorizon->ndiscretevars[ind1], 1.0));
+   potentialbysize2 = decomphorizon->potential[ind2] / (SCIP_Real)(MAX(decomphorizon->ndiscretevars[ind2], 1.0));
+
+   /* prefer the block with higher potential */
+   if( potentialbysize1 > potentialbysize2 )
+      return -1;
+   else if( potentialbysize2 > potentialbysize1 )
+      return 1;
+
+   /* finally, prefer the block with fewer discrete variables */
+   return decomphorizon->ndiscretevars[ind1] - decomphorizon->ndiscretevars[ind2];
 }
 
 /** initialize decomposition horizon data structure by setting up data structures and analyzing blocks */
@@ -495,6 +557,7 @@ SCIP_RETCODE decompHorizonInitialize(
    int blockpos;
    int nstblblocks;
    int ncontvarsscip;
+   int b;
 
    SCIP_DECOMP* decomp = decomphorizon->decomp;
 
@@ -568,7 +631,10 @@ SCIP_RETCODE decompHorizonInitialize(
    /* not necessarily all blocks have variables; store number of available blocks */
    decomphorizon->nblocks = blockpos;
    decomphorizon->nsuitableblocks = nstblblocks;
-   decomphorizon->iterations = 0;
+
+   /* initialize block indices (identical to blockposition initially) */
+   for( b = 0; b < decomphorizon->nblocks; ++b )
+      decomphorizon->blockindices[b] = b;
 
    decompHorizonSetOverlapInterval(decomphorizon, -1, -1);
 
@@ -627,6 +693,18 @@ int decompHorizonGetFirstPosBestPotential(
                &decomphorizon->vars[b == 0 ? 0 : decomphorizon->varblockend[b - 1]], decomphorizon->nvars[b]);
    }
 
+   /* sort the blocks such that the suitable blocks with the highest potential come first */
+   if( ! heurdata->consecutiveblocks )
+   {
+      SCIPsortInd(decomphorizon->blockindices, sortIndCompDecompHorizon, (void*)decomphorizon, decomphorizon->nblocks);
+
+      /* best potential block is now at the front (actual block position is retrieved from blockindices */
+      SCIPdebugMsg(scip, "New potential based sorting with trailing block: 0 (label %d, potential %.4g)\n",
+         decomphorizon->blocklabels[decomphorizon->blockindices[0]], decomphorizon->potential[decomphorizon->blockindices[0]]);
+
+      return 0;
+   }
+
    /* compute the consecutive blocks interval with largest potential */
    b1 = linkvarsexist ? 0 : -1;
    b2 = -1;
@@ -637,8 +715,12 @@ int decompHorizonGetFirstPosBestPotential(
 
    while( b1 < decomphorizon->nblocks - 1 )
    {
+      int blockindb1;
+      int blockindb2;
       ++b1;
-      if( ! decomphorizon->suitable[b1] )
+      blockindb1 = decomphorizon->blockindices[b1];
+
+      if( ! decomphorizon->suitable[decomphorizon->blockindices[b1]] )
       {
          nintervalvars = 0;
          intervalpotential = 0.0;
@@ -650,40 +732,47 @@ int decompHorizonGetFirstPosBestPotential(
       /* interval starts at b1 */
       if( b2 < b1 )
       {
-         nintervalvars = decomphorizon->ndiscretevars[b1];
+         nintervalvars = decomphorizon->ndiscretevars[blockindb1];
          assert(nintervalvars < maxblocksize); /* otherwise, it wasn't suitable */
-         intervalpotential = decomphorizon->potential[b1];
+         intervalpotential = decomphorizon->potential[blockindb1];
          withlinkvars = FALSE;
          b2 = b1;
       }
       /* subtract the variables from the previous block */
       else
       {
+         int prevblockind;
          assert(b1 > (linkvarsexist ? 1 : 0));
-         assert(decomphorizon->suitable[b1 - 1]);
-         nintervalvars -= decomphorizon->ndiscretevars[b1 - 1];
-         intervalpotential -= decomphorizon->potential[b1 - 1];
+         prevblockind = decomphorizon->blockindices[b1 - 1];
+         assert(decomphorizon->suitable[prevblockind]);
+         nintervalvars -= decomphorizon->ndiscretevars[prevblockind];
+         intervalpotential -= decomphorizon->potential[prevblockind];
       }
 
       /* check if block allows to include linking variables */
-      if( ! withlinkvars && linkvarsexist && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1] < maxblocksize )
+      if( ! withlinkvars && linkvarsexist && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[blockindb1] < maxblocksize )
       {
          withlinkvars = TRUE;
-         nintervalvars = decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1];
+         nintervalvars = decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[blockindb1];
          b2 = b1;
       }
-      else if( withlinkvars && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1] >= maxblocksize )
+      else if( withlinkvars && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[blockindb1] >= maxblocksize )
       {
          withlinkvars = FALSE;
-         nintervalvars = decomphorizon->ndiscretevars[b1];
+         nintervalvars = decomphorizon->ndiscretevars[blockindb1];
          b2 = b1;
       }
 
       /* extend the interval by further blocks, if possible */
-      while( ++b2 < decomphorizon->nblocks && decomphorizon->suitable[b2] && nintervalvars + decomphorizon->ndiscretevars[b2] < maxblocksize )
+      while( ++b2 < decomphorizon->nblocks )
       {
-         nintervalvars += decomphorizon->ndiscretevars[b2];
-         intervalpotential += decomphorizon->potential[b2];
+         blockindb2 = decomphorizon->blockindices[b2];
+
+         if( ! decomphorizon->suitable[blockindb2] || nintervalvars + decomphorizon->ndiscretevars[blockindb2] >= maxblocksize )
+            break;
+
+         nintervalvars += decomphorizon->ndiscretevars[blockindb2];
+         intervalpotential += decomphorizon->potential[blockindb2];
       }
 
       /* store the start of the interval with maximum potential */
@@ -713,7 +802,7 @@ SCIP_Bool decompHorizonBlockUsedRecently(
    assert(0 <= blockpos);
    assert(blockpos < decomphorizon->nblocks);
 
-   return (decomphorizon->lastsolblock[blockpos] == SCIPgetBestSol(scip) ||
+   return (decomphorizon->lastsolblock[decomphorizon->blockindices[blockpos]] == SCIPgetBestSol(scip) ||
       (decomphorizon->overlapinterval[0] <= blockpos && blockpos <= decomphorizon->overlapinterval[1]));
 }
 
@@ -737,7 +826,6 @@ SCIP_Bool decompHorizonNext(
    int pos;
    int firstpos;
    SCIP_SOL* bestsol;
-   int lastblockused;      /**< label of last used block, or INT_MIN if none has been used, yet */
    assert(decomphorizon != NULL);
    assert(blockintervalstart != NULL);
    assert(blockintervalend != NULL);
@@ -751,24 +839,22 @@ SCIP_Bool decompHorizonNext(
       return FALSE;
    }
 
-   ++decomphorizon->iterations;
-   lastblockused = decomphorizon->lastblocklabel;
-
    /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
-   found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
+   found = decomphorizon->lastblockpos >= 0;
+   firstpos = decomphorizon->lastblockpos;
    assert(! found || (firstpos >= 0 && firstpos < decomphorizon->nblocks));
 
    bestsol = SCIPgetBestSol(scip);
 
    /* choose first position based on potential; subtract -1 because we immediately increase it */
-   if( ! found || bestsol != decomphorizon->lastsolblock[firstpos] )
+   if( ! found || bestsol != decomphorizon->lastsolblock[decomphorizon->blockindices[firstpos]] )
       firstpos = decompHorizonGetFirstPosBestPotential(scip, decomphorizon, heurdata, maxblocksize) - 1;
 
    /* that's why we subtract 1 from potential based position computation */
    pos = (firstpos + 1) % decomphorizon->nblocks;
 
    while( pos < decomphorizon->nblocks &&
-      (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR ||
+      (! decomphorizon->suitable[decomphorizon->blockindices[pos]] || decomphorizon->blocklabels[decomphorizon->blockindices[pos]] == SCIP_DECOMP_LINKVAR ||
          decompHorizonBlockUsedRecently(scip, decomphorizon, pos)) )
       pos++;
 
@@ -776,23 +862,23 @@ SCIP_Bool decompHorizonNext(
    {
       pos = 0;
       while( pos < firstpos &&
-         (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR ||
+         (! decomphorizon->suitable[decomphorizon->blockindices[pos]] || decomphorizon->blocklabels[decomphorizon->blockindices[pos]] == SCIP_DECOMP_LINKVAR ||
             decompHorizonBlockUsedRecently(scip, decomphorizon, pos)) )
          pos++;
    }
 
-   assert(pos == firstpos || (0 <= pos && decomphorizon->nblocks > pos && (decomphorizon->suitable[pos] || pos == 0)));
+   assert(pos == firstpos || (0 <= pos && decomphorizon->nblocks > pos && (decomphorizon->suitable[decomphorizon->blockindices[pos]] || pos == 0)));
 
    *fixlinkvars = TRUE;
    /* the next suitable block position has been discovered */
-   if( pos != firstpos && decomphorizon->suitable[pos] && !decompHorizonBlockUsedRecently(scip, decomphorizon, pos) )
+   if( pos != firstpos && decomphorizon->suitable[decomphorizon->blockindices[pos]] && !decompHorizonBlockUsedRecently(scip, decomphorizon, pos) )
    {
       int ndiscretevars;
-      *nextblocklabel = decomphorizon->blocklabels[pos];
+      *nextblocklabel = decomphorizon->blocklabels[decomphorizon->blockindices[pos]];
       *blockintervalstart = pos;
       *blockintervalend = pos;
 
-      ndiscretevars = decomphorizon->ndiscretevars[pos];
+      ndiscretevars = decomphorizon->ndiscretevars[decomphorizon->blockindices[pos]];
       /* check if linking variable block exceeds maximum block size */
       if( decomphorizon->blocklabels[0] == SCIP_DECOMP_LINKVAR )
       {
@@ -804,11 +890,11 @@ SCIP_Bool decompHorizonNext(
          ndiscretevars += decomphorizon->ndiscretevars[0];
 
       /* extend the subproblem until maximum target fixing rate is reached */
-      while( ++pos < decomphorizon->nblocks && decomphorizon->suitable[pos] && ndiscretevars + decomphorizon->ndiscretevars[pos] < maxblocksize )
+      while( ++pos < decomphorizon->nblocks && decomphorizon->suitable[decomphorizon->blockindices[pos]] && ndiscretevars + decomphorizon->ndiscretevars[decomphorizon->blockindices[pos]] < maxblocksize )
       {
          *blockintervalend = pos;
-         *nextblocklabel = decomphorizon->blocklabels[pos];
-         ndiscretevars += decomphorizon->ndiscretevars[pos];
+         *nextblocklabel = decomphorizon->blocklabels[decomphorizon->blockindices[pos]];
+         ndiscretevars += decomphorizon->ndiscretevars[decomphorizon->blockindices[pos]];
       }
 
       return TRUE;
@@ -1721,6 +1807,59 @@ SCIP_RETCODE selectNextVariable(
    return SCIP_OKAY;
 }
 
+/** mark some of the blocks between currblockstart and currblockend as recently used, depending on overlap */
+static
+void decompHorizonMarkInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_SOL*             sol,                /**< solution by which some of the blocks should be marked */
+   int                   blockstartpos,      /**< current start position of interval */
+   int                   blockendpos         /**< current end position (inclusive) of interval */
+   )
+{
+   assert(decomphorizon != NULL);
+   assert(heurdata != NULL);
+   int nvarsinterval;
+   int nvarsstartofinterval;
+   int solstamppos;
+   int b;
+   SCIP_Real overlapcomplement;
+
+   /* is the next block unsuitable or have we reached the end of the blocks? In those cases,
+    * we mark all blocks of the current interval; we hence avoid to rerun on a subset of the current subproblem
+    * in the next iteration; we achieve this by setting the overlap to 0.0, (its complement to 1.0)
+    * such that all blocks are marked
+    */
+   if( blockendpos == decomphorizon->nblocks - 1 || ! decomphorizon->suitable[decomphorizon->blockindices[blockendpos + 1]] )
+      overlapcomplement = 1.0;
+   else
+      overlapcomplement = 1.0 - heurdata->overlap;
+
+   /* count the total number of variables in the subproblem defining blocks */
+   nvarsinterval = 0;
+   for( b = blockstartpos; b <= blockendpos; ++b )
+      nvarsinterval += decomphorizon->ndiscretevars[decomphorizon->blockindices[b]];
+
+   nvarsstartofinterval = 0;
+   /* stamp the first blocks up to the desired overlap by the current incumbent solution */
+   for( solstamppos = blockstartpos; solstamppos <= blockendpos; ++solstamppos )
+   {
+      decomphorizon->lastsolblock[decomphorizon->blockindices[solstamppos]] = sol;
+      nvarsstartofinterval += decomphorizon->ndiscretevars[decomphorizon->blockindices[solstamppos]];
+
+      if( nvarsstartofinterval >= overlapcomplement * nvarsinterval )
+         break;
+   }
+   decomphorizon->lastblockpos = solstamppos;
+   SCIPdebugMsg(scip, "Blocks %d (label %d)-- %d (label %d) marked with incumbent solution\n",
+      blockstartpos, decomphorizon->blocklabels[decomphorizon->blockindices[blockstartpos]],
+      solstamppos, decomphorizon->blocklabels[decomphorizon->blockindices[solstamppos]]);
+
+   /* remember the blocks up to the found position as most recent overlap interval */
+   decompHorizonSetOverlapInterval(decomphorizon, blockstartpos, solstamppos);
+}
+
 /** determine the variable fixings based on a decomposition */
 static
 SCIP_RETCODE determineVariableFixingsDecomp(
@@ -1736,7 +1875,6 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    SCIP_SOL* sol;
    SCIP_Bool hasnext;
    SCIP_Bool fixlinkvars;
-   int nvars;
    int currblockstart;
    int currblockend;
    int currblocklabel;
@@ -1745,7 +1883,6 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    assert(scip != NULL);
    assert(decomphorizon != NULL);
 
-   nvars = SCIPgetNVars(scip);
    sol = SCIPgetBestSol(scip);
 
    /* initialize the decomposition horizon first for the current variables */
@@ -1763,7 +1900,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    if( ! hasnext )
    {
       SCIPdebugMsg(scip, "Could not find a suitable interval that follows %d\n",
-               decomphorizon->lastblocklabel);
+               decomphorizon->lastblockpos);
 
       *success = FALSE;
    }
@@ -1772,40 +1909,51 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       /* fix all discrete/continuous variables that are not part of this interval */
       SCIP_VAR** vars;
       int v;
-      int startposs[] = {fixlinkvars ? 0 : decomphorizon->varblockend[0], decomphorizon->varblockend[currblockend]};
-      int endposs[] = {currblockstart == 0 ? 0 : decomphorizon->varblockend[currblockstart - 1], nvars};
+      int startblockposs[] = {fixlinkvars ? 0 : 1, currblockend + 1};
+      int endblockposs[] = {currblockstart, decomphorizon->nblocks};
       int p;
-      int storelabelpos;
-      int solstamppos;
+      int b;
+
 
       SCIPdebugMsg(scip, "Fix %s variables (%scluding linking variables) except blocks %d (label %d) -- %d (label %d)\n",
          heurdata->fixcontvars ? "all" : "discrete",
          fixlinkvars ? "in" : "ex",
-         currblockstart, decomphorizon->blocklabels[currblockstart],
-         currblockend, decomphorizon->blocklabels[currblockend]);
+         currblockstart, decomphorizon->blocklabels[decomphorizon->blockindices[currblockstart]],
+         currblockend, decomphorizon->blocklabels[decomphorizon->blockindices[currblockend]]);
 
       vars = decomphorizonGetVars(decomphorizon);
 
-      /* iterate through all variables outside the unfixed block */
+      /* iterate over the two blocks left and right of the selected consecutive interval and fix all variables
+       *
+       * 0, ... b, ... ,[currblockstart, ..., currblockend], currblockend + 1, ..., decomphorizon->nblocks - 1
+       */
       for( p = 0; p < 2; ++p )
       {
-         /* fix variables outside of this block */
-         for( v = startposs[p]; v < endposs[p]; ++v )
+         /* iterate over all blocks and fix those outside of the blocks interval that defines the current subproblem */
+         for( b = startblockposs[p]; b < endblockposs[p]; ++b )
          {
-            SCIP_VAR* var = vars[v];
+            int blockind = decomphorizon->blockindices[b];
+            int varstartpos = blockind == 0 ? 0 : decomphorizon->varblockend[blockind - 1];
+            int varendpos = decomphorizon->varblockend[blockind];
 
-            if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            /* fix variables inside of this block */
+            for( v = varstartpos; v < varendpos; ++v )
             {
-               SCIP_Real fixval;
+               SCIP_VAR* var = vars[v];
 
-               fixval = getFixVal(scip, sol, var);
-
-               /* store variable and value of this fixing */
-               if( !SCIPisInfinity(scip, REALABS(fixval)) )
+               if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
                {
-                  fixedvars[*nfixings] = var;
-                  fixedvals[*nfixings] = fixval;
-                  ++(*nfixings);
+                  SCIP_Real fixval;
+
+                  fixval = getFixVal(scip, sol, var);
+
+                  /* store variable and value of this fixing */
+                  if( !SCIPisInfinity(scip, REALABS(fixval)) )
+                  {
+                     fixedvars[*nfixings] = var;
+                     fixedvals[*nfixings] = fixval;
+                     ++(*nfixings);
+                  }
                }
             }
          }
@@ -1813,27 +1961,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
       *success = checkFixingrate(scip, heurdata, *nfixings);
 
-      /* query the position to store depending on the selected overlap */
-      storelabelpos = endposs[0] + (1.0 - heurdata->overlap) * (startposs[1] - endposs[0]);
-      assert(0 <= storelabelpos && storelabelpos < decomphorizon->varsmemsize);
-      SCIPdecompGetVarsLabels(decomphorizon->decomp, &vars[storelabelpos], &decomphorizon->lastblocklabel, 1);
-
-      /* stamp the first blocks up to the desired overlap by the current incumbent solution */
-      for( solstamppos = currblockstart; solstamppos <= currblockend; ++solstamppos )
-      {
-         decomphorizon->lastsolblock[solstamppos] = sol;
-
-         if( decomphorizon->varblockend[solstamppos] > storelabelpos )
-         {
-            assert(decomphorizon->blocklabels[solstamppos] == decomphorizon->lastblocklabel);
-            break;
-         }
-      }
-      SCIPdebugMsg(scip, "Blocks %d (label %d)-- %d (label %d) marked with incumbent solution\n",
-         currblockstart, decomphorizon->blocklabels[currblockstart],
-         solstamppos, decomphorizon->blocklabels[solstamppos]);
-
-      decompHorizonSetOverlapInterval(decomphorizon, currblockstart, solstamppos);
+      decompHorizonMarkInterval(scip, decomphorizon, heurdata, sol, currblockstart, currblockend);
    }
 
    return SCIP_OKAY;
@@ -2652,5 +2780,10 @@ SCIP_RETCODE SCIPincludeHeurGins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useselfallback",
          "should random initial variable selection be used if decomposition was not successful?",
          &heurdata->useselfallback, TRUE, DEFAULT_USESELFALLBACK, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/consecutiveblocks",
+         "should blocks be treated consecutively (sorted by ascending label?)",
+         &heurdata->consecutiveblocks, TRUE, DEFAULT_CONSECUTIVEBLOCKS, NULL, NULL) );
+
    return SCIP_OKAY;
 }
