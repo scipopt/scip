@@ -1190,6 +1190,7 @@ void graph_sdStar(
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
    const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
    SCIP_Real distlimit;
+   const SCIP_Real eps = 2.0 * SCIPepsilon(scip);
 
    assert(dcsr && g && dist && visitlist && nvisits && visited && dheap && success);
    assert(graph_pc_isPcMw(g));
@@ -1227,8 +1228,9 @@ void graph_sdStar(
       visited[m] = TRUE;
       dist[m] = cost_csr[e];
       star_base[m] = m;
-      // todo maybe add 2*epsilon to make sure that m is not selected first if equality exists? Need to be subtracted again, once selected
-      graph_heap_correct(m, cost_csr[e], dheap);
+
+      /*  add epsilon to make sure that m is removed from the heap last in case of equality */
+      graph_heap_correct(m, cost_csr[e] + eps, dheap);
 
       if( cost_csr[e] > distlimit )
          distlimit = cost_csr[e];
@@ -1249,14 +1251,14 @@ void graph_sdStar(
       assert(state[k] == CONNECT);
       assert(SCIPisLE(scip, dist[k], distlimit));
 
-      if( with_zero_edges && star_base[k] == k )
+      if( with_zero_edges && k == star_base[k] )
          state[k] = UNKNOWN;
-
 
       /* correct incident nodes */
       for( int e = k_start; e < k_end; e++ )
       {
          const int m = head_csr[e];
+
          assert(g->mark[m] && star_base[k] >= 0);
 
          if( state[m] != CONNECT )
