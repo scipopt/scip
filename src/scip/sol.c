@@ -1990,6 +1990,7 @@ SCIP_Bool SCIPsolsAreEqual(
    )
 {
    SCIP_PROB* prob;
+   SCIP_Bool infobjs;
    SCIP_Real obj1;
    SCIP_Real obj2;
    int v;
@@ -2011,8 +2012,12 @@ SCIP_Bool SCIPsolsAreEqual(
       obj2 = SCIPsolGetObj(sol2, set, transprob, origprob);
    }
 
-   /* solutions with different objective values cannot be the same */
-   if( !SCIPsetIsEQ(set, obj1, obj2) )
+   /* solutions with different objective values cannot be the same; we consider two infinite objective values with the
+    * same sign always to be different
+    */
+   infobjs = (SCIPsetIsInfinity(set, obj1) && SCIPsetIsInfinity(set, obj2))
+      || (SCIPsetIsInfinity(set, -obj1) && SCIPsetIsInfinity(set, -obj2));
+   if( !infobjs && !SCIPsetIsEQ(set, obj1, obj2) )
       return FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
