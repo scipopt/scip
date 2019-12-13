@@ -2073,8 +2073,6 @@ SCIP_RETCODE reduce_da(
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,            /**< reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
@@ -2089,6 +2087,8 @@ SCIP_RETCODE reduce_da(
 )
 {
    STPSOLPOOL* pool = NULL;
+   SCIP_Real* cost = NULL;
+   SCIP_Real* costrev = NULL;
    SCIP_Real* edgefixingbounds = NULL;
    SCIP_Real* nodefixingbounds = NULL;
    SCIP_Real* nodereplacebounds = NULL;
@@ -2119,6 +2119,8 @@ SCIP_RETCODE reduce_da(
    if( graph->terms <= 2 )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, nedges) );
@@ -2314,6 +2316,8 @@ SCIP_RETCODE reduce_da(
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &result);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    assert(graph_valid(scip, graph));
 
@@ -2851,8 +2855,6 @@ SCIP_RETCODE reduce_daPcMw(
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure array */
    GNODE**               gnodearr,           /**< GNODE* terminals array for internal computations or NULL */
-   SCIP_Real*            cost,               /**< reduced edge costs */
-   SCIP_Real*            costrev,            /**< reduced reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
    int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
@@ -2871,6 +2873,8 @@ SCIP_RETCODE reduce_daPcMw(
 {
    STPSOLPOOL* pool = NULL;
    GRAPH* transgraph = NULL;
+   SCIP_Real* cost = NULL;
+   SCIP_Real* costrev = NULL;
    SCIP_Real* bestcost = NULL;
    SCIP_Real* edgefixingbounds = NULL;
    SCIP_Real* nodefixingbounds = NULL;
@@ -2906,6 +2910,8 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &transresult, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, extnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcost, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodefixingbounds, nnodes + 1) );
@@ -3240,10 +3246,13 @@ SCIP_RETCODE reduce_daPcMw(
 
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
+
    SCIPfreeBufferArrayNull(scip, &roots);
    SCIPfreeBufferArray(scip, &nodefixingbounds);
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &bestcost);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &result2);
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &transresult);

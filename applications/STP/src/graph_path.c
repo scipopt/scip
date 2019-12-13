@@ -1222,10 +1222,12 @@ void graph_sdStar(
       assert(g->mark[m]);
       assert(!visited[m]);
 
+
       visitlist[(*nvisits)++] = m;
       visited[m] = TRUE;
       dist[m] = cost_csr[e];
       star_base[m] = m;
+      // todo maybe add 2*epsilon to make sure that m is not selected first if equality exists? Need to be subtracted again, once selected
       graph_heap_correct(m, cost_csr[e], dheap);
 
       if( cost_csr[e] > distlimit )
@@ -1249,6 +1251,7 @@ void graph_sdStar(
 
       if( with_zero_edges && star_base[k] == k )
          state[k] = UNKNOWN;
+
 
       /* correct incident nodes */
       for( int e = k_start; e < k_end; e++ )

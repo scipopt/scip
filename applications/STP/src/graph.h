@@ -387,6 +387,7 @@ extern int    graph_get_nTerms(const GRAPH*);
 extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
 extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
+extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_mark(GRAPH*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);

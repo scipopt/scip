@@ -2668,6 +2668,27 @@ void graph_get_csr(
 }
 
 
+/** get edge costs */
+void graph_get_edgeCosts(
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Real* RESTRICT   cost,               /**< reduced edge costs */
+   SCIP_Real* RESTRICT   costrev             /**< reduced reverse edge costs */
+)
+{
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Real* const gcost = graph->cost;
+
+   assert(cost && costrev);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      cost[e] = gcost[e];
+      costrev[e] = gcost[flipedge(e)];
+      assert(GE(cost[e], 0.0));
+   }
+}
+
+
 /* modifies 'isterm' to mark whether node is a terminal (or proper terminal for PC) */
 void graph_get_isTerm(
    const GRAPH*          g,                  /**< the graph */

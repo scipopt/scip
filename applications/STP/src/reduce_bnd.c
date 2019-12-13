@@ -161,9 +161,7 @@ SCIP_RETCODE reduce_bound(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   SCIP_Real*            cost,               /**< edge cost array                    */
    SCIP_Real*            radius,             /**< radius array                       */
-   SCIP_Real*            costrev,            /**< reversed edge cost array           */
    SCIP_Real*            offset,             /**< pointer to the offset              */
    SCIP_Real*            upperbound,         /**< pointer to an upper bound          */
    int*                  heap,               /**< heap array */
@@ -175,6 +173,8 @@ SCIP_RETCODE reduce_bound(
    GRAPH* adjgraph = NULL;
    PATH* mst = NULL;
    SCIP_Real* prize = NULL;
+   SCIP_Real* cost = NULL;
+   SCIP_Real* costrev = NULL;
    SCIP_Real  r;
    SCIP_Real  obj;
    SCIP_Real  max;
@@ -225,12 +225,10 @@ SCIP_RETCODE reduce_bound(
 
    assert(nterms == (graph->terms - ((graph->stp_type == STP_PCSPG)? 1 : 0)));
 
-   for( e = 0; e < nedges; e++ )
-   {
-      cost[e] = graph->cost[e];
-      costrev[e] = graph->cost[flipedge(e)];
-      assert(SCIPisGE(scip, cost[e], 0.0));
-   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+
+   graph_get_edgeCosts(graph, cost, costrev);
 
    /* init auxiliary graph */
    SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
@@ -344,6 +342,9 @@ SCIP_RETCODE reduce_bound(
          SCIPfreeBufferArrayNull(scip, &mst);
          SCIPfreeBufferArrayNull(scip, &result);
          SCIPfreeBufferArrayNull(scip, &stnode);
+         SCIPfreeBufferArray(scip, &costrev);
+         SCIPfreeBufferArray(scip, &cost);
+
 
          return SCIP_OKAY;
       }
@@ -544,6 +545,8 @@ SCIP_RETCODE reduce_bound(
    SCIPfreeBufferArrayNull(scip, &mst);
    SCIPfreeBufferArrayNull(scip, &stnode);
    SCIPfreeBufferArrayNull(scip, &result);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    assert(graph_valid(scip, graph));
 
