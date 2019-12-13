@@ -1601,7 +1601,7 @@ SCIP_RETCODE propConss(
  *
  * Also removes constraints of the form lhs <= variable <= rhs.
  *
- * @TODO it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
+ * @todo it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
  *
  * @note This could should not run during solving, because the forwardProp takes the bounds of auxiliary variables into account.
  * For the root expression, these bounds are already set to the constraint sides, so that the activity of every expression
@@ -6991,7 +6991,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
 #endif
 
    /*
-    * transform the facet to original space and compute value at x^*, i.e., \alpha x + \beta
+    * transform the facet to original space and compute value at x^*, i.e., alpha x + beta
     */
 
    SCIPdebugMsg(scip, "facet in orig. space: ");
@@ -7008,10 +7008,10 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       ub = box[2 * varpos + 1];
       assert(!SCIPisEQ(scip, lb, ub));
 
-      /* \alpha_i := \bar \alpha_i / (ub_i - lb_i) */
+      /* alpha_i := alpha_bar_i / (ub_i - lb_i) */
       facetcoefs[varpos] = facetcoefs[varpos] / (ub - lb);
 
-      /* \beta = \bar \beta - \sum_i \alpha_i * lb_i */
+      /* beta = beta_bar - sum_i alpha_i * lb_i */
       *facetconstant -= facetcoefs[varpos] * lb;
 
       /* evaluate */
@@ -7021,7 +7021,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    }
    SCIPdebugMsgPrint(scip, "%3.4e ", *facetconstant);
 
-   /* add \beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
+   /* add beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
    facetvalue += *facetconstant;
 
    SCIPdebugMsgPrint(scip, "has value %g, target = %g\n", facetvalue, targetvalue);
@@ -11786,9 +11786,9 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  * Different type expressions:
  * OR6: u value, v other: u < v always
  * OR7: u sum, v var or func: u < v <=> u < 0+v
- *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ *      In other words, u = sum_{i = 1}^n alpha_i u_i, then u < v <=> u_n < v or if u_n = v and alpha_n < 1
  * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
- *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
+ *      In other words, u = Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
  * OR9: u pow, v sum, var or func: u < v <=> u < v^1

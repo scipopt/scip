@@ -711,7 +711,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * x  y  x  y
  * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
  * f
- * |   is d_s f [where d is actually \partial]
+ * |   is d_s f [where d is actually \f$ \partial \f$]
  * s
  * The weight of a path is the product of the weight of the edges in the path.
  * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
