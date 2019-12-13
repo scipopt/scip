@@ -94,30 +94,12 @@ SCIP_RETCODE extArc(
    SCIP_Bool             equality
 )
 {
-   const int nnodes = graph->knots;
-   SCIP_Bool* isterm;
-   int* tree_deg;
-   SCIP_Real* bottleneckDists;
-   SCIP_Real* pcSdToNode = NULL;
    DISTDATA distdata;
+   EXTPERMA extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDists, nnodes) );
-
-   if( graph_pc_isPcMw(graph) )
-      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      bottleneckDists[i] = -1.0;
-      tree_deg[i] = 0;
-   }
-
-   graph_get_isTerm(graph, isterm);
+   SCIP_CALL( reduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
    if( edgedelete >= 0 )
    {
@@ -128,15 +110,10 @@ SCIP_RETCODE extArc(
    }
 
    /* actual test */
-   SCIP_CALL( reduce_extendedCheckArc(scip, graph, redcostdata, edgedeleted,
-         isterm, edge, equality, &distdata, bottleneckDists, pcSdToNode, tree_deg, deletable) );
+   SCIP_CALL( reduce_extendedCheckArc(scip, graph, redcostdata, edge, equality, &distdata, &extpermanent, deletable) );
 
    /* clean up */
-   SCIPfreeBufferArrayNull(scip, &pcSdToNode);
-   SCIPfreeBufferArray(scip, &bottleneckDists);
-   SCIPfreeBufferArray(scip, &tree_deg);
-   SCIPfreeBufferArray(scip, &isterm);
-
+   reduce_extPermaFreeMembers(scip, &extpermanent);
    reduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
@@ -2023,7 +2000,6 @@ SCIP_RETCODE localKeyVertexPc(
    graph_knot_chg(graph, 4, 0);
    graph_knot_chg(graph, 5, 0);
    graph_knot_chg(graph, 6, 0);
-
 
    SCIP_CALL(graph_pc_2pc(scip, graph));
 

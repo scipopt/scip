@@ -1983,18 +1983,14 @@ SCIP_RETCODE reduce_extendedCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
-   STP_Bool*             edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
-   int                   edge,               /**< directed edge to be checked */
+   int                   edge,               /**< edge to be checked */
    SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
    DISTDATA*             distdata,           /**< data for distance computations */
-   SCIP_Real*            bottleneckDistNode, /**< needs to be set to -1.0 (size nnodes) */
-   SCIP_Real*            pcSdToNode,         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
-   int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise;
-                                                      in method: position ( > 0) for nodes in tree */
-   SCIP_Bool*            deletable           /**< is edge deletable? */
+   EXTPERMA*             extpermanent,       /**< extension data */
+   SCIP_Bool*            edgeIsDeletable     /**< is edge deletable? */
 )
 {
+   const SCIP_Bool* isterm = extpermanent->isterm;
    const int root = redcostdata->redCostRoot;
    const SCIP_Real* redcost = redcostdata->redEdgeCost;
    const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
@@ -2004,17 +2000,19 @@ SCIP_RETCODE reduce_extendedCheckArc(
    const int tail = graph->tail[edge];
    const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + nodeToTermpaths[head].dist;
    SCIP_Bool restoreAntiArcDeleted = FALSE;
+   STP_Bool* const edgedeleted = extpermanent->edgedeleted;
 
-   assert(scip && graph && redcost && rootdist && nodeToTermpaths && deletable && distdata && tree_deg && bottleneckDistNode);
+   assert(scip && graph && redcost && rootdist && nodeToTermpaths && distdata);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
    assert(graph_isMarked(graph));
+   assert(reduce_extPermaIsClean(graph, extpermanent));
 
    /* trivial rule-out? */
    if( SCIPisGT(scip, edgebound, cutoff) || (equality && SCIPisEQ(scip, edgebound, cutoff)) || head == root )
    {
-      *deletable = TRUE;
+      *edgeIsDeletable = TRUE;
       return SCIP_OKAY;
    }
 
@@ -2024,7 +2022,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
       restoreAntiArcDeleted = TRUE;
    }
 
-   *deletable = FALSE;
+   *edgeIsDeletable = FALSE;
 
    /* can we extend from 'edge'? */
    if( extLeafIsExtendable(graph, isterm, head) )
@@ -2058,23 +2056,22 @@ SCIP_RETCODE reduce_extendedCheckArc(
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
-            .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
-            .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
+            .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
+            .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = pcSdToNode,
-            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = getMaxTreeDepth(graph),
+            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1,
+            .pcSdToNode = extpermanent->pcSdToNode, .extstack_maxedges = maxstackedges,
+            .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = getMaxTreeDepth(graph),
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
-         extCheckArc(scip, graph, edge, &extdata, deletable);
+         extCheckArc(scip, graph, edge, &extdata, edgeIsDeletable);
       }
 
 #ifndef NDEBUG
       for( int i = 0; i < nnodes; i++ )
-      {
          assert(pseudoancestor_mark[i] == 0);
-         assert(tree_deg[i] == 0 || tree_deg[i] == -1);
-         assert(bottleneckDistNode[i] == -1.0);
-      }
+
+      assert(reduce_extPermaIsClean(graph, extpermanent));
 #endif
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
@@ -2087,7 +2084,6 @@ SCIP_RETCODE reduce_extendedCheckArc(
       SCIPfreeBufferArray(scip, &extstack_start);
       SCIPfreeBufferArray(scip, &extstack_data);
    }
-
 
    if( restoreAntiArcDeleted )
       edgedeleted[flipedge(edge)] = FALSE;
@@ -2254,8 +2250,8 @@ SCIP_RETCODE reduce_extendedEdge2(
 #ifdef CHECK_ARC
          if( !edgedeletable[e] )
          {
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
-                  isterm, e, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &deletable) );
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata,
+                  e, allowequality, &distdata, &extpermanent, &deletable) );
 
             if( deletable )
                edgedeletable[e] = TRUE;
@@ -2265,8 +2261,8 @@ SCIP_RETCODE reduce_extendedEdge2(
          {
             SCIP_Bool erevdeletable = TRUE;
 
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
-                  isterm, erev, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &erevdeletable) );
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata,
+                  erev, allowequality, &distdata, &extpermanent, &erevdeletable) );
 
             if( erevdeletable )
                edgedeletable[erev] = TRUE;

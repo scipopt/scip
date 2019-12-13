@@ -838,7 +838,7 @@ void reduce_distDataFreeMembers(
 SCIP_RETCODE reduce_extPermaInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed */
+   STP_Bool*             edgedeleted,        /**< edge array to mark which directed edge can be removed */
    EXTPERMA*             extperm             /**< (uninitialized) extension data */
 )
 {
@@ -849,7 +849,7 @@ SCIP_RETCODE reduce_extPermaInit(
    const int nnodes = graph_get_nNodes(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
-   assert(scip && edgedeleted && extperm);
+   assert(scip && extperm);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &tree_deg, nnodes) );
