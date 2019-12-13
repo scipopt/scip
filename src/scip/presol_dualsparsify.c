@@ -1274,7 +1274,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          continue;
       }
 
-      /* if the variable is not allowed to be multi-aggregated */
+      /* skip if the variable is not allowed to be multi-aggregated */
       if( SCIPdoNotMultaggrVar(scip, vars[c]) )
       {
          isblockedvar[c] = TRUE;
