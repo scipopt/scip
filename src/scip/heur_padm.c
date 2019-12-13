@@ -85,6 +85,7 @@
 #define COUPLINGSIZE          3
 #define DEFAULT_MINNODES      50LL
 #define DEFAULT_MAXNODES      5000LL
+#define DEFAULT_NODEFAC       0.8
 
 /*
  * Data structures
@@ -176,6 +177,7 @@ struct SCIP_HeurData
    int                   penaltyiterations;  /**< maximal number of penalty iterations */
    int                   timing;             /**< should the heuristic run before or after the processing of the node?
                                                   (0: before, 1: after, 2: both) */
+   SCIP_Real             nodefac;            /**< factor to control nodelimits of subproblems */
    SCIP_Real             gap;                /**< mipgap at start */
    SCIP_Bool             scaling;            /**< enable sigmoid rescaling of penalty parameters */
    SCIP_Bool             assignlinking;      /**< should linking constraints be assigned? */
@@ -1392,7 +1394,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 * in the first iterations we have a smaller node limit
                 */
                iteration = ((piter - 1) * heurdata->admiterations) + aiter;
-               nnodes = (SCIP_Longint)ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(0.8, (double)iteration) ));
+               nnodes = (SCIP_Longint)ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(heurdata->nodefac, (double)iteration) ));
                nnodes = MAX( heurdata->minnodes, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
@@ -1823,6 +1825,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
       "minimum number of nodes to regard in one subproblem",
       &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodefac",
+      "factor to control nodelimits of subproblems", &heurdata->nodefac, TRUE, DEFAULT_NODEFAC, 0.0, 0.99, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
       "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 1, 100, NULL, NULL) );
