@@ -359,6 +359,7 @@ SCIP_RETCODE copyToSubscip(
    assert(success != NULL);
 
    *success = TRUE;
+   newcons = NULL;
 
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyProb(scip, subscip, varmap, consmap, FALSE, name) );
@@ -370,7 +371,6 @@ SCIP_RETCODE copyToSubscip(
       assert(!SCIPconsIsModifiable(conss[i]));
       assert(SCIPconsIsActive(conss[i]));
       assert(!SCIPconsIsDeleted(conss[i]));
-      assert(SCIPconsIsChecked(conss[i]));
 
       /* copy the constraint */
       SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, NULL,
@@ -378,6 +378,7 @@ SCIP_RETCODE copyToSubscip(
                                 SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE,
                                 SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]), FALSE, FALSE, success) );
 
+      assert(newcons != NULL);
       /* abort if constraint was not successfully copied */
       if( !(*success) )
          return SCIP_OKAY;
