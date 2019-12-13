@@ -729,7 +729,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the separator a given number of times at each node */
-   ncalls = SCIPsepaGetNCallsAtNode(sepa);
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
    {
