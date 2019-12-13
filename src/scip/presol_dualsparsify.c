@@ -34,7 +34,7 @@
  * to keep the bounds constraints of variable x_k.
  *
  * Further information can be found in
- * Gemander et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
+ * Chen et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
  *
  * @todo add infrastructure to SCIP for handling aggregated binary variables
  */

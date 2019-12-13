@@ -30,7 +30,7 @@
  * Further information on this presolving approach are given in
  * Achterberg et al. "Presolve reductions in mixed integer programming"
  * and for a two-column extension in
- * Gemander et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
+ * Chen et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
