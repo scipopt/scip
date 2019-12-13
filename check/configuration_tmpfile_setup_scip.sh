@@ -126,7 +126,7 @@ if test "$REOPT" = false
 then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
-
+    INSTANCENAME=${INSTANCE%%.gz}
     # if a decomposition in gzipped format (.dec.gz) with the basename of the instance lies in the same directory,
     # read it into SCIP, as well
     DECOMP=${INSTANCENAME}.dec.gz

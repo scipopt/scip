@@ -523,7 +523,8 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    SCIP_SOL*             sol,                /**< primal solution used to setup tht problem, NULL for LP solution */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** calls the solving method for a single Benders' decomposition subproblem
@@ -669,6 +670,26 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
                                                   corresponding newly created constraints, or NULL */
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
+   );
+
+/** applies a Benders' decomposition to the selected decomposition from the decomposition store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPapplyBendersDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   int                   decompindex         /**< the index of the decomposition that will be applied */
    );
 
 /* @} */

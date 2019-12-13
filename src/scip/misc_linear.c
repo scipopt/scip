@@ -442,3 +442,63 @@ SCIP_ROW* SCIPconsGetRow(
 
    return NULL;
 }
+
+/** adds the given variable to the input constraint.
+ *  If the constraint is setppc or logicor the value is ignored. If the constraint is knapsack, then the value is
+ *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
+ *  TODO: Allow val to be a pointer.
+ */
+SCIP_RETCODE SCIPconsAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_VAR*             var,                /**< variable of the constraint entry */
+   SCIP_Real             val                 /**< the coefficient of the constraint entry */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefLogicor(scip, cons, var) );
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      if( !SCIPisIntegral(scip, val) )
+      {
+         SCIPerrorMessage("The coefficient value %g is not valid. "
+            "The coefficient for a knapsack constraint must be integer.\n", val);
+         return SCIP_ERROR;
+      }
+
+      SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, var, (SCIP_Longint)val) );
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      SCIPerrorMessage("Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
+      return SCIP_ERROR;
+   }
+   else
+   {
+      SCIPerrorMessage("Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}

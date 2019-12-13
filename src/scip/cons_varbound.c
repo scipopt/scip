@@ -3637,7 +3637,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->rhs = newrhs;
+         consdata->rhs = MAX(newrhs, consdata->lhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3677,7 +3677,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->lhs = newlhs;
+         consdata->lhs = MIN(newlhs, consdata->rhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 

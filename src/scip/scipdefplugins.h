@@ -78,6 +78,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"

@@ -109,7 +109,34 @@ Features
   the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
   decomposition subproblems. A priority queue has been added to help with load balancing.
 
-- Add two-row and two-columns presolvers
+- The Benders' decomposition framework can handle MINLPs. If a convex relaxation of the MINLP exists, then this is
+  solved to generate optimality and feasibility cuts. The extensions to the framework are:
+  - New generic solving methods to solve convex NLP subproblems.
+  - Modification to benderscut_opt and benderscut_feas to enable the generation of cuts from convex NLPs.
+  - Addition of benderscut_feasalt to generate feasibility cuts from an alternative subproblem that minimises the
+    violation of infeasible problems.
+  - Better handling of subproblem solution results
+
+- Adds a feasibility phase to the Benders' decomposition subproblem solving methods. The feasibility phase adds slack
+  variables to each of the constraints to ensure feasibility of the subproblem. A large coefficient is given to these
+  slack variables in the objective function to penalise constraint violations. The coefficients are progressively
+  increased until all slack variables take the value 0.0.
+
+- Improved convexity check for Benders' decomposition subproblems. The constraints of the subproblem are now checked for
+  convexity in the initialisation of the Benders' decomposition algorithm. This enables the solving of convex NLPs as
+  Benders' decomposition subproblems.
+
+- Benders' decomposition can be applied using decomposition supplied in the DEC format. To apply Benders' decomposition
+  the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
+
+- new event handler event_estim.c/h that approximates search tree completion and estimates tree size
+  to (optionally) trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
+- new display column that reports approx. search tree completion during the search, and an overview in the statistics table
+
+- Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
+  symmetries. Previously, some plugins were disabled, which is not necessary anymore.
+
+- Add two-row and two-columns presolvers:
   1) "tworowbnd" uses two constraints and applies either LP-based bound tightening or bound tightening on convex combinations of the two rows
   2) "dualsparsify" tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix
 
@@ -146,6 +173,16 @@ Performance improvements
 
 - Improved domcol presolver to not require a complete representation of all constraints in the matrix
 
+- performance improvement of adaptive large neighborhood search heuristic on merely continuous problems. The heuristic
+  stops if presolving in the sub-SCIP fixes less than 50 % of the current target fixing rate over all variables
+  (including continuous).
+
+- reduce memory usage in symmetry detection by a staggered allocation with decreasing overhead for larger instances
+
+- improved full orbitope propagation using a static implementation or a dynamic reordering of orbitope rows by a global rank function
+
+- improved detection of packing/partitioning orbitopes
+
 
 Examples and applications
 -------------------------
@@ -167,6 +204,8 @@ Interface changes
 
 - callback `SCIP_DECL_CONSHDLRENFOLP` can now also return SCIP_SOLVELP as *result, which indicates to the SCIP core that the LP relaxation
   should be solved again because the primal feasibility tolerance of the LP has been tightened (using SCIPsetLPFeastol())
+
+- extension of SCIP_PQUEUE by a new callback SCIP_DECL_PQUEUEELEMCHGPOS to catch swaps as well as functionality to delete arbitrary elements from the priority queue.
 
 ### Deleted and changed API methods
 
@@ -236,6 +275,9 @@ Interface changes
 
 - deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
 
+- SCIPsetupBendersSubproblem takes a parameter of the enforcement type.
+
+- SCIPcreateNlpiProb takes a hashmap to store the map between the nlrows and the index in the nlrow array.
 
 ### New API functions
 
@@ -270,6 +312,31 @@ Interface changes
 - new API function SCIPcolGetAge to get the age of a column
 - added SCIPhashThree(), SCIPhashFive(), SCIPhashSix(), and SCIPhashSeven() that complement SCIPhashTwo(), SCIPhashFour() to combine 32bit integers to
   a 32bit hash value
+- new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
+  solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
+  This avoids the need for a SCIP instance to solve the Benders' decomposition subproblem and generating cuts.
+- new API function SCIPconsAddCoef used for adding a coefficient to a linear-type constraint.
+- new API functions SCIPconsNonlinearGetRhs, SCIPconsNonlinearGetLhs and SCIPconsNonlinearAddLinearCoef for getting the
+  RHS and LHS from a nonlinear-type constraint and adding a linear coefficient to the constraint.
+- new API function SCIPbendersSolSlackVarsActive for checking whether any slack variables from the feasibility phase are
+  active in the subproblem solution.
+- new API functions SCIPbendersSetSubproblemType and SCIPbendersGetSubproblemType sets and gets the subproblem type.
+  This is either:
+  - Convex constraints with continuous variables
+  - Convex constraints with discrete variables
+  - Non-convex constraints with continuous variables
+  - Non-convex constraints with discrete variables
+- new API functions SCIPbendersSetSubproblemIsNonlinear() and SCIPbendersSubproblemIsNonlinear() for setting and
+  identifying whether the Benders' decomposition subproblems contain nonlinear constraints. Similarly, the functions
+  SCIPbendersSetMasterIsNonlinear() and SCIPbendersMasterIsNonlinear() sets and identifies whether the Benders'
+  decomposition master problem contains nonlinear constraints.
+- new API function SCIPapplyBendersDecomposition for applying Benders' decomposition given a decomposition in the DEC
+  format
+- new API function SCIPwasNodeLastBranchParent to query if a node has been the parent of the most recent branching in the tree
+
+### Event system
+
+- new event type SCIP_EVENTTYPE_NODEDELETE to react on nodes that are about to be deleted from the tree
 
 ### Command line interface
 
@@ -314,6 +381,10 @@ Interface changes
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided (only possible for non-model constraints)
 
+- new parameters heuristics/shiftandpropagate/minfixingratelp and heuristics/locks/minfixingratelp to stop the
+  heuristics after propagating integer fixings if no sufficient fixing of the all variables (including continuous)
+  could be achieved. These parameters help to avoid solving LP's that are comparable in hardness to the main root LP.
+
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
   default of 0.75 and 0.5, respectively, uses a point that is 75*alpha% closer to the middle of the domain, where
@@ -331,7 +402,7 @@ Interface changes
   branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
   parameters only have effect if the lnscheck parameter is set to TRUE.
 
-- Added parameter cons/linear/maxmultiaggrquot to limit the maximum coefficient dynamism of an equation on which
+- Added parameter cons/linear/maxmultaggrquot to limit the maximum coefficient dynamism of an equation on which
   multiaggregation is performed. This replaces a compiler define of the same name.
   Default value is 1000, smaller values make multiaggregations numerically more stable.
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
@@ -372,6 +443,13 @@ Interface changes
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
 
+- new parameters to control enhancements for solving MINLPs by Benders' decomposition
+  - benders/<bendersname>/execfeasphase: enables the feasibility phase for solving the Benders' decomposition
+    subproblems
+  - benders/<bendersname>/slackvarcoef: the initial coefficient of the slack variable for the feasibility phase
+  - benders/<bendersname>/checkconsconvexity: should the constraints be checked for convexity. This can be set to FALSE
+    if you are certain that the NLP subproblem is convex.
+
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
@@ -384,11 +462,39 @@ Interface changes
 
 - new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
+- new parameters for tree size estimation and restarts:
+    - estimation/restarts/restartpolicy (default value n)
+    - estimation/method (default value c)
+    - estimation/restarts/restartlimit (default value 1)
+    - estimation/restarts/minnodes (default value 1000)
+    - estimation/restarts/countonlyleaves (default value FALSE)
+    - estimation/restarts/restartfactor (default value 2)
+    - estimation/coefmonoprog (default value 0.3667)
+    - estimation/coefmonossg (default value 0.6333)
+    - estimation/restarts/hitcounterlim (default value 50)
+    - estimation/reportfreq (default value -1)
+    - estimation/regforestfilename (default value "-")
+    - estimation/completiontype (default value a)
+    - estimation/treeprofile/enabled (default value FALSE)
+    - estimation/treeprofile/minnodesperdepth (default value 20)
+    - estimation/useleafts (default value TRUE)
+    - estimation/ssg/nmaxsubtrees (default value -1)
+    - estimation/ssg/nminnodeslastsplit (default value 0)
+
+
+- new parameter constraints/linear/extractcliques to turn clique extraction off
+
+- new emphasis setting emphasis/numerics to increase numerical stability of (mostly) presolving operations such as (multi-)aggregations at the cost of performance.
 
 ### Data structures
 
 - small changes in constants of hash functions
 - added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
+- extended SCIPpqueueCreate() by additional callback argument SCIP_DECL_PQUEUEELEMCHGPOS to catch position changes
+- new methods SCIPpqueueDelPos() to delete elements at a specific position in the priority queue and SCIPpqueueFind() to
+  find a specific position. It is recommended to track position changes using the new callback SCIP_DECL_PQUEUEELEMCHGPOS.
+  In contrast, using SCIPpqueueFind() can be slow because it needs to compare the element it searches for
+  with each slot in the queue.
 
 ### Build system
 
@@ -435,6 +541,7 @@ Miscellaneous
   heuristic display characters have been unified to represent the type of the heuristic
   (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
 - added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
+- added more output for completing a partial solution
 
 Known bugs
 ----------
@@ -524,6 +631,7 @@ Fixed bugs
 - fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
 - SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 - fixed bug in sepa_oddcylce when variables are fixed
+- fixed numerical issues related to tighter constraint sides in varbound constraint handler
 
 Miscellaneous
 -------------

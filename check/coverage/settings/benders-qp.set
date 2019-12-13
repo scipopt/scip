@@ -1,0 +1,49 @@
+# SCIP version 6.0.1.3
+
+# should the variables be labelled for the application of Benders' decomposition?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+decomposition/benderslabels = TRUE
+
+# if a decomposition exists, should Benders' decomposition be applied?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+decomposition/applybenders = TRUE
+
+# is the Benders' decomposition LP cut constraint handler active?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+constraints/benderslp/active = TRUE
+
+# should Benders' decomposition be used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/storeader/usebenders = TRUE
+
+# priority of node selection rule <bfs> in standard mode
+# [type: int, advanced: FALSE, range: [-536870912,1073741823], default: 100000]
+nodeselection/bfs/stdpriority = 200001
+
+# frequency for calling primal heuristic <alns> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/alns/freq = -1
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/rens/freq = -1
+
+# should Benders' decomposition be used in LNS heurisics?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+benders/default/lnscheck = FALSE
+
+# should Benders' cuts be generated while checking solutions?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+#benders/default/cutcheck = FALSE
+
+# should the core point cut strengthening be employed (only applied to fractional solutions or continuous subproblems)?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+benders/default/cutstrengthenenabled = TRUE
+
+# should a feasibility phase be executed during the root node, i.e. adding slack variables to constraints to ensure feasibility
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+benders/default/execfeasphase = TRUE
+
+# the objective coefficient of the slack variables in the subproblem
+# [type: real, advanced: FALSE, range: [0,1e+20], default: 1000000]
+benders/default/slackvarcoef = 100

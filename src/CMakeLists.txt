@@ -77,6 +77,7 @@ set(scipsources
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
+    scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
@@ -216,6 +217,7 @@ set(scipsources
     scip/sepa_zerohalf.c
     scip/benders_default.c
     scip/benderscut_feas.c
+    scip/benderscut_feasalt.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
@@ -250,6 +252,7 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
+    scip/misc_nonlinear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -439,6 +442,7 @@ set(scipheaders
     scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
+    scip/benderscut_feasalt.h
     scip/benderscut_int.h
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
@@ -514,6 +518,7 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
+    scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
@@ -653,6 +658,7 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
+    scip/pub_misc_nonlinear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
