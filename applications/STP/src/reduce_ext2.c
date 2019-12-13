@@ -395,6 +395,37 @@ SCIP_Real getMinDistCombination(
 }
 
 
+/** is the edge valid? */
+static
+SCIP_Bool edgeIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   e                   /**< edge to be checked */
+)
+{
+   if( EAT_FREE == graph->oeat[e] )
+   {
+      return FALSE;
+   }
+   else if( graph_pc_isPcMw(graph) )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      if( (!graph->mark[tail] || !graph->mark[head]) )
+      {
+         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
+
+         return FALSE;
+      }
+
+      assert(!graph_pc_knotIsDummyTerm(graph, tail));
+      assert(!graph_pc_knotIsDummyTerm(graph, head));
+   }
+
+   return TRUE;
+}
+
+
 /** deletes an edge and makes corresponding adaptations */
 static
 void removeEdge(
@@ -741,6 +772,7 @@ void extTreeBottleneckMarkRootPath(
    const int tree_root = extdata->tree_root;
 
    assert(bottleneckDist_node && parentEdgeCost && parentNode && tree_deg);
+   assert(vertex >= 0 && vertex < graph->knots);
    assert(bottleneckDist_node[vertex] == -1.0);
    assert(bottleneckDist_node[tree_root] == -1.0);
 
@@ -761,11 +793,12 @@ void extTreeBottleneckMarkRootPath(
       assert(currentNode != -1);
       assert(tree_deg[childNode] == 1);
 
-      while( currentNode != - 1 )
+      while( currentNode != -1 )
       {
          assert(currentNode >= 0 && tree_deg[currentNode] >= 0);
          assert(parentEdgeCost[childNode] >= 0.0 && bottleneckDist_node[currentNode] == -1.0);
          assert(currentNode != vertex);
+         assert(!isPc || !graph_pc_knotIsDummyTerm(graph, currentNode));
 
          if( tree_deg[childNode] == 2 )
          {
@@ -1310,7 +1343,6 @@ SCIP_Bool extRuleOutEdge(
          SCIPdebugMessage("ancestor simple rule-out  ");
          return TRUE;
       }
-
    }
 
    return FALSE;
@@ -1414,8 +1446,6 @@ SCIP_Bool extRuleOutPeriph(
          const int extleaf = graph->head[extstack_data[i]];
          int nPcSdCands = 0;
          SCIP_Real specialDist;
-
-         assert(extleaf >= 0 && extleaf < graph->knots);
 
          extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
 
@@ -1692,7 +1722,7 @@ void extStackExpand(
    /* compute and add components (overwrite previous, non-expanded component) */
    for( uint32_t counter = 1; counter < powsize; counter++ )
    {
-      for( int j = 0; j < setsize; j++ )
+      for( unsigned int j = 0; j < (unsigned) setsize; j++ )
       {
          /* Check if jth bit in counter is set */
          if( counter & (1 << j) )
@@ -2205,14 +2235,13 @@ SCIP_RETCODE reduce_extendedEdge2(
 )
 {
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Real* const redcost = redcostdata->redEdgeCost;
 
    DISTDATA distdata;
    EXTPERMA extpermanent;
 
    assert(scip && redcostdata && edgedeletable);
-   assert(!pcmw || !graph->extended);
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
 
    *nelims = 0;
@@ -2229,20 +2258,13 @@ SCIP_RETCODE reduce_extendedEdge2(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
-      const int tail = graph->tail[e];
-      const int head = graph->head[e];
-
-      if( pcmw && (!graph->mark[tail] || !graph->mark[head]) )
-         continue;
-
-      if( graph->oeat[e] != EAT_FREE )
+      if( edgeIsValid(graph, e) )
       {
          const int erev = e + 1;
          SCIP_Bool deletable = TRUE;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
-         assert(flipedge(e) == erev);
-         assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
+         assert(flipedge(e) == erev && SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
 
          if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
