@@ -1641,48 +1641,51 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    SCIP_CALL( detectSOC(scip, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
-   /* create variables for cone disaggregation */
-   SCIP_CALL( createDisaggr(scip, conshdlr, expr, (*nlhdlrexprdata)) );
+   if( *success )
+   {
+      /* create variables for cone disaggregation */
+      SCIP_CALL( createDisaggr(scip, conshdlr, expr, (*nlhdlrexprdata)) );
 
 #ifdef WITH_DEBUG_SOLUTION
-   if( SCIPdebugIsMainscip(scip) )
-   {
-      SCIP_SOL* debugsol;
-      SCIP_Real rhsval;
-      int i;
-      int ndisaggvars;
-      int nterms;
-
-      SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-
-      nterms = (*nlhdlrexprdata)->nterms;
-      rhsval = (*nlhdlrexprdata)->coefs[nterms-1] * evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
-
-      if( debugsol != NULL )
+      if( SCIPdebugIsMainscip(scip) )
       {
-         ndisaggvars = SCIPisZero(scip, (*nlhdlrexprdata)->constant) ? nterms-1 : nterms;
+         SCIP_SOL* debugsol;
+         SCIP_Real rhsval;
+         int i;
+         int ndisaggvars;
+         int nterms;
 
-         for( i = 0; i < ndisaggvars; ++i )
+         SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+         nterms = (*nlhdlrexprdata)->nterms;
+         rhsval = (*nlhdlrexprdata)->coefs[nterms-1] * evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
+
+         if( debugsol != NULL )
          {
-            SCIP_Real disvarval;
-            SCIP_Real lhsval;
+            ndisaggvars = SCIPisZero(scip, (*nlhdlrexprdata)->constant) ? nterms-1 : nterms;
 
-            if( SCIPisZero(scip, rhsval) )
-               disvarval = 0.0;
-            else
+            for( i = 0; i < ndisaggvars; ++i )
             {
-               lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
+               SCIP_Real disvarval;
+               SCIP_Real lhsval;
 
-               disvarval = (*nlhdlrexprdata)->coefs[i] * SQR(lhsval) / rhsval;
+               if( SCIPisZero(scip, rhsval) )
+                  disvarval = 0.0;
+               else
+               {
+                  lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
+
+                  disvarval = (*nlhdlrexprdata)->coefs[i] * SQR(lhsval) / rhsval;
+               }
+               /* store debug solution value of disaggregation variable
+               * assumes that expression has been evaluated in debug solution before
+               */
+               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
             }
-            /* store debug solution value of disaggregation variable
-            * assumes that expression has been evaluated in debug solution before
-            */
-            SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
          }
       }
-   }
 #endif
+}
 
    return SCIP_OKAY;
 }
@@ -1755,19 +1758,18 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
 { /*lint --e{715}*/
    int naggrs;
    int k;
+   SCIP_Bool infeasible;
 
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->row != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DIDNOTFIND;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
    /* check whether aggregation row is in the LP */
    if( !SCIProwIsInLP(nlhdlrexprdata->row) )
    {
-      SCIP_Bool infeasible;
-
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->row, FALSE, &infeasible) );
 
       if( infeasible )
@@ -1782,7 +1784,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
    for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_ROW* row;
-      SCIP_Bool cutoff;
 
       /* compute gradient cut */
       SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
@@ -1792,12 +1793,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
          /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) )
          {
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
             SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
 
             *ncuts += 1;
 
-            if( cutoff )
+            if( infeasible )
                *result = SCIP_CUTOFF;
             else
                *result = SCIP_SUCCESS;
