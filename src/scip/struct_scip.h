@@ -29,9 +29,10 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
+#include "scip/type_dcmp.h"
+#include "scip/type_event.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
-#include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"
@@ -69,6 +70,7 @@ struct Scip
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
    SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
+   SCIP_DECOMPSTORE*     decompstore;        /**< decomposition storage data structure */
 
    /* REOPTIMIZATION */
    SCIP_REOPT*           reopt;              /**< reoptimization data */

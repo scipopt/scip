@@ -70,7 +70,7 @@
  */
 
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
-#define DEFAULT_USEIMPLICS         TRUE /**< should implications be used to strength the reduced cost for binary variables? */
+#define DEFAULT_USEIMPLICS        FALSE /**< should implications be used to strength the reduced cost for binary variables? */
 #define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
                                          *   the reductions are always valid, but installing an upper bound on priced
                                          *   variables may lead to problems in pricing (existing variables at their upper
@@ -118,6 +118,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    SCIP_Real rootsol;
    SCIP_Real rootlpobjval;
 
+   assert(scip != NULL);
    assert(SCIPgetDepth(scip) == 0);
 
    /* skip binary variable if it is locally fixed */

@@ -183,11 +183,11 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
 
-   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
+   if( *linecnt + (int)strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
+   (void) strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -562,6 +562,7 @@ SCIP_RETCODE SCIPwritePpm(
 
    assert( scip != NULL );
    assert(readerdata != NULL);
+   assert(vars != NULL); /* for lint */
 
    /* print statistics as comment to file */
    if(readerdata->rgb_ascii)
@@ -684,5 +685,5 @@ SCIP_RETCODE SCIPwritePpm(
 
    *result = SCIP_SUCCESS;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }

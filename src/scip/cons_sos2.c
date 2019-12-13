@@ -118,6 +118,8 @@
 #define EVENTHDLR_NAME         "SOS2"
 #define EVENTHDLR_DESC         "bound change event handler for SOS2 constraints"
 
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
+
 
 /** constraint data for SOS2 constraints */
 struct SCIP_ConsData
@@ -244,7 +246,8 @@ SCIP_RETCODE lockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -263,7 +266,8 @@ SCIP_RETCODE unlockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -325,8 +329,8 @@ SCIP_RETCODE handleNewVariableSOS2(
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)cons, NULL) );
 
       /* if the variable if fixed to nonzero */
       assert( consdata->nfixednonzeros >= 0 );
@@ -496,7 +500,7 @@ SCIP_RETCODE deleteVarSOS2(
    SCIP_CALL( unlockVariableSOS2(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -620,8 +624,8 @@ SCIP_RETCODE presolRoundSOS2(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS2(scip, cons, consdata->vars[j]) );
@@ -909,7 +913,7 @@ SCIP_RETCODE propSOS2(
             ++(*ngen);
       }
       /* cannot locally delete constraint, since position of second entry is not fixed! */
-   }
+   } /*lint !e438*/
    /* if exactly two variables are fixed to be nonzero */
    else if ( consdata->nfixednonzeros == 2 )
    {
@@ -1413,8 +1417,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
 
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-               (SCIP_EVENTDATA*)*consdata, -1) );
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)cons, -1) );
       }
    }
 
@@ -1505,8 +1509,8 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nvars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)*targetcons, NULL) );
    }
 
 #ifdef SCIP_DEBUG
@@ -2002,11 +2006,11 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
       var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
    }
 
@@ -2215,7 +2219,9 @@ static
 SCIP_DECL_EVENTEXEC(eventExecSOS2)
 {
    SCIP_EVENTTYPE eventtype;
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    SCIP_Real oldbound, newbound;
 
    assert( eventhdlr != NULL );
@@ -2223,7 +2229,9 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
    assert( event != NULL );
 
-   consdata = (SCIP_CONSDATA*)eventdata;
+   cons = (SCIP_CONS*)eventdata;
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( 0 <= consdata->nfixednonzeros && consdata->nfixednonzeros <= consdata->nvars );
 
@@ -2252,6 +2260,28 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
+      break;
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global lower bound is not negative anymore -> remove down lock */
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+      /* global lower bound turned negative -> add down lock */
+      else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+      break;
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global upper bound is not positive anymore -> remove up lock */
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+      /* global upper bound turned positive -> add up lock */
+      else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
       break;
    default:
       SCIPerrorMessage("invalid event type.\n");

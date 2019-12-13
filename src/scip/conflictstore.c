@@ -992,13 +992,26 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
       /* if we could not remove a dual ray that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
          SCIPsortPtrBool((void**)conflictstore->dualrayconfs, conflictstore->drayrelaxonly, compareConss,
             conflictstore->ndualrayconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconfs[0]),
                SCIPconsGetAge(conflictstore->dualrayconfs[conflictstore->ndualrayconfs-1])));
 
-         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualrayconfs-1 && local != SCIPconsIsLocal(conflictstore->dualrayconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualrayconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
@@ -1071,6 +1084,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       /* if we could not remove a dual proof that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
          SCIPsortPtrRealRealIntBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
                conflictstore->scalefactors, (int*)conflictstore->updateside, conflictstore->dsolrelaxonly,
@@ -1078,7 +1094,17 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
 
-         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualsolconfs-1 && local != SCIPconsIsLocal(conflictstore->dualsolconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualsolconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
@@ -1307,11 +1333,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
-         rhs = SCIPgetRhsLinear(NULL, dualproof);
+         rhs = SCIPgetRhsLinear(set->scip, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
-            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
+            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(set->scip, dualproof)));
             assert(SCIPsetIsPositive(set, conflictstore->scalefactors[i]));
 
             /* get unscaled rhs */
@@ -1326,7 +1352,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          }
          else
          {
-            SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
+            SCIP_Real lhs;
+
+            lhs = SCIPgetLhsLinear(set->scip, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
             assert(SCIPsetIsNegative(set, conflictstore->scalefactors[i]));
 

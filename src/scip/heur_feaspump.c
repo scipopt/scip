@@ -846,6 +846,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_Bool valid;
 
+      /* ignore value of valid */
       SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &valid) );
 
       if( probingscip != NULL )
@@ -905,7 +906,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPdebugMsg(scip, "SCIP reached the depth limit -> skip heuristic\n");
          return SCIP_OKAY;
       }
-   }
+   } /*lint !e438*/
 
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvars, maxflips) );

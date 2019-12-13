@@ -25,6 +25,7 @@
 
 /* include header files here, such that the user only has to include bendersdefcuts.h */
 #include "scip/benderscut_feas.h"
+#include "scip/benderscut_feasalt.h"
 #include "scip/benderscut_int.h"
 #include "scip/benderscut_nogood.h"
 #include "scip/benderscut_opt.h"

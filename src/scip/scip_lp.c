@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -1187,7 +1187,7 @@ SCIP_RETCODE SCIPcreateRowConshdlr(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONSHDLR, (void*) conshdlr, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1221,7 +1221,7 @@ SCIP_RETCODE SCIPcreateRowCons(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) cons, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1255,7 +1255,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1286,7 +1286,7 @@ SCIP_RETCODE SCIPcreateRowUnspec(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1350,7 +1350,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConshdlr(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONSHDLR, (void*) conshdlr, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1381,7 +1381,7 @@ SCIP_RETCODE SCIPcreateEmptyRowCons(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) cons, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1410,7 +1410,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1438,7 +1438,7 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -2118,6 +2118,25 @@ SCIP_Real SCIPgetRowSolFeasibility(
       return SCIProwGetLPFeasibility(row, scip->set, scip->stat, scip->lp);
    else
       return SCIProwGetPseudoFeasibility(row, scip->set, scip->stat);
+}
+
+/** returns the parallelism of row with objective function
+ *
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Real SCIPgetRowObjParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowObjParallelism", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetObjParallelism(row, scip->set, scip->lp);
 }
 
 /** output row to file stream via the message handler system

@@ -353,15 +353,11 @@ SCIP_RETCODE freeAuxVar(
     */
    /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
 
-   /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
-    * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
-    * locks when freeing a variable
+   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
+    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
+    * variable might be still captured by SCIP's NLP or some other plugin
     */
-   assert(SCIPvarGetNUses(expr->auxvar) >= 2);
-   if( SCIPvarGetNUses(expr->auxvar) == 2 )
-   {
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
-   }
+   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
    if( expr->auxfilterpos >= 0 )
    {
@@ -7677,8 +7673,7 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
    /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
-    * unlocked and freed
+    * removed all of his captures on variables
     */
    if( SCIPgetNRuns(scip) > 1 )
    {

@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1450,6 +1450,19 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** returns the parallelism of row with objective function
+ *
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetRowObjParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
    );
 
 /** output row to file stream via the message handler system

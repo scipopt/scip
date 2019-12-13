@@ -1046,6 +1046,9 @@ SCIP_RETCODE SCIPreadDiff(
    LPINPUT lpinput;
    int i;
 
+   assert(scip != NULL);
+   assert(reader != NULL);
+
    /* initialize LP input data */
    lpinput.file = NULL;
    lpinput.linebuf[0] = '\0';

@@ -15,7 +15,7 @@
 
 /**@file   select.c
  * @brief  unit tests for red black tree datastructure
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 #include "scip/misc.h"

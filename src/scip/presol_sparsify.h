@@ -16,7 +16,7 @@
 /**@file   presol_sparsify.h
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint

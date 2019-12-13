@@ -1217,7 +1217,6 @@ SCIP_RETCODE filterRound(
                   propdata->ngenvboundsaggrfil += 1;
                   SCIPdebugMsg(scip, "found genvbound during aggressive filtering\n");
                }
-
             }
 
             /* restore objective function */
@@ -1648,7 +1647,7 @@ int nextBound(
       }
    }
 
-   return bestidx;
+   return bestidx;  /*lint !e438*/
 }
 
 /** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional

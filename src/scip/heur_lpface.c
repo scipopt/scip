@@ -470,7 +470,6 @@ SCIP_RETCODE setSubscipLimits(
 /** sets all one-time parameter settings like search strategy, but no limits */
 static
 SCIP_RETCODE setSubscipParameters(
-   SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip             /**< data structure of the sub-problem */
    )
 {
@@ -803,7 +802,7 @@ SCIP_RETCODE setupSubscipLpface(
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, heurdata) );
 
    /* set up sub-SCIP parameters */
-   SCIP_CALL( setSubscipParameters(scip, subscip) );
+   SCIP_CALL( setSubscipParameters(subscip) );
 
    return SCIP_OKAY;
 }

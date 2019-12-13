@@ -853,7 +853,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 
       SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
