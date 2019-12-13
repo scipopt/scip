@@ -109,6 +109,10 @@ Features
   the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
   decomposition subproblems. A priority queue has been added to help with load balancing.
 
+- Add two-row and two-columns presolvers
+  1) "tworowbnd" uses two constraints and applies either LP-based bound tightening or bound tightening on convex combinations of the two rows
+  2) "dualsparsify" tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix
+
 Performance improvements
 ------------------------
 
