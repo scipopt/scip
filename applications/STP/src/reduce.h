@@ -72,11 +72,15 @@ typedef struct reduce_costs_data
 typedef struct reduce_costs_parameters
 {
    int                   prevrounds;         /**< number of reduction rounds that have been performed already */
-   SCIP_Bool             userec;             /**< use recombination heuristic? */
-   SCIP_Bool             extended;           /**< use extended tests? */
+   SCIP_Bool             useRec;             /**< use recombination heuristic? */
+   SCIP_Bool             useExtRed;          /**< use extended tests? */
    SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
+   /* PC/MW only values: */
+   SCIP_Bool             pcmw_solbasedda;    /**< rerun Da based on best primal solution */
+   SCIP_Bool             pcmw_useMultRoots;  /**< vary root for DA? (if possible) */
+   SCIP_Bool             pcmw_markroots;     /**< should terminals proven to be part of an opt. sol. be marked as such? */
+   SCIP_Bool             pcmw_fastDa;        /**< run dual ascent heuristic in fast mode? */
 } RPDA;
-
 
 /** permanent extension data */
 typedef struct extension_data_permanent
@@ -148,7 +152,7 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
  */
 extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, const RPDA*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*);
 extern SCIP_RETCODE    reduce_daSlackPrune(SCIP*, SCIP_VAR**, GRAPH*, PATH*, GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*, STP_Bool*, int*, int, SCIP_Bool);
-extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, PATH*, GNODE**, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_RANDNUMGEN*, SCIP_Real, SCIP_Bool);
+extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, const RPDA*, PATH*, GNODE**, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*, SCIP_Real);
 
 
 /* reduce_ext.c

@@ -1071,7 +1071,7 @@ SCIP_RETCODE reduceSap(
 
       if( da )
       {
-         const RPDA paramsda = { .prevrounds = 0, .userec = FALSE, .extended = FALSE, .nodereplacing = FALSE};
+         const RPDA paramsda = { .prevrounds = 0, .useRec = FALSE, .useExtRed = FALSE, .nodereplacing = FALSE};
 
          ub = -1.0;
 
@@ -1152,7 +1152,7 @@ SCIP_RETCODE reduceNw(
    while( (da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
-      const RPDA paramsda = { .prevrounds = 0, .userec = FALSE, .extended = FALSE, .nodereplacing = FALSE};
+      const RPDA paramsda = { .prevrounds = 0, .useRec = FALSE, .useExtRed = FALSE, .nodereplacing = FALSE};
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1290,8 +1290,11 @@ SCIP_RETCODE redLoopMw(
 
       if( (da || (advanced && extensive)) )
       {
-         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
-               state, nodearrchar, &daelims, TRUE, FALSE, FALSE, userec, (rounds == 0), randnumgen, prizesum, TRUE) );
+         const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE, .nodereplacing = TRUE,
+               .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
+
+         SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
+               state, nodearrchar, &daelims, randnumgen, prizesum) );
 
          if( daelims <= 2 * redbound )
             da = FALSE;
@@ -1374,11 +1377,14 @@ SCIP_RETCODE redLoopMw(
       if( !rerun && advanced && g->terms > 2 )
       {
          int cnsadvelims = 0;
+         const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE, .nodereplacing = TRUE,
+               .pcmw_solbasedda = TRUE, .pcmw_useMultRoots =  (g->terms > STP_RED_MWTERMBOUND),
+               .pcmw_markroots = tryrmw, .pcmw_fastDa = FALSE };
 
          SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
-               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), tryrmw, userec, FALSE, randnumgen, prizesum, TRUE) );
+         SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
+               state, nodearrchar, &daelims, randnumgen, prizesum) );
 
          userec = FALSE;
 
@@ -1588,18 +1594,20 @@ SCIP_RETCODE redLoopPc(
 
       if( da || (dualascent && extensive) )
       {
+         const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE, .nodereplacing = nodereplacing,
+               .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
+
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
          if( rpc )
          {
             SCIP_Real ub = -1.0;
-            const RPDA paramsda = { .prevrounds = 0, .userec = FALSE, .extended = FALSE, .nodereplacing = nodereplacing};
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrchar, &danelims, randnumgen) );
          }
          else
-            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, nodearrreal, vbase, heap,
-                  state, nodearrchar, &danelims, TRUE, FALSE, FALSE, userec, (rounds == 0), randnumgen, prizesum, nodereplacing) );
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, heap,
+                  state, nodearrchar, &danelims, randnumgen, prizesum) );
 
          if( danelims <= reductbound )
             da = FALSE;
@@ -1616,6 +1624,9 @@ SCIP_RETCODE redLoopPc(
 
       if( !rerun && advancedrun && g->terms > 2 )
       {
+         const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing,
+                                 .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = TRUE, .pcmw_markroots = TRUE, .pcmw_fastDa = FALSE };
+
          danelims = 0;
          degnelims = 0;
          advancedrun = FALSE;
@@ -1623,14 +1634,13 @@ SCIP_RETCODE redLoopPc(
          if( rpc )
          {
             SCIP_Real ub = -1.0;
-            const RPDA paramsda = { .prevrounds = 0, .userec = FALSE, .extended = TRUE, .nodereplacing = nodereplacing};
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrchar, &danelims, randnumgen) );
          }
          else
          {
-            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, nodearrreal, vbase, heap,
-                  state, nodearrchar, &danelims, TRUE, TRUE, TRUE, userec, FALSE, randnumgen, prizesum, nodereplacing) );
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, heap,
+                  state, nodearrchar, &danelims, randnumgen, prizesum) );
          }
 
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
@@ -1857,7 +1867,7 @@ SCIP_RETCODE redLoopStp(
 
          if( da )
          {
-            const RPDA paramsda = { .prevrounds = inner_rounds, .userec = userec, .extended = FALSE, .nodereplacing = nodereplacing};
+            const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = FALSE, .nodereplacing = nodereplacing};
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase,
                   state, heap, nodearrint, nodearrchar, &danelims, randnumgen));
 
@@ -1918,7 +1928,7 @@ SCIP_RETCODE redLoopStp(
       if( fullreduce && !SCIPisStopped(scip) )
       {
          int extendedelims = 0;
-         const RPDA paramsda = { .prevrounds = inner_rounds, .userec = userec, .extended = TRUE, .nodereplacing = nodereplacing};
+         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;

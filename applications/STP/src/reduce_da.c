@@ -70,6 +70,27 @@ SCIP_Real getSolObj(
 }
 
 
+/** returns maximum allowed deviation for dual-ascent*/
+static
+SCIP_Real getDaMaxDeviation(
+   const RPDA*           paramsda,           /**< parameters */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+)
+{
+   SCIP_Real damaxdeviation;
+
+   assert(paramsda && randnumgen);
+   assert(paramsda->prevrounds >= 0);
+
+   if( paramsda->prevrounds > 0 )
+      damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
+   else
+      damaxdeviation = -1.0;
+
+   return damaxdeviation;
+}
+
+
 /** computes dual solution with dual-ascent and guided solution (and possibly reroots given solution) */
 static
 SCIP_RETCODE computeDualSolutionGuided(
@@ -2105,15 +2126,14 @@ SCIP_RETCODE reduce_da(
    const int nnodes = graph->knots;
    int ndeletions;
    STP_Bool* marked;
-   const SCIP_Bool extended = paramsda->extended;
+   const SCIP_Bool extended = paramsda->useExtRed;
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
-   const SCIP_Bool userec = paramsda->userec;
+   const SCIP_Bool userec = paramsda->useRec;
    const int prevrounds = paramsda->prevrounds;
 
    assert(ub && scip && graph && nelims && nodearrint);
    assert(graph_valid_ancestors(scip, graph));
    assert(graph_valid(scip, graph));
-
    assert(!rpc || !graph->extended);
 
    if( graph->terms <= 2 )
@@ -2139,15 +2159,12 @@ SCIP_RETCODE reduce_da(
    graph_mark(graph);
 
    collectFixedTerminals(graph, terms, &nFixedTerms);
-
    assert(nFixedTerms >= 1);
 
+   graph_get_edgeCosts(graph, cost, costrev);
+
    for( int e = 0; e < nedges; e++ )
-   {
-      cost[e] = graph->cost[e];
-      costrev[e] = graph->cost[flipedge(e)];
       result[e] = UNKNOWN;
-   }
 
    if( directed || rpc )
    {
@@ -2161,10 +2178,7 @@ SCIP_RETCODE reduce_da(
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
 
    // todo maybe inside the loop?
-   if( prevrounds > 0 )
-      damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
-   else
-      damaxdeviation = -1.0;
+   damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
 
    assert(!rpc || graph->extended);
 
@@ -2245,7 +2259,7 @@ SCIP_RETCODE reduce_da(
             REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
                .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
 
-            reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed);
+            SCIP_CALL( reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
             ndeletions += extfixed;
 //#define EXT_WRITE
          //   graph_printInfo(graph);
@@ -2853,6 +2867,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 SCIP_RETCODE reduce_daPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
+   const RPDA*           paramsda,           /**< parameters */
    PATH*                 vnoi,               /**< Voronoi data structure array */
    GNODE**               gnodearr,           /**< GNODE* terminals array for internal computations or NULL */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
@@ -2861,14 +2876,8 @@ SCIP_RETCODE reduce_daPcMw(
    int*                  state,              /**< int 4 * vertices array  */
    STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
-   SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
-   SCIP_Bool             useDifferentRoots,  /**< vary root for DA if possible */
-   SCIP_Bool             markroots,          /**< should terminals proven to be part of an opt. sol. be marked as such? */
-   SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_Bool             fastmode,           /**< run heuristic in fast mode? */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   SCIP_Real             prizesum,           /**< sum of positive prizes */
-   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
+   SCIP_Real             prizesum            /**< sum of positive prizes */
 )
 {
    STPSOLPOOL* pool = NULL;
@@ -2884,7 +2893,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real bestlpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
-   const SCIP_Real damaxdeviation = fastmode ? DAMAXDEVIATION_FAST : -1.0;
    int* roots = NULL;
    int* result = NULL;
    int* result2 = NULL;
@@ -2897,9 +2905,15 @@ SCIP_RETCODE reduce_daPcMw(
    const int nedges = graph_get_nEdges(graph);
    const int extnedges = nedges + 2 * (graph->terms - 1);
    const int root = graph->source;
-   SCIP_Bool varyroot = useDifferentRoots && userec;
-   SCIP_Bool apsol;
+   SCIP_Bool havenewsol;
    SCIP_Bool success;
+   SCIP_Bool userec = paramsda->useRec;
+   const SCIP_Bool useExtendedRed = paramsda->useExtRed;
+   const SCIP_Bool solbasedda = paramsda->pcmw_solbasedda;
+   const SCIP_Bool useDifferentRoots = paramsda->pcmw_useMultRoots;
+   const SCIP_Bool markroots = paramsda->pcmw_markroots;
+   SCIP_Bool varyroot = useDifferentRoots && userec;
+   const SCIP_Real damaxdeviation = paramsda->pcmw_fastDa ? DAMAXDEVIATION_FAST : -1.0;
 
    assert(scip && nelims && nodearrchar);
 
@@ -2944,10 +2958,10 @@ SCIP_RETCODE reduce_daPcMw(
 
    /* compute first primal solution */
    upperbound = FARAWAY;
-   apsol = FALSE;
-   SCIP_CALL( computeDaSolPcMw(scip, graph, NULL, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &apsol) );
+   havenewsol = FALSE;
+   SCIP_CALL( computeDaSolPcMw(scip, graph, NULL, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
 
-   assert(apsol && upperbound < FARAWAY);
+   assert(havenewsol && upperbound < FARAWAY);
    assert(graph_sol_valid(scip, graph, result));
 
    /* the required reduced path cost to be surpassed */
@@ -2980,8 +2994,8 @@ SCIP_RETCODE reduce_daPcMw(
    assert(!graph->extended);
 
    /* edges from result might have been deleted! */
-   apsol = apsol && graph_sol_unreduced(scip, graph, result);
-   assert(!apsol || graph_sol_valid(scip, graph, result));
+   havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+   assert(!havenewsol || graph_sol_valid(scip, graph, result));
 
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
@@ -3007,10 +3021,10 @@ SCIP_RETCODE reduce_daPcMw(
 
       /* try to improve both dual and primal bound */
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,
-            transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
+            transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, 0) );
 
       assert(graph_sol_valid(scip, graph, result));
-      assert(!apsol || SCIPisEQ(scip, getSolObj(scip, graph, result), upperbound));
+      assert(!havenewsol || SCIPisEQ(scip, getSolObj(scip, graph, result), upperbound));
 
       graph_pc_2orgcheck(scip, graph);
 
@@ -3019,13 +3033,32 @@ SCIP_RETCODE reduce_daPcMw(
       updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
       updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
-      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
-            &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
+            &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &havenewsol, extnedges);
 
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
+
+      if( useExtendedRed && !SCIPisZero(scip, minpathcost) && 0 )
+      {
+         int extfixed;
+         int todo;
+
+         REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist,
+                  .nodeTo3TermsPaths = vnoi, .nodeTo3TermsBases = vbase,
+                  .cutoff = minpathcost, .redCostRoot = graph->source };
+
+         havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+
+         SCIP_CALL( reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
+         nfixed += extfixed;
+
+         printf("extfixed=%d \n", extfixed);
+
+         exit(1);
+      }
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
@@ -3040,14 +3073,14 @@ SCIP_RETCODE reduce_daPcMw(
 
          graph_pc_2trans(scip, graph);
 
-         apsol = apsol && graph_sol_unreduced(scip, graph, result);
-         assert(!apsol || graph_sol_valid(scip, graph, result));
+         havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+         assert(!havenewsol || graph_sol_valid(scip, graph, result));
 
          assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
          /* try to improve both dual and primal bound */
          SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,
-               transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &apsol, offset, extnedges, run) );
+               transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, run) );
 
          SCIPdebugMessage("DA: pertubated run %d ub: %f \n", run, upperbound);
          SCIPdebugMessage("DA: pertubated run %d minpathcost: %f \n", run, upperbound - lpobjval);
@@ -3056,10 +3089,10 @@ SCIP_RETCODE reduce_daPcMw(
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
-         nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+         nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
 
          nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
-               &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
+               &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &havenewsol, extnedges);
 
          nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
          nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
@@ -3128,7 +3161,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIP_CALL( graph_path_init(scip, transgraph) );
       SCIP_CALL( graph_init_history(scip, transgraph ) );
 
-      if( apsol && run > 1 )
+      if( havenewsol && run > 1 )
       {
          BMScopyMemoryArray(transresult, result, graph->edges);
          SCIP_CALL(graph_sol_reroot(scip, transgraph, transresult, tmproot));
@@ -3168,8 +3201,8 @@ SCIP_RETCODE reduce_daPcMw(
          }
       }
 
-      apsol = FALSE;
-      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &apsol) );
+      havenewsol = FALSE;
+      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
 
       SCIPdebugMessage("ROOTRUNS upperbound %f \n", upperbound);
       if( pool )
@@ -3227,12 +3260,12 @@ SCIP_RETCODE reduce_daPcMw(
          marked[e] = FALSE;
 
       /* try to eliminate vertices and edges */
-      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
-      apsol = apsol && graph_sol_unreduced(scip, graph, result);
-      assert(!apsol || graph_sol_valid(scip, graph, result));
+      havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+      assert(!havenewsol || graph_sol_valid(scip, graph, result));
       SCIPdebugMessage("FIXED with changed root %d \n\n", nfixed);
 
       graph->mark[tmproot] = TRUE;
