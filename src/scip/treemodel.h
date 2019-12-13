@@ -66,8 +66,7 @@ SCIP_Bool SCIPtreemodelIsEnabled(
 );
 
 /** apply the Treemodel branching rules to attempt to select a better
- *  branching candidate than the one selected by pseudocost branching
- */
+ *  branching candidate than the one selected by pseudocost branching */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP*                 scip,               /**< SCIP data structure */
