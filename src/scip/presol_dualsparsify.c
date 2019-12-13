@@ -577,6 +577,8 @@ SCIP_RETCODE aggregation(
    presoldata->naggregated += 1;
    aggregatedvar = vars[colidx2];
 
+   assert(!SCIPdoNotMultaggrVar(scip, aggregatedvar));
+
    (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "dualsparsifyvar_%d", presoldata->naggregated);
 
    constant = 0.0;
@@ -1262,8 +1264,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       SCIP_Bool lbimplied;
       SCIP_Bool ubimplied;
 
+      vars[c] = SCIPmatrixGetVar(matrix, c);
+
       /* if the locks do not match do not consider the column for sparsification */
       if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) )
+      {
+         isblockedvar[c] = TRUE;
+         ishashingcols[c] = FALSE;
+         continue;
+      }
+
+      /* if the variable is not allowed to be multi-aggregated */
+      if( SCIPdoNotMultaggrVar(scip, vars[c]) )
       {
          isblockedvar[c] = TRUE;
          ishashingcols[c] = FALSE;
@@ -1274,7 +1286,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       getImpliedBounds(scip, matrix, c, &lbimplied, &ubimplied);
 
-      vars[c] = SCIPmatrixGetVar(matrix, c);
       ishashingcols[c] = FALSE;
 
       if( lbimplied && ubimplied )
