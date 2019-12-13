@@ -1382,7 +1382,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPcopyLimits(scip, (problem->blocks[b]).subscip) );
 
                /* stop if there are not enough nodes left */
-               if( nodesleft < DEFAULT_MINNODES )
+               if( nodesleft < heurdata->minnodes )
                {
                   SCIPdebugMsg(scip, "Node limit reached.\n");
                   goto TERMINATE;
@@ -1393,7 +1393,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 */
                iteration = ((piter - 1) * heurdata->admiterations) + aiter;
                nnodes = (SCIP_Longint)ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(0.8, (double)iteration) ));
-               nnodes = MAX( DEFAULT_MINNODES, nnodes );
+               nnodes = MAX( heurdata->minnodes, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
                /* solve block */
