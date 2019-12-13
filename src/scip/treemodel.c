@@ -414,7 +414,8 @@ SCIP_RETCODE selectCandidateUsingRatio(
    SCIP_Bool             filterdominated,    /**< whether dominated variables have been filtered */
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
-   int*                  bestcand            /**< the best branching candidate found by SCIP */
+   int*                  bestcand            /**< the best branching candidate found before the call, 
+					          and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_RATIO branchratio;
@@ -546,7 +547,8 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
-   int*                  bestcand            /**< the best branching candidate found by SCIP */
+   int*                  bestcand            /**< the best branching candidate found before the call, 
+					          and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -702,7 +704,8 @@ SCIP_RETCODE selectCandidateUsingSampling(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
-   int*                  bestcand            /**< the best branching candidate found by SCIP */
+   int*                  bestcand            /**< the best branching candidate found before the call, 
+					          and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -875,11 +878,12 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
    SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                   nbranchcands,       /**< the number of branching candidates */
-   int*                  bestcand            /**< the best branching candidate found by SCIP */
+   int*                  bestcand            /**< the best branching candidate found before the call, 
+					          and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real localabsgap;           /* The gap at the current node */
-   int bestcandheight;     /* The height of the best candidate according to SCIP */
+   int bestcandheight;              /* The height of the best candidate according to SCIP */
    char scoringfunction;            /* Scoring function to use (based on the estimated tree height) */
    char filtersetting;              /* Whether we should apply filtering of dominated variables */
    int c;                           /* Loop counter for branching candidates */
