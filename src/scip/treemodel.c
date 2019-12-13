@@ -263,13 +263,14 @@ SCIP_Bool hasBetterRatio(
    SCIP_Real             rightgain           /**< the right gain of a variable */
    )
 {
-   SCIP_Real result = -1;
+   SCIP_Real result;
 
    assert(branchratio != NULL);
    assert(branchratio->valid);
    assert(SCIPisLE(scip, leftgain, rightgain));
 
    /* We evaluate the characteristic polynomial of the variable on the given ratio. */
+   result = -1;
    if( leftgain > 0.0 && rightgain > 0.0 )
       result = pow(branchratio->upratio, rightgain * branchratio->invleft) - 
 	      pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1;
@@ -289,7 +290,7 @@ void computeVarRatio(
    SCIP_RATIO*           branchratio         /**< storage for the computed ratio */
    )
 {
-   SCIP_Real ratio = 1.0;
+   SCIP_Real ratio;
    SCIP_Real newratio;
    SCIP_Real r;
    int iters;
@@ -329,6 +330,7 @@ void computeVarRatio(
     * Note that we only use the previous ratio if the previous value of r/l was larger,
     * ie. the previous ratio was smaller since we want to initialise at a lower bound.
     */
+   ratio = 1.0;
    newratio = pow(2.0, 1.0/r);
    if( SCIPhistoryIsRatioValid(var->history) && SCIPhistoryGetLastBalance(var->history) > r
       && SCIPhistoryGetLastRatio(var->history) > newratio )
@@ -547,18 +549,23 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
-   SCIP_Real* treesizes = NULL;
+   SCIP_Real* treesizes;
    SCIP_Real referencetreesize;
    SCIP_Real score;
-   SCIP_Real bestscore = 0.0;
-   SCIP_Real avgtreesize = 0.0;
-   int besttscand = *bestcand;
+   SCIP_Real bestscore;
+   SCIP_Real avgtreesize;
+   int besttscand;
+   int referencevar;
    int c;
 
    /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
     * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
-   int referencevar = *bestcand;
+   besttscand = *bestcand;
+   referencevar = *bestcand;
 
+   treesizes = NULL;
+   bestscore = 0.0;
+   avgtreesize = 0.0;
    if( !SCIPisInfinity(scip, localabsgap) )
    {
       referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
@@ -622,8 +629,9 @@ SCIP_Real integerpow(
    int                   b                   /**< the integer exponent */
    )
 {
-   SCIP_Real ans = 1.0;
-
+   SCIP_Real ans;
+  
+   ans = 1.0;
    for( ; b; b /= 2 )
    {
       if( b & 1 )
@@ -646,7 +654,9 @@ SCIP_Real computeSampleTreesize(
 {
    SCIP_RATIO branchratio;
    SCIP_Real prediction;
-   SCIP_Real leftsize, rightsize, midsize;
+   SCIP_Real leftsize;
+   SCIP_Real rightsize;
+   SCIP_Real midsize;
 
    computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
 
@@ -695,18 +705,23 @@ SCIP_RETCODE selectCandidateUsingSampling(
    int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
-   SCIP_Real* treesizes = NULL;
+   SCIP_Real* treesizes;
    SCIP_Real referencetreesize;
    SCIP_Real score;
-   SCIP_Real bestscore = 0.0;
-   SCIP_Real avgtreesize = 0.0;
-   int besttscand = *bestcand;
+   SCIP_Real bestscore;
+   SCIP_Real avgtreesize;
+   int besttscand;
+   int referencevar;
    int c;
 
    /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
     * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
-   int referencevar = *bestcand;
+   besttscand = *bestcand;
+   referencevar = *bestcand;
 
+   treesizes = NULL;
+   bestscore = 0.0;
+   avgtreesize = 0.0;
    if( !SCIPisInfinity(scip, localabsgap) )
    {
       referencetreesize = computeSampleTreesize(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
