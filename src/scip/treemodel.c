@@ -160,7 +160,7 @@ SCIP_RETCODE findNonDominatedVars(
    SCIPsortDownInd(permb, sciprealcomp, (void*)b, size);
 
    *ndominated = 0;
-   /* Now we will traverse the pair of arrays a and b by non-decreasing order of values of b *
+   /* Now we will traverse the pair of arrays a and b by non-decreasing order of values of b
     * and mark the (non) dominated pairs */
 
    /* The current max value of a for all pairs that (almost) have the same value b */
@@ -175,7 +175,7 @@ SCIP_RETCODE findNonDominatedVars(
    besta = -1;
    for( indexinpermb = 1; indexinpermb < size; ++indexinpermb )
    {
-      origindex=permb[indexinpermb];
+      origindex = permb[indexinpermb];
       assert(b[origindex] <= currentb);
       if( SCIPisLT(scip, b[origindex], currentb) )
       {
