@@ -744,6 +744,24 @@ SCIP_Longint SCIPgetNNodeLPs(
    return scip->stat->nnodelps;
 }
 
+/** gets total number of LPs solved in 0 iterations for node relaxations
+ *
+ *  @return the total number of LPs solved with 0 iteratins for node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Longint SCIPgetNNodeZeroIterationLPs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNNodeZeroIterationLPs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->nnodezeroitlps;
+}
+
 /** gets total number of simplex iterations used so far for node relaxations
  *
  *  @return the total number of simplex iterations used so far for node relaxations
