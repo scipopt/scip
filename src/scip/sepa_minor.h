@@ -18,17 +18,17 @@
  * @brief  principal minor separator
  * @author Benjamin Mueller
  *
- * This separator detects all principal minors of the matrix xx' for which all auxiliary variables X exist, i.e., two
- * indices i != j such that X_ii, X_jj, and X_ij exist. Because xx' - X is required to be positive semi-definite, it
- * follows that the matrix
+ * This separator detects all principal minors of the matrix \f$ xx' \f$ for which all auxiliary variables \f$ X \f$
+ * exist, i.e., two indices \f$ i \neq j \f$ such that \f$ X_{ii} \f$, \f$ X_{jj} \f$, and \f$ X_{ij} \f$ exist. Because
+ * \f$ xx' - X \f$ is required to be positive semi-definite, it follows that the matrix
  *
- *              [ 1    x_i  x_j  ]
- *    A(x,X) =  [ x_i  X_ii X_ij ]
- *              [ x_j  X_ij X_jj ]
+ * \f[
+ *    A(x,X) = \begin{bmatrix} 1 & x_i & x_j \\ x_i & X_{ii} & X_{ij} \\ x_j & X_{ij} & X_{jj} \end{bmatrix}
+ * \f]
  *
- * is also required to be positive semi-definite. Let v be a negative eigenvector for A(x*,X*) in a point (x*,X*), which
- * implies that v' A(x*,X*) v < 0. To cut off (x*,X*), the separator computes the globally valid linear inequality
- * v' A(x,X) v >= 0.
+ * is also required to be positive semi-definite. Let \f$ v \f$ be a negative eigenvector for \f$ A(x^*,X^*) \f$ in a
+ * point \f$ (x^*,X^*) \f$, which implies that \f$ v' A(x^*,X^*) v < 0 \f$. To cut off \f$ (x^*,X^*) \f$, the separator
+ * computes the globally valid linear inequality \f$ v' A(x,X) v \ge 0 \f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
