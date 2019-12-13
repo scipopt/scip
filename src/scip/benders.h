@@ -28,7 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 #include "scip/type_message.h"
 #include "scip/type_misc.h"
 #include "scip/type_result.h"
