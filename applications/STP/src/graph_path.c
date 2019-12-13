@@ -1190,7 +1190,7 @@ void graph_sdStar(
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
    const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
    SCIP_Real distlimit;
-   const SCIP_Real eps = 2.0 * SCIPepsilon(scip);
+   const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : SCIPepsilon(scip);
 
    assert(dcsr && g && dist && visitlist && nvisits && visited && dheap && success);
    assert(graph_pc_isPcMw(g));
@@ -1222,7 +1222,6 @@ void graph_sdStar(
 
       assert(g->mark[m]);
       assert(!visited[m]);
-
 
       visitlist[(*nvisits)++] = m;
       visited[m] = TRUE;
