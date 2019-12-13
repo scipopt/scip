@@ -1394,7 +1394,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 * in the first iterations we have a smaller node limit
                 */
                iteration = ((piter - 1) * heurdata->admiterations) + aiter;
-               nnodes = (SCIP_Longint)ceil((problem->blocks[b]).size * nodesleft * ( 1 - pow(heurdata->nodefac, (double)iteration) ));
+               nnodes = (SCIP_Longint)SCIPceil(scip, (problem->blocks[b]).size * nodesleft * ( 1 - pow(heurdata->nodefac, (double)iteration) ));
                nnodes = MAX( heurdata->minnodes, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
@@ -1403,7 +1403,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* subtract used nodes from the total nodelimit */
-               nodesleft -= (SCIP_Longint)ceil(SCIPgetNNodes((problem->blocks[b]).subscip) * (problem->blocks[b]).size);
+               nodesleft -= (SCIP_Longint)SCIPceil(scip, SCIPgetNNodes((problem->blocks[b]).subscip) * (problem->blocks[b]).size);
 
                /* check solution if one of the four cases occurs
                 * - solution is optimal
