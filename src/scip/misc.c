@@ -9327,7 +9327,9 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
+#ifdef __INTEL_COMPILER
+#pragma fenv_access (on)
+#elif defined __GNUC__
 #pragma STD FENV_ACCESS ON
 #endif
 
@@ -9372,7 +9374,11 @@ SCIP_Bool SCIPfindSimpleRational(
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
 
+#ifdef __INTEL_COMPILER
+#pragma fenv_access (off)
+#elif defined __GNUC__
 #pragma STD FENV_ACCESS OFF
+#endif
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);

@@ -76,7 +76,9 @@
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
+#ifdef __INTEL_COMPILER
+#pragma fenv_access (on)
+#elif defined __GNUC__
 #pragma STD FENV_ACCESS ON
 #endif
 
