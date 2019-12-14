@@ -1295,7 +1295,7 @@ SCIP_RETCODE fixVarsRedbased(
       goto TERMINATE;
    }
 
-   assert(propgraph->extended);
+   assert(!graph_pc_isPcMw(graph) || graph->extended);
 
    if( graph_pc_isRootedPcMw(propgraph) )
       SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, &offset, probisinfeas) );
