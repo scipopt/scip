@@ -2282,6 +2282,9 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
                   lpobjval, upperbound, daroot, (run == 0), extended && !rpc));
 
+         if( ndeletions > 0 && !rpc )
+            level0(scip, graph);
+
          assert(graph_valid(scip, graph));
 
          if( !rpc )

@@ -3871,8 +3871,10 @@ SCIP_Bool graph_valid(
          }
 
          isValid = FALSE;
+#ifdef SCIP_DEBUG
          graph_knot_printInfo(g, k);
          SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n", k);
+#endif
 
          goto EXIT;
       }
