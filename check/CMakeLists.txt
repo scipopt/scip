@@ -719,7 +719,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+                                            DEPENDS scip-build)
         endforeach()
 
 endforeach()
