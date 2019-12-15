@@ -557,18 +557,17 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    for( k = 0; k < nnodes; k++ )
       solnode[k] = UNKNOWN;
 
-   ubbest = 0.0;
-
    /* set solution array and get solution value */
    for( e = 0; e < nedges; e++ )
    {
       if( soledge[e] == CONNECT )
       {
-         ubbest += g->cost[e];
          solnode[g->tail[e]] = CONNECT;
          solnode[g->head[e]] = CONNECT;
       }
    }
+
+   ubbest = graph_sol_getObj(g, soledge, 0.0, nedges);
 
    globalobj = ubbest;
 

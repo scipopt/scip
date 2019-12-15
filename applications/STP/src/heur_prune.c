@@ -536,6 +536,8 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
             if( e >= 0 )
                soledge[e] = CONNECT;
          }
+
+         assert(SCIPisEQ(scip, objold, graph_sol_getObj(prunegraph, soledge, 0.0, nedges)));
       }
    }
 

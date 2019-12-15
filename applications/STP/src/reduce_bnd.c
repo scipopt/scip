@@ -104,11 +104,7 @@ SCIP_RETCODE computeSteinerTree(
    {
       graph_pc_2trans(scip, graph);
 
-      for( int e = 0; e < nedges; e++ )
-      {
-         cost[e] = graph->cost[e];
-         costrev[e] = graph->cost[flipedge(e)];
-      }
+      graph_get_edgeCosts(graph, cost, costrev);
    }
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, maxcost, success, FALSE));
@@ -121,11 +117,7 @@ SCIP_RETCODE computeSteinerTree(
 
       assert(SCIPisEQ(scip, obj, graph_pc_solGetObj(scip, graph, result, 0.0)));
 
-      for( int e = 0; e < nedges; e++ )
-      {
-         cost[e] = graph->cost[e];
-         costrev[e] = graph->cost[flipedge(e)];
-      }
+      graph_get_edgeCosts(graph, cost, costrev);
    }
    else
    {
