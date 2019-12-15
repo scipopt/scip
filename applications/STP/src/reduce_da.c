@@ -284,6 +284,117 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 }
 
 
+/** compute primal solution during dual-ascent routine for PCSTP or MWCSP based on reduced costs */
+static
+SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   STPSOLPOOL*           pool,               /**< solution pool */
+   const SCIP_Real*      cost,               /**< dual ascent costs */
+   SCIP_Real*            upperbound,         /**< upperbound pointer */
+   int*                  result1,            /**< sol int array corresponding to upper bound */
+   int*                  result2,            /**< sol int array corresponding to best new solution (might be worse than upper bound) */
+   int*                  vbase,              /**< int array */
+   int*                  pathedge,           /**< int array */
+   STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
+   SCIP_Bool*            apsol               /**< ascend-prune sol? */
+)
+{
+   SCIP_Real ub2;
+   const int nedges = graph->edges;
+   SCIP_Bool success;
+
+   assert(graph_pc_isPcMw(graph));
+
+   /* compute new solution and store it in result2 */
+
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
+   assert(success);
+
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
+
+   assert(graph_sol_valid(scip, graph, result2));
+
+   ub2 = getSolObj(scip, graph, result2);
+   SCIPdebugMessage("DA: first new sol value in computeSteinerTreeRedCostsPcMw: %f ... old value: %f \n", ub2, *upperbound);
+
+   /* try recombination? */
+   if( pool != NULL )
+   {
+      SCIPdebugMessage("ub %f vs best sol %f\n", ub2, pool->sols[0]->obj);
+      SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub2, result2, pool, &success) );
+
+#ifdef SCIP_DEBUG
+      for( int i = 0; i < pool->size; i++ )
+         printf(" %f ", pool->sols[i]->obj);
+      printf("\n ");
+#endif
+
+      if( success && pool->size >= 2 )
+      {
+         /* get index of just added solution */
+         int solindex = pool->maxindex;
+
+         SCIP_Bool solfound;
+
+         SCIPdebugMessage("POOLSIZE %d \n", pool->size);
+
+         SCIP_CALL( SCIPStpHeurRecRun(scip, pool, NULL, NULL, graph, NULL, &solindex, 3, pool->size, FALSE, &solfound) );
+
+         if( solfound )
+         {
+            STPSOL* sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+
+            assert(pool->size >= 2);
+            assert(sol != NULL);
+
+            SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, ub2);
+
+            if( SCIPisLT(scip, sol->obj, ub2) )
+            {
+               BMScopyMemoryArray(result2, sol->soledges, nedges);
+
+               SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
+
+               assert(SCIPisLT(scip, getSolObj(scip, graph, result2), ub2));
+
+               ub2 = getSolObj(scip, graph, result2);
+
+               if( SCIPisLT(scip, ub2, sol->obj) )
+                  SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub2, result2, pool, &success) );
+            }
+         }
+      }
+   }
+
+   if( SCIPisLE(scip, ub2, *upperbound) )
+   {
+      SCIPdebugMessage("DA: improved incumbent %f vs %f, return \n", ub2, *upperbound);
+
+      *apsol = TRUE;
+      *upperbound = ub2;
+      BMScopyMemoryArray(result1, result2, nedges);
+   }
+
+   if( graph->stp_type != STP_MWCSP || !(*apsol) )
+     return SCIP_OKAY;
+
+#if 1
+   SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, result2, pathedge, nodearrchar, &success) );
+
+   if( success )
+   {
+      BMScopyMemoryArray(result1, result2, nedges);
+      *upperbound = getSolObj(scip, graph, result1);
+      SCIPdebugMessage("DA: afterLastExclusion %f \n", *upperbound);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+
 /** collected terminals (fixed ones for RPC) */
 static
 void collectFixedTerminals(
@@ -1507,113 +1618,6 @@ SCIP_RETCODE daOrderRoots(
 }
 
 
-/** compute primal solution during dual-ascent routine for PCSTP or MWCSP */
-static
-SCIP_RETCODE computeDaSolPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph data structure */
-   STPSOLPOOL*           pool,               /**< solution pool */
-   PATH*                 vnoi,               /**< Voronoi data structure */
-   const SCIP_Real*      cost,               /**< dual ascent costs */
-   SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
-   SCIP_Real*            upperbound,         /**< upperbound pointer */
-   int*                  result1,            /**< sol int array corresponding to upper bound */
-   int*                  result2,            /**< sol int array */
-   int*                  vbase,              /**< int array */
-   int*                  pathedge,           /**< int array */
-   STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
-   SCIP_Bool*            apsol               /**< ascend-prune sol? */
-)
-{
-   SCIP_Real ub;
-   const int nedges = graph->edges;
-   SCIP_Bool success;
-
-   /* compute new solution and store it in result2 */
-
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
-   assert(success);
-
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-
-   assert(graph_sol_valid(scip, graph, result2));
-
-   ub = getSolObj(scip, graph, result2);
-   SCIPdebugMessage("DA: first new sol value in computeDaSolPcMw: %f ... old value: %f \n", ub, *upperbound);
-
-   /* try recombination? */
-   if( pool != NULL )
-   {
-      SCIPdebugMessage("ub %f vs best sol %f\n", ub, pool->sols[0]->obj);
-      SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
-
-#ifdef SCIP_DEBUG
-      for( int i = 0; i < pool->size; i++ )
-         printf(" %f ", pool->sols[i]->obj);
-      printf("\n ");
-#endif
-
-      if( success && pool->size >= 2 )
-      {
-         /* get index of just added solution */
-         int solindex = pool->maxindex;
-
-         SCIP_Bool solfound;
-
-         SCIPdebugMessage("POOLSIZE %d \n", pool->size);
-
-         SCIP_CALL( SCIPStpHeurRecRun(scip, pool, NULL, NULL, graph, NULL, &solindex, 3, pool->size, FALSE, &solfound) );
-
-         if( solfound )
-         {
-            STPSOL* sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
-
-            assert(pool->size >= 2);
-            assert(sol != NULL);
-
-            SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, ub);
-
-            if( SCIPisLE(scip, sol->obj, ub) )
-            {
-               BMScopyMemoryArray(result2, sol->soledges, nedges);
-
-               SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-               ub = getSolObj(scip, graph, result2);
-
-               if( SCIPisLT(scip, ub, sol->obj) )
-                  SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
-            }
-         }
-      }
-   }
-
-   if( SCIPisLE(scip, ub, *upperbound) )
-   {
-      SCIPdebugMessage("DA: improved incumbent %f vs %f, return \n", ub, *upperbound);
-
-      *apsol = TRUE;
-      *upperbound = ub;
-      BMScopyMemoryArray(result1, result2, nedges);
-   }
-
-   if( graph->stp_type != STP_MWCSP || !(*apsol) )
-     return SCIP_OKAY;
-
-#if 1
-   SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, result2, pathedge, nodearrchar, &success) );
-
-   if( success )
-   {
-      BMScopyMemoryArray(result1, result2, nedges);
-      *upperbound = getSolObj(scip, graph, result1);
-      SCIPdebugMessage("DA: afterLastExclusion %f \n", *upperbound);
-   }
-#endif
-
-   return SCIP_OKAY;
-}
-
-
 /** try to improve both dual and primal solution */
 static
 SCIP_RETCODE computePertubedSol(
@@ -1624,7 +1628,6 @@ SCIP_RETCODE computePertubedSol(
    PATH* vnoi,
    GNODE** gnodearr,
    SCIP_Real* cost,
-   SCIP_Real* costrev,
    SCIP_Real* bestcost,
    SCIP_Real* pathdist,
    int* state,
@@ -1698,7 +1701,7 @@ SCIP_RETCODE computePertubedSol(
       SCIPfreeBufferArray(scip, &transcost);
    }
 
-   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
 
    /* does result not contain a valid solution? */
    if( !(*apsol) )
@@ -1747,7 +1750,7 @@ SCIP_RETCODE computePertubedSol(
    lb += offset;
    *lpobjval = lb;
 
-   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
 
    assert(!(*apsol) || graph_sol_valid(scip, graph, result));
 
@@ -2890,7 +2893,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real* bestcost = NULL;
    SCIP_Real* edgefixingbounds = NULL;
    SCIP_Real* nodefixingbounds = NULL;
-   SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Real lpobjval;
    SCIP_Real bestlpobjval;
@@ -2962,7 +2964,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* compute first primal solution */
    upperbound = FARAWAY;
    havenewsol = FALSE;
-   SCIP_CALL( computeDaSolPcMw(scip, graph, NULL, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
 
    assert(havenewsol && upperbound < FARAWAY);
    assert(graph_sol_valid(scip, graph, result));
@@ -3011,6 +3013,8 @@ SCIP_RETCODE reduce_daPcMw(
       /* with recombination? */
       if( userec && graph->stp_type != STP_MWCSP )
       {
+         SCIP_Real ub;
+
          /* compute second solution and add to pool */
          SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, BND_TMHEUR_NRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
          assert(success);
@@ -3023,7 +3027,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
 
       /* try to improve both dual and primal bound */
-      SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,
+      SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, bestcost, pathdist, state, vbase, pathedge, result, result2,
             transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, 0) );
 
       assert(graph_sol_valid(scip, graph, result));
@@ -3082,7 +3086,7 @@ SCIP_RETCODE reduce_daPcMw(
          assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
          /* try to improve both dual and primal bound */
-         SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,
+         SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, bestcost, pathdist, state, vbase, pathedge, result, result2,
                transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, run) );
 
          SCIPdebugMessage("DA: pertubated run %d ub: %f \n", run, upperbound);
@@ -3205,7 +3209,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
 
       havenewsol = FALSE;
-      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
+      SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
 
       SCIPdebugMessage("ROOTRUNS upperbound %f \n", upperbound);
       if( pool )
