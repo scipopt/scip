@@ -254,21 +254,31 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
       if( solfound )
       {
          const STPSOL* const sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+         SCIP_Real solobjval;
 
          assert(sol != NULL);
 
+         solobjval = sol->obj;
+
+         if( graph_pc_isRootedPcMw(graph) )
+            solobjval += graph_pc_getNonLeafTermOffset(scip, graph);
+
+         assert(SCIPisEQ(scip, getSolObj(scip, graph, sol->soledges), solobjval));
+
          SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, objval);
 
-         if( sol->obj < objval )
+         if( SCIPisLT(scip, solobjval, objval) )
          {
+            assert(SCIPisLT(scip, getSolObj(scip, graph, sol->soledges), getSolObj(scip, graph, result)));
+
             BMScopyMemoryArray(result, sol->soledges, nedges);
 
             SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
             objval = getSolObj(scip, graph, result);
 
-            assert(SCIPisLE(scip, objval, sol->obj));
+            assert(SCIPisLE(scip, objval, solobjval));
 
-            if( objval < sol->obj )
+            if( objval < solobjval )
                SCIP_CALL(SCIPStpHeurRecAddToPool(scip, objval, result, pool, &solfound));
          }
       }
@@ -344,14 +354,20 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
          if( solfound )
          {
             STPSOL* sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+            SCIP_Real solobjval;
 
-            assert(pool->size >= 2);
             assert(sol != NULL);
+
+            solobjval = sol->obj + graph_pc_getNonLeafTermOffset(scip, graph);
+
+            assert(SCIPisEQ(scip, getSolObj(scip, graph, sol->soledges), solobjval));
 
             SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, ub2);
 
-            if( SCIPisLT(scip, sol->obj, ub2) )
+            if( SCIPisLT(scip, solobjval, ub2) )
             {
+               assert(SCIPisLT(scip, getSolObj(scip, graph, sol->soledges), getSolObj(scip, graph, result2)));
+
                BMScopyMemoryArray(result2, sol->soledges, nedges);
 
                SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
