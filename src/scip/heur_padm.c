@@ -1507,7 +1507,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
 
             }
-            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT && status != SCIP_STATUS_NODELIMIT &&
+            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
+                   !(status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) &&
                    !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
                     SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
