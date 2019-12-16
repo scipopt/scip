@@ -380,9 +380,8 @@ SCIP_RETCODE copyToSubscip(
                                 SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE,
                                 SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]), FALSE, FALSE, success) );
 
-      assert(newcons != NULL);
       /* abort if constraint was not successfully copied */
-      if( !(*success) )
+      if( !(*success) || newcons == NULL)
          return SCIP_OKAY;
 
       SCIP_CALL( SCIPaddCons(subscip, newcons) );
