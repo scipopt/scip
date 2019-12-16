@@ -166,6 +166,7 @@
 #define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
 #define DEFAULT_SCHREIERSIMSLEADERVARTYPE 0  /**< variable type of leader in orbit */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
+#define DEFAULT_SCHREIERSIMSADDCUTS   TRUE   /**< Should Schreier Sims cuts be added? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -272,6 +273,7 @@ struct SCIP_PropData
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
+   SCIP_Bool             schreiersimsaddcuts; /**< Should Schreier Sims cuts be added? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -3238,7 +3240,9 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    /* variables in conflict with leader are fixed and not treated by a cut; trailing -1 to not count the leader */
    ncuts = 0;
    addcuts = TRUE;
-   if ( propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+   if ( propdata->schreiersimsaddcuts )
+      addcuts = TRUE;
+   else if ( propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
       || propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTS
       || propdata->schreiersimstiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
       addcuts = propdata->addconflictcuts;
@@ -4931,6 +4935,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/addconflictcuts",
          "Should Schreier Sims cuts be added if we use a conflict based rule?",
          &propdata->addconflictcuts, TRUE, DEFAULT_ADDCONFLICTCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsaddcuts",
+         "Should Schreier Sims cuts be added?",
+         &propdata->schreiersimsaddcuts, TRUE, DEFAULT_SCHREIERSIMSADDCUTS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
