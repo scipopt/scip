@@ -1753,7 +1753,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
    /*** compute solution value and save greedyextensions many best unconnected nodes  ***/
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, greedyextensions, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, greedyextensions, 2.0, GNODECmpByDist, NULL) );
 
    bestsolval = 0.0;
    nextensions = 0;

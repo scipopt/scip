@@ -330,7 +330,7 @@ char* printRealArray(
 }
 #endif
 
-/** sample from a distribution defined by weights */
+/** sample from a distribution defined by weights */ /*lint -e715*/
 static
 int sampleWeighted(
    SCIP*                 scip,               /**< SCIP data structure */

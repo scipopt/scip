@@ -208,7 +208,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
    return FALSE;
 }
 
-/** sets rounding mode of floating point operations */
+/** sets rounding mode of floating point operations */ /*lint -e715*/
 void SCIPintervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
@@ -1455,6 +1455,18 @@ void SCIPintervalPower(
    if( operand2.inf == operand2.sup )
    {  /* operand is number */
       SCIPintervalPowerScalar(infinity, resultant, operand1, operand2.inf);
+      return;
+   }
+
+   /* log([..,0]) will give an empty interval below, but we want [0,0]^exponent to be 0
+    * if 0 is in exponent, then resultant should also contain 1 (the case exponent == [0,0] is handled above)
+    */
+   if( operand1.sup == 0.0 )
+   {
+      if( operand2.inf <= 0.0 && operand2.sup >= 0.0 )
+         SCIPintervalSetBounds(resultant, 0.0, 1.0);
+      else
+         SCIPintervalSet(resultant, 0.0);
       return;
    }
 

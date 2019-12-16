@@ -16,7 +16,7 @@
 /**@file   tpi.h
  * @ingroup TASKINTERFACE
  * @brief  the type definitions for the SCIP parallel interface
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 

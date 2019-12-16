@@ -72,6 +72,32 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** set the left bound of the time axis to be considered (including hmin) */
+SCIP_RETCODE SCIPsetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmin                /**< left bound of time axis to be considered */
+   );
+
+/** returns the left bound of the time axis to be considered */
+int SCIPgetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** set the right bound of the time axis to be considered (not including hmax) */
+SCIP_RETCODE SCIPsetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmax                /**< right bound of time axis to be considered */
+   );
+
+/** returns the right bound of the time axis to be considered */
+int SCIPgetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -74,8 +74,10 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
+    scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
@@ -144,6 +146,7 @@ set(scipsources
     scip/nodesel_hybridestim.c
     scip/nodesel_restartdfs.c
     scip/nodesel_uct.c
+    scip/presol_milp.cpp
     scip/presol_boundshift.c
     scip/presol_convertinttobin.c
     scip/presol_domcol.c
@@ -175,6 +178,7 @@ set(scipsources
     scip/reader_cip.c
     scip/reader_cnf.c
     scip/reader_cor.c
+    scip/reader_dec.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -212,6 +216,7 @@ set(scipsources
     scip/sepa_zerohalf.c
     scip/benders_default.c
     scip/benderscut_feas.c
+    scip/benderscut_feasalt.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
@@ -246,6 +251,7 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
+    scip/misc_nonlinear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -271,6 +277,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_datastructures.c
     scip/scip_debug.c
+    scip/scip_dcmp.c
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
@@ -434,6 +441,7 @@ set(scipheaders
     scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
+    scip/benderscut_feasalt.h
     scip/benderscut_int.h
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
@@ -501,6 +509,7 @@ set(scipheaders
     scip/cuts.h
     scip/dbldblarith.h
     scip/debug.h
+    scip/dcmp.h
     scip/def.h
     scip/dialog_default.h
     scip/dialog.h
@@ -508,6 +517,7 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
+    scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
@@ -589,6 +599,7 @@ set(scipheaders
     scip/nodesel_uct.h
     scip/paramset.h
     scip/presol_boundshift.h
+    scip/presol_milp.h
     scip/presol_convertinttobin.h
     scip/presol_domcol.h
     scip/presol_dualagg.h
@@ -632,6 +643,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
@@ -644,6 +656,7 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
+    scip/pub_misc_nonlinear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
@@ -666,6 +679,7 @@ set(scipheaders
     scip/reader_cip.h
     scip/reader_cnf.h
     scip/reader_cor.h
+    scip/reader_dec.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -705,6 +719,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_datastructures.h
     scip/scip_debug.h
+    scip/scip_dcmp.h
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
@@ -773,6 +788,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
+    scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -825,6 +841,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
+    scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -938,7 +955,8 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES})
+    ${SYM_LIBRARIES}
+    ${PRESOLVELIB_IMPORTED_TARGETS})
 
 if(SHARED)
     set(SOPLEX_NEEDED 0)
@@ -962,7 +980,7 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
 endif()
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PRESOLVELIB_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)

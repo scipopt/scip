@@ -17,7 +17,7 @@
  * @ingroup OTHER_CFILES
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2180,7 +2180,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
-   SCIPaggrRowRemoveZeros(scip, aggrrow, valid);
+   SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
    return SCIP_OKAY;
 }
@@ -2321,13 +2321,15 @@ SCIP_RETCODE postprocessCutQuad(
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool             useglbbounds,       /**< consider global bound although the cut is local? */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
    assert(aggrrow != NULL);
    assert(valid != NULL);
 
-   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), aggrrow->local, aggrrow->vals, QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
+   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), useglbbounds ? FALSE : aggrrow->local, aggrrow->vals,
+      QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
 }
 
 /** get number of aggregated rows */
@@ -2596,7 +2598,10 @@ SCIP_RETCODE SCIPselectCuts(
    }
    else
    {
-      efficacyfac += objparalweight;
+      /* in case there is no solution add the directed cutoff distance weight to the efficacy weight
+       * since the efficacy underestimates the directed cuttoff distance
+       */
+      efficacyfac += dircutoffdistweight;
       for( i = 0; i < ncuts; ++i )
       {
          SCIP_Real objparallelism;
@@ -2846,6 +2851,7 @@ SCIP_RETCODE determineBestBounds(
    if( boundsfortrans != NULL && boundsfortrans[v] > -3 )
    {
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || ( boundsfortrans[v] == -2 || boundsfortrans[v] == -1 ));
+      assert(boundtypesfortrans != NULL);
 
       /* user has explicitly specified a bound to be used */
       if( boundtypesfortrans[v] == SCIP_BOUNDTYPE_LOWER )
@@ -3007,7 +3013,7 @@ SCIP_RETCODE determineBestBounds(
       }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
@@ -4818,7 +4824,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          tmpcoefs[k - intstart] = -tmpcoefs[k - intstart];
          tmpvalues[k - intstart] = oldsolval;
       }
-   }
+   } /*lint !e438*/
 
    if( bestefficacy > 0.0 )
    {
@@ -5460,7 +5466,7 @@ SCIP_RETCODE determineBoundForSNF(
       binvarused[vubvarprobidx] = 1;
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** construct a 0-1 single node flow relaxation (with some additional simple constraints) of a mixed integer set
@@ -5570,6 +5576,16 @@ SCIP_RETCODE constructSNFRelaxation(
    *localbdsused = FALSE;
    QUAD_ASSIGN_Q(transrhs, rowrhs);
    snf->ntransvars = 0;
+
+   assert(snf->transvarcoefs != NULL); /* for lint */
+   assert(snf->transvarvubcoefs != NULL);
+   assert(snf->transbinvarsolvals != NULL);
+   assert(snf->transcontvarsolvals != NULL);
+   assert(snf->aggrconstants != NULL);
+   assert(snf->aggrcoefscont != NULL);
+   assert(snf->origcontvars != NULL);
+   assert(snf->origbinvars != NULL);
+   assert(snf->aggrcoefsbin != NULL);
 
    /* transform non-binary variables */
    for( i = 0; i < nnonbinvarsrow; ++i )

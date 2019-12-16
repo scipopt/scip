@@ -254,6 +254,15 @@ LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e
 LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
 
+# glop only supports shared libraries
+LPSOPTIONS	+=	glop
+ifeq ($(LPS),glop)
+LPILIBOBJ	=	lpi/lpi_glop.o scip/bitencode.o scip/rbtree.o scip/message.o
+LPILIBSRC  	=	$(SRCDIR)/lpi/lpi_glop.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/shared/ortools
+LPIINSTMSG	=	"  -> \"ortools\" is the path to the OR-Tools directory.\n"
+endif
+
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
 LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
@@ -498,6 +507,7 @@ SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feas.o \
+			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
@@ -556,6 +566,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_solvingphase.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
+			scip/event_estim.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_adaptivediving.o \
@@ -651,6 +662,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_cor.o \
+			scip/reader_dec.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -706,6 +718,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cutpool.o \
 			scip/cuts.o \
 			scip/debug.o \
+			scip/dcmp.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
@@ -722,6 +735,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_nonlinear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -746,6 +760,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cut.o \
 			scip/scip_datastructures.o\
 			scip/scip_debug.o \
+			scip/scip_dcmp.o \
 			scip/scip_dialog.o \
 			scip/scip_disp.o \
 			scip/scip_event.o \
@@ -950,6 +965,37 @@ else
 			done'
 endif
 
+.PHONY: pclint
+pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+		-rm -f pclint.out
+
+		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
+			then \
+				echo "-> running pclint configuration"; \
+				CCPATH=`which $(CC)`; \
+				echo "-> path to compiler: "$${CCPATH}; \
+				cd pclint; \
+				echo "-> running $(PCLINTCONFIG)"; \
+				python $(PCLINTCONFIG) --compiler=$(CC) --compiler-bin=$${CCPATH} --config-output-lnt-file=co-gcc.lnt --config-output-header-file=co-gcc.h --generate-compiler-config ; \
+			fi'
+ifeq ($(FILES),)
+		@$(SHELL) -ec 'echo "-> running pclint ..."; \
+			for i in $^; \
+			do \
+				echo $$i; \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
+				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
+			done'
+else
+		@$(SHELL) -ec  'echo "-> running pclint on specified files ..."; \
+			for i in $(FILES); \
+			do \
+				echo $$i; \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
+				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
+			done'
+endif
+
 .PHONY: splint
 splint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
 		-rm -f splint.out
@@ -1111,6 +1157,9 @@ $(LIBDIR)/shared: $(LIBDIR)
 
 $(LIBDIR)/include: $(LIBDIR)
 		@-mkdir -p $(LIBDIR)/include
+
+$(LIBDIR)/src: $(LIBDIR)
+		@-mkdir -p $(LIBDIR)/src
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
@@ -1580,10 +1629,11 @@ help:
 		@echo
 		@echo "  General options:"
 		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
-		@echo "  - LPS={clp|cpx|grb|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|xprs|none}: Determine LP-solver."
 		@echo "      clp: COIN-OR Clp LP-solver"
 		@echo "      cpx: CPLEX LP-solver"
-		@echo "      grb: Gurobi LP-solver (interface is in beta stage)"
+		@echo "      glop: Glop LP-solver"
+		@echo "      grb: Gurobi LP-solver"
 		@echo "      msk: Mosek LP-solver"
 		@echo "      qso: QSopt LP-solver"
 		@echo "      spx: old SoPlex LP-solver (for versions < 2)"

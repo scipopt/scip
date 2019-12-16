@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -39,6 +39,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
@@ -451,6 +452,8 @@ SCIP_RETCODE copyProb(
 
    /* create conflict store to store conflict constraints */
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
+
+   SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
 
    if( uselocalvarmap )
    {

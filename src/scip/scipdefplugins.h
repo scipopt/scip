@@ -78,6 +78,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
@@ -152,6 +153,9 @@
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
+#ifdef SCIP_WITH_PRESOLVELIB
+#include "scip/presol_milp.h"
+#endif
 #include "scip/presol_redvub.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
@@ -173,6 +177,7 @@
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_cor.h"
+#include "scip/reader_dec.h"
 #include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"

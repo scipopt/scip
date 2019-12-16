@@ -551,7 +551,6 @@ void decreaseFixingRate(
 /** update fixing rate based on the results of the current run */
 static
 void updateFixingRate(
-   SCIP*                 scip,               /**< SCIP data structure */
    NH*                   neighborhood,       /**< neighborhood */
    SCIP_STATUS           subscipstatus,      /**< status of the sub-SCIP run */
    NH_STATS*             runstats            /**< run statistics for this run */
@@ -1021,7 +1020,6 @@ void initRunStats(
 /** update run stats after the sub SCIP was solved */
 static
 void updateRunStats(
-   SCIP*                 scip,               /**< SCIP data structure */
    NH_STATS*             stats,              /**< run statistics */
    SCIP*                 subscip             /**< sub-SCIP instance, or NULL */
    )
@@ -1131,7 +1129,6 @@ void printNeighborhoodStatistics(
 /** update the statistics of the neighborhood based on the sub-SCIP run */
 static
 void updateNeighborhoodStats(
-   SCIP*                 scip,               /**< SCIP data structure */
    NH_STATS*             runstats,           /**< run statistics */
    NH*                   neighborhood,       /**< the selected neighborhood */
    SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP solve */
@@ -2375,7 +2372,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    else
       neighborhoodidx = 0;
 
-   assert(neighborhoodidx >= 0);
+   assert(0 <= neighborhoodidx && neighborhoodidx < NNEIGHBORHOODS);
    assert(heurdata->nactiveneighborhoods > neighborhoodidx);
 
    /* allocate memory for variable fixings buffer */
@@ -2392,10 +2389,12 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
       char probnamesuffix[SCIP_MAXSTRLEN];
+      SCIP_Real allfixingrate;
       int ndomchgs;
       int nchgobjs;
       int naddedconss;
       int v;
+      SCIP_RETCODE retcode;
       SCIP_RESULT fixresult;
 
       tryagain = FALSE;
@@ -2540,12 +2539,34 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
 
-      /* todo alternatively: set up sub-SCIP and run presolving */
-      /* todo was presolving successful enough regarding fixings? otherwise terminate */
-
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.submipclock) );
-      /* run sub-SCIP for the given budget, and collect statistics */
-      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      /* set up sub-SCIP and run presolving */
+      retcode = SCIPpresolve(subscip);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while presolving subproblem in ALNS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
+
+         SCIPABORT();  /*lint --e{527}*/
+         break;
+      }
+
+      /* was presolving successful enough regarding fixings? otherwise, terminate */
+      allfixingrate = (SCIPgetNOrigVars(subscip) - SCIPgetNVars(subscip)) / (SCIP_Real)SCIPgetNOrigVars(subscip);
+
+      /* additional variables added in presolving may lead to the subSCIP having more variables than the original */
+      allfixingrate = MAX(allfixingrate, 0.0);
+
+      if( allfixingrate >= neighborhood->fixingrate.targetfixingrate / 2.0 )
+      {
+         /* run sub-SCIP for the given budget, and collect statistics */
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "Fixed only %.3f of all variables after presolving -> do not solve sub-SCIP\n", allfixingrate);
+      }
 
 #ifdef ALNS_SUBSCIPOUTPUT
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
@@ -2554,7 +2575,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
 
       /* update statistics based on the sub-SCIP run results */
-      updateRunStats(scip, &runstats[neighborhoodidx], subscip);
+      updateRunStats(&runstats[neighborhoodidx], subscip);
       subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
       SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[neighborhoodidx]);
 
@@ -2594,7 +2615,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       heurdata->usednodes += runstats[banditidx].usednodes;
 
       /* determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
+      updateNeighborhoodStats(&runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
@@ -2602,7 +2623,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       if( heurdata->adjustfixingrate && ! allrewardsmode )
       {
          SCIPdebugMsg(scip, "Update fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
-         updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
+         updateFixingRate(heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
       }
       /* similarly, update the minimum improvement for the ALNS heuristic */
@@ -3737,7 +3758,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
    for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
       priorities[i] = heurdata->neighborhoods[i]->priority;
 
-   initseed = (unsigned int)heurdata->seed + SCIPgetNVars(scip);
+   initseed = (unsigned int)(heurdata->seed + SCIPgetNVars(scip));
 
    /* active neighborhoods might change between init calls, reset functionality must take this into account */
    if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->nactiveneighborhoods )

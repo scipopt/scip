@@ -56,8 +56,10 @@
 
 #include "scip/def.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
+#include "scip/type_misc.h"
 #include "scip/type_nlp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -77,6 +79,33 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
+ *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.
+ *  This method can also be used to generate a feasiblity, is a problem to minimise the infeasibilities has been solved
+ *  to generate the dual solutions
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
+   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnumber,         /**< the number of the pricing problem */
+   char*                 cutname,            /**< the name for the cut to be generated */
+   SCIP_Real             objective,          /**< the objective function of the subproblem */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_Real*            consdualvals,       /**< dual variables for the constraints, can be NULL */
+   SCIP_Real*            varlbdualvals,      /**< the dual variables for the variable lower bounds, can be NULL */
+   SCIP_Real*            varubdualvals,      /**< the dual variables for the variable upper bounds, can be NULL */
+   SCIP_HASHMAP*         row2idx,            /**< mapping between the row in the subproblem to the index in the dual array, can be NULL */
+   SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             addcut,             /**< should the Benders' cut be added as a cut or constraint */
+   SCIP_Bool             feasibilitycut,     /**< is this called for the generation of a feasibility cut */
+   SCIP_RESULT*          result              /**< the result from solving the subproblems */
+   );
+
 /** adds the gradient of a nonlinear row in the current NLP solution of a subproblem to a linear row or constraint in the master problem
  *
  * Only computes gradient w.r.t. master problem variables.
@@ -90,6 +119,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
    SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
    SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */

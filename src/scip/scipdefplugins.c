@@ -84,6 +84,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderRlp(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderDiff(scip) );
+   SCIP_CALL( SCIPincludeReaderDec(scip) );
    SCIP_CALL( SCIPincludeReaderFix(scip) );
    SCIP_CALL( SCIPincludeReaderMst(scip) );
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
@@ -99,6 +100,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+#ifdef SCIP_WITH_PRESOLVELIB
+   SCIP_CALL( SCIPincludePresolMILP(scip) );
+#endif
    SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
@@ -126,6 +130,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );

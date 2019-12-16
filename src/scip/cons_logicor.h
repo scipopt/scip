@@ -162,6 +162,16 @@ SCIP_ROW* SCIPgetRowLogicor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** cleans up (multi-)aggregations and fixings from logicor constraints */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupConssLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
+   );
+
 /* @} */
 
 /* @} */

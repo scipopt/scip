@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -452,6 +452,22 @@ SCIP_EXPORT
 void SCIPsetFocusnodeLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             solvelp             /**< should the LP be solved? */
+   );
+
+
+/** query if node was the last parent of a branching of the tree
+ *
+ *  @return TRUE if node was the last parent of a branching of the tree
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPwasNodeLastBranchParent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< tree node, or NULL to check focus node */
    );
 
 /**@} */

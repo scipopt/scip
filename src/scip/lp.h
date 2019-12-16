@@ -306,7 +306,6 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -997,6 +996,27 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             cutoffbound         /**< new upper objective limit */
+   );
+
+/** gets current primal feasibility tolerance of LP solver */
+SCIP_Real SCIPlpGetFeastol(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** sets primal feasibility tolerance of LP solver */
+void SCIPlpSetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   );
+
+/** resets primal feasibility tolerance of LP solver
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+void SCIPlpResetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** applies all cached changes to the LP solver */

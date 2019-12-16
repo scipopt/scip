@@ -100,6 +100,7 @@ SCIP_RETCODE SCIPnodepqCreate(
    )
 {  /*lint --e{715}*/
    assert(nodepq != NULL);
+   assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodepq) );
    (*nodepq)->nodesel = nodesel;
@@ -133,6 +134,7 @@ SCIP_RETCODE SCIPnodepqFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
@@ -142,7 +144,7 @@ SCIP_RETCODE SCIPnodepqFree(
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventqueue, tree, lp) );
+   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
 
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
@@ -156,6 +158,7 @@ SCIP_RETCODE SCIPnodepqClear(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
@@ -179,7 +182,7 @@ SCIP_RETCODE SCIPnodepqClear(
          assert(nodepq->slots[i] != NULL);
          assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
 
-         SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventqueue, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
    }
 
@@ -629,6 +632,7 @@ SCIP_RETCODE SCIPnodepqBound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -685,7 +689,7 @@ SCIP_RETCODE SCIPnodepqBound(
          }
 
          /* free memory of the node */
-         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
       else
          pos--;
