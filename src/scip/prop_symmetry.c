@@ -2630,7 +2630,7 @@ SCIP_RETCODE buildSubgroupGraph(
          componentslastperm[comp1] = j;
          componentslastperm[comp2] = j;
 
-         if ( firstcolor == -1 )
+         if ( firstcolor < 0 )
             firstcolor = color1;
 
          /* add the edges for this swap to the graph */
@@ -2655,7 +2655,7 @@ SCIP_RETCODE buildSubgroupGraph(
          continue;
       }
 
-      assert( firstcolor != -1 );
+      assert( firstcolor > -1 );
       ++(*nusedperms);
 
       /* if the generator can be added, update the datastructures for graph components and colors */
@@ -2812,6 +2812,45 @@ SCIP_RETCODE detectAndHandleSubgroups(
          continue;
       }
 
+#ifdef SCIP_MORE_DEBUG
+   SCIP_Bool* used;
+   int p;
+   int k;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
+   for( p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p )
+   {
+      for( k = 0; k < propdata->npermvars; ++k )
+         used[k] = FALSE;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", p);
+
+      for( k = 0; k < propdata->npermvars; ++k )
+      {
+         if( used[k] )
+            continue;
+
+         j = propdata->perms[p][k];
+
+         if( k == j )
+            continue;
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
+         used[k] = TRUE;
+         while( j != k )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
+            used[j] = TRUE;
+
+            j = propdata->perms[p][j];
+         }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")");
+      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
+   }
+
+   SCIPfreeBufferArray(scip, &used);
+#endif
+
       npermsincomp = propdata->componentbegins[i + 1] - propdata->componentbegins[i];
 
       /* set the first npermsincomp entries of genorder; the others are not used for this component */
@@ -2831,7 +2870,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
             &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
-      SCIPdebugMsg(scip, "created subgroup detection graph for component %d\n", i);
+      SCIPdebugMsg(scip, "created subgroup detection graph using %d of the permutations\n", nusedperms);
 
       assert( graphcomponents != NULL );
       assert( graphcompbegins != NULL );
@@ -2849,10 +2888,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
       {
          SCIP_VAR* vars[2];
          SCIP_Real vals[2] = {1, -1};
-         SCIP_CONS* cons;
          int chosencomp = -1;
          int chosencompsize = 0;
          int k;
+
+         if( compcolorbegins[j+1] - compcolorbegins[j] < 2 )
+         {
+            SCIPdebugMsg(scip, "color %d has only one component -> skip\n", j+1);
+            continue;
+         }
 
          SCIPdebugMsg(scip, "color %d has %d components with overall %d variables\n", j+1, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
@@ -2881,13 +2925,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
          /* add strong SBCs (lex-max order) for chosen graph component */
          for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
          {
+            SCIP_CONS* cons;
             char name[SCIP_MAXSTRLEN];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%d_%d",
-               i, graphcomponents[k-1], graphcomponents[k]);
+            vars[0] = propdata->permvars[graphcomponents[k-1]];
+            vars[1] = propdata->permvars[graphcomponents[k]];
 
-            vars[1] = propdata->permvars[graphcomponents[k-1]];
-            vars[0] = propdata->permvars[graphcomponents[k]];
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
+               i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
                   SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
@@ -2900,10 +2945,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-            if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
+            /* check whether we need to resize */
+            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
             {
                int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-               assert( newsize >= propdata->ngenlinconss );
+               assert( newsize > propdata->ngenlinconss );
 
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
                   propdata->genlinconsssize, newsize) );
@@ -2919,14 +2965,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
       /* possibly add weak SBCs for enclosing orbit of first component */
       if ( nusedperms < npermsincomp )
       {
-         SCIP_CONS* cons;
          SCIP_HASHSET* usedvars;
          SCIP_VAR* vars[2];
          SCIP_Real vals[2] = {1, -1};
          SCIP_Shortbool* varfound;
          int* orbit[2];
-         int orbitsize[2];
+         int orbitsize[2] = {0, 0};
          int activeorb = 0;
+         int chosencolor = -1;
 
          SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
          SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
@@ -2939,6 +2985,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int graphcompsize;
             int firstvaridx;
             int k;
+
+            if( compcolorbegins[j+1] - compcolorbegins[j] < 2 )
+               continue;
 
             graphcomp = chosencomppercolor[j];
             graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
@@ -2965,25 +3014,32 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( orbit[activeorb][0] == firstvaridx );
 
+            SCIPdebugMsg(scip, " color %d has %d vars in enclosing orbit.\n", j+1, orbitsize[activeorb]);
+
             if ( orbitsize[activeorb] > orbitsize[!activeorb] )
+            {
                activeorb = !activeorb;
+               chosencolor = j;
+            }
          }
 
          activeorb = !activeorb;
 
-         vars[1] = propdata->permvars[orbit[activeorb][0]];
+         vars[0] = propdata->permvars[orbit[activeorb][0]];
 
-         SCIPdebugMsg(scip, "adding weak sbcs for enclosing orbit\n");
+         assert(chosencolor > -1);
+         SCIPdebugMsg(scip, "adding weak sbcs for enclosing orbit of color %d.\n", chosencolor+1);
 
          /* add weak SBCs for rest of enclosing orbit */
          for (j = 1; j < orbitsize[activeorb]; ++j)
          {
+            SCIP_CONS* cons;
             char name[SCIP_MAXSTRLEN];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%d_%d",
-               i, orbit[0], orbit[j]);
+            vars[1] = propdata->permvars[orbit[activeorb][j]];
 
-            vars[0] = propdata->permvars[orbit[activeorb][j]];
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%s_%s",
+               i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
                   SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
@@ -2996,10 +3052,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-            if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
+            /* check whether we need to resize */
+            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
             {
                int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-               assert( newsize >= propdata->ngenlinconss );
+               assert( newsize > propdata->ngenlinconss );
 
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
                   propdata->genlinconsssize, newsize) );
@@ -3437,7 +3494,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   if ( !propdata->ofenabled && propdata->detectsubgroups )
+   if ( propdata->detectsubgroups )
    {
       propdata->genlinconsssize = propdata->nperms;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
@@ -4107,7 +4164,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                propdata->ngenorbconss + propdata->ngenlinconss - noldngenconns);
 
             /* if constraints have been added, loop through generated constraints and presolve each */
-            for (i = 0; i < propdata->ngenorbconss + propdata->ngenlinconss; ++i)
+            for (i = 0; i < propdata->ngenorbconss; ++i)
             {
                SCIP_CALL( SCIPpresolCons(scip, propdata->genorbconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
                      nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
@@ -4120,6 +4177,21 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                   return SCIP_OKAY;
                }
             }
+
+            for (i = 0; i < propdata->ngenlinconss; ++i)
+            {
+               SCIP_CALL( SCIPpresolCons(scip, propdata->genlinconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+                     nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+                     nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+               /* exit if cutoff or unboundedness has been detected */
+               if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+               {
+                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genorbconss[i]));
+                  return SCIP_OKAY;
+               }
+            }
+
             SCIPdebugMsg(scip, "Presolved %d generated constraints.\n",
                propdata->ngenorbconss + propdata->ngenlinconss);
          }
