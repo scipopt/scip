@@ -801,6 +801,8 @@ int reduceWithNodeFixingBounds(
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
 
+   graph_mark(graph);
+
    for( int k = 0; k < nnodes; k++ )
    {
       if( !graph->mark[k] || Is_term(graph->term[k]) )
@@ -811,7 +813,7 @@ int reduceWithNodeFixingBounds(
       if( SCIPisLT(scip, upperbound, fixingbounds[k]) )
       {
          SCIPdebugMessage("delete knot %d %f < %f %d\n", k, upperbound, fixingbounds[k], graph->grad[k]);
-         nfixed++;
+         nfixed += graph->grad[k];
 
          graph_knot_del(scip, graph, k, TRUE);
 
