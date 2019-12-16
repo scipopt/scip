@@ -1407,12 +1407,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* check solution if one of the four cases occurs
                 * - solution is optimal
                 * - solution reached gaplimit
-                * - node limit reached
+                * - node limit reached with at least one feasible solution
                 * - time limit is reached but best solution needs no slack variables (no dual solution available)
                 */
-               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || status == SCIP_STATUS_NODELIMIT ||
-                   (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
-                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
+               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT ||
+                     (status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) ||
+                     (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                     SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
                   SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or nodelimit.\n");
 
