@@ -1129,8 +1129,19 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       return SCIP_OKAY;
 
    nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node);
+
+   /* it can happen that the node was not created via branching; search for the most recent ancestor in the queue */
    if( nodeinfo == NULL )
-      return SCIP_OKAY;
+   {
+      do
+      {
+         node = SCIPnodeGetParent(node);
+      } while( node != NULL && (nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node)) == NULL);
+
+      /* no ancestor found */
+      if( nodeinfo == NULL )
+         return SCIP_OKAY;
+   }
 
    /* get open nodes of this subtree stored as priority queue */
    subtreeidx = nodeinfo->subtreeidx;
@@ -1205,8 +1216,13 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
     */
    if( !SCIPhashmapExists(ssg->nodes2info, (void*)focusnode) )
    {
-      parentnode = SCIPnodeGetParent(focusnode);
-      assert(SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+      parentnode = focusnode;
+      do
+      {
+         parentnode = SCIPnodeGetParent(parentnode);
+      } while( parentnode != NULL && !SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+
+      assert(parentnode != NULL && SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
    }
    else
       parentnode = focusnode;

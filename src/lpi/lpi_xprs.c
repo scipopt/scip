@@ -52,7 +52,7 @@
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         SCIPmessagePrintWarning((messagehdlr), "%s:%d: LP Error: Xpress returned %d\n", __FILE__, __LINE__, _restat_); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
