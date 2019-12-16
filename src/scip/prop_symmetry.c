@@ -203,6 +203,7 @@ struct SCIP_PropData
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
+   int                   ncompblocked;       /**< number of components that have been blocked */
    int*                  components;         /**< array containing the indices of permutations sorted by components */
    int*                  componentbegins;    /**< array containing in i-th position the first position of
                                               *   component i in components array */
@@ -596,6 +597,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->componentbegins == NULL );
    assert( propdata->components == NULL );
    assert( propdata->ncomponents == -1 );
+   assert( propdata->ncompblocked == 0 );
 
    assert( propdata->npermvarscaptured == 0 );
 
@@ -689,7 +691,8 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added orbitope/orbisack/symresack constraints */
    if ( propdata->genorbconss != NULL )
    {
-      assert( propdata->ngenorbconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
+      assert( propdata->ngenorbconss + propdata->ngenlinconss > 0
+         || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
 
       /* release constraints */
       for (i = 0; i < propdata->ngenorbconss; ++i)
@@ -735,6 +738,7 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->components, propdata->nperms);
 
       propdata->ncomponents = -1;
+      propdata->ncompblocked = 0;
    }
 
    /* free main symmetry data */
@@ -2608,7 +2612,7 @@ SCIP_RETCODE buildSubgroupGraph(
          img = perm[k];
          assert( perm[img] == k );
 
-         if ( img >= k )
+         if ( img <= k )
             continue;
 
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
@@ -2617,7 +2621,7 @@ SCIP_RETCODE buildSubgroupGraph(
          /* if both variables are in the same component or it is the second time that the
           * component is used for this generator, it would create a cycle, so skip it
           */
-         if ( comp1 == comp2 || componentslastperm[comp1] == j )
+         if ( comp1 == comp2 || componentslastperm[comp1] == j || componentslastperm[comp2] == j )
             break;
 
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
@@ -2641,13 +2645,17 @@ SCIP_RETCODE buildSubgroupGraph(
       /* if the generator is invalid or the new graph is not acyclic, delete the newly added edges */
       if ( k < npermvars || !isAcyclicGraph(scip, graph) )
       {
+         int img;
          int l;
 
          for (l = 0; l < k; ++l)
          {
-            if ( perm[l] < l )
+            img = perm[l];
+
+            if ( img > l )
             {
                SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
+               SCIP_CALL( SCIPdigraphSetNSuccessors(graph, img, SCIPdigraphGetNSuccessors(graph, img) - 1) );
             }
          }
 
@@ -2670,7 +2678,7 @@ SCIP_RETCODE buildSubgroupGraph(
          img = perm[k];
          assert( perm[img] == k );
 
-         if ( img >= k )
+         if ( img <= k )
             continue;
 
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
@@ -2681,14 +2689,17 @@ SCIP_RETCODE buildSubgroupGraph(
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
 
-         assert( color1 != color2 );
+         if( color1 != color2 )
+         {
+            SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
+            SCIPdisjointsetUnion(comptocolor, firstcolor, color2, TRUE);
+         }
 
-         SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
-         SCIPdisjointsetUnion(comptocolor, firstcolor, color2, TRUE);
          SCIPdisjointsetUnion(vartocomponent, comp1, comp2, FALSE);
 
          assert( SCIPdisjointsetFind(vartocomponent, k) == SCIPdisjointsetFind(vartocomponent, img) );
          assert( SCIPdisjointsetFind(comptocolor, SCIPdisjointsetFind(vartocomponent, k)) == firstcolor );
+         assert( SCIPdisjointsetFind(comptocolor, SCIPdisjointsetFind(vartocomponent, img)) == firstcolor );
       }
    }
 
@@ -2812,45 +2823,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
          continue;
       }
 
-#ifdef SCIP_MORE_DEBUG
-   SCIP_Bool* used;
-   int p;
-   int k;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
-   for( p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p )
-   {
-      for( k = 0; k < propdata->npermvars; ++k )
-         used[k] = FALSE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", p);
-
-      for( k = 0; k < propdata->npermvars; ++k )
-      {
-         if( used[k] )
-            continue;
-
-         j = propdata->perms[p][k];
-
-         if( k == j )
-            continue;
-
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
-         used[k] = TRUE;
-         while( j != k )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
-            used[j] = TRUE;
-
-            j = propdata->perms[p][j];
-         }
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")");
-      }
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
-   }
-
-   SCIPfreeBufferArray(scip, &used);
-#endif
-
       npermsincomp = propdata->componentbegins[i + 1] - propdata->componentbegins[i];
 
       /* set the first npermsincomp entries of genorder; the others are not used for this component */
@@ -2864,13 +2836,56 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       SCIPdebugMsg(scip, "component %d has %d permutations consisting of 2-cycles\n", i, ntwocycleperms);
 
+#ifdef SCIP_MORE_DEBUG
+   SCIP_Bool* used;
+   int perm;
+   int p;
+   int k;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
+   for( p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p )
+   {
+      perm = propdata->components[p];
+
+      for( k = 0; k < propdata->npermvars; ++k )
+         used[k] = FALSE;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", perm);
+
+      for( k = 0; k < propdata->npermvars; ++k )
+      {
+         if( used[k] )
+            continue;
+
+         j = propdata->perms[perm][k];
+
+         if( k == j )
+            continue;
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
+         used[k] = TRUE;
+         while( j != k )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
+            used[j] = TRUE;
+
+            j = propdata->perms[perm][j];
+         }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")");
+      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
+   }
+
+   SCIPfreeBufferArray(scip, &used);
+#endif
+
       if ( ntwocycleperms < 2 )
          continue;
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
             &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
-      SCIPdebugMsg(scip, "created subgroup detection graph using %d of the permutations\n", nusedperms);
+      SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
 
       assert( graphcomponents != NULL );
       assert( graphcompbegins != NULL );
@@ -2880,7 +2895,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       assert( nusedperms <= ntwocycleperms );
       assert( ncompcolors < propdata->npermvars );
 
-      SCIPdebugMsg(scip, "number of colors: %d\n", ncompcolors);
+      SCIPdebugMsg(scip, "  number of colors: %d\n", ncompcolors);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
 
@@ -2892,13 +2907,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int chosencompsize = 0;
          int k;
 
-         if( compcolorbegins[j+1] - compcolorbegins[j] < 2 )
+         if( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
-            SCIPdebugMsg(scip, "color %d has only one component -> skip\n", j+1);
+            SCIPdebugMsg(scip, "    color %d has only one variable -> skip\n", j);
+            chosencomppercolor[j] = -1;
+
             continue;
          }
 
-         SCIPdebugMsg(scip, "color %d has %d components with overall %d variables\n", j+1, compcolorbegins[j+1] - compcolorbegins[j],
+         SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
          /* choose largest component for that color */
@@ -2919,8 +2936,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          chosencomppercolor[j] = chosencomp;
 
-         SCIPdebugMsg(scip, "choosing component %d with %d variables\n", chosencomp+1,
-            graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
+         SCIPdebugMsg(scip, "      choosing component %d with %d variables and addingstrong SBCs\n",
+            chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
 
          /* add strong SBCs (lex-max order) for chosen graph component */
          for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
@@ -2940,7 +2957,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_MORE_DEBUG
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -2986,7 +3003,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int firstvaridx;
             int k;
 
-            if( compcolorbegins[j+1] - compcolorbegins[j] < 2 )
+            if( chosencomppercolor[j] < 0 )
                continue;
 
             graphcomp = chosencomppercolor[j];
@@ -3014,8 +3031,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( orbit[activeorb][0] == firstvaridx );
 
-            SCIPdebugMsg(scip, " color %d has %d vars in enclosing orbit.\n", j+1, orbitsize[activeorb]);
-
             if ( orbitsize[activeorb] > orbitsize[!activeorb] )
             {
                activeorb = !activeorb;
@@ -3028,7 +3043,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          vars[0] = propdata->permvars[orbit[activeorb][0]];
 
          assert(chosencolor > -1);
-         SCIPdebugMsg(scip, "adding weak sbcs for enclosing orbit of color %d.\n", chosencolor+1);
+         SCIPdebugMsg(scip, "      adding %d weak sbcs for enclosing orbit of color %d.\n",
+            orbitsize[activeorb]-1, chosencolor);
 
          /* add weak SBCs for rest of enclosing orbit */
          for (j = 1; j < orbitsize[activeorb]; ++j)
@@ -3047,7 +3063,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_MORE_DEBUG
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -3075,6 +3091,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
 
       propdata->componentblocked[i] = TRUE;
+      ++propdata->ncompblocked;
 
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
@@ -3323,6 +3340,7 @@ SCIP_RETCODE detectOrbitopes(
          ++propdata->norbitopes;
 
          propdata->componentblocked[i] = TRUE;
+         ++propdata->ncompblocked;
       }
 
       /* free data structures */
@@ -3494,7 +3512,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   if ( propdata->detectsubgroups )
+   if ( propdata->ncompblocked < propdata->ncomponents && propdata->detectsubgroups )
    {
       propdata->genlinconsssize = propdata->nperms;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
@@ -4409,6 +4427,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->permvarmap = NULL;
 
    propdata->ncomponents = -1;
+   propdata->ncompblocked = 0;
    propdata->components = NULL;
    propdata->componentbegins = NULL;
    propdata->vartocomponent = NULL;
