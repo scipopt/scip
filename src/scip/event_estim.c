@@ -233,16 +233,16 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COEFMONOPROG         0.3667  /**< coefficient of progress in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_COMPL    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_PROG    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                             * (g)ap, (l)-eaf frequency, (o)open nodes,
                                                             * (p)rogress, (s)sg, or (t)ree profile or (w)be */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
-#define DEFAULT_RESTARTPOLICY        'n'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
+#define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
 #define DEFAULT_RESTARTLIMIT          1      /**< default restart limit */
 #define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
-#define DEFAULT_RESTARTFACTOR        2.0     /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+#define DEFAULT_RESTARTFACTOR        50.0    /**< factor by which the estimated number of nodes should exceed the current number of nodes */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
