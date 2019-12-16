@@ -1139,7 +1139,7 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       } while( node != NULL && (nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node)) == NULL);
 
       /* no ancestor found */
-      if( node == NULL )
+      if( nodeinfo == NULL )
          return SCIP_OKAY;
    }
 
