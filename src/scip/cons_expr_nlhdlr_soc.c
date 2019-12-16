@@ -307,7 +307,7 @@ SCIP_RETCODE createDisaggr(
    /* add constant <= rhscoef * rhvar * z_i */
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*) expr);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_const", (void*) expr);
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip),
             0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
@@ -326,9 +326,9 @@ SCIP_RETCODE createDisaggr(
    }
 
    /* create row */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%s", (void*) expr);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
-         nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
+         nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
 
    /* free memory */
@@ -425,15 +425,19 @@ SCIP_RETCODE generateCutSol(
       SCIP_ROWPREP* rowprep;
       SCIP_Real sideval;
       int termstartidx;
+      int ncutvars;
+
+      /* compute maximum number of variables in cut */
+      ncutvars = (k < nterms ? nlhdlrexprdata->nnonzeroes[k] + nlhdlrexprdata->nnonzeroes[nterms-1] + 1 : 2);
 
       /* create cut */
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, k < nterms ? nterms+1 : 2) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
 
-      sideval = 0;
+      sideval = 0.0;
 
       /* add terms for lhs */
-      if( k < nterms )
+      if( k < nterms  && !SCIPisZero(scip, lhsval) )
       {
          termstartidx = nlhdlrexprdata->termbegins[k];
 
@@ -902,7 +906,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       assert(childcoefs[specialtermidx] != 0.0);
 
-      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[specialtermidx] : 1.0;
+      transcoefs[i] = 1.0;
       transcoefsidx[i] = i;
       termbegins[i] = i;
       nnonzeroes[i] = 1;
@@ -925,7 +929,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
                SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
       }
 
-      coefs[nextentry] = childcoefs[i];
+      coefs[nextentry] = ishyperbolic ? -4.0 * childcoefs[i] / childcoefs[specialtermidx]: childcoefs[i];
 
       assert(vars[nextentry] != NULL);
       assert(coefs[nextentry] > 0.0);
@@ -976,9 +980,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
+   SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
 #endif
 
    /* create and store nonlinear handler expression data */
@@ -1469,9 +1473,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
    *success = TRUE;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "found SOC structure for expression %p:\n", (void*)expr);
+   SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
 #endif
 
    /* create and store nonlinear handler expression data */
