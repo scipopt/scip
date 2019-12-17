@@ -1163,22 +1163,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < maxInd; ++j)
    {
-      SCIP_Real varsol;
-
-      varsol = SCIPgetSolVal(scip, sol, vars[j]);
-      objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
+      objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-
-   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-   if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest;
-   else
-      objest = SCIPgetLocalTransEstimate(scip);
-
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1191,21 +1182,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = maxInd+1; j < nvars; ++j)
    {
-      SCIP_Real varsol;
-
-      varsol = SCIPgetSolVal(scip, sol, vars[j]);
-      objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
+      objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-
-   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-   if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest;
-   else
-      objest = SCIPgetLocalTransEstimate(scip);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );

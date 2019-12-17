@@ -1374,7 +1374,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
 
       /* calculate node selection and objective estimate for node 2 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       cnt = 0;
       for( j = 0; j < nvars; ++j )
       {
@@ -1383,22 +1383,14 @@ SCIP_RETCODE branchUnbalancedCardinality(
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
-            SCIP_Real varsol;
-
-            varsol = SCIPgetSolVal(scip, sol, vars[j]);
-            objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
+            objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
             ++cnt;
          }
       }
+      assert(objest >= SCIPgetLocalTransEstimate(scip));
       assert(cnt == nvars - (1 + branchnnonzero));
       assert(cnt > 0);
-
-      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-      if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest;
-      else
-         objest = SCIPgetLocalTransEstimate(scip);
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1599,23 +1591,15 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = 0; j <= ind; ++j )
          {
-            SCIP_Real varsol;
-
-            varsol = SCIPgetSolVal(scip, sol, branchvars[j]);
-            objest += SCIPgetVarPseudocostVal(scip, branchvars[j], -varsol);
+            objest += SCIPcalcChildEstimateIncrease(scip, sol, branchvars[j], 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          }
-
-         /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-         if ( objest > 0.0 )
-            objest = SCIPgetLocalTransEstimate(scip) + objest;
-         else
-            objest = SCIPgetLocalTransEstimate(scip);
+         assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1650,24 +1634,16 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = ind+1; j < nbranchvars; ++j )
          {
-            SCIP_Real varsol;
-
-            varsol = SCIPgetSolVal(scip, sol, branchvars[j]);
-            objest += SCIPgetVarPseudocostVal(scip, branchvars[j], -varsol);
+            objest += SCIPcalcChildEstimateIncrease(scip, sol, branchvars[j], 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          }
          assert(nbranchvars - (ind + 1) > 0);
-
-         /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-         if ( objest > 0.0 )
-            objest = SCIPgetLocalTransEstimate(scip) + objest;
-         else
-            objest = SCIPgetLocalTransEstimate(scip);
+         assert(objest >= SCIPgetLocalTransEstimate(scip));
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );

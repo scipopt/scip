@@ -5636,23 +5636,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode1; ++j)
    {
-      SCIP_Real varsol;
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
-      varsol = SCIPgetSolVal(scip, sol, var);
-      objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
+      objest += SCIPcalcChildEstimateIncrease(scip, sol, var, 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-
-   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-   if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest;
-   else
-      objest = SCIPgetLocalTransEstimate(scip);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5707,23 +5700,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode2; ++j)
    {
-      SCIP_Real varsol;
       SCIP_VAR* var;
 
-      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]);
-      varsol = SCIPgetSolVal(scip, sol, var);
-      objest += SCIPgetVarPseudocostVal(scip, var, -varsol);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, sol, var, 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
-
-   /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-   if ( objest > 0.0 )
-      objest = SCIPgetLocalTransEstimate(scip) + objest;
-   else
-      objest = SCIPgetLocalTransEstimate(scip);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6012,21 +5998,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = 0; j <= ind; ++j)
       {
-         SCIP_Real varsol;
-
-         varsol = SCIPgetSolVal(scip, sol, vars[j]);
-         objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
+         objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
-
-      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-      if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest;
-      else
-         objest = SCIPgetLocalTransEstimate(scip);
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -6038,21 +6016,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = ind+1; j < nvars; ++j)
       {
-         SCIP_Real varsol;
-
-         varsol = SCIPgetSolVal(scip, sol, vars[j]);
-         objest += SCIPgetVarPseudocostVal(scip, vars[j], -varsol);
+         objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
-
-      /* estimated objective: local estimate + sum of the individual pseudo cost estimates (if positive) */
-      if ( objest > 0.0 )
-         objest = SCIPgetLocalTransEstimate(scip) + objest;
-      else
-         objest = SCIPgetLocalTransEstimate(scip);
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
