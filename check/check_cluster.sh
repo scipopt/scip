@@ -210,19 +210,22 @@ do
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
 		    export TIMELIMIT
-		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+
+		    if test $CLUSTERQUEUE != "moskito"
+		       # the space at the end is necessary
+		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    fi
 
                     if test "$SLURMACCOUNT" == ""
 	            then
-                                  SLURMACCOUNT=$ACCOUNT
+			SLURMACCOUNT=$ACCOUNT
                     fi
 
                     if test "$CLUSTERNODES" = "all"
 		    then
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		    else
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
 		    # -V to copy all environment variables
