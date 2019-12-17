@@ -3567,7 +3567,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int* conflictvars;
    int nconflictvars;
    int varidx;
-   int orbitcriterion = INT_MIN;
+   int orbitcriterion;
    int curcriterion;
    int orbitsize;
    int i;
@@ -3606,6 +3606,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    /* select the leader and its orbit */
    if ( *leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || *leaderrule == SCIP_LEADERRULE_LASTINORBIT )
    {
+      orbitcriterion = INT_MIN;
+
       /* iterate over orbits and select the first one that meets the tiebreak rule */
       for (i = 0; i < norbits; ++i)
       {
@@ -3651,7 +3653,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             assert( nodedata != NULL );
             assert( nodedata->orbitidx == i );
 
-            curcriterion = nodedata->nconflictinorbit;
+            if ( nodedata->nconflictinorbit > 0 )
+               curcriterion = nodedata->nconflictinorbit;
          }
 
          /* update selected orbit */
@@ -3712,6 +3715,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    }
    else
    {
+      orbitcriterion = 0;
+
       /* iterate over variables and select the first one that meets the tiebreak rule */
       for (i = 0; i < ngraphvars; ++i)
       {
