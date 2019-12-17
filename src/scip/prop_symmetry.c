@@ -3938,7 +3938,7 @@ SCIP_RETCODE addSchreierSimsConss(
       }
    }
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &norbitleadercomponent, ncomponents) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &norbitleadercomponent, ncomponents) );
 
    while ( ninactiveperms < nperms )
    {
@@ -3995,7 +3995,7 @@ SCIP_RETCODE addSchreierSimsConss(
       if ( norbitleadercomponent[c] > 5 )
          componentblocked[c] = TRUE;
    }
-   SCIPfreeCleanBufferArray(scip, &norbitleadercomponent);
+   SCIPfreeBufferArray(scip, &norbitleadercomponent);
 
    if ( conflictgraphcreated )
    {
