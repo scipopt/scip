@@ -3833,6 +3833,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int leadervartype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool success;
+   int* norbitleadercomponent;
 
    int c;
    int v;
@@ -3937,6 +3938,8 @@ SCIP_RETCODE addSchreierSimsConss(
       }
    }
 
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &norbitleadercomponent, ncomponents) );
+
    while ( ninactiveperms < nperms )
    {
       int nchanges = 0;
@@ -3967,6 +3970,8 @@ SCIP_RETCODE addSchreierSimsConss(
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
+      norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
+
       if ( nchgbds != NULL )
          *nchgbds += nchanges;
 
@@ -3984,6 +3989,13 @@ SCIP_RETCODE addSchreierSimsConss(
          }
       }
    }
+
+   for (c = 0; c < ncomponents; ++c)
+   {
+      if ( norbitleadercomponent[c] > 5 )
+         componentblocked[c] = TRUE;
+   }
+   SCIPfreeCleanBufferArray(scip, &norbitleadercomponent);
 
    if ( conflictgraphcreated )
    {
