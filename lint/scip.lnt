@@ -190,6 +190,7 @@
 
 // turn off unusual use of 'SYM'
 -emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSreallocBlockMemoryArray)
 -emacro(866,BMSduplicateMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArrayNull)

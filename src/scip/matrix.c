@@ -21,6 +21,8 @@
  *
  * The MIP matrix is organized as sparse data structure in row and
  * and column major format.
+ *
+ * @todo disregard relaxation-only variables in lock check and don't copy them to the matrix
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,6 +43,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
@@ -444,7 +447,13 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
    SCIP_Bool             onlyifcomplete,     /**< should matrix creation be skipped if matrix will not be complete? */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
-   SCIP_Bool*            complete            /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            complete,           /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible during matrix creation */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints during matrix creation */
+   int*                  ndelconss,          /**< pointer to count number of deleted specialized linear constraints during matrix creation */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients during matrix creation */
+   int*                  nchgbds,            /**< pointer to count number of changed bounds during matrix creation */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables during matrix creation */
    )
 {
    SCIP_MATRIX* matrix;
@@ -473,9 +482,14 @@ SCIP_RETCODE SCIPmatrixCreate(
 
    *initialized = FALSE;
    *complete = FALSE;
+   *infeasible = FALSE;
 
    /* return if no variables or constraints are present */
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* return if pricers are present and the matrix should only be built when complete */
+   if( onlyifcomplete && SCIPgetNActivePricers(scip) != 0 )
       return SCIP_OKAY;
 
    /* loop over all constraint handlers and collect the number of checked constraints */
@@ -535,6 +549,37 @@ SCIP_RETCODE SCIPmatrixCreate(
       return SCIP_OKAY;
 
    stopped = FALSE;
+
+   /* first, clean up aggregations and fixings in varbound costraints, since this can lead
+    * to boundchanges and the varbound constraint can get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssVarbound(scip, TRUE, infeasible, naddconss, ndelconss, nchgbds ) );
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   /* next, clean up aggregations and fixings in setppc costraints, since this can lead
+    * to fixings and the setppc constraint can get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssSetppc(scip, TRUE, infeasible, naddconss, ndelconss, nchgcoefs, nfixedvars ) );
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   /* next, clean up aggregations and fixings in logicor costraints, since this cannot lead
+    * to further fixings but the logicor constraint can also get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssLogicor(scip, TRUE, naddconss, ndelconss, nchgcoefs) );  
+
+   /* finally, clean up aggregations and fixings in knapsack and linear constraints since now no new linaer constraints
+    * can come up due to downgrading and the remaining cleanup methods cannot fix any more variables
+    */
+
+   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible) );
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible) );
+   if( *infeasible )
+      return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -611,7 +656,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       int nconshdlrconss;
       SCIP_Bool rowadded;
 
-      if( SCIPisStopped(scip) )
+      if( SCIPisStopped(scip) || (onlyifcomplete && !(*complete)) )
       {
          stopped = TRUE;
          break;
@@ -627,6 +672,17 @@ SCIP_RETCODE SCIPmatrixCreate(
          {
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
@@ -649,6 +705,17 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
 
             switch( SCIPgetTypeSetppc(scip, cons) )
             {
@@ -686,6 +753,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
+
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
                   NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), nnonzstmp, &rowadded) );
 
@@ -713,6 +791,17 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                weights = SCIPgetWeightsKnapsack(scip, cons);
                nvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -756,6 +845,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                consvars[0] = SCIPgetVarVarbound(scip, cons);
                consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
@@ -802,6 +902,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                /* get constraint variables and their amount */
                SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
@@ -850,6 +961,27 @@ SCIP_RETCODE SCIPmatrixCreate(
    assert(matrix->nrows <= nconss);
    assert(matrix->nnonzs <= nnonzstmp);
 
+   if( *complete )
+   {
+      SCIP_Bool lockmismatch = FALSE;
+
+      for( i = 0; i < matrix->ncols; ++i )
+      {
+         if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) )
+         {
+            lockmismatch = TRUE;
+            break;
+         }
+      }
+
+      if( lockmismatch )
+      {
+         *complete = FALSE;
+         if( onlyifcomplete )
+            stopped = TRUE;
+      }
+   }
+
    if( !stopped )
    {
       /* calculate row activity bounds */
@@ -859,6 +991,37 @@ SCIP_RETCODE SCIPmatrixCreate(
       SCIP_CALL( setColumnMajorFormat(scip, matrix) );
 
       *initialized = TRUE;
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &matrix->maxactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivity);
+      SCIPfreeBufferArray(scip, &matrix->minactivity);
+
+      SCIPfreeMemoryArray(scip, &matrix->isrhsinfinite);
+      SCIPfreeBufferArray(scip, &matrix->cons);
+
+      SCIPfreeBufferArray(scip, &matrix->rhs);
+      SCIPfreeBufferArray(scip, &matrix->lhs);
+      SCIPfreeBufferArray(scip, &matrix->rowmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->rowmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->rowmatind);
+      SCIPfreeBufferArray(scip, &matrix->rowmatval);
+
+      SCIPfreeBufferArray(scip, &matrix->ndownlocks);
+      SCIPfreeBufferArray(scip, &matrix->nuplocks);
+      SCIPfreeBufferArray(scip, &matrix->ub);
+      SCIPfreeBufferArray(scip, &matrix->lb);
+      SCIPfreeBufferArray(scip, &matrix->colmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->colmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->colmatind);
+      SCIPfreeBufferArray(scip, &matrix->colmatval);
+      SCIPfreeBufferArrayNull(scip, &matrix->vars);
+
+      SCIPfreeBuffer(scip, matrixptr);
    }
 
    return SCIP_OKAY;
@@ -940,6 +1103,8 @@ void SCIPmatrixPrintRow(
    int col;
    SCIP_Real val;
    SCIP_Real* valpnt;
+
+   SCIP_UNUSED(scip);
 
    rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
    rowend = rowpnt + matrix->rowmatcnt[row];
@@ -1313,8 +1478,6 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 #undef SCIPmatrixGetRowNMaxActNegInf
 #undef SCIPmatrixGetRowNMaxActPosInf
 #undef SCIPmatrixGetCons
-#undef SCIPmatrixUplockConflict
-#undef SCIPmatrixDownlockConflict
 
 /** get column based start pointer of values */
 SCIP_Real* SCIPmatrixGetColValPtr(
@@ -1629,7 +1792,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1641,5 +1804,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->ndownlocks[col]);
 }

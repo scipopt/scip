@@ -150,8 +150,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_SOL*             partialsol,         /**< partial solution */
-   SCIP_Bool*            tightened,          /**< array to store for which variables we have found bound tightenings */
-   SCIP_Bool*            success             /**< pointer to store whether the creation was successful */
+   SCIP_Bool*            tightened           /**< array to store for which variables we have found bound tightenings */
    )
 {
    SCIP_VAR** vars;
@@ -167,8 +166,6 @@ SCIP_RETCODE createSubproblem(
    assert(subscip != NULL);
    assert(subvars != NULL);
    assert(heurdata != NULL);
-
-   *success = TRUE;
 
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
@@ -560,14 +557,13 @@ SCIP_RETCODE tightenVariables(
                offset = REALABS(heurdata->boundwidening * (newub-newlb));
             else
             {
-               /* if one bound is finite, widen bound w.r.t. solution value and finite bound */
+               offset = 0.0;
+
+               /* if exactly one bound is finite, widen bound w.r.t. solution value and finite bound */
                if( !SCIPisInfinity(scip, -newlb) )
                   offset = REALABS(heurdata->boundwidening * (solval-newlb));
-               else
-               {
-                  assert(!SCIPisInfinity(scip, newub));
+               else if( !SCIPisInfinity(scip, newub) )
                   offset = REALABS(heurdata->boundwidening * (newub-solval));
-               }
             }
 
             /* update bounds */
@@ -768,12 +764,7 @@ SCIP_RETCODE setupAndSolve(
    SCIPhashmapFree(&varmapf);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, heurdata, subvars, partialsol, tightened, &success) );
-   if( !success )
-   {
-      SCIPdebugMsg(scip, "Error while creating completesol subproblem w.r.t. partial solution <%p>.\n", (void*)partialsol);
-      goto TERMINATE;
-   }
+   SCIP_CALL( createSubproblem(scip, subscip, heurdata, subvars, partialsol, tightened) );
    SCIPdebugMsg(scip, "Completesol subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* do not abort subproblem on CTRL-C */
@@ -1146,7 +1137,11 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
 
       /* run the heuristic, if not too many unknown variables exist */
       if( unknownrate > heurdata->maxunknownrate )
+      {
+         SCIPwarningMessage(scip, "ignore partial solution (%d) because unknown rate is too large (%g > %g)\n", s,
+            unknownrate, heurdata->maxunknownrate);
          continue;
+      }
 
       /* all variables have a finite/known solution value all integer variables have an integral solution value,
        * and there are no continuous variables

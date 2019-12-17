@@ -54,6 +54,7 @@ option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
+option(PRESOLVELIB "should presolvelib be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -208,7 +209,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 #endif()
 
 # use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # set function visibility default to hidden
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -264,6 +265,16 @@ if(MPFR_FOUND)
     include_directories(${MPFR_INCLUDE_DIRS})
 else()
     set(MPFR_LIBRARIES "")
+endif()
+
+# look for presolvelib
+if(PRESOLVELIB)
+   find_package(PRESOLVELIB)
+endif()
+if(PRESOLVELIB_FOUND)
+   set(SCIP_WITH_PRESOLVELIB on)
+else()
+   set(PRESOLVELIB_IMPORTED_TARGETS "")
 endif()
 
 #search the selected LP solver library
