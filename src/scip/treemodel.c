@@ -874,7 +874,6 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_VAR**            branchcands,        /**< branching candidate storage */
    SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
-   SCIP_Real*            scoresfrompc,       /**< pseudocost scores of branching candidates */
    SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
    SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                   nbranchcands,       /**< the number of branching candidates */
@@ -891,24 +890,6 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    assert(treemodel != NULL);
    assert(treemodel->enabled);
    assert(*bestcand >= 0);
-
-   /* If the pseudocosts are zero, use SCIPs best variable since the Treemodel is not applicable */
-   if( SCIPisZero(scip, maxgains[*bestcand]) )
-   {
-      return SCIP_OKAY;
-   }
-
-   /* If SCIPs best candidate was selected due to hybrid branching scores
-    * rather than because of pseudocosts, then we keep it.
-    */
-   if( avgpscostscore <= treemodel->smallpscost )
-   {
-      for( c = 0; c < nbranchcands; ++c )
-      {
-         if( scoresfrompc[c] > scoresfrompc[*bestcand] )
-            return SCIP_OKAY;
-      }
-   }
 
    /* Compute the dual gap at the current node */
    if( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )

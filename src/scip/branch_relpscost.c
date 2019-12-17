@@ -1741,18 +1741,47 @@ SCIP_RETCODE execRelpscost(
       /* Apply the Treemodel branching rule to potentially select a better branching candidate than the current one. */
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && SCIPtreemodelIsEnabled(scip, branchruledata->treemodel) )
       {
-         SCIP_CALL( SCIPtreemodelSelectCandidate(
+	 SCIP_Real smallpscost;
+	 SCIP_Bool usetreemodel;
+
+	 usetreemodel = TRUE;
+
+         /* If the pseudocosts are zero, use SCIPs best variable since the Treemodel is not applicable */
+         if( SCIPisZero(scip, maxgains[bestcand]))
+         {
+             usetreemodel = FALSE;
+         }
+
+         /* If SCIPs best candidate was selected due to hybrid branching scores
+          * rather than because of pseudocosts, then we keep it.
+          */
+         SCIP_CALL( SCIPgetRealParam(scip, "branching/treemodel/smallpscost", &smallpscost) );
+         if( usetreemodel == TRUE && avgpscostscore <= smallpscost )
+         {
+            for( c = 0; c < nbranchcands; ++c )
+            {
+               if( scoresfrompc[c] > scoresfrompc[bestcand] )
+               {
+                  usetreemodel = FALSE;
+		  break;
+               }
+            }
+         }
+
+         if( usetreemodel == TRUE )
+         {
+            SCIP_CALL( SCIPtreemodelSelectCandidate(
                scip,                        /* SCIP data structure */
                branchruledata->treemodel,   /* branching rule */
                branchcands,                 /* branching candidate storage */
                mingains,                    /* minimum gain of rounding downwards or upwards */
                maxgains,                    /* maximum gain of rounding downwards or upwards */
-               scoresfrompc,                /* pseudocost scores of branching candidates */
                scoresfromothers,            /* scores from other branching methods */
                avgpscostscore,              /* average pseudocost score of branching candidates */
                nbranchcands,                /* the number of branching candidates */
                &bestcand                    /* the best branching candidate found by SCIP */
-         ) );
+            ) );
+         }
       }
 
       /* free buffer for the lp gains and pseudocost scores */
