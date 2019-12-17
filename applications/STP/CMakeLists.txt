@@ -42,6 +42,7 @@ add_executable(scipstp
     src/reduce_simple.c
     src/reduce_test.c
     src/reduce_util.c
+    src/solpool.c
     src/validate.c
 )
 

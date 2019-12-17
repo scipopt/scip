@@ -93,6 +93,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_simple.o \
 			reduce_test.o \
 			reduce_util.o \
+			solpool.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o

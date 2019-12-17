@@ -37,6 +37,7 @@
 #include "heur_local.h"
 #include "probdata_stp.h"
 #include "heur_rec.h"
+#include "solpool.h"
 
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
@@ -238,7 +239,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    objval = getSolObj(scip, graph, result);
 
    if( userec )
-      SCIP_CALL(SCIPStpHeurRecAddToPool(scip, objval, result, pool, &soladded));
+      SCIP_CALL(solpool_addSol(scip, objval, result, pool, &soladded));
 
    /* should we try recombination? */
    if( userec && soladded && pool->size >= 2 && objval < *bestobjval )
@@ -253,7 +254,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 
       if( solfound )
       {
-         const STPSOL* const sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+         const STPSOL* const sol = solpool_solFromIndex(pool, solindex);
          SCIP_Real solobjval;
 
          assert(sol != NULL);
@@ -279,7 +280,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
             assert(SCIPisLE(scip, objval, solobjval));
 
             if( objval < solobjval )
-               SCIP_CALL(SCIPStpHeurRecAddToPool(scip, objval, result, pool, &solfound));
+               SCIP_CALL(solpool_addSol(scip, objval, result, pool, &solfound));
          }
       }
    }
@@ -332,7 +333,7 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
    if( pool != NULL )
    {
       SCIPdebugMessage("ub %f vs best sol %f\n", ub2, pool->sols[0]->obj);
-      SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub2, result2, pool, &success) );
+      SCIP_CALL( solpool_addSol(scip, ub2, result2, pool, &success) );
 
 #ifdef SCIP_DEBUG
       for( int i = 0; i < pool->size; i++ )
@@ -353,7 +354,7 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
 
          if( solfound )
          {
-            STPSOL* sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+            STPSOL* sol = solpool_solFromIndex(pool, solindex);
             SCIP_Real solobjval;
 
             assert(sol != NULL);
@@ -377,7 +378,7 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
                ub2 = getSolObj(scip, graph, result2);
 
                if( SCIPisLT(scip, ub2, sol->obj) )
-                  SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub2, result2, pool, &success) );
+                  SCIP_CALL( solpool_addSol(scip, ub2, result2, pool, &success) );
             }
          }
       }
@@ -1354,7 +1355,7 @@ void daPcMarkRoots(
    if( *userec && *solpool != NULL )
    {
       *userec = FALSE;
-      SCIPStpHeurRecFreePool(scip, solpool);
+      solpool_free(scip, solpool);
       *solpool = NULL;
    }
 
@@ -2170,7 +2171,7 @@ SCIP_RETCODE reduce_da(
    SCIP_CALL( SCIPallocBufferArray(scip, &terms, graph->terms) );
 
    if( userec )
-      SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
+      SCIP_CALL( solpool_init(scip, &pool, nedges, SOLPOOL_SIZE) );
 
    if( rpc )
       reduce_identifyNonLeafTerms(scip, graph);
@@ -2323,8 +2324,8 @@ SCIP_RETCODE reduce_da(
          if( nreplacings > 0 && userec )
          {
             /* solutions in pool might not be valid anymore */
-            SCIPStpHeurRecFreePool(scip, &pool);
-            SCIP_CALL(SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE));
+            solpool_free(scip, &pool);
+            SCIP_CALL(solpool_init(scip, &pool, nedges, SOLPOOL_SIZE));
          }
 
          assert(graph_valid_ancestors(scip, graph));
@@ -2346,7 +2347,7 @@ SCIP_RETCODE reduce_da(
       *ub = upperbound;
 
    if( userec )
-      SCIPStpHeurRecFreePool(scip, &pool);
+      solpool_free(scip, &pool);
 
    SCIPfreeBufferArray(scip, &terms);
    SCIPfreeBufferArray(scip, &nodereplacebounds);
@@ -2954,7 +2955,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodefixingbounds, nnodes + 1) );
 
    if( userec )
-      SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
+      SCIP_CALL( solpool_init(scip, &pool, nedges, SOLPOOL_SIZE) );
 
    if( graph_pc_isPc(graph) )
       reduce_identifyNonLeafTerms(scip, graph);
@@ -3040,7 +3041,7 @@ SCIP_RETCODE reduce_daPcMw(
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
          ub = getSolObj(scip, graph, result2);
 
-         SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
+         SCIP_CALL( solpool_addSol(scip, ub, result2, pool, &success) );
          SCIPdebugMessage("added initial TM sol to pool? %d , ub %f \n", success, ub);
       }
 
@@ -3303,7 +3304,7 @@ SCIP_RETCODE reduce_daPcMw(
    *nelims = nfixed;
 
    if( pool != NULL )
-      SCIPStpHeurRecFreePool(scip, &pool);
+      solpool_free(scip, &pool);
 
    SCIPfreeBufferArrayNull(scip, &roots);
    SCIPfreeBufferArray(scip, &nodefixingbounds);

@@ -29,28 +29,12 @@
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "solpool.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** element of Steiner tree solution pool */
-typedef struct stp_solution
-{
-   SCIP_Real obj;
-   int* soledges;
-   int index;
-} STPSOL;
-
-/** edge based solution pool for Steiner tree problems (in presolving) */
-typedef struct stp_solution_pool
-{
-   STPSOL** sols;
-   int size;
-   int nedges;
-   int maxsize;
-   int maxindex;
-} STPSOLPOOL;
 
 /** run REC heuristic */
 SCIP_RETCODE SCIPStpHeurRecRun(
@@ -67,35 +51,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP_Bool*            solfound            /**< new solution found? */
 );
 
-
-/** get solution from index */
-STPSOL* SCIPStpHeurRecSolfromIdx(
-   STPSOLPOOL*           pool,               /**< the pool */
-   const int             soindex             /**< the index */
-    );
-
-/** initializes STPSOL pool */
-SCIP_RETCODE SCIPStpHeurRecInitPool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STPSOLPOOL**          pool,               /**< the pool */
-   const int             nedges,             /**< number of edges of solutions to be stored in the pool */
-   const int             maxsize             /**< capacity of pool */
-   );
-
-/** tries to add STPSOL to pool */
-SCIP_RETCODE SCIPStpHeurRecAddToPool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real       obj,                /**< objective of solution to be added */
-   const int*            soledges,           /**< edge array of solution to be added */
-   STPSOLPOOL*           pool,               /**< the pool */
-   SCIP_Bool*            success             /**< has solution been added? */
-   );
-
-/** frees STPSOL pool */
-void SCIPStpHeurRecFreePool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STPSOLPOOL**          pool                /**< the pool */
-   );
 
 /** creates the rec primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPStpIncludeHeurRec(
