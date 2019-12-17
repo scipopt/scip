@@ -224,7 +224,7 @@ do
     then
         #format is (d-)HH:MM:SS
         HARDTIMELIMIT=$(formattime $HARDTIMELIMIT)
-        echo ${HARDTIMELIMIT}
+        # echo ${HARDTIMELIMIT}
     fi
     HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
     COUNT=$(( $COUNT + 1 ))
