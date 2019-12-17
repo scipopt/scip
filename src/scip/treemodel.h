@@ -92,7 +92,6 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
-   SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call, 
 					          and the best candidate after the call (possibly the same) */

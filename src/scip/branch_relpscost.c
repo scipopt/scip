@@ -1778,7 +1778,6 @@ SCIP_RETCODE execRelpscost(
                mingains,                    /* minimum gain of rounding downwards or upwards */
                maxgains,                    /* maximum gain of rounding downwards or upwards */
                scoresfromothers,            /* scores from other branching methods */
-               avgpscostscore,              /* average pseudocost score of branching candidates */
                nbranchcands,                /* the number of branching candidates */
                &bestcand                    /* the best branching candidate found by SCIP */
             ) );
