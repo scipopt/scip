@@ -27,7 +27,7 @@
 /*lint -esym(766,string.h)                             */
 //#define SCIP_DEBUG
 
-#include "solpool.h";
+#include "solpool.h"
 
 
 /** is given solution in pool? */
