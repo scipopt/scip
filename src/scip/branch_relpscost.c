@@ -1758,9 +1758,10 @@ SCIP_RETCODE execRelpscost(
          SCIP_CALL( SCIPgetRealParam(scip, "branching/treemodel/smallpscost", &smallpscost) );
          if( usetreemodel == TRUE && avgpscostscore <= smallpscost )
          {
-            for( c = 0; c < nbranchcands; ++c )
+            int cand;
+            for( cand = 0; cand < nbranchcands; ++cand )
             {
-               if( scoresfrompc[c] > scoresfrompc[bestcand] )
+               if( scoresfrompc[cand] > scoresfrompc[bestcand] )
                {
                   usetreemodel = FALSE;
 		  break;

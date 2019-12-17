@@ -916,7 +916,6 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    int bestcandheight;              /* The height of the best candidate according to SCIP */
    char scoringfunction;            /* Scoring function to use (based on the estimated tree height) */
    char filtersetting;              /* Whether we should apply filtering of dominated variables */
-   int c;                           /* Loop counter for branching candidates */
 
    assert(treemodel != NULL);
    assert(treemodel->enabled);
