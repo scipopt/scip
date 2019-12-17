@@ -17,12 +17,29 @@
  * @ingroup PUBLICCOREAPI
  * @brief  Branching rules based on the Single-Variable-Branching (SVB) model
  * @author Daniel Anderson
+ * @author Pierre Le Bodic
  *
  * The Single-Variable-Branching (SVB) model is a simplified model of
  * Branch & Bound trees, from which several nontrivial variable selection
  * rules arise. The Treemodel branching rule complements SCIP's hybrid
  * branching by suggesting improved branching variables given the current
  * pseudocosts and the current dual gap.
+ *
+ * Given a variable with dual bound changes (l, r) (both positive)
+ * and an absolute gap G, the SVB model describes the tree that needs to be
+ * built by branching on that same variable at every node until the value G
+ * is reached at every leaf, starting from 0 at the root node.
+ * If we do so for every variable, we can select the variable that produces
+ * the smallest tree.
+ * In the case where the gap is not known, then we can compute the growth rate
+ * of the tree, which we call the ratio.
+ * The ratio of a variable (l, r) is the factor by which the size of the tree 
+ * built using (l, r) that closes a gap G must be multiplied by to close a gap
+ * G+1. This ratio is not constant for all gaps, but when G tends to infinity,
+ * it converges to a fixed value we can compute numerically using a root finding 
+ * algorithm (e.g. Laguerre).
+ * The ratio is used when the gap is too large (e.g. no primal bound known) or
+ * to help approximate the size of the SVB tree for that variable.
  *
  * See the following publication for more detail:
  *
