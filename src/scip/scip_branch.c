@@ -946,6 +946,57 @@ SCIP_Real SCIPcalcChildEstimate(
    return SCIPtreeCalcChildEstimate(scip->tree, scip->set, scip->stat, var, targetvalue);
 }
 
+/** calculates the increase of the estimate for the objective of the best feasible solution contained in the subtree
+ *  after applying the given branching
+ *
+ *  @return the increase of the estimate for the objective of the best feasible solution contained in the subtree after
+ *          applying the given branching.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcChildEstimateIncrease(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to be branched on (NULL if LP solution) */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   )
+{
+   SCIP_Real estimateinc;
+   SCIP_Real varsol;
+
+   assert(tree != NULL);
+   assert(var != NULL);
+
+   varsol = SCIPgetSolVal(scip, sol, vars[j]);
+
+   /* compute increase above parent node's (i.e., focus node's) estimate value */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+   else
+   {
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
+
+      /* calculate estimate based on pseudo costs:
+       *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
+       *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
+       */
+      pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
+      estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol) - MIN(pscdown, pscup);
+   }
+
+   /* due to rounding errors estimateinc might be slightly negative */
+   if( estimateinc > 0.0 )
+      estimateinc = 0.0;
+
+   return estimateinc;
+}
+
 /** creates a child node of the focus node
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
