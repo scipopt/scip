@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,18 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_xyz.c
- * @brief  handler for xyz expressions
+/**@file   cons_expr_erf.c
+ * @brief  handler for guassian error function expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_xyz.h"
+#include "scip/cons_expr_erf.h"
 #include "scip/cons_expr.h"
 
 /* fundamental expression handler properties */
-#define EXPRHDLR_NAME         "xyz"
+#define EXPRHDLR_NAME         "erf"
 #define EXPRHDLR_DESC         "expression handler template"
 #define EXPRHDLR_PRECEDENCE   0
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
@@ -32,18 +32,6 @@
 /*
  * Data structures
  */
-
-/* TODO: fill in the necessary data */
-
-/** expression data */
-struct SCIP_ConsExpr_ExprData
-{
-};
-
-/** expression handler data */
-struct SCIP_ConsExpr_ExprHdlrData
-{
-};
 
 /*
  * Local methods
@@ -57,44 +45,38 @@ struct SCIP_ConsExpr_ExprHdlrData
 
 /** expression handler copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
+SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrErf)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
 }
 
 /** expression handler free callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrXyz)
+SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrErf)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
 }
 
-/** simplifies a xyz expression */
+/** simplifies a erf expression */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
 }
 
 /** expression compare callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareErf)
 {  /*lint --e{715}*/
    assert(expr1 != NULL);
    assert(expr2 != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return 0;
@@ -102,9 +84,9 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
 
 /** expression data copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXyz)
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataErf)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -112,11 +94,11 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXyz)
 
 /** expression data free callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXyz)
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -124,11 +106,11 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXyz)
 
 /** expression print callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
+SCIP_DECL_CONSEXPR_EXPRPRINT(printErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -136,11 +118,11 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
 
 /** expression parse callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -148,11 +130,11 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
 
 /** expression (point-) evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
+SCIP_DECL_CONSEXPR_EXPREVAL(evalErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -160,11 +142,11 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXyz)
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -172,11 +154,11 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXyz)
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXyz)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -184,11 +166,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXyz)
 
 /** separation initialization callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaXyz)
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -196,11 +178,23 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaXyz)
 
 /** separation deinitialization callback */
 static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaXyz)
+SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+/** expression separation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaErf)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -208,11 +202,11 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaXyz)
 
 /** expression under/overestimation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -220,24 +214,24 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 
-/** xyz hash callback */
+/** erf hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
+SCIP_DECL_CONSEXPR_EXPRHASH(hashErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
    assert(EXPRHDLR_HASHKEY != 0.0);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -245,12 +239,12 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -258,13 +252,13 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityXyz)
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(result != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -272,13 +266,13 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityXyz)
 
 /** expression integrality detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
+SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -286,7 +280,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
 
 /** expression branching score callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreXyz)
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreErf)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -294,14 +288,14 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreXyz)
 
    *success = FALSE;
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 
-/** creates the handler for xyz expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
+/** creates the handler for erf expressions and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
@@ -316,30 +310,30 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
 
    /* include expression handler */
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalXyz, exprhdlrdata) );
+         EXPRHDLR_PRECEDENCE, evalErf, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrXyz, freehdlrXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataXyz, freedataXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaXyz, exitSepaXyz, estimateXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreXyz) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrErf, freehdlrErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataErf, freedataErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaErf, exitSepaErf, sepaErf, estimateErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreErf) );
 
    return SCIP_OKAY;
 }
 
-/** creates a xyz expression */
-SCIP_RETCODE SCIPcreateConsExprExprXyz(
+/** creates a erf expression */
+SCIP_RETCODE SCIPcreateConsExprExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */

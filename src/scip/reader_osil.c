@@ -29,6 +29,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_erf.h"
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_pow.h"
@@ -1551,7 +1552,8 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "ln") == 0 ||
       strcmp(exprname, "log10") == 0 ||
       strcmp(exprname, "sin") == 0 ||
-      strcmp(exprname, "cos") == 0
+      strcmp(exprname, "cos") == 0 ||
+      strcmp(exprname, "erf") == 0
       )
    {
       SCIP_CONSEXPR_EXPR* arg;
@@ -1616,6 +1618,10 @@ SCIP_RETCODE readExpression(
       else if( strcmp(exprname, "cos") == 0 )
       {
          SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, expr, arg) );
+      }
+      else if( strcmp(exprname, "erf") == 0 )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprErf(scip, consexprhdlr, expr, arg) );
       }
 
       /* release argument expression */
