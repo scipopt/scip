@@ -709,8 +709,6 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added constraints */
    if ( propdata->genlinconss != NULL )
    {
-      assert( propdata->ngenlinconss > 0 );
-
       /* release constraints */
       for (i = 0; i < propdata->ngenlinconss; ++i)
       {
@@ -3514,6 +3512,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->ncompblocked < propdata->ncomponents && propdata->detectsubgroups )
    {
+      /* @TODO: create array only when needed */
       propdata->genlinconsssize = propdata->nperms;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
 
