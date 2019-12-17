@@ -71,6 +71,8 @@ then
     exit 1;
 fi
 
+OUTPUTDIR="results"
+
 # get current SCIP path
 SCIPPATH=`pwd`
 
@@ -105,41 +107,14 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="  --exclusive "
-else
-    EXCLUSIVE=""
-fi
+# configure cluster-related environment variables
+. ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
 #       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -280,9 +255,7 @@ do
       echo crossover = 0                      >> $TMPFILE
 
       echo readprob $SCIPPATH/$i              >> $TMPFILE
-      echo time [lpoptimize -b]               >> $TMPFILE
-      echo echo bariter:                      >> $TMPFILE
-      echo bariter                            >> $TMPFILE
+      echo time [ mipoptimize ]               >> $TMPFILE
       echo quit                               >> $TMPFILE
 
       # additional environment variables needed by run.sh
@@ -290,6 +263,7 @@ do
       export EXECNAME=$BINNAME
       export BASENAME=$FILENAME
       export FILENAME=$i
+      export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
 
       # check queue type
