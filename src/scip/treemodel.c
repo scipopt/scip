@@ -541,7 +541,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    SCIP_VAR**            branchcands,        /**< branching candidate storage */
    SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
-   SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    SCIP_Real             localabsgap,        /**< The dual gap at the current node */
    SCIP_Bool             filterdominated,    /**< whether dominated variables have been filtered */
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
@@ -595,7 +595,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
 
          for( c = 0; c < nbranchcands; ++c )
          {
-            score = (1.0 - 1.0 / (1.0 + avgtreesize / treesizes[c])) + 0.01 * scoresfromothers[c];
+            score = (1.0 - 1.0 / (1.0 + avgtreesize / treesizes[c])) + 0.01 * tiebreakerscore[c];
             if(score > bestscore)
             {
                bestscore = score;
@@ -698,7 +698,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    SCIP_VAR**            branchcands,        /**< branching candidate storage */
    SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
-   SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    SCIP_Real             localabsgap,        /**< The dual gap at the current node */
    SCIP_Bool             filterdominated,    /**< whether dominated variables have been filtered */
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
@@ -753,7 +753,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
 
          for( c = 0; c < nbranchcands; ++c )
          {
-            score = (1.0 - 1.0 / (1.0 + avgtreesize / treesizes[c])) + 0.01 * scoresfromothers[c];
+            score = (1.0 - 1.0 / (1.0 + avgtreesize / treesizes[c])) + 0.01 * tiebreakerscore[c];
             if( score > bestscore )
             {
                bestscore = score;
@@ -874,7 +874,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_VAR**            branchcands,        /**< branching candidate storage */
    SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
-   SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
+   SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call, 
@@ -944,7 +944,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
       switch( scoringfunction )
       {
       case 's':
-         SCIP_CALL( selectCandidateUsingSVTS(scip, treemodel, branchcands, mingains, maxgains, scoresfromothers,
+         SCIP_CALL( selectCandidateUsingSVTS(scip, treemodel, branchcands, mingains, maxgains, tiebreakerscore,
                localabsgap, filterdominated, dominated, nbranchcands, ndominated, bestcand) );
          break;
       case 'r':
@@ -952,7 +952,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
                dominated, nbranchcands, bestcand) );
          break;
       case 't':
-         SCIP_CALL( selectCandidateUsingSampling(scip, treemodel, branchcands, mingains, maxgains, scoresfromothers,
+         SCIP_CALL( selectCandidateUsingSampling(scip, treemodel, branchcands, mingains, maxgains, tiebreakerscore,
                localabsgap, filterdominated, dominated, nbranchcands, ndominated, bestcand) );
          break;
       default:
