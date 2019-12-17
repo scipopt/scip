@@ -81,11 +81,10 @@ testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh ch
 .PHONY: testclustercpx
 testclustercpx:
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(CPLEX) $(SETTINGS) \
-                $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-                $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
+		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testclustercbc
 testclustercbc:
