@@ -701,6 +701,8 @@ SCIP_Real computeSampleTreesize(
       SCIP_Real phi_lr = phi_l * phi_r;
       SCIP_Real phi_klr = integerpow(phi_lr, k);
 
+      /* We compute an estimate of the size of the tree using the left-most leaf,
+       * right-most leaf, and the leaf obtained from alternating left and right. */
       leftsize = (integerpow(phi_l, kl + 1) - 1.0) / (phi_l - 1.0);
       rightsize = (integerpow(phi_r, kr + 1) - 1.0) / (phi_r - 1.0);
 
