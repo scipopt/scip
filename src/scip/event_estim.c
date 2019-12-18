@@ -2375,7 +2375,7 @@ SCIP_Bool shouldApplyRestartCompletion(
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( completion < 1.0 / eventhdlrdata->restartfactor )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Completion %.5f less than restart threshold %.5f\n",
          completion, 1.0 / eventhdlrdata->restartfactor);
       return TRUE;
@@ -2397,7 +2397,7 @@ SCIP_Bool shouldApplyRestartEstimation(
 
    if( estimation < 0.0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Estimation %g is still unavailable\n",
          estimation);
       return TRUE;
@@ -2749,7 +2749,13 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       {
          /* safe that we triggered a restart at this run */
          if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         {
             eventhdlrdata->nrestartsperformed++;
+
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "Restart triggered after %d consecutive estimations that the remaining tree will be large\n",
+               eventhdlrdata->restarthitcounter);
+         }
 
          eventhdlrdata->lastrestartrun = SCIPgetNRuns(scip);
 
