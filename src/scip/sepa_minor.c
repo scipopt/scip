@@ -457,7 +457,14 @@ SCIP_RETCODE addCut(
    if( !SCIPisFeasLT(scip, eigenval, -mincutviol) )
       return SCIP_OKAY;
 
-   /* the resulting cut reads as v_0^2 + 2v_0v_1 * x + 2v_0v_2 * y + v_1^2 * xx + v_2^2 * yy + 2v_1v_2 * xy */
+   /* the resulting cut reads as 
+    *              (1 x  y )  (v0)
+    *  (v0 v1 v2)  (x xx xy)  (v1)  >= 0
+    *              (y xy yy)  (v2)
+    *  where v is the eigenvector corresponding to a negative eigenvalue
+    *  that is,
+    *  v0^2 + 2 v0 v1 * x + 2 v0 v2 * y + v1^2 * xx + v2^2 * yy + 2 v1 v2 * xy >= 0
+    */
    constant = SQR(eigenvec[0]);
    coefs[0] = 2.0 * eigenvec[0] * eigenvec[1];
    coefs[1] = 2.0 * eigenvec[0] * eigenvec[2];
