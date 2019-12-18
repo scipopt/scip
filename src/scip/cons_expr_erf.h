@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_erf.h
- * @brief  handler for guassian error function expressions
+ * @brief  handler for gaussian error function expressions
  * @author Benjamin Mueller
  */
 
@@ -44,8 +44,7 @@ SCIP_RETCODE SCIPcreateConsExprExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
+   SCIP_CONSEXPR_EXPR*   child               /**< childr expression */
    );
 
 #ifdef __cplusplus
