@@ -3171,8 +3171,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
-   if( nbinlin + nquadvars < 3 )
+   /* currently, a proper SOC constraint needs at least 2 variables (at least one will be quadratic) */
+   if( nbinlin + nquadvars < 2 )
       return SCIP_OKAY;
 
    /* reserve space */
@@ -3231,7 +3231,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          goto GENERALUPG;
       }
 
-      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
+      /* check that bilinear terms do not appear in the rest and quadratic terms have positive sqrcoef have no lincoef */
       quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
       for (i = 0; i < nquadvars; ++i)
       {
@@ -3442,7 +3442,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       goto cleanup;
    }
 
-   if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3560,7 +3560,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
 
-      if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+      if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
       { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
          SCIPdebugMsg(scip, "found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3840,7 +3840,7 @@ GENERALUPG:
       }
    }
 
-   if( rhsvarfound && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvarfound && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    {
       /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
