@@ -451,7 +451,7 @@ SCIP_RETCODE addCut(
    if( !SCIPisFeasLT(scip, eigenval, -mincutviol) )
       return SCIP_OKAY;
 
-   /* the resulting cut reads as 
+   /* the resulting cut reads as
     *              (1 x  y )  (v0)
     *  (v0 v1 v2)  (x xx xy)  (v1)  >= 0
     *              (y xy yy)  (v2)
@@ -481,12 +481,10 @@ SCIP_RETCODE addCut(
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;
-      char name[SCIP_MAXSTRLEN];
 
       /* set name of rowprep */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "minor_%s_%s_%s", SCIPvarGetName(xx), SCIPvarGetName(yy),
-         SCIPvarGetName(xy));
-      memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "minor_%s_%s_%s_%lld", SCIPvarGetName(xx), SCIPvarGetName(yy),
+         SCIPvarGetName(xy), SCIPgetNLPs(scip));
 
       /* create, add, and release row */
       SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
