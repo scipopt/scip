@@ -357,7 +357,7 @@ SCIP_RETCODE detectMinors(
          auxvaryy = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)y);
          assert(auxvaryy != NULL);
 
-         /* store minor into te separation data */
+         /* store minor into the separation data */
          SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvar) );
       }
    }
