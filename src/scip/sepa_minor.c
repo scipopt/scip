@@ -333,24 +333,24 @@ SCIP_RETCODE detectMinors(
    {
       SCIP_VAR* x;
       SCIP_VAR* y;
-      SCIP_VAR* auxvar;
+      SCIP_VAR* auxvarxy;
 
       if( perm == NULL )
       {
          x = xs[i];
          y = ys[i];
-         auxvar = auxvars[i];
+         auxvarxy = auxvars[i];
       }
       else
       {
          x = xs[perm[i]];
          y = ys[perm[i]];
-         auxvar = auxvars[perm[i]];
+         auxvarxy = auxvars[perm[i]];
       }
 
       assert(x != NULL);
       assert(y != NULL);
-      assert(auxvar != NULL);
+      assert(auxvarxy != NULL);
       assert(x != y);
 
       if( SCIPhashmapExists(quadmap, (void*)x) && SCIPhashmapExists(quadmap, (void*)y) )
@@ -364,7 +364,7 @@ SCIP_RETCODE detectMinors(
          assert(auxvaryy != NULL);
 
          /* store minor into the separation data */
-         SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvar) );
+         SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvarxy) );
       }
    }
    SCIPdebugMsg(scip, "found %d 2x2 minors in total\n", sepadata->nminors);
