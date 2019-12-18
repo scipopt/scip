@@ -60,7 +60,7 @@ struct SCIP_SepaData
    int                   maxminors;          /**< maximum number for minors (0: no limit) */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
-   SCIP_Bool             detectedminors;     /**< has the minor detection beeing called? */
+   SCIP_Bool             detectedminors;     /**< has minor detection be called? */
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
 };
