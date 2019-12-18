@@ -124,7 +124,7 @@ void cgraph_node_append(
 }
 
 
-/** deletes node */
+/** deletes node at the top */
 void cgraph_node_deleteTop(
    CGRAPH*               cgraph              /**< new graph */
    )

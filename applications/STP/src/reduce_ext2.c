@@ -74,6 +74,10 @@ typedef struct extension_data
    int* const tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost;     /**< of size nnodes */
    SCIP_Real* const tree_redcostSwap;        /**< of size nnodes */
+   SCIP_Real* const pcSdToNode;                /**< needs to be set to -1.0, only needed of PC */
+   const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
+   REDDATA* const reddata;
+   DISTDATA* const distdata;
    SCIP_Real tree_redcost;
    int tree_root;
    int tree_nedges;
@@ -85,10 +89,6 @@ typedef struct extension_data
    const int tree_maxnleaves;
    const int tree_maxdepth;
    const int tree_maxnedges;
-   SCIP_Real* const pcSdToNode;                /**< needs to be set to -1.0, only needed of PC */
-   const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
-   REDDATA* const reddata;
-   DISTDATA* const distdata;
 } EXTDATA;
 
 

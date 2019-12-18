@@ -3067,10 +3067,11 @@ SCIP_RETCODE reduce_daPcMw(
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
-      if( useExtendedRed && !SCIPisZero(scip, minpathcost) && 0 )
+      // todo test again once the extended reductions are more mature
+#if 0
+      if( useExtendedRed && !SCIPisZero(scip, minpathcost) )
       {
          int extfixed;
-         int todo;
 
          REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist,
                   .nodeTo3TermsPaths = vnoi, .nodeTo3TermsBases = vbase,
@@ -3082,9 +3083,8 @@ SCIP_RETCODE reduce_daPcMw(
          nfixed += extfixed;
 
          printf("extfixed=%d \n", extfixed);
-
-         exit(1);
       }
+#endif
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
