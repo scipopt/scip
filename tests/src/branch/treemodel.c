@@ -162,7 +162,7 @@ void setDualGap(
 static
 void setupTestVars(
    int ncands,     /**< Number of branching candidates */
-   ...                     /**< Groups of four for each candidate indicating (mingain, maxgain, pscostscore, otherscore) */
+   ...             /**< Groups of four for each candidate indicating (mingain, maxgain, otherscore) */
 )
 {
    cr_assert_geq(ncands, 0, "Must initialise a non-zero number of variables");
@@ -251,40 +251,6 @@ Test(branch_treemodel, InitFree)
    cr_assert_null(treemodel, "Treemodel is not NULL after being freed");
 }
 
-/** Test that SCIPs best candidate is retained when the pseudocosts are small */
-Test(branch_treemodel_select, SmallPseudocosts)
-{
-   int bestcand = 0;
-
-   /** Enable Treemodel with small pseudocost threshold */
-   SCIP_TREEMODEL treemodel;
-   treemodel.enabled = TRUE;
-   treemodel.smallpscost = 0.1;
-   treemodel.lowrule = 'r';
-   treemodel.highrule = 'r';
-   treemodel.height = 10;
-   treemodel.filterlow = 'f';
-   treemodel.filterhigh = 'f';
-
-   /** Branching candidates (1,1) and (2,2), where (1,1) is selected by hybrid scores */
-   setupTestVars(
-      2,
-      1.0, 1.0, 0.0, 1.0,
-      2.0, 2.0, 0.1, 0.0
-   );
-
-   /** Set the dual gap */
-   setDualGap(0.0);
-
-   /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
-
-   /** Free the branching candidates */
-   freeTestVars();
-
-   cr_assert_eq(bestcand, 0, "Treemodel rule selected another variable despite small pseudocosts");
-}
-
 /**  Test that the ratio rule selects the correct variable */
 Test(branch_treemodel_select, RatioRule)
 {
@@ -304,10 +270,10 @@ Test(branch_treemodel_select, RatioRule)
    /** Branching candidates (10,10), (2,49), (5,5), (2,48) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.6
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.6
    );
 
    /** Set the dual gap -- irrelevant for ratio rule */
@@ -342,10 +308,10 @@ Test(branch_treemodel_select, SvtsRule1)
    /** Branching candidates (10,10), (2,49), (5,5), (2,48) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.6
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.6
    );
 
    /** Set the dual gap */
@@ -380,10 +346,10 @@ Test(branch_treemodel_select, SvtsRule2)
    /** Branching candidates (10,10), (2,49), (5,5), (2,48) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.9
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.9
    );
 
    /** Set the dual gap */
@@ -418,10 +384,10 @@ Test(branch_treemodel_select, SvtsRule3)
    /** Branching candidates (10,10), (5,5), (2,48), (2,49) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.9,
-      2.0, 49.0, 98.0, 9.8
+      10.0, 10.0, 10.0,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.9,
+      2.0, 49.0, 9.8
    );
 
    /** Set the dual gap */
@@ -456,10 +422,10 @@ Test(branch_treemodel_select, SamplingRule1)
    /** Branching candidates (10,10), (2,49), (5,5), (2,48) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.6
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.6
    );
 
    /** Set the dual gap */
@@ -494,10 +460,10 @@ Test(branch_treemodel_select, SamplingRule2)
    /** Branching candidates (10,10), (5,5), (2,48), (2,49) */
    setupTestVars(
       4,
-      10.0, 10.0, 100.0, 10.0,
-      5.0, 5.0, 25.0, 2.5,
-      2.0, 48.0, 96.0, 9.9,
-      2.0, 49.0, 98.0, 9.8
+      10.0, 10.0, 10.0,
+      5.0, 5.0, 2.5,
+      2.0, 48.0, 9.9,
+      2.0, 49.0, 9.8
    );
 
    /** Set the dual gap */
@@ -533,9 +499,9 @@ Test(branch_treemodel_select, SvtsInfFallback)
    /** Branching candidates (1,1), (10,10), (2,49) */
    setupTestVars(
       4,
-      1.0, 1.0, 1.0, 0.1,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8
+      1.0, 1.0, 0.1,
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8
    );
 
    /** Set the dual gap */
@@ -571,9 +537,9 @@ Test(branch_treemodel_select, SvtsNoPrimalFallback)
    /** Branching candidates (1,1), (10,10), (2,49) */
    setupTestVars(
       4,
-      1.0, 1.0, 1.0, 0.1,
-      10.0, 10.0, 100.0, 10.0,
-      2.0, 49.0, 98.0, 9.8
+      1.0, 1.0, 0.1,
+      10.0, 10.0, 10.0,
+      2.0, 49.0, 9.8
    );
 
    /** Set the dual gap to infinity */
