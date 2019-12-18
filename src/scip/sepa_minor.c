@@ -251,7 +251,7 @@ SCIP_RETCODE detectMinors(
 
          SCIPdebugMsg(scip, "visit expression %p in constraint %s\n", (void*)expr, SCIPconsGetName(cons));
 
-         /* check whether the expression as an auxiliary variable */
+         /* check whether the expression has an auxiliary variable */
          auxvar = SCIPgetConsExprExprAuxVar(expr);
          if( auxvar == NULL )
             continue;
