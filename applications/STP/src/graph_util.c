@@ -40,16 +40,51 @@ graph_heap_clean(
    )
 {
    int* const position = heap->position;
-   int capacity = heap->capacity;
+   const int capacity = heap->capacity;
 
    assert(heap && position);
 
    heap->size = 0;
 
    if( cleanposition )
+   {
       for( int i = 0; i < capacity; i++ )
          position[i] = UNKNOWN;
+   }
+
+   assert(graph_heap_isClean(heap));
 }
+
+
+/** is the heap clean? */
+SCIP_Bool
+graph_heap_isClean(
+   const DHEAP*          heap                /**< the heap  */
+   )
+{
+   const int* const position = heap->position;
+   const int capacity = heap->capacity;
+
+   assert(heap && position);
+
+   if( heap->size != 0 )
+   {
+      SCIPdebugMessage("heap size not 0! (=%d)\n", heap->size);
+      return FALSE;
+   }
+
+   for( int i = 0; i < capacity; i++ )
+   {
+      if( UNKNOWN != position[i] )
+      {
+         SCIPdebugMessage("position %d is not clean \n", i);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
 
 
 /** creates new heap. If entries array is provided, it must be of size capacity + 2  */

@@ -343,3 +343,146 @@ SCIP_Real cgraph_edge_getCost(
 
    return 0.0;
 }
+
+/** is the MST struct valid? */
+SCIP_Bool cmst_valid(
+   const CMST*           cmst                /**< the MST */
+)
+{
+
+   return TRUE;
+}
+
+
+/** initializes MST */
+SCIP_RETCODE cmst_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CMST**                cmst,               /**< the MST */
+   int                   maxnnodes           /**< maximum number of nodes */
+   )
+{
+   CMST* mst;
+
+   assert(scip && cmst);
+   assert(maxnnodes > 1);
+
+   SCIP_CALL( SCIPallocMemory(scip, cmst) );
+
+   mst = *cmst;
+
+   graph_heap_create(scip, maxnnodes, NULL, NULL, &(mst->heap));
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->dist), maxnnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->predecessors), maxnnodes) );
+
+   mst->nnodes_max = maxnnodes;
+
+   assert(cmst_valid(mst));
+
+   SCIPdebugMessage("cmst has been successfully built \n");
+
+   return SCIP_OKAY;
+}
+
+
+/** frees MST */
+void cmst_free(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CMST**                cmst                /**< MST */
+   )
+{
+   CMST* mst;
+
+   assert(scip && cmst);
+
+   mst = *cmst;
+
+   SCIPfreeMemoryArray(scip, &(mst->predecessors));
+   SCIPfreeMemoryArray(scip, &(mst->dist));
+
+   graph_heap_free(scip, TRUE, TRUE, &(mst->heap));
+
+   SCIPfreeMemory(scip, cmst);
+}
+
+
+/** compute MST on given graph */
+void cmst_computeMst(
+   const CGRAPH*         cgraph,             /**< the graph to run on */
+   int                   mstroot,            /**< root for the MST */
+   CMST*                 cmst,               /**< the MST */
+   SCIP_Real*            mstobj              /**< objective of computed MST */
+)
+{
+   const int nnodes_curr = getNnodesCurr(cgraph);
+   const int nnodes_max = getNnodesMax(cgraph);
+   SCIP_Real mstcost = 0.0;
+   const SCIP_Real* const edgecosts = cgraph->edgecosts;
+   int* const preds = cmst->predecessors;
+   SCIP_Real* const dist = cmst->dist;
+   DHEAP* const dheap = cmst->heap;
+   int* const state = dheap->position;
+
+   assert(mstobj && dheap);
+   assert(cgraph_valid(cgraph));
+   assert(nnodes_curr <= cmst->nnodes_max);
+   assert(mstroot >= 0 && mstroot < nnodes_curr);
+
+   for( int i = 0; i < nnodes_curr; i++ )
+   {
+      preds[i] = -1;
+      state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
+   }
+
+   assert(graph_heap_isClean(dheap));
+
+   preds[mstroot] = -1;
+   dist[mstroot] = 0.0;
+   graph_heap_correct(mstroot, 0.0, dheap);
+
+   assert(dheap->size > 0);
+
+   /* build MST */
+   while( dheap->size > 0 )
+   {
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int start = getEdgeStart(k, nnodes_max);
+
+      mstcost += dist[k];
+
+      assert(k >= 0 && k < nnodes_curr);
+      assert(state[k] == CONNECT);
+
+      for( int m = 0; m < nnodes_curr; m++ )
+      {
+         if( state[m] != CONNECT  )
+         {
+            const SCIP_Real ecost = edgecosts[start + m];
+
+            if( ecost < dist[m] )
+            {
+               assert(m != k);
+
+               dist[m] = ecost;
+               preds[m] = k;
+
+               graph_heap_correct(m, ecost, dheap);
+            }
+         }
+      }
+   }
+
+   *mstobj = mstcost;
+
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes_curr; i++ )
+   {
+      assert(LT(dist[i], FARAWAY));
+      assert(preds[i] != -1 || i == mstroot);
+   }
+#endif
+}
+
+
+

@@ -342,6 +342,7 @@ extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);
 extern int    graph_heap_deleteMinReturnNode(DHEAP*);
 extern void   graph_heap_clean(SCIP_Bool, DHEAP*);
 extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
+extern SCIP_Bool graph_heap_isClean(const DHEAP*);
 /* CSR storage: */
 extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
 extern void           graph_free_csr(SCIP*, GRAPH*);

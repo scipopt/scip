@@ -3180,12 +3180,10 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIP_CALL(SCIPfreeSol(scip, &sol));
    }
 
-   // todo
-#if 1
+#if 0
    if( graph_pc_isPcMw(graph) )
       SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
 #endif
-
 
    if( xval == NULL )
    {
