@@ -131,7 +131,6 @@ Test(minor, detect_aux, .init = setup, .fini = teardown)
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int c;
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
       &success) );
