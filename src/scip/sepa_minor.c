@@ -43,7 +43,8 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXMINORS           100 /**< default maximum number for minors (0: no limit) */
+#define DEFAULT_MAXMINORSCONST     3000 /**< default constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
+#define DEFAULT_MAXMINORSFAC       10.0 /**< default factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
 #define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
 #define DEFAULT_RANDSEED            157 /**< default random seed */
 #define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -58,7 +59,8 @@ struct SCIP_SepaData
    SCIP_VAR**            minors;             /**< variables of 2x2 minors; each minor is stored like (auxvar_x^2,auxvar_y^2,auxvar_xy) */
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
-   int                   maxminors;          /**< maximum number for minors (0: no limit) */
+   int                   maxminorsconst;     /**< constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
+   int                   maxminorsfac;       /**< factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             detectedminors;     /**< has minor detection be called? */
@@ -197,6 +199,7 @@ SCIP_RETCODE detectMinors(
    int* perm = NULL;
    int nbilinterms = 0;
    int nquadterms = 0;
+   int maxminors;
    int c;
    int i;
 
@@ -301,12 +304,16 @@ SCIP_RETCODE detectMinors(
    assert(nbilinterms < SCIPgetNVars(scip));
    SCIPdebugMsg(scip, "stored %d bilinear terms in total\n", nbilinterms);
 
+   /* use max(maxminorsconst, maxminorsfac * # quadratic terms) as a limit for the maximum number of minors */
+   maxminors = MAX(sepadata->maxminorsconst, sepadata->maxminorsfac * nquadterms);
+   SCIPdebugMsg(scip, "maximum number of minors = %d\n", maxminors);
+
    /* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
     * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
     * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
     * are more likely to be chosen
     */
-   if( sepadata->maxminors > 0 && sepadata->maxminors < nbilinterms && sepadata->maxminors < SQR(nquadterms) )
+   if( maxminors < nbilinterms && maxminors < SQR(nquadterms) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
 
@@ -318,7 +325,7 @@ SCIP_RETCODE detectMinors(
    }
 
    /* store 2x2 principal minors */
-   for( i = 0; i < nbilinterms && (sepadata->maxminors == 0 || sepadata->nminors < sepadata->maxminors); ++i )
+   for( i = 0; i < nbilinterms && sepadata->nminors < maxminors; ++i )
    {
       SCIP_VAR* x;
       SCIP_VAR* y;
@@ -356,7 +363,7 @@ SCIP_RETCODE detectMinors(
          SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvarxy) );
       }
    }
-   SCIPdebugMsg(scip, "found %d 2x2 minors in total\n", sepadata->nminors);
+   SCIPdebugMsg(scip, "found %d principal minors in total\n", sepadata->nminors);
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &perm);
@@ -368,7 +375,7 @@ SCIP_RETCODE detectMinors(
 
 #ifdef SCIP_STATISTIC
    totaltime += SCIPgetTotalTime(scip);
-   SCIPstatisticMessage("MINOR DETECT %s %f %d\n", SCIPgetProbName(scip), totaltime, sepadata->nminors);
+   SCIPstatisticMessage("MINOR DETECT %s %f %d %d\n", SCIPgetProbName(scip), totaltime, sepadata->nminors, maxminors);
 #endif
 
    return SCIP_OKAY;
@@ -779,9 +786,14 @@ SCIP_RETCODE SCIPincludeSepaMinor(
 
    /* add minor separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/" SEPA_NAME "/maxminors",
-         "maximum number for minors (0: no limit)",
-         &sepadata->maxminors, FALSE, DEFAULT_MAXMINORS, 0, INT_MAX, NULL, NULL) );
+         "separating/" SEPA_NAME "/maxminorsconst",
+         "constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
+         &sepadata->maxminorsconst, FALSE, DEFAULT_MAXMINORSCONST, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/maxminorsfac",
+         "factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
+         &sepadata->maxminorsfac, FALSE, DEFAULT_MAXMINORSFAC, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/mincutviol",
