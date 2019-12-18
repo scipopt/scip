@@ -3768,6 +3768,9 @@ GENERALUPG:
          {
             SCIP_Real aux;
 
+            if( SCIPisZero(scip, a[i * nquadvars + j]) )
+               continue;
+
             if( a[i * nquadvars + j] > 0.0 )
             {
                aux = SCIPcomputeVarLbGlobal(scip, quadvars[j]);
@@ -3792,6 +3795,9 @@ GENERALUPG:
          for( j = 0; j < nquadvars; ++j )
          {
             SCIP_Real aux;
+
+            if( SCIPisZero(scip, a[i * nquadvars + j]) )
+               continue;
 
             if( a[i * nquadvars + j] > 0.0 )
             {
