@@ -60,7 +60,7 @@ struct SCIP_SepaData
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
    int                   maxminorsconst;     /**< constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
-   int                   maxminorsfac;       /**< factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
+   SCIP_Real             maxminorsfac;       /**< factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             detectedminors;     /**< has minor detection be called? */
@@ -305,7 +305,7 @@ SCIP_RETCODE detectMinors(
    SCIPdebugMsg(scip, "stored %d bilinear terms in total\n", nbilinterms);
 
    /* use max(maxminorsconst, maxminorsfac * # quadratic terms) as a limit for the maximum number of minors */
-   maxminors = MAX(sepadata->maxminorsconst, sepadata->maxminorsfac * nquadterms);
+   maxminors = (int) MAX(sepadata->maxminorsconst, sepadata->maxminorsfac * nquadterms);
    SCIPdebugMsg(scip, "maximum number of minors = %d\n", maxminors);
 
    /* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
@@ -790,10 +790,10 @@ SCIP_RETCODE SCIPincludeSepaMinor(
          "constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
          &sepadata->maxminorsconst, FALSE, DEFAULT_MAXMINORSCONST, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/maxminorsfac",
          "factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
-         &sepadata->maxminorsfac, FALSE, DEFAULT_MAXMINORSFAC, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxminorsfac, FALSE, DEFAULT_MAXMINORSFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/mincutviol",
