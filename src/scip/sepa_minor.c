@@ -189,7 +189,6 @@ SCIP_RETCODE detectMinors(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_HASHMAP* exprmap;
    SCIP_HASHMAP* quadmap;
    SCIP_VAR** xs;
    SCIP_VAR** ys;
@@ -225,25 +224,27 @@ SCIP_RETCODE detectMinors(
 
    /* allocate memory */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPhashmapCreate(&exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPhashmapCreate(&quadmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ys, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, SCIPgetNVars(scip)) );
 
+   /* initialize iterator */
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
       SCIP_CONS* cons;
       SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_EXPR* root;
 
       cons = SCIPconshdlrGetConss(conshdlr)[c];
       assert(cons != NULL);
-      assert(SCIPgetExprConsExpr(scip, cons));
+      root = SCIPgetExprConsExpr(scip, cons);
+      assert(root != NULL);
 
-      SCIP_CALL( SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, cons), SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
          SCIP_CONSEXPR_EXPR** children;
@@ -256,13 +257,6 @@ SCIP_RETCODE detectMinors(
          if( auxvar == NULL )
          {
             SCIPdebugMsg(scip, "expression has no auxiliary variable -> skip\n");
-            continue;
-         }
-
-         /* check whether the expression has been considered in another constraint */
-         if( SCIPhashmapExists(exprmap, (void*)expr) )
-         {
-            SCIPdebugMsg(scip, "expression has been considered in another constraint -> skip\n");
             continue;
          }
 
@@ -287,9 +281,6 @@ SCIP_RETCODE detectMinors(
             /* hash the quadratic variable to its corresponding auxiliary variable */
             SCIP_CALL( SCIPhashmapInsert(quadmap, (void*)quadvar, auxvar) );
             ++nquadterms;
-
-            /* add expression to the map to not reconsider it */
-            SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)expr, NULL) );
          }
          /* check for expr = x * y */
          else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
@@ -303,9 +294,6 @@ SCIP_RETCODE detectMinors(
             auxvars[nbilinterms] = auxvar;
             SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
             ++nbilinterms;
-
-            /* add expression to the map to not reconsider it */
-            SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)expr, NULL) );
          }
       }
    }
@@ -375,7 +363,6 @@ SCIP_RETCODE detectMinors(
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
    SCIPhashmapFree(&quadmap);
-   SCIPhashmapFree(&exprmap);
    SCIPexpriteratorFree(&it);
 
 #ifdef SCIP_STATISTIC
