@@ -19,7 +19,6 @@
  * @author Benjamin Mueller
  *
  * @todo detect non-principal minors and use them to derive split cuts
- * @todo avoid binary variables (only important if reformbinprods is disabled)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -290,14 +289,24 @@ SCIP_RETCODE detectMinors(
          else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
             && SCIPgetConsExprExprAuxVar(children[0]) != NULL && SCIPgetConsExprExprAuxVar(children[1]) != NULL )
          {
+            SCIP_VAR* x;
+            SCIP_VAR* y;
+
             assert(children[0] != NULL);
             assert(children[1] != NULL);
 
-            xs[nbilinterms] = SCIPgetConsExprExprAuxVar(children[0]);
-            ys[nbilinterms] = SCIPgetConsExprExprAuxVar(children[1]);
-            auxvars[nbilinterms] = auxvar;
-            SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
-            ++nbilinterms;
+            x = SCIPgetConsExprExprAuxVar(children[0]);
+            y = SCIPgetConsExprExprAuxVar(children[1]);
+
+            /* ignore binary variables */
+            if( !SCIPvarIsBinary(x) && !SCIPvarIsBinary(y) )
+            {
+               xs[nbilinterms] = SCIPgetConsExprExprAuxVar(children[0]);
+               ys[nbilinterms] = SCIPgetConsExprExprAuxVar(children[1]);
+               auxvars[nbilinterms] = auxvar;
+               SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
+               ++nbilinterms;
+            }
          }
       }
    }
