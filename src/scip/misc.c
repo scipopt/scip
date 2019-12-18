@@ -9330,7 +9330,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 #ifdef __INTEL_COMPILER
 #pragma fenv_access (on)
 #elif defined __GNUC__
-#pragma STD FENV_ACCESS ON
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
@@ -9377,7 +9377,7 @@ SCIP_Bool SCIPfindSimpleRational(
 #ifdef __INTEL_COMPILER
 #pragma fenv_access (off)
 #elif defined __GNUC__
-#pragma STD FENV_ACCESS OFF
+#pragma STDC FENV_ACCESS OFF
 #endif
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number

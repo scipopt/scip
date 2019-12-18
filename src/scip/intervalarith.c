@@ -40,7 +40,7 @@
 #ifdef __INTEL_COMPILER
 #pragma fenv_access (on)
 #elif defined __GNUC__
-#pragma STD FENV_ACCESS ON
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
