@@ -26,8 +26,8 @@
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "erf"
 #define EXPRHDLR_DESC         "expression handler template"
-#define EXPRHDLR_PRECEDENCE   0
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
+#define EXPRHDLR_PRECEDENCE   79000
+#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(131071.0)
 
 /*
  * Data structures
@@ -198,42 +198,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalErf)
    return SCIP_OKAY;
 }
 
-/** separation initialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-/** separation deinitialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-/** expression separation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
 /** expression under/overestimation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateErf)
@@ -262,11 +226,14 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropErf)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashErf)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
    assert(expr != NULL);
-   assert(EXPRHDLR_HASHKEY != 0.0);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   *hashkey = EXPRHDLR_HASHKEY;
+   *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
 }
@@ -354,7 +321,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaErf, exitSepaErf, sepaErf, estimateErf) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffErf) );
