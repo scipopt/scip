@@ -46,8 +46,8 @@
 #define DEFAULT_MAXMINORS           100 /**< default maximum number for minors (0: no limit) */
 #define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
 #define DEFAULT_RANDSEED            157 /**< default random seed */
-#define DEFAULT_MAXROUNDS            10 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 /*
  * Data structures
  */
@@ -59,8 +59,8 @@ struct SCIP_SepaData
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
    int                   maxminors;          /**< maximum number for minors (0: no limit) */
-   int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
-   int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
+   int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             detectedminors;     /**< has minor detection be called? */
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
