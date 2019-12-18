@@ -484,5 +484,3 @@ void cmst_computeMst(
 #endif
 }
 
-
-

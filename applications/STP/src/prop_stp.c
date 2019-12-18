@@ -1182,12 +1182,13 @@ SCIP_RETCODE fixVarsExtendedRed(
    int* vbase;
    int* state;
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
-   SCIP_Real minpathcost;
+   const SCIP_Real minpathcost = cutoffbound - lpobjval;
    int extnfixed;
    const int nnodes = propgraph->knots;
    const int nedges = propgraph->edges;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(propgraph);
 
-   minpathcost = cutoffbound - lpobjval;
+   assert(SCIPisGE(scip, minpathcost, 0.0));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
@@ -1199,36 +1200,50 @@ SCIP_RETCODE fixVarsExtendedRed(
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
 
    for( int e = 0; e < nedges; e++ )
+   {
        if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
           marked[e] = TRUE;
        else
           marked[e] = FALSE;
+   }
 
    SCIPStpGetRedcosts(scip, vars, nedges, redcost);
    getRedCostDistances(scip, redcost, propgraph, vnoi, pathdist, pathedge, vbase, state);
 
-   if( graph_pc_isPcMw(propgraph) )
+   if( pcmw )
       graph_pc_2org(scip, propgraph);
 
-   /* reduce graph */
-   extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, marked, TRUE);
+   /* reduce graph and mark arcs todo try other reduction2 instead */
+   extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source,
+         nodearr, marked, TRUE);
 
-   if( graph_pc_isPcMw(propgraph) )
+   if( pcmw )
       graph_pc_2trans(scip, propgraph);
 
+   SCIPdebugMessage("extended graph deletions: %d \n", extnfixed);
+
+   extnfixed = 0;
+
    for( int e = 0; e < nedges; e++ )
-       if( SCIPvarGetUbLocal(vars[e]) > 0.5 && marked[e] )
-       {
-          if( propgraph->cost[e] != propgraph->cost[flipedge_Uint(e)] )
-          {
-             assert(graph_pc_isPcMw(propgraph));
-             continue;
-          }
+   {
+      if( SCIPvarGetUbLocal(vars[e]) > 0.5 && marked[e] )
+      {
+         if( pcmw )
+         {
+            if( graph_pc_knotIsDummyTerm(propgraph, propgraph->tail[e])
+                  || graph_pc_knotIsDummyTerm(propgraph, propgraph->head[e]) )
+            {
+               assert(SCIPisEQ(scip, propgraph->cost[e], FARAWAY) || SCIPisEQ(scip, propgraph->cost[flipedge(e)], FARAWAY));
 
-          SCIPdebugMessage("fix edge %d to 0 \n", e);
+               continue;
+            }
+         }
 
-          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], &extnfixed) );
-       }
+         SCIPdebugMessage("fix edge %d to 0 \n", e);
+
+         SCIP_CALL(SCIPStpFixEdgeVar(scip, vars[e], &extnfixed));
+      }
+   }
 
    SCIPdebugMessage("extended fixes: %d \n", extnfixed);
 
@@ -1314,15 +1329,16 @@ SCIP_RETCODE fixVarsRedbased(
       return SCIP_ERROR;
    }
 
-   /* now reduce the graph */
+   /* start with extended reductions based on reduced costs of LP */
+   SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
+
+   /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
-      SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
    else
    {
-      SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
       SCIP_CALL( level0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }

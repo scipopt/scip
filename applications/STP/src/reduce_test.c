@@ -772,6 +772,85 @@ SCIP_RETCODE completegraph(
 }
 
 
+/** mst test */
+static
+SCIP_RETCODE completemst1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   CGRAPH* cgraph;
+   CMST* cmst;
+   SCIP_Real mstobj;
+   const int maxnnodes = 4;
+   SCIP_Real adjedges[] = { 1.0, 1.0, 1.0, 1.0 };
+
+   SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
+   SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
+
+   cgraph_node_append(cgraph, adjedges, 1);
+   cgraph_node_append(cgraph, adjedges, 2);
+   cgraph_node_append(cgraph, adjedges, 3);
+
+   cmst_computeMst(cgraph, 0, cmst, &mstobj);
+
+   if( !SCIPisEQ(scip, mstobj, 2.0) )
+   {
+      SCIPdebugMessage("wrong obj: %f  \n", mstobj);
+      return SCIP_ERROR;
+   }
+
+   cmst_free(scip, &cmst);
+   cgraph_free(scip, &cgraph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** mst test */
+static
+SCIP_RETCODE completemst2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   CGRAPH* cgraph;
+   CMST* cmst;
+   SCIP_Real mstobj;
+   const int maxnnodes = 4;
+   SCIP_Real adjedges1[] = { -1.0 };
+   SCIP_Real adjedges2[] = { 1.0 };
+   SCIP_Real adjedges3[] = { 1.5, 2.0 };
+
+   SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
+   SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
+
+   cgraph_node_append(cgraph, adjedges1, 1);
+   cgraph_node_append(cgraph, adjedges2, 2);
+   cgraph_node_append(cgraph, adjedges3, 3);
+
+   cmst_computeMst(cgraph, 0, cmst, &mstobj);
+
+   if( !SCIPisEQ(scip, mstobj, 2.5) )
+   {
+      SCIPdebugMessage("wrong obj: %f  \n", mstobj);
+      return SCIP_ERROR;
+   }
+
+   if( cmst->predecessors[2] != 0 )
+   {
+      SCIPdebugMessage("wrong ancestor: %d \n", cmst->predecessors[2]);
+      exit(1);
+   }
+
+   cmst_free(scip, &cmst);
+   cgraph_free(scip, &cgraph);
+
+   return SCIP_OKAY;
+}
+
+
+
+
 static
 SCIP_RETCODE extTest1(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2734,7 +2813,8 @@ SCIP_RETCODE completegraph_test(
 )
 {
    SCIP_CALL( completegraph(scip) );
-//   SCIP_CALL( completemst(scip) );
+   SCIP_CALL( completemst1(scip) );
+   SCIP_CALL( completemst2(scip) );
 
 
    return SCIP_OKAY;
