@@ -35,7 +35,7 @@
 #include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME              "minor"
-#define SEPA_DESC              "separator template"
+#define SEPA_DESC              "principal minor separator"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
