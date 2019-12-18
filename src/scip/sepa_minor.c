@@ -19,6 +19,7 @@
  * @author Benjamin Mueller
  *
  * @todo detect non-principal minors and use them to derive split cuts
+ * @todo avoid binary variables (only important if reformbinprods is disabled)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
