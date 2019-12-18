@@ -958,7 +958,6 @@ SCIP_Real SCIPcalcChildEstimate(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_EXPORT
 SCIP_Real SCIPcalcChildEstimateIncrease(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
