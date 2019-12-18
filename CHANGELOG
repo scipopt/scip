@@ -69,7 +69,10 @@ Features
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
   recompute symmetries if a restart occured.
 
-- handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
+- upgrade some more quadratic constraints to second-order cone constraints, that is,
+  handle linear binary variables as if squared in simple upgrade,
+  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade, and
+  allow to create second-order cone constraints with two variables only
 
 - new variable event when changing the variable type
 
