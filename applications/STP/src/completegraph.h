@@ -50,4 +50,14 @@ typedef struct complete_mst
 
 
 
+
+SCIP_Bool cgraph_valid(const CGRAPH*);
+SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
+void cgraph_free(SCIP*, CGRAPH**);
+void cgraph_node_append(CGRAPH*, const SCIP_Real*, int);
+void cgraph_node_deleteTop(CGRAPH*);
+void cgraph_node_exchange(CGRAPH*, const SCIP_Real*, int, int, int);
+SCIP_Real cgraph_edge_getCost(const CGRAPH*, int, int);
+
+
 #endif /* APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_ */

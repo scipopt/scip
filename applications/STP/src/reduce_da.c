@@ -2932,7 +2932,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool havenewsol;
    SCIP_Bool success;
    SCIP_Bool userec = paramsda->useRec;
-   const SCIP_Bool useExtendedRed = paramsda->useExtRed;
    const SCIP_Bool solbasedda = paramsda->pcmw_solbasedda;
    const SCIP_Bool useDifferentRoots = paramsda->pcmw_useMultRoots;
    const SCIP_Bool markroots = paramsda->pcmw_markroots;
@@ -3069,7 +3068,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       // todo test again once the extended reductions are more mature
 #if 0
-      if( useExtendedRed && !SCIPisZero(scip, minpathcost) )
+      if( paramsda->useExtRed && !SCIPisZero(scip, minpathcost) )
       {
          int extfixed;
 
