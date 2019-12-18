@@ -177,6 +177,7 @@ extern SCIP_RETCODE    reduce_extTest(SCIP*);
 extern SCIP_RETCODE    dheap_Test(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest(SCIP*);
 extern SCIP_RETCODE    heur_extendPcMwTest(SCIP*);
+extern SCIP_RETCODE    completegraph_test(SCIP*);
 extern SCIP_RETCODE    heur_localTest(SCIP*);
 
 

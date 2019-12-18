@@ -2470,6 +2470,13 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    assert(scip != NULL);
 
+#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
+#ifndef NDEBUG
+   SCIP_CALL( testAll(scip) );
+#endif
+#endif
+
    presolinfo.fixed = 0;
 
    /* create graph */

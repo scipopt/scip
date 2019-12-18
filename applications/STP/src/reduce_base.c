@@ -2005,13 +2005,6 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-//#define UNIT_TEST_STP
-#ifdef UNIT_TEST_STP
-#ifndef NDEBUG
-   SCIP_CALL( testAll(scip) );
-#endif
-#endif
-
    SCIP_CALL( level0(scip, graph) );
 
    /* if no reduction methods available, return */

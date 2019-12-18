@@ -32,7 +32,7 @@
 #include "reduce.h"
 #include "heur_local.h"
 #include "heur_tm.h"
-
+#include "completegraph.h"
 
 
 static
@@ -697,6 +697,76 @@ SCIP_RETCODE extTest2_variants(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
    assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** extension test */
+static
+SCIP_RETCODE completegraph(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   CGRAPH* cgraph;
+   const int maxnnodes = 11;
+   SCIP_Real adjedges[] = { 1.0, 1.0, 1.0, 1.0 };
+
+   SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
+
+   assert(0 == cgraph->nnodes_curr);
+   assert(maxnnodes == cgraph->nnodes_max);
+
+   cgraph_node_append(cgraph, adjedges, 1);
+
+   if( !cgraph_valid(cgraph) )
+   {
+      SCIPdebugMessage("cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+   cgraph_node_deleteTop(cgraph);
+
+   if( !cgraph_valid(cgraph) )
+   {
+      SCIPdebugMessage("cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+   cgraph_node_append(cgraph, adjedges, 2);
+   cgraph_node_append(cgraph, adjedges, 3);
+
+   cgraph_node_deleteTop(cgraph);
+
+   if( cgraph->nnodes_curr != 1 )
+   {
+      SCIPdebugMessage("wrong node count cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+   if( !cgraph_valid(cgraph) )
+   {
+      SCIPdebugMessage("cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+   cgraph_node_deleteTop(cgraph);
+
+   if( cgraph->nnodes_curr != 0 )
+   {
+      SCIPdebugMessage("wrong node count cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+   if( !cgraph_valid(cgraph) )
+   {
+      SCIPdebugMessage("cgraph not valid! \n");
+      return SCIP_ERROR;
+   }
+
+
+   cgraph_free(scip, &cgraph);
 
    return SCIP_OKAY;
 }
@@ -2485,6 +2555,13 @@ SCIP_RETCODE testAll(
 )
 {
    assert(scip);
+
+   SCIP_CALL( completegraph_test(scip) );
+
+   assert(0);
+
+
+
    SCIP_CALL( heur_extendPcMwTest(scip) );
    SCIP_CALL( heur_localTest(scip) );
    SCIP_CALL( pseudoDel_test(scip) );
@@ -2647,6 +2724,18 @@ SCIP_RETCODE heur_extendPcMwTest(
 )
 {
    SCIP_CALL( localExtendPc(scip) );
+
+   return SCIP_OKAY;
+}
+
+
+SCIP_RETCODE completegraph_test(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( completegraph(scip) );
+//   SCIP_CALL( completemst(scip) );
+
 
    return SCIP_OKAY;
 }
