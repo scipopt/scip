@@ -70,9 +70,7 @@ static SCIP_STAGE old_stage;
 SCIP_VAR** branchcands;
 SCIP_Real* mingains;
 SCIP_Real* maxgains;
-SCIP_Real* scoresfrompc;
 SCIP_Real* scoresfromothers;
-SCIP_Real avgpscostscore;
 int nbranchcands;
 
 /* TEST SUITES */
@@ -173,24 +171,18 @@ void setupTestVars(
    va_list args;
    va_start(args, ncands);
    nbranchcands = ncands;
-   avgpscostscore = 0.0;
 
    /** Allocate lp gains and scores */
    SCIP_CALL( SCIPallocBufferArray(scip, &mingains, nbranchcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxgains, nbranchcands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &scoresfrompc, nbranchcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &scoresfromothers, nbranchcands) );
 
    for( c = 0; c < ncands; c++ )
    {
       mingains[c] = va_arg(args, double);
       maxgains[c] = va_arg(args, double);
-      scoresfrompc[c] = va_arg(args, double);
       scoresfromothers[c] = va_arg(args, double);
-      avgpscostscore += scoresfrompc[c];
    }
-
-   avgpscostscore /= ncands;
 
    va_end(args);
 
@@ -224,7 +216,6 @@ void freeTestVars(void)
 
    /** Deallocate lp gains */
    SCIPfreeBufferArray(scip, &scoresfromothers);
-   SCIPfreeBufferArray(scip, &scoresfrompc);
    SCIPfreeBufferArray(scip, &maxgains);
    SCIPfreeBufferArray(scip, &mingains);
 }
@@ -286,7 +277,7 @@ Test(branch_treemodel_select, SmallPseudocosts)
    setDualGap(0.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -323,7 +314,7 @@ Test(branch_treemodel_select, RatioRule)
    setDualGap(10.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -361,7 +352,7 @@ Test(branch_treemodel_select, SvtsRule1)
    setDualGap(40.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -399,7 +390,7 @@ Test(branch_treemodel_select, SvtsRule2)
    setDualGap(41.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -437,7 +428,7 @@ Test(branch_treemodel_select, SvtsRule3)
    setDualGap(41.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -475,7 +466,7 @@ Test(branch_treemodel_select, SamplingRule1)
    setDualGap(41.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -513,7 +504,7 @@ Test(branch_treemodel_select, SamplingRule2)
    setDualGap(41.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -551,7 +542,7 @@ Test(branch_treemodel_select, SvtsInfFallback)
    setDualGap(1000000.0);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
@@ -589,7 +580,7 @@ Test(branch_treemodel_select, SvtsNoPrimalFallback)
    setDualGap(SCIP_REAL_MAX);
 
    /** Apply Treemodel rule */
-   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfrompc, scoresfromothers, avgpscostscore, nbranchcands, &bestcand);
+   SCIPtreemodelSelectCandidate(scip, &treemodel, branchcands, mingains, maxgains, scoresfromothers, nbranchcands, &bestcand);
 
    /** Free the branching candidates */
    freeTestVars();
