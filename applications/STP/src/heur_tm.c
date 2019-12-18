@@ -1665,11 +1665,12 @@ void initCostsAndPrioLP(
       {
          if( Is_pseudoTerm(graph->term[k]) )
          {
-            int todo; // test!
             const int term = graph_pc_getTwinTerm(graph, k);
             const int rootedge = graph_pc_getRoot2PtermEdge(graph, term);
 
             prize[k] = cost[rootedge];
+
+            assert(prize[k] >= 0.0);
          }
       }
    }
@@ -3179,7 +3180,8 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIP_CALL(SCIPfreeSol(scip, &sol));
    }
 
-#if 0
+   // todo
+#if 1
    if( graph_pc_isPcMw(graph) )
       SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
 #endif
