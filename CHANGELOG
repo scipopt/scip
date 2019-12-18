@@ -54,6 +54,10 @@ Features
   During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
   The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
 
+- Added new penalty alternating direction method (PADM) primal heuristic that splits the problem into several sub-SCIPs
+  according to a user-provided decomposition. The sub-SCIPs are solved on an alternating basis until a feasible solution of
+  the original problem is found.
+
 - Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
   whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
 

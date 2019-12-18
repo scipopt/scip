@@ -114,6 +114,7 @@
 #include "scip/heur_octane.h"
 #include "scip/heur_ofins.h"
 #include "scip/heur_oneopt.h"
+#include "scip/heur_padm.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
 #include "scip/heur_randrounding.h"
