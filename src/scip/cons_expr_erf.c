@@ -37,7 +37,24 @@
  * Local methods
  */
 
-/* TODO: put your local methods here, and declare them static */
+/** evaluates the gaussian error function at a given point */
+static
+SCIP_Real errorf(
+   SCIP_Real             x                   /**< point to evaluate */
+   )
+{
+   SCIP_Real a1 = +0.254829592;
+   SCIP_Real a2 = -0.284496736;
+   SCIP_Real a3 = +1.421413741;
+   SCIP_Real a4 = -1.453152027;
+   SCIP_Real a5 = +1.061405429;
+   SCIP_Real p  = +0.3275911;
+   int sign  = (x >= 0.0) ? 1 : -1;
+   SCIP_Real t = 1.0 / (1.0 + p * REALABS(x));
+   SCIP_Real y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * exp(-x*x);
+
+    return sign*y;
+}
 
 /*
  * Callback methods of expression handler
