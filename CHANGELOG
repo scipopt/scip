@@ -43,6 +43,12 @@ Features
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 
+- GINS heuristic can make use of a user-provided decomposition labels in two ways:
+ 1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
+ 2. by selecting an interval of consecutive blocks as neighborhood, until fixing rate is reached. In this case, no variable is randomly selected.
+
+- extend potential parameter of GINS to allow computation based on local LP solution, as well
+
 - new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
   At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
   During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
