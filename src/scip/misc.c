@@ -9327,7 +9327,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifdef __INTEL_COMPILER
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
 #elif defined __GNUC__
 #pragma STDC FENV_ACCESS ON
@@ -9374,7 +9374,7 @@ SCIP_Bool SCIPfindSimpleRational(
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
 
-#ifdef __INTEL_COMPILER
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (off)
 #elif defined __GNUC__
 #pragma STDC FENV_ACCESS OFF
