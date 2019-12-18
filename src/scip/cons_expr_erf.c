@@ -150,9 +150,11 @@ static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) == NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   *val = errorf(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
@@ -173,10 +175,25 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffErf)
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalErf)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
+   SCIP_INTERVAL childinterval;
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) == NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+   {
+      SCIP_Real childinf = SCIPintervalGetInf(childinterval);
+      SCIP_Real childsup = SCIPintervalGetSup(childinterval);
+      SCIP_Real inf = childinf <= -SCIP_INTERVAL_INFINITY ? -1.0 : errorf(childinf);
+      SCIP_Real sup = childsup >= +SCIP_INTERVAL_INFINITY ? +1.0 : errorf(childsup);
+      assert(inf <= sup);
+      SCIPintervalSetBounds(interval, inf, sup);
+   }
 
    return SCIP_OKAY;
 }
