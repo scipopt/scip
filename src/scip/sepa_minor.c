@@ -254,11 +254,17 @@ SCIP_RETCODE detectMinors(
          /* check whether the expression has an auxiliary variable */
          auxvar = SCIPgetConsExprExprAuxVar(expr);
          if( auxvar == NULL )
+         {
+            SCIPdebugMsg(scip, "expression has no auxiliary variable -> skip\n");
             continue;
+         }
 
          /* check whether the expression has been considered in another constraint */
          if( SCIPhashmapExists(exprmap, (void*)expr) )
+         {
+            SCIPdebugMsg(scip, "expression has been considered in another constraint -> skip\n");
             continue;
+         }
 
          exprhdlr = SCIPgetConsExprExprHdlr(expr);
          assert(exprhdlr != NULL);
@@ -267,13 +273,13 @@ SCIP_RETCODE detectMinors(
          /* check for expr = (x)^2 */
          if( SCIPgetConsExprExprNChildren(expr) == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
             && SCIPgetConsExprExprPowExponent(expr) == 2.0
-            && SCIPisConsExprExprVar(children[0]) )
+            && SCIPgetConsExprExprAuxVar(children[0]) != NULL )
          {
             SCIP_VAR* quadvar;
 
             assert(children[0] != NULL);
 
-            quadvar = SCIPgetConsExprExprVarVar(children[0]);
+            quadvar = SCIPgetConsExprExprAuxVar(children[0]);
             assert(quadvar != NULL);
             assert(!SCIPhashmapExists(quadmap, (void*)quadvar));
             SCIPdebugMsg(scip, "found %s = (%s)^2\n", SCIPvarGetName(auxvar), SCIPvarGetName(quadvar));
@@ -287,13 +293,13 @@ SCIP_RETCODE detectMinors(
          }
          /* check for expr = x * y */
          else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
-            && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1]) )
+            && SCIPgetConsExprExprAuxVar(children[0]) != NULL && SCIPgetConsExprExprAuxVar(children[1]) != NULL )
          {
             assert(children[0] != NULL);
             assert(children[1] != NULL);
 
-            xs[nbilinterms] = SCIPgetConsExprExprVarVar(children[0]);
-            ys[nbilinterms] = SCIPgetConsExprExprVarVar(children[1]);
+            xs[nbilinterms] = SCIPgetConsExprExprAuxVar(children[0]);
+            ys[nbilinterms] = SCIPgetConsExprExprAuxVar(children[1]);
             auxvars[nbilinterms] = auxvar;
             SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
             ++nbilinterms;

@@ -120,6 +120,51 @@ Test(minor, detect, .init = setup, .fini = teardown)
    cr_expect(sepadata->nminors == 2, "nminors = %d (expected 2)", sepadata->nminors);
 }
 
+/** tests the detection of principal minors that are defined by auxiliary variables; the test uses the following
+ *  nonlinear constraint form sin(x)^2 + sin(x)*sin(y) + sin(y)^2 <= 0
+ */
+Test(minor, detect_aux, .init = setup, .fini = teardown)
+{
+   const char* input = {"[expr] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
+   SCIP_SEPA* sepa;
+   SCIP_SEPADATA* sepadata;
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int c;
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+      &success) );
+   cr_assert(success);
+
+   /* add and release constraint */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* go to solving stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+   cr_assert(SCIPgetNConss(scip) == 1);
+
+   /* call the detection of the nonlinear handlers to create auxiliary variables */
+   cr_assert(SCIPconshdlrGetNConss(conshdlr) == 1);
+   SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr),
+      SCIPconshdlrGetNConss(conshdlr), &infeasible) );
+   cr_assert(!infeasible);
+
+   /* get separator data */
+   sepa = SCIPfindSepa(scip, SEPA_NAME);
+   cr_assert(sepa != NULL);
+   sepadata = SCIPsepaGetData(sepa);
+   cr_assert(sepadata != NULL);
+
+   /* call minor detection */
+   cr_expect(!sepadata->detectedminors);
+   cr_expect(sepadata->nminors == 0);
+   SCIP_CALL( detectMinors(scip, sepadata) );
+   cr_expect(sepadata->detectedminors);
+   cr_expect(sepadata->nminors == 1, "nminors = %d (expected 1)", sepadata->nminors);
+}
+
 /** tests the eigenvalue and eigenvector computation */
 Test(minor, eigenvals, .init = setup, .fini = teardown)
 {
