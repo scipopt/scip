@@ -498,7 +498,7 @@ Test(branch_treemodel_select, SvtsInfFallback)
 
    /** Branching candidates (1,1), (10,10), (2,49) */
    setupTestVars(
-      4,
+      3,
       1.0, 1.0, 0.1,
       10.0, 10.0, 10.0,
       2.0, 49.0, 9.8
@@ -536,7 +536,7 @@ Test(branch_treemodel_select, SvtsNoPrimalFallback)
 
    /** Branching candidates (1,1), (10,10), (2,49) */
    setupTestVars(
-      4,
+      3,
       1.0, 1.0, 0.1,
       10.0, 10.0, 10.0,
       2.0, 49.0, 9.8
