@@ -306,7 +306,7 @@ SCIP_RETCODE detectMinors(
    assert(nbilinterms < SCIPgetNVars(scip));
    SCIPdebugMsg(scip, "stored %d bilinear terms in total\n", nbilinterms);
 
-   /* permute bilinear terms if there are be too many of them; the motivation for this is that we don't want to
+   /* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
     * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
     * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
     * are more likely to be chosen
