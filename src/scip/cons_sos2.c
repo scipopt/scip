@@ -1166,7 +1166,7 @@ SCIP_RETCODE enforceSOS2(
    objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < maxInd; ++j)
    {
-      objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
    assert( objest >= SCIPgetLocalTransEstimate(scip) );
@@ -1185,7 +1185,7 @@ SCIP_RETCODE enforceSOS2(
    objest = SCIPgetLocalTransEstimate(scip);
    for (j = maxInd+1; j < nvars; ++j)
    {
-      objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
    assert( objest >= SCIPgetLocalTransEstimate(scip) );

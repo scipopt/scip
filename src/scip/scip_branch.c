@@ -37,6 +37,7 @@
 #include "scip/lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_numerics.h"
 #include "scip/set.h"
@@ -960,22 +961,19 @@ SCIP_Real SCIPcalcChildEstimate(
 SCIP_EXPORT
 SCIP_Real SCIPcalcChildEstimateIncrease(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< solution to be branched on (NULL if LP solution) */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    )
 {
    SCIP_Real estimateinc;
-   SCIP_Real varsol;
 
-   assert(tree != NULL);
+   assert(scip != NULL);
    assert(var != NULL);
-
-   varsol = SCIPgetSolVal(scip, sol, vars[j]);
 
    /* compute increase above parent node's (i.e., focus node's) estimate value */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-      estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol);
    else
    {
       SCIP_Real pscdown;
@@ -985,9 +983,9 @@ SCIP_Real SCIPcalcChildEstimateIncrease(
        *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
        *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
        */
-      pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
-      pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
-      estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol) - MIN(pscdown, pscup);
+      pscdown = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasFloor(scip->set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasCeil(scip->set, varsol) - varsol);
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol) - MIN(pscdown, pscup);
    }
 
    /* due to rounding errors estimateinc might be slightly negative */

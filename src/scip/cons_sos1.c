@@ -5642,7 +5642,7 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
-      objest += SCIPcalcChildEstimateIncrease(scip, sol, var, 0.0);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
    assert( objest >= SCIPgetLocalTransEstimate(scip) );
@@ -5706,7 +5706,7 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
-      objest += SCIPcalcChildEstimateIncrease(scip, sol, var, 0.0);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
    }
    assert( objest >= SCIPgetLocalTransEstimate(scip) );
@@ -6001,7 +6001,7 @@ SCIP_RETCODE enforceConssSOS1(
       objest = SCIPgetLocalTransEstimate(scip);
       for (j = 0; j <= ind; ++j)
       {
-         objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
       assert( objest >= SCIPgetLocalTransEstimate(scip) );
@@ -6019,7 +6019,7 @@ SCIP_RETCODE enforceConssSOS1(
       objest = SCIPgetLocalTransEstimate(scip);
       for (j = ind+1; j < nvars; ++j)
       {
-         objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
       }
       assert( objest >= SCIPgetLocalTransEstimate(scip) );

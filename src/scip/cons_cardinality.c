@@ -1383,7 +1383,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
-            objest += SCIPcalcChildEstimateIncrease(scip, sol, vars[j], 0.0);
+            objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
             ++cnt;
          }
@@ -1596,7 +1596,7 @@ SCIP_RETCODE branchBalancedCardinality(
          /* calculate node selection and objective estimate for node */
          for( j = 0; j <= ind; ++j )
          {
-            objest += SCIPcalcChildEstimateIncrease(scip, sol, branchvars[j], 0.0);
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          }
          assert( objest >= SCIPgetLocalTransEstimate(scip) );
@@ -1639,7 +1639,7 @@ SCIP_RETCODE branchBalancedCardinality(
          /* calculate node selection and objective estimate for node */
          for( j = ind+1; j < nbranchvars; ++j )
          {
-            objest += SCIPcalcChildEstimateIncrease(scip, sol, branchvars[j], 0.0);
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          }
          assert(nbranchvars - (ind + 1) > 0);

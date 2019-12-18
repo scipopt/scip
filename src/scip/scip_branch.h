@@ -632,8 +632,8 @@ SCIP_Real SCIPcalcChildEstimate(
 SCIP_EXPORT
 SCIP_Real SCIPcalcChildEstimateIncrease(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< solution to be branched on (NULL if NP solution) */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
