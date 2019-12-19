@@ -70,9 +70,8 @@ Features
   recompute symmetries if a restart occured.
 
 - upgrade some more quadratic constraints to second-order cone constraints, that is,
-  handle linear binary variables as if squared in simple upgrade,
-  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade, and
-  allow to create second-order cone constraints with two variables only
+  handle linear binary variables as if squared in simple upgrade and
+  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade
 
 - new variable event when changing the variable type
 

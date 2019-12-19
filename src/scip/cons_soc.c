@@ -3171,8 +3171,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
-   /* a proper SOC constraint needs at least 2 variables (at least one will be quadratic) */
-   if( nbinlin + nquadvars < 2 )
+   /* a proper SOC constraint needs at least 2 variables (at least one will be quadratic)
+    * but performance-wise that doesn't give a clear advantage on product(2), so let's even require 3 vars
+    */
+   if( nbinlin + nquadvars < 3 )
       return SCIP_OKAY;
 
    /* reserve space */
