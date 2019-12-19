@@ -45,6 +45,7 @@ typedef struct complete_mst
    DHEAP*                heap;               /**< heap needed for MST computation */
    SCIP_Real*            dist;               /**< distance array of size nnodes_max */
    int*                  predecessors;       /**< predecessor array of size nnodes_max */
+   SCIP_Real             mstobj;             /**< objective of current MST */
    int                   nnodes_max;         /**< maximum number of nodes */
 } CMST;
 
@@ -59,10 +60,10 @@ void cgraph_node_exchange(CGRAPH*, const SCIP_Real*, int, int, int);
 SCIP_Real cgraph_edge_getCost(const CGRAPH*, int, int);
 
 /*  methods for the corresponding MST structure */
-SCIP_Bool cmst_valid(const CMST*);
+SCIP_Bool cmst_isSync(const CGRAPH*, const CMST*);
 SCIP_RETCODE cmst_init(SCIP*, CMST**, int);
 void cmst_free(SCIP*, CMST**);
-void cmst_computeMst(const CGRAPH*, int, CMST*, SCIP_Real*);
+void cmst_computeMst(const CGRAPH*, int, CMST*);
 
 
 #endif /* APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_ */

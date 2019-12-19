@@ -117,7 +117,7 @@ SCIP_Bool cgraph_valid(
 
    for( int i = 0; i < nnodes_curr; i++ )
    {
-      if( getEdgeStart(i, nnodes_max) > getEdgeStart(i + 1, nnodes_max) )
+      if( i != (nnodes_max - 1) && getEdgeStart(i, nnodes_max) > getEdgeStart(i + 1, nnodes_max) )
       {
          SCIPdebugMessage("positions are broken \n");
          return FALSE;
@@ -150,6 +150,27 @@ SCIP_Bool cgraph_valid(
       {
          SCIPdebugMessage("node %d is not set to NODE_ID_UNDEFINED \n", i);
          return FALSE;
+      }
+   }
+
+   /* check if the edge costs are symmetric */
+   for( int i = 0; i < nnodes_curr; i++ )
+   {
+      const int start_i = getEdgeStart(i, nnodes_max);
+
+      for( int j = 0; j < nnodes_curr; j++ )
+      {
+         const int start_j = getEdgeStart(j, nnodes_max);
+         const SCIP_Real cost_ij = edgecosts[start_i + j];
+         const SCIP_Real cost_ji = edgecosts[start_j + i];
+
+         assert(i != j || EQ(cost_ij, FARAWAY));
+
+         if( !EQ(cost_ji, cost_ij) )
+         {
+            SCIPdebugMessage("wrong edge costs between %d and %d (%f != %f) \n", i, j, cost_ij, cost_ji);
+            return FALSE;
+         }
       }
    }
 
@@ -344,11 +365,52 @@ SCIP_Real cgraph_edge_getCost(
    return 0.0;
 }
 
+
 /** is the MST struct valid? */
-SCIP_Bool cmst_valid(
+SCIP_Bool cmst_isSync(
+   const CGRAPH*         cgraph,             /**< new graph */
    const CMST*           cmst                /**< the MST */
 )
 {
+   SCIP_Real obj;
+   const int nnodes = getNnodesCurr(cgraph);
+   const int nnodes_max = getNnodesMax(cgraph);
+   const SCIP_Real* const edgecosts = cgraph->edgecosts;
+   const int* const preds = cmst->predecessors;
+
+   assert(edgecosts && preds);
+
+   if( cmst->nnodes_max < nnodes )
+   {
+      SCIPdebugMessage("mst has not enough nodes \n");
+      return FALSE;
+   }
+
+   /* now check the objective */
+
+   obj = 0.0;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int start = getEdgeStart(i, nnodes_max);
+      const int pred = preds[i];
+
+      if( pred == -1 )
+         continue;
+
+      assert(pred >= 0 && pred < nnodes);
+      assert(pred != i);
+
+      obj += edgecosts[start + pred];
+   }
+
+   if( !EQ(obj, cmst->mstobj) )
+   {
+      SCIPdebugMessage("wrong objective: %f != %f \n", obj, cmst->mstobj);
+      return FALSE;
+   }
+
+   SCIPdebugMessage("graph and mst are in sync! \n");
 
    return TRUE;
 }
@@ -376,8 +438,7 @@ SCIP_RETCODE cmst_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->predecessors), maxnnodes) );
 
    mst->nnodes_max = maxnnodes;
-
-   assert(cmst_valid(mst));
+   mst->mstobj = 0.0;
 
    SCIPdebugMessage("cmst has been successfully built \n");
 
@@ -410,8 +471,7 @@ void cmst_free(
 void cmst_computeMst(
    const CGRAPH*         cgraph,             /**< the graph to run on */
    int                   mstroot,            /**< root for the MST */
-   CMST*                 cmst,               /**< the MST */
-   SCIP_Real*            mstobj              /**< objective of computed MST */
+   CMST*                 cmst                /**< the MST */
 )
 {
    const int nnodes_curr = getNnodesCurr(cgraph);
@@ -423,7 +483,7 @@ void cmst_computeMst(
    DHEAP* const dheap = cmst->heap;
    int* const state = dheap->position;
 
-   assert(mstobj && dheap);
+   assert(edgecosts && preds && dist && dheap && state);
    assert(cgraph_valid(cgraph));
    assert(nnodes_curr <= cmst->nnodes_max);
    assert(mstroot >= 0 && mstroot < nnodes_curr);
@@ -473,14 +533,16 @@ void cmst_computeMst(
       }
    }
 
-   *mstobj = mstcost;
+   cmst->mstobj = mstcost;
 
 #ifndef NDEBUG
    for( int i = 0; i < nnodes_curr; i++ )
    {
-      assert(LT(dist[i], FARAWAY));
+      assert(LT(dist[i], FARAWAY)); // todo that might actually happen if the costs are too high...
       assert(preds[i] != -1 || i == mstroot);
    }
+
+   assert(cmst_isSync(cgraph, cmst));
 #endif
 }
 

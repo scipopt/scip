@@ -780,7 +780,6 @@ SCIP_RETCODE completemst1(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   SCIP_Real mstobj;
    const int maxnnodes = 4;
    SCIP_Real adjedges[] = { 1.0, 1.0, 1.0, 1.0 };
 
@@ -791,11 +790,11 @@ SCIP_RETCODE completemst1(
    cgraph_node_append(cgraph, adjedges, 2);
    cgraph_node_append(cgraph, adjedges, 3);
 
-   cmst_computeMst(cgraph, 0, cmst, &mstobj);
+   cmst_computeMst(cgraph, 0, cmst);
 
-   if( !SCIPisEQ(scip, mstobj, 2.0) )
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.0) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", mstobj);
+      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
       return SCIP_ERROR;
    }
 
@@ -815,7 +814,6 @@ SCIP_RETCODE completemst2(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   SCIP_Real mstobj;
    const int maxnnodes = 4;
    SCIP_Real adjedges1[] = { -1.0 };
    SCIP_Real adjedges2[] = { 1.0 };
@@ -828,18 +826,18 @@ SCIP_RETCODE completemst2(
    cgraph_node_append(cgraph, adjedges2, 2);
    cgraph_node_append(cgraph, adjedges3, 3);
 
-   cmst_computeMst(cgraph, 0, cmst, &mstobj);
+   cmst_computeMst(cgraph, 0, cmst);
 
-   if( !SCIPisEQ(scip, mstobj, 2.5) )
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.5) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", mstobj);
+      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
       return SCIP_ERROR;
    }
 
    if( cmst->predecessors[2] != 0 )
    {
       SCIPdebugMessage("wrong ancestor: %d \n", cmst->predecessors[2]);
-      exit(1);
+      return SCIP_ERROR;
    }
 
    cmst_free(scip, &cmst);
@@ -848,6 +846,108 @@ SCIP_RETCODE completemst2(
    return SCIP_OKAY;
 }
 
+
+/** mst test */
+static
+SCIP_RETCODE completemst3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   CGRAPH* cgraph;
+   CMST* cmst;
+   const int maxnnodes = 4;
+   SCIP_Real adjedges1[] = { -1.0 };
+   SCIP_Real adjedges2[] = { 1.5 };
+   SCIP_Real adjedges3[] = { 2.0, 1.0 };
+   SCIP_Real adjedges4[] = { 7.5, 0.5, 0.2 };
+
+
+   SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
+   SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
+
+   cgraph_node_append(cgraph, adjedges1, 0);
+   cgraph_node_append(cgraph, adjedges2, 1);
+
+   cgraph_node_deleteTop(cgraph);
+
+   cgraph_node_append(cgraph, adjedges2, 1);
+   cgraph_node_append(cgraph, adjedges3, 2);
+   cgraph_node_append(cgraph, adjedges4, 3);
+
+   cmst_computeMst(cgraph, 0, cmst);
+
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.2) )
+   {
+      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      return SCIP_ERROR;
+   }
+
+   if( cmst->predecessors[3] != 1 || cmst->predecessors[2] != 3  || cmst->predecessors[1] != 0 )
+   {
+      SCIPdebugMessage("wrong ancestor \n");
+      return SCIP_ERROR;
+   }
+
+   cmst_free(scip, &cmst);
+   cgraph_free(scip, &cgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** mst test */
+static
+SCIP_RETCODE completemst4(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   CGRAPH* cgraph;
+   CMST* cmst;
+   const int maxnnodes = 7;
+   SCIP_Real adjedges0[] = { -1.0 };
+   SCIP_Real adjedges1[] = { 2.0 };
+   SCIP_Real adjedges2[] = { 4.0, 3.0 };
+   SCIP_Real adjedges3[] = { 4.0, 4.0, 1.0 };
+   SCIP_Real adjedges4[] = { 1.0, 1.0, 2.0, 3.0 };
+
+   SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
+   SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
+
+   cgraph_node_append(cgraph, adjedges2, 0);
+   cgraph_node_append(cgraph, adjedges3, 1);
+   cgraph_node_append(cgraph, adjedges4, 1);
+   cgraph_node_append(cgraph, adjedges3, 1);
+
+   cgraph_node_deleteTop(cgraph);
+   cgraph_node_deleteTop(cgraph);
+   cgraph_node_deleteTop(cgraph);
+   cgraph_node_deleteTop(cgraph);
+
+   cgraph_node_append(cgraph, adjedges0, 0);
+   cgraph_node_append(cgraph, adjedges1, 1);
+   cgraph_node_append(cgraph, adjedges2, 2);
+   cgraph_node_append(cgraph, adjedges3, 3);
+   cgraph_node_append(cgraph, adjedges4, 4);
+
+   cmst_computeMst(cgraph, 3, cmst);
+
+   if( !SCIPisEQ(scip, cmst->mstobj, 5.0) )
+   {
+      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      return SCIP_ERROR;
+   }
+
+   if( cmst->predecessors[0] != 4 || cmst->predecessors[1] != 4  || cmst->predecessors[4] != 2 || cmst->predecessors[2] != 3 )
+   {
+      SCIPdebugMessage("wrong ancestor \n");
+      return SCIP_ERROR;
+   }
+
+   cmst_free(scip, &cmst);
+   cgraph_free(scip, &cgraph);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -2815,7 +2915,8 @@ SCIP_RETCODE completegraph_test(
    SCIP_CALL( completegraph(scip) );
    SCIP_CALL( completemst1(scip) );
    SCIP_CALL( completemst2(scip) );
-
+   SCIP_CALL( completemst3(scip) );
+   SCIP_CALL( completemst4(scip) );
 
    return SCIP_OKAY;
 }
