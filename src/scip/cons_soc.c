@@ -3171,7 +3171,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
+   /* a proper SOC constraint needs at least 2 variables (at least one will be quadratic)
+    * but performance-wise that doesn't give a clear advantage on product(2), so let's even require 3 vars
+    */
    if( nbinlin + nquadvars < 3 )
       return SCIP_OKAY;
 
@@ -3231,7 +3233,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          goto GENERALUPG;
       }
 
-      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
+      /* check that bilinear terms do not appear in the rest and quadratic terms have positive sqrcoef have no lincoef */
       quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
       for (i = 0; i < nquadvars; ++i)
       {
@@ -3442,7 +3444,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       goto cleanup;
    }
 
-   if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3560,7 +3562,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
 
-      if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+      if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
       { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
          SCIPdebugMsg(scip, "found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3706,7 +3708,9 @@ GENERALUPG:
          nneg++;
    }
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
+   /* a proper SOC constraint needs at least 2 variables
+    * let's make sure we have at least 3, though, as this upgrade comes with extra (multiaggr.) vars
+    */
    if( npos + nneg < 3 )
       goto cleanup;
 
@@ -3718,7 +3722,13 @@ GENERALUPG:
    if( !rhsissoc && !lhsissoc )
       goto cleanup;
 
-   assert(rhsissoc != lhsissoc);
+   if( rhsissoc && lhsissoc )
+   {
+      /* only handle rhs-SOC here for now
+       * if the upgrade is run again on the remaining lhs-SOC, it would upgrade that side
+       */
+      lhsissoc = FALSE;
+   }
 
    if( lhsissoc )
    {
@@ -3846,7 +3856,7 @@ GENERALUPG:
       }
    }
 
-   if( rhsvarfound && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvarfound && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    {
       /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
@@ -3959,7 +3969,7 @@ GENERALUPG:
 #ifdef SCIP_DEBUG
    else
    {
-      if( lhscount < 2 )
+      if( lhscount < 1 )
       {
          SCIPdebugMsg(scip, "Failed because there are not enough lhsvars (%d)\n", lhscount);
       }
