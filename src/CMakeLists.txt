@@ -215,6 +215,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/treemodel.c
     scip/benders_default.c
     scip/benderscut_feas.c
     scip/benderscut_feasalt.c
@@ -830,6 +831,7 @@ set(scipheaders
     scip/table_default.h
     scip/table.h
     scip/tree.h
+    scip/treemodel.h
     scip/type_bandit.h
     scip/type_benders.h
     scip/type_benderscut.h

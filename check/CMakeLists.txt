@@ -69,6 +69,10 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "treemodel_ratio"
+    "treemodel_sampling"
+    "treemodel_svts_filter"
+    "treemodel_svts_nofilter"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
@@ -85,7 +89,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    )
+)
 #
 # settings for the componentshandler test
 #
