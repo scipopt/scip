@@ -41,7 +41,6 @@
 #define STP_EXT_MAXGRAD 8
 #define STP_EXT_MAXEDGES 500
 #define STP_EXTTREE_MAXNEDGES 25
-#define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
 #define STP_EXT_EDGELIMIT 50000
 #define STP_EXT_SDMAXVISITS 10
@@ -49,6 +48,9 @@
 /** reduction data */
 typedef struct reduction_data
 {
+   CMST* const cmst;
+   CGRAPH* const cgraph;
+   int* const cgraphEdgebuffer;
    const SCIP_Real* const redCosts;
    const SCIP_Real* const rootToNodeDist;
    const PATH* const nodeTo3TermsPaths;
@@ -2137,7 +2139,9 @@ SCIP_RETCODE reduce_extendedCheckArc(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
-         REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
+         REDDATA reddata = { .cmst = extpermanent->cmst, .cgraph = extpermanent->cgraph,
+            .cgraphEdgebuffer = extpermanent->cgraphEdgebuffer,
+            .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
             .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = edgedeleted,
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
@@ -2236,7 +2240,9 @@ SCIP_RETCODE reduce_extendedCheckEdge(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
-         REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
+         REDDATA reddata = { .cmst = extpermanent->cmst, .cgraph = extpermanent->cgraph,
+            .cgraphEdgebuffer = extpermanent->cgraphEdgebuffer,
+            .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
             .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,

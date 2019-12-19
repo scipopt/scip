@@ -1999,6 +1999,13 @@ SCIP_RETCODE reduce(
    show = FALSE;
    stp_type = graph->stp_type;
 
+//#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
+#ifndef NDEBUG
+   SCIP_CALL( testAll(scip) );
+#endif
+#endif
+
    /* initialize ancestor list for each edge */
    SCIP_CALL( graph_init_history(scip, graph) );
 

@@ -2736,17 +2736,14 @@ SCIP_RETCODE testAll(
    assert(scip);
 
    SCIP_CALL( completegraph_test(scip) );
-
-   assert(0);
-
-
-
    SCIP_CALL( heur_extendPcMwTest(scip) );
    SCIP_CALL( heur_localTest(scip) );
    SCIP_CALL( pseudoDel_test(scip) );
    SCIP_CALL( reduce_extTest(scip) );
    SCIP_CALL( dheap_Test(scip) );
    SCIP_CALL( reduce_sdPcMwTest(scip) );
+
+   printf("all unit tests passed! \n");
 
    return SCIP_OKAY;
 }

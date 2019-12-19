@@ -854,9 +854,13 @@ SCIP_RETCODE reduce_extPermaInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bottleneckDistNode, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(extperm->cgraphEdgebuffer), STP_EXTTREE_MAXNLEAVES) );
 
    if( pcmw )
       SCIP_CALL( SCIPallocMemoryArray(scip, &pcSdToNode, nnodes) );
+
+   SCIP_CALL( cgraph_init(scip, &(extperm->cgraph), STP_EXTTREE_MAXNLEAVES) );
+   SCIP_CALL( cmst_init(scip, &(extperm->cmst), STP_EXTTREE_MAXNLEAVES) );
 
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;
@@ -935,7 +939,11 @@ void reduce_extPermaFreeMembers(
 {
    assert(scip && extperm);
 
+   cmst_free(scip, &(extperm->cmst));
+   cgraph_free(scip, &(extperm->cgraph));
+
    SCIPfreeMemoryArrayNull(scip, &(extperm->pcSdToNode));
+   SCIPfreeMemoryArray(scip, &(extperm->cgraphEdgebuffer));
    SCIPfreeMemoryArray(scip, &(extperm->bottleneckDistNode));
    SCIPfreeMemoryArray(scip, &(extperm->tree_deg));
    SCIPfreeMemoryArray(scip, &(extperm->isterm));

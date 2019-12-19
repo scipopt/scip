@@ -25,10 +25,12 @@
 #define APPLICATIONS_STP_SRC_REDUCE_H_
 
 #define EXT_CLOSENODES_MAXN 64
+#define STP_EXTTREE_MAXNLEAVES 20
 
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "completegraph.h"
 
 /** path root state */
 typedef struct pathroot_state
@@ -85,6 +87,9 @@ typedef struct reduce_costs_parameters
 /** permanent extension data */
 typedef struct extension_data_permanent
 {
+   CMST*                 cmst;               /**< complete MST */
+   CGRAPH*               cgraph;             /**< complete graph */
+   int*                  cgraphEdgebuffer;   /**< complete graph edge buffer */
    STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
    SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
    SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
