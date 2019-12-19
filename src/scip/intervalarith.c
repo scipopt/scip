@@ -34,12 +34,23 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
+
+/* some static initializations that need to come before enabling fenv_access
+ * (MSVC doesn't consider something like 1.5*M_PI a constant initialization if fenv_access is enabled)
+ */
+/* first one is 1 so even indices are the maximum points */
+static SCIP_Real sin_extremepoints[] = {M_PI_2, 1.5*M_PI, 2.5*M_PI, 3.5*M_PI};
+/* first one is -1 so even indices are the minimum points */
+static SCIP_Real cos_extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
+
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
@@ -2576,8 +2587,6 @@ void SCIPintervalSin(
    int a;
    int b;
    int nbetween;
-   /* first one is 1 so even indices are the maximum points */
-   static SCIP_Real extremepoints[] = {0.5*M_PI, 1.5*M_PI, 2.5*M_PI, 3.5*M_PI};
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
@@ -2596,7 +2605,7 @@ void SCIPintervalSin(
 
    for( b = 0; ; ++b )
    {
-      if( modinf <= extremepoints[b] )
+      if( modinf <= sin_extremepoints[b] )
       {
          a = b;
          break;
@@ -2604,7 +2613,7 @@ void SCIPintervalSin(
    }
    for( ; b < 4; ++b )
    {
-      if( modsup <= extremepoints[b] )
+      if( modsup <= sin_extremepoints[b] )
          break;
    }
 
@@ -2662,8 +2671,6 @@ void SCIPintervalCos(
    int a;
    int b;
    int nbetween;
-   /* first one is -1 so even indices are the minimum points */
-   static SCIP_Real extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
@@ -2682,7 +2689,7 @@ void SCIPintervalCos(
 
    for( b = 0; ; ++b )
    {
-      if( modinf <= extremepoints[b] )
+      if( modinf <= cos_extremepoints[b] )
       {
          a = b;
          break;
@@ -2690,7 +2697,7 @@ void SCIPintervalCos(
    }
    for( ; b < 3; ++b )
    {
-      if( modsup <= extremepoints[b] )
+      if( modsup <= cos_extremepoints[b] )
          break;
    }
 

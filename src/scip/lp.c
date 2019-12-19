@@ -1494,7 +1494,7 @@ SCIP_RETCODE rowEventConstantChanged(
    /* check, if the row is being tracked for coefficient changes
     * if so, issue ROWCONSTCHANGED event
     */
-   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCONSTCHANGED) != 0) )
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCONSTCHANGED)) )
    {
       SCIP_EVENT* event;
 

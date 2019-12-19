@@ -114,6 +114,7 @@ set(scipsources
     scip/heur_octane.c
     scip/heur_ofins.c
     scip/heur_oneopt.c
+    scip/heur_padm.c
     scip/heur_proximity.c
     scip/heur_pscostdiving.c
     scip/heur_reoptsols.c
@@ -214,6 +215,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/treemodel.c
     scip/benders_default.c
     scip/benderscut_feas.c
     scip/benderscut_feasalt.c
@@ -555,6 +557,7 @@ set(scipheaders
     scip/heur_octane.h
     scip/heur_ofins.h
     scip/heur_oneopt.h
+    scip/heur_padm.h
     scip/heur_proximity.h
     scip/heur_pscostdiving.h
     scip/heur_randrounding.h
@@ -828,6 +831,7 @@ set(scipheaders
     scip/table_default.h
     scip/table.h
     scip/tree.h
+    scip/treemodel.h
     scip/type_bandit.h
     scip/type_benders.h
     scip/type_benderscut.h

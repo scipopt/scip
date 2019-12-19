@@ -104,7 +104,7 @@ typedef enum Dec_Section DEC_SECTION;
 /** reads the given decomposition file */
 static
 SCIP_RETCODE readDecomposition(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
 {

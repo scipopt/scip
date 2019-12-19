@@ -69,6 +69,10 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "treemodel_ratio"
+    "treemodel_sampling"
+    "treemodel_svts_filter"
+    "treemodel_svts_nofilter"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
@@ -85,7 +89,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    )
+)
 #
 # settings for the componentshandler test
 #
@@ -506,7 +510,7 @@ macro(add_decompinstancetests instances settings prefix)
                                 )
         endforeach(setting)
     endforeach(instance)
-endmacro(add_instancetests)
+endmacro(add_decompinstancetests)
 
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
@@ -719,7 +723,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+                                            DEPENDS scip-build)
         endforeach()
 
 endforeach()
