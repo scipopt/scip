@@ -2841,28 +2841,28 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int k;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
-   for( p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p )
+   for (p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p)
    {
       perm = propdata->components[p];
 
-      for( k = 0; k < propdata->npermvars; ++k )
+      for (k = 0; k < propdata->npermvars; ++k)
          used[k] = FALSE;
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", perm);
 
-      for( k = 0; k < propdata->npermvars; ++k )
+      for (k = 0; k < propdata->npermvars; ++k)
       {
-         if( used[k] )
+         if ( used[k] )
             continue;
 
          j = propdata->perms[perm][k];
 
-         if( k == j )
+         if ( k == j )
             continue;
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
          used[k] = TRUE;
-         while( j != k )
+         while (j != k)
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
             used[j] = TRUE;
@@ -2878,7 +2878,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
       if ( ntwocycleperms < 2 )
+      {
+         SCIPdebugMsg(scip, "  --> skip\n");
          continue;
+      }
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
             &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
@@ -2893,7 +2896,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       assert( nusedperms <= ntwocycleperms );
       assert( ncompcolors < propdata->npermvars );
 
-      SCIPdebugMsg(scip, "  number of colors: %d\n", ncompcolors);
+      SCIPdebugMsg(scip, "  number of different colors in the graph: %d\n", ncompcolors);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
 
@@ -2904,10 +2907,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int chosencomp = -1;
          int chosencompsize = 0;
          int k;
+#ifdef SCIP_DEBUG
+         SCIP_Bool binaffected = FALSE;
+         SCIP_Bool intaffected = FALSE;
+         SCIP_Bool contaffected = FALSE;
+#endif
 
-         if( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
+         if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
-            SCIPdebugMsg(scip, "    color %d has only one variable -> skip\n", j);
+            SCIPdebugMsg(scip, "    color %d has only one variable --> skip\n", j);
             chosencomppercolor[j] = -1;
 
             continue;
@@ -2919,22 +2927,41 @@ SCIP_RETCODE detectAndHandleSubgroups(
          /* choose largest component for that color */
          for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
          {
-            int compsize = graphcompbegins[k+1] - graphcompbegins[k];
+            SCIP_VAR* firstvar;
+            int compsize;
+
+            compsize = graphcompbegins[k+1] - graphcompbegins[k];
 
             if ( compsize > chosencompsize )
             {
                chosencomp = k;
                chosencompsize = compsize;
             }
+
+            firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
+
+#ifdef SCIP_DEBUG
+            if ( SCIPvarIsBinary(firstvar) )
+               binaffected = TRUE;
+            else if (SCIPvarIsIntegral(firstvar) )
+               intaffected = TRUE;
+            else
+               contaffected = TRUE;
+#endif
          }
 
          assert( chosencomp >= 0 );
          assert( chosencomp < ngraphcomponents );
          assert( chosencompsize > 0 );
 
+#ifdef SCIP_DEBUG
+         SCIPdebugMsg(scip, "    affected types (bin,int,cont): (%d,%d,%d)\n",
+            binaffected, intaffected, contaffected);
+#endif
+
          chosencomppercolor[j] = chosencomp;
 
-         SCIPdebugMsg(scip, "      choosing component %d with %d variables and addingstrong SBCs\n",
+         SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
             chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
 
          /* add strong SBCs (lex-max order) for chosen graph component */
@@ -3327,6 +3354,9 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
+         SCIPdebugMsg(scip, "found an orbitope of size %d x $d in component %d\n", ntwocyclescomp,
+            npermsincomponent + 1, i);
+
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
                ntwocyclescomp, npermsincomponent + 1, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
