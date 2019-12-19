@@ -3257,6 +3257,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
    }
 
+   /* explicitly disable dual sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "dualsparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualsparsify/maxrounds", 0, quiet) );
+   }
+
    /* explicitly disable tworowbnd presolver, if included */
 #ifndef NDEBUG
    if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
