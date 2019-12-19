@@ -43,10 +43,20 @@ Features
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 
+- GINS heuristic can make use of a user-provided decomposition labels in two ways:
+ 1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
+ 2. by selecting an interval of consecutive blocks as neighborhood, until fixing rate is reached. In this case, no variable is randomly selected.
+
+- extend potential parameter of GINS to allow computation based on local LP solution, as well
+
 - new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
   At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
   During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
   The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
+- Added new penalty alternating direction method (PADM) primal heuristic that splits the problem into several sub-SCIPs
+  according to a user-provided decomposition. The sub-SCIPs are solved on an alternating basis until a feasible solution of
+  the original problem is found.
 
 - Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
   whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
@@ -69,7 +79,9 @@ Features
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
   recompute symmetries if a restart occured.
 
-- handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
+- upgrade some more quadratic constraints to second-order cone constraints, that is,
+  handle linear binary variables as if squared in simple upgrade and
+  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade
 
 - new variable event when changing the variable type
 

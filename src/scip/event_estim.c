@@ -1129,8 +1129,19 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       return SCIP_OKAY;
 
    nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node);
+
+   /* it can happen that the node was not created via branching; search for the most recent ancestor in the queue */
    if( nodeinfo == NULL )
-      return SCIP_OKAY;
+   {
+      do
+      {
+         node = SCIPnodeGetParent(node);
+      } while( node != NULL && (nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node)) == NULL);
+
+      /* no ancestor found */
+      if( nodeinfo == NULL )
+         return SCIP_OKAY;
+   }
 
    /* get open nodes of this subtree stored as priority queue */
    subtreeidx = nodeinfo->subtreeidx;
@@ -1205,8 +1216,13 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
     */
    if( !SCIPhashmapExists(ssg->nodes2info, (void*)focusnode) )
    {
-      parentnode = SCIPnodeGetParent(focusnode);
-      assert(SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+      parentnode = focusnode;
+      do
+      {
+         parentnode = SCIPnodeGetParent(parentnode);
+      } while( parentnode != NULL && !SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+
+      assert(parentnode != NULL && SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
    }
    else
       parentnode = focusnode;
@@ -2359,7 +2375,7 @@ SCIP_Bool shouldApplyRestartCompletion(
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( completion < 1.0 / eventhdlrdata->restartfactor )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Completion %.5f less than restart threshold %.5f\n",
          completion, 1.0 / eventhdlrdata->restartfactor);
       return TRUE;
@@ -2381,7 +2397,7 @@ SCIP_Bool shouldApplyRestartEstimation(
 
    if( estimation < 0.0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Estimation %g is still unavailable\n",
          estimation);
       return TRUE;
@@ -2733,7 +2749,13 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       {
          /* safe that we triggered a restart at this run */
          if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         {
             eventhdlrdata->nrestartsperformed++;
+
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "Restart triggered after %d consecutive estimations that the remaining tree will be large\n",
+               eventhdlrdata->restarthitcounter);
+         }
 
          eventhdlrdata->lastrestartrun = SCIPgetNRuns(scip);
 

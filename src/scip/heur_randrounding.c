@@ -305,8 +305,7 @@ SCIP_RETCODE performLPRandRounding(
    int nlpcands;
 
    /* only call heuristic, if an optimal LP solution is at hand */
-   if ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
    if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
@@ -462,8 +461,8 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
+   /* only call heuristic, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
@@ -474,8 +473,8 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't call heuristic, if we have already processed the current LP solution but no relaxation solution is available */
-   if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
+   /* don't call heuristic, if we have already processed the current LP solution */
+   if( SCIPgetNLPs(scip) == heurdata->lastlp )
       return SCIP_OKAY;
 
    propagate = (!heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0);

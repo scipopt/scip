@@ -2825,8 +2825,8 @@ SCIP_RETCODE printQuadraticCons(
    if( nlinvars > 0 )
    {
       /* free buffer arrays */
-      SCIPfreeBufferArray(scip, &activevars);
       SCIPfreeBufferArray(scip, &activevals);
+      SCIPfreeBufferArray(scip, &activevars);
    }
 
    return SCIP_OKAY;
@@ -3232,8 +3232,8 @@ SCIP_RETCODE printAggregatedCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArray(scip, &activevars);
 
    return SCIP_OKAY;
 }
@@ -3807,8 +3807,8 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, 2, NULL, 0, NULL, 0, 
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
-         SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
       }
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
@@ -3883,8 +3883,8 @@ SCIP_RETCODE SCIPwriteLp(
             SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
                   SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
 
-            SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
          }
 
          /* store constraint */
