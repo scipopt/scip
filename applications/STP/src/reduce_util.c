@@ -26,6 +26,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "reduce.h"
 #include "misc_stp.h"
+#include "portab.h"
 
 #ifdef RED_UTIL_TIME
 #include <time.h>
@@ -806,7 +807,6 @@ SCIP_Real reduce_distDataGetSD(
    /* look in neighbors list of vertex1 */
    dist = getCloseNodeDistance(distdata, vertex1, vertex2);
 
-
    /* if no success, binary search on neighbors of vertex2? todo too expensive? */
 
    //   if( distdata->pathroot_isdirty[vertex2] )
@@ -919,7 +919,7 @@ SCIP_Bool reduce_extPermaIsClean(
       if( bottleneckDistNode[i] > -0.5 )
          return FALSE;
 
-      if( pcSdToNode && pcSdToNode[i] > -0.5 )
+      if( pcSdToNode && !EQ(pcSdToNode[i], -1.0) )
          return FALSE;
    }
 

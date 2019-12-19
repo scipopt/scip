@@ -486,6 +486,37 @@ int getMaxTreeDepth(
 }
 
 
+/** returns special distance */
+static inline
+SCIP_Real extGetSD(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Real sd = reduce_distDataGetSD(scip, g, vertex1, vertex2, extdata->distdata);
+
+   assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
+
+   if( extdata->pcSdToNode )
+   {
+      const SCIP_Real sdpc = extdata->pcSdToNode[vertex2];
+
+      assert(SCIPisEQ(scip, sdpc, -1.0) || SCIPisGE(scip, sdpc, 0.0));
+
+      if( sdpc > -0.5 && sdpc < sd )
+      {
+         SCIPdebugMessage("special distance update for pc: %f to %f \n", sd, sdpc);
+         sd = sdpc;
+      }
+   }
+
+   return sd;
+}
+
+
 /** should we truncate from current component? */
 static
 void extPrintStack(
@@ -665,7 +696,7 @@ void extPcSdMarkSingle(
 
 /** marks PcSd array */
 static
-void extPcSdMark(
+void extPcSdToNodeMark(
    const GRAPH*          graph,              /**< graph data structure */
    int                   startvertex,        /**< vertex to start from */
    EXTDATA*              extdata,            /**< extension data */
@@ -686,9 +717,8 @@ void extPcSdMark(
    int count2 = 0;
 
    assert(graph_pc_isPcMw(graph));
-   assert(pcSdToNode && prize);
-
-   *nPcSdCands = 0;
+   assert(pcSdToNode && prize && nPcSdCands);
+   assert(*nPcSdCands == 0);
 
    for( int i = start; i != end; i++ )
    {
@@ -735,7 +765,7 @@ void extPcSdMark(
 
 /** unmarks PcSd array */
 static
-void extPcSdUnmark(
+void extPcSdToNodeUnmark(
    const GRAPH*          graph,              /**< graph data structure */
    const int*            pcSdCands,          /**< marked candidates list */
    int                   nPcSdCands,         /**< number of candidates */
@@ -939,201 +969,30 @@ SCIP_Bool extTreeBottleneckIsDominated(
    const GRAPH*          graph,              /**< graph data structure */
    int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
    int                   vertex_unmarked,    /**< second vertex */
-   SCIP_Real*            specialDist,        /**< best computed special distance approximation */
+   SCIP_Real             specialDist,        /**< best computed special distance approximation (-1.0 if unknown) */
    EXTDATA*              extdata             /**< extension data */
    )
 {
-   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
-   SCIP_Real sd = reduce_distDataGetSD(scip,  graph, vertex_pathmarked, vertex_unmarked, extdata->distdata);
    SCIP_Bool success = FALSE;
-   const SCIP_Bool isPc = (STP_PCSPG == graph->stp_type || STP_RPCSPG == graph->stp_type);
 
    assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots && vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
+   assert(SCIPisEQ(scip, specialDist, -1.0) || SCIPisGE(scip, specialDist, 0.0));
 
-   if( isPc && pcSdToNode[vertex_unmarked] >= 0.0 )
-   {
-      const SCIP_Real sd2 = pcSdToNode[vertex_unmarked];
-      //printf("sd=%f sd2=%f \n", sd, sd2);
-      sd = (sd < -0.5) ? sd2 : MIN(sd, sd2);
-   }
-
-   if( sd >= -0.5 )
+   if( specialDist >= -0.5 )
    {
       const SCIP_Real bottleneckDist = extTreeBottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
 
-      assert(SCIPisGE(scip, sd, 0.0));
+      assert(SCIPisGE(scip, specialDist, 0.0));
 
-      SCIPdebugMessage("%d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, sd, bottleneckDist);
+      SCIPdebugMessage("%d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDist, bottleneckDist);
 
-      if( SCIPisLT(scip, sd, bottleneckDist) )
+      if( SCIPisLT(scip, specialDist, bottleneckDist) )
          success = TRUE;
-      else if( SCIPisLE(scip, sd, bottleneckDist) && 0 ) /* todo cover equality */
+      else if( SCIPisLE(scip, specialDist, bottleneckDist) && 0 ) /* todo cover equality */
          success = TRUE;
    }
-
-   *specialDist = sd;
 
    return success;
-}
-
-
-/** adds top component of stack to tree */
-static
-void extTreeAddStackTop(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            conflict            /**< conflict found? */
-)
-{
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   int* const tree_edges = extdata->tree_edges;
-   int* const tree_leaves = extdata->tree_leaves;
-   int* const tree_deg = extdata->tree_deg;
-   int* const tree_parentNode = extdata->tree_parentNode;
-   SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
-   SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
-   REDDATA* const reddata = extdata->reddata;
-   const SCIP_Real* const redcost = reddata->redCosts;
-   int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
-   const STP_Bool* const edgedeleted = reddata->edgedeleted;
-   const int stackpos = extdata->extstack_ncomponents - 1;
-   const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
-   int conflictIteration = -1;
-   const SCIP_Bool noReversedRedCostTree = (reddata->redCostRoot == extdata->tree_root || SCIPisGE(scip, tree_redcostSwap[comproot], FARAWAY));
-
-   assert(!(*conflict));
-   assert(stackpos >= 0);
-   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
-   assert(comproot >= 0 && comproot < graph->knots);
-   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
-
-   /* update tree leaves array todo might need to be changed for pseudo-elimination */
-   if( comproot != extdata->tree_root )
-      extRemoveNodeFromLeaves(graph, comproot, extdata);
-   else
-   {
-      assert(extdata->tree_nleaves == 1);
-   }
-
-   /* add top expanded component to tree data */
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-   {
-      const int edge = extstack_data[i];
-      const int head = graph->head[edge];
-
-      assert(extdata->tree_nedges < extdata->extstack_maxsize);
-      assert(edge >= 0 && edge < graph->edges);
-      assert(tree_deg[head] == 0 && (tree_deg[comproot] > 0 || comproot == extdata->tree_root));
-      assert(comproot == graph->tail[edge]);
-
-      extdata->tree_redcost += redcost[edge];
-
-      tree_edges[(extdata->tree_nedges)++] = edge;
-      tree_leaves[(extdata->tree_nleaves)++] = head;
-      tree_deg[head] = 1;
-      tree_parentNode[head] = comproot;
-      tree_parentEdgeCost[head] = graph->cost[edge];
-      tree_deg[comproot]++;
-
-      if( noReversedRedCostTree || (edgedeleted && edgedeleted[flipedge(edge)]) )
-         tree_redcostSwap[head] = FARAWAY;
-      else
-         tree_redcostSwap[head] = tree_redcostSwap[comproot] + redcost[flipedge(edge)] - redcost[edge];
-
-      /* no conflict found yet? */
-      if( conflictIteration == -1 )
-      {
-         assert(*conflict == FALSE);
-
-         graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, edge, TRUE, conflict, pseudoancestor_mark);
-
-         if( *conflict )
-         {
-            SCIPdebugMessage("pseudoancestor conflict for edge %d \n", edge);
-            conflictIteration = i;
-            assert(conflictIteration >= 0);
-         }
-      }
-   }
-
-   /* conflict found? */
-   if( conflictIteration != -1 )
-   {
-      assert(*conflict && conflictIteration >= 0);
-
-      for( int i = extstack_start[stackpos]; i < conflictIteration; i++ )
-      {
-         const int edge = extstack_data[i];
-         graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, pseudoancestor_mark);
-      }
-   }
-
-   extdata->tree_depth++;
-
-   assert(!extTreeIsFlawed(scip, graph, extdata));
-}
-
-
-/** some updates */
-static
-void extTreeSyncWithStack(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   EXTDATA*              extdata,            /**< extension data */
-   int*                  nupdatestalls,      /**< update stalls counter */
-   SCIP_Bool*            conflict            /**< conflict found? */
-)
-{
-   const int stackposition = extdata->extstack_ncomponents - 1;
-   REDDATA* const reddata = extdata->reddata;
-
-   assert(scip && graph && extdata && reddata && nupdatestalls && conflict);
-   assert(!(*conflict));
-
-   extPrintStack(graph, extdata);
-
-   /* is current component expanded? */
-   if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
-      extTreeAddStackTop(scip, graph, extdata, conflict); /* add component to tree */
-
-   /* recompute reduced costs? */
-   if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
-   {
-      SCIP_Real treecost = 0.0;
-      const SCIP_Real* const redcost = reddata->redCosts;
-      const int* const tree_edges = extdata->tree_edges;
-      const int tree_nedges = extdata->tree_nedges;
-
-      *nupdatestalls = 0;
-
-      assert(!extTreeIsFlawed(scip, graph, extdata));
-
-      for( int i = 0; i < tree_nedges; i++ )
-      {
-         const int edge = tree_edges[i];
-         assert(edge >= 0 && edge < graph->edges);
-
-         treecost += redcost[edge];
-      }
-
-      assert(SCIPisEQ(scip, treecost, extdata->tree_redcost));
-
-      extdata->tree_redcost = treecost;
-   }
-
-#ifndef NDEBUG
-   if( *conflict == FALSE )
-   {
-      for( int i = 0; i < extdata->tree_nedges; i++ )
-      {
-         const int edge = extdata->tree_edges[i];
-         assert(graph_edge_nPseudoAncestors(graph, edge) == 0 ||
-            graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, edge, reddata->pseudoancestor_mark));
-      }
-   }
-#endif
 }
 
 
@@ -1316,6 +1175,248 @@ SCIP_Real extTreeGetRedcostBound(
 }
 
 
+/** gets reduced cost bound of current tree */
+static
+void extMSTaddLeaf(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extleaf,            /**< the leaf */
+   EXTDATA*              extdata,            /**< extension data */
+   int*                  pcSdCands,          /**< != NULL iff PC/RPC */
+   SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
+)
+{
+   const int* const leaves = extdata->tree_leaves;
+   int nPcSdCands = 0;
+   const int nleaves = extdata->tree_nleaves;
+   SCIP_Bool ruledOut = FALSE;
+   const SCIP_Bool isPc = (pcSdCands != NULL);
+
+   assert(isPc == graph_pc_isPcMw(graph));
+
+   extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
+
+   /* for PC/RPC initialize pcSdToNode array */
+   if( isPc )
+      extPcSdToNodeMark(graph, extleaf, extdata, pcSdCands, &nPcSdCands);
+
+   for( int j = 0; j < nleaves; j++ )
+   {
+      SCIP_Real specialDist;
+      const int leaf = leaves[j];
+
+      assert(extdata->tree_deg[leaf] == 1);
+
+      if( leaf == extleaf )
+         continue;
+
+      specialDist = extGetSD(scip, graph, extleaf, leaf, extdata);
+
+      if( extTreeBottleneckIsDominated(scip, graph, extleaf, leaf, specialDist, extdata) )
+      {
+         SCIPdebugMessage("---bottleneck rule-out---\n");
+         ruledOut = TRUE;
+         break;
+      }
+   }
+
+   if( isPc && !ruledOut )
+   {
+      const int* const tree_deg = extdata->tree_deg;
+      // todo if not successful so far, perhaps try bottleneck distances for inner vertices of STP as well!
+
+      /* also check non-leaves */
+      for( int c = 0; c < nPcSdCands; c++ )
+      {
+         SCIP_Real specialDist;
+         const int cand = pcSdCands[c];
+
+         assert(cand >= 0 && cand < graph->knots);
+
+         /* leaf or not contained? */
+         if( tree_deg[cand] <= 1 )
+            continue;
+
+         specialDist = extGetSD(scip, graph, extleaf, cand, extdata);
+
+         if( extTreeBottleneckIsDominated(scip, graph, extleaf, cand, specialDist, extdata) )
+         {
+            SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
+            ruledOut = TRUE;
+            break;
+         }
+      }
+   }
+
+   extTreeBottleneckUnmarkRootPath(extleaf, extdata);
+
+   if( isPc )
+      extPcSdToNodeUnmark(graph, pcSdCands, nPcSdCands, extdata);
+
+   *leafRuledOut = ruledOut;
+}
+
+
+/** adds top component of stack to tree */
+static
+void extTreeAddStackTop(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            conflict            /**< conflict found? */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   int* const tree_edges = extdata->tree_edges;
+   int* const tree_leaves = extdata->tree_leaves;
+   int* const tree_deg = extdata->tree_deg;
+   int* const tree_parentNode = extdata->tree_parentNode;
+   SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
+   SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
+   REDDATA* const reddata = extdata->reddata;
+   const SCIP_Real* const redcost = reddata->redCosts;
+   int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
+   const STP_Bool* const edgedeleted = reddata->edgedeleted;
+   const int stackpos = extdata->extstack_ncomponents - 1;
+   const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
+   int conflictIteration = -1;
+   const SCIP_Bool noReversedRedCostTree = (reddata->redCostRoot == extdata->tree_root || SCIPisGE(scip, tree_redcostSwap[comproot], FARAWAY));
+
+   assert(!(*conflict));
+   assert(stackpos >= 0);
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
+   assert(comproot >= 0 && comproot < graph->knots);
+   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
+
+   /* update tree leaves array todo might need to be changed for pseudo-elimination */
+   if( comproot != extdata->tree_root )
+      extRemoveNodeFromLeaves(graph, comproot, extdata);
+   else
+   {
+      assert(extdata->tree_nleaves == 1);
+   }
+
+   /* add top expanded component to tree data */
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int head = graph->head[edge];
+
+      assert(extdata->tree_nedges < extdata->extstack_maxsize);
+      assert(edge >= 0 && edge < graph->edges);
+      assert(tree_deg[head] == 0 && (tree_deg[comproot] > 0 || comproot == extdata->tree_root));
+      assert(comproot == graph->tail[edge]);
+
+      extdata->tree_redcost += redcost[edge];
+
+      tree_edges[(extdata->tree_nedges)++] = edge;
+      tree_leaves[(extdata->tree_nleaves)++] = head;
+      tree_deg[head] = 1;
+      tree_parentNode[head] = comproot;
+      tree_parentEdgeCost[head] = graph->cost[edge];
+      tree_deg[comproot]++;
+
+      if( noReversedRedCostTree || (edgedeleted && edgedeleted[flipedge(edge)]) )
+         tree_redcostSwap[head] = FARAWAY;
+      else
+         tree_redcostSwap[head] = tree_redcostSwap[comproot] + redcost[flipedge(edge)] - redcost[edge];
+
+      /* no conflict found yet? */
+      if( conflictIteration == -1 )
+      {
+         assert(*conflict == FALSE);
+
+         graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, edge, TRUE, conflict, pseudoancestor_mark);
+
+         if( *conflict )
+         {
+            SCIPdebugMessage("pseudoancestor conflict for edge %d \n", edge);
+            conflictIteration = i;
+            assert(conflictIteration >= 0);
+         }
+      }
+   }
+
+   /* conflict found? */
+   if( conflictIteration != -1 )
+   {
+      assert(*conflict && conflictIteration >= 0);
+
+      for( int i = extstack_start[stackpos]; i < conflictIteration; i++ )
+      {
+         const int edge = extstack_data[i];
+         graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, pseudoancestor_mark);
+      }
+   }
+
+   extdata->tree_depth++;
+
+   assert(!extTreeIsFlawed(scip, graph, extdata));
+}
+
+
+/** some updates */
+static
+void extTreeSyncWithStack(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   int*                  nupdatestalls,      /**< update stalls counter */
+   SCIP_Bool*            conflict            /**< conflict found? */
+)
+{
+   const int stackposition = extdata->extstack_ncomponents - 1;
+   REDDATA* const reddata = extdata->reddata;
+
+   assert(scip && graph && extdata && reddata && nupdatestalls && conflict);
+   assert(!(*conflict));
+
+   extPrintStack(graph, extdata);
+
+   /* is current component expanded? */
+   if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
+      extTreeAddStackTop(scip, graph, extdata, conflict); /* add component to tree */
+
+   /* recompute reduced costs? */
+   if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
+   {
+      SCIP_Real treecost = 0.0;
+      const SCIP_Real* const redcost = reddata->redCosts;
+      const int* const tree_edges = extdata->tree_edges;
+      const int tree_nedges = extdata->tree_nedges;
+
+      *nupdatestalls = 0;
+
+      assert(!extTreeIsFlawed(scip, graph, extdata));
+
+      for( int i = 0; i < tree_nedges; i++ )
+      {
+         const int edge = tree_edges[i];
+         assert(edge >= 0 && edge < graph->edges);
+
+         treecost += redcost[edge];
+      }
+
+      assert(SCIPisEQ(scip, treecost, extdata->tree_redcost));
+
+      extdata->tree_redcost = treecost;
+   }
+
+#ifndef NDEBUG
+   if( *conflict == FALSE )
+   {
+      for( int i = 0; i < extdata->tree_nedges; i++ )
+      {
+         const int edge = extdata->tree_edges[i];
+         assert(graph_edge_nPseudoAncestors(graph, edge) == 0 ||
+            graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, edge, reddata->pseudoancestor_mark));
+      }
+   }
+#endif
+}
+
+
 /** can any extension via edge be ruled out? */
 static
 SCIP_Bool extRuleOutEdge(
@@ -1427,13 +1528,9 @@ SCIP_Bool extRuleOutPeriph(
    }
    else
    {
-      /* compute special distances and compare with tree bottleneck distances */
-      // todo build MST graph
       const int stackpos = extdata->extstack_ncomponents - 1;
       const int* const extstack_data = extdata->extstack_data;
       const int* const extstack_start = extdata->extstack_start;
-      const int* const leaves = extdata->tree_leaves;
-      const int nleaves = extdata->tree_nleaves;
       const SCIP_Bool isPc = (STP_PCSPG == graph->stp_type || STP_RPCSPG == graph->stp_type);
       int* pcSdCands = NULL;
       SCIP_Bool ruledOut = FALSE;
@@ -1441,55 +1538,14 @@ SCIP_Bool extRuleOutPeriph(
       if( isPc )
          SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &pcSdCands, graph->knots) );
 
+      /* compute special distances for MST test (and compare with tree bottleneck distances for early rule-out) */
       for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
       {
          const int extleaf = graph->head[extstack_data[i]];
-         int nPcSdCands = 0;
-         SCIP_Real specialDist;
 
-         extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
+         extMSTaddLeaf(scip, graph, extleaf, extdata, pcSdCands, &ruledOut);
 
-         if( isPc )
-            extPcSdMark(graph, extleaf, extdata, pcSdCands, &nPcSdCands);
-
-         for( int j = 0; j < nleaves; j++ )
-         {
-            const int leaf = leaves[j];
-            assert(extdata->tree_deg[leaf] == 1);
-
-            if( leaf == extleaf )
-               continue;
-
-            if( extTreeBottleneckIsDominated(scip, graph, extleaf, leaf, &specialDist, extdata) )
-            {
-               SCIPdebugMessage("---bottleneck rule-out---\n");
-               ruledOut = TRUE;
-               break;
-            }
-         }
-
-         if( isPc && !ruledOut )
-         {
-            const int* const tree_deg = extdata->tree_deg;
-            // todo if not successful so far, perhaps try bottleneck distances for inner vertices of STP as well!
-
-            /* also check non-leaves */
-            for( int c = 0; c < nPcSdCands; c++ )
-            {
-               const int cand = pcSdCands[c];
-               if( tree_deg[cand] > 1 && extTreeBottleneckIsDominated(scip, graph, extleaf, cand, &specialDist, extdata) )
-               {
-                  SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
-                  ruledOut = TRUE;
-                  break;
-               }
-            }
-         }
-
-         extTreeBottleneckUnmarkRootPath(extleaf, extdata);
-         if( isPc )
-            extPcSdUnmark(graph, pcSdCands, nPcSdCands, extdata);
-
+         /* early rule out? */
          if( ruledOut )
             break;
       }
@@ -1499,7 +1555,7 @@ SCIP_Bool extRuleOutPeriph(
       if( ruledOut )
          return TRUE;
 
-      // todo do MST test
+      /* now compute the MST */
 
 
 #ifndef NDEBUG
