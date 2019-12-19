@@ -1437,6 +1437,8 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       SCIP_CALL( SCIPnlrowEnsureLinearSize(nlrow, blkmem, set, nlrow->nlinvars + SCIPvarGetMultaggrNVars(var)) );
       for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
       {
+         if( SCIPsetIsZero(set, coef * SCIPvarGetMultaggrScalars(var)[i]) )
+            continue;
          SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[i], coef * SCIPvarGetMultaggrScalars(var)[i]) );
          assert(SCIPvarGetMultaggrVars(var)[i] == nlrow->linvars[nlrow->nlinvars-1]);
          if( !SCIPvarIsActive(SCIPvarGetMultaggrVars(var)[i]) )
