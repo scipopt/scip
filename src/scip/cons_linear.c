@@ -4641,6 +4641,22 @@ SCIP_RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->eventdata == NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdata != NULL);
+   }
+
    if( !consdata->removedfixings )
    {
       SCIP_Real lhssubtrahend;
@@ -4827,7 +4843,6 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
          }
       }
-
       consdata->removedfixings = TRUE;
 
       SCIPdebugMsg(scip, "after fixings:\n");
