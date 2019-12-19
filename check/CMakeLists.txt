@@ -506,7 +506,7 @@ macro(add_decompinstancetests instances settings prefix)
                                 )
         endforeach(setting)
     endforeach(instance)
-endmacro(add_instancetests)
+endmacro(add_decompinstancetests)
 
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
