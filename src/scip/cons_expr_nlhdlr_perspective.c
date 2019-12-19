@@ -58,6 +58,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
    SCIP_CONSEXPR_EXPR**  onoffterms;         /**< on/off terms for which we apply perspective cuts */
    SCIP_Real*            onoffcoefs;         /**< coefficients of onoffterms */
+   SCIP_Real*            termvals0;          /**< 'off' values of the term for each indicator variable */
    SCIP_VAR***           termbvars;          /**< binary vars associated with onoffterms */
    int*                  ntermbvars;         /**< number of binary variables for each term */
    int                   nonoffterms;        /**< number of on/off expressions */
@@ -94,19 +95,29 @@ SCIP_RETCODE varIsSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable to check */
    SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+   SCIP_VAR*             indicator,          /**< indicator variable which var should depend on (NULL if doesn't matter) */
+   SCIP_Real*            val0,               /**< buffer to store value of var when indicator == 0 (NULL if not interested) */
    SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
    )
 {
-   SCIP_Real lb0, ub0, lb1, ub1, glb, gub;
+   SCIP_Real lb0;
+   SCIP_Real ub0;
+   SCIP_Real lb1;
+   SCIP_Real ub1;
+   SCIP_Real glb;
+   SCIP_Real gub;
    SCIP_Bool exists;
-   int c, pos, newsize;
+   int c;
+   int pos;
+   int newsize;
    SCIP_VAR** vlbvars;
    SCIP_VAR** vubvars;
    SCIP_Real* vlbcoefs;
    SCIP_Real* vubcoefs;
    SCIP_Real* vlbconstants;
    SCIP_Real* vubconstants;
-   int nvlbs, nvubs;
+   int nvlbs;
+   int nvubs;
    SCIP_SCVARDATA* scvdata;
    SCIP_VAR* bvar;
 
@@ -115,12 +126,22 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(scvars != NULL);
    assert(result != NULL);
 
-   *result = FALSE;
-
    scvdata = (SCIP_SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)var);
    if( scvdata != NULL )
    {
       *result = TRUE;
+
+      if( indicator != NULL )
+      { /* if the indicator variable matters, look for it */
+         SCIP_Bool found;
+
+         found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+         if( !found )
+            *result = FALSE;
+         else if( val0 != NULL )
+            *val0 = scvdata->vals0[pos];
+      }
+
       return SCIP_OKAY;
    }
 
@@ -134,6 +155,8 @@ SCIP_RETCODE varIsSemicontinuous(
    nvubs = SCIPvarGetNVubs(var);
    glb = SCIPvarGetLbGlobal(var);
    gub = SCIPvarGetUbGlobal(var);
+
+   *result = FALSE;
 
    /* Scan through lower bounds; for each binary vlbvar save the corresponding lb0 and lb1.
     * Then check if there is an upper bound with this vlbvar and save ub0 and ub1.
@@ -558,7 +581,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
 
 /* checks if an expression is semicontinuous
  *
- * An expression is semicontinuous if all of its variables are semicontinuous
+ * An expression is semicontinuous if all of its nonlinear variables are semicontinuous
  * and share at least one common indicator variable */
 static
 SCIP_RETCODE exprIsSemicontinuous(
@@ -576,8 +599,20 @@ SCIP_RETCODE exprIsSemicontinuous(
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool var_is_sc;
    SCIP_SCVARDATA* scvdata;
+   SCIP_VAR* var;
 
    *res = FALSE;
+
+   /* TODO don't do this for root */
+   /* TODO this needs sc prop */
+   /* we are happy with linear terms anyway */
+//   var = SCIPgetConsExprExprAuxVar(expr);
+//   if( var != NULL )
+//   {
+//      SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+//      *res = TRUE;
+//      return SCIP_OKAY;
+//   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nlhdlrexprdata->nvarexprs) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
@@ -589,19 +624,17 @@ SCIP_RETCODE exprIsSemicontinuous(
       goto TERMINATE;
    }
 
-   /* all nonlinear variables of an on/off term should be semicontinuous */
+   /* all nonlinear variables of a nonlinear on/off term should be semicontinuous */
    /* TODO propagate auxiliary variables */
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_VAR* var;
-
       var = SCIPgetConsExprExprVarVar(varexprs[v]);
-      SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
+      SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
       if( !var_is_sc )
       {
-         /* a non-semicontinuous var appearing linearly is ok */
-         if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) || SCIPgetConsExprExprAuxVar(expr) != NULL )
+         if( SCIPgetConsExprExprAuxVar(expr) != NULL ) /* TODO will remove this later */
             *res = TRUE;
+
          goto TERMINATE;
       }
    }
@@ -615,7 +648,7 @@ SCIP_RETCODE exprIsSemicontinuous(
    v0 = *nbvars == 0 ? 1 : 0;
    *nbvars = scvdata->nbnds;
 
-   SCIPdebugMsg(scip, "\nArray intersection for vars %s", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])));
+   SCIPdebugMsg(scip, "\nArray intersection for vars %s, *nbvars = %d", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), *nbvars);
    for( v = v0; v < nvars; ++v )
    {
 #ifdef SCIP_DEBUG
@@ -743,6 +776,8 @@ SCIP_RETCODE freeNlhdlrExprData(
 {
    int c;
 
+   if( nlhdlrexprdata->nonoffterms != 0 )
+      SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->termvals0), nlhdlrexprdata->ntermbvars[0]);
    for( c = 0; c < nlhdlrexprdata->nonoffterms; ++c )
    {
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->termbvars[c]), nlhdlrexprdata->ntermbvars[c]);
@@ -859,10 +894,14 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 { /*lint --e{715}*/
-   int nbvars, nchildren, c;
+   int nbvars;
+   int nchildren;
+   int c;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_VAR** expr_bvars;
    SCIP_CONSEXPR_EXPR** children;
+   SCIP_Real exprval0;
+   SCIP_SOL* sol0;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -898,13 +937,18 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    /* some other nonlinear handler should be able to separate */
    if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
+   {
+      SCIPdebugMsg(scip, "\nno enforcement method, exiting detect");
       return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
+
    (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
    SCIPdebugMsg(scip, "expr %p is %s\n", expr, (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX ? "convex" : "concave");
 
    SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
+
    if( nlhdlrdata->scvars == NULL )
    {
       SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), (*nlhdlrexprdata)->nvarexprs) );
@@ -923,10 +967,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       nchildren = 1;
    }
 
+   /* allocate memory for indicator variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip)) );
 
-   /* collect terms that satisfy the conditions for g_i(x_i) and the corresponding binary variables
-    * all other terms are stored in convterms */
+   /* check that all nonlinear terms that satisfy the conditions for g_i(x_i) and the corresponding binary variables;
+    * also collect information on semicontinuous variables */
 
    nbvars = 0;
    *success = TRUE;
@@ -940,19 +985,99 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          break;
    }
 
-   /* this might happen since non-semicontinuous linear terms are allowed */
+   /* this needs to be checked since non-semicontinuous linear terms are allowed,
+    * so success could remain TRUE, but there could be no semicontinuous terms */
    if( nbvars == 0 )
       *success = FALSE;
 
    if( *success )
    {
+      int nvars, v;
+      SCIP_Real* vals0;
+      SCIP_VAR** vars;
+      SCIP_CONSEXPR_EXPR** varexprs;
+
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip), nbvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*nlhdlrexprdata)->termvals0), nbvars) );
+
+      /* find the 'off' value of the expression for each indicator var */
+
+      /* allocate memory for the solution */
+      SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals0, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+      /* loop through indicator variables */
+      for( v = 0; v < nbvars; ++v )
+      {
+         int v1;
+
+         exprval0 = 0.0;
+
+         /* get x0 */
+         for( v1 = 0; v1 < nvars; ++v1 )
+         {
+            SCIP_Real val0;
+            SCIP_Bool var_is_sc;
+
+            vars[v1] = SCIPgetConsExprExprVarVar(varexprs[v1]);
+
+            /* is the variable semicontinuous with respect to this indicator? */
+            SCIP_CALL( varIsSemicontinuous(scip, vars[v1], nlhdlrdata->scvars, expr_bvars[v], &val0, &var_is_sc) );
+
+            vals0[v1] = val0;
+         }
+
+         /* set x to x0 in sol0 */
+         SCIP_CALL( SCIPsetSolVals(scip, sol0, nvars, vars, vals0) );
+
+         /* evaluate each semicontinuous term */
+         for( c = 0; c < nchildren; ++c )
+         {
+            SCIP_VAR* auxvar;
+            SCIP_Bool var_is_sc;
+
+            /* constant goes into exprval0 too */
+            if( SCIPgetConsExprExprHdlr(children[c]) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+               exprval0 += SCIPgetConsExprExprValue(children[c]);
+
+            /* TODO this works best with sc prop */
+            auxvar = SCIPgetConsExprExprAuxVar(children[c]);
+
+            /* skip non-semicontinuous (with respect to this indicator) linear terms */
+            if( auxvar != NULL )
+            {
+               SCIP_CALL( varIsSemicontinuous(scip, auxvar, nlhdlrdata->scvars, expr_bvars[v], NULL, &var_is_sc) );
+               if( !var_is_sc )
+                  continue;
+            }
+
+            /* get exprval0 */
+            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, children[c], sol0, 0) );
+            exprval0 += SCIPgetConsExprExprValue(children[c]);
+         }
+
+         /* save exprval0 */
+         (*nlhdlrexprdata)->termvals0[v] = exprval0;
+      }
+
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &vals0);
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
+      }
+      SCIPfreeBufferArray(scip, &varexprs);
+      SCIP_CALL( SCIPfreeSol(scip, &sol0) );
+
 
       SCIPdebugMsg(scip, "\ndetected an on/off expr");
 
       addOnoffTerm(scip, conshdlr, *nlhdlrexprdata, 1.0, expr, expr_bvars, nbvars);
 
-      /* if we get here, enforcemethods should have already been set by other handlers */
+      /* if we get here, enforcemethods should have already been set by other handler(s) */
       assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
          || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
 
@@ -1033,6 +1158,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Real pcoef;
    SCIP_VAR** bvars;
+   SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+   SCIP_Real cst0;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1054,85 +1181,76 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
    *ncuts = 0;
 
-   /* if estimating on non-convex side, then do nothing */
-   if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
-   {
-      SCIPdebugMsg(scip, "Estimating on non-convex side, do nothing\n");
-      return SCIP_OKAY;
-   }
-
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   if( !nlhdlrdata->multcuts || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
+   /* build cuts for every indicator variable */
+   for( i = 0; i < nlhdlrexprdata->ntermbvars[0]; ++i )
    {
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+      SCIP_VAR* indicator;
 
-      if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
-         SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
+      indicator = nlhdlrexprdata->termbvars[0][i];
 
-      success = TRUE; /* think positive */
-
-      /* handle convex terms */
-      for( i = 0; i < nlhdlrexprdata->nconvterms && success; ++i )
+      /* use cuts from every suitable nlhdlr */
+      for( j = 0; j < expr->nenfos; ++j )
       {
-         SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol, &success) );
-      }
+         nlhdlr2 = expr->enfos[j]->nlhdlr;
 
-      /* handle on/off terms */
-      for( i = 0; i < nlhdlrexprdata->nonoffterms && success; ++i )
-      {
-         SCIP_VAR* bvar;
-         SCIP_Real minbval = 1, bval;
+         if( nlhdlr2->estimate == NULL )
+            continue;
 
-         /* heuristically choose the most promising binary variable (one closest to 0) */
-         pexpr = nlhdlrexprdata->onoffterms[i];
-         pcoef = nlhdlrexprdata->onoffcoefs[i];
-         bvars = nlhdlrexprdata->termbvars[i];
-         bvar = bvars[0];
-         for( j = 1; j < nlhdlrexprdata->ntermbvars[i]; ++j)
-         {
-            assert(bvars[j] != NULL);
-            bval = SCIPgetSolVal(scip, sol, bvars[j]);
-            if( bval < minbval )
-            {
-               minbval = bval;
-               bvar = bvars[j];
-            }
-         }
-         SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, pcoef, bvar, sol, &success) );
-      }
-
-      if( success )
-      {
-         SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
-      }
-
-      SCIPfreeRowprep(scip, &rowprep);
-   }
-   else /* cuts for every suitable binary variable have been requested and expr is not a sum */
-   {
-      assert(nlhdlrexprdata->nonoffterms == 1);
-
-      /* generate one cut for each binary variable */
-      for( i = 0; i < nlhdlrexprdata->ntermbvars[0]; ++i )
-      {
          SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
-         success = TRUE; /* think positive */
 
-         SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, expr, 1.0, nlhdlrexprdata->termbvars[0][i], sol, &success) );
+         /* ask the handler for an estimator */
+         SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
+            overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
 
          if( success )
          {
+            int v;
+            SCIP_VAR* var;
+            SCIP_Bool var_is_sc;
+
+            SCIPinfoMessage(scip, NULL, "\nrowprep before perspectivy is: ");
+            SCIPprintRowprep(scip, rowprep, NULL);
+
+            /* perspectivy the estimator by adding (1-z)(f0 - sum aix0i)
+             * (i are the indices of semicontinuous variables) */
+
+            cst0 = nlhdlrexprdata->termvals0[i] + rowprep->side;
+
+            SCIPinfoMessage(scip, NULL, "\nexpr = %g at %s = 0 ", cst0, SCIPvarGetName(indicator));
+            SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+
+            for( v = 0; v < rowprep->nvars; ++v )
+            {
+               SCIP_Real val0;
+
+               var = rowprep->vars[v];
+
+               /* is var sc with respect to this indicator? */
+               SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc) );
+
+               if( !var_is_sc )
+                  continue;
+
+               cst0 -= rowprep->coefs[v]*val0;
+               SCIPinfoMessage(scip, NULL, "\nvar %s = %g at 0 ", SCIPvarGetName(var), val0);
+            }
+
+            /* update the rowprep by adding cst0 - cst0*z */
+            SCIPaddRowprepConstant(rowprep, cst0);
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0) );
+
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+
+            SCIPinfoMessage(scip, NULL, "\nrowprep after perspectivy is: ");
+            SCIPprintRowprep(scip, rowprep, NULL);
+
             SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
          }
 
          SCIPfreeRowprep(scip, &rowprep);
-         if( *result == SCIP_CUTOFF )
-            break;
       }
    }
 
@@ -1234,10 +1352,6 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 { /*lint --e{715}*/
-
-   /* TODO detect structure */
-
-   /* TODO create expression and store it in refexpr */
 
    /* set refexpr to expr and capture it if no reformulation is possible */
    *refexpr = expr;
