@@ -86,6 +86,7 @@ Fixed bugs
 - SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 - fixed bug in sepa_oddcylce when variables are fixed
 - fixed numerical issues related to tighter constraint sides in varbound constraint handler
+- fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
 
 Miscellaneous
 -------------

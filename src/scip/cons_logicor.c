@@ -4756,6 +4756,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
             SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
+      consdata->filterpos1 = -1;
    }
    if( consdata->watchedvar2 != -1 )
    {
@@ -4763,6 +4765,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
             SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
+      consdata->filterpos2 = -1;
    }
 
    return SCIP_OKAY;
