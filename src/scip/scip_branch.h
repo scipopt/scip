@@ -618,6 +618,25 @@ SCIP_Real SCIPcalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
+/** calculates the increase of the estimate for the objective of the best feasible solution contained in the subtree
+ *  after applying the given branching
+ *
+ *  @return the increase of the estimate for the objective of the best feasible solution contained in the subtree after
+ *          applying the given branching.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcChildEstimateIncrease(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
 /** creates a child node of the focus node
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

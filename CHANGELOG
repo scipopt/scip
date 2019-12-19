@@ -23,6 +23,8 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
+
 ### Command line interface
 
 ### Interfaces to external software
