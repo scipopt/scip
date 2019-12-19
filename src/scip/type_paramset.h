@@ -68,7 +68,8 @@ enum SCIP_ParamEmphasis
    SCIP_PARAMEMPHASIS_COUNTER     = 6,        /**< get a feasible and "fast" counting process */
    SCIP_PARAMEMPHASIS_PHASEFEAS   = 7,        /**< feasibility phase settings during 3-phase solving approach */
    SCIP_PARAMEMPHASIS_PHASEIMPROVE= 8,        /**< improvement phase settings during 3-phase solving approach */
-   SCIP_PARAMEMPHASIS_PHASEPROOF  = 9         /**< proof phase settings during 3-phase solving approach */
+   SCIP_PARAMEMPHASIS_PHASEPROOF  = 9,        /**< proof phase settings during 3-phase solving approach */
+   SCIP_PARAMEMPHASIS_NUMERICS    = 10        /**< emphasis parameters for increased numerical safety */
 };
 typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 

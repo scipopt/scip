@@ -76,6 +76,7 @@ SCIP_RETCODE SCIPnodeFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
@@ -395,6 +396,7 @@ SCIP_RETCODE SCIPtreeFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -405,6 +407,7 @@ SCIP_RETCODE SCIPtreeClear(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -416,6 +419,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -481,6 +485,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
@@ -950,6 +955,12 @@ SCIP_NODE* SCIPtreeGetLowerboundNode(
 SCIP_Real SCIPtreeGetAvgLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             cutoffbound         /**< global cutoff bound */
+   );
+
+/** query if focus node was already branched on */
+SCIP_Bool SCIPtreeWasNodeLastBranchParent(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            node                /**< tree node, or NULL to check focus node */
    );
 
 #ifdef __cplusplus

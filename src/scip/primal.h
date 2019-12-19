@@ -68,6 +68,7 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
@@ -85,6 +86,7 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -99,6 +101,7 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
@@ -113,6 +116,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
@@ -327,6 +331,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */

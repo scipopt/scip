@@ -130,6 +130,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
@@ -167,6 +168,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
+   SCIP_CALL( SCIPincludeHeurPADM(scip) );
    SCIP_CALL( SCIPincludeHeurProximity(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );

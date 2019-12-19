@@ -2951,6 +2951,7 @@ SCIP_RETCODE solveNodeLP(
 {
    SCIP_Longint nlpiterations;
    SCIP_Longint nlps;
+   SCIP_Longint nzeroitlps;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -2963,6 +2964,7 @@ SCIP_RETCODE solveNodeLP(
    assert(*lperror == FALSE);
 
    nlps = stat->nlps;
+   nzeroitlps = stat->ndualzeroitlps + stat->nprimalzeroitlps + stat->nbarrierzeroitlps;
    nlpiterations = stat->nlpiterations;
 
    if( !initiallpsolved )
@@ -3141,6 +3143,7 @@ SCIP_RETCODE solveNodeLP(
 
    /* update node's LP iteration counter */
    stat->nnodelps += stat->nlps - nlps;
+   stat->nnodezeroitlps += stat->ndualzeroitlps + stat->nprimalzeroitlps + stat->nbarrierzeroitlps - nzeroitlps;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
    /* update number of root node LPs and iterations if the root node was processed */
@@ -4278,9 +4281,14 @@ SCIP_RETCODE solveNode(
          markRelaxsUnsolved(set, relaxation);
       }
 
+      /* check for immediate restart */
+      *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
+	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+
       /* enforce constraints */
       branched = FALSE;
-      if( !(*postpone) && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
+      if( !(*postpone) && !(*restart) && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
       {
          /* if the solution changed since the last enforcement, we have to completely reenforce it; otherwise, we
           * only have to enforce the additional constraints added in the last enforcement, but keep the infeasible
@@ -4325,7 +4333,7 @@ SCIP_RETCODE solveNode(
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
-      if( pricingaborted && !(*infeasible) && !(*cutoff) && !(*postpone) )
+      if( pricingaborted && !(*infeasible) && !(*cutoff) && !(*postpone) && !(*restart) )
       {
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
@@ -4389,7 +4397,7 @@ SCIP_RETCODE solveNode(
        */
       wasforcedlpsolve = forcedlpsolve;
       forcedlpsolve = FALSE;
-      if( (*infeasible) && !(*cutoff) && !(*postpone)
+      if( (*infeasible) && !(*cutoff) && !(*postpone) && !(*restart)
          && (!(*unbounded) || SCIPbranchcandGetNExternCands(branchcand) > 0 || SCIPbranchcandGetNPseudoCands(branchcand) > 0)
          && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
@@ -5260,7 +5268,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* cuts off nodes with lower bound is not better than given cutoff bound, manually; this necessary to ensure that
     * SCIP terminates with a proper solve stage
     */
-   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventqueue, lp, primal->cutoffbound) );
+   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventfilter, eventqueue, lp, primal->cutoffbound) );
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit

@@ -551,6 +551,7 @@ SCIP_RETCODE SCIPresetParams(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
  *
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

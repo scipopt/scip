@@ -37,6 +37,7 @@
 -e773   // expression-like macro not parenthesized
 -e785   // too few initializers for aggregate of type in initialization
 -e788   // enum constant not used within default switch [possibly too strong]
+-e793   // ANSI/ISO minimum translation limit of 31 'significant characters in an external identifier' exceeded, processing  is unaffected
 -e801   // goto statement used
 -e818   // parameter of function could be pointer to const [interesting but clutters output]
 -e834   // operator '-' followed by operator '+' could be confusing without parentheses [seems uninformative]
@@ -142,6 +143,7 @@
 -emacro(776,SCIPallocBlockMemoryArray)
 -emacro(776,SCIPduplicateBlockMemoryArray)
 -emacro(776,BMSallocMemorySize)
+-emacro(776,BMSallocBufferMemoryArray)
 -emacro(776,BMSallocBlockMemoryArray)
 -emacro(776,BMScopyMemoryArray)
 -emacro(776,BMSallocMemoryArray)

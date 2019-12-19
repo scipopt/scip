@@ -2321,6 +2321,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "numerics") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
@@ -3713,6 +3718,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3924,10 +3930,34 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/dynamicweights", TRUE, quiet) );
       break;
 
+   case SCIP_PARAMEMPHASIS_NUMERICS:
+
+      /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
+      /* The higher the Markowitz Parameter is, more sparse pivots will be ignored and the numerically
+      more stable ones will be used as pivot */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999 , quiet) );
+      /* Added parameters as suggested here: https://git.zib.de/integer/scip/issues/2002#note_92716 */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/fastmip", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/scaling", 2, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 20, quiet) );
+      /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultaggrquot", 10.0, quiet) );
+      /* When upgrading constr with knapsack/setppc causes problems */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc" , 0, quiet) );
+      /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities" , 0, quiet) );
+
+      break;
+
    default:
       SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
-   }  
+   }
    return SCIP_OKAY;
 }
 

@@ -335,6 +335,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
@@ -349,6 +350,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 

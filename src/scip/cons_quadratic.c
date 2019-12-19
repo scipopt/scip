@@ -89,8 +89,10 @@
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /* constraint handler properties */
@@ -5258,10 +5260,12 @@ SCIP_RETCODE checkCurvature(
    if( consdata->iscurvchecked )
       return SCIP_OKAY;
 
-   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave, &consdata->maxnonconvexity);
+   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave,
+      &consdata->maxnonconvexity);
    if( !determined && checkmultivariate )
    {
-      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave, &consdata->maxnonconvexity) );
+      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave,
+            &consdata->maxnonconvexity) );
    }
 
    consdata->isconvex = isconvex;
