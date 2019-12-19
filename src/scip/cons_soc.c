@@ -3171,7 +3171,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
-   /* currently, a proper SOC constraint needs at least 2 variables (at least one will be quadratic) */
+   /* a proper SOC constraint needs at least 2 variables (at least one will be quadratic) */
    if( nbinlin + nquadvars < 2 )
       return SCIP_OKAY;
 
@@ -3706,7 +3706,9 @@ GENERALUPG:
          nneg++;
    }
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
+   /* a proper SOC constraint needs at least 2 variables
+    * let's make sure we have at least 3, though, as this upgrade comes with extra (multiaggr.) vars
+    */
    if( npos + nneg < 3 )
       goto cleanup;
 
@@ -3718,7 +3720,13 @@ GENERALUPG:
    if( !rhsissoc && !lhsissoc )
       goto cleanup;
 
-   assert(rhsissoc != lhsissoc);
+   if( rhsissoc && lhsissoc )
+   {
+      /* only handle rhs-SOC here for now
+       * if the upgrade is run again on the remaining lhs-SOC, it would upgrade that side
+       */
+      lhsissoc = FALSE;
+   }
 
    if( lhsissoc )
    {
@@ -3953,7 +3961,7 @@ GENERALUPG:
 #ifdef SCIP_DEBUG
    else
    {
-      if( lhscount < 2 )
+      if( lhscount < 1 )
       {
          SCIPdebugMsg(scip, "Failed because there are not enough lhsvars (%d)\n", lhscount);
       }
