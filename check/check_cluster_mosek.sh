@@ -203,7 +203,7 @@ do
       FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME"_"$THREADS
       BASENAME=$SCIPPATH/results/$FILENAME
 
-      TMPFILE=$BASENAME.tmp
+      TMPFILE=$BASENAME.par
       SETFILE=$BASENAME.set
 
       echo $BASENAME >> $EVALFILE
@@ -242,6 +242,10 @@ do
       then
           echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $TMPFILE
       fi
+
+      # we need to create a tmp file for run.sh - even if it's empty!
+      TMPFILE=$BASENAME.tmp
+      touch $TMPFILE
 
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
