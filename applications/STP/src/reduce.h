@@ -173,19 +173,6 @@ extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, const REDCOST*, const int*, G
 extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
-/* reduce_test.c
- */
-extern SCIP_RETCODE    testAll(SCIP*);
-extern SCIP_RETCODE    pseudoAncestors_test(SCIP*);
-extern SCIP_RETCODE    pseudoDel_test(SCIP*);
-extern SCIP_RETCODE    reduce_extTest(SCIP*);
-extern SCIP_RETCODE    dheap_Test(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest(SCIP*);
-extern SCIP_RETCODE    heur_extendPcMwTest(SCIP*);
-extern SCIP_RETCODE    completegraph_test(SCIP*);
-extern SCIP_RETCODE    heur_localTest(SCIP*);
-
-
 
 /* reduce_simple.c
  */

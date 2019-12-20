@@ -43,6 +43,7 @@
 #include <assert.h>
 #include "graph.h"
 #include "reduce.h"
+#include "stptest.h"
 #include "heur_tm.h"
 #include "misc_stp.h"
 #include "scip/scip.h"
@@ -1999,7 +2000,7 @@ SCIP_RETCODE reduce(
    show = FALSE;
    stp_type = graph->stp_type;
 
-//#define UNIT_TEST_STP
+#define UNIT_TEST_STP
 #ifdef UNIT_TEST_STP
 #ifndef NDEBUG
    SCIP_CALL( testAll(scip) );

@@ -26,6 +26,8 @@
 #ifndef APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_
 #define APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_
 
+#define CGRAPH_EDGECOST_UNDEFINED_VALUE -1.0
+
 #include "scip/scip.h"
 #include "graph.h"
 
@@ -33,6 +35,7 @@
 typedef struct complete_graph
 {
    SCIP_Real*            edgecosts;          /**< edge cost array; of size nnodes_max * (nnodes_max - 1) */
+   SCIP_Real*            adjedgecosts;       /**< adjacency cost array of size nnodes_max + 1, to be filled in by user */
    int*                  nodeids;            /**< node ids; of size nnodes_max */
    int                   nnodes_max;         /**< maximum number of nodes */
    int                   nnodes_curr;        /**< current number of nodes */
@@ -52,9 +55,11 @@ typedef struct complete_mst
 
 /* methods for the complete graph */
 SCIP_Bool cgraph_valid(const CGRAPH*);
+SCIP_Bool cgraph_idsInSync(const CGRAPH*, const int*, int);
 SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
 void cgraph_free(SCIP*, CGRAPH**);
 void cgraph_node_append(CGRAPH*, const SCIP_Real*, int);
+void cgraph_node_applyMinAdjCosts(CGRAPH*, int, int);
 void cgraph_node_deleteTop(CGRAPH*);
 void cgraph_node_exchange(CGRAPH*, const SCIP_Real*, int, int, int);
 SCIP_Real cgraph_edge_getCost(const CGRAPH*, int, int);

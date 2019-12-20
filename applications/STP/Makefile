@@ -92,9 +92,12 @@ CMAINOBJ	=	cmain.o \
 			reduce_ext.o \
 			reduce_ext2.o \
 			reduce_simple.o \
-			reduce_test.o \
 			reduce_util.o \
 			solpool.o \
+			stptest_base.o \
+			stptest_heur.o \
+			stptest_misc.o \
+			stptest_reduce.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o

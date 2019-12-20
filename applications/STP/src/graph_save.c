@@ -188,6 +188,36 @@ void graph_save(
 }
 
 
+/** Write (append) reduction statistics of current graph to file.
+ *  Call before graph packing!*/
+void graph_writeReductionStats(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           probname,           /**< Name of the problem */
+   const char*           filename            /**< Name of the output file */
+)
+{
+   FILE* file;
+   int nnodes_real;
+   int nedges_real;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(filename && probname);
+
+   graph_get_nVET(graph, &nnodes_real, &nedges_real, NULL);
+
+   assert(nnodes_real <= nnodes);
+   assert(nedges_real <= nedges_real);
+   assert(nedges % 2 == 0);
+   assert(nedges_real % 2 == 0);
+
+   file = fopen(filename, "a+");
+
+   fprintf(file, "%s: %d %d     %d %d \n", probname, nnodes, nedges / 2, nnodes_real, nedges_real / 2);
+   fclose(file);
+}
+
+
 /** print graph (in undirected form) in GML format */
 SCIP_RETCODE graph_writeGml(
    const GRAPH*          graph,              /**< Graph to be printed */

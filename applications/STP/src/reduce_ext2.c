@@ -515,6 +515,8 @@ SCIP_Real extGetSD(
       }
    }
 
+   assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
+
    return sd;
 }
 
@@ -1184,6 +1186,8 @@ void extMSTaddLeaf(
    const GRAPH*          graph,              /**< graph data structure */
    int                   extleaf,            /**< the leaf */
    EXTDATA*              extdata,            /**< extension data */
+   CGRAPH*               cgraph,             /**< complete graph data */
+   int*                  cgraphEdgebuffer,   /**< buffer */
    int*                  pcSdCands,          /**< != NULL iff PC/RPC */
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
@@ -1194,6 +1198,7 @@ void extMSTaddLeaf(
    SCIP_Bool ruledOut = FALSE;
    const SCIP_Bool isPc = (pcSdCands != NULL);
 
+   assert(cgraph && cgraphEdgebuffer && leaves);
    assert(isPc == graph_pc_isPcMw(graph));
 
    extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
@@ -1213,6 +1218,7 @@ void extMSTaddLeaf(
          continue;
 
       specialDist = extGetSD(scip, graph, extleaf, leaf, extdata);
+      cgraphEdgebuffer[j] = specialDist >= -0.5 ? specialDist : FARAWAY;
 
       if( extTreeBottleneckIsDominated(scip, graph, extleaf, leaf, specialDist, extdata) )
       {
@@ -1530,12 +1536,17 @@ SCIP_Bool extRuleOutPeriph(
    }
    else
    {
-      const int stackpos = extdata->extstack_ncomponents - 1;
+      CGRAPH* const cgraph = reddata->cgraph;
+      int* pcSdCands = NULL;
+      int* const cgraphEdgebuffer = reddata->cgraphEdgebuffer;
       const int* const extstack_data = extdata->extstack_data;
       const int* const extstack_start = extdata->extstack_start;
+      const int stackpos = extdata->extstack_ncomponents - 1;
       const SCIP_Bool isPc = (STP_PCSPG == graph->stp_type || STP_RPCSPG == graph->stp_type);
-      int* pcSdCands = NULL;
       SCIP_Bool ruledOut = FALSE;
+
+      assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
+      assert(cgraph_idsInSync(cgraph, extdata->tree_leaves, extdata->tree_nleaves));
 
       if( isPc )
          SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &pcSdCands, graph->knots) );
@@ -1545,7 +1556,7 @@ SCIP_Bool extRuleOutPeriph(
       {
          const int extleaf = graph->head[extstack_data[i]];
 
-         extMSTaddLeaf(scip, graph, extleaf, extdata, pcSdCands, &ruledOut);
+         extMSTaddLeaf(scip, graph, extleaf, extdata, cgraph, cgraphEdgebuffer, pcSdCands, &ruledOut);
 
          /* early rule out? */
          if( ruledOut )
@@ -1556,6 +1567,9 @@ SCIP_Bool extRuleOutPeriph(
 
       if( ruledOut )
          return TRUE;
+
+
+      /* assert the that cgraph is clean now... */
 
       /* now compute the MST */
 

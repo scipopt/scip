@@ -34,7 +34,6 @@
 #include "portab.h"
 
 #define NODE_ID_UNDEFINED -2
-#define EDGECOST_UNDEFINED_VALUE -1.0
 
 
 /** gets current number of nodes */
@@ -128,7 +127,7 @@ SCIP_Bool cgraph_valid(
 
    for( int i = start; i < nnodes_max * nnodes_max; i++ )
    {
-      if( !EQ(EDGECOST_UNDEFINED_VALUE, edgecosts[i]) )
+      if( !EQ(CGRAPH_EDGECOST_UNDEFINED_VALUE, edgecosts[i]) )
       {
          SCIPdebugMessage("unused edge value is wrong: %f \n", edgecosts[i]);
          return FALSE;
@@ -178,6 +177,32 @@ SCIP_Bool cgraph_valid(
 }
 
 
+/** is the graph in sync with given node id list? */
+SCIP_Bool cgraph_idsInSync(
+   const CGRAPH*         cgraph,             /**< the graph */
+   const int*            ids,                /**< node ids */
+   int                   nids                /**< number of ids */
+)
+{
+   assert(cgraph && ids);
+   assert(cgraph->nodeids);
+
+
+   if( nids != cgraph->nnodes_curr )
+   {
+      SCIPdebugMessage("wrong number of ids \n");
+      return FALSE;
+   }
+
+   for( int i = 0; i < nids; i++ )
+   {
+      if( cgraph->nodeids[i] != ids[i] )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /** initialize complete, undirected graph */
 SCIP_RETCODE cgraph_init(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -195,6 +220,7 @@ SCIP_RETCODE cgraph_init(
    g = *cgraph;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->edgecosts), maxnnodes * maxnnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->adjedgecosts), maxnnodes + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->nodeids), maxnnodes) );
 
    g->nnodes_curr = 0;
@@ -202,10 +228,13 @@ SCIP_RETCODE cgraph_init(
 
 #ifndef NDEBUG
    for( int i = 0; i < maxnnodes * maxnnodes; i++ )
-      g->edgecosts[i] = EDGECOST_UNDEFINED_VALUE;
+      g->edgecosts[i] = CGRAPH_EDGECOST_UNDEFINED_VALUE;
 
    for( int i = 0; i < maxnnodes; i++ )
       g->nodeids[i] = NODE_ID_UNDEFINED;
+
+   for( int i = 0; i < maxnnodes + 1; i++ )
+      g->adjedgecosts[i] = CGRAPH_EDGECOST_UNDEFINED_VALUE;
 #endif
 
    assert(cgraph_valid(g));
@@ -229,17 +258,58 @@ void cgraph_free(
    g = *cgraph;
 
    SCIPfreeMemoryArray(scip, &(g->nodeids));
+   SCIPfreeMemoryArray(scip, &(g->adjedgecosts));
    SCIPfreeMemoryArray(scip, &(g->edgecosts));
 
    SCIPfreeMemory(scip, cgraph);
 }
 
 
+/** applies adjacency costs to node, but only use if smaller than existing ones. */
+void cgraph_node_applyMinAdjCosts(
+   CGRAPH*               cgraph,             /**< new graph */
+   int                   nodepos,            /**< the node position */
+   int                   nodeid              /**< the node id (for debugging only) */
+   )
+{
+   const int nnodes_curr = getNnodesCurr(cgraph);
+   const int nnodes_max = getNnodesMax(cgraph);
+   const int start = getEdgeStart(nodepos, nnodes_max);
+   SCIP_Real* const edgecosts = cgraph->edgecosts;
+   const SCIP_Real* const adjcosts = cgraph->adjedgecosts;
 
-/** adds node */
+   assert(nodepos >= 0 && nodepos < nnodes_curr);
+   assert(cgraph->nodeids[nodepos] == nodeid);
+
+   for( int i = start, j = 0; i != start + nnodes_curr; i++, j++ )
+   {
+      const SCIP_Real newcost = adjcosts[j];
+      assert(GE(newcost, 0.0));
+      assert(!EQ(edgecosts[i], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+
+      if( newcost < edgecosts[i] )
+         edgecosts[i] = newcost;
+   }
+
+   for( int i = 0; i < nnodes_curr; i++ )
+   {
+      const SCIP_Real newcost = adjcosts[i];
+      const int pos = getEdgeStart(i, nnodes_max) + nodepos;
+      assert(EQ(edgecosts[pos], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+      assert(GE(newcost, 0.0));
+
+      if( newcost < edgecosts[pos] )
+         edgecosts[pos] = newcost;
+   }
+
+   assert(EQ(adjcosts[nnodes_curr], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+   assert(cgraph_valid(cgraph));
+}
+
+/** adds node todo remove adjcost array! */
 void cgraph_node_append(
    CGRAPH*               cgraph,             /**< new graph */
-   const SCIP_Real*      adjcosts,           /**< array with edge costs to neigbors of size nnodes_curr (use -1.0 as debug sentinel) */
+   const SCIP_Real*      adjcosts,           /**< array with edge costs to neighbors of size nnodes_curr (use -1.0 as debug sentinel) */
    int                   nodeid              /**< the node id */
    )
 {
@@ -250,34 +320,46 @@ void cgraph_node_append(
    const int nnodes_max = cgraph->nnodes_max;
    const int start_new = getEdgeStart(nnodes_curr_org, nnodes_max);
 
-#ifndef NDEBUG
    assert(cgraph_valid(cgraph));
-   assert(adjcosts && edgecosts && cgraph->nodeids);
+   assert(edgecosts && cgraph->nodeids);
    assert(nodeid >= 0);
    assert(nnodes_curr_org < nnodes_max);
    assert(NODE_ID_UNDEFINED == cgraph->nodeids[nnodes_curr_org]);
 
-   for( int j = 0; j < nnodes_curr_org; j++ )
-      assert(GE(adjcosts[j], 0.0));
-#endif
-
-   BMScopyMemoryArray(edgecosts + start_new, adjcosts, nnodes_curr_org);
-
    cgraph->nnodes_curr++;
 
-   /* adapt all other edges (going to the new node) */
-   for( int i = 0; i < nnodes_curr_org; i++ )
+   if( adjcosts )
    {
-      const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
+      BMScopyMemoryArray(edgecosts + start_new, adjcosts, nnodes_curr_org);
 
-      assert(EQ(edgecosts[end], EDGECOST_UNDEFINED_VALUE));
+      /* adapt all other edges (going to the new node) */
+      for( int i = 0; i < nnodes_curr_org; i++ )
+      {
+         const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
+         assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
 
-      edgecosts[end] = adjcosts[i];
+         edgecosts[end] = adjcosts[i];
+      }
+   }
+   else
+   {
+      for( int i = start_new; i < start_new + nnodes_curr_org; i++ )
+      {
+         edgecosts[i] = FARAWAY;
+      }
+
+      for( int i = 0; i < nnodes_curr_org; i++ )
+      {
+         const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
+         assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+
+         edgecosts[end] = FARAWAY;
+      }
    }
 
    lastedge = getEdgeEnd(nnodes_curr_org, nnodes_curr_new, nnodes_max) - 1;
-   assert(lastedge >= 0);
-   assert(EQ(EDGECOST_UNDEFINED_VALUE, edgecosts[lastedge]));
+   assert(lastedge >= 0 && lastedge == start_new + nnodes_curr_org);
+   assert(EQ(CGRAPH_EDGECOST_UNDEFINED_VALUE, edgecosts[lastedge]));
 
    edgecosts[lastedge] = FARAWAY;
    cgraph->nodeids[nnodes_curr_org] = nodeid;
@@ -311,9 +393,9 @@ void cgraph_node_deleteTop(
       {
          const int end = getEdgeEnd(i, cgraph->nnodes_curr, cgraph->nnodes_max);
 
-         assert(!EQ(cgraph->edgecosts[end], EDGECOST_UNDEFINED_VALUE));
+         assert(!EQ(cgraph->edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
 
-         cgraph->edgecosts[end] = EDGECOST_UNDEFINED_VALUE;
+         cgraph->edgecosts[end] = CGRAPH_EDGECOST_UNDEFINED_VALUE;
       }
 
       last_start = getEdgeStart(cgraph->nnodes_curr, cgraph->nnodes_max);
@@ -322,8 +404,8 @@ void cgraph_node_deleteTop(
       /* remove entries of deleted vertex */
       for( int i = last_start; i < last_end; i++ )
       {
-         assert(!EQ(cgraph->edgecosts[i], EDGECOST_UNDEFINED_VALUE));
-         cgraph->edgecosts[i] = EDGECOST_UNDEFINED_VALUE;
+         assert(!EQ(cgraph->edgecosts[i], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+         cgraph->edgecosts[i] = CGRAPH_EDGECOST_UNDEFINED_VALUE;
       }
    }
 

@@ -2545,6 +2545,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* presolving */
    SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims, TRUE) );
 
+#ifdef STP_WRITE_RED_STATS
+   graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
+   exit(1);
+#endif
+
 #ifdef WITH_UG
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, &offset, FALSE) );
 #else
