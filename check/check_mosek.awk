@@ -145,8 +145,8 @@ BEGIN {
 /^Optimizer terminated. Time:/ { tottime = $4; }
 
 /^  Solution status : INTEGER_OPTIMAL/ { optimal = 1; aborted = 0;}
-/^Objective of best integer solution:/ { pb = $6; }
-/^Best objective bound:/ { db = $4; }
+/^Objective of best integer solution :/ { pb = $7; }
+/^Best objective bound               :/ { db = $5; }
 
 /^    Interior-point          - iterations/ { iters = $5; }
 /^      Primal simplex        - iterations/ { iters += $6; }
@@ -158,7 +158,10 @@ BEGIN {
 
 /^Return code/ {
    if( $5 == "[MSK_RES_TRM_MAX_TIME]" )
+   {
       timeout = 1;
+      aborted = 0;
+   }
    else if( $5 == "[MSK_RES_OK]" )
       timeout = 0;
    else
@@ -294,7 +297,7 @@ BEGIN {
       printf("%-*s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
 	     namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+      printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
 	     namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
@@ -488,7 +491,7 @@ END {
    printf("\\end{center}\n")                                             >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+---------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
