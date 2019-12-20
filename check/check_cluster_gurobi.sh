@@ -206,7 +206,7 @@ do
   if test -f $SCIPPATH/$i
   then
 
-      echo adding instance $COUNT to queue
+      # echo adding instance $COUNT to queue
 
       # the cluster queue has an upper bound of 2000 jobs; if this limit is
       # reached the submitted jobs are dumped; to avoid that we check the total
@@ -243,10 +243,6 @@ do
       then
 	  rm -f $SETFILE
       fi
-
-      # we need to create a tmp file for run.sh - even if it's empty!
-      TMPFILE=$BASENAME.tmp
-      touch $TMPFILE
 
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
