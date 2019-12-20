@@ -60,8 +60,8 @@ SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
 void cgraph_free(SCIP*, CGRAPH**);
 void cgraph_node_append(CGRAPH*, int);
 void cgraph_node_applyMinAdjCosts(CGRAPH*, int, int);
+void cgraph_node_repositionTop(CGRAPH*, int);
 void cgraph_node_deleteTop(CGRAPH*);
-void cgraph_node_exchange(CGRAPH*, const SCIP_Real*, int, int, int);
 SCIP_Real cgraph_edge_getCost(const CGRAPH*, int, int);
 
 /*  methods for the corresponding MST structure */

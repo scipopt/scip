@@ -1990,11 +1990,10 @@ SCIP_RETCODE reduce(
 {
    int stp_type;
 
-   assert(graph      != NULL);
+   assert(graph != NULL);
    assert(graph_get_fixedges(graph) == NULL);
-   assert(level  >= 0 && level <= 2);
+   assert(level >= 0 && level <= 2);
    assert(minelims >= 0);
-   assert(graph->layers == 1);
 
    *offset = 0.0;
    show = FALSE;
@@ -2002,9 +2001,7 @@ SCIP_RETCODE reduce(
 
 #define UNIT_TEST_STP
 #ifdef UNIT_TEST_STP
-#ifndef NDEBUG
    SCIP_CALL( stptest_all(scip) );
-#endif
 #endif
 
    /* initialize ancestor list for each edge */

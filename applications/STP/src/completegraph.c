@@ -43,6 +43,8 @@ int getNnodesCurr(
 )
 {
    assert(cgraph);
+
+
    return cgraph->nnodes_curr;
 }
 
@@ -54,6 +56,8 @@ int getNnodesMax(
 )
 {
    assert(cgraph);
+
+
    return cgraph->nnodes_max;
 }
 
@@ -352,6 +356,50 @@ void cgraph_node_append(
 }
 
 
+/** replaces node at nodepos_new with top node */
+void cgraph_node_repositionTop(
+   CGRAPH*               cgraph,             /**< new graph */
+   int                   nodepos_new         /**< the new node position */
+   )
+{
+   const int nnodes_curr = getNnodesCurr(cgraph);
+   const int nnodes_max = getNnodesMax(cgraph);
+   const int nodepos_top = nnodes_curr - 1;
+   const int start_new = getEdgeStart(nodepos_new, nnodes_max);
+   const int start_top = getEdgeStart(nodepos_top, nnodes_max);
+
+   SCIP_Real* const edgecosts = cgraph->edgecosts;
+
+   assert(cgraph_valid(cgraph));
+   assert(nodepos_new >= 0 && nodepos_new < nodepos_top);
+
+   for( int i = 0; i < nodepos_top; i++ )
+   {
+      if( i != nodepos_new )
+      {
+         const int edgepos = getEdgeStart(i, nnodes_max) + nodepos_new;
+
+         assert(EQ(edgecosts[edgepos], edgecosts[start_new + i]));
+
+         edgecosts[edgepos] = edgecosts[start_top + i];
+      }
+   }
+
+   assert(start_new + nodepos_top < start_top);
+
+   BMScopyMemoryArray(edgecosts + start_new, edgecosts + start_top, nodepos_top);
+
+   /* adapt diagonal entry */
+   edgecosts[start_new + nodepos_new] = FARAWAY;
+
+   cgraph->nodeids[nodepos_new] = cgraph->nodeids[nodepos_top];
+
+   cgraph_node_deleteTop(cgraph);
+
+   assert(cgraph_valid(cgraph));
+}
+
+
 /** deletes node at the top */
 void cgraph_node_deleteTop(
    CGRAPH*               cgraph              /**< new graph */
@@ -399,24 +447,6 @@ void cgraph_node_deleteTop(
 }
 
 
-/** deletes node */
-void cgraph_node_exchange(
-   CGRAPH*               cgraph,             /**< new graph */
-   const SCIP_Real*      adjcosts,           /**< array with edge costs to neigbors of size nnodes_curr (FARAWAY at own position) */
-   int                   nodepos,            /**< the node position */
-   int                   nodeid_old,         /**< node id (for debugging) */
-   int                   nodeid_new          /**< node id of new entry */
-   )
-{
-   int todo; // what do we really need? nodeid_old, nodeid_new?
-
-   assert(cgraph);
-   assert(cgraph_valid(cgraph));
-   assert(nodeid_new >= 0);
-   assert(cgraph->nnodes_curr <= cgraph->nnodes_max);
-
-}
-
 /** Get edge cost.
  * Note: quite slow, only use for debugging! */
 SCIP_Real cgraph_edge_getCost(
@@ -427,6 +457,7 @@ SCIP_Real cgraph_edge_getCost(
 {
    assert(cgraph);
    assert(cgraph_valid(cgraph));
+   assert(0 && "not yet implemented");
 
    return 0.0;
 }

@@ -577,54 +577,10 @@ SCIP_Bool extLeafIsExtendable(
 }
 
 
-/** adds initial component to stack (needs to be star component rooted in root)*/
-static
-void extAddInitialComponent(
-   const GRAPH*          graph,              /**< graph data structure */
-   const int*            compedges,          /**< component edges */
-   int                   ncompedges,         /**< number of component edges */
-   int                   root,               /**< root of the component */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-   assert(compedges && extdata);
-   assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
-   assert(ncompedges < extdata->extstack_maxedges);
-   assert(root >= 0 && root < graph->knots);
-
-#ifdef SCIP_DEBUG
-   printf("\n --- ADD initial component --- \n\n");
-#endif
-
-   for( int i = 0; i < ncompedges; i++ )
-   {
-      const int e = compedges[i];
-      assert(e >= 0 && e < graph->edges);
-      assert(graph->tail[e] == root);
-
-      SCIPdebugMessage("edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
-
-      extdata->extstack_data[i] = e;
-   }
-
-   extdata->tree_root = root;
-   extdata->extstack_ncomponents = 1;
-   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
-   extdata->extstack_start[0] = 0;
-   extdata->extstack_start[1] = ncompedges;
-   extdata->tree_leaves[0] = root;
-   extdata->tree_parentNode[root] = -1;
-   extdata->tree_redcostSwap[root] = 0.0;
-   extdata->tree_parentEdgeCost[root] = -1.0;
-   extdata->tree_nleaves = 1;
-   assert(extdata->tree_deg[root] == 0);
-}
-
-
-
-/** finds position of given leaf in leaves data */
-static
-int extFindLeafPos(
+/** Finds position of given leaf in leaves data.
+ *  Returns 0 if leaf could not be found. */
+static inline
+int extLeafFindPos(
    const EXTDATA*        extdata,            /**< extension data */
    int                   leaf,               /**< leaf to find */
    int                   startpos            /**< position to start from (going backwards) */
@@ -649,27 +605,87 @@ int extFindLeafPos(
 }
 
 
+/** adds a new leaf */
+static inline
+void extLeafAdd(
+   EXTDATA*              extdata,            /**< extension data */
+   CGRAPH*               cgraph,             /**< complete graph data */
+   int                   leaf                /**< leaf to add */
+)
+{
+   assert(extdata && cgraph && extdata->tree_leaves);
+   assert(leaf >= 0 && extdata->tree_deg[leaf] == 0);
+
+   extdata->tree_leaves[(extdata->tree_nleaves)++] = leaf;
+
+   cgraph_node_append(cgraph, leaf);
+}
+
+
+/** restores a previous leaf */
+static inline
+void extLeafRestore(
+   EXTDATA*              extdata,            /**< extension data */
+   CGRAPH*               cgraph,             /**< complete graph data */
+   int                   leaf                /**< leaf to add */
+)
+{
+   assert(extdata && cgraph && extdata->tree_leaves);
+   assert(leaf >= 0 && extdata->tree_deg[leaf] == 1);
+
+   extdata->tree_leaves[(extdata->tree_nleaves)++] = leaf;
+
+   cgraph_node_append(cgraph, leaf);
+   int todo; // maybe copy saved edge costs here if possible?
+}
+
+
 /** remove entry from leaves list */
 static inline
-void extRemoveNodeFromLeaves(
-   const GRAPH*          graph,              /**< graph data structure */
+void extLeafRemove(
    int                   leaf,              /**< leaf to remove */
+   CGRAPH*               cgraph,            /**< complete graph data structure */
    EXTDATA*              extdata            /**< extension data */
 )
 {
    int* const tree_leaves = extdata->tree_leaves;
    int position;
 
+   assert(cgraph);
    assert(extdata->tree_deg[leaf] == 1);
 
    /* switch last leaf and leaf to be removed */
    extdata->tree_nleaves--;
    assert(extdata->tree_nleaves > 0);
 
-   position = extFindLeafPos(extdata, leaf, extdata->tree_nleaves);
+   position = extLeafFindPos(extdata, leaf, extdata->tree_nleaves);
    assert(position > 0);
 
+   assert(cgraph->nodeids[position] == leaf);
+
+   cgraph_node_repositionTop(cgraph, position);
    tree_leaves[position] = tree_leaves[extdata->tree_nleaves];
+
+   assert(cgraph_idsInSync(cgraph, tree_leaves, extdata->tree_nleaves));
+}
+
+/** remove top entry from leaves list */
+static inline
+void extLeafRemoveTop(
+   int                   topsize,           /**< size of top to remove */
+   CGRAPH*               cgraph,            /**< complete graph data structure */
+   EXTDATA*              extdata            /**< extension data */
+)
+{
+   assert(cgraph && extdata);
+   assert(topsize >= 0 && topsize < extdata->tree_nleaves);
+
+   for( int i = 0; i < topsize; i++ )
+      cgraph_node_deleteTop(cgraph);
+
+   extdata->tree_nleaves -= topsize;
+
+   assert(cgraph_idsInSync(cgraph, extdata->tree_leaves, extdata->tree_nleaves));
 }
 
 
@@ -1277,12 +1293,12 @@ void extTreeAddStackTop(
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
    int* const tree_edges = extdata->tree_edges;
-   int* const tree_leaves = extdata->tree_leaves;
    int* const tree_deg = extdata->tree_deg;
    int* const tree_parentNode = extdata->tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
    SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
    REDDATA* const reddata = extdata->reddata;
+   CGRAPH* const cgraph = reddata->cgraph;
    const SCIP_Real* const redcost = reddata->redCosts;
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
    const STP_Bool* const edgedeleted = reddata->edgedeleted;
@@ -1299,7 +1315,7 @@ void extTreeAddStackTop(
 
    /* update tree leaves array todo might need to be changed for pseudo-elimination */
    if( comproot != extdata->tree_root )
-      extRemoveNodeFromLeaves(graph, comproot, extdata);
+      extLeafRemove(comproot, reddata->cgraph, extdata);
    else
    {
       assert(extdata->tree_nleaves == 1);
@@ -1313,14 +1329,15 @@ void extTreeAddStackTop(
 
       assert(extdata->tree_nedges < extdata->extstack_maxsize);
       assert(edge >= 0 && edge < graph->edges);
-      assert(tree_deg[head] == 0 && (tree_deg[comproot] > 0 || comproot == extdata->tree_root));
+      assert(tree_deg[head] == 0);
+      assert(tree_deg[comproot] > 0 || comproot == extdata->tree_root);
       assert(comproot == graph->tail[edge]);
 
       extdata->tree_redcost += redcost[edge];
 
-      tree_edges[(extdata->tree_nedges)++] = edge;
-      tree_leaves[(extdata->tree_nleaves)++] = head;
+      extLeafAdd(extdata, cgraph, head);
       tree_deg[head] = 1;
+      tree_edges[(extdata->tree_nedges)++] = edge;
       tree_parentNode[head] = comproot;
       tree_parentEdgeCost[head] = graph->cost[edge];
       tree_deg[comproot]++;
@@ -1422,6 +1439,58 @@ void extTreeSyncWithStack(
       }
    }
 #endif
+}
+
+
+/** adds initial component to stack (needs to be star component rooted in root) */
+static
+void extAddInitialComponent(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            compedges,          /**< component edges */
+   int                   ncompedges,         /**< number of component edges */
+   int                   root,               /**< root of the component */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   CGRAPH* const cgraph = extdata->reddata->cgraph;
+
+   assert(compedges);
+   assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
+   assert(ncompedges < extdata->extstack_maxedges);
+   assert(root >= 0 && root < graph->knots);
+
+#ifdef SCIP_DEBUG
+   printf("\n --- ADD initial component --- \n\n");
+#endif
+
+   // todo method needs to be adapted for pseudo-elimination!
+
+   for( int i = 0; i < ncompedges; i++ )
+   {
+      const int e = compedges[i];
+      const int tail = graph->tail[e];
+
+      assert(e >= 0 && e < graph->edges);
+      assert(tail == root);
+
+      SCIPdebugMessage("edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
+
+      extdata->extstack_data[i] = e;
+      extLeafAdd(extdata, cgraph, tail);
+   }
+
+   extdata->tree_root = root;
+   extdata->extstack_ncomponents = 1;
+   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
+   extdata->extstack_start[0] = 0;
+   extdata->extstack_start[1] = ncompedges;
+   extdata->tree_parentNode[root] = -1;
+   extdata->tree_redcostSwap[root] = 0.0;
+   extdata->tree_parentEdgeCost[root] = -1.0;
+
+   assert(ncompedges > 1 || extdata->tree_leaves[0] == root);
+   assert(extdata->tree_deg[root] == 0);
+   assert(extdata->tree_nleaves == ncompedges);
 }
 
 
@@ -1668,7 +1737,6 @@ void extBacktrack(
    if( extstack_state[stackpos] != EXT_STATE_NONE )
    {
       const SCIP_Real* const redcost = reddata->redCosts;
-      int* const tree_leaves = extdata->tree_leaves;
       int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
       const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
       const int compsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
@@ -1699,12 +1767,15 @@ void extBacktrack(
       for( int k = extdata->tree_nleaves - 1; k >= extdata->tree_nleaves - compsize; k-- )
          printf("bt remove leaf %d \n", tree_leaves[k]);
 #endif
-      (extdata->tree_nleaves) -= compsize;
+      extLeafRemoveTop(compsize, reddata->cgraph, extdata);
+
       (extdata->tree_depth)--;
 
-      /* add component root to leaves array and remove current one */
+      int todo; // what about the backtracking? does it change something?
+
+      /* restore component root as a leaf */
       assert(tree_deg[comproot] == 1);
-      tree_leaves[extdata->tree_nleaves++] = comproot;
+      extLeafRestore(extdata, reddata->cgraph, comproot);
 
       assert(extdata->tree_nedges >= 0 && extdata->tree_depth >= 0);
    }

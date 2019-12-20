@@ -468,19 +468,25 @@ SCIP_RETCODE completemst1(
    CGRAPH* cgraph;
    CMST* cmst;
    const int maxnnodes = 7;
-   SCIP_Real adjedges1[] = { FARAWAY, 1.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
-   SCIP_Real adjedges2[] = { 1.0, FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges1[] = { FARAWAY, 2.0, 3.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges2[] = { 2.0, FARAWAY, 3.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges3[] = { 1.0,  0.1, FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
    cgraph_node_append(cgraph, 1);
    cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 3);
 
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 3);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 4);
    cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 3);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 4);
    cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 2, 3);
+
+   cgraph_node_repositionTop(cgraph, 1);
 
    cmst_computeMst(cgraph, 0, cmst);
 
