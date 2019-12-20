@@ -144,9 +144,9 @@ BEGIN {
 #
 /^Optimizer terminated. Time:/ { tottime = $4; }
 
-/^  Solution status : OPTIMAL/ { optimal = 1; aborted = 0;}
-/^  Primal.  obj:/ { pb = $3; }
-/^  Dual.    obj:/ { db = $3; }
+/^  Solution status : INTEGER_OPTIMAL/ { optimal = 1; aborted = 0;}
+/^Objective of best integer solution:/ { pb = $6; }
+/^Best objective bound:/ { db = $4; }
 
 /^    Interior-point          - iterations/ { iters = $5; }
 /^      Primal simplex        - iterations/ { iters += $6; }
