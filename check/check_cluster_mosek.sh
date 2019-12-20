@@ -203,7 +203,7 @@ do
       FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME"_"$THREADS
       BASENAME=$SCIPPATH/results/$FILENAME
 
-      TMPFILE=$BASENAME.par
+      PARFILE=$BASENAME.par
       SETFILE=$BASENAME.set
 
       echo $BASENAME >> $EVALFILE
@@ -223,37 +223,37 @@ do
                rm -f $SETFILE
       fi
 
-      echo > $TMPFILE
-      echo ""                              > $TMPFILE
+      echo > $PARFILE
+      echo ""                              > $PARFILE
       if test $SETNAME != "default"
       then
           echo "non-default settings not yet supported"
       fi
 
-      echo "MSK_IPAR_NUM_THREADS        $THREADS"               >> $TMPFILE
-      echo "MSK_IPAR_INTPNT_BASIS       MSK_BI_NEVER"           >> $TMPFILE # no crossover
-      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $TMPFILE # use interior point
-      echo "MSK_DPAR_INTPNT_TOL_PFEAS   1e-6"                   >> $TMPFILE
-      echo "MSK_DPAR_INTPNT_TOL_DFEAS   1e-7"                   >> $TMPFILE
-      echo "MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"             >> $TMPFILE
-      echo "MSK_IPAR_LOG_MIO_FREQ       $DISPFREQ"              >> $TMPFILE
-      echo "MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"           >> $TMPFILE
+      echo "MSK_IPAR_NUM_THREADS        $THREADS"               >> $PARFILE
+      echo "MSK_IPAR_INTPNT_BASIS       MSK_BI_NEVER"           >> $PARFILE # no crossover
+      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $PARFILE # use interior point
+      echo "MSK_DPAR_INTPNT_TOL_PFEAS   1e-6"                   >> $PARFILE
+      echo "MSK_DPAR_INTPNT_TOL_DFEAS   1e-7"                   >> $PARFILE
+      echo "MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"             >> $PARFILE
+      echo "MSK_IPAR_LOG_MIO_FREQ       $DISPFREQ"              >> $PARFILE
+      echo "MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"           >> $PARFILE
       if test $FEASTOL != "default"
       then
-          echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $TMPFILE
+          echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $PARFILE
       fi
-
-      # we need to create a tmp file for run.sh - even if it's empty!
-      TMPFILE=$BASENAME.tmp
-      touch $TMPFILE
 
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
-      export EXECNAME="$BINNAME -p $TMPFILE $i"
+      export EXECNAME="$BINNAME -p $PARFILE $i"
       export BASENAME=$FILENAME
       export FILENAME=$i
       export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
+
+      # we need to create a tmp file for run.sh - even if it's empty!
+      TMPFILE=$BASENAME.tmp
+      touch $TMPFILE
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"
