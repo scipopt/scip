@@ -184,7 +184,7 @@ do
   if test -f $SCIPPATH/$i
   then
 
-      echo adding instance $COUNT to queue
+      # echo adding instance $COUNT to queue
 
       # the cluster queue has an upper bound of 2000 jobs; if this limit is
       # reached the submitted jobs are dumped; to avoid that we check the total
@@ -223,25 +223,28 @@ do
                rm -f $SETFILE
       fi
 
-      echo > $PARFILE
-      echo ""                              > $PARFILE
       if test $SETNAME != "default"
       then
           echo "non-default settings not yet supported"
       fi
 
+      echo > $PARFILE
+      echo ""                              > $PARFILE
+      echo "BEGIN MOSEK"                                        >> $PARFILE
       echo "MSK_IPAR_NUM_THREADS        $THREADS"               >> $PARFILE
       echo "MSK_IPAR_INTPNT_BASIS       MSK_BI_NEVER"           >> $PARFILE # no crossover
-      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $PARFILE # use interior point
+      #      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $PARFILE # use interior point
       echo "MSK_DPAR_INTPNT_TOL_PFEAS   1e-6"                   >> $PARFILE
       echo "MSK_DPAR_INTPNT_TOL_DFEAS   1e-7"                   >> $PARFILE
       echo "MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"             >> $PARFILE
+      echo "MSK_DPAR_MIO_MAX_TIME $TIMELIMIT"                   >> $PARFILE
       echo "MSK_IPAR_LOG_MIO_FREQ       $DISPFREQ"              >> $PARFILE
       echo "MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"           >> $PARFILE
       if test $FEASTOL != "default"
       then
           echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $PARFILE
       fi
+      echo "END MOSEK"                                          >> $PARFILE
 
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
@@ -250,10 +253,6 @@ do
       export FILENAME=$i
       export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
-
-      # we need to create a tmp file for run.sh - even if it's empty!
-      TMPFILE=$BASENAME.tmp
-      touch $TMPFILE
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"
