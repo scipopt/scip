@@ -399,14 +399,13 @@ SCIP_RETCODE completegraph(
 {
    CGRAPH* cgraph;
    const int maxnnodes = 11;
-   SCIP_Real adjedges[] = { 1.0, 1.0, 1.0, 1.0 };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
 
    assert(0 == cgraph->nnodes_curr);
    assert(maxnnodes == cgraph->nnodes_max);
 
-   cgraph_node_append(cgraph, adjedges, 1);
+   cgraph_node_append(cgraph, 1);
 
    if( !cgraph_valid(cgraph) )
    {
@@ -422,8 +421,8 @@ SCIP_RETCODE completegraph(
       return SCIP_ERROR;
    }
 
-   cgraph_node_append(cgraph, adjedges, 2);
-   cgraph_node_append(cgraph, adjedges, 3);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 3);
 
    cgraph_node_deleteTop(cgraph);
 
@@ -468,21 +467,32 @@ SCIP_RETCODE completemst1(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   const int maxnnodes = 4;
-   SCIP_Real adjedges[] = { 1.0, 1.0, 1.0, 1.0 };
+   const int maxnnodes = 7;
+   SCIP_Real adjedges1[] = { FARAWAY, 1.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges2[] = { 1.0, FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
-   cgraph_node_append(cgraph, adjedges, 1);
-   cgraph_node_append(cgraph, adjedges, 2);
-   cgraph_node_append(cgraph, adjedges, 3);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 3);
+   cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 3);
+   cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
 
    cmst_computeMst(cgraph, 0, cmst);
 
-   if( !SCIPisEQ(scip, cmst->mstobj, 2.0) )
+   if( !SCIPisEQ(scip, cmst->mstobj, 1.0) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      printf("completemst1: wrong obj: %f  \n", cmst->mstobj);
+      return SCIP_ERROR;
+   }
+
+   if( cmst->predecessors[0] != -1 || cmst->predecessors[1] != 0 )
+   {
+      printf("completemst1: wrong ancestor \n");
       return SCIP_ERROR;
    }
 
@@ -493,7 +503,6 @@ SCIP_RETCODE completemst1(
 }
 
 
-
 /** mst test */
 static
 SCIP_RETCODE completemst2(
@@ -502,29 +511,37 @@ SCIP_RETCODE completemst2(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   const int maxnnodes = 4;
-   SCIP_Real adjedges1[] = { -1.0 };
-   SCIP_Real adjedges2[] = { 1.0 };
-   SCIP_Real adjedges3[] = { 1.5, 2.0 };
+   const int maxnnodes = 3;
+   SCIP_Real adjedges1[] = { FARAWAY, 1.0, 2.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges2[] = { 1.0, FARAWAY, 2.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges3[] = { 2.0, 1.0 , FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
-   cgraph_node_append(cgraph, adjedges1, 1);
-   cgraph_node_append(cgraph, adjedges2, 2);
-   cgraph_node_append(cgraph, adjedges3, 3);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 77);
+
+
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 2, 77);
 
    cmst_computeMst(cgraph, 0, cmst);
 
-   if( !SCIPisEQ(scip, cmst->mstobj, 2.5) )
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.0) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      printf("completemst2: wrong obj: %f \n", cmst->mstobj);
       return SCIP_ERROR;
    }
 
-   if( cmst->predecessors[2] != 0 )
+   if( cmst->predecessors[0] != -1 || cmst->predecessors[1] != 0 || cmst->predecessors[2] != 1 )
    {
-      SCIPdebugMessage("wrong ancestor: %d \n", cmst->predecessors[2]);
+      printf("completemst2: wrong ancestor \n");
       return SCIP_ERROR;
    }
 
@@ -543,36 +560,36 @@ SCIP_RETCODE completemst3(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   const int maxnnodes = 4;
-   SCIP_Real adjedges1[] = { -1.0 };
-   SCIP_Real adjedges2[] = { 1.5 };
-   SCIP_Real adjedges3[] = { 2.0, 1.0 };
-   SCIP_Real adjedges4[] = { 7.5, 0.5, 0.2 };
-
+   const int maxnnodes = 3;
+   SCIP_Real adjedges1[] = { FARAWAY, 1.0, 2.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges2[] = { 1.0, FARAWAY, 1.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges3[] = { 2.0, 2.0 , FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
-   cgraph_node_append(cgraph, adjedges1, 0);
-   cgraph_node_append(cgraph, adjedges2, 1);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 77);
 
-   cgraph_node_deleteTop(cgraph);
-
-   cgraph_node_append(cgraph, adjedges2, 1);
-   cgraph_node_append(cgraph, adjedges3, 2);
-   cgraph_node_append(cgraph, adjedges4, 3);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 2, 77);
 
    cmst_computeMst(cgraph, 0, cmst);
 
-   if( !SCIPisEQ(scip, cmst->mstobj, 2.2) )
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.0) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      printf("completemst2: wrong obj: %f \n", cmst->mstobj);
       return SCIP_ERROR;
    }
 
-   if( cmst->predecessors[3] != 1 || cmst->predecessors[2] != 3  || cmst->predecessors[1] != 0 )
+   if( cmst->predecessors[0] != -1 || cmst->predecessors[1] != 0 || cmst->predecessors[2] != 1 )
    {
-      SCIPdebugMessage("wrong ancestor \n");
+      printf("completemst2: wrong ancestor \n");
       return SCIP_ERROR;
    }
 
@@ -591,43 +608,49 @@ SCIP_RETCODE completemst4(
 {
    CGRAPH* cgraph;
    CMST* cmst;
-   const int maxnnodes = 7;
-   SCIP_Real adjedges0[] = { -1.0 };
-   SCIP_Real adjedges1[] = { 2.0 };
-   SCIP_Real adjedges2[] = { 4.0, 3.0 };
-   SCIP_Real adjedges3[] = { 4.0, 4.0, 1.0 };
-   SCIP_Real adjedges4[] = { 1.0, 1.0, 2.0, 3.0 };
+   const int maxnnodes = 3;
+   SCIP_Real adjedges1[] = { FARAWAY, 1.0, 2.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges2[] = { 1.0, FARAWAY, 1.0, CGRAPH_EDGECOST_UNDEFINED_VALUE };
+   SCIP_Real adjedges3[] = { 2.0, 2.0 , FARAWAY, CGRAPH_EDGECOST_UNDEFINED_VALUE };
 
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
-   cgraph_node_append(cgraph, adjedges2, 0);
-   cgraph_node_append(cgraph, adjedges3, 1);
-   cgraph_node_append(cgraph, adjedges4, 1);
-   cgraph_node_append(cgraph, adjedges3, 1);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 77);
+
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 2, 77);
+
+   cmst_computeMst(cgraph, 0, cmst);
 
    cgraph_node_deleteTop(cgraph);
    cgraph_node_deleteTop(cgraph);
-   cgraph_node_deleteTop(cgraph);
-   cgraph_node_deleteTop(cgraph);
 
-   cgraph_node_append(cgraph, adjedges0, 0);
-   cgraph_node_append(cgraph, adjedges1, 1);
-   cgraph_node_append(cgraph, adjedges2, 2);
-   cgraph_node_append(cgraph, adjedges3, 3);
-   cgraph_node_append(cgraph, adjedges4, 4);
+   cgraph_node_append(cgraph, 7);
+   cgraph_node_append(cgraph, 88);
 
-   cmst_computeMst(cgraph, 3, cmst);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 1, 7);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
+   cgraph_node_applyMinAdjCosts(cgraph, 2, 88);
 
-   if( !SCIPisEQ(scip, cmst->mstobj, 5.0) )
+   cmst_computeMst(cgraph, 0, cmst);
+
+   if( !SCIPisEQ(scip, cmst->mstobj, 2.0) )
    {
-      SCIPdebugMessage("wrong obj: %f  \n", cmst->mstobj);
+      printf("completemst2: wrong obj: %f \n", cmst->mstobj);
       return SCIP_ERROR;
    }
 
-   if( cmst->predecessors[0] != 4 || cmst->predecessors[1] != 4  || cmst->predecessors[4] != 2 || cmst->predecessors[2] != 3 )
+   if( cmst->predecessors[0] != -1 || cmst->predecessors[1] != 0 || cmst->predecessors[2] != 1 )
    {
-      SCIPdebugMessage("wrong ancestor \n");
+      printf("completemst2: wrong ancestor \n");
       return SCIP_ERROR;
    }
 
@@ -657,31 +680,31 @@ SCIP_RETCODE completemst5(
    SCIP_CALL( cgraph_init(scip, &cgraph, maxnnodes) );
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
-   cgraph_node_append(cgraph, NULL, 0);
-   cgraph_node_append(cgraph, NULL, 1);
-   cgraph_node_append(cgraph, NULL, 1);
-   cgraph_node_append(cgraph, NULL, 1);
+   cgraph_node_append(cgraph, 0);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 1);
 
    cgraph_node_deleteTop(cgraph);
    cgraph_node_deleteTop(cgraph);
    cgraph_node_deleteTop(cgraph);
    cgraph_node_deleteTop(cgraph);
 
-   cgraph_node_append(cgraph, NULL, 1);
-   cgraph_node_append(cgraph, NULL, 2);
-   cgraph_node_append(cgraph, NULL, 3);
-   cgraph_node_append(cgraph, NULL, 7);
-   cgraph_node_append(cgraph, NULL, 66);
+   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 3);
+   cgraph_node_append(cgraph, 7);
+   cgraph_node_append(cgraph, 66);
 
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 1);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges1, 6);
    cgraph_node_applyMinAdjCosts(cgraph, 0, 1);
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 2);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges2, 6);
    cgraph_node_applyMinAdjCosts(cgraph, 1, 2);
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 3);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 6);
    cgraph_node_applyMinAdjCosts(cgraph, 2, 3);
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges4, 4);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges4, 6);
    cgraph_node_applyMinAdjCosts(cgraph, 3, 7);
-   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges5, 5);
+   BMScopyMemoryArray(cgraph->adjedgecosts, adjedges5, 6);
    cgraph_node_applyMinAdjCosts(cgraph, 4, 66);
 
    cmst_computeMst(cgraph, 3, cmst);

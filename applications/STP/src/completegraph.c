@@ -295,7 +295,8 @@ void cgraph_node_applyMinAdjCosts(
    {
       const SCIP_Real newcost = adjcosts[i];
       const int pos = getEdgeStart(i, nnodes_max) + nodepos;
-      assert(EQ(edgecosts[pos], CGRAPH_EDGECOST_UNDEFINED_VALUE));
+
+      assert(!EQ(edgecosts[pos], CGRAPH_EDGECOST_UNDEFINED_VALUE));
       assert(GE(newcost, 0.0));
 
       if( newcost < edgecosts[pos] )
@@ -306,10 +307,9 @@ void cgraph_node_applyMinAdjCosts(
    assert(cgraph_valid(cgraph));
 }
 
-/** adds node todo remove adjcost array! */
+/** add node (at the end, so at position cgraph->nnodes_curr) */
 void cgraph_node_append(
    CGRAPH*               cgraph,             /**< new graph */
-   const SCIP_Real*      adjcosts,           /**< array with edge costs to neighbors of size nnodes_curr (use -1.0 as debug sentinel) */
    int                   nodeid              /**< the node id */
    )
 {
@@ -328,33 +328,17 @@ void cgraph_node_append(
 
    cgraph->nnodes_curr++;
 
-   if( adjcosts )
+   for( int i = start_new; i < start_new + nnodes_curr_org; i++ )
    {
-      BMScopyMemoryArray(edgecosts + start_new, adjcosts, nnodes_curr_org);
-
-      /* adapt all other edges (going to the new node) */
-      for( int i = 0; i < nnodes_curr_org; i++ )
-      {
-         const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
-         assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
-
-         edgecosts[end] = adjcosts[i];
-      }
+      edgecosts[i] = FARAWAY;
    }
-   else
+
+   for( int i = 0; i < nnodes_curr_org; i++ )
    {
-      for( int i = start_new; i < start_new + nnodes_curr_org; i++ )
-      {
-         edgecosts[i] = FARAWAY;
-      }
+      const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
+      assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
 
-      for( int i = 0; i < nnodes_curr_org; i++ )
-      {
-         const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
-         assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
-
-         edgecosts[end] = FARAWAY;
-      }
+      edgecosts[end] = FARAWAY;
    }
 
    lastedge = getEdgeEnd(nnodes_curr_org, nnodes_curr_new, nnodes_max) - 1;

@@ -58,7 +58,7 @@ SCIP_Bool cgraph_valid(const CGRAPH*);
 SCIP_Bool cgraph_idsInSync(const CGRAPH*, const int*, int);
 SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
 void cgraph_free(SCIP*, CGRAPH**);
-void cgraph_node_append(CGRAPH*, const SCIP_Real*, int);
+void cgraph_node_append(CGRAPH*, int);
 void cgraph_node_applyMinAdjCosts(CGRAPH*, int, int);
 void cgraph_node_deleteTop(CGRAPH*);
 void cgraph_node_exchange(CGRAPH*, const SCIP_Real*, int, int, int);
