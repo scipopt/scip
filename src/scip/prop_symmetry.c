@@ -3361,7 +3361,7 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
-         SCIPdebugMsg(scip, "found an orbitope of size %d x $d in component %d\n", ntwocyclescomp,
+         SCIPdebugMsg(scip, "found an orbitope of size %d x %d in component %d\n", ntwocyclescomp,
             npermsincomponent + 1, i);
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
