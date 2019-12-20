@@ -10698,10 +10698,6 @@ SCIP_RETCODE dualPresolve(
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
-      /* due to numerics, if bounds are huge, we do not perform multi-aggregation */
-      if( SCIPisHugeValue(scip, ub) || SCIPisHugeValue(scip, -lb) )
-         return SCIP_OKAY;
-
       /* lhs <= a_0 * x_0 + a_1 * x_1 + ... + a_{n-1} * x_{n-1} <= rhs
        *
        * a_i >= 0, c_i >= 0, lhs exists, nlocksdown(x_i) == 1:
