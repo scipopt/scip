@@ -13,31 +13,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_dualinfer.h
- * @ingroup PRESOLVERS
- * @brief  dual inference presolver
+/**@file   heur_padm.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  PADM primal heuristic based on ideas published in the paper
+ *         "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems"
+ *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
- * @author Patrick Gemander
- *
- * This presolver does bound strengthening on continuous variables (columns) for getting bounds on dual variables y.
- * The bounds of the dual variables are then used to fix primal variables or change the side of constraints.
- * For ranged rows one needs to decide which side (rhs or lhs) determines the equality.
- *
- * We distinguish two cases concerning complementary slackness:
- * i)  reduced cost fixing:       c_j - sup_y(y^T A_{.j}) > 0 => x_j = l_j
- *                                c_j - inf_y(y^T A_{.j}) < 0 => x_j = u_j
- * ii) positive dual lower bound: y_i > 0 =>  A_{i.}x = b_i
- *
- * Further information on this presolving approach are given in
- * Achterberg et al. "Presolve reductions in mixed integer programming"
- * and for a two-column extension in
- * Chen et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
+ * @author Katrin Halbig
+ * 
+ * The penalty alternating direction method (PADM) heuristic is a construction heuristic which additionally needs a
+ * user decomposition with linking variables only.
+ * 
+ * PADM splits the problem into several sub-SCIPs according to the decomposition, whereby the linking variables get
+ * copied and the difference is penalized. Then the sub-SCIPs are solved on an alternating basis until they arrive at
+ * the same values of the linking variables (ADM-loop). If they don't reconcile after a couple of iterations,
+ * the penalty parameters are increased (penalty-loop) and the sub-SCIPs are solved again on an alternating basis.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_DUALINFER_H__
-#define __SCIP_PRESOL_DUALINFER_H__
+#ifndef __SCIP_HEUR_PADM_H__
+#define __SCIP_HEUR_PADM_H__
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
@@ -47,12 +43,12 @@
 extern "C" {
 #endif
 
-/** creates the dual inference presolver and includes it in SCIP
+/** creates the PADM primal heuristic and includes it in SCIP
  *
- * @ingroup PresolverIncludes
+ *  @ingroup PrimalHeuristicIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludePresolDualinfer(
+SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

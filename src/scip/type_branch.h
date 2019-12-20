@@ -46,6 +46,7 @@ extern "C" {
 typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate storage */
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
 typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */
+typedef struct SCIP_Treemodel SCIP_TREEMODEL;     /**< parameter storage for the Treemodel branching rules */
 
 
 /** copy method for branchrule plugins (called when SCIP copies plugins)

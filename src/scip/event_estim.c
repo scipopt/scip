@@ -233,16 +233,16 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COEFMONOPROG         0.3667  /**< coefficient of progress in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_COMPL    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_PROG    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                             * (g)ap, (l)-eaf frequency, (o)open nodes,
                                                             * (p)rogress, (s)sg, or (t)ree profile or (w)be */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
-#define DEFAULT_RESTARTPOLICY        'n'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
+#define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
 #define DEFAULT_RESTARTLIMIT          1      /**< default restart limit */
 #define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
-#define DEFAULT_RESTARTFACTOR        2.0     /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+#define DEFAULT_RESTARTFACTOR        50.0    /**< factor by which the estimated number of nodes should exceed the current number of nodes */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
@@ -1129,8 +1129,19 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       return SCIP_OKAY;
 
    nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node);
+
+   /* it can happen that the node was not created via branching; search for the most recent ancestor in the queue */
    if( nodeinfo == NULL )
-      return SCIP_OKAY;
+   {
+      do
+      {
+         node = SCIPnodeGetParent(node);
+      } while( node != NULL && (nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node)) == NULL);
+
+      /* no ancestor found */
+      if( nodeinfo == NULL )
+         return SCIP_OKAY;
+   }
 
    /* get open nodes of this subtree stored as priority queue */
    subtreeidx = nodeinfo->subtreeidx;
@@ -1205,8 +1216,13 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
     */
    if( !SCIPhashmapExists(ssg->nodes2info, (void*)focusnode) )
    {
-      parentnode = SCIPnodeGetParent(focusnode);
-      assert(SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+      parentnode = focusnode;
+      do
+      {
+         parentnode = SCIPnodeGetParent(parentnode);
+      } while( parentnode != NULL && !SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+
+      assert(parentnode != NULL && SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
    }
    else
       parentnode = focusnode;
@@ -2359,7 +2375,7 @@ SCIP_Bool shouldApplyRestartCompletion(
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( completion < 1.0 / eventhdlrdata->restartfactor )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Completion %.5f less than restart threshold %.5f\n",
          completion, 1.0 / eventhdlrdata->restartfactor);
       return TRUE;
@@ -2381,7 +2397,7 @@ SCIP_Bool shouldApplyRestartEstimation(
 
    if( estimation < 0.0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Estimation %g is still unavailable\n",
          estimation);
       return TRUE;
@@ -2733,7 +2749,13 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       {
          /* safe that we triggered a restart at this run */
          if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         {
             eventhdlrdata->nrestartsperformed++;
+
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "Restart triggered after %d consecutive estimations that the remaining tree will be large\n",
+               eventhdlrdata->restarthitcounter);
+         }
 
          eventhdlrdata->lastrestartrun = SCIPgetNRuns(scip);
 

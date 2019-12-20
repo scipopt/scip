@@ -43,10 +43,20 @@ Features
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 
+- GINS heuristic can make use of a user-provided decomposition labels in two ways:
+ 1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
+ 2. by selecting an interval of consecutive blocks as neighborhood, until fixing rate is reached. In this case, no variable is randomly selected.
+
+- extend potential parameter of GINS to allow computation based on local LP solution, as well
+
 - new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
   At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
   During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
   The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
+- Added new penalty alternating direction method (PADM) primal heuristic that splits the problem into several sub-SCIPs
+  according to a user-provided decomposition. The sub-SCIPs are solved on an alternating basis until a feasible solution of
+  the original problem is found.
 
 - Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
   whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
@@ -69,7 +79,9 @@ Features
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
   recompute symmetries if a restart occured.
 
-- handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
+- upgrade some more quadratic constraints to second-order cone constraints, that is,
+  handle linear binary variables as if squared in simple upgrade and
+  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade
 
 - new variable event when changing the variable type
 
@@ -136,7 +148,11 @@ Features
 - Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
   symmetries. Previously, some plugins were disabled, which is not necessary anymore.
 
+- A new presolver "dualsparsify" was added. It tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix.
 
+- The presolver "tworowbnd" was implemented with better performance. It now also supports bound tightening on convex combinations of two rows.
+
+- To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
 Performance improvements
 ------------------------
@@ -331,6 +347,9 @@ Interface changes
 - new API function SCIPapplyBendersDecomposition for applying Benders' decomposition given a decomposition in the DEC
   format
 - new API function SCIPwasNodeLastBranchParent to query if a node has been the parent of the most recent branching in the tree
+- new API functions SCIPtreemodelInit(), SCIPtreemodelFree(), SCIPtreemodelIsEnabled(), SCIPtreemodelSelectCandidate() related to the new
+  treemodel way of comparing branching candidates. These functions are only currently used for reliability pscost branching, but they can be used
+  in other parts of the code.
 
 ### Event system
 
@@ -479,10 +498,32 @@ Interface changes
     - estimation/ssg/nmaxsubtrees (default value -1)
     - estimation/ssg/nminnodeslastsplit (default value 0)
 
-
 - new parameter constraints/linear/extractcliques to turn clique extraction off
 
 - new emphasis setting emphasis/numerics to increase numerical stability of (mostly) presolving operations such as (multi-)aggregations at the cost of performance.
+
+- new parameters for treemodel:
+  - new parameter branching/treemodel/enable to enable the treemodel in reliability pscost branching and possible
+    future parts of the code where it could be used.
+  - new parameter branching/treemodel/highrule to specify which branching rule to use when treemodel thinks the node
+    is high in the tree.
+  - new parameter branching/treemodel/lowrule to specify which branching rule to use when treemodel thinks the node
+    is low in the tree.
+  - new parameter branching/treemodel/height to specify at which (estimated) height a node is high or low in the tree.
+  - new parameter branching/treemodel/filterhigh to specify whether to filter dominated candidates in nodes which are
+    high in the tree.
+  - new parameter branching/treemodel/filterlow to specify whether to filter dominated candidates in nodes which are
+    low in the tree.
+  - new parameter branching/treemodel/maxfpiter to specify the maximum number of fixed-point iterations to use when
+    computing the ratio of a variable using the fixed-point method.
+  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly 
+    before approximating it using the ratio.
+  - new parameter branching/treemodel/fallbackinf defines the fallback strategy to use when the tree size estimates
+    obtained by SVTS are infinite.
+  - new parameter branching/treemodel/fallbacknoprim defines the fallback strategy to use when no primal bound is known
+    and thus SVTS would not be able to compute a tree size (it would be infinite).
+  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be 
+    the deciding factor for branching, in which case it may be better not to use the treemodel.
 
 ### Data structures
 
@@ -506,6 +547,7 @@ Deleted files
 
 Unit tests
 ----------
+ - new unit test for treemodel.
 
 Testing
 -------
@@ -569,6 +611,8 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -630,6 +674,7 @@ Fixed bugs
 - SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 - fixed bug in sepa_oddcylce when variables are fixed
 - fixed numerical issues related to tighter constraint sides in varbound constraint handler
+- fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
 
 Miscellaneous
 -------------
