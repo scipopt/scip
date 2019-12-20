@@ -707,7 +707,7 @@ SCIP_RETCODE completemst5(
 
 
 /** test pseudo ancestors */
-SCIP_RETCODE pseudoAncestors_test(
+SCIP_RETCODE stptest_pseudoAncestors(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -725,7 +725,7 @@ SCIP_RETCODE pseudoAncestors_test(
 }
 
 /** test pseudo deletion */
-SCIP_RETCODE pseudoDel_test(
+SCIP_RETCODE stptest_pseudoDel(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -741,7 +741,7 @@ SCIP_RETCODE pseudoDel_test(
 
 
 
-SCIP_RETCODE dheap_Test(
+SCIP_RETCODE stptest_dheap(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -841,7 +841,7 @@ SCIP_RETCODE dheap_Test(
 
 
 
-SCIP_RETCODE completegraph_test(
+SCIP_RETCODE stptest_completegraph(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {

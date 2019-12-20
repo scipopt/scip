@@ -2003,7 +2003,7 @@ SCIP_RETCODE reduce(
 #define UNIT_TEST_STP
 #ifdef UNIT_TEST_STP
 #ifndef NDEBUG
-   SCIP_CALL( testAll(scip) );
+   SCIP_CALL( stptest_all(scip) );
 #endif
 #endif
 

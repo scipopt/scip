@@ -1103,7 +1103,7 @@ SCIP_RETCODE localInsertion2pc(
    return SCIP_OKAY;
 }
 
-SCIP_RETCODE heur_extendPcMwTest(
+SCIP_RETCODE stptest_heur_extendPcMw(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1114,7 +1114,7 @@ SCIP_RETCODE heur_extendPcMwTest(
 
 
 /** test local search heuristics */
-SCIP_RETCODE heur_localTest(
+SCIP_RETCODE stptest_heur_local(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {

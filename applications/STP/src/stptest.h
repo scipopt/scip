@@ -29,25 +29,24 @@
 
 /* reduce_base.c
  */
-extern SCIP_RETCODE    testAll(SCIP*);
+extern SCIP_RETCODE    stptest_all(SCIP*);
 
 /* stptest_reduce.c
  */
-extern SCIP_RETCODE    reduce_extTest(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest(SCIP*);
+extern SCIP_RETCODE    stptest_reduce_ext(SCIP*);
+extern SCIP_RETCODE    stptest_reduce_sdpcmw(SCIP*);
 
 /* stptest_misc.c
  */
-extern SCIP_RETCODE    pseudoAncestors_test(SCIP*);
-extern SCIP_RETCODE    pseudoDel_test(SCIP*);
-extern SCIP_RETCODE    dheap_Test(SCIP*);
-extern SCIP_RETCODE    completegraph_test(SCIP*);
+extern SCIP_RETCODE    stptest_pseudoAncestors(SCIP*);
+extern SCIP_RETCODE    stptest_pseudoDel(SCIP*);
+extern SCIP_RETCODE    stptest_dheap(SCIP*);
+extern SCIP_RETCODE    stptest_completegraph(SCIP*);
 
 /* stptest_heur.c
  */
-extern SCIP_RETCODE    heur_extendPcMwTest(SCIP*);
-extern SCIP_RETCODE    heur_localTest(SCIP*);
-
+extern SCIP_RETCODE    stptest_heur_extendPcMw(SCIP*);
+extern SCIP_RETCODE    stptest_heur_local(SCIP*);
 
 
 #endif /* APPLICATIONS_STP_SRC_STPTEST_H_ */

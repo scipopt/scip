@@ -1024,7 +1024,7 @@ SCIP_RETCODE sdPcMwTest4(
 
 
 /** tests extended reduction techniques */
-SCIP_RETCODE reduce_extTest(
+SCIP_RETCODE stptest_reduce_ext(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1056,7 +1056,7 @@ SCIP_RETCODE reduce_extTest(
 
 
 /** tests PCMW special distance methods */
-SCIP_RETCODE reduce_sdPcMwTest(
+SCIP_RETCODE stptest_reduce_sdpcmw(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {

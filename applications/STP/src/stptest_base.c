@@ -31,19 +31,19 @@
 
 
 /** tests all */
-SCIP_RETCODE testAll(
+SCIP_RETCODE stptest_all(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
    assert(scip);
 
-   SCIP_CALL( completegraph_test(scip) );
-   SCIP_CALL( heur_extendPcMwTest(scip) );
-   SCIP_CALL( heur_localTest(scip) );
-   SCIP_CALL( pseudoDel_test(scip) );
-   SCIP_CALL( reduce_extTest(scip) );
-   SCIP_CALL( dheap_Test(scip) );
-   SCIP_CALL( reduce_sdPcMwTest(scip) );
+   SCIP_CALL( stptest_completegraph(scip) );
+   SCIP_CALL( stptest_heur_extendPcMw(scip) );
+   SCIP_CALL( stptest_heur_local(scip) );
+   SCIP_CALL( stptest_pseudoDel(scip) );
+   SCIP_CALL( stptest_reduce_ext(scip) );
+   SCIP_CALL( stptest_dheap(scip) );
+   SCIP_CALL( stptest_reduce_sdpcmw(scip) );
 
    printf("all unit tests passed! \n");
 
