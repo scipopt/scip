@@ -71,6 +71,8 @@ then
     exit 1;
 fi
 
+OUTPUTDIR="results"
+
 # get current SCIP path
 SCIPPATH=`pwd`
 
@@ -105,41 +107,14 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="  --exclusive "
-else
-    EXCLUSIVE=""
-fi
+# configure cluster-related environment variables
+. ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
 #       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -157,35 +132,35 @@ else
     TMP=`expr $HARDTIMELIMIT / 60`
     if test "$TMP" != "0"
     then
-        MYMINUTES=`expr $TMP % 60`
-        TMP=`expr $TMP / 60`
-        if test "$TMP" != "0"
-        then
-            MYHOURS=`expr $TMP % 24`
-            MYDAYS=`expr $TMP / 24`
-        fi
+	MYMINUTES=`expr $TMP % 60`
+	TMP=`expr $TMP / 60`
+	if test "$TMP" != "0"
+	then
+	    MYHOURS=`expr $TMP % 24`
+	    MYDAYS=`expr $TMP / 24`
+	fi
    fi
     #format seconds to have two characters
     if test ${MYSECONDS} -lt 10
     then
-        MYSECONDS=0${MYSECONDS}
+	MYSECONDS=0${MYSECONDS}
     fi
     #format minutes to have two characters
     if test ${MYMINUTES} -lt 10
     then
-        MYMINUTES=0${MYMINUTES}
+	MYMINUTES=0${MYMINUTES}
     fi
     #format hours to have two characters
     if test ${MYHOURS} -lt 10
     then
-        MYHOURS=0${MYHOURS}
+	MYHOURS=0${MYHOURS}
     fi
     #format HARDTIMELIMT
     if test ${MYDAYS} = "0"
     then
-        HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     else
-        HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     fi
 fi
 
