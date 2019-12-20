@@ -108,7 +108,7 @@ echo format \"nodelimit %g\" \$maxnode  >> $TMPFILE
 echo format \"memlimit %g\" \$treememorylimit >> $TMPFILE
 echo format \"percentmemtofile %g\" \$treememorysavingtarget >> $TMPFILE
 
-echo readprob $SCIPPATH/$i              >> $TMPFILE
+echo readprob $INSTANCE                 >> $TMPFILE
 echo time [ mipoptimize ]               >> $TMPFILE
 echo echo simplexiter:                  >> $TMPFILE
 echo simplexiter                        >> $TMPFILE
