@@ -2812,6 +2812,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int ntwocycleperms;
       int npermsincomp;
       int nusedperms;
+      int ntrivialcolors = 0;
       int j;
 
       /* if component is blocked, skip it */
@@ -2915,8 +2916,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
+#ifdef SCIP_MORE_DEBUG
             SCIPdebugMsg(scip, "    color %d has only one variable --> skip\n", j);
             chosencomppercolor[j] = -1;
+#endif
+
+            ++ntrivialcolors;
 
             continue;
          }
@@ -2955,7 +2960,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          assert( chosencompsize > 0 );
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMsg(scip, "    affected types (bin,int,cont): (%d,%d,%d)\n",
+         SCIPdebugMsg(scip, "      affected types (bin,int,cont): (%d,%d,%d)\n",
             binaffected, intaffected, contaffected);
 #endif
 
@@ -3003,6 +3008,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             ++propdata->ngenlinconss;
          }
       }
+
+      SCIPdebugMsg(scip, "    %d trivial colors were skipped", ntrivialcolors);
 
       /* possibly add weak SBCs for enclosing orbit of first component */
       if ( nusedperms < npermsincomp )
@@ -3068,7 +3075,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          vars[0] = propdata->permvars[orbit[activeorb][0]];
 
          assert(chosencolor > -1);
-         SCIPdebugMsg(scip, "      adding %d weak sbcs for enclosing orbit of color %d.\n",
+         SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
             orbitsize[activeorb]-1, chosencolor);
 
          /* add weak SBCs for rest of enclosing orbit */
