@@ -182,18 +182,17 @@ do
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
 		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
-
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 
                 # check if binary exists. The second condition checks whether there is a binary of that name directly available
                 # independent of whether it is a symlink, file in the working directory, or application in the path
-        if test -e $SCIPPATH/../$BINNAME
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-        elif type $BINNAME >/dev/null 2>&1
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$BINNAME
-        fi
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
@@ -211,7 +210,8 @@ do
 		    export SETFILE
 		    export TIMELIMIT
 
-		    if test $CLUSTERQUEUE != "moskito"
+		    if test "$CLUSTERQUEUE" != "moskito"
+		    then
 		       # the space at the end is necessary
 		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
 		    fi
