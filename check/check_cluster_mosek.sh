@@ -252,6 +252,7 @@ do
       export EXECNAME="$BINNAME -p $TMPFILE $i"
       export BASENAME=$FILENAME
       export FILENAME=$i
+      export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
 
       # check queue type
