@@ -162,6 +162,7 @@
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
 #include "scip/presol_sparsify.h"
+#include "scip/presol_dualsparsify.h"
 #include "scip/presol_stuffing.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"

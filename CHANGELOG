@@ -148,7 +148,11 @@ Features
 - Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
   symmetries. Previously, some plugins were disabled, which is not necessary anymore.
 
+- A new presolver "dualsparsify" was added. It tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix.
 
+- The presolver "tworowbnd" was implemented with better performance. It now also supports bound tightening on convex combinations of two rows.
+
+- To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
 Performance improvements
 ------------------------
