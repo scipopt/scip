@@ -578,7 +578,7 @@ SCIP_Bool extLeafIsExtendable(
 
 
 /** Finds position of given leaf in leaves data.
- *  Returns 0 if leaf could not be found. */
+ *  Returns -1 if leaf could not be found. */
 static inline
 int extLeafFindPos(
    const EXTDATA*        extdata,            /**< extension data */
@@ -663,7 +663,12 @@ void extLeafRemove(
 
    assert(cgraph->nodeids[position] == leaf);
 
-   cgraph_node_repositionTop(cgraph, position);
+   /* is leaf the last entry? */
+   if( position == extdata->tree_nleaves)
+      cgraph_node_deleteTop(cgraph);
+   else
+      cgraph_node_repositionTop(cgraph, position);
+
    tree_leaves[position] = tree_leaves[extdata->tree_nleaves];
 
    assert(cgraph_idsInSync(cgraph, tree_leaves, extdata->tree_nleaves));
