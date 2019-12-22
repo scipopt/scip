@@ -269,6 +269,33 @@ void cgraph_free(
 }
 
 
+/** cleans, i.e. resets, graph */
+void cgraph_clean(
+   CGRAPH*               cgraph              /**< new graph */
+   )
+{
+   const int nnodes_curr = getNnodesCurr(cgraph);
+
+   assert(cgraph_valid(cgraph));
+
+   for( int i = 0; i < nnodes_curr; i++ )
+      cgraph_node_deleteTop(cgraph);
+
+   assert(cgraph_isEmpty(cgraph));
+}
+
+
+/** is the graph empty? */
+SCIP_Bool cgraph_isEmpty(
+   const CGRAPH*         cgraph              /**< new graph */
+   )
+{
+   assert(cgraph_valid(cgraph));
+
+   return (cgraph->nnodes_curr == 0);
+}
+
+
 /** applies adjacency costs to node, but only use if smaller than existing ones. */
 void cgraph_node_applyMinAdjCosts(
    CGRAPH*               cgraph,             /**< new graph */

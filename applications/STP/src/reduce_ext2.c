@@ -94,18 +94,32 @@ typedef struct extension_data
 } EXTDATA;
 
 
-/** clean extension data struct */
+/** cleans extension data */
 static inline
 void extdataClean(
    EXTDATA*              extdata             /**< extension data */
 )
 {
+   assert(extdata);
+
    extdata->extstack_ncomponents = 0;
    extdata->tree_nleaves = 0;
    extdata->tree_nedges = 0;
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
    extdata->tree_redcost = 0.0;
+}
+
+
+/** cleans reduction data */
+static inline
+void reddataClean(
+   REDDATA*              reddata             /**< reduction data */
+)
+{
+   assert(reddata);
+
+   cgraph_clean(reddata->cgraph);
 }
 
 
@@ -173,6 +187,7 @@ SCIP_Bool reddataIsClean(
    const REDDATA*        reddata             /**< reduction data */
 )
 {
+   assert(graph && reddata);
 
    for( int i = 0; i < graph->knots; i++ )
    {
@@ -641,13 +656,16 @@ void extLeafRestore(
    int                   leaf                /**< leaf to add */
 )
 {
+   int todo; // maybe copy saved edge costs here if possible, check whether it is valid and if so, reinsert.
+     // somehow need to remember whether leaf has been reinstated or not!
+
+
    assert(extdata && cgraph && extdata->tree_leaves);
    assert(leaf >= 0 && extdata->tree_deg[leaf] == 1);
 
    extdata->tree_leaves[(extdata->tree_nleaves)++] = leaf;
 
    cgraph_node_append(cgraph, leaf);
-   int todo; // maybe copy saved edge costs here if possible?
 }
 
 
@@ -1372,6 +1390,22 @@ void extTreeSyncWithStack(
 }
 
 
+#ifndef NDEBUG
+/** gets reduced cost bound of current tree */
+static
+SCIP_Bool extMSTisInSync(
+   const CGRAPH*         cgraph              /**< complete graph data */
+   )
+{
+// assert that the costs of the tree all coincide with the actual SD etc distances!
+// might be good to have this and reddata extdata stuff in extra method reduce_ext_util.c or just reduce_util.c
+// need some flag (in cgraph?) to see whether a leaf in the cgraph does not actually have valid costs (or any)
+// and should be recomputed!
+   return TRUE;
+}
+
+
+#endif
 
 
 /** gets reduced cost bound of current tree */
@@ -1382,18 +1416,19 @@ void extMSTaddLeaf(
    int                   extleaf,            /**< the leaf */
    EXTDATA*              extdata,            /**< extension data */
    CGRAPH*               cgraph,             /**< complete graph data */
-   int*                  cgraphEdgebuffer,   /**< buffer */
    int*                  pcSdCands,          /**< != NULL iff PC/RPC */
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
+   SCIP_Real* const adjedgecosts = cgraph->adjedgecosts;
    const int* const leaves = extdata->tree_leaves;
+   int leafpos = -1;
    int nPcSdCands = 0;
    const int nleaves = extdata->tree_nleaves;
    SCIP_Bool ruledOut = FALSE;
    const SCIP_Bool isPc = (pcSdCands != NULL);
 
-   assert(cgraph && cgraphEdgebuffer && leaves);
+   assert(adjedgecosts && leaves);
    assert(isPc == graph_pc_isPcMw(graph));
 
    extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
@@ -1410,10 +1445,14 @@ void extMSTaddLeaf(
       assert(extdata->tree_deg[leaf] == 1);
 
       if( leaf == extleaf )
+      {
+         leafpos = j;
+         adjedgecosts[j] = FARAWAY;
          continue;
+      }
 
       specialDist = extGetSD(scip, graph, extleaf, leaf, extdata);
-      cgraphEdgebuffer[j] = specialDist >= -0.5 ? specialDist : FARAWAY;
+      adjedgecosts[j] = specialDist >= -0.5 ? specialDist : FARAWAY;
 
       if( extTreeBottleneckIsDominated(scip, graph, extleaf, leaf, specialDist, extdata) )
       {
@@ -1422,6 +1461,7 @@ void extMSTaddLeaf(
          break;
       }
    }
+
 
    if( isPc && !ruledOut )
    {
@@ -1449,6 +1489,14 @@ void extMSTaddLeaf(
             break;
          }
       }
+   }
+
+   if( !ruledOut && 0 )
+   {
+      assert(leafpos >= 0);
+
+   int todo;
+   cgraph_node_applyMinAdjCosts(cgraph, leafpos, extleaf);
    }
 
    extTreeBottleneckUnmarkRootPath(extleaf, extdata);
@@ -1625,7 +1673,6 @@ SCIP_Bool extRuleOutPeriph(
    {
       CGRAPH* const cgraph = reddata->cgraph;
       int* pcSdCands = NULL;
-      int* const cgraphEdgebuffer = reddata->cgraphEdgebuffer;
       const int* const extstack_data = extdata->extstack_data;
       const int* const extstack_start = extdata->extstack_start;
       const int stackpos = extStackGetPosition(extdata);
@@ -1643,7 +1690,7 @@ SCIP_Bool extRuleOutPeriph(
       {
          const int extleaf = graph->head[extstack_data[i]];
 
-         extMSTaddLeaf(scip, graph, extleaf, extdata, cgraph, cgraphEdgebuffer, pcSdCands, &ruledOut);
+         extMSTaddLeaf(scip, graph, extleaf, extdata, cgraph, pcSdCands, &ruledOut);
 
          /* early rule out? */
          if( ruledOut )
@@ -1781,15 +1828,12 @@ void extBacktrack(
       }
 
       (extdata->tree_nedges) -= compsize;
-#if 0
-      for( int k = extdata->tree_nleaves - 1; k >= extdata->tree_nleaves - compsize; k-- )
-         printf("bt remove leaf %d \n", tree_leaves[k]);
-#endif
+
+     // for( int k = extdata->tree_nleaves - 1; k >= extdata->tree_nleaves - compsize; k-- ) printf("bt remove leaf %d \n", extdata->tree_leaves[k]);
+
       extLeafRemoveTop(compsize, reddata->cgraph, extdata);
 
       (extdata->tree_depth)--;
-
-      int todo; // what about the backtracking? does it change something?
 
       /* restore component root as a leaf */
       assert(tree_deg[comproot] == 1);
@@ -2167,7 +2211,12 @@ void extCheckArc(
    tree_deg[tail] = 0;
 
    graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
+   extdataClean(extdata);
+   reddataClean(extdata->reddata);
+
+   assert(reddataIsClean(graph, extdata->reddata) && extdataIsClean(graph, extdata));
 }
+
 
 /** check (directed) arc */
 SCIP_RETCODE reduce_extendedCheckArc(
@@ -2260,12 +2309,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
          extCheckArc(scip, graph, edge, &extdata, edgeIsDeletable);
       }
 
-#ifndef NDEBUG
-      for( int i = 0; i < nnodes; i++ )
-         assert(pseudoancestor_mark[i] == 0);
-
       assert(reduce_extPermaIsClean(graph, extpermanent));
-#endif
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
@@ -2363,14 +2407,8 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 
          /* try to extend from tail? */
          if( !(*edgeIsDeletable) && extLeafIsExtendable(graph, isterm, tail) )
-         {
-            extdataClean(&extdata);
             extCheckArc(scip, graph, flipedge(edge), &extdata, edgeIsDeletable);
-         }
       }
-
-      for( int i = 0; i < nnodes; i++ )
-         assert(pseudoancestor_mark[i] == 0);
 
       assert(reduce_extPermaIsClean(graph, extpermanent));
 

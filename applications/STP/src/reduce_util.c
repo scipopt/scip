@@ -913,7 +913,16 @@ SCIP_Bool reduce_extPermaIsClean(
    tree_deg = extperm->tree_deg;
 
    if( nnodes != extperm->nnodes )
+   {
+      SCIPdebugMessage("inconsistent number of nodes \n");
       return FALSE;
+   }
+
+   if( !cgraph_isEmpty(extperm->cgraph) )
+   {
+      SCIPdebugMessage("cgraph not empty! \n");
+      return FALSE;
+   }
 
    for( int i = 0; i < nnodes; i++ )
    {
