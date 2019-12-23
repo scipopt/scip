@@ -18,6 +18,7 @@
  * @author Daniel Rehfeldt
  *
  * This file implements extended reduction techniques for several Steiner problems.
+ * Note: Deprecated and is only used for test purposes. Use extreduce.h methods instead.
  *
  * A list of all interface methods can be found in reduce.h.
  *

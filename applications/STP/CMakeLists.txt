@@ -14,6 +14,8 @@ add_executable(scipstp
     src/dialog_stp.c
     src/dualascent.c
     src/event_bestsol.c
+    src/extreduce_base.c
+    src/extreduce_util.c
     src/graph_history.c
     src/graph_base.c
     src/graph_load.c
@@ -39,7 +41,6 @@ add_executable(scipstp
     src/reduce_bnd.c
     src/reduce_da.c
     src/reduce_ext.c
-    src/reduce_ext2.c
     src/reduce_simple.c
     src/reduce_util.c
     src/stptest_base.c

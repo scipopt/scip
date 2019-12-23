@@ -37,12 +37,26 @@ typedef struct complete_graph
    SCIP_Real*            edgecosts;          /**< edge cost array; of size nnodes_max * (nnodes_max - 1) */
    SCIP_Real*            adjedgecosts;       /**< adjacency cost array of size nnodes_max + 1, to be filled in by user */
    int*                  nodeids;            /**< node ids; of size nnodes_max */
+   SCIP_Bool*            node_has_adjcosts;  /**< does node have adjacency costs? */
    int                   nnodes_max;         /**< maximum number of nodes */
    int                   nnodes_curr;        /**< current number of nodes */
 } CGRAPH;
 
 
-/** complete, undirected graph MST storage */
+/** buffer that allows to (partially) restore a complete graph node
+ * todo need something more special here that takes dfs depth and a node identifier (which) as input applies corresponding
+ * part to graph...
+ * maybe whenever you store something you get an identifier back??? */
+typedef struct complete_graph_node_buffer
+{
+   SCIP_Real*            adjedgecosts;       /**< adjacency cost array for nodes */
+   int*                  nodeids;            /**< corresponding node ids (only needed for debugging) */
+   int                   nnodes;             /**< number of nodes that are currently stored */
+   int                   dfsdepth;           /**< current number of nodes */
+} CNBUFF;
+
+
+/** complete, undirected graph MST storage; for computing an MST on a CGRAPH */
 typedef struct complete_mst
 {
    DHEAP*                heap;               /**< heap needed for MST computation */
@@ -60,6 +74,7 @@ SCIP_Bool cgraph_idsInSync(const CGRAPH*, const int*, int);
 SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
 void cgraph_free(SCIP*, CGRAPH**);
 void cgraph_clean(CGRAPH*);
+SCIP_Bool cgraph_node_hasAdjCosts(const CGRAPH*, int);
 void cgraph_node_append(CGRAPH*, int);
 void cgraph_node_applyMinAdjCosts(CGRAPH*, int, int);
 void cgraph_node_repositionTop(CGRAPH*, int);

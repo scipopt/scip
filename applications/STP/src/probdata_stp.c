@@ -44,6 +44,7 @@
 #include "dualascent.h"
 #include "graph.h"
 #include "reduce.h"
+#include "stptest.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
@@ -2602,6 +2603,11 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
+
+#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
+   SCIP_CALL( stptest_all(scip) );
+#endif
 
    return SCIP_OKAY;
 }

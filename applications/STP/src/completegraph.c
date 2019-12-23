@@ -226,6 +226,7 @@ SCIP_RETCODE cgraph_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->edgecosts), maxnnodes * maxnnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->adjedgecosts), maxnnodes + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->nodeids), maxnnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->node_has_adjcosts), maxnnodes) );
 
    g->nnodes_curr = 0;
    g->nnodes_max = maxnnodes;
@@ -261,6 +262,7 @@ void cgraph_free(
 
    g = *cgraph;
 
+   SCIPfreeMemoryArray(scip, &(g->node_has_adjcosts));
    SCIPfreeMemoryArray(scip, &(g->nodeids));
    SCIPfreeMemoryArray(scip, &(g->adjedgecosts));
    SCIPfreeMemoryArray(scip, &(g->edgecosts));
@@ -296,9 +298,22 @@ SCIP_Bool cgraph_isEmpty(
 }
 
 
+/** has the given node adjacency costs? */
+SCIP_Bool cgraph_node_hasAdjCosts(
+   const CGRAPH*         cgraph,             /**< the complete graph */
+   int                   nodepos             /**< the node position */
+   )
+{
+   assert(cgraph_valid(cgraph));
+   assert(nodepos >= 0 && nodepos < getNnodesCurr(cgraph));
+
+   return cgraph->node_has_adjcosts[nodepos];
+}
+
+
 /** applies adjacency costs to node, but only use if smaller than existing ones. */
 void cgraph_node_applyMinAdjCosts(
-   CGRAPH*               cgraph,             /**< new graph */
+   CGRAPH*               cgraph,             /**< the complete graph */
    int                   nodepos,            /**< the node position */
    int                   nodeid              /**< the node id (for debugging only) */
    )
@@ -334,9 +349,12 @@ void cgraph_node_applyMinAdjCosts(
          edgecosts[pos] = newcost;
    }
 
+   cgraph->node_has_adjcosts[nodepos] = TRUE;
+
    assert(EQ(adjcosts[nnodes_curr], CGRAPH_EDGECOST_UNDEFINED_VALUE));
    assert(cgraph_valid(cgraph));
 }
+
 
 /** add node (at the end, so at position cgraph->nnodes_curr) */
 void cgraph_node_append(
@@ -346,38 +364,39 @@ void cgraph_node_append(
 {
    int lastedge;
    SCIP_Real* const edgecosts = cgraph->edgecosts;
-   const int nnodes_curr_org = cgraph->nnodes_curr;
-   const int nnodes_curr_new = nnodes_curr_org + 1;
+   const int nodepos_new = cgraph->nnodes_curr;
+   const int nnodes_curr_new = nodepos_new + 1;
    const int nnodes_max = cgraph->nnodes_max;
-   const int start_new = getEdgeStart(nnodes_curr_org, nnodes_max);
+   const int start_new = getEdgeStart(nodepos_new, nnodes_max);
 
    assert(cgraph_valid(cgraph));
    assert(edgecosts && cgraph->nodeids);
    assert(nodeid >= 0);
-   assert(nnodes_curr_org < nnodes_max);
-   assert(NODE_ID_UNDEFINED == cgraph->nodeids[nnodes_curr_org]);
+   assert(nodepos_new < nnodes_max);
+   assert(NODE_ID_UNDEFINED == cgraph->nodeids[nodepos_new]);
 
    cgraph->nnodes_curr++;
 
-   for( int i = start_new; i < start_new + nnodes_curr_org; i++ )
+   for( int i = start_new; i < start_new + nodepos_new; i++ )
    {
       edgecosts[i] = FARAWAY;
    }
 
-   for( int i = 0; i < nnodes_curr_org; i++ )
+   for( int i = 0; i < nodepos_new; i++ )
    {
-      const int end = getEdgeEnd(i, nnodes_curr_org, nnodes_max);
+      const int end = getEdgeEnd(i, nodepos_new, nnodes_max);
       assert(EQ(edgecosts[end], CGRAPH_EDGECOST_UNDEFINED_VALUE));
 
       edgecosts[end] = FARAWAY;
    }
 
-   lastedge = getEdgeEnd(nnodes_curr_org, nnodes_curr_new, nnodes_max) - 1;
-   assert(lastedge >= 0 && lastedge == start_new + nnodes_curr_org);
+   lastedge = getEdgeEnd(nodepos_new, nnodes_curr_new, nnodes_max) - 1;
+   assert(lastedge >= 0 && lastedge == start_new + nodepos_new);
    assert(EQ(CGRAPH_EDGECOST_UNDEFINED_VALUE, edgecosts[lastedge]));
 
    edgecosts[lastedge] = FARAWAY;
-   cgraph->nodeids[nnodes_curr_org] = nodeid;
+   cgraph->nodeids[nodepos_new] = nodeid;
+   cgraph->node_has_adjcosts[nodepos_new] = FALSE;
 
    assert(cgraph_valid(cgraph));
 }
@@ -607,10 +626,15 @@ void cmst_computeMst(
    DHEAP* const dheap = cmst->heap;
    int* const state = dheap->position;
 
+#ifndef NDEBUG
    assert(edgecosts && preds && dist && dheap && state);
    assert(cgraph_valid(cgraph));
    assert(nnodes_curr <= cmst->nnodes_max);
    assert(mstroot >= 0 && mstroot < nnodes_curr);
+
+   for( int i = 0; i < nnodes_curr; i++ )
+      assert(cgraph_node_hasAdjCosts(cgraph, i));
+#endif
 
    for( int i = 0; i < nnodes_curr; i++ )
    {
@@ -625,7 +649,7 @@ void cmst_computeMst(
    dist[mstroot] = 0.0;
    graph_heap_correct(mstroot, 0.0, dheap);
 
-   assert(dheap->size > 0);
+   assert(dheap->size == 1);
 
    /* build MST */
    while( dheap->size > 0 )

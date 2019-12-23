@@ -31,13 +31,14 @@
 #include <assert.h>
 #include "graph.h"
 #include "reduce.h"
+#include "extreduce.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
-#include "dualascent.h"
 #include "heur_local.h"
-#include "probdata_stp.h"
 #include "heur_rec.h"
 #include "solpool.h"
+#include "dualascent.h"
+#include "probdata_stp.h"
 
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
@@ -2281,7 +2282,7 @@ SCIP_RETCODE reduce_da(
             REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
                .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
 
-            SCIP_CALL( reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
+            SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
             ndeletions += extfixed;
 //#define EXT_WRITE
          //   graph_printInfo(graph);
@@ -3078,7 +3079,7 @@ SCIP_RETCODE reduce_daPcMw(
 
          havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
 
-         SCIP_CALL( reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
+         SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
          nfixed += extfixed;
 
          printf("extfixed=%d \n", extfixed);

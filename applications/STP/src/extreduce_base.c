@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "graph.h"
-#include "reduce.h"
+#include "extreduce.h"
 
 #define EXT_STATE_NONE     0
 #define EXT_STATE_EXPANDED 1
@@ -461,7 +461,7 @@ void removeEdge(
 #endif
 
    graph_edge_delFull(scip, graph, edge, TRUE);
-   reduce_distDataDeleteEdge(scip, graph, edge, distdata);
+   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
 
    if( graph->grad[tail] == 0 )
    {
@@ -563,7 +563,7 @@ SCIP_Real extGetSD(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   SCIP_Real sd = reduce_distDataGetSD(scip, g, vertex1, vertex2, extdata->distdata);
+   SCIP_Real sd = extreduce_distDataGetSD(scip, g, vertex1, vertex2, extdata->distdata);
 
    assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
 
@@ -2219,7 +2219,7 @@ void extCheckArc(
 
 
 /** check (directed) arc */
-SCIP_RETCODE reduce_extendedCheckArc(
+SCIP_RETCODE extreduce_checkArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
@@ -2247,7 +2247,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
    assert(graph_isMarked(graph));
-   assert(reduce_extPermaIsClean(graph, extpermanent));
+   assert(extreduce_extPermaIsClean(graph, extpermanent));
 
    /* trivial rule-out? */
    if( SCIPisGT(scip, edgebound, cutoff) || (equality && SCIPisEQ(scip, edgebound, cutoff)) || head == root )
@@ -2309,7 +2309,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
          extCheckArc(scip, graph, edge, &extdata, edgeIsDeletable);
       }
 
-      assert(reduce_extPermaIsClean(graph, extpermanent));
+      assert(extreduce_extPermaIsClean(graph, extpermanent));
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
@@ -2330,7 +2330,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
 
 
 /** check edge */
-SCIP_RETCODE reduce_extendedCheckEdge(
+SCIP_RETCODE extreduce_checkEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
@@ -2355,7 +2355,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
    assert(graph_isMarked(graph));
-   assert(reduce_extPermaIsClean(graph, extpermanent));
+   assert(extreduce_extPermaIsClean(graph, extpermanent));
 
    *edgeIsDeletable = FALSE;
 
@@ -2410,7 +2410,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
             extCheckArc(scip, graph, flipedge(edge), &extdata, edgeIsDeletable);
       }
 
-      assert(reduce_extPermaIsClean(graph, extpermanent));
+      assert(extreduce_extPermaIsClean(graph, extpermanent));
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
@@ -2428,7 +2428,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 
 
 /** extended reduction test for edges */
-SCIP_RETCODE reduce_extendedEdge2(
+SCIP_RETCODE extreduce_deleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution array or NULL */
@@ -2455,8 +2455,8 @@ SCIP_RETCODE reduce_extendedEdge2(
    graph_mark(graph);
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
-   SCIP_CALL( reduce_extPermaInit(scip, graph, edgedeletable, &extpermanent) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
+   SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeletable, &extpermanent) );
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -2475,7 +2475,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 #ifdef CHECK_ARC
          if( !edgedeletable[e] )
          {
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata,
+            SCIP_CALL( extreduce_checkArc(scip, graph, &redcostdata,
                   e, allowequality, &distdata, &extpermanent, &deletable) );
 
             if( deletable )
@@ -2486,7 +2486,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          {
             SCIP_Bool erevdeletable = TRUE;
 
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata,
+            SCIP_CALL( extreduce_checkArc(scip, graph, &redcostdata,
                   erev, allowequality, &distdata, &extpermanent, &erevdeletable) );
 
             if( erevdeletable )
@@ -2495,7 +2495,7 @@ SCIP_RETCODE reduce_extendedEdge2(
             deletable = (deletable && erevdeletable);
          }
 #else
-         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, redcostdata, e, allowequality, &distdata, &extpermanent, &deletable) );
+         SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, e, allowequality, &distdata, &extpermanent, &deletable) );
 #endif
 
          if( deletable )
@@ -2513,8 +2513,8 @@ SCIP_RETCODE reduce_extendedEdge2(
       edgedeletable[e] = FALSE;
 #endif
 
-   reduce_extPermaFreeMembers(scip, &extpermanent);
-   reduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_extPermaFreeMembers(scip, &extpermanent);
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
 #ifndef NDEBUG

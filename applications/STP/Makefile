@@ -64,6 +64,8 @@ CMAINOBJ	=	cmain.o \
 			completegraph.o \
 			cons_stp.o \
 			dualascent.o \
+			extreduce_base.o \
+			extreduce_util.o \
 			graph_history.o \
 			graph_base.o \
 			graph_load.o \
@@ -90,7 +92,6 @@ CMAINOBJ	=	cmain.o \
 			reduce_bnd.o \
 			reduce_da.o \
 			reduce_ext.o \
-			reduce_ext2.o \
 			reduce_simple.o \
 			reduce_util.o \
 			solpool.o \

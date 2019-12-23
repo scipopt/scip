@@ -30,6 +30,7 @@
 #include "stptest.h"
 #include "graph.h"
 #include "reduce.h"
+#include "extreduce.h"
 #include "heur_local.h"
 #include "heur_tm.h"
 #include "completegraph.h"
@@ -54,23 +55,23 @@ SCIP_RETCODE extArc(
    EXTPERMA extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
-   SCIP_CALL( reduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
    if( edgedelete >= 0 )
    {
       graph_edge_delFull(scip, graph, edgedelete, TRUE);
-      reduce_distDataDeleteEdge(scip, graph, edgedelete, &distdata);
+      extreduce_distDataDeleteEdge(scip, graph, edgedelete, &distdata);
 
       graph_mark(graph);
    }
 
    /* actual test */
-   SCIP_CALL( reduce_extendedCheckArc(scip, graph, redcostdata, edge, equality, &distdata, &extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, edge, equality, &distdata, &extpermanent, deletable) );
 
    /* clean up */
-   reduce_extPermaFreeMembers(scip, &extpermanent);
-   reduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_extPermaFreeMembers(scip, &extpermanent);
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    return SCIP_OKAY;
@@ -781,7 +782,7 @@ SCIP_RETCODE extDistTest(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -835,12 +836,12 @@ SCIP_RETCODE extDistTest(
 #ifndef NDEBUG
    {
       const int edge = 2;
-      const SCIP_Real dist1_2 = reduce_distDataGetSD(scip, graph, 1, 2, &distdata);
-      const SCIP_Real dist1_3 = reduce_distDataGetSD(scip, graph, 1, 3, &distdata);
-      const SCIP_Real dist1_5 = reduce_distDataGetSD(scip, graph, 1, 5, &distdata);
-      const SCIP_Real dist2_1 = reduce_distDataGetSD(scip, graph, 2, 1, &distdata);
-      const SCIP_Real dist2_5 = reduce_distDataGetSD(scip, graph, 2, 5, &distdata);
-      const SCIP_Real dist2_6 = reduce_distDataGetSD(scip, graph, 2, 6, &distdata);
+      const SCIP_Real dist1_2 = extreduce_distDataGetSD(scip, graph, 1, 2, &distdata);
+      const SCIP_Real dist1_3 = extreduce_distDataGetSD(scip, graph, 1, 3, &distdata);
+      const SCIP_Real dist1_5 = extreduce_distDataGetSD(scip, graph, 1, 5, &distdata);
+      const SCIP_Real dist2_1 = extreduce_distDataGetSD(scip, graph, 2, 1, &distdata);
+      const SCIP_Real dist2_5 = extreduce_distDataGetSD(scip, graph, 2, 5, &distdata);
+      const SCIP_Real dist2_6 = extreduce_distDataGetSD(scip, graph, 2, 6, &distdata);
 
       assert(dist1_2 == 0.4);
       assert(dist1_3 == -1.0);
@@ -851,12 +852,12 @@ SCIP_RETCODE extDistTest(
 
       assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
       graph_edge_delFull(scip, graph, edge, TRUE);
-      reduce_distDataDeleteEdge(scip, graph, edge, &distdata);
+      extreduce_distDataDeleteEdge(scip, graph, edge, &distdata);
 
       {
-         const SCIP_Real dist1_2_b = reduce_distDataGetSD(scip, graph, 1, 2, &distdata);
-         const SCIP_Real dist2_6_b = reduce_distDataGetSD(scip, graph, 2, 6, &distdata);
-         const SCIP_Real dist2_5_b = reduce_distDataGetSD(scip, graph, 2, 5, &distdata);
+         const SCIP_Real dist1_2_b = extreduce_distDataGetSD(scip, graph, 1, 2, &distdata);
+         const SCIP_Real dist2_6_b = extreduce_distDataGetSD(scip, graph, 2, 6, &distdata);
+         const SCIP_Real dist2_5_b = extreduce_distDataGetSD(scip, graph, 2, 5, &distdata);
 
          assert(dist1_2_b == -1.0);
          assert(dist2_6_b == -1.0);
@@ -865,7 +866,7 @@ SCIP_RETCODE extDistTest(
    }
 #endif
 
-   reduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    graph_path_exit(scip, graph);

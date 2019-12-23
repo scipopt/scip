@@ -43,7 +43,6 @@
 #include <assert.h>
 #include "graph.h"
 #include "reduce.h"
-#include "stptest.h"
 #include "heur_tm.h"
 #include "misc_stp.h"
 #include "scip/scip.h"
@@ -1999,11 +1998,6 @@ SCIP_RETCODE reduce(
    show = FALSE;
    stp_type = graph->stp_type;
 
-#define UNIT_TEST_STP
-#ifdef UNIT_TEST_STP
-   SCIP_CALL( stptest_all(scip) );
-#endif
-
    /* initialize ancestor list for each edge */
    SCIP_CALL( graph_init_history(scip, graph) );
 
@@ -2043,6 +2037,8 @@ SCIP_RETCODE reduce(
       }
       else
       {
+         assert(graph_typeIsSpgLike(graph));
+
          SCIP_CALL( reduceStp(scip, graph, offset, minelims, FALSE, TRUE, FALSE) );
       }
    }
@@ -2070,6 +2066,8 @@ SCIP_RETCODE reduce(
       }
       else
       {
+         assert(graph_typeIsSpgLike(graph));
+
          SCIP_CALL( reduceStp(scip, graph, offset, minelims, TRUE, TRUE, userec) );
       }
    }
