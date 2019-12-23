@@ -573,7 +573,7 @@ SCIP_Real extGetSD(
 
       assert(SCIPisEQ(scip, sdpc, -1.0) || SCIPisGE(scip, sdpc, 0.0));
 
-      if( sdpc > -0.5 && sdpc < sd )
+      if( sdpc > -0.5 && (sdpc < sd || sd < -0.5) )
       {
          SCIPdebugMessage("special distance update for pc: %f to %f \n", sd, sdpc);
          sd = sdpc;
