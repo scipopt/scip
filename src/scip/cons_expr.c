@@ -251,6 +251,8 @@ struct SCIP_ConshdlrData
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
+   SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
+   char                     branchmethod;    /**< branching method */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5692,92 +5694,32 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
    return SCIP_OKAY;
 }
 
-/** helper function to do or prepare branching */
+/** registers all variables in violated constraints with branching scores as branching candidates */
 static
-SCIP_RETCODE branching(
+SCIP_RETCODE registerBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to process */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
-   SCIP_RESULT*          result              /**< pointer to store the result of branching */
+   SCIP_Bool*            success             /**< buffer to store whether at least one branching candidate was added */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSDATA* consdata;
    int c;
+   int i;
 
-   assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(result != NULL);
+   assert(success != NULL);
 
-   *result = SCIP_DIDNOTFIND;
+   *success = FALSE;
 
-   /* propagate branching scores from expressions with children to variable expressions
-    * TODO maybe integrate this into previous loop, i.e., after enforceExpr on all exprs of one constraint,
-    * propagate its branching scores to the variables for this one constraint
-    */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   for( c = 0; c < nconss; ++c )
-   {
-      assert(conss != NULL);
-      assert(conss[c] != NULL);
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
-      if( !isConsViolated(scip, conss[c]) )
-         continue;
-
-      /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
-      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         switch( SCIPexpriteratorGetStageDFS(it) )
-         {
-            case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
-            {
-               /* propagate branching score, if any, from this expression to current child
-                * NOTE: this only propagates down branching scores that were computed by computeBranchScore
-                * we use the brscoretag to recognize whether this expression has a valid branching score
-                */
-               if( expr->brscoretag == conshdlrdata->enforound )
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPexpriteratorGetChildExprDFS(it), expr->brscore);
-
-               break;
-            }
-
-            case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
-            {
-               /* invalidate the branching scores in this expression, so they are not passed on in case this expression
-                * is visited again
-                * do this only for expressions with children, since for variables we need the brscoretag to be intact
-                */
-               if( expr->nchildren > 0 )
-                  expr->brscoretag = 0;
-
-               break;
-            }
-
-            default:
-               SCIPABORT();
-               break;
-         }
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* register external branching candidates */
    for( c = 0; c < nconss; ++c )
    {
-      int i;
       assert(conss != NULL && conss[c] != NULL);
 
       consdata = SCIPconsGetData(conss[c]);
@@ -5812,7 +5754,7 @@ SCIP_RETCODE branching(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
 
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
-            *result = SCIP_INFEASIBLE;
+            *success = TRUE;
          }
          else
          {
@@ -5831,7 +5773,118 @@ SCIP_RETCODE branching(
    return SCIP_OKAY;
 }
 
-/** call enforcement or estimator callback of nonlinear handler
+/** helper function to do or prepare branching */
+static
+SCIP_RETCODE branching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_RESULT*          result              /**< pointer to store the result of branching */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->branchaux )
+   {
+      /* propagate branching scores from expressions with children to variable expressions
+       * TODO maybe integrate this into previous loop, i.e., after enforceExpr on all exprs of one constraint,
+       * propagate its branching scores to the variables for this one constraint
+       */
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      for( c = 0; c < nconss; ++c )
+      {
+         assert(conss != NULL);
+         assert(conss[c] != NULL);
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
+         if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+            continue;
+
+         /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+         SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+         for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+         {
+            switch( SCIPexpriteratorGetStageDFS(it) )
+            {
+               case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
+               {
+                  /* propagate branching score, if any, from this expression to current child
+                   * NOTE: this only propagates down branching scores that were computed by computeBranchScore
+                   * we use the brscoretag to recognize whether this expression has a valid branching score
+                   */
+                  if( expr->brscoretag == conshdlrdata->enforound )
+                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPexpriteratorGetChildExprDFS(it), expr->brscore);
+
+                  break;
+               }
+
+               case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
+               {
+                  /* invalidate the branching scores in this expression, so they are not passed on in case this expression
+                   * is visited again
+                   * do this only for expressions with children, since for variables we need the brscoretag to be intact
+                   */
+                  if( expr->nchildren > 0 )
+                     expr->brscoretag = 0;
+
+                  break;
+               }
+
+               default:
+                  SCIPABORT();
+                  break;
+            }
+         }
+      }
+
+      SCIPexpriteratorFree(&it);
+   }
+
+   switch( conshdlrdata->branchmethod )
+   {
+      case 'e' :
+      {
+         SCIP_Bool success;
+
+         SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &success) );
+         if( success )
+            *result = SCIP_INFEASIBLE;
+
+         break;
+      }
+
+      default :
+      {
+         SCIPerrorMessage("Unknown branching method '%c'\n", conshdlrdata->branchmethod);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** call separation or estimator callback of nonlinear handler
  *
  * Calls the enforcement callback, if available.
  * Otherwise, calls the estimator callback, if available, and constructs a cut from the estimator.
@@ -13589,6 +13642,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
          "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
          &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchaux",
+         "whether to allow branching on auxiliary variables (variables added for extended formulation)",
+         &conshdlrdata->branchaux, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchmethod",
+         "method on how to branch: register 'e'xtern branching candidates",
+         &conshdlrdata->branchmethod, TRUE, 'e', "e", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
