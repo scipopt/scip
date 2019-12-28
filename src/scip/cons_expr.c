@@ -5706,8 +5706,8 @@ SCIP_RETCODE registerBranchingCandidates(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
    int c;
-   int i;
 
    assert(conshdlr != NULL);
    assert(success != NULL);
@@ -5716,6 +5716,14 @@ SCIP_RETCODE registerBranchingCandidates(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->branchaux )
+   {
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      /* SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR); */
+   }
 
    /* register external branching candidates */
    for( c = 0; c < nconss; ++c )
@@ -5730,45 +5738,87 @@ SCIP_RETCODE registerBranchingCandidates(
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
-      for( i = 0; i < consdata->nvarexprs; ++i )
+      if( !conshdlrdata->branchaux )
       {
-         SCIP_Real brscore;
+         int i;
+
+         /* if not branching on auxvars, then branching() will have propagated branching scores to original variables,
+          * so we can loop over variable expressions
+          */
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            SCIP_Real brscore;
+            SCIP_Real lb;
+            SCIP_Real ub;
+            SCIP_VAR* var;
+
+            /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
+            if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag )
+               continue;
+
+            brscore = consdata->varexprs[i]->brscore;
+            var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+            assert(var != NULL);
+
+            lb = SCIPcomputeVarLbLocal(scip, var);
+            ub = SCIPcomputeVarUbLocal(scip, var);
+
+            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
+            if( !SCIPisEQ(scip, lb, ub) )
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
+
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
+               *success = TRUE;
+            }
+            else
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g]\n", SCIPvarGetName(var), lb, ub); )
+            }
+
+            /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+            consdata->varexprs[i]->brscoretag = 0;
+         }
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_VAR* var;
          SCIP_Real lb;
          SCIP_Real ub;
-         SCIP_VAR* var;
 
-         /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
-         if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag )
-            continue;
-
-         brscore = consdata->varexprs[i]->brscore;
-         var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
-         assert(var != NULL);
-
-         lb = SCIPcomputeVarLbLocal(scip, var);
-         ub = SCIPcomputeVarUbLocal(scip, var);
-
-         /* introduce variable if it has not been fixed yet and has a branching score > 0 */
-         if( !SCIPisEQ(scip, lb, ub) )
+         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
+            if( expr->brscoretag != conshdlrdata->enforound )
+               continue;
 
-            SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
-            *success = TRUE;
-         }
-         else
-         {
-            ENFOLOG(
-               SCIP_Real solval = SCIPgetSolVal(scip, sol, var);
-               SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g] = %.15g (out-of-bounds by %g)\n", SCIPvarGetName(var), lb, ub, solval, MAX(lb - solval, solval - ub));
-            )
-            /* *maxvarboundviol = MAX3(*maxvarboundviol, lb - solval, solval - ub); */
-         }
+            /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
+             * so this expression should either be an original variable or have an auxiliary variable
+             */
+            var = SCIPgetConsExprExprAuxVar(expr);
+            assert(var != NULL);
 
-         /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
-         consdata->varexprs[i]->brscoretag = 0;
+            lb = SCIPcomputeVarLbLocal(scip, var);
+            ub = SCIPcomputeVarUbLocal(scip, var);
+
+            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
+            if( !SCIPisEQ(scip, lb, ub) )
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, expr->brscore); )
+
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, expr->brscore, SCIP_INVALID) );
+               *success = TRUE;
+            }
+            else
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g]\n", SCIPvarGetName(var), lb, ub); )
+            }
+         }
       }
    }
+
+   if( conshdlrdata->branchaux )
+      SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
