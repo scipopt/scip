@@ -92,6 +92,8 @@
 #define VERTEXPOLY_RANDNUMINITSEED  20181029 /**< seed for random number generator, which is used to move points away from the boundary */
 #define VERTEXPOLY_ADJUSTFACETFACTOR     1e1 /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
 
+#define BRANCH_RANDNUMINITSEED      20191229 /**< seed for random number generator, which is used to select from several similar good branching candidates */
+
 /* properties of the expression constraint handler statistics table */
 #define TABLE_NAME_EXPR                          "expression"
 #define TABLE_DESC_EXPR                          "expression constraint handler statistics"
@@ -274,6 +276,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_BILINTERM* bilinterms;      /**< bilinear terms */
    int                      nbilinterms;     /**< total number of bilinear terms */
    int                      bilintermssize;  /**< size of bilinterms array */
+
+   SCIP_RANDNUMGEN*         branch_randnumgen;/**< randum number generated used in branching variable selection */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -5905,7 +5909,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
          if( consviol <= SCIPfeastol(scip) )
             continue;
 
-         /* TODO the 0.8 should be a parameter, a similar one already exists for when to allow weak cuts */
          if( attempt == 0 && consviol < conshdlrdata->branchhighviolfactor * maxviol )
             continue;
          else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxviol )
@@ -6018,6 +6021,8 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
    if( ncands > 1 )
    {
+      int offset;
+
       /* if more than one candidate, then sort by some measure
        * TODO: for now this sorts by the brscore, but other metrics (nuses, domain width, pseudocosts, etc) should be tried, too
        */
@@ -6027,11 +6032,70 @@ SCIP_RETCODE branchConstraintInfeasibility(
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
 
-      /* TODO choose at random from all candidates with brscore similar to maximum,
-       * for that remove duplicates from cands before */
-   }
+      /* remove duplicates and find how many candidates have a brscore close to the maximum
+       * TODO should we choose random from all candidates, using the brscore's as probability distribution?
+       */
+      c = 1;
+      offset = 0;
+      do
+      {
+         assert(c+offset < ncands);
+         if( cands[c-1] == cands[c+offset] )
+         {
+            /* skip equal candidate */
+            ++offset;
+         }
+         else
+         {
+            /* move candidate at c+offset to c */
+            cands[c] = cands[c+offset];
 
-   var = SCIPgetConsExprExprAuxVar(cands[0]);
+            /* stop if brscore at new c'th candidate is too low */
+            if( cands[c]->brscore < conshdlrdata->branchhighviolfactor * cands[0]->brscore )
+            {
+               assert(c > 0);
+               ncands = c;
+               break;
+            }
+
+            ++c;
+         }
+
+         if( c+offset >= ncands )
+         {
+            /* end of array: correct ncands and stop, all candidates have relatively high brscore */
+            ncands -= offset;
+            break;
+         }
+      }
+      while( TRUE );
+
+      assert(ncands > 0);
+      assert(cands[ncands-1]->brscore >= conshdlrdata->branchhighviolfactor * cands[0]->brscore);
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing duplicates and low scores\n", ncands,
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
+
+      if( ncands > 1 )
+      {
+         /* choose at random from candidates 0..ncands-1
+          * TODO alternatively add all as external branching candidates?
+          */
+         if( conshdlrdata->branch_randnumgen == NULL )
+         {
+            SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branch_randnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
+         }
+         c = SCIPrandomGetInt(conshdlrdata->branch_randnumgen, 0, ncands-1);
+         var = SCIPgetConsExprExprAuxVar(cands[c]);
+      }
+      else
+         var = SCIPgetConsExprExprAuxVar(cands[0]);
+   }
+   else
+   {
+      var = SCIPgetConsExprExprAuxVar(cands[0]);
+   }
    assert(var != NULL);
 
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>\n", SCIPvarGetName(var)); )
@@ -8892,6 +8956,8 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       assert(conshdlrdata->vp_lp[i] == NULL);
 #endif
 
+   assert(conshdlrdata->branch_randnumgen == NULL);
+
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -9031,6 +9097,9 @@ SCIP_DECL_CONSEXIT(consExitExpr)
          SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
       }
    }
+
+   if( conshdlrdata->branch_randnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->branch_randnumgen);
 
    ENFOLOG(
       if( enfologfile != NULL )
