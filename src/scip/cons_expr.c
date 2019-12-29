@@ -253,6 +253,7 @@ struct SCIP_ConshdlrData
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
    char                     branchmethod;    /**< branching method */
+   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.) */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5905,9 +5906,9 @@ SCIP_RETCODE branchConstraintInfeasibility(
             continue;
 
          /* TODO the 0.8 should be a parameter, a similar one already exists for when to allow weak cuts */
-         if( attempt == 0 && consviol < 0.8 * maxviol )
+         if( attempt == 0 && consviol < conshdlrdata->branchhighviolfactor * maxviol )
             continue;
-         else if( attempt == 1 && consviol > 0.8 * maxviol )
+         else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxviol )
             continue;
 
          if( !conshdlrdata->branchaux )
@@ -13929,11 +13930,15 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchaux",
          "whether to allow branching on auxiliary variables (variables added for extended formulation)",
-         &conshdlrdata->branchaux, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->branchaux, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchmethod",
          "method on how to branch: register 'e'xtern branching candidates, variable in largely violated 'c'onstraint",
-         &conshdlrdata->branchmethod, TRUE, 'e', "ce", NULL, NULL) );
+         &conshdlrdata->branchmethod, FALSE, 'e', "ce", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchhighviolfactor",
+         "consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.)",
+         &conshdlrdata->branchhighviolfactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
