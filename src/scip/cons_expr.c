@@ -6021,8 +6021,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
    if( ncands > 1 )
    {
-      int offset;
-
       /* if more than one candidate, then sort by some measure
        * TODO: for now this sorts by the brscore, but other metrics (nuses, domain width, pseudocosts, etc) should be tried, too
        */
@@ -6032,48 +6030,25 @@ SCIP_RETCODE branchConstraintInfeasibility(
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
 
-      /* remove duplicates and find how many candidates have a brscore close to the maximum
+      /* find how many candidates have a brscore close to the maximum
+       * (TODO could do a binary search as array is sorted by score)
        * TODO should we choose random from all candidates, using the brscore's as probability distribution?
        */
-      c = 1;
-      offset = 0;
-      do
+      for( c = 1; c < ncands; ++c )
       {
-         assert(c+offset < ncands);
-         if( cands[c-1] == cands[c+offset] )
-         {
-            /* skip equal candidate */
-            ++offset;
-         }
-         else
-         {
-            /* move candidate at c+offset to c */
-            cands[c] = cands[c+offset];
+         assert(cands[c-1] != cands[c]);  /* we should have no duplicates */
 
-            /* stop if brscore at new c'th candidate is too low */
-            if( cands[c]->brscore < conshdlrdata->branchhighviolfactor * cands[0]->brscore )
-            {
-               assert(c > 0);
-               ncands = c;
-               break;
-            }
-
-            ++c;
-         }
-
-         if( c+offset >= ncands )
+         /* stop if brscore is below threshold */
+         if( cands[c]->brscore < conshdlrdata->branchhighviolfactor * cands[0]->brscore )
          {
-            /* end of array: correct ncands and stop, all candidates have relatively high brscore */
-            ncands -= offset;
+            ncands = c;
             break;
          }
       }
-      while( TRUE );
-
       assert(ncands > 0);
       assert(cands[ncands-1]->brscore >= conshdlrdata->branchhighviolfactor * cands[0]->brscore);
 
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing duplicates and low scores\n", ncands,
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
 
