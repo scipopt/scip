@@ -5752,18 +5752,21 @@ SCIP_RETCODE registerBranchingCandidates(
             SCIP_Real ub;
             SCIP_VAR* var;
 
-            /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
-            if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag )
+            brscore = consdata->varexprs[i]->brscore;
+
+            /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint)
+             * or have a branching score of 0.0
+             */
+            if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag || brscore == 0.0 )
                continue;
 
-            brscore = consdata->varexprs[i]->brscore;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
             lb = SCIPcomputeVarLbLocal(scip, var);
             ub = SCIPcomputeVarUbLocal(scip, var);
 
-            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
+            /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
@@ -5789,7 +5792,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
          for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
-            if( expr->brscoretag != conshdlrdata->enforound )
+            if( expr->brscoretag != conshdlrdata->enforound || expr->brscore == 0.0 )
                continue;
 
             /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
@@ -5801,7 +5804,7 @@ SCIP_RETCODE registerBranchingCandidates(
             lb = SCIPcomputeVarLbLocal(scip, var);
             ub = SCIPcomputeVarUbLocal(scip, var);
 
-            /* introduce variable if it has not been fixed yet and has a branching score > 0 */
+            /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, expr->brscore); )
