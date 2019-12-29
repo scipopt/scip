@@ -132,7 +132,7 @@
 #define POWEROFTWO(x) (0x1u << (x))
 
 #ifdef ENFO_LOGGING
-#define ENFOLOG(x) if( SCIPgetSubscipDepth(scip) == 0 ) { x }
+#define ENFOLOG(x) if( SCIPgetSubscipDepth(scip) == 0 && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL ) { x }
 
 FILE* enfologfile = NULL;
 
@@ -8983,10 +8983,8 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata->nforcelp = 0;
    SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
 
-
 #ifdef ENFOLOGFILE
-   if( SCIPgetSubscipDepth(scip) == 0 )
-      enfologfile = fopen(ENFOLOGFILE, "w");
+   ENFOLOG( enfologfile = fopen(ENFOLOGFILE, "w"); )
 #endif
 
    return SCIP_OKAY;
