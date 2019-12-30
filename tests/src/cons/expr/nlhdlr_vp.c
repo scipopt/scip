@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlhdlr_convex.c
- * @brief  tests convex nonlinear handler
+/**@file   nlhdlr_vp.c
+ * @brief  tests vertex-polyhedral nonlinear handler
  *
  */
 
@@ -62,7 +62,7 @@ void setup(void)
    /* get nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), CONVEX_NLHDLR_NAME) == 0 )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), VP_NLHDLR_NAME) == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
          break;
@@ -99,7 +99,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-/** given a string for f(x) and its curvature, run nlhdlr_convex detect on f(x) = 0 and see whether that gives correct flags */
+/** given a string for f(x) and its curvature, run nlhdlr_vp detect on f(x) = 0 and see whether that gives correct flags */
 static
 SCIP_RETCODE detect(
    const char*           exprstr,
@@ -146,15 +146,15 @@ SCIP_RETCODE detect(
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
       cr_expect(success);
-      cr_expect(enforcebelow);
-      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
+      cr_expect(enforceabove);
+      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
       cr_expect(success);
-      cr_expect(enforceabove);
-      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
+      cr_expect(enforcebelow);
+      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
    }
 
    if( success )
@@ -170,7 +170,7 @@ SCIP_RETCODE detect(
 }
 
 /* tests detection of convex/concave subexpressions */
-Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
+Test(nlhdlrvp, detect, .init = setup, .fini = teardown)
 {
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);
