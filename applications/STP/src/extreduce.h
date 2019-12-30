@@ -36,12 +36,14 @@
 #define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
 
+#define EXT_STATE_NONE     0
+#define EXT_STATE_EXPANDED 1
+#define EXT_STATE_MARKED   2
 
 #include "scip/scip.h"
 #include "graph.h"
 #include "reduce.h"
 #include "completegraph.h"
-
 
 /** permanent extension data */
 typedef struct extension_data_permanent
@@ -156,6 +158,16 @@ extern void            extreduce_extdataClean(EXTDATA*);
 extern SCIP_Bool       extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
 extern void            extreduce_reddataClean(REDDATA*);
 extern SCIP_Bool       extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
+extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
+extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*);
+extern int             extreduce_getMaxTreeDepth(const GRAPH*);
+
+
+/* extreduce_dbg.c
+ */
+extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
+extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
+extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

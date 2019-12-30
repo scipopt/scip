@@ -1075,3 +1075,91 @@ SCIP_Bool extreduce_reddataIsClean(
 
    return TRUE;
 }
+
+
+
+/** is the edge valid? */
+SCIP_Bool extreduce_edgeIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   e                   /**< edge to be checked */
+)
+{
+   if( EAT_FREE == graph->oeat[e] )
+   {
+      return FALSE;
+   }
+   else if( graph_pc_isPcMw(graph) )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      if( (!graph->mark[tail] || !graph->mark[head]) )
+      {
+         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
+
+         return FALSE;
+      }
+
+      assert(!graph_pc_knotIsDummyTerm(graph, tail));
+      assert(!graph_pc_knotIsDummyTerm(graph, head));
+   }
+
+   return TRUE;
+}
+
+
+/** deletes an edge and makes corresponding adaptations */
+void extreduce_edgeRemove(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                graph,              /**< graph data structure (in/out) */
+   DISTDATA*             distdata            /**< distance data (in/out) */
+)
+{
+   const int tail = graph->tail[edge];
+   const int head = graph->head[edge];
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("remove edge ");
+   graph_edge_printInfo(graph, edge);
+#endif
+
+   graph_edge_delFull(scip, graph, edge, TRUE);
+   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
+
+   if( graph->grad[tail] == 0 )
+   {
+      if( Is_term(graph->term[tail])  )
+      {
+         assert(graph_pc_isPcMw(graph) || tail == graph->source);
+      }
+      else
+      {
+         graph->mark[tail] = FALSE;
+      }
+   }
+
+   if( graph->grad[head] == 0 )
+   {
+      if( Is_term(graph->term[head]) || head == graph->source )
+      {
+         assert(graph_pc_isPcMw(graph));
+      }
+      else
+      {
+         graph->mark[head] = FALSE;
+      }
+   }
+}
+
+/** get maximum allow depth for extended tree in given graph */
+int extreduce_getMaxTreeDepth(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const int maxdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
+
+   assert(maxdepth > 0);
+
+   return maxdepth;
+}

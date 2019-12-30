@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reduce_ext2.c
+/**@file   extreduce_base.c
  * @brief  extended reductions for Steiner tree problems
  * @author Daniel Rehfeldt
  *
@@ -32,142 +32,10 @@
 #include "portab.h"
 #include "extreduce.h"
 
-#define EXT_STATE_NONE     0
-#define EXT_STATE_EXPANDED 1
-#define EXT_STATE_MARKED   2
 #define EXT_REDCOST_NRECOMP 10
 #define EXT_SDMAXVISITS 10
 
 
-#ifndef NDEBUG
-/** is current tree flawed? */
-static
-SCIP_Bool extTreeIsFlawed(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   const EXTDATA*        extdata             /**< extension data */
-)
-{
-   int* edgecount;
-   int* degreecount;
-   const int* const tree_edges = extdata->tree_edges;
-   const int* const tree_deg = extdata->tree_deg;
-   const int* const tree_leaves = extdata->tree_leaves;
-   const int nleaves = extdata->tree_nleaves;
-   const int tree_nedges = extdata->tree_nedges;
-   const int nedges = graph->edges;
-   const int nnodes = graph->knots;
-   int leavescount;
-   const SCIP_Bool isPc = graph_pc_isPcMw(graph);
-
-   SCIP_Bool flawed = FALSE;
-
-   assert(nleaves >= 1);
-
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &edgecount, nedges) );
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &degreecount, nnodes) );
-
-   for( int i = 0; i < tree_nedges; i++ )
-   {
-      const int e = tree_edges[i];
-      const int head = graph->head[e];
-      const int tail = graph->tail[e];
-
-      assert(e >= 0 && e < nedges);
-
-      if( edgecount[e] > 0 || edgecount[flipedge(e)] > 0  )
-      {
-         printf("tree_nedges %d \n", tree_nedges);
-         printf("FLAW: double edge \n");
-         graph_edge_printInfo(graph, e);
-         flawed = TRUE;
-      }
-
-      if( tree_deg[tail] <= 0 )
-      {
-         printf("FLAW: non-positive degree for %d (%d) \n", tail, tree_deg[tail]);
-         flawed = TRUE;
-      }
-
-      if( tree_deg[head] <= 0 )
-      {
-         printf("FLAW: non-positive degree for %d (%d) \n", head, tree_deg[head]);
-         flawed = TRUE;
-      }
-
-      degreecount[tail]++;
-      degreecount[head]++;
-
-      edgecount[e]++;
-   }
-
-   leavescount = 1; /* for tail of initial edge */
-
-   /* degree check */
-   for( int i = 0; i < tree_nedges && !flawed; i++ )
-   {
-      const int e = tree_edges[i];
-      const int head = graph->head[e];
-
-      if( degreecount[head] == 1 )
-         leavescount++;
-
-      if( degreecount[head] != tree_deg[head] )
-      {
-         printf("FLAW: wrong degree  \n");
-         flawed = TRUE;
-      }
-   }
-
-   /* leaves check */
-   if( !flawed && leavescount != nleaves )
-   {
-      printf("FLAW wrong leaves count %d != %d \n", leavescount, nleaves);
-      flawed = TRUE;
-   }
-
-   for( int i = 0; i < nleaves && !flawed; i++ )
-   {
-      const int leaf = tree_leaves[i];
-      if( degreecount[leaf] != 1 )
-      {
-         printf("FLAW wrong leaf %d degree %d != %d \n", leaf, degreecount[leaf], 1);
-         flawed = TRUE;
-      }
-   }
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( isPc && extdata->pcSdToNode[i] >= -0.5 )
-      {
-         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcSdToNode[i]);
-         flawed = TRUE;
-      }
-      if( extdata->tree_bottleneckDistNode[i] >= -0.5 )
-      {
-         printf("FLAW wrong tree_bottleneckDistNode entry[%d]=%f \n", i, extdata->tree_bottleneckDistNode[i]);
-         flawed = TRUE;
-      }
-   }
-
-   /* clean-up */
-   for( int i = 0; i < tree_nedges; i++ )
-   {
-      const int e = tree_edges[i];
-      const int head = graph->head[e];
-      const int tail = graph->tail[e];
-
-      edgecount[e] = 0;
-      degreecount[tail] = 0;
-      degreecount[head] = 0;
-   }
-
-   SCIPfreeCleanBufferArray(scip, &degreecount);
-   SCIPfreeCleanBufferArray(scip, &edgecount);
-
-   return flawed;
-}
-#endif
 
 /** insertion sort; note: could be speed-up by use of sentinel value at position 0 */
 static inline
@@ -277,97 +145,6 @@ SCIP_Real getMinDistCombination(
 }
 
 
-/** is the edge valid? */
-static
-SCIP_Bool edgeIsValid(
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   e                   /**< edge to be checked */
-)
-{
-   if( EAT_FREE == graph->oeat[e] )
-   {
-      return FALSE;
-   }
-   else if( graph_pc_isPcMw(graph) )
-   {
-      const int tail = graph->tail[e];
-      const int head = graph->head[e];
-
-      if( (!graph->mark[tail] || !graph->mark[head]) )
-      {
-         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
-
-         return FALSE;
-      }
-
-      assert(!graph_pc_knotIsDummyTerm(graph, tail));
-      assert(!graph_pc_knotIsDummyTerm(graph, head));
-   }
-
-   return TRUE;
-}
-
-
-/** deletes an edge and makes corresponding adaptations */
-static
-void removeEdge(
-   SCIP*                 scip,               /**< SCIP */
-   int                   edge,               /**< edge to delete */
-   GRAPH*                graph,              /**< graph data structure (in/out) */
-   DISTDATA*             distdata            /**< distance data (in/out) */
-)
-{
-   const int tail = graph->tail[edge];
-   const int head = graph->head[edge];
-
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("remove edge ");
-   graph_edge_printInfo(graph, edge);
-#endif
-
-   graph_edge_delFull(scip, graph, edge, TRUE);
-   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
-
-   if( graph->grad[tail] == 0 )
-   {
-      if( Is_term(graph->term[tail])  )
-      {
-         assert(graph_pc_isPcMw(graph) || tail == graph->source);
-      }
-      else
-      {
-         graph->mark[tail] = FALSE;
-      }
-   }
-
-   if( graph->grad[head] == 0 )
-   {
-      if( Is_term(graph->term[head]) || head == graph->source )
-      {
-         assert(graph_pc_isPcMw(graph));
-      }
-      else
-      {
-         graph->mark[head] = FALSE;
-      }
-   }
-}
-
-
-/** get maximum allow depth for extended tree in given graph */
-static
-int getMaxTreeDepth(
-   const GRAPH*          graph               /**< graph data structure */
-)
-{
-   const int maxdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
-
-   assert(maxdepth > 0);
-
-   return maxdepth;
-}
-
-
 /** returns current position in the stack */
 static inline
 int extStackGetPosition(
@@ -376,45 +153,6 @@ int extStackGetPosition(
 {
    assert(extdata->extstack_ncomponents > 0);
    return (extdata->extstack_ncomponents - 1);
-}
-
-
-/** prints the current stack */
-static
-void extStackPrint(
-   const GRAPH*          graph,              /**< graph data structure */
-   const EXTDATA*        extdata             /**< extension data */
-)
-{
-#ifdef SCIP_DEBUG
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extdata->extstack_ncomponents - 1;
-
-   for( int j = 0; j <= stackpos; j++ )
-   {
-      if( extdata->extstack_state[j] == EXT_STATE_NONE )
-         printf("pos=%d state=NONE \n", j);
-      else if( extdata->extstack_state[j] == EXT_STATE_EXPANDED )
-         printf("pos=%d state=EXPANDED \n", j);
-      else
-      {
-         assert(extdata->extstack_state[j] == EXT_STATE_MARKED);
-
-         printf("pos=%d state=MARKED \n", j);
-      }
-
-      /* check all leaves of current component */
-      for( int i = extstack_start[j]; i < extstack_start[j + 1]; i++ )
-      {
-         const int edge = extstack_data[i];
-         assert(edge >= 0 && edge < graph->edges);
-
-         printf("  ");
-         graph_edge_printInfo(graph, edge);
-      }
-   }
-#endif
 }
 
 
@@ -1221,7 +959,7 @@ void extTreeStackTopAdd(
 
    extdata->tree_depth++;
 
-   assert(!extTreeIsFlawed(scip, graph, extdata));
+   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
 }
 
 
@@ -1314,7 +1052,7 @@ void extTreeRecompRedCosts(
 
    extdata->tree_nDelUpArcs = 0;
 
-   assert(!extTreeIsFlawed(scip, graph, extdata));
+   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
 
    for( int i = 0; i < tree_nedges; i++ )
    {
@@ -1356,7 +1094,9 @@ void extTreeSyncWithStack(
    assert(scip && graph && extdata && nupdatestalls && conflict);
    assert(!(*conflict));
 
-   extStackPrint(graph, extdata);
+#ifdef SCIP_DEBUG
+   extreduce_printStack(graph, extdata);
+#endif
 
    /* is current component expanded? */
    if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
@@ -1369,18 +1109,10 @@ void extTreeSyncWithStack(
       *nupdatestalls = 0;
    }
 
-   /* assert that the entire tree is hashed */
 #ifndef NDEBUG
-   if( *conflict == FALSE )
+   if( !(*conflict) )
    {
-      const REDDATA* const reddata = extdata->reddata;
-
-      for( int i = 0; i < extdata->tree_nedges; i++ )
-      {
-         const int edge = extdata->tree_edges[i];
-         assert(graph_edge_nPseudoAncestors(graph, edge) == 0 ||
-            graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, edge, reddata->pseudoancestor_mark));
-      }
+      assert(extreduce_treeIsHashed(graph, extdata));
    }
 #endif
 }
@@ -1822,7 +1554,7 @@ void extBacktrack(
 
    extdata->extstack_ncomponents = stackpos + 1;
 
-   assert(!extTreeIsFlawed(scip, graph, extdata));
+   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
 }
 
 /** expands top component of stack (backtracks if stack is full) */
@@ -2255,7 +1987,7 @@ SCIP_RETCODE extreduce_checkArc(
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
             .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1,
             .pcSdToNode = extpermanent->pcSdToNode, .extstack_maxedges = maxstackedges,
-            .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = getMaxTreeDepth(graph),
+            .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          extCheckArc(scip, graph, edge, &extdata, edgeIsDeletable);
@@ -2417,7 +2149,7 @@ SCIP_RETCODE extreduce_deleteArcs(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
-      if( edgeIsValid(graph, e) )
+      if( extreduce_edgeIsValid(graph, e) )
       {
          const int erev = e + 1;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
@@ -2452,7 +2184,7 @@ SCIP_RETCODE extreduce_deleteArcs(
          {
             assert(edgedeletable[e] && edgedeletable[erev]);
 
-            removeEdge(scip, e, graph, &distdata);
+            extreduce_edgeRemove(scip, e, graph, &distdata);
 
             (*nelims)++;
          }
@@ -2507,7 +2239,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
-      if( edgeIsValid(graph, e) )
+      if( extreduce_edgeIsValid(graph, e) )
       {
          const int erev = e + 1;
          SCIP_Bool deletable = TRUE;
@@ -2522,7 +2254,7 @@ SCIP_RETCODE extreduce_deleteEdges(
 
          if( deletable )
          {
-            removeEdge(scip, e, graph, &distdata);
+            extreduce_edgeRemove(scip, e, graph, &distdata);
 
             (*nelims)++;
          }
