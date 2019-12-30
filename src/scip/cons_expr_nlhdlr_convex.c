@@ -850,8 +850,11 @@ SCIP_RETCODE collectLeafs(
             childidx = SCIPexpriteratorGetChildIdxDFS(it);
             SCIP_CALL( SCIPreplaceConsExprExprChild(scip, nlexpr, childidx, newchild) );  /* this captures newchild again */
 
-            SCIP_CALL( SCIPhashmapRemove(nlexpr2origexpr, (void*)child) );
-            SCIP_CALL( SCIPhashmapInsert(nlexpr2origexpr, (void*)newchild, (void*)origexpr) );
+            /* do not remove child->origexpr from hashmap, as child may appear again due to common subexprs (created by curvCheckProductComposite, for example)
+             * if it doesn't reappear, though, but the memory address is reused, we need to make sure it points to the right origexpr
+             */
+            /* SCIP_CALL( SCIPhashmapRemove(nlexpr2origexpr, (void*)child) ); */
+            SCIPhashmapSetImage(nlexpr2origexpr, (void*)newchild, (void*)origexpr);
 
             if( !SCIPhashmapExists(leaf2index, (void*)newchild) )
             {
