@@ -666,6 +666,33 @@ static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckS
 /** number of curvcheck methods */
 static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 
+/** checks whether expression is a sum with more than one child and each child being a variable */
+static
+SCIP_Bool exprIsMultivarLinear(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression to check */
+   )
+{
+   int nchildren;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return FALSE;
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+   if( nchildren <= 1 )
+      return FALSE;
+
+   for( c = 0; c < nchildren; ++c )
+      if( SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[c]) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+         return FALSE;
+
+   return TRUE;
+}
+
 /** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
  *
  * If the curvature cannot be achieved for an expression in the original expression graph,
@@ -716,15 +743,22 @@ SCIP_RETCODE constructExpr(
       {
          /* if bwdiff is not implemented, then we could not generate cuts in the convex nlhdlr, so "stop" (treat nlexpr as variable) */
       }
+      else if( !nlhdlrdata->isnlhdlrconvex && exprIsMultivarLinear(conshdlr, (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr)) )
+      {
+         /* if we are in the vertex-polyhedral handler, we would like to treat linear multivariate subexpressions by a new auxvar always,
+          * e.g., handle log(x+y) as log(z), z=x+y, because the estimation problem will be smaller then without making the estimator worse
+          * (cons_nonlinear does this, too)
+          * TODO this check isn't sufficient to also handle sums that become linear after we add auxvars for some children
+          */
+#ifdef SCIP_MORE_DEBUG
+         SCIPprintConsExprExpr(scip, conshdlr, SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr), NULL);
+         SCIPinfoMessage(scip, NULL, "... is a multivariate linear sum that we'll treat as auxvar\n");
+#endif
+      }
       else if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
       {
          SCIP_Bool success;
          int method;
-
-         /* TODO if we are in the vertex-polyhedral handler, we would like to treat linear multivariate subexpressions by a new auxvar,
-          * e.g., handle log(x+y) as log(z), z=x+y, because the estimation problem will be smaller then without making the estimator worse
-          * (cons_nonlinear does this, too)
-          */
 
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
