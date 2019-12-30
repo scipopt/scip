@@ -57,44 +57,49 @@ enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
 static
 int getWorkLimits_pc(
    const GRAPH* g,
-   int round,
+   int roundnumber,
    enum PC_REDTYPE redtype
 )
 {
    const int nedges = g->edges;
+   const int sqrtnedges = (int) sqrt(nedges);
    int limit = 0;
 
-   assert(round >= 0);
+   assert(roundnumber >= 0);
+   assert(nedges >= 0);
+   assert(sqrtnedges >= 0 && sqrtnedges <= nedges);
 
    switch (redtype)
    {
    case pc_sdc:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
+      limit = (roundnumber > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
       break;
    case pc_sdstar:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND;
+      limit = (roundnumber > 0) ? STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND;
       break;
    case pc_sdw1:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
+      limit = (roundnumber > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
       break;
    case pc_sdw2:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : 0;
+      limit = (roundnumber > 0) ? STP_RED_SDSPBOUND2 : 0;
       break;
    case pc_bd3:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND / 2;
+      limit = (roundnumber > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND / 2;
       break;
    default:
       assert(0);
-      limit = 0;
+
    }
 
-   if( nedges >= STP_RED_EDGELIMIT && round == 0 )
-      limit = (int) MAX(limit, limit * sqrt(nedges) / 5000.0);
+   if( nedges >= STP_RED_EDGELIMIT && roundnumber == 0 )
+      limit = (int) MAX(limit, limit * sqrtnedges / 5000.0);
    else
-      limit = (int) MAX(limit, limit * sqrt(nedges) / 150.0);
+      limit = (int) MAX(limit, limit * sqrtnedges / 150.0);
 
  //  printf("limit %d \n", limit);
  //  printf("avg degree %f \n", graph_get_avgDeg(g));
+
+   assert(limit >= 0);
 
    return limit;
 }
@@ -116,7 +121,6 @@ void reduceStatsPrint(
 #endif
 
 }
-
 
 
 /** iterate NV and SL test while at least minelims many contractions are being performed */
@@ -490,7 +494,7 @@ SCIP_RETCODE level0RpcRmwInfeas(
             assert(g->term2edge[k] >= 0);
             assert(!gmark[graph_pc_getTwinTerm(g, k)]);
 
-            graph_pc_deleteTerm(scip, g, k, offsetp);
+            (void) graph_pc_deleteTerm(scip, g, k, offsetp);
          }
       }
    }
@@ -773,7 +777,6 @@ SCIP_RETCODE reduceMw(
    SCIP_Real* edgearrreal2;
    int* state;
    int* vbase;
-   int* edgearrint;
    int* nodearrint;
    int* nodearrint2;
    int* nodearrint3;
@@ -806,12 +809,10 @@ SCIP_RETCODE reduceMw(
       {
          SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
       }
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, extnedges) );
    }
    else
    {
       extnedges = nedges;
-      edgearrint = NULL;
       gnodearr = NULL;
    }
 
@@ -839,7 +840,7 @@ SCIP_RETCODE reduceMw(
 
    /* reduction loop */
    SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, state,
-         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
+         vbase, nodearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal2);
@@ -853,7 +854,6 @@ SCIP_RETCODE reduceMw(
    SCIPfreeBufferArray(scip, &nodearrint3);
    SCIPfreeBufferArray(scip, &nodearrint2);
    SCIPfreeBufferArray(scip, &nodearrint);
-   SCIPfreeBufferArrayNull(scip, &edgearrint);
 
    if( gnodearr != NULL )
    {
@@ -1195,7 +1195,6 @@ SCIP_RETCODE redLoopMw(
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< voronoi base array  */
    int*                  nodearrint,         /**< nodes-sized array  */
-   int*                  edgearrint,         /**< edges-sized array  */
    int*                  nodearrint2,        /**< nodes-sized array  */
    int*                  nodearrint3,        /**< nodes-sized array  */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
@@ -1481,13 +1480,12 @@ SCIP_RETCODE redLoopPc(
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
-   graph_heap_create(scip, g->knots, NULL, NULL, &dheap);
+   SCIP_CALL( graph_heap_create(scip, g->knots, NULL, NULL, &dheap) );
 
    graph_pc_2org(scip, g);
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    SCIP_CALL( graph_pc_presolInit(scip, g) );
-
 
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", ntotalelims);

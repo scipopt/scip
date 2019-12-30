@@ -737,7 +737,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
             {
                SCIPdebugMessage("term2edge consistency fail0 %d \n", i);
                graph_knot_printInfo(g, i);
-               printf("isNonLeaf=%d isNonLeaf_evaluate=%d \n", isNonLeaf, isNonLeaf_evaluate);
+               printf("isNonLeaf=%ud isNonLeaf_evaluate=%ud \n", isNonLeaf, isNonLeaf_evaluate);
 
                return FALSE;
             }
@@ -1002,6 +1002,31 @@ void graph_pc_termToNonLeafTerm(
       termDeleteExtension(scip, g, term, FALSE);
       g->term2edge[term] = TERM2EDGE_NONLEAFTERM;
    }
+}
+
+
+/** is the edge part of the extended graph? */
+SCIP_Bool graph_pc_edgeIsExtended(
+   const GRAPH*          g,                  /**< the graph */
+   int                   edge                /**< edge to be checked */
+   )
+{
+   const int tail = g->tail[edge];
+   const int head = g->head[edge];
+
+   assert(graph_pc_isPcMw(g));
+   assert(edge >= 0 && edge < g->edges);
+
+   if( graph_pc_knotIsDummyTerm(g, tail) || graph_pc_knotIsDummyTerm(g, head) )
+   {
+      assert(EQ(g->cost[edge], FARAWAY) || EQ(g->cost[flipedge(edge)], FARAWAY));
+
+      return TRUE;
+   }
+
+   assert(LT(g->cost[edge], FARAWAY) || LT(g->cost[flipedge(edge)], FARAWAY));
+
+   return FALSE;
 }
 
 
@@ -1912,7 +1937,6 @@ SCIP_RETCODE graph_pc_getRsap(
 
 /** adapts SAP deriving from PCST or MWCS problem with new big M */
 void graph_pc_adaptSap(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bigM,               /**< new big M value */
    GRAPH*                graph,              /**< the SAP graph */
    SCIP_Real*            offset              /**< the offset */
@@ -1922,7 +1946,7 @@ void graph_pc_adaptSap(
    const int root = graph->source;
 
    assert(bigM > 0.0);
-   assert(scip != NULL && graph != NULL && offset != NULL);
+   assert(graph != NULL && offset != NULL);
    assert(graph->outbeg[root] >= 0);
 
    oldbigM = graph->cost[graph->outbeg[root]];
@@ -1934,7 +1958,7 @@ void graph_pc_adaptSap(
 
    for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
    {
-      assert(graph->cost[e] == oldbigM);
+      assert(EQ(graph->cost[e], oldbigM));
       graph->cost[e] = bigM;
    }
 }

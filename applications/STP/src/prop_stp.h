@@ -68,8 +68,8 @@ EXTERN
 void SCIPStpGetRedcosts(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nedges,             /**< nedges */
-   SCIP_Real*            cost                /**< reduced costs */
+   const GRAPH*          graph,              /**< graph data */
+   SCIP_Real*            redcosts            /**< reduced costs */
    );
 
 /** gets propagator graph  */

@@ -26,8 +26,16 @@
 #ifndef APPLICATIONS_STP_SRC_EXTREDUCE_H_
 #define APPLICATIONS_STP_SRC_EXTREDUCE_H_
 
-#define EXT_CLOSENODES_MAXN 64
+#define STP_EXT_CLOSENODES_MAXN 64
+#define STP_EXT_MAXDFSDEPTH 6
+#define STP_EXT_MINDFSDEPTH 4
+#define STP_EXT_MAXGRAD 8
+#define STP_EXT_MAXEDGES 500
+#define STP_EXT_EDGELIMIT 50000
+#define STP_EXTTREE_MAXNEDGES 25
 #define STP_EXTTREE_MAXNLEAVES 20
+#define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
+
 
 #include "scip/scip.h"
 #include "graph.h"
@@ -76,9 +84,61 @@ typedef struct distance_data
 } DISTDATA;
 
 
+/** reduction data; just used internally */
+typedef struct reduction_data
+{
+   CMST* const cmst;
+   CGRAPH* const cgraph;
+   int* const cgraphEdgebuffer;
+   const SCIP_Real* const redCosts;
+   const SCIP_Real* const rootToNodeDist;
+   const PATH* const nodeTo3TermsPaths;
+   const int* const nodeTo3TermsBases;
+   const STP_Bool* const edgedeleted;
+   int* const pseudoancestor_mark;
+   const SCIP_Real cutoff;
+   const SCIP_Bool equality;
+   const int redCostRoot;
+} REDDATA;
+
+
+/** extension data; just used internally */
+typedef struct extension_data
+{
+   int* const extstack_data;
+   int* const extstack_start;
+   int* const extstack_state;
+   int* const tree_leaves;
+   int* const tree_edges;
+   int* const tree_deg;                      /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for current tail,
+                                                   0 otherwise; in method: position ( > 0) for nodes in tree */
+   SCIP_Real* const tree_bottleneckDistNode; /**< needs to be set to -1.0 (for all nodes) */
+   int* const tree_parentNode;
+   SCIP_Real* const tree_parentEdgeCost;     /**< of size nnodes */
+   SCIP_Real* const tree_redcostSwap;        /**< of size nnodes */
+   SCIP_Real* const pcSdToNode;                /**< needs to be set to -1.0, only needed of PC */
+   const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
+   REDDATA* const reddata;
+   DISTDATA* const distdata;
+   SCIP_Real tree_redcost;
+   int tree_nDelUpArcs;
+   int tree_root;
+   int tree_nedges;
+   int tree_depth;
+   int tree_nleaves;
+   int extstack_ncomponents;
+   const int extstack_maxsize;
+   const int extstack_maxedges;
+   const int tree_maxnleaves;
+   const int tree_maxdepth;
+   const int tree_maxnedges;
+} EXTDATA;
+
+
 /* extreduce_base.c
  */
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
@@ -92,8 +152,10 @@ extern void            extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DI
 extern SCIP_RETCODE    extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
 extern SCIP_Bool       extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void            extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
-
-
+extern void            extreduce_extdataClean(EXTDATA*);
+extern SCIP_Bool       extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
+extern void            extreduce_reddataClean(REDDATA*);
+extern SCIP_Bool       extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

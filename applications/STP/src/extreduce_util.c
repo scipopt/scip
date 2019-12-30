@@ -854,13 +854,13 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bottleneckDistNode, nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(extperm->cgraphEdgebuffer), STP_EXTTREE_MAXNLEAVES) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(extperm->cgraphEdgebuffer), STP_EXTTREE_MAXNLEAVES_GUARD) );
 
    if( pcmw )
       SCIP_CALL( SCIPallocMemoryArray(scip, &pcSdToNode, nnodes) );
 
-   SCIP_CALL( cgraph_init(scip, &(extperm->cgraph), STP_EXTTREE_MAXNLEAVES) );
-   SCIP_CALL( cmst_init(scip, &(extperm->cmst), STP_EXTTREE_MAXNLEAVES) );
+   SCIP_CALL( cgraph_init(scip, &(extperm->cgraph), STP_EXTTREE_MAXNLEAVES_GUARD) );
+   SCIP_CALL( cmst_init(scip, &(extperm->cmst), STP_EXTTREE_MAXNLEAVES_GUARD) );
 
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;
@@ -958,4 +958,120 @@ void extreduce_extPermaFreeMembers(
    SCIPfreeMemoryArray(scip, &(extperm->isterm));
 
    extperm->nnodes = -1;
+}
+
+
+/** cleans extension data */
+void extreduce_extdataClean(
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   assert(extdata);
+
+   extdata->extstack_ncomponents = 0;
+   extdata->tree_nDelUpArcs = 0;
+   extdata->tree_nleaves = 0;
+   extdata->tree_nedges = 0;
+   extdata->tree_depth = 0;
+   extdata->tree_root = -1;
+   extdata->tree_redcost = 0.0;
+}
+
+
+/** cleans reduction data */
+void extreduce_reddataClean(
+   REDDATA*              reddata             /**< reduction data */
+)
+{
+   assert(reddata);
+
+   cgraph_clean(reddata->cgraph);
+}
+
+
+/** is the extension data clean? */
+SCIP_Bool extreduce_extdataIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   if( extdata->extstack_ncomponents != 0 )
+   {
+      printf("extdata->extstack_ncomponents %d \n", extdata->extstack_ncomponents);
+      return FALSE;
+   }
+
+   if( extdata->tree_nDelUpArcs != 0 )
+   {
+      printf("extdata->tree_nDelUpArcs %d \n", extdata->tree_nDelUpArcs);
+      return FALSE;
+   }
+
+   if( !EQ(extdata->tree_redcost, 0.0) )
+   {
+      printf("extdata->tree_redcost %f \n", extdata->tree_redcost);
+      return FALSE;
+   }
+
+   if( extdata->tree_nleaves != 0 )
+   {
+      printf("extdata->tree_nleaves %d \n", extdata->tree_nleaves);
+      return FALSE;
+   }
+
+   if( extdata->tree_root != -1 )
+   {
+      printf("extdata->tree_root %d \n", extdata->tree_root);
+      return FALSE;
+   }
+
+   if( extdata->tree_nedges != 0 )
+   {
+      printf("extdata->tree_nedges %d \n", extdata->tree_nedges);
+      return FALSE;
+   }
+
+   if( extdata->tree_depth != 0 )
+   {
+      printf("extdata->tree_depth %d \n", extdata->tree_depth);
+      return FALSE;
+   }
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      if( !(extdata->tree_deg[i] == 0 || extdata->tree_deg[i] == -1) )
+      {
+         printf("extdata->tree_deg[i] %d \n", extdata->tree_deg[i]);
+         return FALSE;
+      }
+
+      if( extdata->tree_bottleneckDistNode[i] != -1.0 )
+      {
+         printf("extdata->bottleneckDistNode[i] %f \n", extdata->tree_bottleneckDistNode[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
+/** is the reduction data clean? */
+SCIP_Bool extreduce_reddataIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDDATA*        reddata             /**< reduction data */
+)
+{
+   assert(graph && reddata);
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      if( reddata->pseudoancestor_mark[i] != 0 )
+      {
+         printf("pseudoancestor_mark %d \n", reddata->pseudoancestor_mark[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
 }

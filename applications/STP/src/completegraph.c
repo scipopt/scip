@@ -98,7 +98,6 @@ SCIP_Bool cgraph_valid(
    const CGRAPH*         cgraph              /**< the graph */
 )
 {
-   int start;
    const int nnodes_curr = getNnodesCurr(cgraph);
    const int nnodes_max = getNnodesMax(cgraph);
    const SCIP_Real* const edgecosts = cgraph->edgecosts;
@@ -127,17 +126,6 @@ SCIP_Bool cgraph_valid(
       }
    }
 
-   start = nnodes_curr > 0 ? getEdgeEnd(nnodes_curr - 1, nnodes_curr, nnodes_max) : 0;
-
-   for( int i = start; i < nnodes_max * nnodes_max; i++ )
-   {
-      if( !EQ(CGRAPH_EDGECOST_UNDEFINED_VALUE, edgecosts[i]) )
-      {
-         SCIPdebugMessage("unused edge value is wrong: %f \n", edgecosts[i]);
-         return FALSE;
-      }
-   }
-
    for( int i = 0; i < nnodes_curr; i++ )
    {
       if( NODE_ID_UNDEFINED == nodeids[i] )
@@ -147,14 +135,6 @@ SCIP_Bool cgraph_valid(
       }
    }
 
-   for( int i = nnodes_curr; i < nnodes_max; i++ )
-   {
-      if( NODE_ID_UNDEFINED != nodeids[i] )
-      {
-         SCIPdebugMessage("node %d is not set to NODE_ID_UNDEFINED \n", i);
-         return FALSE;
-      }
-   }
 
    /* check if the edge costs are symmetric */
    for( int i = 0; i < nnodes_curr; i++ )
@@ -176,6 +156,29 @@ SCIP_Bool cgraph_valid(
          }
       }
    }
+
+#ifndef NDEBUG
+   {
+      const int start = nnodes_curr > 0 ? getEdgeEnd(nnodes_curr - 1, nnodes_curr, nnodes_max) : 0;
+
+      for( int i = start; i < nnodes_max * nnodes_max; i++ )
+      {
+         if( !EQ(CGRAPH_EDGECOST_UNDEFINED_VALUE, edgecosts[i]) )
+         {
+            SCIPdebugMessage("unused edge value is wrong: %f \n", edgecosts[i]);
+            return FALSE;
+         }
+      }
+      for( int i = nnodes_curr; i < nnodes_max; i++ )
+      {
+         if( NODE_ID_UNDEFINED != nodeids[i] )
+         {
+            SCIPdebugMessage("node %d is not set to NODE_ID_UNDEFINED \n", i);
+            return FALSE;
+         }
+      }
+   }
+#endif
 
    return TRUE;
 }
