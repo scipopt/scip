@@ -69,6 +69,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_Bool             isnlhdlrconvex;     /**< whether this data is used for the convex nlhdlr (TRUE) or the vertex-polyhedral one (FALSE) */
+   SCIP_SOL*             vpevalsol;          /**< solution used when evaluating vertex-polyhedral function in facet computation */
 
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
@@ -79,6 +80,15 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             cvxprodcomp;        /**< whether to use convexity check on product composition f(h)*h */
    SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
 };
+
+/** data struct to be be passed on to vertexpoly-evalfunction (see SCIPcomputeFacetVertexPolyhedral) */
+typedef struct
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
+   SCIP_SOL*                     vpevalsol;
+   SCIP*                         scip;
+   SCIP_CONSHDLR*                conshdlr;
+} VERTEXPOLYFUN_EVALDATA;
 
 /** stack used in constructExpr to store expressions that need to be investigated ("to do list") */
 typedef struct
@@ -186,6 +196,26 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) == SCIPgetConsExprExprNChildren(origexpr));
 
    return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalVP)
+{
+   VERTEXPOLYFUN_EVALDATA* evaldata = (VERTEXPOLYFUN_EVALDATA*)funcdata;
+   int i;
+
+   assert(args != NULL);
+   assert(nargs == evaldata->nlhdlrexprdata->nleafs);
+   assert(evaldata != NULL);
+
+   for( i = 0; i < nargs; ++i )
+   {
+      SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->vpevalsol, SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
+   }
+
+   SCIP_CALL_ABORT( SCIPevalConsExprExpr(evaldata->scip, evaldata->conshdlr, evaldata->nlhdlrexprdata->nlexpr, evaldata->vpevalsol, 0) );
+
+   return SCIPgetConsExprExprValue(evaldata->nlhdlrexprdata->nlexpr);
 }
 
 static
@@ -994,6 +1024,11 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexVP)
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
 
+   if( (*nlhdlrdata)->vpevalsol != NULL )
+   {
+      SCIPfreeSol(scip, &(*nlhdlrdata)->vpevalsol);
+   }
+
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
@@ -1238,6 +1273,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = TRUE;
+   nlhdlrdata->vpevalsol = NULL;
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC, CONVEX_NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexVP, nlhdlrdata) );
    assert(nlhdlr != NULL);
@@ -1355,6 +1391,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectVertexPolyhedral)
       }
    }
 
+   /* TODO reject if too many (>14) leafs */
+
    assert(*success || nlexpr == NULL);
    if( !*success )
    {
@@ -1372,8 +1410,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectVertexPolyhedral)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateVertexPolyhedral)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
+   VERTEXPOLYFUN_EVALDATA evaldata;
+   SCIP_Real* xstar;
+   SCIP_Real* box;
+   SCIP_Real facetconstant;
+   SCIP_VAR* var;
+   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1395,7 +1440,98 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateVertexPolyhedral)
        (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
       return SCIP_OKAY;
 
-   /* TODO */
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( nlhdlrdata->vpevalsol == NULL )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->vpevalsol, NULL) );
+   }
+
+   evaldata.nlhdlrexprdata = nlhdlrexprdata;
+   evaldata.vpevalsol = nlhdlrdata->vpevalsol;
+   evaldata.scip = scip;
+   evaldata.conshdlr = conshdlr;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nlhdlrexprdata->nleafs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nlhdlrexprdata->nleafs) );
+
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      box[2*i] = SCIPvarGetLbLocal(var);
+      if( SCIPisInfinity(scip, -box[2*i]) )
+      {
+         SCIPdebugMsg(scip, "lower bound at -infinity, no estimate possible\n");
+         goto TERMINATE;
+      }
+
+      box[2*i+1] = SCIPvarGetUbLocal(var);
+      if( SCIPisInfinity(scip, box[2*i+1]) )
+      {
+         SCIPdebugMsg(scip, "upper bound at +infinity, no estimate possible\n");
+         goto TERMINATE;
+      }
+
+      xstar[i] = SCIPgetSolVal(scip, sol, var);
+      assert(xstar[i] != SCIP_INVALID);
+   }
+
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nleafs) );
+
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, nlhdlrExprEvalVP, (void*)&evaldata,
+      xstar, box, nlhdlrexprdata->nleafs, targetvalue, success, rowprep->coefs, &facetconstant) );
+
+   if( !*success )
+      goto TERMINATE;
+
+   rowprep->local = TRUE;
+   rowprep->side = -facetconstant;
+   rowprep->nvars = nlhdlrexprdata->nleafs;
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+      rowprep->vars[i] = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+
+ TERMINATE:
+   if( addbranchscores )
+   {
+      SCIP_Real violation;
+
+      /* check how much is the violation on the side that we estimate */
+      if( auxvalue == SCIP_INVALID ) /*lint !e777*/
+      {
+         /* if cannot evaluate, then always branch */
+         violation = SCIPinfinity(scip);
+      }
+      else
+      {
+         SCIP_Real auxval;
+
+         /* get value of auxiliary variable of this expression */
+         assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+         auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+         /* compute the violation
+          * if we underestimate, then we enforce expr <= auxval, so violation is (positive part of) auxvalue - auxval
+          * if we overestimate,  then we enforce expr >= auxval, so violation is (positive part of) auxval - auxvalue
+          */
+         if( !overestimate )
+            violation = MAX(0.0, auxvalue - auxval);
+         else
+            violation = MAX(0.0, auxval - auxvalue);
+      }
+      assert(violation >= 0.0);
+
+      /* TODO should/could do something more elaborate as in cons_expr_product */
+      for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+         SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[i]), REALABS(violation));
+
+      *addedbranchscores = TRUE;
+   }
+
+   SCIPfreeBufferArrayNull(scip, &box);
+   SCIPfreeBufferArrayNull(scip, &xstar);
 
    return SCIP_OKAY;
 }
@@ -1427,6 +1563,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrVertexPolyhedral(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = FALSE;
+   nlhdlrdata->vpevalsol = NULL;
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, VP_NLHDLR_NAME, VP_NLHDLR_DESC, VP_NLHDLR_PRIORITY, nlhdlrDetectVertexPolyhedral, nlhdlrEvalAuxConvexVP, nlhdlrdata) );
    assert(nlhdlr != NULL);
