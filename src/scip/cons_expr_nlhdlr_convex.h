@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_convex.h
- * @brief  nonlinear handler for convex expressions
+ * @brief  nonlinear handlers for convex and vertex-polyhedral expressions, respectively
  * @author Benjamin Mueller
  */
 
@@ -32,6 +32,13 @@ extern "C" {
 /** includes convex nonlinear handler to consexpr */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+   );
+
+/** includes vertex-polyhedral nonlinear handler to consexpr */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeConsExprNlhdlrVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );

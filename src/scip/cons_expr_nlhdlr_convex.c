@@ -14,14 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_convex.c
- * @brief  nonlinear handler for convex expressions
+ * @brief  nonlinear handlers for convex and vertex-polyhedral expressions
  * @author Benjamin Mueller
  * @author Stefan Vigerske
  *
  * TODO curvature information that have been computed during the detection
  *      of other nonlinear handler can not be used right now
- * TODO perturb reference point if separation fails due to too large numbers
- * TODO if univariate integer, then do secant on 2 nearest integers instead of tangent
+ * TODO convex: perturb reference point if separation fails due to too large numbers
+ * TODO convex: if univariate integer, then do secant on 2 nearest integers instead of tangent
+ * TODO vertex-polyhedral: look for more than concave subexpressions, e.g., edge-concave, multilinear
  */
 
 #include <string.h>
@@ -36,15 +37,19 @@
 #include "scip/cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "convex"
-#define NLHDLR_DESC         "convex handler for expressions"
-#define NLHDLR_PRIORITY     50
+#define CONVEX_NLHDLR_NAME     "convex"
+#define CONVEX_NLHDLR_DESC     "handler that identifies and estimates convex expressions"
+#define CONVEX_NLHDLR_PRIORITY 50
 
-#define DEFAULT_DETECTSUM   FALSE
+#define VP_NLHDLR_NAME         "vertex-polyhedral"
+#define VP_NLHDLR_DESC         "handler that identifies and estimates vertex-polyhedral expressions (in particular concave ones)"
+#define VP_NLHDLR_PRIORITY     40
+
+#define DEFAULT_DETECTSUM      FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
-#define DEFAULT_CVXSIGNOMIAL TRUE
-#define DEFAULT_CVXPRODCOMP TRUE
-#define DEFAULT_HANDLETRIVIAL FALSE
+#define DEFAULT_CVXSIGNOMIAL   TRUE
+#define DEFAULT_CVXPRODCOMP    TRUE
+#define DEFAULT_HANDLETRIVIAL  FALSE
 
 /*
  * Data structures
@@ -63,6 +68,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
+   SCIP_Bool             isnlhdlrconvex;     /**< whether this data is used for the convex nlhdlr (TRUE) or the vertex-polyhedral one (FALSE) */
+
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
    SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
@@ -705,14 +712,20 @@ SCIP_RETCODE constructExpr(
       assert(SCIPgetConsExprExprNChildren(nlexpr) == 0);
 
       oldstackpos = stack.stackpos;
-      if( !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )
+      if( nlhdlrdata->isnlhdlrconvex && !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )
       {
-         /* if bwdiff is not implemented, then we could not generate cuts, so "stop" (treat nlexpr as variable) */
+         /* if bwdiff is not implemented, then we could not generate cuts in the convex nlhdlr, so "stop" (treat nlexpr as variable) */
       }
       else if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
       {
          SCIP_Bool success;
          int method;
+
+         /* TODO if we are in the vertex-polyhedral handler, we would like to treat linear multivariate subexpressions by a new auxvar,
+          * e.g., handle log(x+y) as log(z), z=x+y, because the estimation problem will be smaller then without making the estimator worse
+          * (cons_nonlinear does this, too)
+          */
+
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
          {
@@ -938,7 +951,7 @@ SCIP_RETCODE createNlhdlrExprData(
  */
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvex)
+SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexVP)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
@@ -951,7 +964,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvex)
 
 /** callback to free expression specific data */
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
+SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvexVP)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
@@ -966,7 +979,6 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
    return SCIP_OKAY;
 }
 
-/** the detection assumes that the curvature information of the expression has been computed already */
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
@@ -992,6 +1004,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
+   assert(nlhdlrdata->isnlhdlrconvex);
 
    /* ignore sums if > 1 children
     * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
@@ -1060,7 +1073,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
 /** auxiliary evaluation callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvexVP)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->nlexpr != NULL);
@@ -1102,7 +1115,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
-   assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with the one stored in nlexpr */  /*lint !e777*/
+   assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexVP) should coincide with the one stored in nlexpr */  /*lint !e777*/
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(auxvalue)) )
    {
@@ -1167,7 +1180,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
    assert(targetscip != NULL);
    assert(targetconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), CONVEX_NLHDLR_NAME) == 0);
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(targetscip, targetconsexprhdlr) );
 
@@ -1187,34 +1200,226 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    assert(consexprhdlr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+   nlhdlrdata->isnlhdlrconvex = TRUE;
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC, CONVEX_NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexVP, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/detectsum",
       "whether to run convexity detection when the root of an expression is a sum",
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/preferextended",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/preferextended",
       "whether to prefer extended formulations",
       &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
       &nlhdlrdata->cvxsignomial, TRUE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxprodcomp",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxprodcomp",
       "whether to use convexity check on product composition f(h)*h",
       &nlhdlrdata->cvxprodcomp, TRUE, DEFAULT_CVXPRODCOMP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/handletrivial",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/handletrivial",
       "whether to also handle trivial convex expressions",
       &nlhdlrdata->handletrivial, TRUE, DEFAULT_HANDLETRIVIAL, NULL, NULL) );
 
-   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
+   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvexVP);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
-   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
+   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexVP);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+
+
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectVertexPolyhedral)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONSEXPR_EXPR* nlexpr = NULL;
+   SCIP_HASHMAP* nlexpr2origexpr;
+   int nleafs = 0;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   *success = FALSE;
+
+   /* we currently cannot contribute in presolve */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+   assert(!nlhdlrdata->isnlhdlrconvex);
+
+   /* ignore sums if > 1 children for now
+    * - for f(x) + g(y), i.e., distinct variables, it's better to handle f(x) and g(y) separately, as this keeps the estimation problem smaller and doesn't make the estimators worse
+    * - for f(x) + g(x), i.e., same variables, it could actually be better to handle them jointly, because we might get tighter estimators (?)
+    * - but we have no simple check which situation we are in (could well be something in between), so I'm going for the first way by default for now
+    */
+   if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
+      return SCIP_OKAY;
+
+   /* ignore pure constants and variables */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+      return SCIP_OKAY;
+
+   /* initialize mapping from copied expression to original one
+    * 20 is not a bad estimate for the size of concave subexpressions that we can usually discover
+    * when expressions will be allowed to store "user"data, we could get rid of this hashmap (TODO)
+    */
+   SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
+
+   if( !*enforcedbelow )
+   {
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONCAVE) );
+      if( nlexpr != NULL )
+      {
+         assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
+
+         *enforcedbelow = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr <= auxvar\n", (void*)expr);
+      }
+      else
+      {
+         SCIP_CALL( SCIPhashmapRemoveAll(nlexpr2origexpr) );
+      }
+   }
+
+   if( !*enforcedabove && nlexpr == NULL )
+   {
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONVEX) );
+      if( nlexpr != NULL )
+      {
+         assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
+
+         *enforcedabove = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr >= auxvar\n", (void*)expr);
+      }
+   }
+
+   assert(*success || nlexpr == NULL);
+   if( !*success )
+   {
+      SCIPhashmapFree(&nlexpr2origexpr);
+      return SCIP_OKAY;
+   }
+
+   /* store variable expressions into the expression data of the nonlinear handler */
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs) );
+
+   return SCIP_OKAY;
+}
+
+/** estimator callback */
+static
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateVertexPolyhedral)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_EXPRCURV curvature;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *addedbranchscores = FALSE;
+
+   /* if estimating on non-concave side, then do nothing */
+   curvature = SCIPgetConsExprExprCurvature(nlexpr);
+   assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
+   if( ( overestimate && curvature == SCIP_EXPRCURV_CONCAVE) ||
+       (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
+      return SCIP_OKAY;
+
+   /* TODO */
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrVertexPolyhedral)
+{ /*lint --e{715}*/
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), VP_NLHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrVertexPolyhedral(targetscip, targetconsexprhdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** includes vertex-polyhedral nonlinear handler to consexpr */
+SCIP_RETCODE SCIPincludeConsExprNlhdlrVertexPolyhedral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+   )
+{
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+   nlhdlrdata->isnlhdlrconvex = FALSE;
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, VP_NLHDLR_NAME, VP_NLHDLR_DESC, VP_NLHDLR_PRIORITY, nlhdlrDetectVertexPolyhedral, nlhdlrEvalAuxConvexVP, nlhdlrdata) );
+   assert(nlhdlr != NULL);
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" VP_NLHDLR_NAME "/detectsum",
+      "whether to run convexity detection when the root of an expression is a sum",
+      &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
+
+   /*SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" VP_NLHDLR_NAME "/preferextended",
+      "whether to prefer extended formulations",
+      &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );*/
+   /* "extended" formulations of a concave expressions can give worse estimators */
+   nlhdlrdata->preferextended = FALSE;
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" VP_NLHDLR_NAME "/cvxsignomial",
+      "whether to use convexity check on signomials",
+      &nlhdlrdata->cvxsignomial, TRUE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" VP_NLHDLR_NAME "/cvxprodcomp",
+      "whether to use convexity check on product composition f(h)*h",
+      &nlhdlrdata->cvxprodcomp, TRUE, DEFAULT_CVXPRODCOMP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" VP_NLHDLR_NAME "/handletrivial",
+      "whether to also handle trivial convex expressions",
+      &nlhdlrdata->handletrivial, TRUE, DEFAULT_HANDLETRIVIAL, NULL, NULL) );
+
+   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvexVP);
+   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrVertexPolyhedral);
+   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexVP);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateVertexPolyhedral, NULL);
 
    return SCIP_OKAY;
 }
