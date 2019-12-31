@@ -14673,7 +14673,10 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
 
       /* check whether target has been missed */
       if( *success && overestimate == (*facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]] > targetvalue) )
+      {
+         SCIPdebugMsg(scip, "computed secant, but missed target %g (facetvalue=%g, overestimate=%d)\n", targetvalue, *facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]], overestimate);
          *success = FALSE;
+      }
    }
    else if( nvars == 2 )
    {

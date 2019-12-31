@@ -207,8 +207,14 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
    assert(nargs == evaldata->nlhdlrexprdata->nleafs);
    assert(evaldata != NULL);
 
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMsg(evaldata->scip, "eval vertexpolyfun at\n");
+#endif
    for( i = 0; i < nargs; ++i )
    {
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebugMsg(evaldata->scip, "  <%s> = %g\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i])), args[i]);
+#endif
       SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->vpevalsol, SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
    }
 
@@ -1450,6 +1456,19 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
        (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
       return SCIP_OKAY;
 
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "%sestimate concave expression ", overestimate ? "over" : "under");
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " at point\n");
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      SCIPinfoMessage(scip, NULL, "  <%s> = %g [%g,%g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+   }
+#endif
+
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
@@ -1495,13 +1514,21 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       xstar, box, nlhdlrexprdata->nleafs, targetvalue, success, rowprep->coefs, &facetconstant) );
 
    if( !*success )
+   {
+      SCIPdebugMsg(scip, "failed to compute facet of convex hull\n");
       goto TERMINATE;
+   }
 
    rowprep->local = TRUE;
    rowprep->side = -facetconstant;
    rowprep->nvars = nlhdlrexprdata->nleafs;
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
       rowprep->vars[i] = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "computed estimator: ");
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
 
  TERMINATE:
    if( addbranchscores )
