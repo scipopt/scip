@@ -1006,7 +1006,7 @@ SCIP_RETCODE createNlhdlrExprData(
 
 #ifdef SCIP_DEBUG
    SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
-   SCIPinfoMessage(scip, NULL, " is handled as %s\n", SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(nlexpr)));
+   SCIPinfoMessage(scip, NULL, " (%p) is handled as %s\n", SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr), SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(nlexpr)));
 #endif
 
    return SCIP_OKAY;
@@ -1022,11 +1022,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexConcave)
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
-
-   if( (*nlhdlrdata)->vpevalsol != NULL )
-   {
-      SCIPfreeSol(scip, &(*nlhdlrdata)->vpevalsol);
-   }
+   assert((*nlhdlrdata)->vpevalsol == NULL);
 
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
@@ -1310,6 +1306,21 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
 
 
+static
+SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitConcave)
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( nlhdlrdata->vpevalsol != NULL )
+   {
+      SCIPfreeSol(scip, &nlhdlrdata->vpevalsol);
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
@@ -1593,6 +1604,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConcave);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexConcave);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConcave, NULL);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitConcave);
 
    return SCIP_OKAY;
 }
