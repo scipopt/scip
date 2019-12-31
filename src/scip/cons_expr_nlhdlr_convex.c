@@ -1376,6 +1376,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONCAVE) );
+
+      if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
+      {
+         SCIPdebugMsg(scip, "Too many variables (%d) in constructed expression. Will not be able to estimate. Rejecting.\n", nleafs);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexpr) );
+      }
+
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1395,6 +1402,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONVEX) );
+
+      if( nlexpr != NULL && nleafs > 14 )
+      {
+         SCIPdebugMsg(scip, "Too many variables (%d) in constructed expression. Will not be able to estimate. Rejecting.\n", nleafs);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexpr) );
+      }
+
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1406,8 +1420,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
          SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr >= auxvar\n", (void*)expr);
       }
    }
-
-   /* TODO reject if too many (>14) leafs */
 
    assert(*success || nlexpr == NULL);
    if( !*success )
