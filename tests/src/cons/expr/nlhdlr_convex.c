@@ -160,7 +160,7 @@ SCIP_RETCODE detect(
    if( success )
    {
       cr_assert_not_null(nlhdlrexprdata);
-      SCIP_CALL( nlhdlrfreeExprDataConvexVP(scip, nlhdlr, expr, &nlhdlrexprdata) );
+      SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

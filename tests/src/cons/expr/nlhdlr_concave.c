@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlhdlr_vp.c
- * @brief  tests vertex-polyhedral nonlinear handler
+/**@file   nlhdlr_concave.c
+ * @brief  tests concave nonlinear handler
  *
  */
 
@@ -62,7 +62,7 @@ void setup(void)
    /* get nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), VP_NLHDLR_NAME) == 0 )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), CONCAVE_NLHDLR_NAME) == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
          break;
@@ -99,7 +99,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-/** given a string for f(x) and its curvature, run nlhdlr_vp detect on f(x) = 0 and see whether that gives correct flags */
+/** given a string for f(x) and its curvature, run nlhdlr_concave detect on f(x) = 0 and see whether that gives correct flags */
 static
 SCIP_RETCODE detect(
    const char*           exprstr,
@@ -160,7 +160,7 @@ SCIP_RETCODE detect(
    if( success )
    {
       cr_assert_not_null(nlhdlrexprdata);
-      SCIP_CALL( nlhdlrfreeExprDataConvexVP(scip, nlhdlr, expr, &nlhdlrexprdata) );
+      SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -170,7 +170,7 @@ SCIP_RETCODE detect(
 }
 
 /* tests detection of convex/concave subexpressions */
-Test(nlhdlrvp, detect, .init = setup, .fini = teardown)
+Test(nlhdlrconcave, detect, .init = setup, .fini = teardown)
 {
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);

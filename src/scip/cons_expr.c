@@ -13557,14 +13557,14 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for convex expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(scip, conshdlr) );
 
+   /* include nonlinear handler for concave expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrConcave(scip, conshdlr) );
+
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
 
    /* include nonlinear handler for perspective reformulations */
    SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
-
-   /* include nonlinear handler for vertex-polyhedral expressions */
-   SCIP_CALL( SCIPincludeConsExprNlhdlrVertexPolyhedral(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
