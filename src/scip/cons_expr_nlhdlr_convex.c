@@ -197,6 +197,33 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    return SCIP_OKAY;
 }
 
+/** shrink nlhdlr-expression by removing children
+ *
+ * reverse of nlhdlrExprGrowChildren
+ */
+static
+SCIP_RETCODE nlhdlrExprContractChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from copied to original expression */
+   SCIP_CONSEXPR_EXPR*   nlhdlrexpr          /**< expression for which to remove children */
+   )
+{
+   assert(scip != NULL);
+   assert(nlhdlrexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) > 0);
+
+   /* TODO remove children from nlexpr2origexpr ?
+    * should also do this if they are not used somewhere else; we could check nuses for this
+    * however, it shouldn't matter to have some stray entries in the hashmap either
+    */
+
+   SCIP_CALL( SCIPremoveConsExprExprChildren(scip, nlhdlrexpr) );
+   assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) == 0);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
 {
@@ -701,7 +728,15 @@ static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckS
 /** number of curvcheck methods */
 static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 
-/** checks whether expression is a sum with more than one child and each child being a variable */
+/** checks whether expression is a sum with more than one child and each child being a variable ...
+ *
+ * ... or going to be a variable if expr is a nlhdlr-specific copy
+ * Within constructExpr(), we can have expression of any type which are a copy of an original expression,
+ * but without children. At the end of constructExpr() (after the loop with the stack), these expressions
+ * will remain as leafs and will eventually be turned into variables in collectLeafs(). Thus we treat
+ * every child that has no children as if it were a variable. Theoretically, there is still the possibility
+ * that it could be a constant (value-expression), but simplify should have removed these.
+ */
 static
 SCIP_Bool exprIsMultivarLinear(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -722,7 +757,8 @@ SCIP_Bool exprIsMultivarLinear(
       return FALSE;
 
    for( c = 0; c < nchildren; ++c )
-      if( SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[c]) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+      /*if( SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[c]) != SCIPgetConsExprExprHdlrVar(conshdlr) ) */
+      if( SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(expr)[c]) > 0 )
          return FALSE;
 
    return TRUE;
@@ -783,7 +819,9 @@ SCIP_RETCODE constructExpr(
          /* if we are in the concave handler, we would like to treat linear multivariate subexpressions by a new auxvar always,
           * e.g., handle log(x+y) as log(z), z=x+y, because the estimation problem will be smaller then without making the estimator worse
           * (cons_nonlinear does this, too)
-          * TODO this check isn't sufficient to also handle sums that become linear after we add auxvars for some children
+          * this check takes care of this when x and y are original variables
+          * however, it isn't unlikely that we will have sums that become linear after we add auxvars for some children
+          * this will be handled in a postprocessing below
           */
 #ifdef SCIP_MORE_DEBUG
          SCIPprintConsExprExpr(scip, conshdlr, SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr), NULL);
@@ -824,6 +862,51 @@ SCIP_RETCODE constructExpr(
    }
 
    exprstackFree(scip, &stack);
+
+   if( !nlhdlrdata->isnlhdlrconvex && *rootnlexpr != NULL )
+   {
+      /* remove multivariate linear subexpressions, that is, change some f(z1+z2) into f(z3) (z3=z1+z2 will be done by nlhdlr_default)
+       * this handles the case that was not covered by the above check, which could recognize f(x+y) for x, y original variables
+       */
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, *rootnlexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
+
+      while( !SCIPexpriteratorIsEnd(it) )
+      {
+         SCIP_CONSEXPR_EXPR* child;
+
+         child = SCIPexpriteratorGetChildExprDFS(it);
+         assert(child != NULL);
+
+         /* We want to change some f(x+y+z) into just f(), where f is the expression the iterator points to
+          * and x+y+z is child. A child of a child, e.g., z, may not be a variable yet (these are added in collectLeafs later),
+          * but an expression of some nonlinear type without children.
+          */
+         if( exprIsMultivarLinear(conshdlr, child) )
+         {
+            /* turn child (x+y+z) into a sum without children
+             * collectLeafs() should then replace this by an auxvar
+             */
+#ifdef SCIP_MORE_DEBUG
+            SCIPprintConsExprExpr(scip, conshdlr, child, NULL);
+            SCIPinfoMessage(scip, NULL, "... is a multivariate linear sum that we'll treat as auxvar instead (postprocess)\n");
+#endif
+
+            SCIP_CALL( nlhdlrExprContractChildren(scip, conshdlr, nlexpr2origexpr, child) );
+
+            SCIPexpriteratorSkipDFS(it);
+         }
+         else
+         {
+            SCIPexpriteratorGetNext(it);
+         }
+      }
+
+      SCIPexpriteratorFree(&it);
+   }
 
    if( *rootnlexpr != NULL )
    {
@@ -1090,6 +1173,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    /* ignore pure constants and variables */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "nlhdlr_convex detect for expr %p\n", (void*)expr);
 
    /* initialize mapping from copied expression to original one
     * 20 is not a bad estimate for the size of convex subexpressions that we can usually discover
@@ -1366,6 +1451,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    /* ignore pure constants and variables */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "nlhdlr_concave detect for expr %p\n", (void*)expr);
 
    /* initialize mapping from copied expression to original one
     * 20 is not a bad estimate for the size of concave subexpressions that we can usually discover

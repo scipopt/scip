@@ -10944,6 +10944,31 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    return SCIP_OKAY;
 }
 
+/** remove all children of expr
+ *
+ * only use if you really know what you are doing
+ */
+SCIP_RETCODE SCIPremoveConsExprExprChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   for( c = 0; c < expr->nchildren; ++c )
+   {
+      assert(expr->children[c] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[c])) );
+   }
+
+   expr->nchildren = 0;
+
+   return SCIP_OKAY;
+}
+
 /** overwrites/replaces a child of an expressions
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)

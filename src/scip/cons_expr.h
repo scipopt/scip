@@ -448,6 +448,16 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    );
 
+/** remove all children of expr
+ *
+ * only use if you really know what you are doing
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPremoveConsExprExprChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** overwrites/replaces a child of an expressions
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
