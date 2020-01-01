@@ -1447,6 +1447,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    SCIP_Real facetconstant;
    SCIP_VAR* var;
    int i;
+   SCIP_Bool allfixed;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1497,6 +1498,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nlhdlrexprdata->nleafs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nlhdlrexprdata->nleafs) );
 
+   allfixed = TRUE;
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
    {
       var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
@@ -1516,8 +1518,18 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
          goto TERMINATE;
       }
 
+      if( !SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
+         allfixed = FALSE;
+
       xstar[i] = SCIPgetSolVal(scip, sol, var);
       assert(xstar[i] != SCIP_INVALID);
+   }
+
+   if( allfixed )
+   {
+      /* SCIPcomputeFacetVertexPolyhedral prints a warning and does not succeed if all is fixed */
+      SCIPdebugMsg(scip, "all variables fixed, skip estimate\n");
+      goto TERMINATE;
    }
 
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nleafs) );
