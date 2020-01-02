@@ -31,6 +31,7 @@
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
+#include <numeric>
 #include <boost/numeric/ublas/vector_sparse.hpp>
 
 #ifdef WITH_GMP
@@ -41,9 +42,6 @@
 
 extern "C"{
 
-using std::vector;
-using std::map;
-
 struct SCIP_Rational{
    Rational val;
    unsigned int isinf:1;
@@ -52,7 +50,12 @@ struct SCIP_Rational{
 
 struct SCIP_RationalArray
 {
-   map<int, Rational>    vals;
+   sparsevec vals;
+};
+
+struct SCIP_RationalVector
+{
+   densevec vals;
 };
 
 /** basis status for columns and rows */
@@ -1363,6 +1366,31 @@ SCIP_Real RatApproxReal(
 }
 
 /*
+ * Vector arithmetic (to shorten code and provide benefits due to 
+ * usage of expression Templates)
+ */
+void RatScalarProduct(
+   SCIP_Rational*        result,             /**< the resulting rational */          
+   SCIP_Rational**       array1,             /**< the first array */
+   SCIP_Rational**       array2,             /**< the second array */
+   int                   len                 /**< length of the arrays */
+   )
+{
+   int i;
+   result->isinf = FALSE;
+   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+   Rational& rat = result->val;
+   for( i = 0; i < len; ++i )
+   {
+      assert(array1[i] != NULL);
+      assert(array2[i] != NULL);
+      assert(!(array1[i]->isinf && array2[i]->isinf));
+      rat += array1[i]->val * array2[i]->val;
+   }
+}
+
+
+/*
  * Dynamic Arrays
  */
 
@@ -1376,7 +1404,20 @@ SCIP_RETCODE SCIPrationalarrayCreate(
    assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, rationalarray) );
-   new (&(*rationalarray)->vals) map<int,Rational>();
+   new (&(*rationalarray)->vals) sparsevec();
+
+   return SCIP_OKAY;
+}
+
+/** creates a dynamic array of real values */
+SCIP_RETCODE SCIPrationalarrayResize(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< pointer to store the real array */
+   int                   newsize             /**< new size */
+   )
+{
+   assert(rationalarray != NULL);
+
+   rationalarray->vals.resize(newsize);
 
    return SCIP_OKAY;
 }
@@ -1385,7 +1426,7 @@ SCIP_RETCODE SCIPrationalarrayCreate(
 SCIP_RETCODE SCIPrationalarrayCopy(
    SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the copied real array */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_RATIONALARRAY*   sourcerationalarray /**< dynamic real array to copy */
+   SCIP_RATIONALARRAY*   sourcerationalarray /**< dynamic rational array to copy */
    )
 {
    assert(rationalarray != NULL);
@@ -1406,7 +1447,7 @@ SCIP_RETCODE SCIPrationalarrayFree(
    assert(rationalarray != NULL);
    assert(*rationalarray != NULL);
 
-   (*rationalarray)->vals.~map();
+   (*rationalarray)->vals.~sparsevec();
    BMSfreeBlockMemory(blkmem, rationalarray);
 
    return SCIP_OKAY;
@@ -1414,7 +1455,7 @@ SCIP_RETCODE SCIPrationalarrayFree(
 
 /** gets value of entry in dynamic array */
 void SCIPrationalarrayGetVal(
-   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to get value for */
    SCIP_Rational*        result              /**< store the result */
    )
@@ -1422,8 +1463,8 @@ void SCIPrationalarrayGetVal(
    assert(rationalarray != NULL);
    assert(idx >= 0);
    auto search = rationalarray->vals.find(idx);
-   if(  search != rationalarray->vals.end() )
-      result->val = search->second;
+   if( search != rationalarray->vals.end() )
+      result->val = *search;
    else
       result->val = 0;
 }
@@ -1445,12 +1486,13 @@ SCIP_RETCODE SCIPrationalarraySetVal(
 
 /** increases value of entry in dynamic array */
 SCIP_RETCODE SCIPrationalarrayIncVal(
-   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to increase value for */
-    SCIP_Rational*  incval              /**< value to increase array index */
+    SCIP_Rational*       incval              /**< value to increase array index */
    )
 {
    assert(incval != NULL);
+   assert(!incval->isinf);
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
@@ -1458,6 +1500,45 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
       rationalarray->vals[idx] += incval->val;
 
    return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPrationalarryScalarProd(
+   SCIP_Rational*        result,             /**< the resulting rational */
+   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
+   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+   )
+{
+   const auto& v1 = rationalarray1->vals;
+   const auto& v2 = rationalarray2->vals;
+   result->val = boost::numeric::ublas::inner_prod(v1, v2);
+   result->isinf = FALSE;
+   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+}
+
+SCIP_RETCODE SCIPrationalarryAdd(
+   SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
+   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
+   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+   )
+{
+   const auto& v1 = rationalarray1->vals;
+   const auto& v2 = rationalarray2->vals;
+   result->val = v1 + v2;
+   result->isinf = FALSE;
+   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+}
+
+SCIP_RETCODE SCIPrationalarryDiff(
+   SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
+   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
+   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+   )
+{
+   const auto& v1 = rationalarray1->vals;
+   const auto& v2 = rationalarray2->vals;
+   result->val = v1 - v2;
+   result->isinf = FALSE;
+   result->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
 }

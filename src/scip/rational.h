@@ -302,6 +302,7 @@ void RatDivReal(
    );
 
 /* Computes res += op1 * op2 and saves the result in res */
+SCIP_EXPORT
 void RatAddProd(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -309,6 +310,7 @@ void RatAddProd(
    );
 
 /* Computes res -= op1 * op2 and saves the result in res */
+SCIP_EXPORT
 void RatDiffProd(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -539,14 +541,21 @@ SCIP_Bool RatRoundInteger(
  */
 
 /** creates a dynamic array of real values */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayCreate(
    SCIP_RATIONALARRAY**  rationalarray,          /**< pointer to store the real array */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** creates a dynamic array of real values */
+SCIP_EXPORT
+SCIP_RETCODE SCIPrationalarrayResize(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< pointer to store the real array */
+   int                   newsize             /**< new size */
+   );
+
 /** creates a copy of a dynamic array of real values */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayCopy(
    SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the copied real array */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -554,20 +563,20 @@ SCIP_RETCODE SCIPrationalarrayCopy(
    );
 
 /** frees a dynamic array of real values */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayFree(
    SCIP_RATIONALARRAY**      rationalarray,  /**< pointer to the real array */
    BMS_BLKMEM*           blkmem          /**< block memory */
    );
 
 /** clears a dynamic real array */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayClear(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
    );
 
 /** gets value of entry in dynamic array */
-extern
+SCIP_EXPORT
 void SCIPrationalarrayGetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
    int                   idx,                /**< array index to get value for */
@@ -575,7 +584,7 @@ void SCIPrationalarrayGetVal(
    );
 
 /** sets value of entry in dynamic array */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarraySetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
    int                   idx,                /**< array index to set value for */
@@ -583,14 +592,20 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    );
 
 /** increases value of entry in dynamic array */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
    int                   idx,                /**< array index to increase value for */
     SCIP_Rational*  incval              /**< value to increase array index */
    );
 
-extern
+SCIP_EXPORT
+SCIP_RETCODE SCIPrationalarryScalarProd(
+   SCIP_Rational*        result,             /**< the resulting rational */
+   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic real array */
+   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic real array */
+   );
+
 void testRuntimesRational(
    );
 
