@@ -45,7 +45,6 @@ extern "C" {
 #endif
 
 /** creates separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreexCreate(
    SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -53,7 +52,6 @@ SCIP_RETCODE SCIPsepastoreexCreate(
    );
 
 /** frees separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreexFree(
    SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem              /**< block memory */
@@ -61,7 +59,6 @@ SCIP_RETCODE SCIPsepastoreexFree(
 
 
 /** adds cut to separation storage and captures it */
-extern
 SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -75,7 +72,6 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    );
 
 /** adds cuts to the LP and clears separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreexSyncLPs(
    SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -87,7 +83,6 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
    );
 
 /** clears the separation storage without adding the cuts to the LP */
-extern
 SCIP_RETCODE SCIPsepastoreexClearCuts(
    SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -98,31 +93,26 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    );
 
 /** get cuts in the separation storage */
-extern
 SCIP_ROWEX** SCIPsepastoreexGetCuts(
    SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
-extern
 int SCIPsepastoreexGetNCuts(
    SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
    );
 
 /** get total number of cuts found so far */
-extern
 int SCIPsepastoreexGetNCutsFound(
    SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
    );
 
 /** get number of cuts found so far in current separation round */
-extern
 int SCIPsepastoreexGetNCutsFoundRound(
    SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
-extern
 int SCIPsepastoreexGetNCutsApplied(
    SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
    );

@@ -52,8 +52,6 @@
 #define PSWARMSTARTAUXPROB         TRUE
 #define PSPOSTPROCESSDUALSOL       TRUE
 
-
-
 static
 SCIP_Bool fpLPisIntFeasible(
    SCIP_LP*              lp,

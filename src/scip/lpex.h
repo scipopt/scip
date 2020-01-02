@@ -54,7 +54,6 @@ extern "C" {
  */
 
 /** checks if the exact column and its fpcol are consistent */
-extern
 SCIP_Bool colexInSync(
    SCIP_COLEX*           colex,              /**< exact column */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -62,7 +61,6 @@ SCIP_Bool colexInSync(
    );
 
 /** creates an LP column */
-extern
 SCIP_RETCODE SCIPcolexCreate(
    SCIP_COLEX**          col,                /**< pointer to column data */
    SCIP_COL*             fpcol,              /**< the corresponding fp col */
@@ -77,7 +75,6 @@ SCIP_RETCODE SCIPcolexCreate(
    );
 
 /** frees an LP column */
-extern
 SCIP_RETCODE SCIPcolexFree(
    SCIP_COLEX**          col,                /**< pointer to LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -87,7 +84,6 @@ SCIP_RETCODE SCIPcolexFree(
    );
 
 /** output column to file stream */
-extern
 void SCIPcolexPrint(
    SCIP_COLEX*           col,                /**< LP column */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -95,7 +91,6 @@ void SCIPcolexPrint(
    );
 
 /** adds a previously non existing coefficient to an LP column */
-extern
 SCIP_RETCODE SCIPcolexAddCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -107,7 +102,6 @@ SCIP_RETCODE SCIPcolexAddCoef(
    );
 
 /** deletes coefficient from column */
-extern
 SCIP_RETCODE SCIPcolexDelCoef(
    SCIP_COLEX*           col,                /**< column to be changed */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -118,7 +112,6 @@ SCIP_RETCODE SCIPcolexDelCoef(
    );
 
 /** changes or adds a coefficient to an LP column */
-extern
 SCIP_RETCODE SCIPcolexChgCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -130,7 +123,6 @@ SCIP_RETCODE SCIPcolexChgCoef(
    );
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
-extern
 SCIP_RETCODE SCIPcolexIncCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -142,7 +134,6 @@ SCIP_RETCODE SCIPcolexIncCoef(
    );
 
 /** changes objective value of column */
-extern
 SCIP_RETCODE SCIPcolexChgObj(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -151,7 +142,6 @@ SCIP_RETCODE SCIPcolexChgObj(
    );
 
 /** changes lower bound of column */
-extern
 SCIP_RETCODE SCIPcolexChgLb(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -160,7 +150,6 @@ SCIP_RETCODE SCIPcolexChgLb(
    );
 
 /** changes upper bound of column */
-extern
 SCIP_RETCODE SCIPcolexChgUb(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -185,7 +174,6 @@ void SCIProwexCapture(
    );
 
 /** output column to file stream */
-extern
 void SCIProwexPrint(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -203,7 +191,6 @@ int SCIProwexGetNNonz(
    );
 
 /** returns TRUE iff row is member of current LP */
-extern
 SCIP_Bool SCIProwexIsInLP(
    SCIP_ROWEX*           row                 /**< LP row */
    );
@@ -214,21 +201,18 @@ SCIP_Bool SCIProwexIsModifiable(
    );
 
 /** returns true, if an exact row for this fprow was already created */
-extern
 SCIP_Bool SCIProwHasExRow(
    SCIP_LPEX*            lpex,               /**< exact lp data structure */
    SCIP_ROW*             row                 /**< SCIP row */
    );
 
 /** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-extern
 SCIP_ROWEX* SCIProwGetExRow(
    SCIP_LPEX*            lpex,               /**< exact lp data structure */
    SCIP_ROW*             row                 /**< SCIP row */
    );
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
-extern
 SCIP_COLEX* SCIPcolGetExCol(
    SCIP_LPEX*            lpex,               /**< exact lp data structure */
    SCIP_COL*             col                 /**< SCIP col */
@@ -244,7 +228,6 @@ void SCIPcolexCalcFarkasRedcostCoef(
    );
 
 /** creates and captures an LP row */
-extern
 SCIP_RETCODE SCIProwCreateExact(
    SCIP_ROWEX**          row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row */
@@ -262,7 +245,6 @@ SCIP_RETCODE SCIProwCreateExact(
    );
 
 /** applies all cached changes to the LP solver */
-extern
 SCIP_RETCODE SCIPlpexFlush(
    SCIP_LPEX*            lp,                 /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -275,19 +257,16 @@ SCIP_RETCODE SCIPlpexFlush(
  */
 
 /** returns whether it is possible to use neumair-shcherbina bounding method */
-extern
 SCIP_Bool SCIPlpexBSpossible(
    SCIP_LPEX*            lp                  /**< pointer to LP data object */
    );
 
 /** returns whether it is possible to use project and shift bounding method */
-extern
 SCIP_Bool SCIPlpexPSpossible(
    SCIP_LPEX*            lp                  /**< pointer to LP data object */
    );
 
 /** checks that lp and fplp are properly synced */
-extern
 SCIP_Bool SCIPlpexIsSynced(
    SCIP_LPEX*            lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -295,7 +274,6 @@ SCIP_Bool SCIPlpexIsSynced(
    );
 
 /** creates empty LP data object */
-extern
 SCIP_RETCODE SCIPlpexCreate(
    SCIP_LPEX**           lpex,               /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -316,7 +294,6 @@ SCIP_RETCODE SCIPlpexFree(
    );
 
 /** adds a column to the LP and captures the variable */
-extern
 SCIP_RETCODE SCIPlpexAddCol(
    SCIP_LPEX*            lpex,               /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -325,7 +302,6 @@ SCIP_RETCODE SCIPlpexAddCol(
    );
 
 /** adds a row to the LP and captures it */
-extern
 SCIP_RETCODE SCIPlpexAddRow(
    SCIP_LPEX*            lpex,               /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -337,7 +313,6 @@ SCIP_RETCODE SCIPlpexAddRow(
    );
 
 /** returns the feasibility of a row for the given solution */
-extern
 void SCIProwexGetSolFeasibility(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -347,7 +322,6 @@ void SCIProwexGetSolFeasibility(
    );
 
 /** returns the activity of a row for a given solution */
-extern
 void SCIProwexGetSolActivity(
    SCIP_ROWEX*           rowex,              /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -358,7 +332,6 @@ void SCIProwexGetSolActivity(
    );
 
 /** decreases usage counter of LP row, and frees memory if necessary */
-extern
 SCIP_RETCODE SCIProwexRelease(
    SCIP_ROWEX**          row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -367,7 +340,6 @@ SCIP_RETCODE SCIProwexRelease(
    );
 
 /** frees an LP row */
-extern
 SCIP_RETCODE SCIProwexFree(
    SCIP_ROWEX**          row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -376,7 +348,6 @@ SCIP_RETCODE SCIProwexFree(
    );
 
 /** ensuresr, that column array of row can store at least num entries */
-extern
 SCIP_RETCODE SCIProwexEnsureSize(
    SCIP_ROWEX*           row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -385,7 +356,6 @@ SCIP_RETCODE SCIProwexEnsureSize(
    );
 
 /** add constant value to a row */
-extern
 SCIP_RETCODE SCIProwexAddConstant(
    SCIP_ROWEX*           row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -397,7 +367,6 @@ SCIP_RETCODE SCIProwexAddConstant(
    );
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
-extern
 SCIP_RETCODE SCIProwexIncCoef(
    SCIP_ROWEX*           row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -409,7 +378,6 @@ SCIP_RETCODE SCIProwexIncCoef(
    );
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
-extern
 void SCIProwexGetLPFeasibility(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -419,7 +387,6 @@ void SCIProwexGetLPFeasibility(
    );
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
-extern
 void SCIProwexGetPseudoFeasibility(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -428,7 +395,6 @@ void SCIProwexGetPseudoFeasibility(
    );
 
 /** returns the activity of a row in the current LP solution */
-extern
 SCIP_Rational* SCIProwexGetLPActivity(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -437,7 +403,6 @@ SCIP_Rational* SCIProwexGetLPActivity(
    );
 
 /** returns the pseudo activity of a row in the current pseudo solution */
-extern
 SCIP_Rational* SCIProwexGetPseudoActivity(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -445,7 +410,6 @@ SCIP_Rational* SCIProwexGetPseudoActivity(
    );
 
 /** recalculates the current activity of a row */
-extern
 void SCIProwexRecalcLPActivity(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -453,7 +417,6 @@ void SCIProwexRecalcLPActivity(
    );
 
  /** calculates the current pseudo activity of a row */
-extern
 void SCIProwexRecalcPseudoActivity(
    SCIP_ROWEX*           row,                /**< row data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -461,43 +424,36 @@ void SCIProwexRecalcPseudoActivity(
    );
 
 /** gets objective value of column */
-extern
 SCIP_Rational* SCIPcolexGetObj(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets lower bound of column */
-extern
 SCIP_Rational* SCIPcolexGetLb(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets upper bound of column */
-extern
 SCIP_Rational* SCIPcolexGetUb(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets best bound of column with respect to the objective function */
-extern
 SCIP_Rational* SCIPcolexGetBestBound(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets the primal LP solution of a column */
-extern
 SCIP_Rational* SCIPcolexGetPrimsol(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets the minimal LP solution value, this column ever assumed */
-extern
 SCIP_Rational* SCIPcolexGetMinPrimsol(
    SCIP_COLEX*           col                 /**< LP column */
    );
 
 /** gets the maximal LP solution value, this column ever assumed */
-extern
 SCIP_Rational* SCIPcolexGetMaxPrimsol(
    SCIP_COLEX*           col                 /**< LP column */
    );
@@ -510,7 +466,6 @@ SCIP_Rational* SCIPcolexGetMaxPrimsol(
 
 
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarObj(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -520,7 +475,6 @@ SCIP_RETCODE SCIPlpexUpdateVarObj(
    );
 
 /** updates current root pseudo objective value for a global change in a variable's lower bound */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarLbGlobal(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -530,7 +484,6 @@ SCIP_RETCODE SCIPlpexUpdateVarLbGlobal(
    );
 
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarLb(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -540,7 +493,6 @@ SCIP_RETCODE SCIPlpexUpdateVarLb(
    );
 
 /** updates current root pseudo objective value for a global change in a variable's upper bound */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarUbGlobal(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -550,7 +502,6 @@ SCIP_RETCODE SCIPlpexUpdateVarUbGlobal(
    );
 
 /** updates current pseudo objective value for a change in a variable's upper bound */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarUb(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -560,7 +511,6 @@ SCIP_RETCODE SCIPlpexUpdateVarUb(
    );
 
 /** informs LP, that given variable was added to the problem */
-extern
 SCIP_RETCODE SCIPlpexUpdateAddVar(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -568,7 +518,6 @@ SCIP_RETCODE SCIPlpexUpdateAddVar(
    );
 
 /** informs LP, that given variable is to be deleted from the problem */
-extern
 SCIP_RETCODE SCIPlpexUpdateDelVar(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -576,7 +525,6 @@ SCIP_RETCODE SCIPlpexUpdateDelVar(
    );
 
 /** informs LP, that given formerly loose problem variable is now a column variable */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarColumn(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -584,7 +532,6 @@ SCIP_RETCODE SCIPlpexUpdateVarColumn(
    );
 
 /** informs LP, that given formerly column problem variable is now again a loose variable */
-extern
 SCIP_RETCODE SCIPlpexUpdateVarLoose(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -592,18 +539,15 @@ SCIP_RETCODE SCIPlpexUpdateVarLoose(
    );
 
 /** decrease the number of loose variables by one */
-extern
 void SCIPlpexDecNLoosevars(
    SCIP_LPEX*            lp                  /**< current LP data */
    );
 
-extern
 SCIP_RETCODE SCIPlexGetNRows(
    SCIP_LPEX*            lp                  /**< current LP data */
    );
 
 /** stores the LP solution in the columns and rows */
-extern
 SCIP_RETCODE SCIPlpexGetSol(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -613,7 +557,6 @@ SCIP_RETCODE SCIPlpexGetSol(
    );
 
 /** stores LP solution with infinite objective value in the columns and rows */
-extern
 SCIP_RETCODE SCIPlpexGetUnboundedSol(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -623,7 +566,6 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
    );
 
 /** returns primal ray proving the unboundedness of the current LP */
-extern
 SCIP_RETCODE SCIPlpexGetPrimalRay(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -637,7 +579,6 @@ SCIP_RETCODE SCIPlpexGetPrimalRay(
  *
  *  @note the check will not be performed if @p valid is NULL.
  */
-extern
 SCIP_RETCODE SCIPlpexGetDualfarkas(
    SCIP_LPEX*            lpex,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -669,7 +610,6 @@ void SCIPlpexGetPseudoObjval(
    );
 
 /** removes all columns after the given number of cols from the LP */
-extern
 SCIP_RETCODE SCIPlpexShrinkCols(
    SCIP_LPEX*            lpex,               /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -677,7 +617,6 @@ SCIP_RETCODE SCIPlpexShrinkCols(
    );
 
 /** removes and releases all rows after the given number of rows from the LP */
-extern
 SCIP_RETCODE SCIPlpexShrinkRows(
    SCIP_LPEX*            lpex,               /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -700,7 +639,6 @@ SCIP_RETCODE SCIPlpexReset(
    );
 
 /** removes all columns and rows from LP, releases all rows */
-extern
 SCIP_RETCODE SCIPlpexClear(
    SCIP_LPEX*            lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */

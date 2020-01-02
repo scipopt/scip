@@ -44,20 +44,17 @@ extern "C" {
 #endif
 
 /** creates certificate data structure */
-extern
 SCIP_RETCODE SCIPcertificateCreate(
    SCIP_CERTIFICATE**    certificate,        /**< pointer to store the certificate information */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** frees certificate data structure */
-extern
 void SCIPcertificateFree(
    SCIP_CERTIFICATE**    certificate         /**< pointer to store the certificate information */
    );
 
 /** initializes certificate information and creates files for certificate output */
-extern
 SCIP_RETCODE SCIPcertificateInit(
    SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -67,7 +64,6 @@ SCIP_RETCODE SCIPcertificateInit(
    );
 
 /** closes the certificate output files */
-extern
 void SCIPcertificateExit(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -75,19 +71,16 @@ void SCIPcertificateExit(
    );
 
 /** returns whether the certificate output is activated? */
-extern
 SCIP_Bool SCIPcertificateIsActive(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** returns current certificate file size in MB */
-extern
 SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** sets the objective function used when printing dual bounds */
-extern
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -96,7 +89,6 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    );
 
 /** prints a string to the problem section of the certificate file */
-extern
 void SCIPcertificatePrintProblemMessage(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -104,7 +96,6 @@ void SCIPcertificatePrintProblemMessage(
    );
 
 /** prints a string to the proof section of the certificate file */
-extern
 void SCIPcertificatePrintProofMessage(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -112,7 +103,6 @@ void SCIPcertificatePrintProofMessage(
    );
 
 /** prints a rational number to the problem section of the certificate file */
-extern
 void SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
@@ -120,7 +110,6 @@ void SCIPcertificatePrintProblemRational(
    );
 
 /** prints a rational number to the proof section of the certificate file */
-extern
 void SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
@@ -128,7 +117,6 @@ void SCIPcertificatePrintProofRational(
    );
 
 /** prints a comment to the problem section of the certificate file */
-extern
 void SCIPcertificatePrintProblemComment(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -136,7 +124,6 @@ void SCIPcertificatePrintProblemComment(
    );
 
 /** prints a comment to the proof section of the certificate file */
-extern
 void SCIPcertificatePrintProofComment(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -144,27 +131,23 @@ void SCIPcertificatePrintProofComment(
    );
 
 /** prints variable section header */
-extern
 void SCIPcertificatePrintVarHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    int                   nvars               /**< number of variables */
    );
 
 /** prints version header */
-extern
 void SCIPcertificatePrintVersionHeader(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** prints integer section header */
-extern
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    int                   nvars               /**< number of variables */
    );
 
 /** prints constraint section header */
-extern
 void SCIPcertificatePrintConsHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    int                   nconss,             /**< number of all constraints */
@@ -172,13 +155,11 @@ void SCIPcertificatePrintConsHeader(
    );
 
 /** prints derivation section header */
-extern
 void SCIPcertificatePrintDerHeader(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** prints constraint */
-extern
 void SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           consname,           /**< name of the constraint */
@@ -190,7 +171,6 @@ void SCIPcertificatePrintCons(
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */
-extern
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           boundname,          /**< name of the bound constraint */
@@ -200,7 +180,6 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    );
 
 /** checks whether variable bound assumption is present; prints it if not; returns index */
-extern
 SCIP_Longint SCIPcertificatePrintBoundAssumption(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           assumptionname,     /**< name of the bound constraint */
@@ -218,7 +197,6 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    );
 
 /** prints dual bound to proof section */
-extern
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
@@ -229,7 +207,6 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    );
 
 /** Print a dual bound from an exact lp solution */
-extern
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
@@ -240,7 +217,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    );
 
 /** Print a dual bound from an exact lp solution */
-extern
 SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
@@ -251,7 +227,6 @@ SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
    );
 
 /** update the parent certificate node data when branching, print branching into certificate if not already present */
-extern
 SCIP_RETCODE SCIPcertificatePrintBranching(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -281,7 +256,6 @@ int SCIPcertificatePrintUnsplitting(
    );
 
 /** prints RTP section with lowerbound and upperbound range */
-extern
 void SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
@@ -297,13 +271,11 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 
 
 /** prints RTP section for infeasibility */
-extern
 void SCIPcertificatePrintRtpInfeas(
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    );
 
 /** prints SOL header and exact solution to certificate file */
-extern
 void SCIPcertificatePrintSolex(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */

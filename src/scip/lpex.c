@@ -2617,7 +2617,6 @@ SCIP_RETCODE lpexFlushChgRows(
  */
 
 /** creates an LP column */
-extern
 SCIP_RETCODE SCIPcolexCreate(
    SCIP_COLEX**          col,                /**< pointer to column data */
    SCIP_COL*             fpcol,              /**< the corresponding fp col */
@@ -2697,7 +2696,6 @@ SCIP_RETCODE SCIPcolexCreate(
 }
 
 /** frees an LP column */
-extern
 SCIP_RETCODE SCIPcolexFree(
    SCIP_COLEX**          col,                /**< pointer to LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2741,7 +2739,6 @@ SCIP_RETCODE SCIPcolexFree(
 }
 
 /** output column to file stream */
-extern
 void SCIPcolexPrint(
    SCIP_COLEX*           col,                /**< LP column */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2780,7 +2777,6 @@ void SCIPcolexPrint(
 }
 
 /** adds a previously non existing coefficient to an LP column */
-extern
 SCIP_RETCODE SCIPcolexAddCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2799,7 +2795,6 @@ SCIP_RETCODE SCIPcolexAddCoef(
 }
 
 /** deletes coefficient from column */
-extern
 SCIP_RETCODE SCIPcolexDelCoef(
    SCIP_COLEX*           col,                /**< column to be changed */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2844,7 +2839,6 @@ SCIP_RETCODE SCIPcolexDelCoef(
 }
 
 /** changes or adds a coefficient to an LP column */
-extern
 SCIP_RETCODE SCIPcolexChgCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2896,7 +2890,6 @@ SCIP_RETCODE SCIPcolexChgCoef(
 }
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
-extern
 SCIP_RETCODE SCIPcolexIncCoef(
    SCIP_COLEX*           col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2953,7 +2946,6 @@ SCIP_RETCODE SCIPcolexIncCoef(
 }
 
 /** changes objective value of column */
-extern
 SCIP_RETCODE SCIPcolexChgObj(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3001,7 +2993,6 @@ SCIP_RETCODE SCIPcolexChgObj(
 }
 
 /** changes lower bound of column */
-extern
 SCIP_RETCODE SCIPcolexChgLb(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3051,7 +3042,6 @@ SCIP_RETCODE SCIPcolexChgLb(
 }
 
 /** changes upper bound of column */
-extern
 SCIP_RETCODE SCIPcolexChgUb(
    SCIP_COLEX*           col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3377,7 +3367,6 @@ SCIP_RETCODE SCIPlpPsdataFree(
 
 
 /** returns whether it is possible to use neumair-shcherbina bounding method */
-extern
 SCIP_Bool SCIPlpexBSpossible(
    SCIP_LPEX*            lp                  /**< pointer to LP data object */
    )
@@ -3388,7 +3377,6 @@ SCIP_Bool SCIPlpexBSpossible(
 }
 
 /** returns whether it is possible to use project and shift bounding method */
-extern
 SCIP_Bool SCIPlpexPSpossible(
    SCIP_LPEX*            lp                  /**< pointer to LP data object */
    )
@@ -3400,7 +3388,6 @@ SCIP_Bool SCIPlpexPSpossible(
 }
 
 /** checks that lp and fplp are properly synced */
-extern
 SCIP_Bool SCIPlpexIsSynced(
    SCIP_LPEX*            lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3414,7 +3401,6 @@ SCIP_Bool SCIPlpexIsSynced(
 }
 
 /** creates empty LP data object */
-extern
 SCIP_RETCODE SCIPlpexCreate(
    SCIP_LPEX**           lp,                 /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -3717,7 +3703,6 @@ void SCIProwexCapture(
 }
 
 /** output column to file stream */
-extern
 void SCIProwexPrint(
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */

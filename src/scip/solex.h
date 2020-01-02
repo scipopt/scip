@@ -228,13 +228,11 @@ SCIP_RETCODE SCIPsolexCheck(
    );
 
 /** gets current position of solution in array of existing solutions of primal data */
-extern
 int SCIPsolexGetPrimalexIndex(
    SCIP_SOL*               sol                 /**< primal CIP solution */
    );
 
 /** sets current position of solution in array of existing solutions of primal data */
-extern
 void SCIPsolexSetPrimalexIndex(
    SCIP_SOL*               sol,                /**< primal CIP solution */
    int                   primalindex         /**< new primal index of solution */

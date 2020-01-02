@@ -242,7 +242,6 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    );
 
 /** adds correct bound-data to negated variable */
-extern
 SCIP_RETCODE SCIPvarNegateExactData(
    SCIP_VAR*             negvar,             /**< the negated variable */
    SCIP_VAR*             origvar,            /**< the original variable */
@@ -251,7 +250,6 @@ SCIP_RETCODE SCIPvarNegateExactData(
    );
 
 /** create and set the exact variable bounds and objective value */
-extern
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -261,7 +259,6 @@ SCIP_RETCODE SCIPvarAddExactData(
    );
 
 /** copy exact variable data from one variable to another */
-extern
 SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */

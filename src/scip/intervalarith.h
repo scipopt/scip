@@ -117,7 +117,7 @@ void SCIPintervalSet(
    );
 
 /** stores given value as interval */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRational(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
    SCIP_Rational*        value               /**< value to store */

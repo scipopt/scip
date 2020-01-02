@@ -64,7 +64,6 @@ extern "C" {
 /** resolves variable to columns and adds them with the coefficient to the 
  *
  */
-extern
 SCIP_RETCODE SCIPvarAddToRowExact(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -78,7 +77,6 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    );
 
 /** converts transformed variable into column variable and creates LP column */
-extern
 SCIP_RETCODE SCIPvarColumnExact(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -89,7 +87,6 @@ SCIP_RETCODE SCIPvarColumnExact(
    );
 
 /** changes objective value of variable */
-extern
 SCIP_RETCODE SCIPvarScaleObjExact(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -102,7 +99,6 @@ SCIP_RETCODE SCIPvarScaleObjExact(
    );
 
 /** changes objective value of variable */
-extern
 SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -115,13 +111,11 @@ SCIP_RETCODE SCIPvarChgObjExact(
    );
 
 /** return the status of the exact variable data */
-extern
 SCIP_VARSTATUS SCIPvarGetStatusExact(
    SCIP_VAR*             var                /**< scip variabel */
    );
 
 /** gets column of COLUMN variable */
-extern
 SCIP_COLEX* SCIPvarGetColExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
