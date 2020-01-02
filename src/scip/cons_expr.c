@@ -7397,6 +7397,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    int i;
    SCIP_Real facetvalue;
    SCIP_Real mindomwidth;
+   SCIP_RETCODE lpsolveretcode;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7525,12 +7526,19 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
     */
    if( conshdlrdata->vp_dualsimplex )
    {
-      SCIP_CALL( SCIPlpiSolveDual(lp) );
+      lpsolveretcode = SCIPlpiSolveDual(lp);
    }
    else
    {
-      SCIP_CALL( SCIPlpiSolvePrimal(lp) );
+      lpsolveretcode = SCIPlpiSolvePrimal(lp);
    }
+   if( lpsolveretcode == SCIP_LPERROR )
+   {
+      SCIPdebugMsg(scip, "LP error, aborting.\n");
+      goto CLEANUP;
+   }
+   SCIP_CALL( lpsolveretcode );
+
    /* any dual feasible solution should provide a valid estimator (and a dual optimal one a facet) */
    if( !SCIPlpiIsDualFeasible(lp) )
    {
