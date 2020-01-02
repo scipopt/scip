@@ -113,7 +113,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(rlt_selection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
+Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
 {
    SCIP_ROW* row1;
    SCIP_ROW* row2;
@@ -311,7 +311,7 @@ Test(rlt_selection, implrels, .init = setup, .fini = teardown, .description = "t
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(rlt_selection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
+Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
 {
    SCIP_ROW* row1;
    SCIP_ROW* row2;
@@ -371,8 +371,6 @@ Test(rlt_selection, implrelbnd, .init = setup, .fini = teardown, .description = 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
    cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
-   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
-   cr_expect_eq(sepadata->nlinexprs[1], 2, "\nExpected 2 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
 
    /* check the product expressions */
    cr_assert(sepadata->bilinterms[0] != NULL);
@@ -389,6 +387,9 @@ Test(rlt_selection, implrelbnd, .init = setup, .fini = teardown, .description = 
    cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
    var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
    cr_expect_eq(var, x1, "Var 1 of product 1 should be x1, got %s", SCIPvarGetName(var));
+
+   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expressions for product b1x2, got %d", sepadata->nlinexprs[0]);
+   cr_expect_eq(sepadata->nlinexprs[1], 2, "\nExpected 2 linear expressions for product b1x1, got %d", sepadata->nlinexprs[1]);
 
    /* check the linear expressions obtained from the implied relation and the implied bound */
    cr_assert(sepadata->linexprs[0][1] != NULL);
@@ -419,7 +420,7 @@ Test(rlt_selection, implrelbnd, .init = setup, .fini = teardown, .description = 
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(rlt_selection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
+Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
 {
    SCIP_ROW* row1;
    SCIP_ROW* row2;
@@ -557,7 +558,7 @@ Test(rlt_selection, implrelclique, .init = setup, .fini = teardown, .description
 }
 
 
-Test(rlt_selection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
+Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
 {
    SCIP_ROW* row1;
    SCIP_ROW* row2;
@@ -663,7 +664,7 @@ Test(rlt_selection, implbnd, .init = setup, .fini = teardown, .description = "te
    var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[2]);
    coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[2];
    cr_expect_eq(var, x1, "Var 2 of linexpr 0 for product b1b2 should be x1, got %s", SCIPvarGetName(var));
-   cr_expect_eq(coef, -1.0, "Coefficient of w = x1 should be -1.0, got %f", coef);
+   cr_expect_eq(coef, -1.0, "Coefficient of w = x1 should be -1.0, got %g", coef);
 
    cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]), 0.0, "Linexpr 0 for product b1b2 should have constant 0.0, got %f",
    SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]));
@@ -734,4 +735,157 @@ Test(rlt_selection, implbnd, .init = setup, .fini = teardown, .description = "te
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
    SCIPfreeBuffer(scip, &sepadata);
+}
+
+
+Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .description = "test creating linked lists of rows")
+{
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_CONS* cons3;
+   SCIP_CONS* cons4;
+   SCIP_CONS* cons5;
+   SCIP_VAR* vars[3];
+   SCIP_Real coefs1[3];
+   SCIP_Bool cutoff;
+   SCIP_VAR* var;
+   SCIP_Real coef;
+   int nrows;
+   int i;
+   int nvars_in_2rels;
+   int r;
+   SCIP_ROW** prob_rows;
+   SCIP_ROW* row1;
+   int* row_list;
+   SCIP_HASHTABLE* hashtable2;
+   SCIP_HASHTABLE* hashtable3;
+   SCIP_VAR** vars_in_2rels;
+   SCIP_VAR*** related_vars;
+   int* nrelated_vars;
+   HASHDATA* foundhashdata;
+
+   /* create linear relations */
+
+   vars[0] = x1;
+   vars[1] = x2;
+   vars[2] = b1;
+
+   /* 0 <= 2x1 + 2x2 <= 1 */
+   coefs1[0] = 2.0; coefs1[1] = 2.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 2, vars, coefs1, 0.0, 1.0) );
+
+   /* 0 <= 2x1 + 1.5x2 + 3b1 <= 1 */
+   coefs1[0] = 2.0; coefs1[1] = 1.5; coefs1[2] = 3.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons2, "c2", 3, vars, coefs1, 0.0, 1.0) );
+
+   /* 4x1 + 2x2 - b1 <= 1 */
+   coefs1[0] = 4.0; coefs1[1] = 2.0; coefs1[2] = -1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons3, "c3", 3, vars, coefs1, -SCIPinfinity(scip), 1.0) );
+
+   /* x1 + 3x2 + b1 <= 2 */
+   coefs1[0] = 1.0; coefs1[1] = 3.0; coefs1[2] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons4, "c4", 3, vars, coefs1, -SCIPinfinity(scip), 2.0) );
+
+   /* x1 - 2x2 <= 1 */
+   coefs1[0] = 1.0; coefs1[1] = -2.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons5, "c5", 2, vars, coefs1, -SCIPinfinity(scip), 1.0) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+   SCIP_CALL( SCIPaddCons(scip, cons2) );
+   SCIP_CALL( SCIPaddCons(scip, cons3) );
+   SCIP_CALL( SCIPaddCons(scip, cons4) );
+   SCIP_CALL( SCIPaddCons(scip, cons5) );
+
+   /* construct the LP */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+   /* create the rows */
+   nrows = 5;
+   SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
+   SCIPsortPtr((void**)prob_rows, SCIProwComp, nrows);
+
+   /* create tables of implied and unconditional relations */
+   SCIP_CALL( SCIPhashtableCreate(&hashtable3, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
+      hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&hashtable2, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
+      hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
+
+   /* allocate the array of variables that appear in 2-var relations */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars_in_2rels, SCIPgetNVars(scip)) );
+   /* allocate the array of arrays of variables that appear in 2-var relations with each variable */
+   SCIP_CALL( SCIPallocBufferArray(scip, &related_vars, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
+
+   /* create separator data - this will also detect the products */
+   SCIP_CALL( createRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
+      nrelated_vars, &nvars_in_2rels, row_list) );
+
+   for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
+   {
+      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashtable3, i);
+      if( foundhashdata == NULL )
+         continue;
+
+      SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
+         SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
+
+      SCIPinfoMessage(scip, NULL, "\nrow array:");
+      r = foundhashdata->firstrow;
+      while( r != -1 )
+      {
+         assert(r < nrows && r >= 0);
+         row1 = prob_rows[r];
+         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
+         r = row_list[r];
+      }
+
+      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
+      SCIPfreeBuffer(scip, &foundhashdata);
+   }
+
+   for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
+   {
+      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashtable2, i);
+      if( foundhashdata == NULL )
+         continue;
+
+      SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
+      SCIPvarGetName(foundhashdata->vars[1]));
+
+      SCIPinfoMessage(scip, NULL, "\nrow array:");
+      r = foundhashdata->firstrow;
+      while( r != -1 )
+      {
+         assert(r < nrows && r >= 0);
+         row1 = prob_rows[r];
+         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
+         r = row_list[r];
+      }
+
+      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
+      SCIPfreeBuffer(scip, &foundhashdata);
+   }
+
+   for( i = 0; i < nvars_in_2rels; ++i )
+   {
+      SCIPfreeBufferArray(scip, &related_vars[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &nrelated_vars);
+   SCIPfreeBufferArray(scip, &related_vars);
+   SCIPfreeBufferArray(scip, &vars_in_2rels);
+
+   SCIPfreeBufferArray(scip, &row_list);
+
+   SCIPhashtableFree(&hashtable2);
+   SCIPhashtableFree(&hashtable3);
+
+   SCIPfreeBufferArray(scip, &prob_rows);
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons5) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons4) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons3) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
 }

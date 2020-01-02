@@ -2921,7 +2921,7 @@ SCIP_RETCODE separateRltCuts(
                if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
                {
                   /* add the row to SCIP; equality cuts are forced to be added to the LP */
-                  SCIP_CALL(SCIPaddRow(scip, cut, buildeqcut, &infeasible));
+                  SCIP_CALL( SCIPaddRow(scip, cut, buildeqcut, &infeasible) );
                   ++*ncuts;
 
                   if( infeasible )

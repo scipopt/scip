@@ -163,7 +163,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int j;
 
    cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars);
+   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
    cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
