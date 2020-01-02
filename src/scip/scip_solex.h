@@ -876,12 +876,14 @@ SCIP_RETCODE SCIPupdatePrimalRayEx(
    SCIP_SOL*             primalray           /**< the new primal ray */
    );
 
+/** overwrite the fp-values in a solution with the rounded exact ones */
 SCIP_EXPORT
 SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns TRUE if the solution is an exact rational solution */
 SCIP_EXPORT
 SCIP_Bool SCIPisExactSol(
    SCIP*                 scip,               /**< SCIP data structure */

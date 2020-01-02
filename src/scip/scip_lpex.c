@@ -393,8 +393,9 @@ SCIP_RETCODE SCIPprintRowex(
 }
 
 
+/** returns whether the exact lp was solved */
 SCIP_Bool SCIPlpexIsSolved(
-   SCIP* scip
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);

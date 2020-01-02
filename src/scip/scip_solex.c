@@ -225,9 +225,10 @@ void SCIPgetSolexTransObj(
    }
 }
 
+/** overwrite the fp-values in a solution with the rounded exact ones */
 SCIP_RETCODE SCIPoverwriteFPsol(
-   SCIP*                 scip,
-   SCIP_SOL*             sol
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    int v;
@@ -245,7 +246,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    return SCIP_OKAY;
 }
 
-SCIP_EXPORT
+/** print a rational solution */
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -307,6 +308,7 @@ SCIP_RETCODE SCIPprintSolex(
    return SCIP_OKAY;
 }
 
+/** returns TRUE if the solution is an exact rational solution */
 SCIP_Bool SCIPisExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */

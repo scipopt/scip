@@ -194,8 +194,10 @@ SCIP_RETCODE SCIPprintRowex(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** returns whether the exact lp was solved */
+SCIP_EXPORT
 SCIP_Bool SCIPlpexIsSolved(
-   SCIP* scip
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPaddVarExactData(
    SCIP_VAR*             var,                /**< pointer to variable */
    SCIP_Rational*        lb,                 /**< lower bounf of variable */
    SCIP_Rational*        ub,                 /**< upper bound of variable */
-   SCIP_Rational*        obj                 /** < objective function value */
+   SCIP_Rational*        obj                 /**< objective function value */
    )
 {
    assert(var != NULL);

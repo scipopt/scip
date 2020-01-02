@@ -79,6 +79,7 @@ SCIP_Bool SCIPisExactSolve(
 /** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
  *  only relevant for solving the problem provably correct
  */
+SCIP_EXPORT
 SCIP_Bool SCIPuseFPRelaxation(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -87,6 +88,7 @@ SCIP_Bool SCIPuseFPRelaxation(
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
  *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct
  */
+SCIP_EXPORT
 char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -145,12 +147,16 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+
+/** enforce integrality of the current exact rational lp solution */ 
+SCIP_EXPORT
 SCIP_RETCODE SCIPenfoIntegralityExact(
    SCIP*                 scip,
    SCIP_RESULT*          result
    );
 
 /** returns whether the certificate output is activated? */
+SCIP_EXPORT
 SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */
    );
@@ -160,16 +166,21 @@ SCIP_Bool SCIPisCertificateActive(
  *
  *  @return tolerance certificate data structure
  */
+SCIP_EXPORT
 SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** compute a safe bound that is valid in exact rational arithmetic */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,
-   SCIP_Real*            safebound
+   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven instead */
+   SCIP_Real*            safebound           /**< store the safe bound */
    );
 
+/** force the next lp to be solved by a rational lp solver */
+SCIP_EXPORT
 SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip               /**< SCIP data structure */
    );

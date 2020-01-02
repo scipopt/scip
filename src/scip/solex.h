@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPvalsexCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_VALSEX*          sourcevals           /**< primal CIP solution to copy */
+   SCIP_VALSEX*          sourcevals          /**< primal CIP solution to copy */
    );
 
 /** frees primal CIP solution */
@@ -229,17 +229,17 @@ SCIP_RETCODE SCIPsolexCheck(
 
 /** gets current position of solution in array of existing solutions of primal data */
 int SCIPsolexGetPrimalexIndex(
-   SCIP_SOL*               sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** sets current position of solution in array of existing solutions of primal data */
 void SCIPsolexSetPrimalexIndex(
-   SCIP_SOL*               sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   primalindex         /**< new primal index of solution */
    );
 
 SCIP_Bool SCIPsolIsExactSol(
-   SCIP_SOL*             sol                /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** retransforms exact part of solution to original problem space */
