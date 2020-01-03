@@ -44,14 +44,14 @@ function stripversion {
 
 # format time in seconds into format  dd-hh:mm:ss
 function formattime {
-  local T=$1
-  local D=$((T/60/60/24))
-  local H=$((T/60/60%24))
-  local M=$((T/60%60))
-  local S=$((T%60))
-  local F="%02d"
-  printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
-  echo ${PRETTYTIME}
+    local T=$1
+    local D=$((T/60/60/24))
+    local H=$((T/60/60%24))
+    local M=$((T/60%60))
+    local S=$((T%60))
+    local F="%02d"
+    printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
+    echo ${PRETTYTIME}
 }
 
 # input environment - these environment variables should be set before invoking this script
@@ -62,7 +62,7 @@ TIMELIMIT=$4     # the time limit in seconds
 TIMEFORMAT=$5    # the format for the time (sec or format)
 MEMLIMIT=$6      # the memory limit in MB
 MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-DEBUGTOOL=$8      # which debug tool should be used, if any?
+DEBUGTOOL=$8     # which debug tool should be used, if any?
 SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
 
 # get current SCIP path
