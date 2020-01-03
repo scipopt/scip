@@ -2375,9 +2375,12 @@ SCIP_Bool shouldApplyRestartCompletion(
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( completion < 1.0 / eventhdlrdata->restartfactor )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "Completion %.5f less than restart threshold %.5f\n",
-         completion, 1.0 / eventhdlrdata->restartfactor);
+      SCIPstatistic(
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "Completion %.5f less than restart threshold %.5f\n",
+            completion, 1.0 / eventhdlrdata->restartfactor);
+      )
+
       return TRUE;
    }
 
@@ -2397,18 +2400,24 @@ SCIP_Bool shouldApplyRestartEstimation(
 
    if( estimation < 0.0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "Estimation %g is still unavailable\n",
-         estimation);
+      SCIPstatistic(
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "Estimation %g is still unavailable\n",
+            estimation);
+      )
+
       return TRUE;
    }
 
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( estimation > eventhdlrdata->treedata->nnodes * eventhdlrdata->restartfactor )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "Estimation %g exceeds number of estimation tree nodes %" SCIP_LONGINT_FORMAT " by a factor of %.1f\n",
-         estimation, eventhdlrdata->treedata->nnodes, estimation / eventhdlrdata->treedata->nnodes);
+      SCIPstatistic(
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "Estimation %g exceeds number of estimation tree nodes %" SCIP_LONGINT_FORMAT " by a factor of %.1f\n",
+            estimation, eventhdlrdata->treedata->nnodes, estimation / eventhdlrdata->treedata->nnodes);
+      )
+
       return TRUE;
    }
 
