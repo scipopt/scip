@@ -39,7 +39,7 @@ function stripversion {
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
     NAMENOVERSION=${NAMENOVERSION%%\.*}
-    #echo $NAMENOVERSION
+    echo $NAMENOVERSION
 }
 
 # format time in seconds into format  dd-hh:mm:ss
@@ -51,7 +51,7 @@ function formattime {
     local S=$((T%60))
     local F="%02d"
     printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
-    #echo ${PRETTYTIME}
+    echo ${PRETTYTIME}
 }
 
 # input environment - these environment variables should be set before invoking this script
@@ -224,7 +224,7 @@ do
     then
         #format is (d-)HH:MM:SS
         HARDTIMELIMIT=$(formattime $HARDTIMELIMIT)
-        echo ${HARDTIMELIMIT}
+        #echo ${HARDTIMELIMIT}
     fi
     HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
     COUNT=$(( $COUNT + 1 ))
