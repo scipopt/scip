@@ -31,9 +31,12 @@
  */
 extern SCIP_RETCODE    stptest_all(SCIP*);
 
+/* stptest_extreduce.c
+ */
+extern SCIP_RETCODE    stptest_extreduce(SCIP*);
+
 /* stptest_reduce.c
  */
-extern SCIP_RETCODE    stptest_reduce_ext(SCIP*);
 extern SCIP_RETCODE    stptest_reduce_sdpcmw(SCIP*);
 
 /* stptest_misc.c

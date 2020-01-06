@@ -44,7 +44,6 @@ int getNnodesCurr(
 {
    assert(cgraph);
 
-
    return cgraph->nnodes_curr;
 }
 
@@ -93,6 +92,31 @@ int getEdgeEnd(
 }
 
 
+/** gets position of node with specified id */
+static inline
+int getPositionFromId(
+   const CGRAPH*         cgraph,             /**< new graph */
+   int                   nodeid              /**< the node id */
+   )
+{
+   int nodepos;
+   const int* const nodeids = cgraph->nodeids;
+
+   assert(cgraph_valid(cgraph));
+   assert(nodeid >= 0);
+
+   for( nodepos = cgraph->nnodes_curr - 1; nodepos >= 0; nodepos-- )
+   {
+      if( nodeids[nodepos] == nodeid )
+         break;
+   }
+
+   assert(nodepos >= 0);
+
+   return nodepos;
+}
+
+
 /** is the graph valid? */
 SCIP_Bool cgraph_valid(
    const CGRAPH*         cgraph              /**< the graph */
@@ -107,6 +131,8 @@ SCIP_Bool cgraph_valid(
    assert(nnodes_max > 1);
    assert(nnodes_curr <= nnodes_max);
    assert(nnodes_curr >= 0);
+   assert(cgraph->nnodes_active <= nnodes_curr);
+   assert(cgraph->nnodes_active >= 0);
 
    for( int i = 0; i < nnodes_curr - 1; i++ )
    {
@@ -194,21 +220,47 @@ SCIP_Bool cgraph_idsInSync(
    assert(cgraph && ids);
    assert(cgraph->nodeids);
 
-
    if( nids != cgraph->nnodes_curr )
    {
-      SCIPdebugMessage("wrong number of ids \n");
+      SCIPdebugMessage("wrong number of ids (%d!=%d) \n",  nids, cgraph->nnodes_curr);
       return FALSE;
    }
 
    for( int i = 0; i < nids; i++ )
    {
       if( cgraph->nodeids[i] != ids[i] )
+      {
+         SCIPdebugMessage("wrong id for entry %d (%d!=%d) \n", i, cgraph->nodeids[i], ids[i]);
          return FALSE;
+      }
    }
 
    return TRUE;
 }
+
+
+/** is node with given id in the graph?? */
+SCIP_Bool cgraph_idIsContained(
+   const CGRAPH*         cgraph,             /**< the graph */
+   int                   id                  /**< the id */
+)
+{
+   const int nnodes = getNnodesCurr(cgraph);
+
+   assert(cgraph->nodeids);
+   assert(id >= 0);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( cgraph->nodeids[i] == id )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 
 /** initialize complete, undirected graph */
 SCIP_RETCODE cgraph_init(
@@ -232,6 +284,7 @@ SCIP_RETCODE cgraph_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g->node_has_adjcosts), maxnnodes) );
 
    g->nnodes_curr = 0;
+   g->nnodes_active = 0;
    g->nnodes_max = maxnnodes;
 
 #ifndef NDEBUG
@@ -375,6 +428,7 @@ void cgraph_node_append(
    assert(cgraph_valid(cgraph));
    assert(edgecosts && cgraph->nodeids);
    assert(nodeid >= 0);
+   assert(!cgraph_idIsContained(cgraph, nodeid));
    assert(nodepos_new < nnodes_max);
    assert(NODE_ID_UNDEFINED == cgraph->nodeids[nodepos_new]);
 
@@ -405,43 +459,47 @@ void cgraph_node_append(
 }
 
 
-/** replaces node at nodepos_new with top node */
+/** replaces node with id 'nodeid_new' by top node */
 void cgraph_node_repositionTop(
    CGRAPH*               cgraph,             /**< new graph */
-   int                   nodepos_new         /**< the new node position */
+   int                   nodeid_new          /**< the new node id */
    )
 {
    const int nnodes_curr = getNnodesCurr(cgraph);
-   const int nnodes_max = getNnodesMax(cgraph);
    const int nodepos_top = nnodes_curr - 1;
-   const int start_new = getEdgeStart(nodepos_new, nnodes_max);
-   const int start_top = getEdgeStart(nodepos_top, nnodes_max);
-
-   SCIP_Real* const edgecosts = cgraph->edgecosts;
+   const int nodepos_new = getPositionFromId(cgraph, nodeid_new);
 
    assert(cgraph_valid(cgraph));
-   assert(nodepos_new >= 0 && nodepos_new < nodepos_top);
+   assert(nodepos_new >= 0 && nodepos_new <= nodepos_top);
 
-   for( int i = 0; i < nodepos_top; i++ )
+   if( nodepos_new != nodepos_top )
    {
-      if( i != nodepos_new )
+      const int nnodes_max = getNnodesMax(cgraph);
+      const int start_new = getEdgeStart(nodepos_new, nnodes_max);
+      const int start_top = getEdgeStart(nodepos_top, nnodes_max);
+      SCIP_Real* const edgecosts = cgraph->edgecosts;
+
+      for( int i = 0; i < nodepos_top; i++ )
       {
-         const int edgepos = getEdgeStart(i, nnodes_max) + nodepos_new;
+         if( i != nodepos_new )
+         {
+            const int edgepos = getEdgeStart(i, nnodes_max) + nodepos_new;
 
-         assert(EQ(edgecosts[edgepos], edgecosts[start_new + i]));
+            assert(EQ(edgecosts[edgepos], edgecosts[start_new + i]));
 
-         edgecosts[edgepos] = edgecosts[start_top + i];
+            edgecosts[edgepos] = edgecosts[start_top + i];
+         }
       }
+
+      assert(start_new + nodepos_top < start_top);
+
+      BMScopyMemoryArray(edgecosts + start_new, edgecosts + start_top, nodepos_top);
+
+      /* adapt diagonal entry */
+      edgecosts[start_new + nodepos_new] = FARAWAY;
+
+      cgraph->nodeids[nodepos_new] = cgraph->nodeids[nodepos_top];
    }
-
-   assert(start_new + nodepos_top < start_top);
-
-   BMScopyMemoryArray(edgecosts + start_new, edgecosts + start_top, nodepos_top);
-
-   /* adapt diagonal entry */
-   edgecosts[start_new + nodepos_new] = FARAWAY;
-
-   cgraph->nodeids[nodepos_new] = cgraph->nodeids[nodepos_top];
 
    cgraph_node_deleteTop(cgraph);
 
@@ -494,6 +552,42 @@ void cgraph_node_deleteTop(
 
 #endif
 }
+
+
+/** deletes node */
+void cgraph_node_delete(
+   CGRAPH*               cgraph,             /**< new graph */
+   int                   nodeid              /**< the node id */
+   )
+{
+   int nodepos;
+   const int* const nodeids = cgraph->nodeids;
+
+   assert(cgraph_valid(cgraph));
+   assert(nodeid >= 0);
+
+   for( nodepos = cgraph->nnodes_curr - 1; nodepos >= 0; nodepos-- )
+   {
+      if( nodeids[nodepos] == nodeid )
+         break;
+   }
+
+   assert(nodepos >= 0);
+   assert(0 && "not fully implemented yet");
+}
+
+
+/** gets id of node at the top */
+int cgraph_node_getTopId(
+   const CGRAPH*         cgraph              /**< new graph */
+   )
+{
+   assert(cgraph_valid(cgraph));
+   assert(cgraph->nnodes_curr > 0);
+
+   return cgraph->nodeids[cgraph->nnodes_curr - 1];
+}
+
 
 
 /** Get edge cost.

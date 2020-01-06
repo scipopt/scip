@@ -1677,13 +1677,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
 {  /*lint --e{715}*/
    SCIP_Bool feasible;
    SCIP_CONSDATA* consdata;
-   int i;
 
-   for( i = 0; i < nconss; i++ )
+   for( int i = 0; i < nconss; i++ )
    {
+      int todo; // allow cyles???
       consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), FALSE, &feasible) );
 
       if( !feasible )
       {
@@ -1691,6 +1691,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
          return SCIP_OKAY;
       }
    }
+
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -1706,9 +1707,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 
    for( int i = 0; i < nconss; i++ )
    {
+      int todo; // allow cyles???
       const SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), FALSE, &feasible) );
 
       if( !feasible )
       {
@@ -1730,7 +1732,7 @@ SCIP_DECL_CONSCHECK(consCheckStp)
 
    assert(g != NULL);
 
-   SCIP_CALL(SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), &feasible));
+   SCIP_CALL(SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), FALSE, &feasible));
 
    if( !feasible )
    {

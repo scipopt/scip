@@ -1109,6 +1109,8 @@ SCIP_RETCODE stptest_heur_extendPcMw(
 {
    SCIP_CALL( localExtendPc(scip) );
 
+   printf("stptest_heur_extendPcMw: all ok \n");
+
    return SCIP_OKAY;
 }
 
@@ -1128,6 +1130,8 @@ SCIP_RETCODE stptest_heur_local(
    SCIP_CALL( localKeyPathExchangePc2(scip) );
    SCIP_CALL( localKeyPathExchangePc(scip) );
    SCIP_CALL( localKeyPathExchange(scip) );
+
+   printf("stptest_heur_local: all ok \n");
 
    return SCIP_OKAY;
 }

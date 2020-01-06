@@ -41,7 +41,7 @@ SCIP_RETCODE stptest_all(
    SCIP_CALL( stptest_heur_extendPcMw(scip) );
    SCIP_CALL( stptest_heur_local(scip) );
    SCIP_CALL( stptest_pseudoDel(scip) );
-   SCIP_CALL( stptest_reduce_ext(scip) );
+   SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_dheap(scip) );
    SCIP_CALL( stptest_reduce_sdpcmw(scip) );
 

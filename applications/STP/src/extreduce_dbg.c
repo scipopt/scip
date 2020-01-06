@@ -155,6 +155,16 @@ SCIP_Bool extreduce_treeIsFlawed(
       degreecount[head] = 0;
    }
 
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(degreecount[i] == 0);
+   }
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      assert(edgecount[i] == 0);
+   }
+
    SCIPfreeCleanBufferArray(scip, &degreecount);
    SCIPfreeCleanBufferArray(scip, &edgecount);
 
@@ -221,4 +231,48 @@ void extreduce_printStack(
          graph_edge_printInfo(graph, edge);
       }
    }
+}
+
+
+/** debug initialization */
+void extreduce_extendInitDebug(
+   int*                  extedgesstart,      /**< array */
+   int*                  extedges            /**< array */
+)
+{
+   assert(extedgesstart && extedges);
+
+   for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
+      extedgesstart[i] = -1;
+
+   for( int i = 0; i < STP_EXT_MAXGRAD * STP_EXT_MAXGRAD; i++ )
+      extedges[i] = -1;
+}
+
+
+
+/** does the cgraph correspond to the current tree? */
+SCIP_Bool extreduce_cgraphInSyncWithTree(
+   const EXTDATA*        extdata             /**< extension data */
+   )
+{
+   CGRAPH* cgraph;
+
+   assert(extdata);
+   assert(extdata->reddata);
+
+   cgraph = extdata->reddata->cgraph;
+
+   assert(cgraph);
+
+
+// assert that the costs of the tree all coincide with the actual SD etc distances!
+// might be good to have this and reddata extdata stuff in extra method reduce_ext_util.c or just reduce_util.c
+// need some flag (in cgraph?) to see whether a leaf in the cgraph does not actually have valid costs (or any)
+// and should be recomputed!
+
+   if( !cgraph_idsInSync(cgraph, extdata->tree_leaves, extdata->tree_nleaves) )
+      return FALSE;
+
+   return TRUE;
 }

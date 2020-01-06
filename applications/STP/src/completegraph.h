@@ -40,6 +40,7 @@ typedef struct complete_graph
    SCIP_Bool*            node_has_adjcosts;  /**< does node have adjacency costs? */
    int                   nnodes_max;         /**< maximum number of nodes */
    int                   nnodes_curr;        /**< current number of nodes */
+   int                   nnodes_active;      /**< current number of nodes for which adjacency costs have been added */
 } CGRAPH;
 
 
@@ -71,6 +72,7 @@ typedef struct complete_mst
 SCIP_Bool cgraph_valid(const CGRAPH*);
 SCIP_Bool cgraph_isEmpty(const CGRAPH*);
 SCIP_Bool cgraph_idsInSync(const CGRAPH*, const int*, int);
+SCIP_Bool cgraph_idIsContained(const CGRAPH*, int);
 SCIP_RETCODE cgraph_init(SCIP*, CGRAPH**, int);
 void cgraph_free(SCIP*, CGRAPH**);
 void cgraph_clean(CGRAPH*);
@@ -79,6 +81,8 @@ void cgraph_node_append(CGRAPH*, int);
 void cgraph_node_applyMinAdjCosts(CGRAPH*, int, int);
 void cgraph_node_repositionTop(CGRAPH*, int);
 void cgraph_node_deleteTop(CGRAPH*);
+void cgraph_node_delete(CGRAPH*, int);
+int cgraph_node_getTopId(const CGRAPH*);
 SCIP_Real cgraph_edge_getCost(const CGRAPH*, int, int);
 
 /*  methods for the corresponding MST structure */

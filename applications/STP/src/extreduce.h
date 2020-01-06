@@ -27,6 +27,7 @@
 #define APPLICATIONS_STP_SRC_EXTREDUCE_H_
 
 #define STP_EXT_CLOSENODES_MAXN 64
+#define STP_EXT_MAXSTACKSIZE 10000
 #define STP_EXT_MAXDFSDEPTH 6
 #define STP_EXT_MINDFSDEPTH 4
 #define STP_EXT_MAXGRAD 8
@@ -117,8 +118,9 @@ typedef struct extension_data
    SCIP_Real* const tree_bottleneckDistNode; /**< needs to be set to -1.0 (for all nodes) */
    int* const tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost;     /**< of size nnodes */
-   SCIP_Real* const tree_redcostSwap;        /**< of size nnodes */
+   SCIP_Real* const tree_redcostSwap;           /**< of size nnodes */
    SCIP_Real* const pcSdToNode;                /**< needs to be set to -1.0, only needed of PC */
+   int* const pcSdCands;                       /**< needed only for PC */
    const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
@@ -161,13 +163,16 @@ extern SCIP_Bool       extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
 extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*);
 extern int             extreduce_getMaxTreeDepth(const GRAPH*);
-
+extern int             extreduce_getMaxStackSize(void);
 
 /* extreduce_dbg.c
  */
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
+extern SCIP_Bool       extreduce_cgraphInSyncWithTree(const EXTDATA*);
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
+extern void            extreduce_extendInitDebug(int*, int*);
+
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

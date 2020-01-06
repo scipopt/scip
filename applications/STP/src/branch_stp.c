@@ -383,8 +383,6 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    if( addsol )
    {
-      SCIP_SOL* sol = NULL;
-
       const int nvars = SCIPprobdataGetNVars(scip);
       assert(nvars == graph->edges);
 
@@ -392,7 +390,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
       for( int e = 0; e < nvars; e++ )
          costorg[e] = (CONNECT == soledges[e]) ? 1.0 : 0.0;
 
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, costorg, sol, NULL, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, costorg, NULL, &success) );
       SCIPdebugMessage("solution added? %d \n", success);
    }
 

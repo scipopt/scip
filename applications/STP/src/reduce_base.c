@@ -759,13 +759,12 @@ SCIP_RETCODE reducePc(
 }
 
 /** reduction package for the MWCSP */
-static
 SCIP_RETCODE reduceMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   STP_Bool              advanced,           /**< perform advanced reductions? */
+   SCIP_Bool             advanced,           /**< perform advanced reductions? */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
@@ -866,7 +865,6 @@ SCIP_RETCODE reduceMw(
 }
 
 /** basic reduction package for the HCDSTP */
-static
 SCIP_RETCODE reduceHc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -985,7 +983,6 @@ SCIP_RETCODE reduceHc(
 }
 
 /** basic reduction package for the SAP */
-static
 SCIP_RETCODE reduceSap(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -1103,7 +1100,7 @@ SCIP_RETCODE reduceSap(
 }
 
 
-static
+/** reduce node-weighted Steiner tree problem */
 SCIP_RETCODE reduceNw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */

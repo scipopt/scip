@@ -223,7 +223,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
-   SCIP_SOL*             sol,                /**< the new solution */
    SCIP_HEUR*            heur,               /**< heuristic data */
    SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
    );

@@ -486,7 +486,7 @@ SCIP_RETCODE completemst1(
    BMScopyMemoryArray(cgraph->adjedgecosts, adjedges3, 4);
    cgraph_node_applyMinAdjCosts(cgraph, 2, 3);
 
-   cgraph_node_repositionTop(cgraph, 1);
+   cgraph_node_repositionTop(cgraph, 2);
 
    cmst_computeMst(cgraph, 0, cmst);
 
@@ -687,9 +687,9 @@ SCIP_RETCODE completemst5(
    SCIP_CALL( cmst_init(scip, &cmst, maxnnodes) );
 
    cgraph_node_append(cgraph, 0);
-   cgraph_node_append(cgraph, 1);
-   cgraph_node_append(cgraph, 1);
-   cgraph_node_append(cgraph, 1);
+   cgraph_node_append(cgraph, 2);
+   cgraph_node_append(cgraph, 3);
+   cgraph_node_append(cgraph, 4);
 
    cgraph_node_deleteTop(cgraph);
    cgraph_node_deleteTop(cgraph);
@@ -763,7 +763,7 @@ SCIP_RETCODE stptest_pseudoDel(
    SCIP_CALL( pseudoDelSingle(scip) );
    SCIP_CALL( pseudoDelDouble(scip) );
 
-   printf("pseudoDeletion test passed \n");
+   printf("pseudoDeletion test: all ok \n");
 
    return SCIP_OKAY;
 }
@@ -865,6 +865,8 @@ SCIP_RETCODE stptest_dheap(
    graph_heap_free(scip, TRUE, TRUE, &heap);
    assert(heap == NULL);
 
+   printf("stptest_dheap: all ok \n");
+
    return SCIP_OKAY;
 }
 
@@ -880,6 +882,8 @@ SCIP_RETCODE stptest_completegraph(
    SCIP_CALL( completemst3(scip) );
    SCIP_CALL( completemst4(scip) );
    SCIP_CALL( completemst5(scip) );
+
+   printf("stptest_completegraph: all ok \n");
 
    return SCIP_OKAY;
 }

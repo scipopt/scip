@@ -1045,7 +1045,7 @@ SCIP_Bool extreduce_extdataIsClean(
          return FALSE;
       }
 
-      if( extdata->tree_bottleneckDistNode[i] != -1.0 )
+      if( !EQ(extdata->tree_bottleneckDistNode[i], -1.0) )
       {
          printf("extdata->bottleneckDistNode[i] %f \n", extdata->tree_bottleneckDistNode[i]);
          return FALSE;
@@ -1152,7 +1152,14 @@ void extreduce_edgeRemove(
    }
 }
 
-/** get maximum allow depth for extended tree in given graph */
+/** get maximum allowed stack size */
+int extreduce_getMaxStackSize(void)
+{
+   return STP_EXT_MAXSTACKSIZE;
+}
+
+
+/** get maximum allowed depth for extended tree in given graph */
 int extreduce_getMaxTreeDepth(
    const GRAPH*          graph               /**< graph data structure */
 )

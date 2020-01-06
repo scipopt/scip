@@ -453,6 +453,91 @@ SCIP_RETCODE probdataCreate(
    return SCIP_OKAY;
 }
 
+
+/** sets STP solving mode */
+static
+SCIP_RETCODE setStpSolvingMode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< pointer to problem data */
+)
+{
+   char mode;
+
+   SCIP_CALL( SCIPgetCharParam(scip, "stp/mode", &mode) );
+
+   /* set STP solving mode */
+   probdata->mode = MODE_CUT;
+   assert(mode != 'p' && "pricing mode currently not supported\n");
+
+   if( mode == 'f' )
+      probdata->mode = MODE_FLOW;
+   else
+      assert(mode == 'c');
+
+   return SCIP_OKAY;
+}
+
+
+/** presolves STP */
+static
+SCIP_RETCODE presolveStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< pointer to problem data */
+   SCIP_Real*            offset              /**< offset from STP reductions */
+)
+{
+   GRAPH* packedgraph;
+   GRAPH* graph = probdata->graph;
+   SCIP_Real oldtimelimit;
+   SCIP_Real presoltimelimit;
+   int reduction;
+
+   assert(graph);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
+   SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
+
+   if( presoltimelimit > -0.5 )
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", presoltimelimit) );
+
+   /* save original root */
+   if( !graph_pc_isPcMw(graph) )
+      graph->orgsource = graph->source;
+
+   probdata->norgedges = graph->edges;
+
+//#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
+   SCIP_CALL( stptest_all(scip) );
+#endif
+
+   /* the actual presolving */
+   SCIP_CALL( reduce(scip, graph, offset, reduction, probdata->minelims, TRUE) );
+
+#ifdef STP_WRITE_RED_STATS
+   graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
+   exit(1);
+#endif
+
+#ifdef WITH_UG
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, offset, FALSE) );
+#else
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, offset, TRUE) );
+#endif
+
+   graph = packedgraph;
+   assert(graph);
+
+   probdata->stp_type = graph->stp_type;
+   probdata->graph = graph;
+
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+
+   return SCIP_OKAY;
+}
+
+
 /** frees the constraints of CUT model */
 static
 SCIP_RETCODE freeConstraintsCutModel(
@@ -2451,19 +2536,14 @@ SCIP_RETCODE SCIPprobdataCreate(
    )
 {
    SCIP_PROBDATA* probdata;
-   SCIP_Real offset;
-   SCIP_Real oldtimelimit;
-   SCIP_Real presoltimelimit;
+   SCIP_Real offset = 0.0;
    PRESOL presolinfo;
    GRAPH* graph;
-   GRAPH* packedgraph;
    SCIP_Bool printGraph;
    int symcons;
    int cyclecons;
    int usedacuts;
-   int reduction;
    int compcentral;
-   char mode;
    char* intlogfilename;
    char* logfilename;
    char* probname;
@@ -2483,9 +2563,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
    /* get parameters */
-   SCIP_CALL( SCIPgetCharParam(scip, "stp/mode", &mode) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/compcentral", &compcentral) );
-   SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usesymcons", &(symcons)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usecyclecons", &(cyclecons)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usedacuts", &(usedacuts)) );
@@ -2516,52 +2594,19 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
-   /* set solving mode */
-   probdata->mode = MODE_CUT;
-
-   assert(mode != 'p' && "pricing mode currently not supported\n");
-
-   if( mode == 'f' )
-      probdata->mode = MODE_FLOW;
-   else
-      assert(mode == 'c');
+   setStpSolvingMode(scip, probdata);
 
    if( printGraph )
    {
       SCIP_CALL( graph_writeGml(graph, "OriginalGraph.gml", NULL) );
    }
 
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
-   SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
-
-   if( presoltimelimit > -0.5 )
-      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", presoltimelimit) );
-
-   /* save original root */
-   if( !graph_pc_isPcMw(graph) )
-      graph->orgsource = graph->source;
-
-   probdata->norgedges = graph->edges;
-
-   /* presolving */
-   SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims, TRUE) );
-
-#ifdef STP_WRITE_RED_STATS
-   graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
-   exit(1);
-#endif
-
-#ifdef WITH_UG
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, &offset, FALSE) );
-#else
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, &offset, TRUE) );
-#endif
-
-   graph = packedgraph;
-   assert(graph);
-
-   probdata->stp_type = graph->stp_type;
    probdata->graph = graph;
+
+   /* reduce the graph (and do some house-holding) */
+   presolveStp(scip, probdata, &offset);
+
+   graph = probdata->graph;
 
    writeCommentSection(scip, graph, filename);
 
@@ -2583,8 +2628,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 #endif
 
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
-
    SCIP_CALL( setParams(scip, probdata, symcons, cyclecons) );
 
    /* setting the offset to the fixed value given in the input file plus the fixings given by the reduction techniques */
@@ -2603,11 +2646,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
-
-//#define UNIT_TEST_STP
-#ifdef UNIT_TEST_STP
-   SCIP_CALL( stptest_all(scip) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -3423,11 +3461,11 @@ void SCIPprobdataWriteLogLine(
 SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
-   SCIP_SOL*             sol,                /**< the new solution */
    SCIP_HEUR*            heur,               /**< heuristic data */
    SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
    )
 {
+   SCIP_SOL* sol = NULL;
    SCIP_PROBDATA* probdata;
    SCIP_VAR** edgevars;
    GRAPH* graph;

@@ -401,7 +401,6 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
    /* solution found by prune heuristic? */
    if( success )
    {
-      SCIP_SOL* sol;
       SCIP_Real pobj;
       SCIP_Real* nval;
 
@@ -429,8 +428,7 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       SCIPdebugMessage("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
 
       /* try to add new solution to pool */
-      sol = NULL;
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
 
       /* has solution been added? */
       if( success )

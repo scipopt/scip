@@ -180,8 +180,193 @@ typedef struct insertion_data
  */
 
 
+/** prune the solution? */
+static inline
+SCIP_Bool solNeedsPruning(
+   SCIP_SOL*             initialsol          /**< SCIP data structure */
+)
+{
+   assert(initialsol);
+
+   if( SCIPsolGetHeur(initialsol) == NULL )
+   {
+      return TRUE;
+   }
+
+   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(initialsol)), "rec") == 0 )
+   {
+      return FALSE;
+   }
+
+   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(initialsol)), "TM") == 0 )
+   {
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** prune the solution? */
+static inline
+SCIP_RETCODE solPrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  results             /**< Steiner tree edges (in/out) */
+)
+{
+   STP_Bool* steinertree;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(graph, results, 0.0, nedges);
+#endif
+
+   assert(graph_sol_valid(scip, graph, results));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
+
+   graph_sol_setVertexFromEdge(graph, results, steinertree);
+
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, results, steinertree) );
+
+   SCIPfreeBufferArray(scip, &steinertree);
+
+#ifndef NDEBUG
+   {
+       const SCIP_Real initialobj_pruned = graph_sol_getObj(graph, results, 0.0, nedges);
+
+       assert(SCIPisLE(scip, initialobj_pruned, initialobj));
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** fills solution array 'results' */
+static inline
+void solGetStpSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_SOL*             initialsol,         /**< SCIP data structure */
+   int*                  results             /**< Steiner tree edges (out) */
+)
+{
+   SCIP_Real* xvals = SCIPprobdataGetXval(scip, initialsol);
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(results);
+   assert(xvals);
+
+   /* set solution array */
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( SCIPisEQ(scip, xvals[e], 1.0) )
+      {
+         results[e] = CONNECT;
+      }
+      else
+      {
+         assert(SCIPisEQ(scip, xvals[e], 0.0));
+
+         results[e] = UNKNOWN;
+      }
+   }
+}
+
+
+/** tries to add solution stored in 'results' to SCIP solution pool */
+static inline
+SCIP_RETCODE solAddTry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sols,               /**< SCIP solutions */
+   SCIP_HEUR*            heur,               /**< heuristic */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             initialsol_obj,     /**< objective */
+   SCIP_SOL*             initialsol,         /**< SCIP data structure */
+   int*                  results,            /**< Steiner tree edges (out) */
+   SCIP_RESULT*          result              /**< pointer */
+)
+{
+   SCIP_Real* newsol_vals;
+   const int nedges = graph_get_nEdges(graph);
+   SCIP_Bool feasible = FALSE;
+   SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+
+   assert(heurdata);
+   assert(*result == SCIP_DIDNOTFIND);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &newsol_vals, nedges) );
+
+   for( int v = 0; v < nedges; v++ )
+      newsol_vals[v] = (results[v] == CONNECT) ? 1.0 : 0.0;
+
+   SCIP_CALL( SCIPStpValidateSol(scip, graph, newsol_vals, FALSE, &feasible) );
+
+   assert(feasible);
+
+   /* is new solution feasible? */
+   if( feasible )
+   {
+      const SCIP_Real newsol_obj = graph_sol_getObj(graph, results, 0.0, nedges);
+      const SCIP_Bool solIsBetter = SCIPisLT(scip, newsol_obj, initialsol_obj);
+      const SCIP_Bool solIsBetter_org
+         = SCIPisLT(scip, newsol_obj, SCIPgetSolOrigObj(scip, initialsol) - SCIPprobdataGetOffset(scip));
+
+      assert(SCIPisLE(scip, newsol_obj, initialsol_obj));
+
+#ifndef NDEBUG
+      {
+         SCIP_Real pobj = 0.0;
+
+         for( int v = 0; v < nedges; v++ )
+            pobj += graph->cost[v] * newsol_vals[v];
+
+         assert(SCIPisEQ(scip, pobj, newsol_obj));
+      }
+#endif
+
+      // todo if solIsBetter || solIsBetter_org
+
+      /* has solution been improved? */
+      if( solIsBetter_org )
+      {
+         SCIP_SOL* const bestsol = sols[0];
+         SCIP_Bool success = FALSE;
+
+         SCIP_CALL( SCIPprobdataAddNewSol(scip, newsol_vals, heur, &success) );
+
+         if( success )
+         {
+            *result = SCIP_FOUNDSOL;
+
+            if( heurdata->nbestsols < heurdata->maxnsols && SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), newsol_obj) )
+            {
+               heurdata->nfails = 0;
+               heurdata->nbestsols++;
+            }
+            SCIPdebugMessage("success in local: old: %f new: %f \n", (SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip)), newsol_obj);
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &newsol_vals);
+
+   if( *result != SCIP_FOUNDSOL )
+   {
+      heurdata->nfails++;
+      if( heurdata->nbestsols > DEFAULT_MINNBESTSOLS && heurdata->nfails > 1 )
+         heurdata->nbestsols--;
+
+      SCIPdebugMessage("fail! %d \n", heurdata->nbestsols);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** can the problem class be used? */
-static
+static inline
 SCIP_Bool probtypeIsValidForLocal(
    const GRAPH*          graph               /**< graph data structure */
 )
@@ -3449,22 +3634,15 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_HEURDATA* heurdata;
    SCIP_PROBDATA* probdata;
    GRAPH* graph;                             /* graph structure */
-   SCIP_SOL* newsol;                         /* new solution */
+   SCIP_SOL* initialsol;                         /* initial solution */
    SCIP_SOL** sols;                          /* solutions */
-   SCIP_VAR** vars;                          /* SCIP variables */
-   SCIP_Real* nval;
-   SCIP_Real* xval;
    int v;
    int nActiveSols;
-   int nvars;
    int nsols;                                /* number of all solutions found so far */
    int nedges;
    int* results;
    int* lastsolindices;
-   SCIP_Bool feasible;
-#ifndef NDEBUG
-   SCIP_Real initialobj;
-#endif
+   SCIP_Real initialsol_obj;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -3521,78 +3699,42 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( v == nActiveSols )
       return SCIP_OKAY;
 
-   newsol = sols[v];
-   lastsolindices[v] = SCIPsolGetIndex(newsol);
+   initialsol = sols[v];
+   lastsolindices[v] = SCIPsolGetIndex(initialsol);
 
    /* solution not good enough? */
    if( (v > heurdata->nbestsols && !(heurdata->maxfreq)) )
       return SCIP_OKAY;
 
    /* has the new solution been found by this very heuristic? */
-   if( SCIPsolGetHeur(newsol) == heur )
+   if( SCIPsolGetHeur(initialsol) == heur )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
-   vars = SCIPprobdataGetVars(scip);
-   nvars = SCIPprobdataGetNVars(scip);
-   xval = SCIPprobdataGetXval(scip, newsol);
-
-   if( vars == NULL )
-      return SCIP_OKAY;
-
-   assert(vars != NULL);
-   assert(xval != NULL);
+   assert(SCIPprobdataGetVars(scip) != NULL);
+   assert(SCIPprobdataGetNVars(scip) == nedges);
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
-   /* set solution array */
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( SCIPisEQ(scip, xval[e], 1.0) )
-         results[e] = CONNECT;
-      else
-         results[e] = UNKNOWN;
-   }
+   /* write solution into 'results' array */
+   solGetStpSol(scip, graph, initialsol, results);
 
    if( !graph_sol_valid(scip, graph, results) )
    {
-      SCIPfreeBufferArray(scip, &nval);
       SCIPfreeBufferArray(scip, &results);
+
       return SCIP_OKAY;
    }
 
-#ifndef NDEBUG
-   initialobj = graph_sol_getObj(graph, results, 0.0, nedges);
-#endif
-
-   /* pruning necessary? */
-   if( SCIPsolGetHeur(newsol) == NULL ||
-      !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
-         strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "TM") == 0) )
+   /* initial pruning necessary? */
+   if( solNeedsPruning(initialsol) )
    {
-      const int nnodes = graph->knots;
-      STP_Bool* steinertree;
-      SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
-      assert(graph_sol_valid(scip, graph, results));
-
-      graph_sol_setVertexFromEdge(graph, results, steinertree);
-
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, results, steinertree) );
-
-      SCIPfreeBufferArray(scip, &steinertree);
-
-#ifndef NDEBUG
-      {
-          const SCIP_Real initialobj_pruned = graph_sol_getObj(graph, results, 0.0, nedges);
-          assert(SCIPisLE(scip, initialobj_pruned, initialobj));
-
-          initialobj = initialobj_pruned;
-      }
-#endif
+      SCIP_CALL( solPrune(scip, graph, results) );
    }
+
+   initialsol_obj = graph_sol_getObj(graph, results, 0.0, nedges);
 
    /* execute local heuristics */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, results) );
@@ -3602,77 +3744,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( SCIPStpHeurLocalExtendPcMwImp(scip, graph, results) );
 #endif
 
-   assert(nvars == nedges);
 
-   /* can we connect the network */
-   for( v = 0; v < nvars; v++ )
-      nval[v] = (results[v] == CONNECT) ? 1.0 : 0.0;
+   /* finally, try to add the solution to the SCIP pool */
+   SCIP_CALL( solAddTry(scip, sols, heur, graph, initialsol_obj, initialsol, results, result) );
 
-   SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &feasible) );
-
-   assert(feasible);
-
-   /* solution feasible? */
-   if( feasible )
-   {
-      SCIP_Real pobj;
-      SCIP_Bool solIsBetter;
-
-#ifndef NDEBUG
-      const SCIP_Real newobj = graph_sol_getObj(graph, results, 0.0, nedges);
-      const SCIP_Bool solIsBetter_debug = SCIPisGT(scip, initialobj, newobj);
-
-      assert(SCIPisGE(scip, initialobj, newobj));
-      assert(nedges == nvars);
-#endif
-
-      pobj = 0.0;
-
-      for( v = 0; v < nedges; v++ )
-         pobj += graph->cost[v] * nval[v];
-
-      solIsBetter = SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj);
-
-#ifndef NDEBUG
-      assert(solIsBetter_debug == solIsBetter);
-#endif
-
-      /* has solution been improved? */
-      if( solIsBetter )
-      {
-         SCIP_SOL* bestsol;
-         SCIP_SOL* impsol;
-         SCIP_Bool success;
-
-         bestsol = sols[0];
-         impsol = NULL;
-
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, impsol, heur, &success) );
-
-         if( success )
-         {
-            *result = SCIP_FOUNDSOL;
-
-            if( heurdata->nbestsols < heurdata->maxnsols && SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
-            {
-               heurdata->nfails = 0;
-               heurdata->nbestsols++;
-            }
-            SCIPdebugMessage("success in local: old: %f new: %f \n", (SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip)), pobj);
-         }
-      }
-   }
-
-   if( *result != SCIP_FOUNDSOL )
-   {
-      heurdata->nfails++;
-      if( heurdata->nbestsols > DEFAULT_MINNBESTSOLS && heurdata->nfails > 1 )
-         heurdata->nbestsols--;
-
-      SCIPdebugMessage("fail! %d \n", heurdata->nbestsols);
-   }
-
-   SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
 
    return SCIP_OKAY;

@@ -606,8 +606,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( success && addsol )
    {
       /* add solution */
-      SCIP_SOL* sol = NULL;
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
       SCIPdebugMessage("Ascend-and-prune added solution \n");
    }
 

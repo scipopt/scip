@@ -417,7 +417,6 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    /* solution found by slackprune heuristic? */
    if( success )
    {
-      SCIP_SOL* sol;
       SCIP_Real pobj;
       SCIP_Real* nval;
 
@@ -442,8 +441,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
       SCIPdebugMessage("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
 
       /* try to add new solution to pool */
-      sol = NULL;
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
 
       /* has solution been added? */
       if( success )

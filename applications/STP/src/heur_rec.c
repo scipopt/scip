@@ -646,7 +646,6 @@ SCIP_RETCODE poolAddSol(
    }
    else
    {
-      SCIP_SOL* sol = NULL;
       SCIP_Real* nval = NULL;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
@@ -659,7 +658,7 @@ SCIP_RETCODE poolAddSol(
             nval[e] = 0.0;
       }
 
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, soladded) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, soladded) );
 
       if( *soladded )
       {

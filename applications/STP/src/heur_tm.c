@@ -2140,16 +2140,22 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       SCIP_Real* nval;
       const int nvars = SCIPprobdataGetNVars(scip);
 
+      assert(nvars == nedges);
+
       SCIP_CALL(SCIPallocBufferArray(scip, &nval, nvars));
 
       for( int v = 0; v < nvars; v++ )
-         nval[v] = (soledges[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
+      {
+         nval[v] = (soledges[v] == CONNECT) ? 1.0 : 0.0;
+      }
 
-      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
+      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, FALSE, &success) );
+
+      assert(success);
+
       if( success )
       {
-         SCIP_SOL* sol = NULL;
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
 
          if( success )
          {

@@ -2541,6 +2541,7 @@ int graph_get_nNodes(
 )
 {
    assert(graph);
+   assert(graph->knots >= 1);
 
    return graph->knots;
 }
@@ -2552,6 +2553,7 @@ int graph_get_nEdges(
 )
 {
    assert(graph);
+   assert(graph->edges >= 0);
 
    return graph->edges;
 }
@@ -3540,7 +3542,7 @@ SCIP_RETCODE graph_pack(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    GRAPH**               newgraph,           /**< the new graph */
-   SCIP_Real*            offset,             /**< pointer to store offset from non-leaf terminals (only PC) */
+   SCIP_Real*            offset,             /**< pointer to add offset from non-leaf terminals to (only PC) */
    SCIP_Bool             verbose             /**< verbose? */
    )
 {

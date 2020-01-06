@@ -567,6 +567,6 @@ extern void graph_writeStpOrg(SCIP*, const GRAPH*, const char*);
 
 /* validate.c
  */
-extern SCIP_RETCODE    SCIPStpValidateSol(SCIP*, const GRAPH*, const double*, SCIP_Bool*);
+extern SCIP_RETCODE    SCIPStpValidateSol(SCIP*, const GRAPH*, const double*, SCIP_Bool, SCIP_Bool*);
 
 #endif /* !APPLICATIONS_STP_GRAPH_H_ */
