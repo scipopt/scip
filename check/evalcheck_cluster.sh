@@ -224,7 +224,7 @@ do
       then
           if test "$EXPIRE" = "1"
           then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+6 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               if test -z "$RBCLI_TAG"
