@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.0
+ * @version  7.0.0.1
  *
  * \image html scippy.png
  */
