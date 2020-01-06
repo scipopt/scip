@@ -80,7 +80,7 @@ SLURMACCOUNT    =       ""
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	6.0.2.4
+SCIP_VERSION	=	7.0.0
 
 # compiling and linking parameters
 VERBOSE		=	false
