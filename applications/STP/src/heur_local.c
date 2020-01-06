@@ -216,9 +216,9 @@ SCIP_RETCODE solPrune(
 {
    STP_Bool* steinertree;
    const int nnodes = graph->knots;
-   const int nedges = graph->edges;
 
 #ifndef NDEBUG
+   const int nedges = graph->edges;
    const SCIP_Real initialobj = graph_sol_getObj(graph, results, 0.0, nedges);
 #endif
 
