@@ -182,48 +182,50 @@ do
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
 		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
-
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 
                 # check if binary exists. The second condition checks whether there is a binary of that name directly available
                 # independent of whether it is a symlink, file in the working directory, or application in the path
-        if test -e $SCIPPATH/../$BINNAME
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-        elif type $BINNAME >/dev/null 2>&1
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$BINNAME
-        fi
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
 
-	export SOLVERPATH=$SCIPPATH
-	# this looks wrong but is totally correct
-	export BASENAME=$FILENAME
-	export FILENAME=$INSTANCE
-	export CLIENTTMPDIR
-	export OUTPUTDIR
-	export HARDTIMELIMIT
-	export HARDMEMLIMIT
-	export CHECKERPATH=$SCIPPATH/solchecker
-	export SETFILE
-	export TIMELIMIT
+		# additional environment variables needed by run.sh
+		export SOLVERPATH=$SCIPPATH
+		# this looks wrong but is totally correct
+		export BASENAME=$FILENAME
+		export FILENAME=$INSTANCE
+		export CLIENTTMPDIR
+		export OUTPUTDIR
+		export HARDTIMELIMIT
+		export HARDMEMLIMIT
+		export CHECKERPATH=$SCIPPATH/solchecker
+		export SETFILE
+		export TIMELIMIT
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
-		# additional environment variables needed by run.sh
-		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    if test "$CLUSTERQUEUE" != "moskito"
+		    then
+		       # the space at the end is necessary
+		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    fi
 
                     if test "$SLURMACCOUNT" == ""
 	            then
-                                  SLURMACCOUNT=$ACCOUNT
+			SLURMACCOUNT=$ACCOUNT
                     fi
 
                     if test "$CLUSTERNODES" = "all"
 		    then
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		    else
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
 		    # -V to copy all environment variables

@@ -48,8 +48,31 @@ CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
 
-echo $FEASTOL
+# check if all variables defined (by checking the last one)
+if test -z $EXCLUSIVE
+then
+    echo Skipping test since not all variables are defined
+    echo "TSTNAME       = $TSTNAME"
+    echo "BINNAME       = $BINNAME"
+    echo "SETNAMES      = $SETNAME"
+    echo "BINID         = $BINID"
+    echo "TIMELIMIT     = $TIMELIMIT"
+    echo "NODELIMIT     = $NODELIMIT"
+    echo "MEMLIMIT      = $MEMLIMIT"
+    echo "THREADS       = $THREADS"
+    echo "FEASTOL       = $FEASTOL"
+    echo "DISPFREQ      = $DISPFREQ"
+    echo "CONTINUE      = $CONTINUE"
+    echo "QUEUETYPE     = $QUEUETYPE"
+    echo "QUEUE         = $QUEUE"
+    echo "PPN           = $PPN"
+    echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "NOWAITCLUSTER = $NOWAITCLUSTER"
+    echo "EXCLUSIVE     = $EXCLUSIVE"
+    exit 1;
+fi
 
+OUTPUTDIR="results"
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -85,41 +108,14 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="  --exclusive --exclude=opt233,opt234,opt235,opt236,opt237,opt238,opt239,opt240,opt241,opt242,opt243,opt244,opt245,opt246,opt247,opt248"
-else
-    EXCLUSIVE=""
-fi
+# configure cluster-related environment variables
+. ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
 #       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -210,7 +206,7 @@ do
   if test -f $SCIPPATH/$i
   then
 
-      echo adding instance $COUNT to queue
+      # echo adding instance $COUNT to queue
 
       # the cluster queue has an upper bound of 2000 jobs; if this limit is
       # reached the submitted jobs are dumped; to avoid that we check the total
@@ -248,15 +244,12 @@ do
 	  rm -f $SETFILE
       fi
 
-      # we need to create a tmp file for run.sh - even if it's empty!
-      TMPFILE=$BASENAME.tmp
-      touch $TMPFILE
-
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME="$BINNAME $CLSETTINGSLIST $i"
       export BASENAME=$FILENAME
       export FILENAME=$i
+      export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
 
       # check queue type
