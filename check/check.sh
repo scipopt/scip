@@ -85,22 +85,24 @@ MEMFORMAT="kB"
 
 if test -e $SCIPPATH/../$BINNAME
 then
-   EXECNAME=$SCIPPATH/../$BINNAME
+    EXECNAME=$SCIPPATH/../$BINNAME
+
+    # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
+    if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
+	# skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
+	HARDMEMLIMIT="none"
+    elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
+	# skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
+	HARDMEMLIMIT="none"
+    else
+	ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
+    fi
 else
-   EXECNAME=$BINNAME
+    EXECNAME=$BINNAME
+    ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
 fi
 
 
-# check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
-if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
-   # skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
-   HARDMEMLIMIT="none"
-elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
-   # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
-   HARDMEMLIMIT="none"
-else
-   ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
-fi
 
 export EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
 

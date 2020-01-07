@@ -82,7 +82,7 @@ do
       echo ""
       echo create overall output and error file for $EVALFILE
 
-      # check first if all out, err, and set files exist for this eval-file.
+      # check first if all out and err files exist for this eval-file.
       NMISSING=0
       for i in `cat $DIR/$EVALFILE.eval` DONE
       do
@@ -91,7 +91,7 @@ do
             break
         fi
 
-        for extension in out err set
+        for extension in out err
         do
             FILE=${i}.${extension}
             if ! test -e ${FILE}
@@ -104,7 +104,7 @@ do
 
       if [ ${NMISSING} -gt 0 -a ${REMOVE} -eq 1 ]
       then
-        echo "Exiting because ${NMISSING} out/err/set file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
+        echo "Exiting because ${NMISSING} out/err file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
         exit
       fi
 

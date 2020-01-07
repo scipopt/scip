@@ -182,7 +182,7 @@ else
 	    FULLTSTNAME="testset/$TSTNAME.ttest"
 	    TIMEFACTOR=$TIMELIMIT
 	else
-	    if [ -f testset/$TSTNAME.ttest ];
+	    if [ -f testset/$TSTNAME.test ];
 	    then
 		FULLTSTNAME="testset/$TSTNAME.test"
 		TIMEFACTOR=1

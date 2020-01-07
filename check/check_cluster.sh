@@ -166,7 +166,7 @@ do
 		# infer the names of all involved files from the arguments
 		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE \
 		                              $p $s $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		# skip instance if log file is present and we want to continue a previously launched test run

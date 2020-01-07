@@ -110,7 +110,7 @@ echo set parallel 1                     >> $TMPFILE
 echo set lpmethod 4                     >> $TMPFILE
 echo set barrier crossover -1           >> $TMPFILE
 #echo write $SETFILE                     >> $TMPFILE
-echo read $INSTANCE                  >> $TMPFILE
+echo read $INSTANCE                     >> $TMPFILE
 echo display problem stats              >> $TMPFILE
 echo $OPTCOMMAND                        >> $TMPFILE
 echo display solution quality           >> $TMPFILE

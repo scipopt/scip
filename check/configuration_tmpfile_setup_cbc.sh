@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -78,13 +78,9 @@ fi
 # The following variables are ignored:
 # $DISPFREQ, $OPTCOMMAND
 
-# reset TMPFILE
-echo > $TMPFILE
-echo ""                              > $TMPFILE
-
 # workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
 TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
-echo seconds $TIMELIMIT                 >> $TMPFILE
+echo seconds $TIMELIMIT                 >  $TMPFILE
 # set mip gap:
 echo ratioGap 0.0                       >> $TMPFILE
 if test $FEASTOL != "default"
@@ -95,7 +91,7 @@ fi
 echo maxNodes $NODELIMIT                >> $TMPFILE
 echo threads $THREADS                   >> $TMPFILE
 
-echo import $SCIPPATH/$i                >> $TMPFILE
+echo import $INSTANCE                   >> $TMPFILE
 echo ratioGap                           >> $TMPFILE
 echo allowableGap                       >> $TMPFILE
 echo seconds                            >> $TMPFILE
