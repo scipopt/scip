@@ -2527,18 +2527,21 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
       SCIP_Bool* usedperm;
+      SCIP_Bool* rowisbinary;
       SCIP_Bool isorbitope = TRUE;
       SCIP_Bool infeasibleorbitope;
       int** orbitopevaridx;
       int* columnorder;
       int npermsincomponent;
       int ntwocyclescomp = INT_MAX;
+      int nbincyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
       int* nusedelems;
       int coltoextend;
       int j;
       int row;
+      int cnt;
 
       /* get properties of permutations */
       npermsincomponent = componentbegins[i + 1] - componentbegins[i];
@@ -2546,17 +2549,20 @@ SCIP_RETCODE detectOrbitopes(
       for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
          SCIP_Bool iscompoftwocycles = FALSE;
-         SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
+         int nbincyclesperm = 0;
 
-         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &nbincyclesperm) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
+         {
             ntwocyclescomp = ntwocyclesperm;
+            nbincyclescomp = nbincyclesperm;
+         }
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
+         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
          {
             isorbitope = FALSE;
             break;
@@ -2591,6 +2597,9 @@ SCIP_RETCODE detectOrbitopes(
       /* count how often an element was used in the potential orbitope */
       SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
+      /* store whether a row of the potential orbitope contains only binary variables */
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &rowisbinary, ntwocyclescomp) );
+
       /* fill first two columns of orbitopevaridx matrix */
       row = 0;
       for (j = 0; j < npermvars; ++j)
@@ -2602,6 +2611,11 @@ SCIP_RETCODE detectOrbitopes(
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
          {
+            assert( SCIPvarIsBinary(permvars[j]) == SCIPvarIsBinary(permvars[perms[permidx][j]]) );
+
+            if ( SCIPvarIsBinary(permvars[j]) )
+               rowisbinary[row] = TRUE;
+
             orbitopevaridx[row][0] = j;
             orbitopevaridx[row++][1] = perms[permidx][j];
             nusedelems[j] += 1;
@@ -2635,7 +2649,7 @@ SCIP_RETCODE detectOrbitopes(
             continue;
 
          SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[componentbegins[i] + j]], TRUE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], TRUE, &nusedelems, permvars, rowisbinary, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -2668,7 +2682,7 @@ SCIP_RETCODE detectOrbitopes(
             continue;
 
          SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[componentbegins[i] + j]], FALSE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], FALSE, &nusedelems, permvars, rowisbinary, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -2693,23 +2707,29 @@ SCIP_RETCODE detectOrbitopes(
          goto FREEDATASTRUCTURES;
 
       /* we have found a potential orbitope, prepare data for orbitope conshdlr */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, ntwocyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbincyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, nbincyclescomp) );
+      cnt = 0;
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent + 1) ); /*lint !e866*/
-         varsallocorder[j] = vars[j]; /* to ensure that we can free the buffer in reverse order */
+         if ( ! rowisbinary[j] )
+            continue;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[cnt], npermsincomponent + 1) ); /*lint !e866*/
+         varsallocorder[cnt] = vars[cnt]; /* to ensure that we can free the buffer in reverse order */
+         ++cnt;
       }
+      assert( cnt == nbincyclescomp );
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
       SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
-            orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
+            orbitopevaridx, columnorder, nusedelems, rowisbinary, &infeasibleorbitope) );
 
       if ( ! infeasibleorbitope )
       {
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
-               ntwocyclescomp, npermsincomponent + 1, TRUE, FALSE,
+               nbincyclescomp, npermsincomponent + 1, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2722,7 +2742,7 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* free data structures */
-      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      for (j = nbincyclescomp - 1; j >= 0; --j)
       {
          SCIPfreeBufferArray(scip, &varsallocorder[j]);
       }
@@ -2730,6 +2750,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIPfreeBufferArray(scip, &vars);
 
    FREEDATASTRUCTURES:
+      SCIPfreeBufferArray(scip, &rowisbinary);
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
       for (j = ntwocyclescomp - 1; j >= 0; --j)

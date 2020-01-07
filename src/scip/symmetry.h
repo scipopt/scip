@@ -130,7 +130,7 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    int                   nvars,              /**< number of variables */
    SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
+   int*                  nbincyclesperm      /**< pointer to store number of binary cycles */
    );
 
 /** determine number of variables affected by symmetry group */
@@ -180,6 +180,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int*                  perm,               /**< permutation */
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
+   SCIP_VAR**            permvars,           /**< permutation vars array */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether variables in an orbitope row are binary */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    );
@@ -196,6 +198,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
    );
 
