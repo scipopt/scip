@@ -301,6 +301,10 @@ SCIP_RETCODE createDisaggr(
 
       vars[nvars] = nlhdlrexprdata->disvars[i];
       coefs[nvars] = 1.0;
+
+      SCIPvarMarkRelaxationOnly(vars[nvars]);
+      SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1);
+
       ++nvars;
    }
 
@@ -312,8 +316,14 @@ SCIP_RETCODE createDisaggr(
             0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
 
+      SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[size - 1]);
+
       vars[nvars] = nlhdlrexprdata->disvars[size - 1];
       coefs[nvars] = 1.0;
+
+      SCIPvarMarkRelaxationOnly(vars[nvars]);
+      SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1);
+
       ++nvars;
    }
 
@@ -383,12 +393,17 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
+   SCIP_ROWPREP* rowprep;
    SCIP_VAR* cutvar;
    SCIP_Real cutcoef;
    SCIP_Real value;
    SCIP_Real disvarval;
    SCIP_Real rhsval;
    SCIP_Real lhsval;
+   SCIP_Real sideval;
+   SCIP_Real denominator;
+   int termstartidx;
+   int ncutvars;
    int nterms;
    int i;
 
@@ -420,78 +435,75 @@ SCIP_RETCODE generateCutSol(
    value -= rhsval * disvarval;
    SCIPdebugMsg(scip, "evaluate disaggregation: value=%g\n", value);
 
-   if( value > mincutviolation )
+   /* if the cone is not violated or we would divide by 0, don't compute cut */
+   if( value <= mincutviolation || SCIPisZero(scip, disvarval) || SCIPisZero(scip, rhsval) )
+      return SCIP_OKAY;
+
+   /* compute maximum number of variables in cut */
+   ncutvars = (k < nterms ? nlhdlrexprdata->nnonzeroes[k] + nlhdlrexprdata->nnonzeroes[nterms-1] + 1 : 2);
+
+   /* create cut */
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
+
+   assert(nlhdlrexprdata->coefs[nterms-1] > 0);
+
+   sideval = 0.0;
+   termstartidx = nlhdlrexprdata->termbegins[nterms-1];
+   denominator = 2.0 *  SQRT(nlhdlrexprdata->coefs[nterms-1]) * rhsval * disvarval;
+
+   /* add terms for lhs */
+   if( k < nterms  && !SCIPisZero(scip, lhsval) )
    {
-      SCIP_ROWPREP* rowprep;
-      SCIP_Real sideval;
-      int termstartidx;
-      int ncutvars;
+      termstartidx = nlhdlrexprdata->termbegins[k];
 
-      /* compute maximum number of variables in cut */
-      ncutvars = (k < nterms ? nlhdlrexprdata->nnonzeroes[k] + nlhdlrexprdata->nnonzeroes[nterms-1] + 1 : 2);
-
-      /* create cut */
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
-
-      sideval = 0.0;
-
-      /* add terms for lhs */
-      if( k < nterms  && !SCIPisZero(scip, lhsval) )
+      for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
       {
-         termstartidx = nlhdlrexprdata->termbegins[k];
+         assert(nlhdlrexprdata->coefs[k] > 0);
 
-         for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
-         {
-            cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
-            cutcoef = 2.0 * nlhdlrexprdata->coefs[k] * nlhdlrexprdata->transcoefs[termstartidx + i] * lhsval;
+         cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
+         cutcoef = SQRT(nlhdlrexprdata->coefs[k]) * nlhdlrexprdata->transcoefs[termstartidx + i];
 
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
-
-            sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
-         }
-      }
-
-      /* add terms for rhs */
-      if( !SCIPisZero(scip, disvarval) )
-      {
-         termstartidx = nlhdlrexprdata->termbegins[nterms-1];
-
-         for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
-         {
-            cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
-            cutcoef = -nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
-
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
-
-            sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
-         }
-      }
-
-      /* add term for disvar */
-      if( !SCIPisZero(scip, rhsval) )
-      {
-         cutvar = nlhdlrexprdata->disvars[k];
-         cutcoef = -rhsval * nlhdlrexprdata->coefs[nterms-1];
+         if( SCIPisNegative(scip, lhsval) )
+            cutcoef = -cutcoef;
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
          sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
       }
-
-
-      /* add side */
-      SCIPaddRowprepSide(rowprep, sideval - value);
-
-      if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
-      {
-         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
-         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, cut, rowprep, conshdlr) );
-      }
-
-      /* free memory */
-      SCIPfreeRowprep(scip, &rowprep);
    }
+
+   /* add terms for rhs */
+   for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+   {
+      cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
+      cutcoef = -nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
+      cutcoef /= denominator;
+
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+      sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+   }
+
+   /* add term for disvar */
+   cutvar = nlhdlrexprdata->disvars[k];
+   cutcoef = -rhsval / denominator;
+
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+   sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+
+   /* add side */
+   SCIPaddRowprepSide(rowprep, sideval - value);
+
+   if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
+   {
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
+      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, cut, rowprep, conshdlr) );
+   }
+
+   /* free memory */
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
