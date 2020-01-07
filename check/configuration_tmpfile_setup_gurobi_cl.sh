@@ -43,59 +43,27 @@ EXECNAME=${20}     # - executable call
 # new environment variables after running this script
 # -None
 
-# set solfile
-SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
+# updated environment variables after running this script
+# EXECNAME
 
-if test $p -gt 0
-then
-    echo "Warning: CBC configuration currently cannot handle instance permutation"
-    exit 1
-fi
+# init an empty list of command line settings to be used by gurobi_cl
+CLSETTINGSLIST=""
 
-if test "$SETNAME" != "default"
-then
-    echo "Warning: CBC configuration currently cannot handle non-default settings"
-    exit 1
-fi
-
-if test "$REOPT" = true
-then
-    echo "Warning: CBC configuration currently cannot handle reoptimization"
-    exit 1
-fi
-
-if test "$VISUALIZE" = true
-then
-    echo "Warning: CBC configuration currently cannot handle visualization"
-    exit 1
-fi
-
-if test $SETCUTOFF = 1 || test $SETCUTOFF = true
-then
-    echo "Warning: Setting a cutoff is currently not supported for CBC configuration"
-    exit 1
-fi
-
-# The following variables are ignored:
-# $DISPFREQ, $OPTCOMMAND
-
-# workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
-TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
-echo seconds $TIMELIMIT                 >  $TMPFILE
-# set mip gap:
-echo ratioGap 0.0                       >> $TMPFILE
+#append feasibility tolerance in case of non-default values
 if test $FEASTOL != "default"
 then
-    echo primalTolerance $FEASTOL       >> $TMPFILE
-    echo integerTolerance $FEASTOL      >> $TMPFILE
+    CLSETTINGSLIST="$CLSETTINGSLIST FeasibilityTol=$FEASTOL IntFeasTol=$FEASTOL"
 fi
-echo maxNodes $NODELIMIT                >> $TMPFILE
-echo threads $THREADS                   >> $TMPFILE
+CLSETTINGSLIST="$CLSETTINGSLIST TimeLimit=$TIMELIMIT NodeLimit=$NODELIMIT DisplayInterval=$DISPFREQ MIPGap=0.0 Threads=$THREADS Crossover=0 Method=2"
 
-echo import $INSTANCE                   >> $TMPFILE
-echo ratioGap                           >> $TMPFILE
-echo allowableGap                       >> $TMPFILE
-echo seconds                            >> $TMPFILE
-echo stat                               >> $TMPFILE
-echo solve                              >> $TMPFILE
-echo quit                               >> $TMPFILE
+# parse settings from settings file via awk
+if test $SETNAME != "default"
+then
+    echo `pwd`
+    CLSETTINGSLIST="`awk 'BEGIN { finalstr=""} {finalstr=finalstr " "$1"="$2} END {print finalstr}' $SETTINGS` $CLSETTINGSLIST"
+fi
+
+#have a look if Gurobi is invoked with the settings you are asking for
+echo "Gurobi will be invoked with arguments: $CLSETTINGSLIST"
+
+EXECNAME="$EXECNAME $CLSETTINGSLIST $INSTANCE"

@@ -175,6 +175,16 @@ do
 		    continue
 		fi
 
+		# check if binary exists. The second condition checks whether there is a binary of that name directly available
+		# independent of whether it is a symlink, file in the working directory, or application in the path
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
+
 		# find out the solver that should be used
 		SOLVER=`stripversion $BINNAME`
 
@@ -182,20 +192,10 @@ do
 
 		# call tmp file configuration for the solver
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
+                    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND \
+                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE $EXECNAME
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
-
-                # check if binary exists. The second condition checks whether there is a binary of that name directly available
-                # independent of whether it is a symlink, file in the working directory, or application in the path
-		if test -e $SCIPPATH/../$BINNAME
-		then
-		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-		elif type $BINNAME >/dev/null 2>&1
-		then
-		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
-		fi
-
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH
 		# this looks wrong but is totally correct
@@ -208,6 +208,7 @@ do
 		export CHECKERPATH=$SCIPPATH/solchecker
 		export SETFILE
 		export TIMELIMIT
+                export EXECNAME
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"

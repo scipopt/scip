@@ -104,7 +104,7 @@ fi
 
 
 
-export EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
+EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
 
 INIT="true"
 COUNT=0
@@ -176,16 +176,18 @@ do
 		# overwrite the tmp file now
 		# call tmp file configuration for SCIP
 		. ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
+		  $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND \
+		  $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE $EXECNAME
 
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH
 		export BASENAME=$FILENAME
 		export FILENAME=$INSTANCE
 		export SOLNAME=$SOLCHECKFILE
-                export TIMELIMIT
+		export TIMELIMIT
 		export CLIENTTMPDIR
-                export OUTPUTDIR
+		export OUTPUTDIR
+		export EXECNAME
 		export CHECKERPATH=$SCIPPATH/solchecker
 
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT

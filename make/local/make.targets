@@ -44,7 +44,9 @@ testcbc:
 .PHONY: testgurobi
 testgurobi:
 		cd check; \
-		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check.sh $(TEST) $(GUROBI) $(SETTINGS) $(notdir $(GUROBI)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
 
 .PHONY: testglpk
 testglpk:
@@ -109,15 +111,16 @@ testclustercbc:
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
 		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
-# solvers with a specialized interface:
-
 .PHONY: testclustergurobi
 testclustergurobi:
 		cd check; \
-		$(SHELL) ./check_cluster_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		$(SHELL) ./check_cluster.sh $(TEST) $(GUROBI) $(SETTINGS) $(notdir $(GUROBI)).$(OSTYPE).$(ARCH) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
+
+# solvers with a specialized interface:
 
 .PHONY: testclustermosek
 testclustermosek:
