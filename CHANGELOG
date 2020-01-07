@@ -606,6 +606,7 @@ Fixed bugs
 - fixed numerical issues related to tighter constraint sides in varbound constraint handler
 - fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
 - fixed treatment of multi-aggregated variables in logicor constraint handler
+- handle special case of redundant implications
 
 Miscellaneous
 -------------
