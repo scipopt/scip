@@ -2259,7 +2259,7 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* do not compute symmetry if there are no binary variables */
-   if ( SCIPgetNBinVars(scip) == 0 )
+   if ( ! propdata->detectsubgroups && SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
@@ -2417,7 +2417,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* exit if no binary variables are affected by symmetry */
-   if ( ! propdata->binvaraffected )
+   if ( ! propdata->binvaraffected && ! propdata->detectsubgroups )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
@@ -3193,7 +3193,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          }
       }
 
-      SCIPdebugMsg(scip, "    %d trivial colors were skipped", ntrivialcolors);
+      SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
       /* possibly add weak SBCs for enclosing orbit of first component */
       if ( nusedperms < npermsincomp )
@@ -3305,6 +3305,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPfreeBufferArray(scip, &varfound);
          SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
       }
+      else
+         SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
 
       propdata->componentblocked[i] = TRUE;
       ++propdata->ncompblocked;
@@ -3717,7 +3719,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   assert( propdata->binvaraffected || ! propdata->symconsenabled );
+   assert( propdata->binvaraffected || ! propdata->symconsenabled || propdata->detectsubgroups );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -3734,7 +3736,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected );
+   assert( propdata->binvaraffected || propdata->detectsubgroups );
    propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
