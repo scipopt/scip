@@ -71,6 +71,8 @@ then
     exit 1;
 fi
 
+OUTPUTDIR="results"
+
 # get current SCIP path
 SCIPPATH=`pwd`
 
@@ -105,41 +107,14 @@ then
     exit
 fi
 
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE="  --exclusive "
-else
-    EXCLUSIVE=""
-fi
+# configure cluster-related environment variables
+. ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
 #       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -157,35 +132,35 @@ else
     TMP=`expr $HARDTIMELIMIT / 60`
     if test "$TMP" != "0"
     then
-        MYMINUTES=`expr $TMP % 60`
-        TMP=`expr $TMP / 60`
-        if test "$TMP" != "0"
-        then
-            MYHOURS=`expr $TMP % 24`
-            MYDAYS=`expr $TMP / 24`
-        fi
+	MYMINUTES=`expr $TMP % 60`
+	TMP=`expr $TMP / 60`
+	if test "$TMP" != "0"
+	then
+	    MYHOURS=`expr $TMP % 24`
+	    MYDAYS=`expr $TMP / 24`
+	fi
    fi
     #format seconds to have two characters
     if test ${MYSECONDS} -lt 10
     then
-        MYSECONDS=0${MYSECONDS}
+	MYSECONDS=0${MYSECONDS}
     fi
     #format minutes to have two characters
     if test ${MYMINUTES} -lt 10
     then
-        MYMINUTES=0${MYMINUTES}
+	MYMINUTES=0${MYMINUTES}
     fi
     #format hours to have two characters
     if test ${MYHOURS} -lt 10
     then
-        MYHOURS=0${MYHOURS}
+	MYHOURS=0${MYHOURS}
     fi
     #format HARDTIMELIMT
     if test ${MYDAYS} = "0"
     then
-        HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     else
-        HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     fi
 fi
 
@@ -209,7 +184,7 @@ do
   if test -f $SCIPPATH/$i
   then
 
-      echo adding instance $COUNT to queue
+      # echo adding instance $COUNT to queue
 
       # the cluster queue has an upper bound of 2000 jobs; if this limit is
       # reached the submitted jobs are dumped; to avoid that we check the total
@@ -228,7 +203,7 @@ do
       FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME"_"$THREADS
       BASENAME=$SCIPPATH/results/$FILENAME
 
-      TMPFILE=$BASENAME.tmp
+      PARFILE=$BASENAME.par
       SETFILE=$BASENAME.set
 
       echo $BASENAME >> $EVALFILE
@@ -248,31 +223,35 @@ do
                rm -f $SETFILE
       fi
 
-      echo > $TMPFILE
-      echo ""                              > $TMPFILE
       if test $SETNAME != "default"
       then
           echo "non-default settings not yet supported"
       fi
 
-      echo "MSK_IPAR_NUM_THREADS        $THREADS"               >> $TMPFILE
-      echo "MSK_IPAR_INTPNT_BASIS       MSK_BI_NEVER"           >> $TMPFILE # no crossover
-      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $TMPFILE # use interior point
-      echo "MSK_DPAR_INTPNT_TOL_PFEAS   1e-6"                   >> $TMPFILE
-      echo "MSK_DPAR_INTPNT_TOL_DFEAS   1e-7"                   >> $TMPFILE
-      echo "MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"             >> $TMPFILE
-      echo "MSK_IPAR_LOG_MIO_FREQ       $DISPFREQ"              >> $TMPFILE
-      echo "MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"           >> $TMPFILE
+      echo > $PARFILE
+      echo ""                              > $PARFILE
+      echo "BEGIN MOSEK"                                        >> $PARFILE
+      echo "MSK_IPAR_NUM_THREADS        $THREADS"               >> $PARFILE
+      echo "MSK_IPAR_INTPNT_BASIS       MSK_BI_NEVER"           >> $PARFILE # no crossover
+      #      echo "MSK_IPAR_OPTIMIZER          MSK_OPTIMIZER_INTPNT"   >> $PARFILE # use interior point
+      echo "MSK_DPAR_INTPNT_TOL_PFEAS   1e-6"                   >> $PARFILE
+      echo "MSK_DPAR_INTPNT_TOL_DFEAS   1e-7"                   >> $PARFILE
+      echo "MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"             >> $PARFILE
+      echo "MSK_DPAR_MIO_MAX_TIME $TIMELIMIT"                   >> $PARFILE
+      echo "MSK_IPAR_LOG_MIO_FREQ       $DISPFREQ"              >> $PARFILE
+      echo "MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"           >> $PARFILE
       if test $FEASTOL != "default"
       then
-          echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $TMPFILE
+          echo "MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"              >> $PARFILE
       fi
+      echo "END MOSEK"                                          >> $PARFILE
 
       # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
-      export EXECNAME="$BINNAME -p $TMPFILE $i"
+      export EXECNAME="$BINNAME -p $PARFILE $i"
       export BASENAME=$FILENAME
       export FILENAME=$i
+      export OUTPUTDIR
       export CLIENTTMPDIR=$CLIENTTMPDIR
 
       # check queue type
