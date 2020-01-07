@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -190,7 +190,7 @@ void appendLine(
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
-   strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
+   (void) strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
 
    (*linecnt) += (int) strlen(extension);
 
@@ -476,6 +476,9 @@ SCIP_RETCODE printLinearRow(
 
    for( v = 0; v < nvars; ++v )
    {
+      assert(vars != NULL);  /* for lint */
+      assert(vals != NULL);
+
       var = vars[v];
       assert( var != NULL );
 

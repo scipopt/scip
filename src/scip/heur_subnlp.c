@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1256,9 +1256,9 @@ SCIP_RETCODE solveSubNLP(
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
-      /* these should not happen, but if one does, it's save to go to CLEANUP */
-      SCIPABORT();
-   case SCIP_STATUS_OPTIMAL: 
+      /* these should not happen, but if one does, it's safe to go to CLEANUP */
+      SCIPABORT();    /*lint -fallthrough*/
+   case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_INFEASIBLE: 
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TIMELIMIT:
@@ -1696,8 +1696,8 @@ SCIP_RETCODE forbidFixation(
 
          fixval = SCIPvarGetLbGlobal(subvar);
          assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in sub-SCIP */   /*lint !e777*/
-         assert((int)fixval == fixval); /* we have rounded values before fixing */
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/ 
+         assert(SCIPceil(scip, fixval - 0.5) == fixval); /* we have rounded values before fixing */ /*lint !e777*/
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/
 
          if( SCIPvarGetLbGlobal(var) < fixval )
          {
@@ -2561,6 +2561,7 @@ SCIP* SCIPgetSubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2578,6 +2579,7 @@ SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2595,6 +2597,7 @@ SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2612,6 +2615,7 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 

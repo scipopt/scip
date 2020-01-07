@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1285,6 +1285,8 @@ SCIP_RETCODE readObjective(
       /* set the linear objective values */
       for( i = 0; i < ncoefs; ++i )
       {
+         assert(vars != NULL);  /* for lint */
+         assert(coefs != NULL);
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
 
@@ -1337,7 +1339,7 @@ SCIP_RETCODE readObjective(
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
    SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*line !e438*/
 }
 
 /** create indicator constraint */
@@ -1486,6 +1488,7 @@ SCIP_RETCODE createIndicatorConstraint(
       SCIPerrorMessage("invalid constraint sense <%d>\n", linsense);
       return SCIP_INVALIDDATA;
    }
+   assert(lincoefs != NULL);
 
    /* create and add the indicator constraint */
    initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
@@ -1613,7 +1616,7 @@ SCIP_RETCODE readConstraints(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
-   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ);
+   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ); /*lint !e530*/
 
    /* read the right hand side */
    sidesign = +1;
@@ -1761,6 +1764,7 @@ SCIP_RETCODE readConstraints(
          syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable.");
          goto TERMINATE;
       }
+      assert(coefs != NULL);
       if( !SCIPisEQ(scip, coefs[0], 1.0) )
       {
          syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
@@ -1771,7 +1775,7 @@ SCIP_RETCODE readConstraints(
          syntaxError(scip, lpinput, "Indicator part cannot handle equations.");
          goto TERMINATE;
       }
-
+      assert(vars != NULL);
       retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], lhs);
    }
 
@@ -2579,7 +2583,7 @@ void appendLine(
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
     * because of overlapping memory areas in memcpy used in sprintf.
     */
-   strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
+   (void) strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 
@@ -2641,6 +2645,9 @@ void printRow(
    /* print coefficients */
    for( v = 0; v < nlinvars; ++v )
    {
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
       var = linvars[v];
       assert( var != NULL );
 
@@ -2660,6 +2667,7 @@ void printRow(
       /* print linear coefficients of quadratic variables */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);   /* for lint */
          if( quadvarterms[v].lincoef == 0.0 )
             continue;
 
@@ -2679,6 +2687,7 @@ void printRow(
       /* print square terms */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);   /* for lint */
          if( quadvarterms[v].sqrcoef == 0.0 )
             continue;
 
@@ -2816,8 +2825,8 @@ SCIP_RETCODE printQuadraticCons(
    if( nlinvars > 0 )
    {
       /* free buffer arrays */
-      SCIPfreeBufferArray(scip, &activevars);
       SCIPfreeBufferArray(scip, &activevals);
+      SCIPfreeBufferArray(scip, &activevars);
    }
 
    return SCIP_OKAY;
@@ -3223,8 +3232,8 @@ SCIP_RETCODE printAggregatedCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArray(scip, &activevars);
 
    return SCIP_OKAY;
 }
@@ -3439,6 +3448,9 @@ SCIP_RETCODE SCIPreadLp(
    SCIP_RETCODE retcode;
    LPINPUT lpinput;
    int i;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
 
    /* initialize LP input data */
    lpinput.file = NULL;
@@ -3795,8 +3807,8 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, 2, NULL, 0, NULL, 0, 
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
-         SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
       }
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
@@ -3871,8 +3883,8 @@ SCIP_RETCODE SCIPwriteLp(
             SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
                   SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
 
-            SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
          }
 
          /* store constraint */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,10 +193,8 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 static
 SCIP_RETCODE getScoreLikeCoefdiving(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
-   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
    SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
    SCIP_VAR*             cand,               /**< diving candidate */
    SCIP_Real             candsol,            /**< diving candidate solution */
@@ -307,10 +305,8 @@ SCIP_RETCODE getScoreLikeCoefdiving(
 static
 SCIP_RETCODE getScore(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
-   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
    SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
    SCIP_VAR*             cand,               /**< diving candidate */
    SCIP_Real             candsol,            /**< diving candidate solution */
@@ -330,7 +326,6 @@ SCIP_RETCODE getScore(
    int nconflictlocksdown;
 
    assert(scip != NULL);
-   assert(heur != NULL);
    assert(heurdata != NULL);
    assert(rng != NULL);
 
@@ -468,11 +463,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 
    if( heurdata->likecoefdiving )
    {
-      SCIP_CALL( getScoreLikeCoefdiving(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
+      SCIP_CALL( getScoreLikeCoefdiving(scip, heurdata, rng, divetype, cand, candsol, candsfrac, score, roundup) );
    }
    else
    {
-      SCIP_CALL( getScore(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
+      SCIP_CALL( getScore(scip, heurdata, rng, divetype, cand, candsol, candsfrac, score, roundup) );
    }
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */

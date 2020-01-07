@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,6 +78,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
@@ -113,6 +114,7 @@
 #include "scip/heur_octane.h"
 #include "scip/heur_ofins.h"
 #include "scip/heur_oneopt.h"
+#include "scip/heur_padm.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
 #include "scip/heur_randrounding.h"
@@ -152,11 +154,15 @@
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
+#ifdef SCIP_WITH_PRESOLVELIB
+#include "scip/presol_milp.h"
+#endif
 #include "scip/presol_redvub.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
 #include "scip/presol_sparsify.h"
+#include "scip/presol_dualsparsify.h"
 #include "scip/presol_stuffing.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
@@ -173,6 +179,7 @@
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_cor.h"
+#include "scip/reader_dec.h"
 #include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"

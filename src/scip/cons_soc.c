@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
 #define SCIP_PRIVATE_ROWPREP
 
 #include "blockmemshell/memory.h"
@@ -3171,7 +3171,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
+   /* a proper SOC constraint needs at least 2 variables (at least one will be quadratic)
+    * but performance-wise that doesn't give a clear advantage on product(2), so let's even require 3 vars
+    */
    if( nbinlin + nquadvars < 3 )
       return SCIP_OKAY;
 
@@ -3231,7 +3233,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          goto GENERALUPG;
       }
 
-      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
+      /* check that bilinear terms do not appear in the rest and quadratic terms have positive sqrcoef have no lincoef */
       quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
       for (i = 0; i < nquadvars; ++i)
       {
@@ -3442,7 +3444,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       goto cleanup;
    }
 
-   if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3560,7 +3562,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
       }
 
-      if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+      if( rhsvar != NULL && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
       { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
          SCIPdebugMsg(scip, "found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -3706,7 +3708,9 @@ GENERALUPG:
          nneg++;
    }
 
-   /* currently, a proper SOC constraint needs at least 3 variables */
+   /* a proper SOC constraint needs at least 2 variables
+    * let's make sure we have at least 3, though, as this upgrade comes with extra (multiaggr.) vars
+    */
    if( npos + nneg < 3 )
       goto cleanup;
 
@@ -3718,7 +3722,13 @@ GENERALUPG:
    if( !rhsissoc && !lhsissoc )
       goto cleanup;
 
-   assert(rhsissoc != lhsissoc);
+   if( rhsissoc && lhsissoc )
+   {
+      /* only handle rhs-SOC here for now
+       * if the upgrade is run again on the remaining lhs-SOC, it would upgrade that side
+       */
+      lhsissoc = FALSE;
+   }
 
    if( lhsissoc )
    {
@@ -3768,6 +3778,9 @@ GENERALUPG:
          {
             SCIP_Real aux;
 
+            if( SCIPisZero(scip, a[i * nquadvars + j]) )
+               continue;
+
             if( a[i * nquadvars + j] > 0.0 )
             {
                aux = SCIPcomputeVarLbGlobal(scip, quadvars[j]);
@@ -3792,6 +3805,9 @@ GENERALUPG:
          for( j = 0; j < nquadvars; ++j )
          {
             SCIP_Real aux;
+
+            if( SCIPisZero(scip, a[i * nquadvars + j]) )
+               continue;
 
             if( a[i * nquadvars + j] > 0.0 )
             {
@@ -3840,7 +3856,7 @@ GENERALUPG:
       }
    }
 
-   if( rhsvarfound && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvarfound && lhscount >= 1 && !SCIPisNegative(scip, lhsconstant) )
    {
       /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMsg(scip, "found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
@@ -3953,7 +3969,7 @@ GENERALUPG:
 #ifdef SCIP_DEBUG
    else
    {
-      if( lhscount < 2 )
+      if( lhscount < 1 )
       {
          SCIPdebugMsg(scip, "Failed because there are not enough lhsvars (%d)\n", lhscount);
       }
@@ -4847,15 +4863,15 @@ SCIP_DECL_CONSCOPY(consCopySOC)
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global, valid) );
       assert(!(*valid) || rhsvar != NULL);
-   }
 
-   /* only create the target constraint, if all variables could be copied */
-   if( *valid )
-   {
-      SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-            consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
-            rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
+      /* only create the target constraint, if all variables could be copied */
+      if( *valid )
+      {
+         SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+               consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
+               rhsvar, consdata->rhscoeff, consdata->rhsoffset,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
+      }
    }
 
    SCIPfreeBufferArray(sourcescip, &vars);
@@ -5420,6 +5436,7 @@ int SCIPgetNLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5432,6 +5449,7 @@ SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5444,6 +5462,7 @@ SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5456,6 +5475,7 @@ SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5468,6 +5488,7 @@ SCIP_Real SCIPgetLhsConstantSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5480,6 +5501,7 @@ SCIP_VAR* SCIPgetRhsVarSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5492,6 +5514,7 @@ SCIP_Real SCIPgetRhsCoefSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5504,6 +5527,7 @@ SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 

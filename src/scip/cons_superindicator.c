@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -222,7 +222,7 @@ SCIP_RETCODE consdataCheckSuperindicator(
  *  with respect to its global bounds
  */
 static
-SCIP_RETCODE extractLinearValues(
+void extractLinearValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< pointer to linear constraint */
    SCIP_Real*            minactivity,        /**< pointer to return the minimal activity */
@@ -295,8 +295,6 @@ SCIP_RETCODE extractLinearValues(
 
    if( ismaxinfinity )
       *maxactivity = SCIPinfinity(scip);
-
-   return SCIP_OKAY;
 }
 
 /** tries to upgrade superindicator constraint to an indicator constraint */
@@ -489,7 +487,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    }
 
    /* if linear slack constraint is redundant due to bounded activities we can delete the superindicator constraint */
-   SCIP_CALL( extractLinearValues(scip, slackcons, &minact, &maxact, &minabscoef) );
+   extractLinearValues(scip, slackcons, &minact, &maxact, &minabscoef);
    assert(!SCIPisInfinity(scip, minact));
    assert(!SCIPisInfinity(scip, -maxact));
 
@@ -665,7 +663,7 @@ SCIP_RETCODE upgradeSuperindicator(
    return SCIP_OKAY;
 }
 
-/** helper function to enforce constraints */
+/** helper function to enforce constraints */   /*lint -e{715}*/
 static
 SCIP_RETCODE enforceConstraint(
    SCIP*                 scip,               /**< SCIP data structure */

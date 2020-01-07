@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1009,9 +1009,9 @@ const char* SCIPlpiGetSolverName(
    )
 {
 #ifdef CPX_VERSION_VERSION
-   sprintf(cpxname, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
+   (void) snprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
 #else
-   sprintf(cpxname, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
+   (void) sprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
 #endif
    return cpxname;
 }
@@ -1035,7 +1035,7 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->cpxlp;
 }
 
-/** pass integrality information to LP solver */
+/** pass integrality information to LP solver */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
@@ -3645,7 +3645,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3717,7 +3717,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -3791,7 +3791,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3866,7 +3866,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ *//*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */

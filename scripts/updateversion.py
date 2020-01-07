@@ -89,10 +89,14 @@ else:
     commands.getoutput('sed -i "s/set(SCIP_VERSION_PATCH %s)/set(SCIP_VERSION_PATCH %s)/" CMakeLists.txt' %(oldpatch, newpatch))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_SUB %s)/set(SCIP_VERSION_SUB %s)/" CMakeLists.txt' %(oldsubversion, newsubversion))
 
-    if newapiversion != None:
+    if newapiversion != oldapiversion:
+        print("\nAPI versions before the change:")
+        print(commands.getoutput('grep -e "APIVERSION" -e "VERSION_API" src/scip/def.h  CMakeLists.txt'))
         if newsubversion == "0":
-            print "Warning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
+            print "\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
         commands.getoutput('sed -i "s/\#define SCIP_APIVERSION.*%3s/\#define SCIP_APIVERSION             %3s/" src/scip/def.h' \
                            %(oldapiversion, newapiversion))
-        commands.getoutput('sed -i "s/set(SCIP_VERSION_API %s)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
-                           %(oldapiversion, newapiversion))
+        commands.getoutput('sed -i "s/set(SCIP_VERSION_API [0-9]*)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
+                           %(newapiversion))
+        print("\nAPI versions after the change:")
+        print(commands.getoutput('grep -e "APIVERSION" -e "VERSION_API" src/scip/def.h  CMakeLists.txt'))

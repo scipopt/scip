@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -117,11 +117,11 @@ struct SCIP_ConshdlrData
 
 enum Proprule
 {
-   PROPRULE_1,                          /**< v_i = TRUE                                   =>  r   = TRUE            */
-   PROPRULE_2,                          /**< r   = FALSE                                  =>  v_i = FALSE for all i */
-   PROPRULE_3,                          /**< v_i = FALSE for all i                        =>  r   = FALSE           */
-   PROPRULE_4,                          /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_1       = 0,                     /**< v_i = TRUE                                   =>  r   = TRUE            */
+   PROPRULE_2       = 1,                     /**< r   = FALSE                                  =>  v_i = FALSE for all i */
+   PROPRULE_3       = 2,                     /**< v_i = FALSE for all i                        =>  r   = FALSE           */
+   PROPRULE_4       = 3,                     /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
+   PROPRULE_INVALID = 4                      /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
 
@@ -184,7 +184,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -193,8 +193,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** gets number of LP rows needed for the LP relaxation of the constraint */
@@ -1403,7 +1401,7 @@ SCIP_DECL_CONSFREE(consFreeOr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -2174,6 +2172,8 @@ int SCIPgetNVarsOr(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an or constraint\n");
@@ -2195,6 +2195,8 @@ SCIP_VAR** SCIPgetVarsOr(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an or constraint\n");
@@ -2215,6 +2217,8 @@ SCIP_VAR* SCIPgetResultantOr(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

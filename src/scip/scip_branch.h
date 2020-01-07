@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -615,6 +615,25 @@ SCIP_EXPORT
 SCIP_Real SCIPcalcChildEstimate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
+/** calculates the increase of the estimate for the objective of the best feasible solution contained in the subtree
+ *  after applying the given branching
+ *
+ *  @return the increase of the estimate for the objective of the best feasible solution contained in the subtree after
+ *          applying the given branching.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcChildEstimateIncrease(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 

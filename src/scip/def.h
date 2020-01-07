@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -112,16 +112,17 @@
 
 #include "scip/type_retcode.h"
 #include "scip/type_message.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define SCIP_VERSION                602 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
-#define SCIP_APIVERSION              62 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                700 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_APIVERSION              68 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,7 +17,7 @@
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
  * @author Jakob Witzig
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 

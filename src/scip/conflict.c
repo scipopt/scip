@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -907,15 +907,15 @@ void lpbdchgsFree(
 
 /** return the char associated with the type of the variable */
 static
-const char* varGetChar(
+char varGetChar(
    SCIP_VAR*             var                 /**< variable */
    )
 {
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
 
-   return (!SCIPvarIsIntegral(var) ? "C" :
-          (vartype == SCIP_VARTYPE_BINARY ? "B" :
-          (vartype == SCIP_VARTYPE_INTEGER ? "I" : "M")));
+   return (!SCIPvarIsIntegral(var) ? 'C' :
+          (vartype == SCIP_VARTYPE_BINARY ? 'B' :
+          (vartype == SCIP_VARTYPE_INTEGER ? 'I' : 'M')));
 }
 
 /** resets the data structure of a proofset */
@@ -2566,7 +2566,7 @@ SCIP_RETCODE tightenSingleVar(
          SCIP_Real consrhs;
          char name[SCIP_MAXSTRLEN];
 
-         SCIPsetDebugMsg(set, "add constraint <%s>[%s] %s %g to node #%lld in depth %d\n",
+         SCIPsetDebugMsg(set, "add constraint <%s>[%c] %s %g to node #%lld in depth %d\n",
                SCIPvarGetName(var), varGetChar(var), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", newbound,
                SCIPnodeGetNumber(tree->path[validdepth]), validdepth);
 
@@ -2603,7 +2603,7 @@ SCIP_RETCODE tightenSingleVar(
       {
          assert(applyglobal);
 
-         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%s]: %g -> %g\n",
+         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%c]: %g -> %g\n",
                (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
                SCIPvarGetName(var), varGetChar(var),
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
@@ -3836,6 +3836,9 @@ SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
    assert(!SCIPbdchginfoIsRedundant(bdchginfo1));
    assert(!SCIPbdchginfoIsRedundant(bdchginfo2));
 
+   if( bdchginfo1 == bdchginfo2 )
+      return 0;
+
    if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
@@ -3882,9 +3885,9 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
 
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
@@ -7477,7 +7480,7 @@ SCIP_RETCODE separateAlternativeProofs(
       {
          proofsetFree(&alternativeproofset, blkmem);
       }
-   }
+   }  /*lint !e438*/
 
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1438,6 +1438,8 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       SCIP_CALL( SCIPnlrowEnsureLinearSize(nlrow, blkmem, set, nlrow->nlinvars + SCIPvarGetMultaggrNVars(var)) );
       for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
       {
+         if( SCIPsetIsZero(set, coef * SCIPvarGetMultaggrScalars(var)[i]) )
+            continue;
          SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[i], coef * SCIPvarGetMultaggrScalars(var)[i]) );
          assert(SCIPvarGetMultaggrVars(var)[i] == nlrow->linvars[nlrow->nlinvars-1]);
          if( !SCIPvarIsActive(SCIPvarGetMultaggrVars(var)[i]) )
@@ -2716,7 +2718,7 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
       {
          SCIP_Bool dummy;
          SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &dummy, NULL, NULL) );
-      }
+      }  /*lint !e438*/
    }
 
    /* notify row about the change */
@@ -5053,6 +5055,7 @@ SCIP_RETCODE SCIPnlpInclude(
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(set != NULL);
+   assert(blkmem != NULL);
    assert(set->stage == SCIP_STAGE_INIT);
 
    /* check whether event handler is already present */
@@ -5295,6 +5298,7 @@ SCIP_Bool SCIPnlpHasCurrentNodeNLP(
    SCIP_NLP*             nlp                 /**< NLP data */
    )
 {
+   assert(nlp != NULL);
    return TRUE;
 } /*lint !e715*/
 

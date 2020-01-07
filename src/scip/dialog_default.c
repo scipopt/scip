@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1715,7 +1715,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
             if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
-               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
+               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx, SCIP_BENDERSENFOTYPE_CHECK) );
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
@@ -1727,8 +1727,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                {
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
-                  if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
-                     SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                  if( SCIPbendersGetSubproblemType(benders[idx], subidx) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+                  {
+                     /* need to check whether the subproblem is an NLP and solved as an NLP */
+                     if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+                     {
+                        SCIP_SOL* nlpsol;
+                        SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+                        SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+                        SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                     }
+                  }
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
                   SCIPdialogMessage(scip, NULL, "\n");
@@ -3090,6 +3103,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis numerics command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems to prove optimality fast */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -3466,7 +3495,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3513,17 +3542,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          if( sol == NULL )
          {
             SCIPdialogMessage(scip, NULL, "no mip start available\n");
-            fclose(file);
          }
          else
          {
             SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
 
             SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-            fclose(file);
          }
+         fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3643,7 +3671,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
 
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3687,7 +3715,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
          SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3769,7 +3797,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {
             SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
-            --i;
+            --i; /*lint !e850*/
          }
       }
 
@@ -5085,6 +5113,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
+   /* set estimate */
+   if( !SCIPdialogHasEntry(setmenu, "estimation") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "estimation", "change parameters for restarts and tree size estimation", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
@@ -5623,6 +5662,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisOptimality, NULL, NULL,
             "optimality", "predefined parameter settings for proving optimality fast", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "numerics" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "numerics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisNumerics, NULL, NULL,
+            "numerics", "predefined parameter settings for increased numerical stability", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
