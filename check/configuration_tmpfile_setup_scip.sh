@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -126,11 +126,10 @@ if test "$REOPT" = false
 then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
-
+    INSTANCENAME=${INSTANCE%%.gz}
     # if a decomposition in gzipped format (.dec.gz) with the basename of the instance lies in the same directory,
     # read it into SCIP, as well
     DECOMP=${INSTANCENAME}.dec.gz
-    echo $DECOMP
     if test -f $DECOMP
     then
 	echo read $DECOMP            >> $TMPFILE

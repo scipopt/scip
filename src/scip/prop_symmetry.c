@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2166,6 +2166,15 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   /* do not compute symmetry if there are no binary variables */
+   if ( SCIPgetNBinVars(scip) == 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    /* determine symmetry specification */
    if ( SCIPgetNBinVars(scip) > 0 )
       type |= (int) SYM_SPEC_BINARY;
@@ -2777,7 +2786,6 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata->nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( ncomponents > 0 );
 
    /* if components have not been computed */
    if ( ncomponents == -1 )

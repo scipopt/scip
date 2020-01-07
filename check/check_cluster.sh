@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -184,7 +184,6 @@ do
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
 		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
-
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 
                 # check if binary exists. The second condition checks whether there is a binary of that name directly available
@@ -197,27 +196,31 @@ do
 		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
 		fi
 
+		# additional environment variables needed by run.sh
+		export SOLVERPATH=$SCIPPATH
+		# this looks wrong but is totally correct
+		export BASENAME=$FILENAME
+		export FILENAME=$INSTANCE
+		export CLIENTTMPDIR
+		export OUTPUTDIR
+		export HARDTIMELIMIT
+		export HARDMEMLIMIT
+		export CHECKERPATH=$SCIPPATH/solchecker
+		export SETFILE
+		export TIMELIMIT
+
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
-		# additional environment variables needed by run.sh
-		    export SOLVERPATH=$SCIPPATH
-                    # this looks wrong but is totally correct
-		    export BASENAME=$FILENAME
-		    export FILENAME=$INSTANCE
-		    export CLIENTTMPDIR
-                    export OUTPUTDIR
-		    export HARDTIMELIMIT
-		    export HARDMEMLIMIT
-		    export CHECKERPATH=$SCIPPATH/solchecker
-		    export SETFILE
-		    export TIMELIMIT
-		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    if test "$CLUSTERQUEUE" != "moskito"
+		    then
+		       # the space at the end is necessary
+		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    fi
 
                     if test "$SLURMACCOUNT" == "default"
 	            then
-                        SLURMACCOUNT=$ACCOUNT
+			SLURMACCOUNT=$ACCOUNT
                     fi
 
                     if test "$CLUSTERNODES" = "all"
@@ -228,9 +231,8 @@ do
 		    fi
 		else
 		    # -V to copy all environment variables
-		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
-			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+		    qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
+			 -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
 		fi
 	    done # end for SETNAME
 	done # end for PERMUTE

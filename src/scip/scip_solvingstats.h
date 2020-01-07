@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -576,6 +576,20 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
  */
 SCIP_EXPORT
 SCIP_Longint SCIPgetNNodeLPs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets total number of LPs solved in 0 iterations for node relaxations
+ *
+ *  @return the total number of LPs solved with 0 iteratins for node relaxations
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Longint SCIPgetNNodeZeroIterationLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

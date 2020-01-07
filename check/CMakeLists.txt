@@ -18,6 +18,9 @@ endif()
 
 add_dependencies(check scip_check)
 
+# copy data files to binary directory, so that they can be accessed with relative paths
+# in settings files
+file(COPY coverage/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/coverage)
 #
 # define the instance sets
 #
@@ -50,6 +53,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+    "emphasis_numerics"
 
     #constraints
     "indicatorlogicorsepa"
@@ -65,6 +69,10 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "treemodel_ratio"
+    "treemodel_sampling"
+    "treemodel_svts_filter"
+    "treemodel_svts_nofilter"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
@@ -81,7 +89,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    )
+)
 #
 # settings for the componentshandler test
 #
@@ -105,8 +113,10 @@ set(settings_fastMIP
     "presolving_off"
     "separating_off"
     "vbcvisualization"
+    "enable_treeprofile_regression_forest"
   )
 set(settings_MINLP
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"
@@ -150,7 +160,15 @@ set(settings_Benders
     "usebenders-tr"
     "usebenders-cutstrengthen"
    )
-   
+
+set(settings_BendersLB
+    "usebenders"
+   )
+
+set(settings_BendersQP
+    "benders-qp"
+   )
+
 set(settings_Indicator
     "default"
     "indicatorrestart"
@@ -169,7 +187,7 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-   
+
 #
 # Indicator instances
 #
@@ -373,7 +391,16 @@ set(instances_Stochastic
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+   )
+
+set(instances_BendersLB
     "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
+   )
+
+set(instances_BendersQP
+    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
+    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
 
 set(instances_Or
@@ -425,6 +452,13 @@ macro(split_instance instance)
     get_filename_component(basename ${path} NAME)
 endmacro(split_instance)
 
+macro(split_decompinstance instance)
+    list(GET instance 0 instpath)
+    list(GET instance 1 decpath)
+    list(GET instance 2 optval)
+    get_filename_component(basename ${instpath} NAME)
+endmacro(split_decompinstance)
+
 macro(add_instancetests instances settings prefix)
 #
 # loop over the instances
@@ -444,13 +478,46 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+        endforeach(setting)
+    endforeach(instance)
+endmacro(add_instancetests)
+
+macro(add_decompinstancetests instances settings prefix)
+#
+# loop over the instances
+#
+if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
+   set(TEST_BENDERSQP TRUE)
+else()
+   set(TEST_BENDERSQP FALSE)
+endif()
+if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
+    foreach(instance ${${instances}})
+        split_decompinstance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${${settings}})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME ${prefix}-${setting}-${basename}
+               COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
+                    )
+            set_tests_properties(${prefix}-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
                                     FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)
     endforeach(instance)
-endmacro(add_instancetests)
+endif()
+endmacro(add_decompinstancetests)
 
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
@@ -471,6 +538,8 @@ add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
+add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
+add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 
 #
 # test writing and reading solutions
@@ -661,7 +730,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+                                            DEPENDS scip-build)
         endforeach()
 
 endforeach()

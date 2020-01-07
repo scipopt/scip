@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,9 +60,8 @@
  *   SOS2 constraint: \f$ \min \{l_x, l_y\} \leq x + y \leq \max \{u_x, u_y\}\f$, where \f$l_x, u_x,
  *   l_y, u_y\f$ are the lower and upper bounds of x and y, respectively.
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would affect lhs/rhs of rows)
- * @todo Try to compute better ChildEstimates in enforceSOS2 when called for relaxation solution,
- *   currently this uses SCIPcalcChildEstimate, which uses SCIPvarGetSol and can only get either the
- *   LP or the pseudo solution, as well as pseudo costs, which are not computed for the relaxation.
+ * @todo Try to compute better estimations for the child nodes in enforceSOS2 when called for a relaxation solution;
+ *   currently pseudo costs are used, which are not computed for the relaxation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1169,14 +1168,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < maxInd; ++j)
    {
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) maxInd);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1189,14 +1187,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = maxInd+1; j < nvars; ++j)
    {
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) (nvars-maxInd-1));
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2389,10 +2389,12 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
       char probnamesuffix[SCIP_MAXSTRLEN];
+      SCIP_Real allfixingrate;
       int ndomchgs;
       int nchgobjs;
       int naddedconss;
       int v;
+      SCIP_RETCODE retcode;
       SCIP_RESULT fixresult;
 
       tryagain = FALSE;
@@ -2537,12 +2539,34 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
 
-      /* todo alternatively: set up sub-SCIP and run presolving */
-      /* todo was presolving successful enough regarding fixings? otherwise terminate */
-
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.submipclock) );
-      /* run sub-SCIP for the given budget, and collect statistics */
-      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      /* set up sub-SCIP and run presolving */
+      retcode = SCIPpresolve(subscip);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while presolving subproblem in ALNS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
+
+         SCIPABORT();  /*lint --e{527}*/
+         break;
+      }
+
+      /* was presolving successful enough regarding fixings? otherwise, terminate */
+      allfixingrate = (SCIPgetNOrigVars(subscip) - SCIPgetNVars(subscip)) / (SCIP_Real)SCIPgetNOrigVars(subscip);
+
+      /* additional variables added in presolving may lead to the subSCIP having more variables than the original */
+      allfixingrate = MAX(allfixingrate, 0.0);
+
+      if( allfixingrate >= neighborhood->fixingrate.targetfixingrate / 2.0 )
+      {
+         /* run sub-SCIP for the given budget, and collect statistics */
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "Fixed only %.3f of all variables after presolving -> do not solve sub-SCIP\n", allfixingrate);
+      }
 
 #ifdef ALNS_SUBSCIPOUTPUT
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );

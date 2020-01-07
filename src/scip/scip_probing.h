@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -406,6 +406,14 @@ SCIP_RETCODE SCIPsolveProbingRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether a relaxation was infeasible or the objective
                                               *   limit was reached (or NULL, if not needed) */
+   );
+
+/** print statistics of probing */
+SCIP_EXPORT
+char* SCIPsnprintfProbingStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */

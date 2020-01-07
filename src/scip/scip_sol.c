@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3194,7 +3194,19 @@ SCIP_RETCODE SCIPtrySol(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted solution not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3293,7 +3305,19 @@ SCIP_RETCODE SCIPtrySolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3335,7 +3359,19 @@ SCIP_RETCODE SCIPtryCurrentSol(
    if( *stored )
    {
       if( bestsol != SCIPgetBestSol(scip) )
+      {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+         SCIP_Bool feasible;
+         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+         if( ! feasible )
+         {
+            SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+            SCIPABORT();
+         }
+#endif
          SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,6 +38,7 @@
 #include "scip/lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_numerics.h"
 #include "scip/set.h"
@@ -945,6 +946,53 @@ SCIP_Real SCIPcalcChildEstimate(
    assert( var->scip == scip );
 
    return SCIPtreeCalcChildEstimate(scip->tree, scip->set, scip->stat, var, targetvalue);
+}
+
+/** calculates the increase of the estimate for the objective of the best feasible solution contained in the subtree
+ *  after applying the given branching
+ *
+ *  @return the increase of the estimate for the objective of the best feasible solution contained in the subtree after
+ *          applying the given branching.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Real SCIPcalcChildEstimateIncrease(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   )
+{
+   SCIP_Real estimateinc;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   /* compute increase above parent node's (i.e., focus node's) estimate value */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol);
+   else
+   {
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
+
+      /* calculate estimate based on pseudo costs:
+       *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
+       *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
+       */
+      pscdown = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasFloor(scip->set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasCeil(scip->set, varsol) - varsol);
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol) - MIN(pscdown, pscup);
+   }
+
+   /* due to rounding errors estimateinc might be slightly negative */
+   if( estimateinc > 0.0 )
+      estimateinc = 0.0;
+
+   return estimateinc;
 }
 
 /** creates a child node of the focus node

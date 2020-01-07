@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -394,7 +394,7 @@ SCIP_RETCODE tightenVariables(
    int                   nvars,              /**< number of problem variables */
    SCIP_SOL*             sol,                /**< solution to guide the bound changes */
    SCIP_Bool*            tightened,          /**< array to store if variable bound could be tightened */
-   SCIP_Bool*            success             /**< pointer to store the success */
+   SCIP_Bool*            infeasible          /**< pointer to store whether subproblem is infeasible */
    )
 {
 #ifndef NDEBUG
@@ -419,7 +419,7 @@ SCIP_RETCODE tightenVariables(
 
    SCIPdebugMsg(scip, "> start probing along the solution values\n");
 
-   *success = TRUE;
+   *infeasible = FALSE;
    abortearly = FALSE;
    nbndtightenings = 0;
    ndomredssum = 0;
@@ -604,7 +604,7 @@ SCIP_RETCODE tightenVariables(
                      if( cutoff )
                      {
                         SCIPdebugMsg(scip, "> subproblem is infeasible within the local bounds\n");
-                        *success = FALSE;
+                        *infeasible = TRUE;
                         return SCIP_OKAY;
                      }
 #ifdef SCIP_MORE_DEBUG
@@ -662,7 +662,7 @@ SCIP_RETCODE tightenVariables(
                      if( cutoff )
                      {
                         SCIPdebugMsg(scip, "> subproblem is infeasible within the local bounds\n");
-                        *success = FALSE;
+                        *infeasible = TRUE;
                         return SCIP_OKAY;
                      }
 #ifdef SCIP_MORE_DEBUG
@@ -907,7 +907,29 @@ SCIP_RETCODE setupAndSolve(
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
-  TERMINATE:
+   /* print message if the completion of a partial solution failed */
+   if( *result != SCIP_FOUNDSOL )
+   {
+      switch( SCIPgetStatus(subscip) )
+      {
+      case SCIP_STATUS_INFEASIBLE:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (subproblem is infeasible)\n");
+         break;
+      case SCIP_STATUS_NODELIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (node limit exceeded)\n");
+         break;
+      case SCIP_STATUS_TIMELIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (time limit exceeded)\n");
+         break;
+      case SCIP_STATUS_MEMLIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (memory limit exceeded)\n");
+         break;
+      default:
+         break;
+      } /*lint !e788*/
+   }
+
+TERMINATE:
    SCIPfreeBufferArray(scip, &subvars);
 
    return SCIP_OKAY;
@@ -927,6 +949,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP* subscip;
    SCIP_VAR** vars;
    SCIP_Bool* tightened;
+   SCIP_Bool infeasible;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
    int nvars;
@@ -958,10 +981,13 @@ SCIP_RETCODE applyCompletesol(
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened, &success) );
+   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened, &infeasible) );
 
-   if( !success )
+   if( infeasible )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (subproblem is infeasible)\n");
       goto ENDPROBING;
+   }
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
