@@ -102,8 +102,6 @@ else
     ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
 fi
 
-
-
 EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
 
 INIT="true"
@@ -173,11 +171,11 @@ do
 		    CONFFILE="configuration_tmpfile_setup_scip.sh"
 		fi
 
-		# overwrite the tmp file now
 		# call tmp file configuration for SCIP
+		# this may modify the EXECNAME environment variable
 		. ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
 		  $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND \
-		  $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE $EXECNAME
+		  $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH

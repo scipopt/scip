@@ -191,9 +191,10 @@ do
 		CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
 		# call tmp file configuration for the solver
+		# this may modify the EXECNAME environment variable
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
                     $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND \
-                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE $EXECNAME
+                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 		# additional environment variables needed by run.sh
