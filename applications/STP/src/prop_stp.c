@@ -1009,8 +1009,36 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    return SCIP_OKAY;
 }
 
+
+/** initializes */
+static inline
+SCIP_RETCODE initPropgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure to use for the update */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   assert(scip && graph && propdata);
+
+   assert(propdata->propgraph == NULL);
+
+   propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+
+   SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
+
+   propdata->propgraph->norgmodeledges = propdata->propgraph->edges;
+   propdata->propgraph->norgmodelknots = propdata->propgraph->knots;
+
+   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
+
+   assert(propdata->nfixededges == 0);
+   assert(propdata->propgraph != NULL);
+
+   return SCIP_OKAY;
+}
+
 /** update the graph from propdata from given graph */
-static
+static inline
 SCIP_RETCODE updatePropgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure to use for the update */
@@ -1376,6 +1404,44 @@ TERMINATE:
 }
 
 
+/** block edges of the underlying graphs by using global fixings */
+static inline
+void blockEdgesWithGlobalFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   GRAPH*                graph               /**< graph data structure */
+)
+{
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(vars && scip);
+
+   if( !graph_typeIsSpgLike(graph) && !graph_pc_isPc(graph) && graph->stp_type != STP_DCSTP )
+   {
+      return;
+   }
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      const int erev = e + 1;
+
+      /* both e and its anti-parallel edge fixed to zero? */
+      if( SCIPvarGetUbGlobal(vars[e]) < 0.5 && SCIPvarGetUbGlobal(vars[erev]) < 0.5 && LT(graph->cost[e], BLOCKED) )
+      {
+         int todo; // for pc/rpc can we maybe also block edges with unequal costs??
+         assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
+         assert(LT(graph->cost[erev], BLOCKED));
+
+         if( EQ(graph->cost[e], graph->cost[erev]) )
+         {
+            graph->cost[e] = BLOCKED;
+            graph->cost[erev] = BLOCKED;
+         }
+      }
+   }
+}
+
+
 /**@} */
 
 /**@name Callback methods of propagator
@@ -1485,14 +1551,10 @@ SCIP_DECL_PROPEXEC(propExecStp)
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
 
+      /* first call? */
       if( propdata->propgraph == NULL )
       {
-         propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-         SCIP_CALL( graph_copy(scip, graph, &(propdata->propgraph)) );
-         propdata->propgraph->norgmodeledges = propdata->propgraph->edges;
-         propdata->propgraph->norgmodelknots = propdata->propgraph->knots;
-         SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
-         assert(propdata->nfixededges == 0);
+         SCIP_CALL( initPropgraph(scip, graph, propdata) );
       }
 
       /* in the tree? */
@@ -1550,25 +1612,8 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
       *result = SCIP_REDUCEDDOM;
 
-      if( graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || graph->stp_type == STP_RPCSPG ||
-          graph->stp_type == STP_PCSPG || graph->stp_type == STP_DCSTP )
-      {
-         for( int e = 0; e < graph->edges; e += 2 )
-         {
-            const int erev = e + 1;
-
-            /* both e and its anti-parallel edge fixed to zero? */
-            if( SCIPvarGetUbGlobal(vars[e]) < 0.5 && SCIPvarGetUbGlobal(vars[erev]) < 0.5 && graph->cost[e] < BLOCKED )
-            {
-               assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
-               if( graph->cost[e] == graph->cost[erev] )
-               {
-                  graph->cost[e] = BLOCKED;
-                  graph->cost[erev] = BLOCKED;
-               }
-            }
-         }
-      }
+      /* translate the global fixings of variables into blocking of graph edges */
+      blockEdgesWithGlobalFixings(scip, vars, graph);
    }
    else
    {
