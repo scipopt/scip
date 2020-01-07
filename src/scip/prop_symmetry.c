@@ -3102,9 +3102,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          {
 #ifdef SCIP_MORE_DEBUG
             SCIPdebugMsg(scip, "    color %d has only one variable --> skip\n", j);
-            chosencomppercolor[j] = -1;
 #endif
-
+            chosencomppercolor[j] = -1;
             ++ntrivialcolors;
 
             continue;
@@ -3139,14 +3138,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
          }
 
-         assert( chosencomp >= 0 );
-         assert( chosencomp < ngraphcomponents );
-         assert( chosencompsize > 0 );
-
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "      affected types (bin,int,cont): (%d,%d,%d)\n",
             binaffected, intaffected, contaffected);
 #endif
+
+         assert( chosencomp >= 0 );
+         assert( chosencomp < ngraphcomponents );
+         assert( chosencompsize > 0 );
 
          chosencomppercolor[j] = chosencomp;
 
@@ -3219,7 +3218,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int firstvaridx;
             int k;
 
-            if( chosencomppercolor[j] < 0 )
+            if ( chosencomppercolor[j] < 0 )
                continue;
 
             graphcomp = chosencomppercolor[j];
