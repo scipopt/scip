@@ -57,11 +57,6 @@ testsymphony:
 		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
 		$(DISPFREQ) $(CONTINUE);
 
-.PHONY: testblis
-testblis:
-		cd check; \
-		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
-
 
 # -------------------------------------------------------------------------------------------------
 # scripts for testing on cluster
