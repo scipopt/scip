@@ -2166,6 +2166,15 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   /* do not compute symmetry if there are no binary variables */
+   if ( SCIPgetNBinVars(scip) == 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    /* determine symmetry specification */
    if ( SCIPgetNBinVars(scip) > 0 )
       type |= (int) SYM_SPEC_BINARY;
