@@ -44,7 +44,8 @@ if [ "${GITBRANCH}" != "master" ]; then
     if [[ ${GITBRANCH} =~ "bugfix" ]]; then
       GITBRANCH=bugfix
     else
-      echo "Branch is neither 'master' nor 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      export FAILREASON="Branch is neither 'master', 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      echo ${FAILREASON}
       exit 1
     fi
   fi

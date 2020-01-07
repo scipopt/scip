@@ -1,6 +1,6 @@
-@page RNNEXT Release notes for SCIP NEXT
+@page RN70 Release notes for SCIP 7.0
 
-@section RNNEXT SCIP NEXT
+@section RN700 SCIP 7.0.0
 *************************
 
 Features
@@ -153,6 +153,8 @@ Features
 - The presolver "tworowbnd" was implemented with better performance. It now also supports bound tightening on convex combinations of two rows.
 
 - To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
+
+- allow disabling of pricers during solving process
 
 Performance improvements
 ------------------------
@@ -350,6 +352,7 @@ Interface changes
 - new API functions SCIPtreemodelInit(), SCIPtreemodelFree(), SCIPtreemodelIsEnabled(), SCIPtreemodelSelectCandidate() related to the new
   treemodel way of comparing branching candidates. These functions are only currently used for reliability pscost branching, but they can be used
   in other parts of the code.
+- New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
 
 ### Event system
 
@@ -388,6 +391,11 @@ Interface changes
 - changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
 - replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
   tolerance to initialize the primal feasibility tolerance of the LP solver
+- enabling aggressive presolving now activates all available presolving plugins,
+  and decreases the presolving/restartfac parameter correctly with respect to default.
+- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+  the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
+  of the RINS heuristic.
 
 ### New parameters
 
@@ -562,6 +570,7 @@ Build system
 - Removed static object compilation dependency files (depend.*). If using a GCC compatible compiler, then dependency
   files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
   file (.o) in the corresponding obj subdirectory.
+- added support for building against Ipopt >= 3.13
 
 Fixed bugs
 ----------
@@ -572,85 +581,6 @@ Fixed bugs
 - fix minor bug in cut score calculation
 - fixed several bugs related to rounding locks of variables not being updated correctly
 - small fix in cons_varbound.c to skip changing bounds of multi-aggregated variables in separation callback
-
-Miscellaneous
--------------
-
-- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
-  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
-  heuristic display characters have been unified to represent the type of the heuristic
-  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
-- added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
-- added more output for completing a partial solution
-
-Known bugs
-----------
-
-@page RN60 Release notes for SCIP 6.0
-
-@section RN603 SCIP 6.0.3
-*************************
-
-Features
---------
-
-- allow disabling of pricers during solving process
-
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
-### Deleted and changed API methods
-
-### New API functions
-
-- New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-- enabling aggressive presolving now activates all available presolving plugins,
-  and decreases the presolving/restartfac parameter correctly with respect to default.
-
-- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
-  the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
-  of the RINS heuristic.
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
-
-- added support for building against Ipopt >= 3.13
-
-Fixed bugs
-----------
-
 - fixed issue in SCIPtightenVar* and SCIPinferVar* that occurs for small bound changes
 - fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 - fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
@@ -675,9 +605,18 @@ Fixed bugs
 - fixed bug in sepa_oddcylce when variables are fixed
 - fixed numerical issues related to tighter constraint sides in varbound constraint handler
 - fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
+- fixed treatment of multi-aggregated variables in logicor constraint handler
+- handle special case of redundant implications
 
 Miscellaneous
 -------------
+
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
+  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+- added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
+- added more output for completing a partial solution
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
@@ -685,6 +624,7 @@ Miscellaneous
 Known bugs
 ----------
 
+@page RN60 Release notes for SCIP 6.0
 
 @section RN602 SCIP 6.0.2
 *************************
