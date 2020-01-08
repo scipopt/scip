@@ -308,7 +308,7 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
         echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED} fullgh=${FULLGITHASH}" >> $RBDB
       fi
     else
-      ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
+      ./evalcheck_cluster.sh "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
     fi
     cat ${OUTPUT}
     rm ${OUTPUT}
