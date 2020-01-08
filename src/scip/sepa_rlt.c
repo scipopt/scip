@@ -73,10 +73,10 @@
  * Data structures
  */
 
-/** data object to compare constraint easier */
+/** data object for pairs and triples of variables */
 struct HashData
 {
-   SCIP_VAR**            vars;               /**< constraint variables used for hash comparison */
+   SCIP_VAR**            vars;               /**< variables in the pair or triple, used for hash comparison */
    int                   nvars;              /**< number of variables */
    int                   nrows;              /**< number of rows */
    int                   firstrow;           /**< beginning of the corresponding row linked list */
@@ -88,21 +88,24 @@ typedef struct HashData HASHDATA;
 struct SCIP_SepaData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< expression constraint handler */
-   SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
-
-   SCIP_CONSEXPR_EXPR**  bilinterms;         /**< bilinear terms */
-   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the exprs and linearization variables of each bilinear term */
-   SCIP_VAR***           varbilinvars;       /**< arrays of vars appearing in a bilinear term together with xj for each xj from varssorted */
-   int*                  nvarbilinvars;      /**< number of vars for each element of varbilinvars */
-   int*                  varpriorities;      /**< priorities of the variables in varssorted */
-   int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
-   int                   nbilinterms;        /**< total number of bilinear terms */
-   int                   sbilinterms;        /**< size of bilinear terms arrays */
-   int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
 
-   /* information for each bilinear product */
+   /* variables */
+   SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
+   int*                  varpriorities;      /**< priorities of the variables in varssorted */
+   SCIP_VAR***           varbilinvars;       /**< arrays of vars appearing in a bilinear term together with xj for each xj from varssorted */
+   int*                  nvarbilinvars;      /**< number of vars for each element of varbilinvars */
+   int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
+
+   /* bilinear terms */
+   SCIP_CONSEXPR_EXPR**  bilinterms;         /**< bilinear terms */
+   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the linearization variables/exprs of each bilinear term */
+   int                   nbilinterms;        /**< total number of bilinear terms */
+   int                   sbilinterms;        /**< size of bilinear terms arrays */
+   int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
+
+   /* information on linearisations of bilinear products */
    SCIP_Bool*            isimplicit;         /**< whether bilinterms[i] is an implicit bilinear relation */
    int*                  bilinlockspos;      /**< positive locks of the bilinear terms */
    int*                  bilinlocksneg;      /**< negative locks of the bilinear terms */
@@ -137,12 +140,12 @@ struct SCIP_SepaData
 /** projected LP data structure */
 struct ProjLP
 {
-   SCIP_Real** coefs;       /* arrays of coefficients for each row */
-   SCIP_VAR*** vars;        /* arrays of variables for each row */
-   SCIP_Real*  lhss;        /* row left hand sides */
-   SCIP_Real*  rhss;        /* row right hand sides */
-   SCIP_Real*  consts;      /* row constants */
-   int*        nNonz;       /* number of nonzeros in each row */
+   SCIP_Real**           coefs;              /* arrays of coefficients for each row */
+   SCIP_VAR***           vars;               /* arrays of variables for each row */
+   SCIP_Real*            lhss;               /* row left hand sides */
+   SCIP_Real*            rhss;               /* row right hand sides */
+   SCIP_Real*            consts;             /* row constants */
+   int*                  nNonz;              /* number of nonzeros in each row */
 };
 typedef struct ProjLP PROJLP;
 
@@ -186,7 +189,9 @@ static
 SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
 {  /*lint --e{715}*/
    HASHDATA* hashdata;
-   int minidx, mididx, maxidx;
+   int minidx;
+   int mididx;
+   int maxidx;
    int idx[3];
 
    hashdata = (HASHDATA*)key;
@@ -220,7 +225,8 @@ SCIP_RETCODE freeSepaData(
    SCIP_SEPADATA*        sepadata            /**< separation data */
    )
 {  /*lint --e{715}*/
-   int i, j;
+   int i;
+   int j;
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
@@ -293,9 +299,9 @@ SCIP_RETCODE freeSepaData(
 /** ensures that the arrays in sepadata can store at least n bilinear terms  */
 static
 SCIP_RETCODE ensureBilinSizes(
-   SCIP*          scip,     /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata, /**< separator data */
-   int            n         /**< minimum number of entries to store */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   n                   /**< minimum number of entries to store */
    )
 {
    assert(sepadata->nbilinterms <= sepadata->sbilinterms);
@@ -385,7 +391,7 @@ SCIP_RETCODE getInitialRows(
          continue;
       }
 
-      if( row != NULL)
+      if( row != NULL )
       {
          (*rows)[*nrows] = row;
          ++*nrows;
@@ -399,22 +405,25 @@ SCIP_RETCODE getInitialRows(
 /** store the bilinear product and all related information in sepadata */
 static
 SCIP_RETCODE addBilinProduct(
-   SCIP*                scip,          /**< SCIP data structure */
-   SCIP_SEPADATA*       sepadata,      /**< separator data */
-   SCIP_CONSEXPR_EXPR*  expr,          /**< product expression */
-   SCIP_VAR*            x,             /**< a product variable with smaller index */
-   SCIP_VAR*            y,             /**< a product variable with larger index */
-   SCIP_CONSEXPR_EXPR** linexpr,       /**< linearisation expression */
-   SCIP_Bool            isimplicit,    /**< whether the product is implicit */
-   SCIP_Bool            underestimate, /**< does linexpr underestimate the product? */
-   SCIP_Bool            overestimate,  /**< does linexpr overestimate the product? */
-   SCIP_HASHMAP*        varmap         /**< map containing vars that have already been encountered in products */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
+   SCIP_VAR*             x,                  /**< a product variable with smaller index */
+   SCIP_VAR*             y,                  /**< a product variable with larger index */
+   SCIP_CONSEXPR_EXPR**  linexpr,            /**< linearisation expression */
+   SCIP_Bool             isimplicit,         /**< whether the product is implicit */
+   SCIP_Bool             underestimate,      /**< does linexpr underestimate the product? */
+   SCIP_Bool             overestimate,       /**< does linexpr overestimate the product? */
+   SCIP_HASHMAP*         varmap              /**< map containing vars that have already been encountered in products */
 )
 {
-   int mapidx, xidx, yidx;
+   int mapidx;
+   int xidx;
+   int yidx;
    SCIP_CONSEXPR_EXPR* prodexprs[2];
    SCIP_Bool new = FALSE;
-   int termpos, linpos;
+   int termpos;
+   int linpos;
    SCIP_Bool found;
 
    assert(SCIPgetConsExprExprHdlr(*linexpr) == SCIPgetConsExprExprHdlrVar(sepadata->conshdlr) ||
@@ -457,7 +466,8 @@ SCIP_RETCODE addBilinProduct(
    if( termpos == INT_MAX )
    { /* this is the first time we come across this product */
       /* store variables if it's the first time they are found in a bilinear term */
-      int xpos, ypos;
+      int xpos;
+      int ypos;
 
       if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
       {
@@ -607,19 +617,20 @@ SCIP_RETCODE addBilinProduct(
 /** create and simplify a linearisation expression */
 static
 SCIP_RETCODE createLinearisation(
-   SCIP*                scip,      /**< SCIP data structure */
-   SCIP_SEPADATA*       sepadata,  /**< separator data */
-   SCIP_VAR*            w,         /**< the first variable to be added to expression */
-   SCIP_VAR*            x,         /**< the second variable to be added to expression */
-   SCIP_VAR*            y,         /**< the third variable to be added to expression */
-   SCIP_Real*           coefs,     /**< coefficients of the variables in the order w, x, y */
-   SCIP_Real            cst,       /**< constant term */
-   SCIP_CONSEXPR_EXPR** linexpr    /**< buffer to store the created expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR*             w,                  /**< the first variable to be added to expression */
+   SCIP_VAR*             x,                  /**< the second variable to be added to expression */
+   SCIP_VAR*             y,                  /**< the third variable to be added to expression */
+   SCIP_Real*            coefs,              /**< coefficients of the variables in the order w, x, y */
+   SCIP_Real             cst,                /**< constant term */
+   SCIP_CONSEXPR_EXPR**  linexpr             /**< buffer to store the created expression */
    )
 {
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPR* linchildren[3];
-   SCIP_Bool changed, infeasible;
+   SCIP_Bool changed;
+   SCIP_Bool infeasible;
    int i;
 
    for( i = 0; i <= 2; ++i )
@@ -646,20 +657,21 @@ SCIP_RETCODE createLinearisation(
 /** extract a bilinear product from two linear relations, if possible */
 static
 SCIP_RETCODE extractProducts(
-   SCIP*          scip,      /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,  /**< separator data */
-   SCIP_VAR**     vars,      /**< 3 variables involved in the inequalities in the order x,w,y */
-   SCIP_Real*     coefs1,    /**< coefficients of the first inequality */
-   SCIP_Real*     coefs2,    /**< coefficients of the second inequality */
-   SCIP_Real      side1,     /**< side of the first (implied) inequality */
-   SCIP_Real      side2,     /**< side of the second (implied) inequality */
-   SCIP_Real      uselhs1,   /**< is the first inequality >=? */
-   SCIP_Real      uselhs2,   /**< is the second inequality >=? */
-   SCIP_HASHMAP*  varmap,    /**< variable map */
-   SCIP_Bool      f          /**< the first relation is an implication x == f */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR**            vars,               /**< 3 variables involved in the inequalities in the order x,w,y */
+   SCIP_Real*            coefs1,             /**< coefficients of the first inequality */
+   SCIP_Real*            coefs2,             /**< coefficients of the second inequality */
+   SCIP_Real             side1,              /**< side of the first (implied) inequality */
+   SCIP_Real             side2,              /**< side of the second (implied) inequality */
+   SCIP_Real             uselhs1,            /**< is the first inequality >=? */
+   SCIP_Real             uselhs2,            /**< is the second inequality >=? */
+   SCIP_HASHMAP*         varmap,             /**< variable map */
+   SCIP_Bool             f                   /**< the first relation is an implication x == f */
 )
 {
-   SCIP_Real sign1, sign2;
+   SCIP_Real sign1;
+   SCIP_Real sign2;
    SCIP_Real mult;
    SCIP_CONSEXPR_EXPR* linexpr;
    SCIP_Real lincoefs[3];
@@ -802,24 +814,27 @@ SCIP_RETCODE extractProducts(
  */
 static
 SCIP_RETCODE detectProductsImplbnd(
-   SCIP*          scip,     /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata, /**< separator data */
-   SCIP_Real*     coefs1,   /**< coefficients of the first linear relation */
-   SCIP_VAR**     vars,     /**< variables of the first relation in the order x, w, y */
-   SCIP_Real      side1,    /**< side of the first relation */
-   SCIP_Bool      uselhs1,  /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
-   int            varpos1,  /**< position of the indicator variable in the vars array */
-   int            varpos2,  /**< position of the variable that is bounded */
-   SCIP_HASHMAP*  varmap,   /**< variable map */
-   SCIP_Bool      f         /**< the value of x that activates the first relation */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_Real*            coefs1,             /**< coefficients of the first linear relation */
+   SCIP_VAR**            vars,               /**< variables of the first relation in the order x, w, y */
+   SCIP_Real             side1,              /**< side of the first relation */
+   SCIP_Bool             uselhs1,            /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
+   int                   varpos1,            /**< position of the indicator variable in the vars array */
+   int                   varpos2,            /**< position of the variable that is bounded */
+   SCIP_HASHMAP*         varmap,             /**< variable map */
+   SCIP_Bool             f                   /**< the value of x that activates the first relation */
    )
 {
    SCIP_Real coefs2[3];
-   SCIP_Bool foundlb, foundub;
-   SCIP_Real impllb, implub;
+   SCIP_Bool foundlb;
+   SCIP_Bool foundub;
+   SCIP_Real impllb;
+   SCIP_Real implub;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
-   SCIP_Bool xval, globalside;
+   SCIP_Bool xval;
+   SCIP_Bool globalside;
 
    assert( varpos1 != varpos2 );
 
@@ -872,16 +887,16 @@ SCIP_RETCODE detectProductsImplbnd(
  */
 static
 SCIP_RETCODE detectProductsClique(
-   SCIP*          scip,      /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,  /**< separator data */
-   SCIP_Real*     coefs1,    /**< coefficients of the first linear relation */
-   SCIP_VAR**     vars,      /**< variables of the first relation in the order x, w, y */
-   SCIP_Real      side1,     /**< side of the first relation */
-   SCIP_Bool      uselhs1,   /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
-   int            varpos1,   /**< position of the first (binary) variable in the vars array */
-   int            varpos2,   /**< position of the second (binary) variable in the vars array */
-   SCIP_HASHMAP*  varmap,    /**< variable map */
-   SCIP_Bool      f          /**< the value of x that activates the first relation */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_Real*            coefs1,             /**< coefficients of the first linear relation */
+   SCIP_VAR**            vars,               /**< variables of the first relation in the order x, w, y */
+   SCIP_Real             side1,              /**< side of the first relation */
+   SCIP_Bool             uselhs1,            /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
+   int                   varpos1,            /**< position of the first (binary) variable in the vars array */
+   int                   varpos2,            /**< position of the second (binary) variable in the vars array */
+   SCIP_HASHMAP*         varmap,             /**< variable map */
+   SCIP_Bool             f                   /**< the value of x that activates the first relation */
 )
 {
    SCIP_Real coefs2[3];
@@ -941,26 +956,28 @@ SCIP_RETCODE detectProductsClique(
  */
 static
 SCIP_RETCODE detectProductsUnconditional(
-   SCIP*           scip,      /**< SCIP data structure */
-   SCIP_SEPADATA*  sepadata,  /**< separator data */
-   SCIP_ROW**      rows,      /**< problem rows */
-   int*            row_list,  /**< linked list of rows corresponding to 2 or 3 var sets */
-   SCIP_HASHTABLE* hashtable, /**< hashtable storing unconditional relations */
-   SCIP_Real*      coefs1,    /**< coefficients of the first linear relation */
-   SCIP_VAR**      vars,      /**< variables of the first relation in the order x, w, y */
-   SCIP_Real       side1,     /**< side of the first relation */
-   SCIP_Bool       uselhs1,   /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
-   int             varpos1,   /**< position of the first unconditional variable in the vars array */
-   int             varpos2,   /**< position of the second unconditional variable in the vars array */
-   SCIP_HASHMAP*   varmap,    /**< variable map */
-   SCIP_Bool       f,         /**< the value of x that activates the first relation */
-   SCIP_Bool       fixedside  /**< indicates if there is no need to substract the big-M from side1 */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_ROW**            rows,               /**< problem rows */
+   int*                  row_list,           /**< linked list of rows corresponding to 2 or 3 var sets */
+   SCIP_HASHTABLE*       hashtable,          /**< hashtable storing unconditional relations */
+   SCIP_Real*            coefs1,             /**< coefficients of the first linear relation */
+   SCIP_VAR**            vars,               /**< variables of the first relation in the order x, w, y */
+   SCIP_Real             side1,              /**< side of the first relation */
+   SCIP_Bool             uselhs1,            /**< is the left (TRUE) or right (FALSE) hand side given for the first relation? */
+   int                   varpos1,            /**< position of the first unconditional variable in the vars array */
+   int                   varpos2,            /**< position of the second unconditional variable in the vars array */
+   SCIP_HASHMAP*         varmap,             /**< variable map */
+   SCIP_Bool             f,                  /**< the value of x that activates the first relation */
+   SCIP_Bool             fixedside           /**< indicates if there is no need to substract the big-M from side1 */
    )
 {
    HASHDATA hashdata;
    HASHDATA* foundhashdata;
    SCIP_ROW* row2;
-   int r2, pos1, pos2;
+   int r2;
+   int pos1;
+   int pos2;
    SCIP_Real coefs2[3];
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -1030,19 +1047,23 @@ SCIP_RETCODE detectProductsUnconditional(
  */
 static
 SCIP_RETCODE createRelationTables(
-   SCIP*           scip,           /**< SCIP data structure */
-   SCIP_ROW**      prob_rows,      /**< linear rows of the problem */
-   int             nrows,          /**< number of rows */
-   SCIP_HASHTABLE* hashtable2,     /**< hashtable to store 2-variable relations */
-   SCIP_HASHTABLE* hashtable3,     /**< hashtable to store implied relations */
-   SCIP_VAR**      vars_in_2rels,  /**< array of variables that appear in 2-variable relations */
-   SCIP_VAR***     related_vars,   /**< for each var in vars_in_2rels, array of related vars */
-   int*            nrelated_vars,  /**< for each var in vars_in_2rels, number of related vars */
-   int*            nvars_in_2rels, /**< number of variables that appear in 2-variable relations */
-   int*            row_list        /**< linked lists of rows for each 2 or 3 variable set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            prob_rows,          /**< linear rows of the problem */
+   int                   nrows,              /**< number of rows */
+   SCIP_HASHTABLE*       hashtable2,         /**< hashtable to store 2-variable relations */
+   SCIP_HASHTABLE*       hashtable3,         /**< hashtable to store implied relations */
+   SCIP_VAR**            vars_in_2rels,      /**< array of variables that appear in 2-variable relations */
+   SCIP_VAR***           related_vars,       /**< for each var in vars_in_2rels, array of related vars */
+   int*                  nrelated_vars,      /**< for each var in vars_in_2rels, number of related vars */
+   int*                  nvars_in_2rels,     /**< number of variables that appear in 2-variable relations */
+   int*                  row_list            /**< linked lists of rows for each 2 or 3 variable set */
    )
 {
-   int r, v1, v2, varpos1, varpos2;
+   int r;
+   int v1;
+   int v2;
+   int varpos1;
+   int varpos2;
    SCIP_COL** cols;
    HASHDATA hashdata;
    HASHDATA* foundhashdata;
@@ -1163,7 +1184,7 @@ SCIP_RETCODE createRelationTables(
          /* an implied relation contains at least one binary variable */
          if( SCIPvarGetType(SCIPcolGetVar(cols[0])) != SCIP_VARTYPE_BINARY
              && SCIPvarGetType(SCIPcolGetVar(cols[1])) != SCIP_VARTYPE_BINARY
-             && SCIPvarGetType(SCIPcolGetVar(cols[2])) != SCIP_VARTYPE_BINARY)
+             && SCIPvarGetType(SCIPcolGetVar(cols[2])) != SCIP_VARTYPE_BINARY )
             continue;
 
          /* fill in hashdata */
@@ -1207,28 +1228,41 @@ SCIP_RETCODE createRelationTables(
 /* detect bilinear products encoded in linear constraints */
 static
 SCIP_RETCODE detectHiddenProducts(
-   SCIP*          scip,       /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,   /**< separation data */
-   SCIP_HASHMAP*  varmap      /**< variable map */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separation data */
+   SCIP_HASHMAP*         varmap              /**< variable map */
    )
 {
-   int v1, r, r2, i, j, nrows;
+   int v1;
+   int r;
+   int r2;
+   int i;
+   int j;
+   int nrows;
    SCIP_ROW** prob_rows;
    SCIP_HASHTABLE* hashtable3;
    SCIP_HASHTABLE* hashtable2;
    HASHDATA* foundhashdata;
    SCIP_VAR* vars_xwy[3];
-   SCIP_Real coefs1[3], coefs2[3];
+   SCIP_Real coefs1[3];
+   SCIP_Real coefs2[3];
    SCIP_ROW* row1;
    SCIP_ROW* row2;
-   int xpos, ypos, wpos, f;
-   int nvars_in_2rels, varpos;
+   int xpos;
+   int ypos;
+   int wpos;
+   int f;
+   int nvars_in_2rels;
+   int varpos;
    SCIP_VAR** vars_in_2rels;
    SCIP_VAR*** related_vars;
    int* nrelated_vars;
-   SCIP_Bool found, xfixing;
-   SCIP_Bool uselhs1, uselhs2;
-   SCIP_Real side1, side2;
+   SCIP_Bool found;
+   SCIP_Bool xfixing;
+   SCIP_Bool uselhs1;
+   SCIP_Bool uselhs2;
+   SCIP_Real side1;
+   SCIP_Real side2;
    int* row_list;
 
    /* get the (initial) rows */
@@ -1254,7 +1288,7 @@ SCIP_RETCODE detectHiddenProducts(
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
    {
       foundhashdata = (HASHDATA *) SCIPhashtableGetEntry(hashtable2, i);
-      if( foundhashdata == NULL)
+      if( foundhashdata == NULL )
          continue;
 
       SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
@@ -1273,7 +1307,7 @@ SCIP_RETCODE detectHiddenProducts(
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
    {
       foundhashdata = (HASHDATA *) SCIPhashtableGetEntry(hashtable3, i);
-      if( foundhashdata == NULL)
+      if( foundhashdata == NULL )
          continue;
 
       SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
@@ -1342,7 +1376,7 @@ SCIP_RETCODE detectHiddenProducts(
 
                coefs1[0] = SCIProwGetVals(row1)[xpos];
 
-               if( (!xfixing && coefs1[0] > 0) ||  (xfixing && coefs1[0] < 0))
+               if( (!xfixing && coefs1[0] > 0) ||  (xfixing && coefs1[0] < 0) )
                {
                   uselhs1 = TRUE;
                   side1 = SCIProwGetLhs(row1);
@@ -1394,7 +1428,7 @@ SCIP_RETCODE detectHiddenProducts(
                      coefs2[1] = SCIProwGetVals(row2)[wpos];
                      coefs2[2] = SCIProwGetVals(row2)[ypos];
 
-                     if( (!xfixing && coefs2[0] > 0) ||  (xfixing && coefs2[0] < 0))
+                     if( (!xfixing && coefs2[0] > 0) ||  (xfixing && coefs2[0] < 0) )
                      {
                         uselhs2 = FALSE;
                         side2 = SCIProwGetRhs(row2);
@@ -1426,10 +1460,12 @@ SCIP_RETCODE detectHiddenProducts(
                   coefs2[2] = 0.0;
                   SCIPdebugMsg(scip, "w global bounds:\n");
                   if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars_xwy[1])) )
-                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, xfixing ? side1-coefs1[0] : side1, SCIPvarGetLbGlobal(vars_xwy[1]), uselhs1, TRUE, varmap, xfixing) );
+                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, xfixing ? side1-coefs1[0] : side1,
+                        SCIPvarGetLbGlobal(vars_xwy[1]), uselhs1, TRUE, varmap, xfixing) );
 
                   if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars_xwy[1])) )
-                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, xfixing ? side1-coefs1[0] : side1, SCIPvarGetUbGlobal(vars_xwy[1]), uselhs1, FALSE, varmap, xfixing) );
+                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, xfixing ? side1-coefs1[0] : side1,
+                        SCIPvarGetUbGlobal(vars_xwy[1]), uselhs1, FALSE, varmap, xfixing) );
 
                   /* do implied bounds and cliques with w */
                   if( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY )
@@ -1534,7 +1570,7 @@ SCIP_RETCODE detectHiddenProducts(
             /* the second relation is in w and y */
             coefs2[0] = 0.0;
 
-            assert( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY );
+            assert(SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY);
 
             SCIPdebugMsg(scip, "Implic of x = %s + implied lb on w = %s:\n", SCIPvarGetName(vars_xwy[0]), SCIPvarGetName(vars_xwy[1]));
 
@@ -1691,7 +1727,7 @@ SCIP_RETCODE createSepaData(
    {
       SCIP_CONSEXPR_EXPR* expr;
 
-      SCIP_CALL(SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, conss[i]), SCIP_CONSEXPRITERATOR_DFS, TRUE));
+      SCIP_CALL( SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, conss[i]), SCIP_CONSEXPRITERATOR_DFS, TRUE) );
       SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
       expr = SCIPexpriteratorGetCurrent(it);
 
@@ -1847,7 +1883,8 @@ int getBilinPos(
    SCIP_VAR*             y                   /**< second variable */
    )
 {
-   int idx, img;
+   int idx;
+   int img;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -1881,17 +1918,21 @@ int getBilinPos(
  */
 static
 SCIP_RETCODE updateBestEstimators(
-   SCIP*          scip,       /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,   /**< separator data */
-   int            pos,        /**< position of the product */
-   SCIP_SOL*      sol         /**< solution at which to evaluate the expressions */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   pos,                /**< position of the product */
+   SCIP_SOL*             sol                 /**< solution at which to evaluate the expressions */
 )
 {
-   SCIP_Real prodval, linval, prodviol;
-   SCIP_Real viol_below, viol_above;
+   SCIP_Real prodval;
+   SCIP_Real linval;
+   SCIP_Real prodviol;
+   SCIP_Real viol_below;
+   SCIP_Real viol_above;
+   int i;
+
    viol_below = -SCIPinfinity(scip);
    viol_above = -SCIPinfinity(scip);
-   int i;
 
    if( sepadata->bestunderestimator[pos] != -1 )
    { /* the estimators have already been updated in this round */
@@ -1967,7 +2008,7 @@ SCIP_RETCODE isAcceptableRow(
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms); ++i )
    {
-      linpos = getBilinPos(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]) );
+      linpos = getBilinPos(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
 
       /* if the product hasn't been found, no linearisations for it are known */
       if( linpos == -1 )
@@ -1992,12 +2033,12 @@ SCIP_RETCODE isAcceptableRow(
 /** adds a linearisation (coef*linexpr) of a product term to the cut */
 static
 SCIP_RETCODE addLinearisationToRow(
-   SCIP*               scip,     /**< SCIP data structure */
-   SCIP_CONSHDLR*      conshdlr, /**< constraint handler */
-   SCIP_ROW*           cut,      /**< cut to add the linearisation to */
-   SCIP_CONSEXPR_EXPR* linexpr,  /**< linearisation to be added */
-   SCIP_Real           coef,     /**< coefficient of the linearisation */
-   SCIP_Real*          finalside /**< buffer that stores the side of the cut */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_ROW*             cut,                /**< cut to add the linearisation to */
+   SCIP_CONSEXPR_EXPR*   linexpr,            /**< linearisation to be added */
+   SCIP_Real             coef,               /**< coefficient of the linearisation */
+   SCIP_Real*            finalside           /**< buffer that stores the side of the cut */
 )
 {
    int i;
@@ -2030,28 +2071,32 @@ SCIP_RETCODE addLinearisationToRow(
  */
 static
 SCIP_RETCODE addRltTerm(
-   SCIP*          scip,         /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,     /**< separator data */
-   SCIP_SOL*      sol,          /**< the point to be separated (can be NULL) */
-   SCIP_ROW*      cut,          /**< cut to which the term is to be added */
-   SCIP_VAR*      var,          /**< multiplier variable */
-   SCIP_VAR*      colvar,       /**< row variable to be multiplied */
-   SCIP_Real      coef,         /**< coefficient of the bilinear term */
-   SCIP_Bool      uselb,        /**< whether we multiply with (var - lb) or (ub - var) */
-   SCIP_Bool      uselhs,       /**< whether to create a cut for the lhs or rhs */
-   SCIP_Bool      local,        /**< whether local or global cuts should be computed */
-   SCIP_Bool      computeEqCut, /**< whether conditions are fulfilled to compute equality cuts */
-   SCIP_Real*     coefvar,      /**< coefficient of var */
-   SCIP_Real*     finalside,    /**< buffer to store the left or right hand side of cut */
-   SCIP_Bool*     success       /**< buffer to store whether cut was created successfully */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   SCIP_ROW*             cut,                /**< cut to which the term is to be added */
+   SCIP_VAR*             var,                /**< multiplier variable */
+   SCIP_VAR*             colvar,             /**< row variable to be multiplied */
+   SCIP_Real             coef,               /**< coefficient of the bilinear term */
+   SCIP_Bool             uselb,              /**< whether we multiply with (var - lb) or (ub - var) */
+   SCIP_Bool             uselhs,             /**< whether to create a cut for the lhs or rhs */
+   SCIP_Bool             local,              /**< whether local or global cuts should be computed */
+   SCIP_Bool             computeEqCut,       /**< whether conditions are fulfilled to compute equality cuts */
+   SCIP_Real*            coefvar,            /**< coefficient of var */
+   SCIP_Real*            finalside,          /**< buffer to store the left or right hand side of cut */
+   SCIP_Bool*            success             /**< buffer to store whether cut was created successfully */
    )
 {
    SCIP_CONSEXPR_EXPR* linexpr;
-   SCIP_Real lbvar, ubvar;
+   SCIP_Real lbvar;
+   SCIP_Real ubvar;
    SCIP_Real refpointvar;
-   SCIP_Real signfactor, boundfactor;
-   SCIP_Real coefauxvar, coefcolvar;
-   int auxpos, linpos;
+   SCIP_Real signfactor;
+   SCIP_Real boundfactor;
+   SCIP_Real coefauxvar;
+   SCIP_Real coefcolvar;
+   int auxpos;
+   int linpos;
 
    lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
    ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
@@ -2096,7 +2141,7 @@ SCIP_RETCODE addRltTerm(
          }
       }
 
-      if( linpos != -1)
+      if( linpos != -1 )
          linexpr = sepadata->linexprs[auxpos][linpos];
    }
 
@@ -2467,18 +2512,21 @@ SCIP_RETCODE computeProjRltCut(
  */
 static
 SCIP_RETCODE createProjLP(
-   SCIP*            scip,       /**< SCIP data structure */
-   SCIP_ROW**       rows,       /**< problem rows */
-   int              nrows,      /**< number of rows */
-   SCIP_SOL*        sol,        /**< the point to be separated (can be NULL) */
-   PROJLP**         projlp,     /**< the projected problem data structure */
-   SCIP_Bool        local       /**< are local cuts allowed? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            rows,               /**< problem rows */
+   int                   nrows,              /**< number of rows */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   PROJLP**              projlp,             /**< the projected problem data structure */
+   SCIP_Bool             local               /**< are local cuts allowed? */
    )
 {
    SCIP_COL** cols;
-   int i, v;
+   int i;
+   int v;
    SCIP_VAR* var;
-   SCIP_Real val, vlb, vub;
+   SCIP_Real val;
+   SCIP_Real vlb;
+   SCIP_Real vub;
 
    assert(scip != NULL);
    assert(rows != NULL);
@@ -2533,13 +2581,14 @@ SCIP_RETCODE createProjLP(
 /* prints the projected LP */
 static
 void printProjLP(
-   SCIP*   scip,        /**< SCIP data structure */
-   PROJLP* projlp,      /**< the projected LP */
-   int     nrows,       /**< number of rows in projlp */
-   FILE*   file         /**< output file (or NULL for standard output) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   PROJLP*               projlp,             /**< the projected LP */
+   int                   nrows,              /**< number of rows in projlp */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int i,j;
+   int i;
+   int j;
 
    assert(projlp != NULL);
 
@@ -2582,9 +2631,9 @@ void printProjLP(
  */
 static
 void freeProjLP(
-   SCIP*    scip,   /**< SCIP data structure */
-   PROJLP** projlp, /**< the projected LP */
-   int      nrows   /**< number of rows in projlp */
+   SCIP*                 scip,               /**< SCIP data structure */
+   PROJLP**              projlp,             /**< the projected LP */
+   int                   nrows               /**< number of rows in projlp */
    )
 {
    int i;
@@ -2613,13 +2662,13 @@ void freeProjLP(
  */
 static
 void addRowMark(
-   int           ridx,              /**< row index */
-   SCIP_Real     coef,              /**< ai*(w - xy) */
-   SCIP_Real     prod_viol_below,   /**< violation of the product from below (0 or positive) */
-   SCIP_Real     prod_viol_above,   /**< violation of the product from above (0 or positive) */
-   int*          row_idcs,          /**< sparse array with indices of marked rows */
-   int*          row_marks,         /**< sparse array to store the marks */
-   int*          nmarked            /**< number of marked rows */
+   int                   ridx,               /**< row index */
+   SCIP_Real             coef,               /**< ai*(w - xy) */
+   SCIP_Real             prod_viol_below,    /**< violation of the product from below (0 or positive) */
+   SCIP_Real             prod_viol_above,    /**< violation of the product from above (0 or positive) */
+   int*                  row_idcs,           /**< sparse array with indices of marked rows */
+   int*                  row_marks,          /**< sparse array to store the marks */
+   int*                  nmarked             /**< number of marked rows */
 )
 {
    int newmark;
@@ -2662,28 +2711,38 @@ void addRowMark(
 /* mark all rows that should be multiplied by xj */
 static
 SCIP_RETCODE markRowsXj(
-   SCIP*          scip,       /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,   /**< separator data */
-   SCIP_CONSHDLR* conshdlr,   /**< constraint handler */
-   SCIP_SOL*      sol,        /**< point to be separated (can be NULL) */
-   int            j,          /**< index of the multiplier variable in sepadata */
-   SCIP_Bool      local,      /**< are local cuts allowed? */
-   SCIP_HASHMAP*  row_to_pos, /**< hashmap linking row indices to positions in array */
-   int*           row_marks,  /**< sparse array storing the row marks */
-   int*           row_idcs,   /**< sparse array storing the marked row positions */
-   int*           nmarked     /**< number of marked rows */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol,                /**< point to be separated (can be NULL) */
+   int                   j,                  /**< index of the multiplier variable in sepadata */
+   SCIP_Bool             local,              /**< are local cuts allowed? */
+   SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
+   int*                  row_marks,          /**< sparse array storing the row marks */
+   int*                  row_idcs,           /**< sparse array storing the marked row positions */
+   int*                  nmarked             /**< number of marked rows */
 )
 {
-   int i, idx, img, ncolrows, r, ridx;
+   int i;
+   int idx;
+   int img;
+   int ncolrows;
+   int r;
+   int ridx;
    SCIP_VAR* xi;
    SCIP_VAR* xj;
-   SCIP_Real vlb, vub, val;
-   SCIP_Real a, prodval;
+   SCIP_Real vlb;
+   SCIP_Real vub;
+   SCIP_Real val;
+   SCIP_Real a;
+   SCIP_Real prodval;
    SCIP_COL* coli;
    SCIP_Real* colvals;
-   SCIP_Real prod_viol_below, prod_viol_above;
+   SCIP_Real prod_viol_below;
+   SCIP_Real prod_viol_above;
    SCIP_ROW** colrows;
-   int posunder, posover;
+   int posunder;
+   int posover;
 
    *nmarked = 0;
 
@@ -2796,28 +2855,35 @@ SCIP_RETCODE markRowsXj(
 /** builds and adds the RLT cuts */
 static
 SCIP_RETCODE separateRltCuts(
-   SCIP*          scip,         /**< SCIP data structure */
-   SCIP_SEPA*     sepa,         /**< separator */
-   SCIP_SEPADATA* sepadata,     /**< separator data */
-   SCIP_CONSHDLR* conshdlr,     /**< constraint handler */
-   SCIP_SOL*      sol,          /**< the point to be separated (can be NULL) */
-   SCIP_HASHMAP*  row_to_pos,   /**< hashmap linking row indices to positions in array */
-   PROJLP*        projlp,       /**< the projected LP */
-   SCIP_ROW**     rows,         /**< problem rows */
-   int            nrows,        /**< number of problem rows */
-   SCIP_Bool      allowlocal,   /**< are local cuts allowed? */
-   int*           ncuts,        /**< buffer to store the number of generated cuts */
-   SCIP_RESULT*   result        /**< buffer to store whether separation was successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
+   PROJLP*               projlp,             /**< the projected LP */
+   SCIP_ROW**            rows,               /**< problem rows */
+   int                   nrows,              /**< number of problem rows */
+   SCIP_Bool             allowlocal,         /**< are local cuts allowed? */
+   int*                  ncuts,              /**< buffer to store the number of generated cuts */
+   SCIP_RESULT*          result              /**< buffer to store whether separation was successful */
 )
 {
-   int j, r, k, nmarked;
+   int j;
+   int r;
+   int k;
+   int nmarked;
    SCIP_VAR* xj;
    int* row_marks;
    int* row_idcs;
    SCIP_ROW* cut;
    SCIP_Bool uselb[4] = {TRUE, TRUE, FALSE, FALSE};
    SCIP_Bool uselhs[4] = {TRUE, FALSE, TRUE, FALSE};
-   SCIP_Bool success, infeasible, accepted, buildeqcut, iseqrow;
+   SCIP_Bool success;
+   SCIP_Bool infeasible;
+   SCIP_Bool accepted;
+   SCIP_Bool buildeqcut;
+   SCIP_Bool iseqrow;
 
    assert(projlp != NULL);
 
@@ -2844,7 +2910,7 @@ SCIP_RETCODE separateRltCuts(
          SCIP_ROW* row;
 
          assert(row_marks[r] != 0);
-         assert( SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]) );
+         assert(SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]));
 
          pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
          row = rows[pos];
@@ -2935,7 +3001,8 @@ SCIP_RETCODE separateRltCuts(
                      SCIPinfoMessage(scip, NULL, "CUTOFF! The cut obtained from row %d and multiplied with id %d (%s, %s, eq = %s) revealed infeasibility\n",
                                      SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
                      *result = SCIP_CUTOFF;
-                  } else
+                  }
+                  else
                   {
                      SCIPdebugMsg(scip, "SEPARATED: added cut to scip\n");
                      *result = SCIP_SEPARATED;
@@ -2949,7 +3016,7 @@ SCIP_RETCODE separateRltCuts(
             /* release the cut */
             if( cut != NULL )
             {
-               SCIP_CALL(SCIPreleaseRow(scip, &cut));
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
 
             if( (sepadata->maxncuts >= 0 && *ncuts >= sepadata->maxncuts) || *result == SCIP_CUTOFF )
@@ -3044,17 +3111,19 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolRlt)
 /** fills an array of rows suitable for RLT cut generation */
 static
 SCIP_RETCODE storeSuitableRows(
-   SCIP*          scip,        /**< SCIP data structure */
-   SCIP_SEPA*     sepa,        /**< separator */
-   SCIP_SEPADATA* sepadata,    /**< separator data */
-   SCIP_ROW**     prob_rows,   /**< problem rows */
-   SCIP_ROW**     rows,        /**< an array to be filled with suitable rows */
-   int*           nrows,       /**< buffer to store the number of suitable rows */
-   SCIP_HASHMAP*  row_to_pos,  /**< hashmap linking row indices to positions in rows */
-   SCIP_Bool      allowlocal   /**< are local rows allowed? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_ROW**            prob_rows,          /**< problem rows */
+   SCIP_ROW**            rows,               /**< an array to be filled with suitable rows */
+   int*                  nrows,              /**< buffer to store the number of suitable rows */
+   SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in rows */
+   SCIP_Bool             allowlocal          /**< are local rows allowed? */
    )
 {
-   int new_nrows, r, j;
+   int new_nrows;
+   int r;
+   int j;
    SCIP_Bool iseqrow;
    SCIP_COL** cols;
    SCIP_Bool iscontrow;
@@ -3070,7 +3139,7 @@ SCIP_RETCODE storeSuitableRows(
          continue;
 
       /* if global cuts are requested, only globally valid rows can be used */
-      if( !allowlocal && SCIProwIsLocal(prob_rows[r]))
+      if( !allowlocal && SCIProwIsLocal(prob_rows[r]) )
          continue;
 
       /* if continuous rows are requested, only those can be used */
