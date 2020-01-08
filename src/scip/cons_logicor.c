@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1080,8 +1080,31 @@ SCIP_RETCODE applyFixings(
       }
       else if( var != consdata->vars[v] )
       {
+         assert(SCIPvarIsBinary(var));
+
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         SCIP_CALL( addCoef(scip, cons, var) );
+
+         /* the binvar representative might be fixed:
+          * - if fixed to 1, the constraint is redundant
+          * - if fixed to 0, the representative does not need to be added to the constraint
+          * - if not fixed, we add the representative to the constraint
+          */
+         if( SCIPvarGetLbGlobal(var) > 0.5 )
+         {
+            assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+            *redundant = TRUE;
+
+            goto TERMINATE;
+         }
+         else if( SCIPvarGetUbGlobal(var) < 0.5 )
+         {
+            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+            ++(*nchgcoefs);
+         }
+         else
+         {
+            SCIP_CALL( addCoef(scip, cons, var) );
+         }
       }
    }
 
@@ -4737,6 +4760,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
             SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
+      consdata->filterpos1 = -1;
    }
    if( consdata->watchedvar2 != -1 )
    {
@@ -4744,6 +4769,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
             SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
             consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
+      consdata->filterpos2 = -1;
    }
 
    return SCIP_OKAY;

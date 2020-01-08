@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3103,6 +3103,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis numerics command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems to prove optimality fast */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -5097,6 +5113,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
+   /* set estimate */
+   if( !SCIPdialogHasEntry(setmenu, "estimation") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "estimation", "change parameters for restarts and tree size estimation", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
@@ -5635,6 +5662,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisOptimality, NULL, NULL,
             "optimality", "predefined parameter settings for proving optimality fast", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "numerics" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "numerics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisNumerics, NULL, NULL,
+            "numerics", "predefined parameter settings for increased numerical stability", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

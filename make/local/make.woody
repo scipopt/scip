@@ -1,0 +1,20 @@
+# Call with "make testcluster" when on Erlangen woody-Cluster
+#
+# The given parameters will have the job run on an exclusive node
+# with 32GB RAM and four cores.
+#
+# To get the result files call "./evalcheck_cluster.sh
+# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+#
+# This leads to result files 
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+#
+QUEUETYPE	=	qsub
+QUEUE		=	route
+PPN		=	4:sl32g
+MEM		=	32000
+CLIENTTMPDIR	=	/scratch
+NOWAITCLUSTER   =       0
+EXCLUSIVE       =       notneeded

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -6917,6 +6917,10 @@ SCIP_RETCODE checkParallelObjective(
          SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
 
          cutoffbound = (consdata->capacity - offset) / scale;
+
+         SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+            SCIPconsGetName(cons), cutoffbound);
+
 
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1271,7 +1271,7 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddObjoffset", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobAddObjoffset(scip->transprob, addval);
-   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat,
+   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventfilter,
          scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    return SCIP_OKAY;
@@ -1441,8 +1441,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -1459,8 +1459,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    default:

@@ -18,6 +18,9 @@ endif()
 
 add_dependencies(check scip_check)
 
+# copy data files to binary directory, so that they can be accessed with relative paths
+# in settings files
+file(COPY coverage/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/coverage)
 #
 # define the instance sets
 #
@@ -50,6 +53,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+    "emphasis_numerics"
 
     #constraints
     "indicatorlogicorsepa"
@@ -65,6 +69,10 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "treemodel_ratio"
+    "treemodel_sampling"
+    "treemodel_svts_filter"
+    "treemodel_svts_nofilter"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
@@ -81,7 +89,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    )
+)
 #
 # settings for the componentshandler test
 #
@@ -105,8 +113,10 @@ set(settings_fastMIP
     "presolving_off"
     "separating_off"
     "vbcvisualization"
+    "enable_treeprofile_regression_forest"
   )
 set(settings_MINLP
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"
@@ -181,7 +191,7 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-   
+
 #
 # Indicator instances
 #
@@ -481,8 +491,7 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
-                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)
@@ -493,6 +502,12 @@ macro(add_decompinstancetests instances settings prefix)
 #
 # loop over the instances
 #
+if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
+   set(TEST_BENDERSQP TRUE)
+else()
+   set(TEST_BENDERSQP FALSE)
+endif()
+if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
     foreach(instance ${${instances}})
         split_decompinstance(instance)
         #
@@ -514,7 +529,8 @@ macro(add_decompinstancetests instances settings prefix)
                                 )
         endforeach(setting)
     endforeach(instance)
-endmacro(add_instancetests)
+endif()
+endmacro(add_decompinstancetests)
 
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
@@ -728,7 +744,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+                                            DEPENDS scip-build)
         endforeach()
 
 endforeach()

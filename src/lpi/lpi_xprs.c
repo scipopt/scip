@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,7 +52,7 @@
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         SCIPmessagePrintWarning((messagehdlr), "%s:%d: LP Error: Xpress returned %d\n", __FILE__, __LINE__, _restat_); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }

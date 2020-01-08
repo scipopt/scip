@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3637,7 +3637,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->rhs = newrhs;
+         consdata->rhs = MAX(newrhs, consdata->lhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3677,7 +3677,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->lhs = newlhs;
+         consdata->lhs = MIN(newlhs, consdata->rhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 

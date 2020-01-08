@@ -95,6 +95,7 @@ set(scipsources
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
+    scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
@@ -131,6 +132,7 @@ set(scipsources
     scip/heur_octane.c
     scip/heur_ofins.c
     scip/heur_oneopt.c
+    scip/heur_padm.c
     scip/heur_proximity.c
     scip/heur_pscostdiving.c
     scip/heur_reoptsols.c
@@ -176,6 +178,7 @@ set(scipsources
     scip/presol_qpkktref.c
     scip/presol_redvub.c
     scip/presol_sparsify.c
+    scip/presol_dualsparsify.c
     scip/presol_stuffing.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
@@ -233,6 +236,7 @@ set(scipsources
     scip/sepa_rlt.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/treemodel.c
     scip/benders_default.c
     scip/benderscut_feas.c
     scip/benderscut_feasalt.c
@@ -551,6 +555,7 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
+    scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
@@ -588,6 +593,7 @@ set(scipheaders
     scip/heur_octane.h
     scip/heur_ofins.h
     scip/heur_oneopt.h
+    scip/heur_padm.h
     scip/heur_proximity.h
     scip/heur_pscostdiving.h
     scip/heur_randrounding.h
@@ -645,6 +651,7 @@ set(scipheaders
     scip/presol_qpkktref.h
     scip/presol_redvub.h
     scip/presol_sparsify.h
+    scip/presol_dualsparsify.h
     scip/presol_stuffing.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
@@ -862,6 +869,7 @@ set(scipheaders
     scip/table_default.h
     scip/table.h
     scip/tree.h
+    scip/treemodel.h
     scip/type_bandit.h
     scip/type_benders.h
     scip/type_benderscut.h

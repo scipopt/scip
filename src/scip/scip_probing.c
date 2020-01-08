@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1021,6 +1021,83 @@ SCIP_RETCODE SCIPsolveProbingRelax(
    }
 
    return SCIP_OKAY;
+}
+
+/** print statistics of probing */
+char* SCIPsnprintfProbingStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
+   )
+{
+   char* ptr = strbuf;
+   const int nvartypes = 4;
+
+   assert(scip != NULL);
+   assert(strbuf != NULL);
+
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_VAR** vars;
+      int nbinvars = SCIPgetNBinVars(scip);
+      int nintvars = SCIPgetNIntVars(scip);
+      int nimplvars = SCIPgetNImplVars(scip);
+      int nvars = SCIPgetNVars(scip);
+      int vartypeend[] = {
+            nbinvars,
+            nbinvars + nintvars,
+            nbinvars + nintvars + nimplvars,
+            nvars
+      };
+      const char* vartypenames[] = {
+            "binary",
+            "integer",
+            "implicit integer",
+            "continuous"
+      };
+      int nvartypefixed[4];
+      int nvarsfixed = 0;
+      int depth;
+      int probingdepth;
+      int vartypestart = 0;
+      int v;
+      int p;
+
+      vars = SCIPgetVars(scip);
+      BMSclearMemoryArray(nvartypefixed, nvartypes);
+
+      /* loop over vartypes and count fixings */
+      for( p = 0; p < nvartypes; ++p )
+      {
+         for( v = vartypestart; v < vartypeend[p]; ++v )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+               ++nvartypefixed[p];
+         }
+         nvarsfixed += nvartypefixed[p];
+         vartypestart = vartypeend[p];
+      }
+
+      depth = SCIPgetDepth(scip);
+      probingdepth = SCIPgetProbingDepth(scip);
+
+      ptr += SCIPsnprintf(ptr, len, "Depth: (%d total, %d probing) ", depth, probingdepth);
+      ptr += SCIPsnprintf(ptr, len, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
+
+      for( p = 0; p < nvartypes; ++p )
+      {
+         int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
+         ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
+      }
+
+   }
+   else
+   {
+      (void) SCIPsnprintf(strbuf, len, "Not in probing");
+   }
+
+   return strbuf;
+
 }
 
 /** gets the candidate score and preferred rounding direction for a candidate variable */

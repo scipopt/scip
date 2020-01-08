@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5087,7 +5087,7 @@ SCIP_RETCODE nodepairqueueCreate(
 #endif
 
    /* initialize priority queue */
-   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs) );
+   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs, NULL) );
 
    /* fill priority queue using array nodepairs */
    for( n = 0; n < nnodepairs; n++ )
