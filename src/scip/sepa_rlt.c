@@ -129,6 +129,9 @@ struct SCIP_SepaData
    SCIP_Bool             useinsubscip;       /**< indicates whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< indicates whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< indicates whether the separator should use implicit products */
+
+   /* TODO remove this when done with cliques */
+   SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
 };
 
 /** projected LP data structure */
@@ -1092,7 +1095,6 @@ SCIP_RETCODE createRelationTables(
          if( foundhashdata != NULL )
          {
             /* if element exists, update it by adding the row */
-            assert(r == SCIProwGetIndex(prob_rows[r]));
             row_list[r] = foundhashdata->firstrow;
             foundhashdata->firstrow = r;
 
@@ -1108,7 +1110,6 @@ SCIP_RETCODE createRelationTables(
             foundhashdata->nrows = 1;
             foundhashdata->vars = hashdata.vars;
 
-            assert(r == SCIProwGetIndex(prob_rows[r]));
             foundhashdata->firstrow = r;
 
             SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)foundhashdata) );
@@ -1178,7 +1179,6 @@ SCIP_RETCODE createRelationTables(
          if( foundhashdata != NULL )
          {
             /* if element exists, update it by adding the row */
-            assert(r == SCIProwGetIndex(prob_rows[r]));
             row_list[r] = foundhashdata->firstrow;
             foundhashdata->firstrow = r;
 
@@ -1194,7 +1194,6 @@ SCIP_RETCODE createRelationTables(
             foundhashdata->nrows = 1;
             foundhashdata->vars = hashdata.vars;
 
-            assert(r == SCIProwGetIndex(prob_rows[r]));
             foundhashdata->firstrow = r;
 
             SCIP_CALL( SCIPhashtableInsert(hashtable3, (void*)foundhashdata) );
@@ -1234,7 +1233,6 @@ SCIP_RETCODE detectHiddenProducts(
 
    /* get the (initial) rows */
    SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
-   SCIPsortPtr((void**)prob_rows, SCIProwComp, nrows);
 
    /* create tables of implied and unconditional relations */
    SCIP_CALL( SCIPhashtableCreate(&hashtable3, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
@@ -1267,8 +1265,7 @@ SCIP_RETCODE detectHiddenProducts(
       while( r != -1 )
       {
          assert(r < nrows && r >= 0);
-         row1 = prob_rows[r];
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
+         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(prob_rows[r]));
          r = row_list[r];
       }
    }
@@ -1287,8 +1284,7 @@ SCIP_RETCODE detectHiddenProducts(
       while( r != -1 )
       {
          assert(r < nrows && r >= 0);
-         row1 = prob_rows[r];
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
+         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(prob_rows[r]));
          r = row_list[r];
       }
    }
@@ -1304,6 +1300,9 @@ SCIP_RETCODE detectHiddenProducts(
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "\nImplied relations table:\n");
 #endif
+
+   SCIP_CALL( SCIPcreateClock(scip, &sepadata->cliquetime) );
+   SCIP_CALL( SCIPresetClock(scip, sepadata->cliquetime) );
 
    /* start actually looking for products */
    /* go through all sets of three variables */
@@ -1441,7 +1440,9 @@ SCIP_RETCODE detectHiddenProducts(
                   else
                   { /* w is binary - look for cliques containing x and w */
                      SCIPdebugMsg(scip, "Implied relation + cliques with x and w:\n");
+                     SCIP_CALL( SCIPstartClock(scip, sepadata->cliquetime) );
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, xfixing ? side1-coefs1[0] : side1, uselhs1, 0, 1, varmap, xfixing) );
+                     SCIP_CALL( SCIPstopClock(scip, sepadata->cliquetime) );
                   }
 
                   /* use unconditional relations (i.e. relations of w and y) */
@@ -1466,8 +1467,10 @@ SCIP_RETCODE detectHiddenProducts(
                   if( SCIPvarGetType(vars_xwy[1]) == SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[2]) == SCIP_VARTYPE_BINARY )
                   {
                      SCIPdebugMsg(scip, "Implied relation + cliques with w and y:\n"); /* TODO this can be more efficient with x in outer loop */
+                     SCIP_CALL( SCIPstartClock(scip, sepadata->cliquetime) );
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, FALSE) );
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1-coefs1[0], uselhs1, 1, 2, varmap, TRUE) );
+                     SCIP_CALL( SCIPstopClock(scip, sepadata->cliquetime) );
                   }
 
                   /* inequalities containing w and y */
@@ -1580,6 +1583,9 @@ SCIP_RETCODE detectHiddenProducts(
          }
       }
    }
+
+   SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f", SCIPgetClockTime(scip, sepadata->cliquetime));
+   SCIP_CALL( SCIPfreeClock(scip, &sepadata->cliquetime) );
 
    for( i = 0; i < nvars_in_2rels; ++i )
    {
