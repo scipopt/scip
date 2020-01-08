@@ -48,6 +48,8 @@
 #define DEFAULT_RANDSEED            157 /**< default random seed */
 #define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_IGNOREPACKINGCONSS TRUE /**< default for ignoring circle packing constraints during minor detection */
+
 /*
  * Data structures
  */
@@ -65,6 +67,7 @@ struct SCIP_SepaData
    SCIP_Bool             detectedminors;     /**< has minor detection be called? */
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
+   SCIP_Bool             ignorepackingconss; /**< whether to ignore circle packing constraints during minor detection */
 };
 
 /*
@@ -94,7 +97,7 @@ SCIP_RETCODE sepadataAddMinor(
    assert(auxvarxx != auxvarxy);
    assert(auxvaryy != auxvarxy);
 
-   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s for x=%s y=%y\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy),
+   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s for x=%s y=%s\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy),
       SCIPvarGetName(auxvarxy), SCIPvarGetName(x), SCIPvarGetName(y));
 
    /* reallocate if necessary */
@@ -153,6 +156,113 @@ SCIP_RETCODE sepadataClear(
    sepadata->minorssize = 0;
 
    return SCIP_OKAY;
+}
+
+/** helper method to identify non-overlapping constraints in circle packing */
+static
+SCIP_Bool isPackingCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons                /**< expression constraint */
+   )
+{
+   SCIP_CONSEXPR_EXPR* root;
+   SCIP_VAR* quadvars[4] = {NULL, NULL, NULL, NULL};
+   SCIP_VAR* bilinvars[4] = {NULL, NULL, NULL, NULL};
+   int nbilinvars = 0;
+   int nquadvars = 0;
+   int nchildren;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   root = SCIPgetExprConsExpr(scip, cons);
+   assert(root != NULL);
+   nchildren = SCIPgetConsExprExprNChildren(root);
+
+   /* non-overlapping constraint has 6 terms (2 bilinear + 4 quadratic) */
+   if( nchildren != 6 || SCIPgetConsExprExprHdlr(root) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return FALSE;
+
+   for( i = 0; i < nchildren && (nbilinvars <= 4 && nquadvars <= 4); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_EXPR** children;
+      SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+      /* get child */
+      expr = SCIPgetConsExprExprChildren(root)[i];
+      assert(expr != NULL);
+      children = SCIPgetConsExprExprChildren(expr);
+
+      /* get expression handler */
+      exprhdlr = SCIPgetConsExprExprHdlr(expr);
+      assert(exprhdlr != NULL);
+
+      /* case: expr = x^2; x is no auxiliary variable */
+      if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(expr) == 2.0
+         && SCIPisConsExprExprVar(children[0]) )
+      {
+         SCIP_VAR* x;
+
+         /* too many quadratic variables -> stop */
+         if( nquadvars == 4 )
+            return FALSE;
+
+         x = SCIPgetConsExprExprVarVar(children[0]);
+         assert(x != NULL);
+
+         quadvars[nquadvars++] = x;
+      }
+      /* case: expr = x * y; x and y are no auxiliary variables */
+      else if( exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) && SCIPgetConsExprExprNChildren(expr) == 2
+         && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1]) )
+      {
+         SCIP_VAR* x;
+         SCIP_VAR* y;
+
+         /* too many bilinear variables -> stop */
+         if( nbilinvars == 4 )
+            return FALSE;
+
+         x = SCIPgetConsExprExprVarVar(children[0]);
+         assert(x != NULL);
+         y = SCIPgetConsExprExprVarVar(children[1]);
+         assert(y != NULL);
+         assert(x != y);
+
+         bilinvars[nbilinvars++] = x;
+         bilinvars[nbilinvars++] = y;
+      }
+      else
+      {
+         return FALSE;
+      }
+   }
+
+   /* number of bilinear and quadratic terms do not fit */
+   if( nbilinvars != 4 || nquadvars != 4 )
+      return FALSE;
+
+   /* each quadratic variable has to appear in exactly one bilinear terms */
+   for( i = 0; i < nquadvars; ++i )
+   {
+      int counter = 0;
+      int j;
+
+      for( j = 0; j < nbilinvars; ++j )
+      {
+         if( quadvars[i] == bilinvars[j] )
+            ++counter;
+      }
+
+      if( counter != 1 )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** helper method to get the variables associated to a minor */
@@ -246,6 +356,13 @@ SCIP_RETCODE detectMinors(
       assert(cons != NULL);
       root = SCIPgetExprConsExpr(scip, cons);
       assert(root != NULL);
+
+      /* ignore circle packing constraints */
+      if( sepadata->ignorepackingconss && isPackingCons(scip, conshdlr, cons) )
+      {
+         SCIPdebugMsg(scip, "ignore packing constraints %s\n", SCIPconsGetName(cons));
+         continue;
+      }
 
       for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
@@ -818,6 +935,11 @@ SCIP_RETCODE SCIPincludeSepaMinor(
          "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/" SEPA_NAME "/ignorepackingconss",
+         "whether to ignore circle packing constraints during minor detection",
+         &sepadata->ignorepackingconss, FALSE, DEFAULT_IGNOREPACKINGCONSS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

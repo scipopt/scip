@@ -31,6 +31,7 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
+static SCIP_VAR* w;
 
 /** helper method for setup */
 static
@@ -54,9 +55,11 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, -1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -1.0, 1.0,  1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -1.0, 1.0, -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -1.0, 1.0, -1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
 }
 
 /** helper method for teardown */
@@ -66,6 +69,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
@@ -192,4 +196,37 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
       cr_assert(SCIPisRelEQ(scip, xval * eigenvecs[3*i] + xxval * eigenvecs[3*i + 1] + xyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
       cr_assert(SCIPisRelEQ(scip, yval * eigenvecs[3*i] + xyval * eigenvecs[3*i + 1] + yyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
    }
+}
+
+/** tests isPackingCons() */
+Test(minor, isPackingCons, .init = setup, .fini = teardown)
+{
+   const char* inputs[4] = {
+      "[expr] <c1>: 1 <= <x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <w> <= 2",
+      "[expr] <c2>: 1 <= 2*<x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <x> <= 2",
+      "[expr] <c3>: 1 <= <x>^2  + <y>^2 + <z>^2 + <x>^2 + <x> * <y> + <z> * <w> <= 2",
+      "[expr] <c4>: 1 <= <x>^2  + <y>^2 + <z>^2 + sin(<w>) + <x> * <y> + <z> * <w> <= 2"};
+   SCIP_CONS* cons;
+   SCIP_Bool success;
+   int i;
+
+   /* create, add, and release constraints */
+   for( i = 0; i < 4; ++i )
+   {
+      SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+         &success) );
+      cr_assert(success);
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* go to solving stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+   cr_assert(SCIPgetNConss(scip) == 4);
+
+   cr_expect(isPackingCons(scip, conshdlr, SCIPgetConss(scip)[0]));
+   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[1]));
+   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[2]));
+   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[3]));
 }
