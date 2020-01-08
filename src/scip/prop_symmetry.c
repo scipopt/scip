@@ -2562,7 +2562,7 @@ SCIP_RETCODE detectOrbitopes(
          }
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
+         if ( nbincyclesperm == 0 || ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
          {
             isorbitope = FALSE;
             break;
