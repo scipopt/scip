@@ -9449,12 +9449,16 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       pseudocoefs[v] = -SCIPvarGetObj(var);
       curvarlbs[v] = SCIPvarGetLbLocal(var);
       curvarubs[v] = SCIPvarGetUbLocal(var);
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
+
+      if( SCIPsetIsZero(set, pseudocoefs[v]) )
+         continue;
+
       if( pseudocoefs[v] > 0.0 )
          pseudoact += pseudocoefs[v] * curvarubs[v];
       else
          pseudoact += pseudocoefs[v] * curvarlbs[v];
-      lbchginfoposs[v] = var->nlbchginfos-1;
-      ubchginfoposs[v] = var->nubchginfos-1;
    }
    assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, transprob)));
    SCIPsetDebugMsg(set, "  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);
