@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3247,6 +3247,30 @@ SCIP_RETCODE paramsetSetPresolvingFast(
 #endif
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "sparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable dual sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "dualsparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualsparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable tworowbnd presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", 0, quiet) );
    }
 
    /* explicitly forbid the use of implications in logicor presolving */

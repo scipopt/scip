@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -9646,8 +9646,10 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
@@ -9691,7 +9693,11 @@ SCIP_Bool SCIPfindSimpleRational(
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
 
-#pragma STD FENV_ACCESS OFF
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (off)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS OFF
+#endif
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);

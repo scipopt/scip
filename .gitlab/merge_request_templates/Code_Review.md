@@ -26,5 +26,5 @@
 
 * [ ] Look for a satisfactory solution that ensures backwards compatibility.
 * [ ] Document interface changes in the CHANGELOG.
-* [ ] Increase SCIP_APIVERSION after the merge.
+* [ ] Increase SCIP_APIVERSION after the merge (use `scripts/updateversion.py -a`!).
 * [ ] Tag this MR with the label 'default parameter' and inform one of the developers responsible for SAP (default: Jakob) if a parameter was added/deleted/changed.
