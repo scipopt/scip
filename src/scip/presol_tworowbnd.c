@@ -1262,7 +1262,7 @@ int calcCliqueMaximums(
                 maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
 #endif
 
-   /* find next maximum */
+   /* find other maximums */
    minlambda = 0.0;
    if( firstmaxpos == -1 )
       maxidx = -1;
@@ -1767,6 +1767,29 @@ SCIP_RETCODE applyConvComb
    }
 #endif
 
+   /* Filter numerically unstable breakpoints and mark them with value '3.0' */
+   for( i = 0; i < nvars; i++ )
+   {
+      if (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0) )
+      {
+         idx = varinds[i];
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoint %g of variable %s is numerically unstable and will be skipped\n", breakpoints[i], SCIPmatrixGetColName(matrix, idx));
+#endif
+         breakpoints[i] = 3.0;
+         nbreakpoints--;
+         /* adjust sign as variable no longer has a real breakpoint */
+         if ( signs[idx] == UP && SCIPisZero(scip, breakpoints[i])
+              || signs[idx] == DN && SCIPisEQ(scip, breakpoints[i], 1.0) )
+            signs[idx] = POS;
+         else if ( signs[idx] == DN && SCIPisZero(scip, breakpoints[i])
+                   || signs[idx] == UP && SCIPisEQ(scip, breakpoints[i], 1.0) )
+            signs[idx] == NEG;
+         /* assert that computation of clique breakpoints has been numerically stable */
+         assert(signs[idx] != CLQ);
+      }
+   }
+
    /* The obvious preconditions for bound tightenings are met, so we try to calculate new bounds. */
    if( nbreakpoints >= 1 )
    {
@@ -1796,8 +1819,10 @@ SCIP_RETCODE applyConvComb
          idx = varinds[i];
          if( signs[idx] == UP || signs[idx] == NEG )
          {
-            assert(SCIPisNegative(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisNegative(scip, row1coefs[idx])));
+            assert(SCIPisEQ(scip, breakpoints[i], 3.0) /* breakpoint has been marked as numerically unstable */
+                   || SCIPisNegative(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisNegative(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, -lbs[idx]) )
             {
                l1 -= row1coefs[idx] * lbs[idx];
@@ -1810,8 +1835,10 @@ SCIP_RETCODE applyConvComb
          }
          else if( signs[idx] == DN || signs[idx] == POS )
          {
-            assert(SCIPisPositive(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisPositive(scip, row1coefs[idx])));
+            assert(SCIPisEQ(scip, breakpoints[i], 3.0) /* breakpoint has been marked as numerically unstable */
+                   || SCIPisPositive(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisPositive(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, ubs[idx]) )
             {
                l1 -= row1coefs[idx] * ubs[idx];
@@ -2117,7 +2144,7 @@ SCIP_RETCODE applyConvComb
 
                idx = varinds[j];
                coef = breakpoints[i] * row1coefs[idx] + (1 - breakpoints[i]) * row2coefs[idx];
-               assert(!SCIPisEQ(scip, breakpoints[i], 2.0));
+               assert(!SCIPisEQ(scip, breakpoints[i], 2.0) && !SCIPisEQ(scip, breakpoints[i], 3.0));
 
                /* skip if the coefficient is too close to zero as computations become numerically unstable */
                if( SCIPisFeasZero(scip, coef) )
