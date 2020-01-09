@@ -1779,11 +1779,11 @@ SCIP_RETCODE applyConvComb
          breakpoints[i] = 3.0;
          nbreakpoints--;
          /* adjust sign as variable no longer has a real breakpoint */
-         if ( signs[idx] == UP && SCIPisZero(scip, breakpoints[i])
-              || signs[idx] == DN && SCIPisEQ(scip, breakpoints[i], 1.0) )
+         if ( (signs[idx] == UP && SCIPisZero(scip, breakpoints[i]))
+              || (signs[idx] == DN && SCIPisEQ(scip, breakpoints[i], 1.0)) )
             signs[idx] = POS;
-         else if ( signs[idx] == DN && SCIPisZero(scip, breakpoints[i])
-                   || signs[idx] == UP && SCIPisEQ(scip, breakpoints[i], 1.0) )
+         else if ( (signs[idx] == DN && SCIPisZero(scip, breakpoints[i]))
+                   || (signs[idx] == UP && SCIPisEQ(scip, breakpoints[i], 1.0)) )
             signs[idx] = NEG;
          /* assert that computation of clique breakpoints has been numerically stable */
          assert(signs[idx] != CLQ);
