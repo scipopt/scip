@@ -499,7 +499,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    /* initialize shortest path algorithm */
    SCIP_CALL( graph_path_init(scip, newgraph) );
 
-   SCIP_CALL( level0(scip, newgraph) );
+   SCIP_CALL( reduceLevel0(scip, newgraph) );
 
 #ifdef DEBUG_ASCENDPRUNE
    if( graph_pc_isRootedPcMw(g) )

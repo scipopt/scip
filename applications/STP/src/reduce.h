@@ -28,6 +28,11 @@
 #include "scip/scip.h"
 #include "graph.h"
 
+#define STP_REDUCTION_NONE      0
+#define STP_REDUCTION_BASIC     1
+#define STP_REDUCTION_ADVANCED  2
+
+
 /** minimum spanning tree on the terminal distance graph */
 typedef struct special_distance_minimum_spanning_tree SDMST;
 
@@ -61,10 +66,10 @@ typedef struct reduce_costs_parameters
 
 /* reduce.c
  */
-extern SCIP_RETCODE level0(SCIP*, GRAPH*);
-extern SCIP_RETCODE level0infeas(SCIP*, GRAPH*, SCIP_Bool*);
-extern SCIP_RETCODE level0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
-extern SCIP_RETCODE level0RpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
+extern SCIP_RETCODE reduceLevel0(SCIP*, GRAPH*);
+extern SCIP_RETCODE reduceLevel0infeas(SCIP*, GRAPH*, SCIP_Bool*);
+extern SCIP_RETCODE reduceLevel0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE reduceLevel0RpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reducePc(SCIP*, const int*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduceMw(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool);

@@ -3757,6 +3757,163 @@ SCIP_RETCODE graph_termsReachable(
 }
 
 
+/*
+ * distinguishes a terminal as the root; with centertype
+ *      = CENTER_OK  : Do nothing
+ *      = CENTER_DEG : find maximum degree
+ *      = CENTER_SUM : find the minimum distance sum
+ *      = CENTER_MIN : find the minimum largest distance
+ *      = CENTER_ALL : find the minimum distance sum to all knots
+ */
+SCIP_RETCODE graph_findCentralTerminal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   centertype,         /**< type of root selection */
+   int*                  central_term        /**< pointer to store the selected (terminal) vertex */
+   )
+{
+   PATH*   path;
+   double* cost;
+   int     i;
+   int     k;
+   int     center  = -1;
+   int     degree  = 0;
+   double  sum;
+   double  max;
+   double  minimum = FARAWAY;
+   double  maximum = 0.0;
+   double  oldval  = 0.0;
+
+   assert(g         != NULL);
+   assert(g->layers == 1);
+   assert(centertype == STP_CENTER_OK || centertype == STP_CENTER_DEG ||
+          centertype == STP_CENTER_SUM  || centertype == STP_CENTER_MIN || centertype == STP_CENTER_ALL );
+
+   *central_term = g->source;
+
+   if( centertype == STP_CENTER_OK || g->grad[g->source] == 0)
+   {
+      assert(Is_term(g->term[*central_term]));
+
+      return SCIP_OKAY;
+   }
+
+   /* Find knot of maximum degree.
+    */
+   if( centertype == STP_CENTER_DEG )
+   {
+      degree = 0;
+
+      for( i = 0; i < g->knots; i++ )
+      {
+         if( g->stp_type == STP_NWPTSPG && graph_nw_knotIsLeaf(g, i) )
+            continue;
+
+         if( Is_term(g->term[i]) && (g->grad[i] > degree) )
+         {
+            degree = g->grad[i];
+            center = i;
+         }
+      }
+
+      assert(degree > 0);
+      assert(Is_term(g->term[center]));
+
+      *central_term = center;
+
+      return SCIP_OKAY;
+   }
+
+   /* For the other methods we need the shortest paths */
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, g->edges) );
+
+   assert(path != NULL);
+   assert(cost != NULL);
+
+   for( i = 0; i < g->knots; i++ )
+      g->mark[i] = TRUE;
+
+   for( i = 0; i < g->edges; i++ )
+      cost[i] = 1.0;
+
+   for( i = 0; i < g->knots; i++ )
+   {
+      if (!Is_term(g->term[i]))
+         continue;
+
+      if( g->stp_type == STP_NWPTSPG && graph_nw_knotIsLeaf(g, i) )
+         continue;
+
+      graph_path_exec(scip, g, FSP_MODE, i, cost, path);
+
+      sum = 0.0;
+      max = 0.0;
+
+      for( k = 0; k < g->knots; k++ )
+      {
+         assert((path[k].edge >= 0) || (k == i));
+         assert((path[k].edge >= 0) || (path[k].dist == 0));
+
+         if( Is_term(g->term[k]) || (centertype == STP_CENTER_ALL) )
+         {
+            sum += path[k].dist;
+
+            if( path[k].dist > max )
+               max = path[k].dist;
+         }
+      }
+
+      if( (centertype == STP_CENTER_SUM) || (centertype == STP_CENTER_ALL) )
+      {
+         if( sum < minimum )
+         {
+            minimum = sum;
+            center  = i;
+         }
+         if( sum > maximum )
+            maximum = sum;
+
+         if( i == g->source )
+            oldval = sum;
+      }
+      else
+      {
+         assert(centertype == STP_CENTER_MIN);
+
+         /* If the maximum distance to terminal ist shorter or if
+          * it is of the same length but the degree of the knot is
+          * higher, we change the center.
+          */
+         if( SCIPisLT(scip, max, minimum) || (SCIPisEQ(scip, max, minimum) && (g->grad[i] > degree)) )
+         {
+            minimum = max;
+            center  = i;
+            degree  = g->grad[i];
+         }
+         if( max > maximum )
+            maximum = max;
+
+         if( i == g->source )
+            oldval = max;
+      }
+   }
+   assert(center >= 0);
+   assert(Is_term(g->term[center]));
+
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &path);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Central Terminal is %d (min=%g, max=%g, old=%g)\n",
+      center, minimum, maximum, oldval);
+
+   assert(Is_term(g->term[center]));
+   *central_term = center;
+
+   return SCIP_OKAY;
+}
+
+
 /** is the given graph valid? */
 SCIP_Bool graph_valid(
    SCIP*                 scip,               /**< scip struct */

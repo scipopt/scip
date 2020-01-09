@@ -44,11 +44,6 @@ extern "C" {
 #define STP_CONS_ALWAYS        1           /**< always use (respective) constraints */
 #define STP_CONS_AUTOMATIC     2           /**< use (respective) constraints depending on the problem instance */
 
-#define STP_CENTER_OK    0           /**< do nothing */
-#define STP_CENTER_DEG   1           /**< find maximum degree */
-#define STP_CENTER_SUM   2           /**< find the minimum distance sum */
-#define STP_CENTER_MIN   3           /**< find the minimum largest distance */
-#define STP_CENTER_ALL   4           /**< find the minimum distance sum to all knots */
 
 /** sets up the problem data */
 EXTERN

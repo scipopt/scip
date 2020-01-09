@@ -4875,7 +4875,7 @@ SCIP_RETCODE reduce_ledge(
    /* graph might have become disconnected */
    if( *nelims > 0 )
    {
-      SCIP_CALL( level0(scip, g) );
+      SCIP_CALL( reduceLevel0(scip, g) );
    }
 
    /* free netgraph and  MST data structure */

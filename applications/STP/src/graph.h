@@ -53,6 +53,12 @@
 #define STP_TERM_PSEUDO   -2        /**< pseudo-terminal (for PC/MW variants) */
 #define STP_TERM_NONLEAF  -3        /**< non-leaf (pseudo-) terminal (for PC/MW variants) */
 
+#define STP_CENTER_OK    0           /**< do nothing */
+#define STP_CENTER_DEG   1           /**< find maximum degree */
+#define STP_CENTER_SUM   2           /**< find the minimum distance sum */
+#define STP_CENTER_MIN   3           /**< find the minimum largest distance */
+#define STP_CENTER_ALL   4           /**< find the minimum distance sum to all knots */
+
 #define TERM2EDGE_NOTERM      -1    /**< for PC/MW: vertex is no terminal */
 #define TERM2EDGE_FIXEDTERM   -2    /**< for PC/MW: vertex is fixed terminal; artificial root is also considered a fixed terminal */
 #define TERM2EDGE_NONLEAFTERM -3    /**< for PC/MW: vertex is non-leaf terminal */
@@ -413,6 +419,7 @@ extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
 extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
 extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_isMarked(const GRAPH*);

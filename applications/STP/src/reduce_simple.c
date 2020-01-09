@@ -1244,7 +1244,7 @@ SCIP_RETCODE reduce_simple_mw(
 
    assert(graph_valid(scip, g));
 
-   SCIP_CALL( level0(scip, g) );
+   SCIP_CALL( reduceLevel0(scip, g) );
 
    return SCIP_OKAY;
 }
@@ -1473,7 +1473,7 @@ SCIP_RETCODE reduce_simple_pc(
 
    assert(graph_valid(scip, g));
 
-   SCIP_CALL( level0(scip, g) );
+   SCIP_CALL( reduceLevel0(scip, g) );
 
    return SCIP_OKAY;
 }

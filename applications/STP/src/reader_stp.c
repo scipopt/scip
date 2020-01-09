@@ -30,6 +30,7 @@
 
 #include "probdata_stp.h"
 #include "reader_stp.h"
+#include "reduce.h"
 #include "graph.h"
 
 
@@ -45,7 +46,7 @@
 #define   DEFAULT_COMPCENTRAL  STP_CENTER_DEG             /**< selection type for the root (for undirected STPs) */
 #define   DEFAULT_EMITGRAPH    FALSE                      /**< emit graph? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE                   /**< count presolving time as part of overall solution time? */
-#define   DEFAULT_REDUCTION    2                          /**< reduction mode to apply */
+#define   DEFAULT_REDUCTION    STP_REDUCTION_ADVANCED     /**< reduction mode to apply */
 #define   DEFAULT_SYMCONS      STP_CONS_AUTOMATIC         /**< symmetry constraints */
 #define   DEFAULT_CYCLECONS    STP_CONS_AUTOMATIC         /**< cycle constraints */
 #define   DEFAULT_DACUTS       STP_CONS_ALWAYS            /**< always use dual-ascent cuts */

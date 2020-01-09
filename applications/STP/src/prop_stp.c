@@ -938,9 +938,9 @@ SCIP_RETCODE propgraphPruneUnconnected(
    assert(!(*probisinfeas));
 
    if( graph_pc_isRootedPcMw(propgraph) )
-      SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, offset, probisinfeas) );
+      SCIP_CALL( reduceLevel0RpcRmwInfeas(scip, propgraph, offset, probisinfeas) );
    else
-      SCIP_CALL( level0infeas(scip, propgraph, probisinfeas) );
+      SCIP_CALL( reduceLevel0infeas(scip, propgraph, probisinfeas) );
 
    return SCIP_OKAY;
 }
@@ -1377,7 +1377,7 @@ SCIP_RETCODE fixVarsRedbased(
    }
    else
    {
-      SCIP_CALL( level0(scip, propgraph) );
+      SCIP_CALL( reduceLevel0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
 

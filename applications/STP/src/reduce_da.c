@@ -2314,7 +2314,7 @@ SCIP_RETCODE reduce_da(
                   lpobjval, upperbound, daroot, (run == 0), extended && !rpc));
 
          if( ndeletions > 0 && !rpc )
-            level0(scip, graph);
+            reduceLevel0(scip, graph);
 
          assert(graph_valid(scip, graph));
 
