@@ -3370,7 +3370,7 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
-   if ( propdata->nschreiersimsconss > 0 )
+   if ( propdata->nleaders > 0 )
    {
       SCIPfreeBufferArray(scip, &modifiedpermvars);
       for (p = nperms - 1; p >= 0; --p)
@@ -3938,7 +3938,9 @@ SCIP_RETCODE addSchreierSimsConss(
       }
    }
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &norbitleadercomponent, ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &norbitleadercomponent, ncomponents) );
+   for (c = 0; c < ncomponents; ++c)
+      norbitleadercomponent[c] = 0;
 
    while ( ninactiveperms < nperms )
    {
