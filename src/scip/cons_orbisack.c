@@ -86,8 +86,8 @@
 
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
-
 #define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbisack constraints should be forced to be copied to sub SCIPs */
 
 
 /*
@@ -102,6 +102,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
    int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
+   SCIP_Bool             forceconscopy;      /**< whether orbisack constraints should be forced to be copied to sub SCIPs */
 };
 
 /** constraint data for orbisack constraints */
@@ -1758,6 +1759,7 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 static
 SCIP_DECL_CONSCOPY(consCopyOrbisack)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR** sourcevars1;
    SCIP_VAR** sourcevars2;
@@ -1785,11 +1787,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbisack)
    assert( sourcedata->vars2 != NULL );
    assert( sourcedata->nrows > 0 );
 
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
    /* do not copy non-model constraints */
-   if ( !sourcedata->ismodelcons )
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
@@ -2038,6 +2043,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkpporbisack",
          "Upgrade orbisack constraints to packing/partioning orbisacks?",
          &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether orbisack constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
