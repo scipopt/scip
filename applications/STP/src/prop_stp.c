@@ -1430,7 +1430,6 @@ void blockEdgesWithGlobalFixings(
       {
          int todo; // for pc/rpc can we maybe also block edges with unequal costs??
          assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
-         assert(LT(graph->cost[erev], BLOCKED));
 
          if( EQ(graph->cost[e], graph->cost[erev]) )
          {
