@@ -3549,6 +3549,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcedata->nblocks > 0 );
    assert( sourcedata->vars != NULL );
 
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;
    sourcevars = sourcedata->vars;

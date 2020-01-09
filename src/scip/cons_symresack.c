@@ -2382,6 +2382,14 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
    assert( sourcedata->perm != NULL );
    assert( sourcedata->nvars > 0 );
 
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    sourcevars = sourcedata->vars;
    nvars = sourcedata->nvars;
 

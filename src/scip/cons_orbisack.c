@@ -1785,6 +1785,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbisack)
    assert( sourcedata->vars2 != NULL );
    assert( sourcedata->nrows > 0 );
 
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+      
+      return SCIP_OKAY;
+   }
+
    sourcevars1 = sourcedata->vars1;
    sourcevars2 = sourcedata->vars2;
    nrows = sourcedata->nrows;
