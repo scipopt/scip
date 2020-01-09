@@ -1784,7 +1784,7 @@ SCIP_RETCODE applyConvComb
             signs[idx] = POS;
          else if ( signs[idx] == DN && SCIPisZero(scip, breakpoints[i])
                    || signs[idx] == UP && SCIPisEQ(scip, breakpoints[i], 1.0) )
-            signs[idx] == NEG;
+            signs[idx] = NEG;
          /* assert that computation of clique breakpoints has been numerically stable */
          assert(signs[idx] != CLQ);
       }
