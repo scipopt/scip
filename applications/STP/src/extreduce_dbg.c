@@ -34,6 +34,19 @@
 #include "extreduce.h"
 
 
+/** returns current position in the stack */
+static inline
+int extStackGetPosition(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_ncomponents > 0);
+
+   return (extdata->extstack_ncomponents - 1);
+}
+
+
 /** is current tree flawed? */
 SCIP_Bool extreduce_treeIsFlawed(
    SCIP*                 scip,               /**< SCIP */
@@ -231,6 +244,36 @@ void extreduce_printStack(
          graph_edge_printInfo(graph, edge);
       }
    }
+}
+
+
+/** is the node in the current top component of the stack? */
+SCIP_Bool extreduce_nodeIsInStackTop(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   node                /**< the node */
+   )
+{
+   const int stackpos = extStackGetPosition(extdata);
+   const int* const stack_start = extdata->extstack_start;
+   const int* const stack_data = extdata->extstack_data;
+
+   assert(graph);
+   assert(stack_start && stack_data);
+   assert(node >= 0 && node < graph->knots);
+   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED || extdata->extstack_state[stackpos] == EXT_STATE_MARKED);
+
+   for( int i = stack_start[stackpos]; i < stack_start[stackpos + 1]; i++ )
+   {
+      const int topnode = graph->head[stack_data[i]];
+
+      assert(topnode >= 0 && topnode < graph->knots);
+
+      if( topnode == node )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 

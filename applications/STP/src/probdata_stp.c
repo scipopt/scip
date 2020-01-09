@@ -55,18 +55,6 @@
 
 #define STP_SYM_PRIZE
 #define STP_AGG_SYM
-#define CENTER_OK    0           /**< do nothing */
-#define CENTER_DEG   1           /**< find maximum degree */
-#define CENTER_SUM   2           /**< find the minimum distance sum */
-#define CENTER_MIN   3           /**< find the minimum largest distance */
-#define CENTER_ALL   4           /**< find the minimum distance sum to all knots */
-
-#define MODE_CUT    0           /**< branch and cut */
-#define MODE_FLOW   1           /**< use flow model */
-#define MODE_PRICE  2           /**< branch and price */
-
-#define CONS_ALWAYS       1           /**< always use (respective) constraints */
-#define CONS_SPECIFIC     2           /**< use (respective) constraints depending on the problem instance */
 
 #define FLOWB       FALSE
 #define USEOFFSETVAR TRUE
@@ -279,7 +267,7 @@ void writeCommentSection(
  *      = CENTER_ALL : find the minimum distance sum to all knots
  */
 static
-SCIP_RETCODE central_terminal(
+SCIP_RETCODE findCentralTerminal(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  central_term,       /**< pointer to store the selected (terminal) vertex */
@@ -303,12 +291,12 @@ SCIP_RETCODE central_terminal(
 
    *central_term = g->source;
 
-   if( centertype == CENTER_OK || g->grad[g->source] == 0)
+   if( centertype == STP_CENTER_OK || g->grad[g->source] == 0)
       return SCIP_OKAY;
 
    /* Find knot of maximum degree.
     */
-   if( centertype == CENTER_DEG )
+   if( centertype == STP_CENTER_DEG )
    {
       degree = 0;
 
@@ -360,7 +348,7 @@ SCIP_RETCODE central_terminal(
          assert((path[k].edge >= 0) || (k == i));
          assert((path[k].edge >= 0) || (path[k].dist == 0));
 
-         if( Is_term(g->term[k]) || (centertype == CENTER_ALL) )
+         if( Is_term(g->term[k]) || (centertype == STP_CENTER_ALL) )
          {
             sum += path[k].dist;
 
@@ -369,7 +357,7 @@ SCIP_RETCODE central_terminal(
          }
       }
 
-      if( (centertype == CENTER_SUM) || (centertype == CENTER_ALL) )
+      if( (centertype == STP_CENTER_SUM) || (centertype == STP_CENTER_ALL) )
       {
          if( sum < minimum )
          {
@@ -384,7 +372,7 @@ SCIP_RETCODE central_terminal(
       }
       else
       {
-         assert(centertype == CENTER_MIN);
+         assert(centertype == STP_CENTER_MIN);
 
          /* If the maximum distance to terminal ist shorter or if
           * it is of the same length but the degree of the knot is
@@ -466,11 +454,11 @@ SCIP_RETCODE setStpSolvingMode(
    SCIP_CALL( SCIPgetCharParam(scip, "stp/mode", &mode) );
 
    /* set STP solving mode */
-   probdata->mode = MODE_CUT;
+   probdata->mode = STP_MODE_CUT;
    assert(mode != 'p' && "pricing mode currently not supported\n");
 
    if( mode == 'f' )
-      probdata->mode = MODE_FLOW;
+      probdata->mode = STP_MODE_FLOW;
    else
       assert(mode == 'c');
 
@@ -545,7 +533,7 @@ SCIP_RETCODE freeConstraintsCutModel(
    SCIP_PROBDATA*        probdata            /**< pointer to problem data */
    )
 {
-   assert(probdata->mode == MODE_CUT);
+   assert(probdata->mode == STP_MODE_CUT);
 
    /* Degree-Constrained STP? */
    if( probdata->stp_type == STP_DCSTP )
@@ -612,17 +600,17 @@ SCIP_RETCODE freeConstraintsNonCutModel(
    SCIP_PROBDATA*        probdata            /**< pointer to problem data */
    )
 {
-   assert(probdata->mode != MODE_CUT);
+   assert(probdata->mode != STP_MODE_CUT);
 
    /* release path constraints */
-   if( probdata->mode == MODE_PRICE )
+   if( probdata->mode == STP_MODE_PRICE )
    {
       for( int t = 0; t < probdata->realnterms; ++t )
          SCIP_CALL( SCIPreleaseCons(scip, &(probdata->pathcons[t])) );
    }
    else
    {
-      assert(probdata->mode == MODE_FLOW);
+      assert(probdata->mode == STP_MODE_FLOW);
 
       for( int t = 0; t < probdata->realnterms; ++t )
       {
@@ -679,7 +667,7 @@ SCIP_RETCODE probdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->offsetvar) );
 #endif
 
-   if( (*probdata)->mode == MODE_CUT )
+   if( (*probdata)->mode == STP_MODE_CUT )
    {
       SCIP_CALL( freeConstraintsCutModel(scip, *probdata) );
    }
@@ -937,7 +925,7 @@ SCIP_RETCODE createConstraints(
 
    assert(scip != NULL);
    assert(probdata != NULL);
-   assert(probdata->mode != MODE_CUT);
+   assert(probdata->mode != STP_MODE_CUT);
 
    SCIPdebugMessage("createConstraints \n");
    graph = probdata->graph;
@@ -956,7 +944,7 @@ SCIP_RETCODE createConstraints(
          {
 	    (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "EdgeConstraint%d_%d", t, e);
             SCIP_CALL( SCIPcreateConsLinear ( scip, &( probdata->edgecons[t * nedges + e] ), consname, 0, NULL, NULL,
-	          -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == MODE_PRICE, FALSE, FALSE, FALSE) );
+	          -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == STP_MODE_PRICE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, probdata->edgecons[t * nedges + e]) );
          }
       }
@@ -970,13 +958,13 @@ SCIP_RETCODE createConstraints(
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "EdgeConstraintT%d", e);
          SCIP_CALL( SCIPcreateConsLinear ( scip, &( probdata->edgecons[e] ), consname,
                0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == MODE_PRICE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, probdata->mode == STP_MODE_PRICE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, probdata->edgecons[e]) );
       }
    }
 
    /* Branch and Price mode */
-   if( probdata->mode == MODE_PRICE )
+   if( probdata->mode == STP_MODE_PRICE )
    {
       /* create |T \ {root}| path constraints */
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->pathcons), realnterms) );
@@ -991,7 +979,7 @@ SCIP_RETCODE createConstraints(
       }
    }
    /* Flow mode */
-   else if( probdata->mode == MODE_FLOW )
+   else if( probdata->mode == STP_MODE_FLOW )
    {
       /* create path constraints */
       if( !probdata->bigt )
@@ -1106,7 +1094,7 @@ SCIP_RETCODE createVariables(
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );
 
       /* cut mode */
-      if( probdata->mode == MODE_CUT )
+      if( probdata->mode == STP_MODE_CUT )
       {
          int a;
          assert(probdata->nlayers == 1);
@@ -1376,7 +1364,7 @@ SCIP_RETCODE createVariables(
       }
 
       /* Price mode */
-      if( probdata->mode == MODE_PRICE )
+      if( probdata->mode == STP_MODE_PRICE )
       {
          PATH* path;
 
@@ -1424,7 +1412,7 @@ SCIP_RETCODE createVariables(
          SCIPfreeBufferArray(scip, &path);
       }
       /* Flow mode */
-      else if( probdata->mode == MODE_FLOW )
+      else if( probdata->mode == STP_MODE_FLOW )
       {
          /* store the number of disparate flows (commodities) in nflows */
          int nflows;
@@ -1525,7 +1513,7 @@ SCIP_RETCODE createModel(
        SCIP_CALL( graph_path_init(scip, probdata->orggraph) );
  #endif
 
-      if( probdata->mode == MODE_CUT )
+      if( probdata->mode == STP_MODE_CUT )
       {
          SCIP_CALL(graph_mincut_init(scip, graph));
       }
@@ -1551,7 +1539,7 @@ SCIP_RETCODE createModel(
          }
       }
 
-      if( probdata->mode == MODE_CUT )
+      if( probdata->mode == STP_MODE_CUT )
       {
          SCIP_CONS* cons;
 
@@ -1690,7 +1678,7 @@ SCIP_RETCODE createInitialCuts(
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
-   assert(MODE_CUT == probdata->mode);
+   assert(STP_MODE_CUT == probdata->mode);
 
    if( pc || mw )
    {
@@ -1755,10 +1743,10 @@ SCIP_RETCODE setParams(
 
    if( pc || mw )
    {
-      if( cyclecons == CONS_ALWAYS || (cyclecons == CONS_SPECIFIC && graph->edges <= CYC_CONS_LIMIT) )
+      if( cyclecons == STP_CONS_ALWAYS || (cyclecons == STP_CONS_AUTOMATIC && graph->edges <= CYC_CONS_LIMIT) )
          probdata->usecyclecons = TRUE;
 
-      if( symcons == CONS_ALWAYS || (symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT) )
+      if( symcons == STP_CONS_ALWAYS || (symcons == STP_CONS_AUTOMATIC && graph->terms <= SYM_CONS_LIMIT) )
          probdata->usesymcons = TRUE;
 
       if( probdata->usesymcons  )
@@ -1807,7 +1795,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
    SCIP_CALL( graph_copy(scip, sourcedata->graph, &graphcopy) );
    SCIP_CALL( graph_path_init(scip, graphcopy) );
 
-   if( sourcedata->mode == MODE_CUT )
+   if( sourcedata->mode == STP_MODE_CUT )
       SCIP_CALL( graph_mincut_init(scip, graphcopy) );
 
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
@@ -1870,7 +1858,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       }
 
       /* cut mode */
-      if( sourcedata->mode == MODE_CUT )
+      if( sourcedata->mode == STP_MODE_CUT )
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
@@ -2054,7 +2042,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
          }
 
          /* transform constraints */
-         if( sourcedata->mode == MODE_PRICE )
+         if( sourcedata->mode == STP_MODE_PRICE )
          {
             SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms));
             for( c = sourcedata->realnterms - 1; c >= 0; --c )
@@ -2073,7 +2061,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
             }
          }
          /* transform constraints and variables */
-         else if( sourcedata->mode == MODE_FLOW )
+         else if( sourcedata->mode == STP_MODE_FLOW )
          {
             if( sourcedata->bigt )
             {
@@ -2172,7 +2160,7 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
 
    if( !(*probdata)->graphHasVanished )
    {
-      if ( (*probdata)->mode == MODE_CUT )
+      if ( (*probdata)->mode == STP_MODE_CUT )
          graph_mincut_exit(scip, (*probdata)->graph);
 
       graph_path_exit(scip, (*probdata)->graph);
@@ -2257,7 +2245,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
       SCIP_CALL( SCIPtransformVars(scip, sourcedata->nvars, sourcedata->edgevars, (*targetdata)->edgevars) );
 
       /* cut mode */
-      if( sourcedata->mode == MODE_CUT )
+      if( sourcedata->mode == STP_MODE_CUT )
       {
          (*targetdata)->edgecons = NULL;
          (*targetdata)->pathcons = NULL;
@@ -2316,13 +2304,13 @@ SCIP_DECL_PROBTRANS(probtransStp)
          }
 
          /* transform constraints */
-         if( sourcedata->mode == MODE_PRICE )
+         if( sourcedata->mode == STP_MODE_PRICE )
          {
             SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms));
             SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->pathcons, (*targetdata)->pathcons));
          }
          /* transform constraints and variables*/
-         else if( sourcedata->mode == MODE_FLOW )
+         else if( sourcedata->mode == STP_MODE_FLOW )
          {
             if( sourcedata->bigt )
             {
@@ -2553,7 +2541,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    presolinfo.fixed = 0;
 
-   /* create graph */
+   /* read graph from file */
    SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
 
    SCIPdebugMessage("load type :: %d \n\n", graph->stp_type);
@@ -2617,7 +2605,9 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* select a root node */
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_NWSPG )
-      SCIP_CALL( central_terminal(scip, graph, &(graph->source), compcentral) );
+   {
+      SCIP_CALL( findCentralTerminal(scip, graph, &(graph->source), compcentral) );
+   }
 
 #ifdef WITH_UG
    {
@@ -2630,7 +2620,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    SCIP_CALL( setParams(scip, probdata, symcons, cyclecons) );
 
-   /* setting the offset to the fixed value given in the input file plus the fixings given by the reduction techniques */
+   /* setting the offset to the fixed value given in the input file plus the fixings
+    * given by the reduction techniques */
    probdata->offset = presolinfo.fixed + offset;
 
    SCIP_CALL( createModel(scip, probdata) );
@@ -2640,9 +2631,12 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
 #endif
 
-   if( probdata->mode == MODE_CUT && usedacuts != 0 )
+   /* todo test */
+   assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
+
+   if( probdata->mode == STP_MODE_CUT && usedacuts != STP_CONS_NEVER )
    {
-      assert(usedacuts == 1 || usedacuts == 2);
+      assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
 
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
@@ -3483,7 +3477,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* create path variables (Price mode) or set the flow vars (Flow mode) corresponding to the new solution */
-   if( probdata->mode != MODE_CUT )
+   if( probdata->mode != STP_MODE_CUT )
    {
       SCIP_Real* edgecost;
       SCIP_Real* flowvals;
@@ -3508,7 +3502,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       SCIP_CALL( SCIPallocMemoryArray(scip, &path, graph->knots) );
 
       /* Flow mode */
-      if ( probdata->mode == MODE_FLOW )
+      if ( probdata->mode == STP_MODE_FLOW )
       {
          pathvars = NULL;
       }
@@ -3534,7 +3528,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       /* create and add path variables (Price mode) or set the flow variables (Flow mode) */
       for( t = 0; t < realnterms; ++t )
       {
-         if( probdata->mode == MODE_PRICE )
+         if( probdata->mode == STP_MODE_PRICE )
          {
 	    /* create a new path variable */
             (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "PathVar%d_X", t);
@@ -3554,7 +3548,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          {
             if( !probdata->bigt )
             {
-               if( probdata->mode == MODE_PRICE )
+               if( probdata->mode == STP_MODE_PRICE )
                {
                   /* add the new path variable to the constraints corresponding to the current edge */
                   assert(var != NULL);
@@ -3568,7 +3562,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             }
             else
             {
-               if( probdata->mode == MODE_PRICE )
+               if( probdata->mode == STP_MODE_PRICE )
                {
                   assert(var != NULL);
                   SCIP_CALL( SCIPaddCoefLinear(scip, probdata->edgecons[path[tail].edge], var, 1.0) );
@@ -3581,7 +3575,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             }
             tail = graph->tail[path[tail].edge];
          }
-         if( probdata->mode == MODE_PRICE )
+         if( probdata->mode == STP_MODE_PRICE )
          {
             assert(var != NULL);
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -3590,7 +3584,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       /* store the new solution value */
       SCIP_CALL( SCIPsetSolVals(scip, sol, probdata->nvars, edgevars, nval) );
-      if( probdata->mode == MODE_FLOW )
+      if( probdata->mode == STP_MODE_FLOW )
       {
          SCIP_CALL( SCIPsetSolVals(scip, sol, nedges * (probdata->bigt ? 1 : realnterms) , probdata->flowvars, flowvals) );
       }
@@ -3874,7 +3868,7 @@ void initReceivedSubproblem(
 
    probdata->graph = graph;
 
-   assert(graph != NULL && probdata->mode == MODE_CUT);
+   assert(graph != NULL && probdata->mode == STP_MODE_CUT);
 
    nnodes = graph->knots;
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodestate, nnodes) );

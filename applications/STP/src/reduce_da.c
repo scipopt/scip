@@ -2294,7 +2294,7 @@ SCIP_RETCODE reduce_da(
             ndeletions += extfixed;
 //#define EXT_WRITE
          //   graph_printInfo(graph);
-         //   printf("newly fixedSECOND =%d \n", extfixed);
+           // printf("newly fixedSECOND =%d \n", extfixed);
           //  exit(1);
 #ifdef EXT_WRITE
             {

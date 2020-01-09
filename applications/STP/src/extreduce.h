@@ -130,6 +130,7 @@ typedef struct extension_data
    int tree_nedges;
    int tree_depth;
    int tree_nleaves;
+   int nPcSdCands;                             /**< needed only for PC */
    int extstack_ncomponents;
    const int extstack_maxsize;
    const int extstack_maxedges;
@@ -170,9 +171,9 @@ extern int             extreduce_getMaxStackSize(void);
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_cgraphInSyncWithTree(const EXTDATA*);
+extern SCIP_Bool       extreduce_nodeIsInStackTop(const GRAPH*, const EXTDATA*, int);
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
 extern void            extreduce_extendInitDebug(int*, int*);
-
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

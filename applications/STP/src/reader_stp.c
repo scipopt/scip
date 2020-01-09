@@ -42,16 +42,16 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-#define   DEFAULT_COMPCENTRAL  1             /**< selection type for the root (for undirected STPs) */
-#define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
-#define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
-#define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
-#define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
-#define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
-#define   DEFAULT_DACUTS       1             /**< always use dual-ascent cuts */
-#define   DEFAULT_SDEXT        3             /**< sd extended */
-#define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
-#define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
+#define   DEFAULT_COMPCENTRAL  STP_CENTER_DEG             /**< selection type for the root (for undirected STPs) */
+#define   DEFAULT_EMITGRAPH    FALSE                      /**< emit graph? */
+#define   DEFAULT_COUNTPRESOLTIME  TRUE                   /**< count presolving time as part of overall solution time? */
+#define   DEFAULT_REDUCTION    2                          /**< reduction mode to apply */
+#define   DEFAULT_SYMCONS      STP_CONS_AUTOMATIC         /**< symmetry constraints */
+#define   DEFAULT_CYCLECONS    STP_CONS_AUTOMATIC         /**< cycle constraints */
+#define   DEFAULT_DACUTS       STP_CONS_ALWAYS            /**< always use dual-ascent cuts */
+#define   DEFAULT_SDEXT        3                          /**< sd extended */
+#define   DEFAULT_MINELIMS     3                          /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
+#define   DEFAULT_PRETIMELIMIT -1.0                       /**< presolving time limit */
 
 #define STP_MODES "cfp" /**< valid values for user parameter 'stp/mode' */
 
