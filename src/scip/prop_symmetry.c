@@ -154,6 +154,7 @@
 #define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
+#define DEFAULT_ONLYBINARYSYMMETRY   TRUE    /**< Is only symmetry on binary variables used? */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -231,6 +232,7 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
+   SCIP_Bool             onlybinarysymmetry; /**< Whether only symmetry on binary variables is used */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -2386,8 +2388,8 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* do not compute symmetry if there are no binary variables */
-   if ( SCIPgetNBinVars(scip) == 0 )
+   /* do not compute symmetry if there are no binary variables, but only those would be used */
+   if ( propdata->onlybinarysymmetry && SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
@@ -4141,6 +4143,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
      "propagating/" PROP_NAME "/usecolumnsparsity",
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+     "propagating/" PROP_NAME "/onlybinarysymmetry",
+         "Is only symmetry on binary variables used?",
+         &propdata->onlybinarysymmetry, TRUE, DEFAULT_ONLYBINARYSYMMETRY, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
