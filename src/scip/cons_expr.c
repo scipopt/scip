@@ -8258,7 +8258,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 || *nchgbds > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -12925,6 +12925,26 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    return SCIP_OKAY;
 }
 
+/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+ *
+ *  @note this method is only used for testing purposes
+ */
+SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+
+   return SCIP_OKAY;
+}
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
