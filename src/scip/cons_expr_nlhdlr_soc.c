@@ -1301,15 +1301,13 @@ SCIP_RETCODE detectSocQuadraticComplex(
    rhsissoc = (nneg == 1 && SCIPgetConsExprExprNLocksPos(expr) > 0);
    lhsissoc = (npos == 1 && SCIPgetConsExprExprNLocksNeg(expr) > 0);
 
-   /* if non is potentially SOC, stop */
-   if( !rhsissoc && !lhsissoc )
-      goto CLEANUP;
-
-   /* @TODO: This is wrong, what do we do if both sides are possible? */
-   assert(rhsissoc != lhsissoc);
-
-   if( lhsissoc )
+   /* @TODO: what do we do if both sides are possible? */
+   if( !rhsissoc )
    {
+      /* if non is potentially SOC, stop */
+      if( !lhsissoc )
+         goto CLEANUP;
+
       /* lhs is potentially SOC, change signs */
       lhsconstant = lhs - constant;
 
