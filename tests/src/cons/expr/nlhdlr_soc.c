@@ -527,9 +527,9 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real coefs[4] = {7.0, 2.0, 1.0, 1.0};
+   SCIP_Real coefs[4] = {14.0, 4.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[6] = {2.0, 2.0, 1.0, -1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[6] = {1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
    int nnonzeroes[4] = {1, 1, 2, 2};
 
@@ -668,9 +668,9 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real coefs[4] = {7.0, 2.0, 1.0, 1.0};
+   SCIP_Real coefs[4] = {14.0, 4.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[6] = {2.0, 2.0, 1.0, -1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[6] = {1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
    int nnonzeroes[4] = {1, 1, 2, 2};
 
