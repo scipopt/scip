@@ -303,7 +303,7 @@ SCIP_RETCODE createDisaggr(
       coefs[nvars] = 1.0;
 
       SCIPvarMarkRelaxationOnly(vars[nvars]);
-      SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1);
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
       ++nvars;
    }
@@ -316,13 +316,11 @@ SCIP_RETCODE createDisaggr(
             0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
 
-      SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[size - 1]);
-
       vars[nvars] = nlhdlrexprdata->disvars[size - 1];
       coefs[nvars] = 1.0;
 
       SCIPvarMarkRelaxationOnly(vars[nvars]);
-      SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1);
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
       ++nvars;
    }
@@ -366,6 +364,7 @@ SCIP_RETCODE freeDisaggr(
    /* release variables */
    for( i = 0; i < size; ++i )
    {
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
