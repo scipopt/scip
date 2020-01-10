@@ -1240,7 +1240,6 @@ int calcCliqueMaximums(
       SCIPdebugMsg(scip, "var_%d: %g + %g * lambda\n", i, row2coefs[varinds[cliquevarpos[i]]], gradients[i]);
 #endif
 
-
    /* find maximum for lambda = 0 */
    maxpos = 0;
    for( i = 1; i < cliquesize; i++ )
@@ -1328,7 +1327,7 @@ int calcCliqueMaximums(
       else
       {
          breakpointval = row2coefs[varinds[cliquevarpos[newmaxpos]]] + minlambda * gradients[newmaxpos];
-         assert(maxidx == -1 || SCIPisEQ(scip, breakpointval, row2coefs[maxidx] + minlambda * gradients[maxpos]));
+         assert(maxidx == -1 || SCIPisFeasZero(scip, breakpointval - (row2coefs[maxidx] + minlambda * gradients[maxpos])));
 
          /* check if next segment can become negative */
          if( SCIPisNegative(scip, breakpointval) || (SCIPisZero(scip, breakpointval) && !SCIPisPositive(scip, gradients[newmaxpos])) )
