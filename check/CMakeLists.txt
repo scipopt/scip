@@ -489,6 +489,12 @@ macro(add_decompinstancetests instances settings prefix)
 #
 # loop over the instances
 #
+if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
+   set(TEST_BENDERSQP TRUE)
+else()
+   set(TEST_BENDERSQP FALSE)
+endif()
+if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
     foreach(instance ${${instances}})
         split_decompinstance(instance)
         #
@@ -510,6 +516,7 @@ macro(add_decompinstancetests instances settings prefix)
                                 )
         endforeach(setting)
     endforeach(instance)
+endif()
 endmacro(add_decompinstancetests)
 
 add_instancetests(instances_CP settings_default "CP")

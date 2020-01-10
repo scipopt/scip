@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_paramset.h"
+#include "scip/pub_var.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_cut.h"
@@ -110,6 +111,38 @@ SCIP_RETCODE createBenderscutData(
 /*
  * Local methods
  */
+
+/** updates the cut constant for the given subproblem based upon the global bounds of the associated auxiliary variable */
+static
+void updateSubproblemCutConstant(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUTDATA*  benderscutdata,     /**< the Benders' decomposition cut data */
+   int                   probnumber          /**< the index for the subproblem */
+   )
+{
+   SCIP_VAR* auxiliaryvar;
+
+   assert(masterprob != NULL);
+   assert(benders != NULL);
+   assert(benderscutdata != NULL);
+
+   auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
+
+   /* checking if the subproblem lower bound has been updated. If it is has changed, then firstcut is set to TRUE.
+    * Otherwise, the constant remains the same.
+    */
+   if( SCIPisGT(masterprob, SCIPbendersGetSubproblemLowerbound(benders, probnumber),
+         benderscutdata->subprobconstant[probnumber]) )
+   {
+      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubproblemLowerbound(benders, probnumber);
+      benderscutdata->firstcut[probnumber] = TRUE;
+   }
+
+   /* updating the cut constant if the auxiliary variable global lower bound is greater than the current constant */
+   if( SCIPisGT(masterprob, SCIPvarGetLbGlobal(auxiliaryvar), benderscutdata->subprobconstant[probnumber]) )
+      benderscutdata->subprobconstant[probnumber] = SCIPvarGetLbGlobal(auxiliaryvar);
+}
 
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
@@ -335,18 +368,14 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       return SCIP_OKAY;
    }
 
-   /* checking if the subproblem lower bound has been updated. If it is has changed, then firstcut is set to TRUE.
-    * Otherwise, the constant remains the same.
-    */
-   if( SCIPisLT(masterprob, benderscutdata->subprobconstant[probnumber],
-         SCIPbendersGetSubproblemLowerbound(benders, probnumber)) )
-   {
-      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubproblemLowerbound(benders, probnumber);
-      benderscutdata->firstcut[probnumber] = TRUE;
-   }
+   /* checking whether the subproblem constant is less than the auxiliary variable global lower bound */
+   updateSubproblemCutConstant(masterprob, benders, benderscutdata, probnumber);
 
-   /* if no integer cuts have been previously generated, then an initial lower bounding cut is added */
-   if( benderscutdata->firstcut[probnumber] )
+   /* if no integer cuts have been previously generated and the bound on the auxiliary variable is -infinity,
+    * then an initial lower bounding cut is added
+    */
+   if( benderscutdata->firstcut[probnumber]
+      && SCIPisInfinity(masterprob, -SCIPvarGetLbGlobal(SCIPbendersGetAuxiliaryVar(benders, probnumber))) )
    {
       benderscutdata->firstcut[probnumber] = FALSE;
       SCIP_CALL( generateAndApplyBendersIntegerCuts(masterprob, benders, benderscut, sol, probnumber, type, result,

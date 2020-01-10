@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -169,6 +169,8 @@ do
 
           echo readprob $SCIPPATH/$i              >> $TMPFILE
           echo time mipoptimize                   >> $TMPFILE
+	  echo echo simplexiter:                  >> $TMPFILE
+	  echo simplexiter                        >> $TMPFILE
           echo quit                               >> $TMPFILE
           echo -----------------------------
           date
