@@ -896,6 +896,9 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
+   /* make sure that symmetry is computed for all variable types */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
@@ -1066,6 +1069,9 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
+   /* make sure that symmetry is computed for all variable types */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
@@ -1230,6 +1236,9 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
 
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* make sure that symmetry is computed for all variable types */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -1396,6 +1405,9 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
 
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* make sure that symmetry is computed for all variable types */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
