@@ -242,6 +242,9 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
 
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
+
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -290,6 +293,9 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -344,6 +350,9 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 8.0);
 
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
+
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -394,6 +403,9 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 0.0);
+
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -446,6 +458,9 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -535,6 +550,9 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -627,6 +645,9 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
 
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
+
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -676,6 +697,9 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -730,6 +754,9 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
 
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
+
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -783,6 +810,9 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
 
+   /* free disaggregation */
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
+
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -823,9 +853,6 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
          nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
-
-   /* create disaggregation */
-   SCIP_CALL( createDisaggr(scip, conshdlr, normexpr, nlhdlrexprdata) );
 
    /* check disvars */
    cr_expect(nlhdlrexprdata->disvars[0] != NULL);
