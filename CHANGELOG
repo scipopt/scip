@@ -655,6 +655,7 @@ Fixed bugs
 - fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
 - fixed treatment of multi-aggregated variables in logicor constraint handler
 - handle special case of redundant implications
+- fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
 
 Miscellaneous
 -------------
