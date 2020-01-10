@@ -3370,7 +3370,7 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
-   if ( propdata->nschreiersimsconss > 0 )
+   if ( propdata->nleaders > 0 )
    {
       SCIPfreeBufferArray(scip, &modifiedpermvars);
       for (p = nperms - 1; p >= 0; --p)
