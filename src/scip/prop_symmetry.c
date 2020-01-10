@@ -4083,6 +4083,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
    if ( ! propdata->ofenabled )
    {
+      /* free symmetry conss if Schreier-Sims cuts are active and no orbitope has been found */
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
+
       /* exit if no or only trivial symmetry group is available */
       if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
          return SCIP_OKAY;
