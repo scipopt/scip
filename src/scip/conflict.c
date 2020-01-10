@@ -9453,7 +9453,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       ubchginfoposs[v] = var->nubchginfos-1;
 
       if( SCIPsetIsZero(set, pseudocoefs[v]) )
+      {
+         pseudocoefs[v] = 0.0;
          continue;
+      }
 
       if( pseudocoefs[v] > 0.0 )
          pseudoact += pseudocoefs[v] * curvarubs[v];
