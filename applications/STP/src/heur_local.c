@@ -330,7 +330,7 @@ SCIP_RETCODE solAddTry(
       // todo if solIsBetter || solIsBetter_org
 
       /* has solution been improved? */
-      if( solIsBetter_org )
+      if( solIsBetter || solIsBetter_org )
       {
          SCIP_SOL* const bestsol = sols[0];
          SCIP_Bool success = FALSE;
