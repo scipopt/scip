@@ -4102,6 +4102,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       {
          SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
       }
+
+      /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims cuts are active) */
+      if ( propdata->ngenconss == 0 )
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
    }
 
    return SCIP_OKAY;
