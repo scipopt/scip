@@ -130,7 +130,9 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    int                   nvars,              /**< number of variables */
    SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   int*                  nbincyclesperm      /**< pointer to store number of binary cycles */
+   int*                  nbincyclesperm,     /**< pointer to store number of binary cycles */
+   SCIP_Bool*            allvarsbinary,      /**< pointer to strore whether all affected variables are binary */
+   SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    );
 
 /** determine number of variables affected by symmetry group */
