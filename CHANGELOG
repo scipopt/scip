@@ -581,6 +581,12 @@ Interface changes
   - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be 
     the deciding factor for branching, in which case it may be better not to use the treemodel.
 
+- new parameters for symmetry handling constraint handlers to enforce that also non-model constraint are copied:
+  - new parameter "constraints/orbisack/forceconscopy"
+  - new parameter "constraints/orbitope/forceconscopy"
+  - new parameter "constraints/symresack/forceconscopy"
+
+
 ### Data structures
 
 - small changes in constants of hash functions
