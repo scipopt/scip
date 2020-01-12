@@ -740,7 +740,7 @@ END {
    bestbetterobj = 0;
    bestfeasibles = 0;
 
-   # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
+   # calculate the order in which the columns should be printed: use alphabetical order but SCIP/SoPlex < other, default < non-default
    for( s = 0; s < nsolver; ++s )
    {
       sname = solvername[s];
@@ -756,16 +756,17 @@ END {
          }
          else
          {
-            # use alphabetical order, but put CPLEX before SCIP and "default" before all others
-            if( substr(sname, 1, 5) == "CPLEX" && substr(iname, 1, 5) != "CPLEX" )
-               break;
-            if( substr(sname, 1, 5) == substr(iname, 1, 5) &&
-               match(sname, "default") != 0 && match(iname, "default") == 0 )
-               break;
-            if( substr(sname, 1, 5) == substr(iname, 1, 5) &&
-               (match(sname, "default") == 0) == (match(iname, "default") == 0) &&
-               sname < iname )
-               break;
+            # SCIP with SoPlex before all others
+            if( substr(sname, 1, 4) == "SCIP" && substr(sname, 12, 3) == "spx" && substr(sname, 1, 4) == "SCIP" && substr(iname, 12, 3) != "spx" )
+                break;
+
+           # put default settings before other settings for same solver
+            if( substr(sname, 1, 5) == substr(iname, 1, 5) && match(sname, "default") != 0 && match(iname, "default") == 0 )
+              break;
+
+           # sort alphabetically if solver is the same and no default settings are involved
+           if( substr(sname, 1, 5) == substr(iname, 1, 5) && (match(sname, "default") == 0) == (match(iname, "default") == 0) && sname < iname )
+              break;
          }
       }
       for( j = s-1; j >= o; --j )
