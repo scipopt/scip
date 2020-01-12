@@ -3992,7 +3992,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
    for (c = 0; c < ncomponents; ++c)
    {
-      if ( norbitleadercomponent[c] > 5 )
+      if ( norbitleadercomponent[c] > 0 )
          componentblocked[c] = TRUE;
    }
    SCIPfreeBufferArray(scip, &norbitleadercomponent);
