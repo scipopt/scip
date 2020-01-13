@@ -1167,10 +1167,10 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       assert(nodeinfofirst == NULL || subtreeidx == nodeinfofirst->subtreeidx);
       newgap = calcGap(scip, nodeinfofirst != NULL ? nodeinfofirst->lowerbound : SCIPinfinity(scip) );
 
-      assert(newgap <= oldgap);
+      assert(SCIPisLE(scip, newgap, oldgap));
 
       /* the SSG value is always up-to-date because it is recomputed when the primal bound changes */
-      ssg->value += ssg->scalingfactor * (newgap - oldgap);
+      ssg->value += ssg->scalingfactor * MIN(newgap - oldgap, 0.0);
    }
 
    SCIP_CALL( SCIPhashmapRemove(ssg->nodes2info, (void*)node) );

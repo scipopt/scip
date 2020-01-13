@@ -82,8 +82,8 @@ export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 BRANCHNAME=${GITBRANCH}
 SOPLEXBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
-  BRANCHNAME="v60-bugfix"
-  SOPLEXBRANCHNAME="bugfix-40"
+  BRANCHNAME="v70-bugfix"
+  SOPLEXBRANCHNAME="bugfix-50"
 fi
 if [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
