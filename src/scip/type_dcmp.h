@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_dcmp.h
- * @ingroup TODO
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for decompositions and the decomposition store
  * @author Gregor Hendel
  */

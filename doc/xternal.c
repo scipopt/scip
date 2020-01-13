@@ -221,6 +221,7 @@
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  */
 
@@ -6520,6 +6521,116 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page DECOMP How to provide a problem decomposition
+ *
+ *  Most Mixed Integer Programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
+ * maybe except for a few outlier columns/rows with many nonzeros.
+ * A decomposition identifies subproblems (subsets of rows and columns) that are only linked to each other via a set of linking rows and/or linking
+ * columns, but are otherwise independent.
+ * The special case of completely independent subproblems (with no linking rows and columns), for example, can be solved by solving
+ * the much smaller subproblems and concatenating their optimal solutions.
+ * This case has already been integrated into SCIP as a successful presolving technique.
+ * Another use of decomposition within SCIP is the @ref BENDDECF "Benders Decomposition framework".
+ *
+ * Since SCIP 7.0, it is easier to pass user decompositions to SCIP that can be used within Benders decomposition or by user algorithms.
+ * This page introduces the struct SCIP_DECOMP and gives examples how to create and use it.
+ *
+ * @section DECOMP_OVERVIEW Overview
+ *
+ * In the following, we present decompositions of Mixed Integer Programs. However, the generalization to Constraint Integer Programs is straightforward.
+ *
+ * Concretely, for \f$k \geq 0\f$ we call a partition \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$ of the rows and columns of the constraint matrix \f$A\f$ into \f$k + 1\f$ pieces each,
+ * %
+ * \f[
+ *   D^{\text{row}} = (D^{\text{row}}_{1},\dots,D^{\text{row}}_{k},L^{\text{row}}), \quad D^{\text{col}} = (D^{\text{col}}_{1},\dots,D^{\text{col}}_{k},L^{\text{col}})
+ * \f]
+ * a decomposition of \f$A\f$ if \f$D^{\text{row}}_{q} \neq \emptyset\f$, \f$D^{\text{col}}_{q} \neq \emptyset\f$ for \f$q \in \{1,\dots,k\}\f$ and if it holds for all \f$i\in D^{\text{row}}_{q_{1}}, j\in D^{\text{col}}_{q_{2}}\f$ that \f$a_{i,j} \neq 0 \Rightarrow q_{1} = q_{2}\f$.
+ * The special rows \f$L^{\text{row}}\f$ and columns \f$L^{\text{col}}\f$, which may be empty, are called linking rows and linking columns, respectively.
+ * In other words, the inequality system \f$A x \geq b\f$ can be rewritten
+ * with respect to a decomposition \f$\mathcal{D}\f$ by a suitable permutation of the rows
+ * and columns of \f$A\f$ as equivalent system
+ * \f[
+ *   \left(
+ *   \begin{matrix}
+ *     A_{[D^{\text{row}}_{1},D^{\text{col}}_{1}]} &
+ *     0 &
+ *     \cdots &
+ *     0 &
+ *     A_{[D^{\text{row}}_{1},L^{\text{col}}]}\\
+ *     0 &
+ *     A_{[D^{\text{row}}_{2},D^{\text{col}}_{2}]} &
+ *     0 &
+ *     0 &
+ *     A_{[D^{\text{row}}_{2},L^{\text{col}}]}\\
+ *     \vdots &
+ *     0 &
+ *     \ddots &
+ *     0 &
+ *     \vdots\\
+ *     0 &
+ *     \cdots &
+ *     0 &
+ *     A_{[D^{\text{row}}_{k},D^{\text{col}}_{k}]} &
+ *     A_{[D^{\text{row}}_{k},L^{\text{col}}]}\\
+ *     A_{[L^{\text{row}},D^{\text{col}}_{1}]} &
+ *     A_{[L^{\text{row}},D^{\text{col}}_{2}]} &
+ *     \cdots &
+ *     A_{[L^{\text{row}},D^{\text{col}}_{k}]} &
+ *     A_{[L^{\text{row}},L^{\text{col}}]}
+ *   \end{matrix}
+ *   \right)
+ *   \left(
+ *   \begin{matrix}
+ *     x_{[D^{\text{col}}_{1}]}\\
+ *     x_{[D^{\text{col}}_{2}]}\\
+ *     \vdots\\
+ *     x_{[D^{\text{col}}_{k}]}\\
+ *     x_{[L^{\text{col}}]}
+ *   \end{matrix}
+ *   \right)
+ *   \geq
+ *   \left(
+ *   \begin{matrix}
+ *     b_{[D^{\text{row}}_{1}]}\\
+ *     b_{[D^{\text{row}}_{2}]}\\
+ *     \vdots\\
+ *     b_{[D^{\text{row}}_{k}]}\\
+ *     b_{[L^{\text{row}}]}
+ *   \end{matrix}
+ *   \right)
+ * % A= \left(\begin{matrix}4&8&\frac{1}{2}\\\frac{3}{2}&4&1\\1&3&7\end{matrix}\right)
+ * \f]
+ * where we use the short hand syntax \f$A_{[I,J]}\f$ to denote
+ * the \f$|I|\f$-by-\f$|J|\f$ submatrix that arises from the deletion of all entries
+ * from \f$A\f$ except for rows \f$I\f$ and columns \f$J\f$,
+ * for nonempty row
+ * and column subsets \f$I\subseteq\{1,\dots,m\}\f$ and \f$J\subseteq\{1,\dots,n\}\f$.
+ *  *
+ *
+ * - transformation
+ * - key statistics
+ * - use within SCIP/benefit for users.
+ * - use for Benders @ref BENDDECF
+ *
+ * @section Creation via SCIP-API
+ *
+ * - creation
+ * - labeling the variables
+ * - labeling the constraints
+ * - computing statistics
+ * - adding the decomposition to SCIP
+ *
+ * @section DECOMP_READDEC Reading a decomposition from a file
+ *
+ * Please refer to the @ref reader_dec.h "DEC file reader".
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+
 /**@page BENDDECF How to use the Benders' decomposition framework
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
@@ -7714,6 +7825,11 @@
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
+ */
+
+/**@defgroup DecompMethods Decomposition data structure
+ * @ingroup DataStructures
+ * @brief methods for creating and accessing user decompositions
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
