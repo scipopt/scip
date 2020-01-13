@@ -86,9 +86,9 @@
 #define DEFAULT_MINNODES      50LL
 #define DEFAULT_MAXNODES      5000LL
 #define DEFAULT_NODEFAC       0.8
-#define DEFAULT_ADMIT         12
+#define DEFAULT_ADMIT         4
 #define DEFAULT_PENALTYIT     100
-#define DEFAULT_GAP           8.0
+#define DEFAULT_GAP           2.0
 
 /*
  * Data structures
