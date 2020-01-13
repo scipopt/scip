@@ -1948,8 +1948,6 @@ SCIP_RETCODE addConflictBinvar(
    SCIP_Real ub;
    SCIP_Bool foundimplics;
 
-   assert(objimplics != NULL);
-
    assert(SCIPvarIsBinary(var));
 
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
@@ -1966,6 +1964,7 @@ SCIP_RETCODE addConflictBinvar(
    {
       if( respropuseimplics )
       {
+         assert(objimplics != NULL);
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, objimplics->nlbimpls, objimplics->nlbimpls + objimplics->nubimpls,
                bdchgidx, addedvars, reqpseudoobjval, &foundimplics) );
       }
@@ -1991,6 +1990,7 @@ SCIP_RETCODE addConflictBinvar(
    {
       if( respropuseimplics )
       {
+         assert(objimplics != NULL);
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, 0, objimplics->nlbimpls,
                bdchgidx, addedvars, reqpseudoobjval, &foundimplics) );
       }
