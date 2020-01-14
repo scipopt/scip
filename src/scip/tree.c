@@ -2510,7 +2510,8 @@ SCIP_RETCODE SCIPnodePropagateImplics(
             /* @note should this be checked here (because SCIPnodeAddBoundinfer fails for multi-aggregated variables)
              *       or should SCIPnodeAddBoundinfer() just return for multi-aggregated variables?
              */
-            if( SCIPvarGetStatus(SCIPvarGetProbvar(implvars[j])) == SCIP_VARSTATUS_MULTAGGR )
+            if( SCIPvarGetStatus(implvars[j]) == SCIP_VARSTATUS_MULTAGGR ||
+                  SCIPvarGetStatus(SCIPvarGetProbvar(implvars[j])) == SCIP_VARSTATUS_MULTAGGR )
                continue;
 
             /* check for infeasibility */
