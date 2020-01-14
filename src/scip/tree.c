@@ -2571,7 +2571,8 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 
                assert(SCIPvarIsBinary(vars[k]));
 
-               if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_MULTAGGR )
+               if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_MULTAGGR ||
+                     SCIPvarGetStatus(SCIPvarGetProbvar(vars[k])) == SCIP_VARSTATUS_MULTAGGR )
                   continue;
 
                if( vars[k] == var && values[k] == varfixing )
