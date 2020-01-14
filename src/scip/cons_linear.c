@@ -8289,7 +8289,7 @@ SCIP_RETCODE extractCliques(
             threshold = consdata->rhs - consdata->glbminactivity;
 
             j = 1;
-#if 0 /* assertion should only hold when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[0], threshold));
 #endif

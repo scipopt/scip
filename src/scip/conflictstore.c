@@ -134,10 +134,10 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       int nvars2;
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons1, &nvars1, &success) );
-      assert(success)
+      assert(success);
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons2, &nvars2, &success) );
-      assert(success)
+      assert(success);
 
       if( nvars1 >= nvars2 )
          return -1;
