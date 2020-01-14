@@ -758,8 +758,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* get children of the sum */
    children = SCIPgetConsExprExprChildren(expr);
    nchildren = SCIPgetConsExprExprNChildren(expr);
-   childcoefs = SCIPgetConsExprExprSumCoefs(expr);
    constant = SCIPgetConsExprExprSumConstant(expr);
+
+   /* we duplicate the child coefficients since we have to manipulate them */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprChildren(expr), nchildren) );
 
    /* initialize data */
    lhsidx = -1;
@@ -886,9 +888,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
    else
    {
-         /* rhs variable is not non-negative -> no SOC */
-         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0 )
-            return SCIP_OKAY;
+      /* rhs variable is not non-negative -> no SOC */
+      if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0 )
+         return SCIP_OKAY;
    }
 
    if( SCIPisNegative(scip, sideconstant) )
@@ -940,7 +942,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
                SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
       }
 
-      coefs[nextentry] = ishyperbolic ? -4.0 * childcoefs[i] / childcoefs[specialtermidx]: childcoefs[i];
+      coefs[nextentry] = ishyperbolic ? -4.0 * childcoefs[i] / childcoefs[specialtermidx] : childcoefs[i];
 
       assert(vars[nextentry] != NULL);
       assert(coefs[nextentry] > 0.0);
@@ -1009,6 +1011,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIPfreeBufferArray(scip, &offsets);
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &childcoefs);
 
    return SCIP_OKAY;
 }
