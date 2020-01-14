@@ -155,7 +155,7 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-#define DEFAULT_ONLYBINORBITOPES     TRUE    /**< Should only orbitopes be detected that exclusively act on binary variables? */
+#define DEFAULT_ORBITOPEPCTBINROWS    0.9    /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
@@ -239,7 +239,7 @@ struct SCIP_PropData
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-   SCIP_Bool             onlybinorbitopes;   /**< Should only orbitopes be detected that exclusively act on binary variables? */
+   SCIP_Real             orbitopepctbinrows; /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
    int                   norbitopes;         /**< number of orbitope constraints */
 
    /* data necessary for orbital fixing */
@@ -2554,19 +2554,28 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_Bool allvarsbinary;
          int ntwocyclesperm = 0;
          int nbincyclesperm = 0;
+         SCIP_Bool onlybinorbitopes;
 
+         onlybinorbitopes = propdata->orbitopepctbinrows == 1.0 ? TRUE : FALSE;
          SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles,
-               &ntwocyclesperm, &nbincyclesperm, &allvarsbinary, propdata->onlybinorbitopes) );
+               &ntwocyclesperm, &nbincyclesperm, &allvarsbinary, onlybinorbitopes) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
          {
             ntwocyclescomp = ntwocyclesperm;
             nbincyclescomp = nbincyclesperm;
+
+            /* if the percentage of binary rows in the orbitope's action var matrix is too small, discard the orbitope */
+            if ( (SCIP_Real) nbincyclescomp <= (SCIP_Real) ntwocyclesperm * propdata->orbitopepctbinrows )
+            {
+               isorbitope = FALSE;
+               break;
+            }
          }
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-         if ( nbincyclesperm == 0 || ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
+         if ( ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
          {
             isorbitope = FALSE;
             break;
@@ -3891,10 +3900,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &propdata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/onlybinorbitopes",
-         "Should only orbitopes be detected that exclusively act on binary variables?",
-         &propdata->onlybinorbitopes, TRUE, DEFAULT_ONLYBINORBITOPES, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/orbitopepctbinrows",
+         "percentage of binary rows of an orbitope matrix below which orbitopes are not added",
+         &propdata->orbitopepctbinrows, TRUE, DEFAULT_ORBITOPEPCTBINROWS, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/addconsstiming",
