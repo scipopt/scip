@@ -34,13 +34,6 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
-
-/* some static initializations that need to come before enabling fenv_access
- * (MSVC doesn't consider something like 1.5*M_PI a constant initialization if fenv_access is enabled)
- */
-/* first one is -1 so even indices are the minimum points */
-static SCIP_Real cos_extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
-
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
