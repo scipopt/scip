@@ -756,8 +756,9 @@ END {
          }
          else
          {
-            # SCIP with SoPlex before all others
-            if( substr(sname, 1, 4) == "SCIP" && substr(sname, 12, 3) == "spx" && substr(sname, 1, 4) == "SCIP" && substr(iname, 12, 3) != "spx" )
+            # SCIP with SoPlex before all others (note that the version numbers can be 7 or 8 characters long)
+            if( substr(sname, 1, 4) == "SCIP" && (substr(sname, 12, 3) == "spx" || substr(sname, 13, 3) == "spx") &&
+		substr(iname, 1, 4) == "SCIP" && (substr(iname, 12, 3) != "spx" && substr(iname, 13, 3) != "spx" )
                break;
 
             # put default settings before other settings for same solver
