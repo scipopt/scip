@@ -2755,7 +2755,7 @@ void SCIPintervalCos(
       assert(finf <= fsup);
 
       finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-	   fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
+      fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
    }
    else
    {
