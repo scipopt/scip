@@ -1116,7 +1116,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
             return SCIP_OKAY;
          }
 
-         argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+               SCIPgetConsExprExprChildren(children[i])[0], &argvar) );
+         assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
@@ -1127,7 +1129,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
       else if( SCIPisConsExprExprVar(children[i])
          && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
-         argvar = SCIPgetConsExprExprAuxVar(children[i]);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], &argvar) );
+         assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
@@ -1143,7 +1146,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
             return SCIP_OKAY;
          }
 
-         argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+               SCIPgetConsExprExprChildren(children[i])[0], &argvar) );
+         assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
@@ -1151,7 +1156,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
             ++nvars;
          }
 
-         argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[1]);
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+               SCIPgetConsExprExprChildren(children[i])[1], &argvar) );
+         assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
@@ -1171,6 +1178,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          && SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       {
          termauxvar = SCIPgetConsExprExprAuxVar(children[i]);
+         assert(termauxvar != NULL);
 
          /* if the auxiliary variable was not found in any quadratic term, it is not soc-representable  */
          if( !SCIPhashmapExists(var2idx, (void*) termauxvar) )
@@ -1197,6 +1205,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
 
          argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         assert(argvar != NULL);
+
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos >= 0);
          assert(varpos < nvars);
@@ -1207,6 +1217,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
       else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
          argvar = SCIPgetConsExprExprAuxVar(children[i]);
+         assert(argvar != NULL);
+
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos >= 0);
          assert(varpos < nvars);
@@ -1221,6 +1233,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(SCIPgetConsExprExprNChildren(children[i]) == 2);
 
          argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         assert(argvar != NULL);
+
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos >= 0);
          assert(varpos < nvars);
@@ -1228,6 +1242,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
          vars[varpos] = argvar;
 
          argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[1]);
+         assert(argvar != NULL);
+
          varpos2 = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos2 >= 0);
          assert(varpos2 < nvars);
@@ -1239,6 +1255,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
       else
       {
          argvar = SCIPgetConsExprExprAuxVar(children[i]);
+         assert(argvar != NULL);
+
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos >= 0);
          assert(varpos < nvars);
