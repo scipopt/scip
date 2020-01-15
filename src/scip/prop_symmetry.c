@@ -2961,6 +2961,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
 {
    int* genorder;
    int i;
+#ifdef SCIP_DEBUG
+   int nstrongsbcs = 0;
+   int nweaksbcs = 0;
+#endif
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3152,6 +3156,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
             chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
 
+#ifdef SCIP_DEBUG
+         nstrongsbcs += graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp] - 1;
+#endif
+
          /* add strong SBCs (lex-max order) for chosen graph component */
          for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
          {
@@ -3261,6 +3269,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
             orbitsize[activeorb]-1, chosencolor);
 
+#ifdef SCIP_DEBUG
+         nweaksbcs += orbitsize[activeorb] - 1;
+#endif
+
          /* add weak SBCs for rest of enclosing orbit */
          for (j = 1; j < orbitsize[activeorb]; ++j)
          {
@@ -3315,6 +3327,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
    }
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "total number of added strong sbcs: %d\n", nstrongsbcs);
+   SCIPdebugMsg(scip, "total number of added weak sbcs: %d\n", nweaksbcs);
+#endif
 
    SCIPfreeBufferArray(scip, &genorder);
 
