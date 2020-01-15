@@ -31,6 +31,10 @@ do
       if test "$i" = "-r"
       then
           REMOVE=1
+      elif test "$i" = "-E"
+      then
+          UPLOAD=1
+          EXPIRE=1
       elif test "$i" = "-R"
       then
           REMOVE=1
