@@ -61,10 +61,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_numerics.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
-#include "core/Presolve.hpp"
-#include "core/ProblemBuilder.hpp"
-#include "tbb/task_scheduler_init.h"
-
+#include "presol/core/Presolve.hpp"
+#include "presol/core/ProblemBuilder.hpp"
+#include "presol/Config.hpp"
 
 #define PRESOL_NAME            "milp"
 #define PRESOL_DESC            "MILP specific presolving methods"
@@ -75,6 +74,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
 #define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
+#define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros is at most this
                                               *   factor times the number of nonzeros before presolving */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
@@ -91,11 +92,12 @@ SCIP_RETCODE SCIPincludePresolMILP(
 /** presolver data */
 struct SCIP_PresolData
 {
-   tbb::task_scheduler_init schedulerinit;   /**< initialization object for tbb scheduler */
    int lastncols;                            /**< the number of columns from the last call */
    int lastnrows;                            /**< the number of rows from the last call */
    int threads;                              /**< maximum number of threads presolving may use (0: automatic) */
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
+   int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
+   int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    SCIP_Bool enablesparsify;                 /**< should the sparsify presolver be enabled within the presolve library? */
    SCIP_Bool enabledomcol;                   /**< should the dominated column presolver be enabled within the presolve library? */
    SCIP_Bool enableprobing;                  /**< should the probing presolver be enabled within the presolve library? */
@@ -106,6 +108,7 @@ struct SCIP_PresolData
                                               *   factor times the number of nonzeros before presolving */
 };
 
+using namespace presol;
 
 /*
  * Local methods
@@ -197,33 +200,8 @@ SCIP_DECL_PRESOLINIT(presolInitMILP)
    data->lastncols = -1;
    data->lastnrows = -1;
 
-   /* determine the number of threads to initialize the tbb scheduler with.
-    * The tbb default is to use the number of available hardware threads */
-   int numthreads = tbb::task_scheduler_init::default_num_threads();
-
-   /* if data->threads has a lower number than that and is not set to automatic,
-    * then use that lower number of threads */
-   if( data->threads != 0 && data->threads < numthreads )
-      numthreads = data->threads;
-
-   new (&data->schedulerinit) tbb::task_scheduler_init(numthreads);
-
    return SCIP_OKAY;
 }
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-static
-SCIP_DECL_PRESOLEXIT(presolExitMILP)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
-   assert(data != NULL);
-
-   /* deinitilize tbb scheduler by calling destructor of initialization object */
-   data->schedulerinit.~task_scheduler_init();
-
-   return SCIP_OKAY;
-}
-
 
 /** execution method of presolver */
 static
@@ -297,6 +275,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    /* communicate the SCIP parameter to the presolve libary */
    presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
+
+   presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
+
+   presolve.getPresolveOptions().detectlindep = data->detectlineardependency;
+
+   /* set number of threads to be used for presolve */
+   presolve.getPresolveOptions().threads = data->threads;
 
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
@@ -403,11 +388,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
    int newnnz = problem.getConstraintMatrix().getNnz();
-
+   bool constraintsReplaced = false;
    if( newnnz <= data->modifyconsfac * oldnnz )
    {
       int oldnrows = SCIPmatrixGetNRows(matrix);
       int newnrows = problem.getNRows();
+
+      constraintsReplaced = true;
 
       /* capture constraints that are still present in the problem after presolve */
       for( int i = 0; i < newnrows; ++i )
@@ -533,6 +520,25 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          if( aggregated )
             *naggrvars += 1;
+         else if( constraintsReplaced )
+         {
+            /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
+            tmpvars.clear();
+            tmpvals.clear();
+            for( int j = first + 1; j < last; ++j )
+            {
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals.push_back(res.postsolve.values[j]);
+            }
+
+            SCIP_CONS* cons;
+            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(aggrvar));
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name.c_str(),
+               tmpvars.size(), tmpvars.data(), tmpvals.data(), side, side ) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            *naddconss += 1;
+         }
 
          if( infeas )
          {
@@ -615,9 +621,15 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
+   String name = fmt::format("presolvelib {}.{}.{}", PRESOLVE_VERSION_MAJOR, PRESOLVE_VERSION_MINOR, PRESOLVE_VERSION_PATCH)
+#ifdef PRESOLVE_GITHASH_AVAILABLE
+   String desc = fmt::format("external library for presolving MILPs (link coming soon) [GitHash: {}]", PRESOLVE_GITHASH);
+#else
+   String desc("external library for presolving MILPs (link coming soon)");
+#endif
+
    /* add external code info for the presolve library */
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "presolve library",
-      "external library for presolving MILPs (link and versioning coming soon)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, name.c_str(), desc.c_str()) );
 
    /* create MILP presolver data */
    presoldata = NULL;
@@ -636,7 +648,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyMILP) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeMILP) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
-   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitMILP) );
 
    /* add MILP presolver parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -648,6 +659,19 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/maxfillinpersubstitution",
          "maximal possible fillin for substitutions to be considered",
          &presoldata->maxfillinpersubstitution, FALSE, DEFAULT_MAXFILLINPERSUBST, INT_MIN, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/" PRESOL_NAME "/maxshiftperrow",
+         "maximal amount of nonzeros allowed to be shifted to make space for substitutions",
+         &presoldata->maxshiftperrow, TRUE, DEFAULT_MAXSHIFTPERROW, 0, INT_MAX, NULL, NULL) );
+
+   if( DependentRows<double>::Enabled )
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "presolving/" PRESOL_NAME "/detectlineardependency",
+            "should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always)",
+            &presoldata->detectlineardependency, TRUE, DEFAULT_DETECTLINDEP, 0, 2, NULL, NULL) );
+   }
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/" PRESOL_NAME "/modifyconsfac",
