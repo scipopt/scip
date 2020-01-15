@@ -614,6 +614,7 @@ Fixed bugs
 - fixed treatment of multi-aggregated variables in logicor constraint handler
 - handle special case of redundant implications
 - fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
+- fixed creation of (Lagrangian) variable bounds in the OBBT propagator
 
 Miscellaneous
 -------------
