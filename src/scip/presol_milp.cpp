@@ -621,7 +621,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   String name = fmt::format("presolvelib {}.{}.{}", PRESOLVE_VERSION_MAJOR, PRESOLVE_VERSION_MINOR, PRESOLVE_VERSION_PATCH)
+   String name = fmt::format("presolvelib {}.{}.{}", PRESOLVE_VERSION_MAJOR, PRESOLVE_VERSION_MINOR, PRESOLVE_VERSION_PATCH);
 #ifdef PRESOLVE_GITHASH_AVAILABLE
    String desc = fmt::format("external library for presolving MILPs (link coming soon) [GitHash: {}]", PRESOLVE_GITHASH);
 #else
