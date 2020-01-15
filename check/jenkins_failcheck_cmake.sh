@@ -297,7 +297,7 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
       # add tags to uploaded run
       export RBCLI_TAG="${GITBRANCH},${PERFORMANCE}"
       if [ "${MODE}" == "debug" ]; then
-        ./evalcheck_cluster.sh -T ${EVALFILE} > ${OUTPUT}
+        ./evalcheck_cluster.sh -E ${EVALFILE} > ${OUTPUT}
       else
         ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
       fi
