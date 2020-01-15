@@ -693,10 +693,7 @@ SCIP_RETCODE createGenVBound(
             SCIP_Real activity = c - gamma_dual * SCIPgetCutoffbound(scip);
 
             for( k = 0; k < ncoefs; ++k )
-            {
-               SCIP_Real lpval = SCIPvarGetLPSol(genvboundvars[k]);
-               activity += genvboundcoefs[k] * lpval;
-            }
+               activity += genvboundcoefs[k] * SCIPvarGetLPSol(genvboundvars[k]);
 
             SCIPdebugMsg(scip, "LVB activity = %g lpobj = %g\n", activity, SCIPgetLPObjval(scip));
             assert(SCIPisRelEQ(scip, activity, SCIPgetLPObjval(scip)));
