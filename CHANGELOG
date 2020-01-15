@@ -616,6 +616,7 @@ Fixed bugs
 - fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
 - fixed numerical issue related to very large greatest common dividers in linear constraint handler
 - avoid using implications on multiaggregated variables when propagating implications
+- fixed creation of (Lagrangian) variable bounds in the OBBT propagator
 
 Miscellaneous
 -------------
