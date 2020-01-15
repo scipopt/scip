@@ -618,7 +618,7 @@ SCIP_RETCODE createGenVBound(
          gamma_dual = -SCIProwGetDualsol(propdata->cutoffrow);
 
          /* we need to treat gamma to be exactly 0 if it is below the dual feasibility tolerance, see #2914 */
-         if( EPSEQ(gamma_dual, 0.0, SCIPdualfeastol(scip)) )
+         if( EPSZ(gamma_dual, SCIPdualfeastol(scip)) )
             gamma_dual = 0.0;
       }
 
