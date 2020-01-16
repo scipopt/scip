@@ -187,7 +187,8 @@ void checkCut(
    cr_assert_not_null(vars);
    cr_assert_not_null(vals);
 
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars);
+   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d vars in cut, but got %d\n",
+      nvars, SCIProwGetNNonz(cut));
    cr_expect_eq(SCIProwGetRhs(cut), rhs, "expected rhs = %f, but got %f\n", rhs, SCIProwGetRhs(cut));
 
    for( i = 0; i < nvars; ++i )
@@ -882,7 +883,7 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
 }
 
 /* separates simple norm function from different points */
-Test(nlhdlrsoc, separation1, .description = "detects more complex norm expression")
+Test(nlhdlrsoc, separation1, .description = "test separation for simple norm expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -932,13 +933,7 @@ Test(nlhdlrsoc, separation1, .description = "detects more complex norm expressio
    /* check cut w.r.t. x */
    SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, 0, 0.0, &cut) );
 
-   cutvars[0] = nlhdlrexprdata->disvars[0];
-   cutvars[1] = x;
-   cutvals[0] = -2.0;
-   cutvals[1] = 2.0;
-
-   checkCut(cut, cutvars, cutvals, 1.0, 2);
-   SCIPreleaseRow(scip, &cut);
+   cr_expect_null(cut);
 
    /* check cut w.r.t. y */
    SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, 1, 0.0, &cut) );
@@ -946,11 +941,11 @@ Test(nlhdlrsoc, separation1, .description = "detects more complex norm expressio
    cutvars[0] = nlhdlrexprdata->disvars[1];
    cutvars[1] = auxvar;
    cutvars[2] = y;
-   cutvals[0] = -2.0;
-   cutvals[1] = -1.0;
-   cutvals[2] = 4.0;
+   cutvals[0] = -1.0 / (2.0 * SQRT(2.0));
+   cutvals[1] = -1.0 / SQRT(2.0);
+   cutvals[2] = 1.0;
 
-   checkCut(cut, cutvars, cutvals, 2.0, 3);
+   checkCut(cut, cutvars, cutvals, 2.0 - 3.0 / (2.0 * SQRT(2.0)), 3);
    SCIPreleaseRow(scip, &cut);
 
    /* check cut w.r.t. z */
@@ -959,11 +954,11 @@ Test(nlhdlrsoc, separation1, .description = "detects more complex norm expressio
    cutvars[0] = nlhdlrexprdata->disvars[2];
    cutvars[1] = auxvar;
    cutvars[2] = z;
-   cutvals[0] = -2.0;
-   cutvals[1] = -1.0;
-   cutvals[2] = -4.0;
+   cutvals[0] = -1.0 / (2.0 * SQRT(2.0));
+   cutvals[1] = -1.0 / SQRT(2.0);
+   cutvals[2] = -1.0;
 
-   checkCut(cut, cutvars, cutvals, 2.0, 3);
+   checkCut(cut, cutvars, cutvals, -2.0 - 3.0 / (2.0 * SQRT(2.0)), 3);
    SCIPreleaseRow(scip, &cut);
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
