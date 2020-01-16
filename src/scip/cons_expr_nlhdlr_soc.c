@@ -761,7 +761,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    constant = SCIPgetConsExprExprSumConstant(expr);
 
    /* we duplicate the child coefficients since we have to manipulate them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprChildren(expr), nchildren) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprSumCoefs(expr), nchildren) );
 
    /* initialize data */
    lhsidx = -1;
