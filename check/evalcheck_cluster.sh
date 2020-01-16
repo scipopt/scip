@@ -16,6 +16,7 @@
 
 # if RBCLI_TAG is set, then it will be passed as tags to rbcli
 export LANG=C
+export LC_NUMERIC=C
 
 REMOVE=0
 UPLOAD=0
@@ -63,9 +64,6 @@ do
   ERRFILE=$DIR/$EVALFILE.err
   SETFILE=$DIR/$EVALFILE.set
   METAFILE=$DIR/$EVALFILE.meta
-  RESFILE=$DIR/$EVALFILE.res
-  TEXFILE=$DIR/$EVALFILE.tex
-  PAVFILE=$DIR/$EVALFILE.pav
 
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
@@ -86,7 +84,7 @@ do
       echo ""
       echo create overall output and error file for $EVALFILE
 
-      # check first if all out, err, and set files exist for this eval-file.
+      # check first if all out and err files exist for this eval-file.
       NMISSING=0
       for i in `cat $DIR/$EVALFILE.eval` DONE
       do
@@ -95,7 +93,7 @@ do
             break
         fi
 
-        for extension in out err set
+        for extension in out err
         do
             FILE=${i}.${extension}
             if ! test -e ${FILE}
@@ -108,7 +106,7 @@ do
 
       if [ ${NMISSING} -gt 0 -a ${REMOVE} -eq 1 ]
       then
-        echo "Exiting because ${NMISSING} out/err/set file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
+        echo "Exiting because ${NMISSING} out/err file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
         exit
       fi
 
@@ -172,56 +170,12 @@ do
   fi
 
   # check if the out file exists
-  if test -e $DIR/$EVALFILE.out
+  if test -e $OUTFILE
   then
       echo create results for $EVALFILE
 
-      # detect test set
-      TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
-      # detect test used solver
-      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
-
-      echo "Testset " $TSTNAME
-      echo "Solver  " $SOLVER
-
-      if test -f testset/$TSTNAME.test
-      then
-          TESTFILE=testset/$TSTNAME.test
-      else
-          TESTFILE=""
-      fi
-
-      # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-      SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
-      do
-          if test -f testset/${f}.solu
-          then
-              SOLUFILE=testset/${f}.solu
-              break
-          fi
-      done
-
-      if test "$SOLVER" = "gurobi_cl"
-      then
-          awk -f check_gurobi.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cplex"
-      then
-          awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "xpress"
-      then
-          awk -f check_xpress.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "mosek"
-      then
-          awk -f check_mosek.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cbc"
-      then
-          awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      # we should not check for SOLVER = scip here, because check.awk needs also to be called for examples with other names
-      else
-          awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      fi
+      # run check.awk (or the solver specialization) to evaluate the outfile
+      . ./evaluate.sh $OUTFILE
 
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
