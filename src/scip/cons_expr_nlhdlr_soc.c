@@ -718,14 +718,14 @@ SCIP_RETCODE detectSocQuadraticSimple(
    )
 {
    SCIP_CONSEXPR_EXPR** children;
-   SCIP_VAR** vars;
+   SCIP_VAR** vars = NULL;
    SCIP_Real* childcoefs;
-   SCIP_Real* coefs;
-   SCIP_Real* offsets;
-   SCIP_Real* transcoefs;
-   int* transcoefsidx;
-   int* termbegins;
-   int* nnonzeroes;
+   SCIP_Real* coefs = NULL;
+   SCIP_Real* offsets = NULL;
+   SCIP_Real* transcoefs = NULL;
+   int* transcoefsidx = NULL;
+   int* termbegins = NULL;
+   int* nnonzeroes = NULL;
    SCIP_Real constant;
    SCIP_Real sideconstant;
    SCIP_Real lhs;
@@ -821,24 +821,24 @@ SCIP_RETCODE detectSocQuadraticSimple(
       }
       else
       {
-         return SCIP_OKAY;
+         goto CLEANUP;
       }
 
       if( nposquadterms > 1 && nnegquadterms > 1 )
-         return SCIP_OKAY;
+         goto CLEANUP;
 
       if( nposbilinterms + nnegbilinterms > 1 )
-         return SCIP_OKAY;
+         goto CLEANUP;
 
       if( nposbilinterms > 0 && nposquadterms > 0 )
-         return SCIP_OKAY;
+         goto CLEANUP;
 
       if( nnegbilinterms > 0 && nnegquadterms > 0 )
-         return SCIP_OKAY;
+         goto CLEANUP;
    }
 
    if( nposquadterms == nchildren || nnegquadterms == nchildren )
-      return SCIP_OKAY;
+      goto CLEANUP;
 
    assert(nposquadterms <= 1 || nnegquadterms <= 1);
    assert(nposbilinterms + nnegbilinterms <= 1);
@@ -855,7 +855,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       /* if rhs is infinity, it can't be soc */
       if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
-         return SCIP_OKAY;
+         goto CLEANUP;
 
       specialtermidx = rhsidx;
       sideconstant = constant - rhs;
@@ -866,7 +866,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       /* if lhs is infinity, it can't be soc */
       if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
-         return SCIP_OKAY;
+         goto CLEANUP;
 
       specialtermidx = lhsidx;
       sideconstant = lhs - constant;
@@ -882,7 +882,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0
          || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]).inf < 0.0 )
       {
-         return SCIP_OKAY;
+         goto CLEANUP;
       }
 
       sideconstant *= 4.0 / -childcoefs[specialtermidx];
@@ -891,11 +891,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       /* rhs variable is not non-negative -> no SOC */
       if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0 )
-         return SCIP_OKAY;
+         goto CLEANUP;
    }
 
    if( SCIPisNegative(scip, sideconstant) )
-      return SCIP_OKAY;
+      goto CLEANUP;
 
    /**
     *  we have found an soc-representable expression
@@ -1004,15 +1004,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
          termbegins, nnonzeroes, sideconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
-   /* free memory */
-   SCIPfreeBufferArray(scip, &nnonzeroes);
-   SCIPfreeBufferArray(scip, &termbegins);
-   SCIPfreeBufferArray(scip, &transcoefsidx);
-   SCIPfreeBufferArray(scip, &transcoefs);
-   SCIPfreeBufferArray(scip, &offsets);
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &childcoefs);
+CLEANUP:
+   SCIPfreeBufferArrayNull(scip, &nnonzeroes);
+   SCIPfreeBufferArrayNull(scip, &termbegins);
+   SCIPfreeBufferArrayNull(scip, &transcoefsidx);
+   SCIPfreeBufferArrayNull(scip, &transcoefs);
+   SCIPfreeBufferArrayNull(scip, &offsets);
+   SCIPfreeBufferArrayNull(scip, &coefs);
+   SCIPfreeBufferArrayNull(scip, &vars);
+   SCIPfreeBufferArrayNull(scip, &childcoefs);
 
    return SCIP_OKAY;
 }
