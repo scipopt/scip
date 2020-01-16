@@ -941,11 +941,11 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvars[0] = nlhdlrexprdata->disvars[1];
    cutvars[1] = auxvar;
    cutvars[2] = y;
-   cutvals[0] = -1.0 / (2.0 * SQRT(2.0));
-   cutvals[1] = -1.0 / SQRT(2.0);
+   cutvals[0] = -1.0 / SQRT(2.0);
+   cutvals[1] = -1.0 / (2.0 * SQRT(2.0));
    cutvals[2] = 1.0;
 
-   checkCut(cut, cutvars, cutvals, 2.0 - 3.0 / (2.0 * SQRT(2.0)), 3);
+   checkCut(cut, cutvars, cutvals, -4.0 + 2.0 / SQRT(2.0), 3);
    SCIPreleaseRow(scip, &cut);
 
    /* check cut w.r.t. z */
@@ -954,11 +954,11 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvars[0] = nlhdlrexprdata->disvars[2];
    cutvars[1] = auxvar;
    cutvars[2] = z;
-   cutvals[0] = -1.0 / (2.0 * SQRT(2.0));
-   cutvals[1] = -1.0 / SQRT(2.0);
+   cutvals[0] = -1.0 / SQRT(2.0);
+   cutvals[1] = -1.0 / (2.0 * SQRT(2.0));
    cutvals[2] = -1.0;
 
-   checkCut(cut, cutvars, cutvals, -2.0 - 3.0 / (2.0 * SQRT(2.0)), 3);
+   checkCut(cut, cutvars, cutvals, -4.0 + 2.0 / SQRT(2.0), 3);
    SCIPreleaseRow(scip, &cut);
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );

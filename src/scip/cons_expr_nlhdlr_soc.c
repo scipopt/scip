@@ -448,8 +448,7 @@ SCIP_RETCODE generateCutSol(
    assert(nlhdlrexprdata->coefs[nterms-1] > 0);
 
    sideval = 0.0;
-   termstartidx = nlhdlrexprdata->termbegins[nterms-1];
-   denominator = 2.0 *  SQRT(nlhdlrexprdata->coefs[nterms-1]) * rhsval * disvarval;
+   denominator = 2.0 *  SQRT(nlhdlrexprdata->coefs[nterms-1] * rhsval * disvarval);
 
    /* add terms for lhs */
    if( k < nterms  && !SCIPisZero(scip, lhsval) )
@@ -468,9 +467,11 @@ SCIP_RETCODE generateCutSol(
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-         sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+         sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
       }
    }
+
+   termstartidx = nlhdlrexprdata->termbegins[nterms-1];
 
    /* add terms for rhs */
    for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
@@ -481,7 +482,7 @@ SCIP_RETCODE generateCutSol(
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-      sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
    }
 
    /* add term for disvar */
@@ -490,7 +491,7 @@ SCIP_RETCODE generateCutSol(
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-   sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+   sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
 
    /* add side */
    SCIPaddRowprepSide(rowprep, sideval - value);
