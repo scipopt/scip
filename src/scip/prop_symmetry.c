@@ -3220,8 +3220,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
                SCIPfreeBufferArray(scip, &orbitopematrix[k]);
             SCIPfreeBufferArray(scip, &orbitopematrix);
          }
-
-         chosencomppercolor[j] = -1;
+         else
+            chosencomppercolor[j] = -1;
       }
 #if 0
 
