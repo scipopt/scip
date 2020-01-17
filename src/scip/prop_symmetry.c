@@ -148,7 +148,7 @@
 #define DEFAULT_CHECKSYMMETRIES     FALSE    /**< Should all symmetries be checked after computation? */
 #define DEFAULT_DISPLAYNORBITVARS   FALSE    /**< Should the number of variables affected by some symmetry be displayed? */
 #define DEFAULT_USECOLUMNSPARSITY   FALSE    /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
-#define DEFAULT_DOUBLEEQUATIONS      FALSE   /**< Double equations to positive/negative version? */
+#define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 
@@ -156,7 +156,7 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-#define DEFAULT_DETECTSUBGROUPS      TRUE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
+#define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
