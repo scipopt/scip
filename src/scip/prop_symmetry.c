@@ -3202,7 +3202,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             }
 
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", orbitopematrix,
-                  SCIP_ORBITOPETYPE_FULL, nrows, ncolumns, TRUE, FALSE,
+                  SCIP_ORBITOPETYPE_FULL, nrows, ncolumns, FALSE, TRUE, FALSE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3646,7 +3646,7 @@ SCIP_RETCODE detectOrbitopes(
             npermsincomponent + 1, i);
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
-               ntwocyclescomp, npermsincomponent + 1, TRUE, FALSE,
+               ntwocyclescomp, npermsincomponent + 1, TRUE, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
