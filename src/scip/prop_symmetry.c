@@ -3175,6 +3175,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert(colorcompsize > 2);
 
+            chosencomppercolor[j] = 0;
+
             nrows = compcolorbegins[j+1] - compcolorbegins[j];
             ncolumns = colorcompsize;
 
