@@ -3095,7 +3095,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_Real vals[2] = {1, -1};
          int chosencomp = -1;
          int chosencompsize = 0;
+         int colorcompsize = 0;
          int k;
+         SCIP_Bool isorbitope = TRUE;
 #ifdef SCIP_DEBUG
          SCIP_Bool binaffected = FALSE;
          SCIP_Bool intaffected = FALSE;
@@ -3104,9 +3106,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
-#ifdef SCIP_MORE_DEBUG
-            SCIPdebugMsg(scip, "    color %d has only one variable --> skip\n", j);
-#endif
             chosencomppercolor[j] = -1;
             ++ntrivialcolors;
 
@@ -3116,7 +3115,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
-         /* choose largest component for that color */
+         /* check whether components of this color build an orbitope (with > 2 columns) */
          for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
          {
             SCIP_VAR* firstvar;
@@ -3124,28 +3123,101 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             compsize = graphcompbegins[k+1] - graphcompbegins[k];
 
-            if ( compsize > chosencompsize )
+            if ( colorcompsize < 1 )
             {
-               chosencomp = k;
-               chosencompsize = compsize;
+               if( compsize < 3 )
+               {
+                  isorbitope = FALSE;
+                  break;
+               }
+
+               colorcompsize = compsize;
             }
 
             firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
 
+            if ( compsize != colorcompsize  || ! SCIPvarIsBinary(firstvar) )
+            {
+               isorbitope = FALSE;
+               break;
+            }
+         }
+
 #ifdef SCIP_DEBUG
+         for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
+         {
+            SCIP_VAR* firstvar;
+
+            firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
+
             if ( SCIPvarIsBinary(firstvar) )
                binaffected = TRUE;
             else if (SCIPvarIsIntegral(firstvar) )
                intaffected = TRUE;
             else
                contaffected = TRUE;
-#endif
          }
 
-#ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "      affected types (bin,int,cont): (%d,%d,%d)\n",
             binaffected, intaffected, contaffected);
 #endif
+
+         if ( isorbitope )
+         {
+            SCIP_VAR*** orbitopematrix;
+            SCIP_CONS* cons;
+            int nrows;
+            int ncolumns;
+            int colorstart;
+            int l;
+
+            assert(colorcompsize > 2);
+
+            nrows = compcolorbegins[j+1] - compcolorbegins[j];
+            ncolumns = colorcompsize;
+
+            SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
+               ncolumns, nrows);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, nrows) );
+            for (k = 0; k < nrows; ++k)
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[k], ncolumns) );
+            }
+
+            colorstart = compcolorbegins[j];
+
+            for (k = 0; k < nrows; ++k)
+            {
+               int compstart;
+
+               compstart = graphcompbegins[colorstart + k];
+
+               for (l = 0; l < ncolumns; ++l)
+               {
+                  orbitopematrix[k][l] = propdata->permvars[graphcomponents[compstart + l]];
+               }
+            }
+
+            SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", orbitopematrix,
+                  SCIP_ORBITOPETYPE_FULL, nrows, ncolumns, TRUE, FALSE,
+                  propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+
+            /* do not release constraint here - will be done later */
+            propdata->genorbconss[propdata->ngenorbconss++] = cons;
+            ++propdata->norbitopes;
+
+            propdata->componentblocked[i] = TRUE;
+            ++propdata->ncompblocked;
+
+            for (k = 0; k < nrows; ++k)
+               SCIPfreeBufferArray(scip, &orbitopematrix[k]);
+            SCIPfreeBufferArray(scip, &orbitopematrix);
+         }
+      }
+#if 0
 
          assert( chosencomp >= 0 );
          assert( chosencomp < ngraphcomponents );
@@ -3198,12 +3270,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
             propdata->genlinconss[propdata->ngenlinconss] = cons;
             ++propdata->ngenlinconss;
          }
-      }
+#endif
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
       /* possibly add weak SBCs for enclosing orbit of first component */
-      if ( nusedperms < npermsincomp )
+      if ( propdata->componentblocked[i] && nusedperms < npermsincomp )
       {
          SCIP_HASHSET* usedvars;
          SCIP_VAR* vars[2];
@@ -3318,9 +3390,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
-
-      propdata->componentblocked[i] = TRUE;
-      ++propdata->ncompblocked;
 
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
