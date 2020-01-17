@@ -3301,6 +3301,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int graphcompsize;
             int firstvaridx;
             int k;
+            int l;
 
             if ( chosencomppercolor[j] < 0 )
                continue;
@@ -3321,10 +3322,13 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPhashsetRemoveAll(usedvars);
 
             /* mark all variables that have been used in strong SBCs */
-            for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
+            for (l = compcolorbegins[j]; l < compcolorbegins[j+1]; ++l)
             {
-               SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
-                     (void*) (size_t) (graphcomponents[k]+1)) );
+               for (k = graphcompbegins[l]; k < graphcompbegins[l+1]; ++k)
+               {
+                  SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
+                        (void*) (size_t) (graphcomponents[k]+1)) );
+               }
             }
 
             SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
