@@ -3396,14 +3396,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
                propdata->genlinconss[propdata->ngenlinconss] = cons;
                ++propdata->ngenlinconss;
             }
-
-            SCIPfreeBufferArray(scip, &orbit[0]);
-            SCIPfreeBufferArray(scip, &orbit[1]);
-            SCIPfreeBufferArray(scip, &varfound);
-            SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
          }
          else
             SCIPdebugMsg(scip, "  no further weak sbcs are valid\n");
+
+         SCIPfreeBufferArray(scip, &orbit[0]);
+         SCIPfreeBufferArray(scip, &orbit[1]);
+         SCIPfreeBufferArray(scip, &varfound);
+         SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
       }
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
