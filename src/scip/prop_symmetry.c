@@ -3218,6 +3218,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
                SCIPfreeBufferArray(scip, &orbitopematrix[k]);
             SCIPfreeBufferArray(scip, &orbitopematrix);
          }
+
+         chosencomppercolor[j] = -1;
       }
 #if 0
 
@@ -3303,7 +3305,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
             if ( chosencomppercolor[j] < 0 )
                continue;
 
+#if 0
             graphcomp = chosencomppercolor[j];
+#else
+            graphcomp = compcolorbegins[j];
+#endif
             graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
             firstvaridx = graphcomponents[graphcompbegins[graphcomp]];
 
