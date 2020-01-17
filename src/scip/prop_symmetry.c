@@ -3345,60 +3345,65 @@ SCIP_RETCODE detectAndHandleSubgroups(
             }
          }
 
-         activeorb = !activeorb;
-
-         vars[0] = propdata->permvars[orbit[activeorb][0]];
-
-         assert(chosencolor > -1);
-         SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
-            orbitsize[activeorb]-1, chosencolor);
-
-#ifdef SCIP_DEBUG
-         nweaksbcs += orbitsize[activeorb] - 1;
-#endif
-
-         /* add weak SBCs for rest of enclosing orbit */
-         for (j = 1; j < orbitsize[activeorb]; ++j)
+         if ( chosencolor > -1 )
          {
-            SCIP_CONS* cons;
-            char name[SCIP_MAXSTRLEN];
+            activeorb = !activeorb;
 
-            vars[1] = propdata->permvars[orbit[activeorb][j]];
+            vars[0] = propdata->permvars[orbit[activeorb][0]];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%s_%s",
-               i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+            assert(chosencolor > -1);
+            SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
+               orbitsize[activeorb]-1, chosencolor);
 
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-                  SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-                  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   #ifdef SCIP_DEBUG
+            nweaksbcs += orbitsize[activeorb] - 1;
+   #endif
 
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-
-#ifdef SCIP_MORE_DEBUG
-            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-            /* check whether we need to resize */
-            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+            /* add weak SBCs for rest of enclosing orbit */
+            for (j = 1; j < orbitsize[activeorb]; ++j)
             {
-               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-               assert( newsize > propdata->ngenlinconss );
+               SCIP_CONS* cons;
+               char name[SCIP_MAXSTRLEN];
 
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                  propdata->genlinconsssize, newsize) );
+               vars[1] = propdata->permvars[orbit[activeorb][j]];
 
-               propdata->genlinconsssize = newsize;
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%s_%s",
+                  i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+
+               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   #ifdef SCIP_MORE_DEBUG
+               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+   #endif
+
+               /* check whether we need to resize */
+               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+               {
+                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+                  assert( newsize > propdata->ngenlinconss );
+
+                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                     propdata->genlinconsssize, newsize) );
+
+                  propdata->genlinconsssize = newsize;
+               }
+
+               propdata->genlinconss[propdata->ngenlinconss] = cons;
+               ++propdata->ngenlinconss;
             }
 
-            propdata->genlinconss[propdata->ngenlinconss] = cons;
-            ++propdata->ngenlinconss;
+            SCIPfreeBufferArray(scip, &orbit[0]);
+            SCIPfreeBufferArray(scip, &orbit[1]);
+            SCIPfreeBufferArray(scip, &varfound);
+            SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
          }
-
-         SCIPfreeBufferArray(scip, &orbit[0]);
-         SCIPfreeBufferArray(scip, &orbit[1]);
-         SCIPfreeBufferArray(scip, &varfound);
-         SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
+         else
+            SCIPdebugMsg(scip, "  no further weak sbcs are valid\n");
       }
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
