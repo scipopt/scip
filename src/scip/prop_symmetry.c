@@ -157,6 +157,7 @@
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
 #define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
+#define DEFAULT_ADDWEAKSBCS          TRUE    /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
@@ -245,6 +246,7 @@ struct SCIP_PropData
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    SCIP_Bool             detectsubgroups;    /**< Should we try to detect symmetric subgroups of the symmetry group? */
+   SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
    int                   norbitopes;         /**< number of orbitope constraints */
 
    /* data necessary for orbital fixing */
@@ -3275,7 +3277,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
       /* possibly add weak SBCs for enclosing orbit of first component */
-      if ( propdata->componentblocked[i] && nusedperms < npermsincomp )
+      if ( propdata->addweaksbcs && propdata->componentblocked[i] && nusedperms < npermsincomp )
       {
          SCIP_HASHSET* usedvars;
          SCIP_VAR* vars[2];
@@ -4840,6 +4842,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/detectsubgroups",
          "Should we try to detect symmetric subgroups of the symmetry group?",
          &propdata->detectsubgroups, TRUE, DEFAULT_DETECTSUBGROUPS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/addweaksbcs",
+         "Should we add weak SBCs for enclosing orbit of symmetric subgroups?",
+         &propdata->addweaksbcs, TRUE, DEFAULT_ADDWEAKSBCS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/addconsstiming",
