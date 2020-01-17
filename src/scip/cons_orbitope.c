@@ -280,6 +280,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->resolveprop = resolveprop;
    (*consdata)->istrianglefixed = FALSE;
    (*consdata)->ismodelcons = ismodelcons;
+   (*consdata)->usedynamicprop = usedynamicprop;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
