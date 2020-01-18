@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -228,85 +228,99 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 /** get the number of successful runs of the diving settings */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetSolSuccess(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the number of calls to this dive set */
 SCIP_EXPORT
 int SCIPdivesetGetNCalls(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the number of calls successfully terminated at a feasible leaf node */
 SCIP_EXPORT
 int SCIPdivesetGetNSolutionCalls(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the minimum depth reached by this dive set */
 SCIP_EXPORT
 int SCIPdivesetGetMinDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum depth reached by this dive set */
 SCIP_EXPORT
 int SCIPdivesetGetMaxDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the average depth this dive set reached during execution */
 SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the minimum depth at which this dive set found a solution */
 SCIP_EXPORT
 int SCIPdivesetGetMinSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum depth at which this dive set found a solution */
 SCIP_EXPORT
 int SCIPdivesetGetMaxSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the average depth at which this dive set found a solution */
 SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of LP iterations used by this dive set */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNLPIterations(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of probing nodes used by this dive set */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNProbingNodes(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of backtracks performed by this dive set */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNBacktracks(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of conflicts found by this dive set */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNConflicts(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */
 SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNSols(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum LP iterations quotient of the diving settings */
@@ -381,6 +395,12 @@ SCIP_Bool SCIPdivesetSupportsType(
 /** returns the random number generator of this \p diveset for tie-breaking */
 SCIP_EXPORT
 SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** is this dive set publicly available (ie., can be used by other primal heuristics?) */
+SCIP_EXPORT
+SCIP_Bool SCIPdivesetIsPublic(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

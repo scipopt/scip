@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,6 +180,8 @@ typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
 
+/** callback to act on position change of @p elem in priority queue */
+#define SCIP_DECL_PQUEUEELEMCHGPOS(x) void x (void* elem, int oldpos, int newpos)
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_qpkktref.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  qpkktref presolver
  * @author Tobias Fischer
  *
@@ -2052,8 +2053,8 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
          &presoldata->addkktbinary, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadbounded",
-         "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a \
-         finite optimal solution might not exist and the KKT conditions would then be invalid",
+         "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a "
+         "finite optimal solution might not exist and the KKT conditions would then be invalid",
          &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadindef",

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -1235,7 +1236,8 @@ SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
    SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos)) /**< callback to act on position change of elem in priority queue, or NULL */
    )
 {
    assert(pqueue != NULL);
@@ -1250,6 +1252,7 @@ SCIP_RETCODE SCIPpqueueCreate(
    (*pqueue)->sizefac = sizefac;
    (*pqueue)->slots = NULL;
    (*pqueue)->ptrcomp = ptrcomp;
+   (*pqueue)->elemchgpos = elemchgpos;
    SCIP_CALL( pqueueResize(*pqueue, initsize) );
 
    return SCIP_OKAY;
@@ -1276,6 +1279,57 @@ void SCIPpqueueClear(
    pqueue->len = 0;
 }
 
+/** assign element to new slot in priority queue */
+static
+void pqueueElemChgPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem,               /**< element whose position changes */
+   int                   oldpos,             /**< old position or -1 if elem is newly inserted */
+   int                   newpos              /**< new position */
+   )
+{
+   pqueue->slots[newpos] = elem;
+
+   /* act on position change */
+   if( pqueue->elemchgpos != NULL )
+   {
+      pqueue->elemchgpos(elem, oldpos, newpos);
+   }
+}
+
+#ifdef SCIP_MORE_DEBUG
+/** ensure that the priority queue still has the heap property */
+static
+SCIP_Bool pqueueHasHeapProperty(
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
+   )
+{
+   int i;
+
+   if( SCIPpqueueNElems(pqueue) == 0 )
+      return TRUE;
+
+   /* check local heap property between parents and children */
+   for( i = 0; i < SCIPpqueueNElems(pqueue); ++i )
+   {
+      if( i > 0 && pqueue->ptrcomp(pqueue->slots[i], pqueue->slots[PQ_PARENT(i)]) < 0 )
+         return FALSE;
+      if( i < PQ_PARENT(SCIPpqueueNElems(pqueue)) )
+      {
+         int leftchild = PQ_LEFTCHILD(i);
+         int rightchild = PQ_RIGHTCHILD(i);
+         assert(leftchild < SCIPpqueueNElems(pqueue));
+         assert(rightchild <= SCIPpqueueNElems(pqueue));
+         if( pqueue->ptrcomp(pqueue->slots[i], pqueue->slots[leftchild]) > 0 )
+            return FALSE;
+         if( rightchild < SCIPpqueueNElems(pqueue) && pqueue->ptrcomp(pqueue->slots[i], pqueue->slots[rightchild]) > 0)
+            return FALSE;
+      }
+   }
+   return TRUE;
+}
+#endif
+
 /** inserts element into priority queue */
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
@@ -1283,6 +1337,7 @@ SCIP_RETCODE SCIPpqueueInsert(
    )
 {
    int pos;
+   int parentpos;
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
@@ -1293,14 +1348,85 @@ SCIP_RETCODE SCIPpqueueInsert(
    /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = pqueue->len;
    pqueue->len++;
-   while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[PQ_PARENT(pos)]) < 0 )
+   parentpos = PQ_PARENT(pos);
+   while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[parentpos]) < 0 )
    {
-      pqueue->slots[pos] = pqueue->slots[PQ_PARENT(pos)];
-      pos = PQ_PARENT(pos);
+      assert((*pqueue->ptrcomp)(pqueue->slots[parentpos], elem) >= 0);
+      pqueueElemChgPos(pqueue, pqueue->slots[parentpos], parentpos, pos);
+
+      pos = parentpos;
+      parentpos = PQ_PARENT(pos);
    }
-   pqueue->slots[pos] = elem;
+
+   /* insert element at the found position */
+   pqueueElemChgPos(pqueue, elem, -1, pos);
+
+#ifdef SCIP_MORE_DEBUG
+   assert(pqueueHasHeapProperty(pqueue));
+#endif
 
    return SCIP_OKAY;
+}
+
+
+/** delete element at specified position, maintaining the heap property */
+void SCIPpqueueDelPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   int                   pos                 /**< position of element that should be deleted */
+   )
+{
+   void* last;
+
+   assert(pqueue != NULL);
+   assert(pos >= 0);
+   assert(pos < SCIPpqueueNElems(pqueue));
+
+   /* remove element at specified position of the tree, move the better child to its parents position until the last element
+    * of the queue could be placed in the empty slot
+    */
+   pqueue->len--;
+
+   /* everything in place */
+   if( pos == pqueue->len )
+      return;
+
+   last = pqueue->slots[pqueue->len];
+
+   /* last element is brought to pos. it may now violate the heap property compared to its parent, or to its children.
+    * In the first case, move it up, otherwise, move it down.
+    */
+   while( pos > 0 && (*pqueue->ptrcomp)(last, pqueue->slots[PQ_PARENT(pos)]) < 0 )
+   {
+      pqueueElemChgPos(pqueue, pqueue->slots[PQ_PARENT(pos)], PQ_PARENT(pos), pos);
+      pos = PQ_PARENT(pos);
+   }
+
+   while( pos <= PQ_PARENT(pqueue->len-1) )
+   {
+      int childpos = PQ_LEFTCHILD(pos);
+      int brotherpos = PQ_RIGHTCHILD(pos);
+
+      /* determine better of the two children */
+      if( brotherpos < pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
+         childpos = brotherpos;
+
+      if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
+         break;
+
+      /* move better element from childpos to pos */
+      pqueueElemChgPos(pqueue, pqueue->slots[childpos], childpos, pos);
+
+      pos = childpos;
+   }
+
+   /* pos must point into a valid position */
+   assert(pos <= pqueue->len - 1);
+
+   pqueueElemChgPos(pqueue, last, pqueue->len, pos);
+
+#ifdef SCIP_MORE_DEBUG
+   assert(pqueueHasHeapProperty(pqueue));
+#endif
 }
 
 /** removes and returns best element from the priority queue */
@@ -1309,10 +1435,6 @@ void* SCIPpqueueRemove(
    )
 {
    void* root;
-   void* last;
-   int pos;
-   int childpos;
-   int brotherpos;
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
@@ -1320,26 +1442,9 @@ void* SCIPpqueueRemove(
    if( pqueue->len == 0 )
       return NULL;
 
-   /* remove root element of the tree, move the better child to its parents position until the last element
-    * of the queue could be placed in the empty slot
-    */
    root = pqueue->slots[0];
-   last = pqueue->slots[pqueue->len-1];
-   pqueue->len--;
-   pos = 0;
-   while( pos <= PQ_PARENT(pqueue->len-1) )
-   {
-      childpos = PQ_LEFTCHILD(pos);
-      brotherpos = PQ_RIGHTCHILD(pos);
-      if( brotherpos <= pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
-         childpos = brotherpos;
-      if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
-         break;
-      pqueue->slots[pos] = pqueue->slots[childpos];
-      pos = childpos;
-   }
-   assert(pos <= pqueue->len);
-   pqueue->slots[pos] = last;
+
+   SCIPpqueueDelPos(pqueue, 0);
 
    return root;
 }
@@ -1378,6 +1483,23 @@ void** SCIPpqueueElems(
    assert(pqueue->len >= 0);
 
    return pqueue->slots;
+}
+
+/** return the position of @p elem in the priority queue, or -1 if element is not found */
+int SCIPpqueueFind(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   int pos = -1;
+
+   while( ++pos < SCIPpqueueNElems(pqueue) )
+   {
+      if( pqueue->slots[pos] == elem )
+         return pos;
+   }
+
+   return -1;
 }
 
 
@@ -1459,7 +1581,7 @@ int SCIPcalcMultihashSize(
    int pos;
 
    (void) SCIPsortedvecFindInt(primetable, minsize, primetablesize, &pos);
-   assert(pos < primetablesize);
+   assert(0 <= pos && pos < primetablesize);
 
    return primetable[pos];
 }
@@ -5405,6 +5527,16 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealIntBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealBool
 #define SORTTPL_KEYTYPE     void*
@@ -6833,7 +6965,7 @@ SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_CALL( profileUpdate(profile, left, right, -demand, &pos, &infeasible) );
    assert(!infeasible);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */
@@ -7161,6 +7293,11 @@ SCIP_RETCODE SCIPdigraphCreate(
    (*digraph)->components = NULL;
    (*digraph)->componentstarts = NULL;
 
+   /* all nodes are initially considered as non-articulation points */
+   (*digraph)->narticulations = -1;
+   (*digraph)->articulations = NULL;
+   (*digraph)->articulationscheck = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -7215,6 +7352,7 @@ SCIP_RETCODE SCIPdigraphCopy(
    int ncomponents;
    int nnodes;
    int i;
+   SCIP_Bool articulationscheck;
 
    assert(sourcedigraph != NULL);
    assert(targetdigraph != NULL);
@@ -7229,6 +7367,7 @@ SCIP_RETCODE SCIPdigraphCopy(
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
+   articulationscheck = sourcedigraph->articulationscheck;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
    (*targetdigraph)->blkmem = targetblkmem;
@@ -7273,6 +7412,20 @@ SCIP_RETCODE SCIPdigraphCopy(
       (*targetdigraph)->components = NULL;
       (*targetdigraph)->componentstarts = NULL;
       (*targetdigraph)->componentstartsize = 0;
+   }
+
+   /* copy the articulation point information if it has been computed and is up-to-date */
+   if( articulationscheck )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->articulations, sourcedigraph->articulations, sourcedigraph->narticulations) );
+      (*targetdigraph)->narticulations = sourcedigraph->narticulations;
+      (*targetdigraph)->articulationscheck = TRUE;
+   }
+   else
+   {
+      (*targetdigraph)->narticulations = -1;
+      (*targetdigraph)->articulations = NULL;
+      (*targetdigraph)->articulationscheck = FALSE;
    }
 
    return SCIP_OKAY;
@@ -7331,6 +7484,10 @@ void SCIPdigraphFree(
    assert(digraphptr->componentstartsize == 0);
    assert(digraphptr->components == NULL);
    assert(digraphptr->componentstarts == NULL);
+
+   /* free the articulation points structure if it has been computed*/
+   if( digraphptr->articulationscheck )
+      BMSfreeBlockMemoryArray(blkmem, &digraphptr->articulations, digraphptr->narticulations);
 
    /* free directed graph data structure */
    BMSfreeBlockMemoryArray(blkmem, &digraphptr->nodedata, digraphptr->nnodes);
@@ -7413,6 +7570,9 @@ SCIP_RETCODE SCIPdigraphAddArc(
    digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
+   /* the articulation points are not up-to-date */
+   digraph->articulationscheck = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -7450,6 +7610,9 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    digraph->successors[startnode][nsuccessors] = endnode;
    digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
+
+   /* the articulation points are not up-to-date */
+   digraph->articulationscheck = FALSE;
 
    return SCIP_OKAY;
 }
@@ -7649,6 +7812,162 @@ void depthFirstSearch(
          assert( stackidx < digraph->nnodes );
       }
    }
+}
+
+/** checks for articulation points in a given directed graph through a recursive depth-first-search.
+ *  starts from a given start node and keeps track of the nodes' discovery time in search for back edges.
+ *
+ *  @note an articulation point is a node whose removal disconnects a connected graph or increases
+ *  the number of connected components in a disconnected graph
+ */
+static
+void findArticulationPointsUtil(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  tdisc,              /**< array of size number of nodes to store each node's discovery time */
+   int*                  mindisc,            /**< array of size number of nodes to store the discovery time of the earliest discovered vertex
+                                              *   to which startnode (or any node in the subtree rooted at it) is having a back edge */
+   int*                  parent,             /**< array to store the parent of each node in the DFS tree */
+   SCIP_Bool*            articulationflag,   /**< array to mark whether a node is identified as an articulation point */
+   int                   time                /**< current discovery time in the DFS */
+   )
+{
+   int n;
+   int nchildren = 0;
+   int nsucc;
+   int* succnodes;
+
+   assert(digraph != NULL);
+   assert(startnode >= 0);
+   assert(startnode < digraph->nnodes);
+   assert(visited != NULL);
+   assert(visited[startnode] == FALSE);
+   assert(tdisc != NULL);
+   assert(mindisc != NULL);
+   assert(parent != NULL);
+   assert(articulationflag != NULL);
+   assert(time >= 0);
+
+   nsucc = (int) SCIPdigraphGetNSuccessors(digraph, startnode);
+   succnodes = (int*) SCIPdigraphGetSuccessors(digraph, startnode);
+   visited[startnode] = TRUE;
+   tdisc[startnode] = time + 1;
+   mindisc[startnode] = time + 1;
+
+   /* process all the adjacent nodes to startnode */
+   for( n = 0; n < nsucc; ++n)
+   {
+      if( !visited[succnodes[n]] )
+      {
+         parent[succnodes[n]] = startnode;
+         ++nchildren;
+         findArticulationPointsUtil(digraph, succnodes[n], visited, tdisc, mindisc, parent, articulationflag, time + 1);
+         /* updated the mindisc of startnode when the DFS concludes for node n*/
+         mindisc[startnode] = MIN(mindisc[startnode], mindisc[succnodes[n]]);
+
+         /* the root is an articulation point if it has more than 2 children*/
+         if( parent[startnode] == -1 && nchildren > 1 )
+            articulationflag[startnode] = TRUE;
+         /* a vertex startnode is an articulation point if it is not the root and
+          * there is no back edge from the subtree rooted at child n to any of the ancestors of startnode */
+         if( parent[startnode] > -1 && mindisc[succnodes[n]] >= tdisc[startnode] )
+            articulationflag[startnode] = TRUE;
+      }
+      else
+      {
+         if( parent[startnode] != succnodes[n] )
+            mindisc[startnode] = MIN(mindisc[startnode], tdisc[succnodes[n]]);
+      }
+   }
+
+   if( articulationflag[startnode] )
+      ++digraph->narticulations;
+}
+
+/** identifies the articulation points in a given directed graph
+ *  uses the helper recursive function findArticulationPointsUtil
+ */
+SCIP_RETCODE SCIPdigraphGetArticulationPoints(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
+   )
+{
+
+   BMS_BLKMEM* blkmem;
+   SCIP_Bool* visited;
+   SCIP_Bool* articulationflag;
+   int* tdisc;
+   int* mindisc;
+   int* parent;
+   int n;
+   int articulationidx = 0;
+   int time = 0;
+
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
+
+   /* Only perform the computation if the articulation points are NOT up-to-date */
+   if( !digraph->articulationscheck )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&tdisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&mindisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&parent, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&articulationflag, digraph->nnodes) );
+
+      assert(digraph->blkmem != NULL);
+      blkmem = digraph->blkmem;
+
+      if( digraph->narticulations >= 0 ) /* case: articulations have already been computed but not up-to-date */
+         BMSfreeBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations);
+
+      /* Initialize the no. of articulation points ahead of the recursive computation */
+      digraph->narticulations = 0;
+
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         visited[n] = FALSE;
+         parent[n] = -1;
+         articulationflag[n] = FALSE;
+      }
+
+      /* the function is called on every unvisited node in the graph to cover the disconnected graph case */
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if( !visited[n] )
+            findArticulationPointsUtil(digraph, n, visited, tdisc, mindisc, parent, articulationflag, time);
+      }
+
+      /* allocation of the block memory for the node indices of the articulation points*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations) );
+
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if ( articulationflag[n] )
+         {
+            digraph->articulations[articulationidx] = n;
+            ++articulationidx;
+         }
+      }
+
+      BMSfreeMemoryArrayNull(&articulationflag);
+      BMSfreeMemoryArrayNull(&parent);
+      BMSfreeMemoryArrayNull(&mindisc);
+      BMSfreeMemoryArrayNull(&tdisc);
+      BMSfreeMemoryArrayNull(&visited);
+   }
+
+   if( articulations != NULL )
+      (*articulations) = digraph->articulations;
+   if( narticulations != NULL )
+      (*narticulations) = digraph->narticulations;
+
+   /* the articulation points are now up-to-date */
+   digraph->articulationscheck = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** Compute undirected connected components on the given graph.
@@ -8987,6 +9306,9 @@ SCIP_Bool SCIPrealToRational(
    assert(nominator != NULL);
    assert(denominator != NULL);
 
+   if( REALABS(val) >= 1.0 * SCIP_LONGINT_MAX / maxdnom )
+      return FALSE;
+
    /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
     * is tried as denominator
     */
@@ -9324,8 +9646,10 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
@@ -9369,7 +9693,11 @@ SCIP_Bool SCIPfindSimpleRational(
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
 
-#pragma STD FENV_ACCESS OFF
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (off)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS OFF
+#endif
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);

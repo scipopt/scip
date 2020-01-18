@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for propagators
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -206,7 +207,7 @@ SCIP_RETCODE doPropCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when propagator should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))",
       SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*prop)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+         (int*)(&(*prop)->timingmask), TRUE, (int) timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);

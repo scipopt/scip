@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -408,6 +408,14 @@ SCIP_RETCODE SCIPsolveProbingRelax(
                                               *   limit was reached (or NULL, if not needed) */
    );
 
+/** print statistics of probing */
+SCIP_EXPORT
+char* SCIPsnprintfProbingStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
+   );
+
 /** stores the candidate score and preferred rounding direction for a candidate variable */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetDivesetScore(
@@ -426,7 +434,8 @@ SCIP_EXPORT
 void SCIPupdateDivesetLPStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** update diveset statistics and global diveset statistics */
@@ -439,7 +448,8 @@ void SCIPupdateDivesetStats(
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
+   SCIP_Bool             leavewassol,        /**< was a solution found at the leaf? */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings

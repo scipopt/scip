@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
  * \f]
  * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
+ *
+ * We distinguish whether an orbitope is a model constraint or not. If it is a model constraint, then
+ * its information are copied to subSCIPs. Otherwise, the constraint was added just for the purpose of
+ * symmetry handling and we do not copy its information to subSCIPs.
  */
 
 /** type of orbitope constraint: full, packing, or partitioning orbitope */
@@ -95,6 +99,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
+   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -137,7 +142,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
-   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
+   SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
+   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );
 
 /* @} */

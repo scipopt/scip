@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_nonlinear.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for nonlinear functions
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -963,6 +964,8 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
                                               *   problem */
+   SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem, can be NULL */
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
@@ -1226,6 +1229,12 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             if( nlscore != NULL )
                ++nlscore[exprvaridxs[nconss][k]];
          }
+      }
+
+      /* if the row to index hash map is provided, we need to store the row index */
+      if( nlrow2idx != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(nlrow2idx, nlrows[i], nconss) );
       }
 
       ++nconss;

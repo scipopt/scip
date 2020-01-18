@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -3014,9 +3015,9 @@ SCIP_RETCODE extendToCover(
             /* create row */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -3493,6 +3494,18 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
+         /* We also need to update the events and locks if restart is forced, since global bound change events on binary
+          * variables are also caught in this case. If it would not be updated and forcerestart = TRUE, then an event
+          * might be dropped on a wrong variable. */
+         if ( conshdlrdata->forcerestart )
+         {
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED,
+                  conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
+                  (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+         }
+
          SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
          SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
@@ -3746,7 +3759,7 @@ SCIP_RETCODE propIndicator(
             lhs = SCIPgetRhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, lhs) )
                lhs = -SCIPinfinity(scip);
-            rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            rhs = SCIPgetLhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, -rhs) )
                rhs = SCIPinfinity(scip);
 
@@ -4067,7 +4080,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -4581,7 +4594,7 @@ SCIP_RETCODE separatePerspective(
 
             SCIPdebugMsg(scip, "Found cut of lhs value %f > %f.\n", cutval, cutrhs);
             (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
@@ -4691,9 +4704,9 @@ SCIP_RETCODE separateIndicators(
                char name[50];
 
                (void) SCIPsnprintf(name, 50, "couple%d", c);
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -5892,7 +5905,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -5929,7 +5942,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
       nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -6013,7 +6026,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
@@ -6395,7 +6408,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip),
             conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
@@ -6460,7 +6473,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
-      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
    *result = SCIP_SUCCESS;
@@ -6896,11 +6909,11 @@ SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
    assert( scip != NULL );
    assert( cons != NULL );
    assert( vars != NULL );
-   assert( varssize >= 0 );
    assert( success != NULL );
 
    if ( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert( varssize >= 0 );
 
    (*success) = TRUE;
 

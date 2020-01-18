@@ -1,0 +1,5 @@
+TIME
+PERIODS       LP
+    TailAssignmentVar_0_0      FlightCover_0            STAGE-1
+    RecoveryAssignmentVar_0_0  RecoveryFlightCover_0    STAGE-2
+ENDATA

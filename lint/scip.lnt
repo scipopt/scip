@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -160,6 +160,7 @@
 -emacro(647,BMSallocClearMemoryArray)
 -emacro(647,SCIPallocMemoryArray)
 -emacro(647,SCIPallocBlockMemoryArray)
+-emacro(647,SCIPreallocBlockMemoryArray)
 -emacro(647,SCIPallocBufferArray)
 -emacro(647,SCIPreallocBufferArray)
 -emacro(647,SCIPfreeBlockMemoryArrayNull)
@@ -190,9 +191,14 @@
 
 // turn off unusual use of 'SYM'
 -emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSreallocBlockMemoryArray)
 -emacro(866,BMSduplicateMemoryArray)
+-emacro(866,BMSduplicateBlockMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArrayNull)
+-emacro(866,SCIPallocBufferArray)
+-emacro(866,SCIPduplicateBlockMemoryArray)
+-emacro(866,SCIPreallocBlockMemoryArray)
 
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)

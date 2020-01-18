@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,7 +41,7 @@ extern "C" {
 
 /** create a set of diving heuristic settings */
 SCIP_RETCODE SCIPdivesetCreate(
-   SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
+   SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -63,8 +63,10 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    );
 
 /** resets diving settings counters */
@@ -83,7 +85,8 @@ void SCIPdivesetUpdateStats(
    SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
    SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
+   SCIP_Bool             leavesol,           /**< has the diving heuristic reached a feasible leaf */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
@@ -98,11 +101,19 @@ SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
    );
 
+/** check specific preconditions for diving, e.g., if an incumbent solution is available */
+SCIP_RETCODE SCIPdivesetIsAvailable(
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
+   );
+
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
 void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** copies the given primal heuristic to a new scip */

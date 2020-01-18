@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nsubproblems,       /**< the number of Benders' decomposition subproblems */
-   SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
+   SCIP_Bool             usebenders,         /**< will Benders' decomposition be used to solve the problem */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    );
 
 /** returns the number of facilities */

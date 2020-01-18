@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@ struct SYM_Vartype
    SCIP_Real             lb;                 /**< lower bound of variable */
    SCIP_Real             ub;                 /**< upper bound of variable */
    SCIP_VARTYPE          type;               /**< type of variable */
+   int                   nconss;             /**< number of conss a variable is contained in */
    int                   color;              /**< store color */
 };
 

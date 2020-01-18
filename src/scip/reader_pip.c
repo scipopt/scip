@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_pip.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  * @author Marc Pfetsch
@@ -245,6 +246,7 @@ SCIP_Bool getNextLine(
 {
    int i;
 
+   assert(scip != NULL);  /* for lint */
    assert(pipinput != NULL);
 
    /* clear the line */
@@ -1063,9 +1065,9 @@ SCIP_RETCODE readPolynomial(
             syntaxError(scip, pipinput, "cannot have '^' before first variable in monomial");
             goto TERMINATE_READPOLYNOMIAL;
          }
-         exponents[nfactors-1] = exponent;
-         if( SCIPisIntegral(scip, exponent) && exponent > 0.0 )
-            monomialdegree += (int)exponent - 1; /* -1, because we added +1 when we put the variable into varidxs */
+         exponents[nfactors-1] = exponent;  /*lint !e530*/
+         if( SCIPisIntegral(scip, exponent) && exponent > 0.0 ) /*lint !e530*/
+            monomialdegree += (int)exponent - 1; /*lint !e530*//* -1, because we added +1 when we put the variable into varidxs */
          else
             monomialdegree = SCIP_EXPR_DEGREEINFINITY;
 
@@ -1151,7 +1153,6 @@ SCIP_RETCODE readPolynomial(
  */
 static
 void getLinearAndQuadraticCoefs(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree holding polynomial expression */
    SCIP_Real*            constant,           /**< buffer to store constant monomials */
    int*                  nlinvars,           /**< buffer to store number of linear coefficients */
@@ -1364,7 +1365,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
 
-         getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
+         getLinearAndQuadraticCoefs(exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
                SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
@@ -1547,7 +1548,7 @@ SCIP_RETCODE readConstraints(
    if( degree > 2 )
    {
       /* assign the left and right hand side, depending on the constraint sense */
-      switch ( sense )
+      switch ( sense )  /*lint !e530*/
       {
       case PIP_SENSE_GE:
          lhs = sidevalue;
@@ -1583,10 +1584,10 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
       SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
 
-      getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
+      getLinearAndQuadraticCoefs(exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
       /* assign the left and right hand side, depending on the constraint sense */
-      switch( sense )
+      switch( sense ) /*lint !e530*/
       {
       case PIP_SENSE_GE:
          lhs = sidevalue - constant;
@@ -2089,7 +2090,7 @@ void appendLine(
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
     * because of overlapping memory areas in memcpy used in sprintf.
     */
-   strncat(linebuffer, extension, PIP_MAX_PRINTLEN - strlen(linebuffer));
+   (void) strncat(linebuffer, extension, PIP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 
@@ -2151,6 +2152,9 @@ void printRow(
    /* print coefficients */
    for( v = 0; v < nlinvars; ++v )
    {
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
       var = linvars[v];
       assert( var != NULL );
 
@@ -2170,6 +2174,8 @@ void printRow(
       /* print linear coefficients of quadratic variables */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);  /* for lint */
+
          if( quadvarterms[v].lincoef == 0.0 )
             continue;
 
@@ -2188,6 +2194,7 @@ void printRow(
       /* print square terms */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);  /* for lint */
          if( quadvarterms[v].sqrcoef == 0.0 )
             continue;
 
@@ -2281,6 +2288,9 @@ void printRowNl(
    /* print coefficients */
    for( v = 0; v < nlinvars; ++v )
    {
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
       var = linvars[v];
       assert( var != NULL );
 
@@ -2781,7 +2791,6 @@ SCIP_RETCODE printNonlinearCons(
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of active variables in the problem */
    SCIP_VAR**            vars,               /**< variable array */
    int*                  nAggregatedVars,    /**< number of aggregated variables on output */
@@ -3510,7 +3519,7 @@ SCIP_RETCODE SCIPwritePip(
       cons = consQuadratic[c];
       for( v = 0; v < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++v )
       {
-         SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, 
+         SCIP_CALL( collectAggregatedVars(1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, 
                &nAggregatedVars, &aggregatedVars, &varAggregated) );
       }         
    }
@@ -3526,7 +3535,7 @@ SCIP_RETCODE SCIPwritePip(
 
          for( v = 0; v < SCIPexprtreeGetNVars(exprtree); ++v )
          {
-            SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPexprtreeGetVars(exprtree)[v],
+            SCIP_CALL( collectAggregatedVars(1, &SCIPexprtreeGetVars(exprtree)[v],
                   &nAggregatedVars, &aggregatedVars, &varAggregated) );
          }
       }
@@ -3541,7 +3550,7 @@ SCIP_RETCODE SCIPwritePip(
 
       spvars[0] = SCIPgetNonlinearVarAbspower(scip, cons);
       spvars[1] = SCIPgetLinearVarAbspower(scip, cons);
-      SCIP_CALL( collectAggregatedVars(scip, 2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(2, spvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
    /* check for aggregated variables in and constraints and output aggregations as linear constraints */
@@ -3551,10 +3560,10 @@ SCIP_RETCODE SCIPwritePip(
 
       cons = consAnd[c];
 
-      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), &nAggregatedVars, &aggregatedVars, &varAggregated) );
 
       resultant = SCIPgetResultantAnd(scip, cons);
-      SCIP_CALL( collectAggregatedVars(scip, 1, &resultant, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(1, &resultant, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
    /* check for aggregated variables in bivariate constraints and output aggregations as linear constraints */
@@ -3565,12 +3574,12 @@ SCIP_RETCODE SCIPwritePip(
       cons = consBivariate[c];
 
       assert(SCIPexprtreeGetNVars(SCIPgetExprtreeBivariate(scip, cons)) == 2);
-      SCIP_CALL( collectAggregatedVars(scip, 2, SCIPexprtreeGetVars(SCIPgetExprtreeBivariate(scip, cons)), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(2, SCIPexprtreeGetVars(SCIPgetExprtreeBivariate(scip, cons)), &nAggregatedVars, &aggregatedVars, &varAggregated) );
 
       z = SCIPgetLinearVarBivariate(scip, cons);
       if( z != NULL )
       {
-         SCIP_CALL( collectAggregatedVars(scip, 1, &z, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+         SCIP_CALL( collectAggregatedVars(1, &z, &nAggregatedVars, &aggregatedVars, &varAggregated) );
       }
    }
 
@@ -3774,6 +3783,9 @@ SCIP_RETCODE SCIPreadPip(
    PIPINPUT pipinput;
    SCIP_RETCODE retcode;
    int i;
+
+   assert(scip != NULL);  /* for lint */
+   assert(reader != NULL);
 
    /* initialize PIP input data */
    pipinput.file = NULL;

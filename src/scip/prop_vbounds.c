@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -274,7 +275,6 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
    assert(pos >= 0);
 
    inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
@@ -1194,7 +1194,7 @@ SCIP_RETCODE initData(
    propdata->initialized = TRUE;
 
    /* prepare priority queue structure */
-   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
+   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices, NULL) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
    BMSclearMemoryArray(propdata->inqueue, nbounds);
 
@@ -2577,6 +2577,7 @@ SCIP_RETCODE tarjan(
       /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
       if( topoorder != NULL && (stacksize > 0 || label > *startindex + 1) )
       {
+         assert(nordered != NULL);
          topoorder[*nordered] = curridx;
          ++(*nordered);
       }

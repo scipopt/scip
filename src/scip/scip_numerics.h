@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -86,8 +86,11 @@ SCIP_Real SCIPfeastol(
 
 /** returns primal feasibility tolerance of LP solver
  *
+ *  @deprecated Please use SCIPgetLPFeastol().
+ *
  *  @return primal feasibility tolerance of LP solver
  */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_Real SCIPlpfeastol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -143,10 +146,13 @@ SCIP_RETCODE SCIPchgFeastol(
 
 /** sets the primal feasibility tolerance of LP solver
  *
+ *  @deprecated Please use SCIPsetLPFeastol().
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_EXPORT
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */

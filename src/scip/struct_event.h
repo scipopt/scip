@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -90,6 +90,14 @@ struct SCIP_EventImplAdd
    SCIP_VAR*             var;                /**< variable for which an implication, variable bound, or clique was added */
 };
 
+/** data for variable type change events */
+struct SCIP_EventTypeChg
+{
+   SCIP_VARTYPE          oldtype;            /**< old variable type */
+   SCIP_VARTYPE          newtype;            /**< new variable type */
+   SCIP_VAR*             var;                /**< variable whose type changed */
+};
+
 /** data for row addition to separation storage events */
 struct SCIP_EventRowAddedSepa
 {
@@ -153,6 +161,7 @@ struct SCIP_Event
       SCIP_EVENTBDCHG    eventbdchg;          /**< data for bound change events */
       SCIP_EVENTHOLE     eventhole;           /**< data for domain hole events */
       SCIP_EVENTIMPLADD  eventimpladd;        /**< data for implication added events */
+      SCIP_EVENTTYPECHG  eventtypechg;        /**< data for variable type change events */
       SCIP_EVENTROWADDEDSEPA eventrowaddedsepa; /**< data for row addition to separation storage events */
       SCIP_EVENTROWDELETEDSEPA eventrowdeletedsepa; /**< data for row deletion from separation storage events */
       SCIP_EVENTROWADDEDLP eventrowaddedlp;   /**< data for row addition to LP events */

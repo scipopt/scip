@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -252,7 +252,7 @@ struct SCIP_Row
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
    unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
-   unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
+   unsigned int          origintype:3;       /**< origin of row (0: unkown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
 };
 
 /** current LP data */
@@ -272,13 +272,17 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
+   SCIP_Real             feastol;            /**< current feasibility tolerance */
    SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
    SCIP_Real             lpiconditionlimit;  /**< current condition number limit in LPI */
+   SCIP_Real             lpimarkowitz;       /**< current markowitz threshhold */
    SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
+   SCIP_Real             degeneracy;         /**< share of degenerate non-basic variables in the current LP */
+   SCIP_Real             varconsratio;       /**< variable-constraint ratio of the optimal face */
    SCIP_LPI*             lpi;                /**< LP solver interface */
    SCIP_COL**            lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROW**            lpirows;            /**< array with rows currently stored in the LP solver */
@@ -297,6 +301,7 @@ struct SCIP_Lp
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    SCIP_Longint          validsoldirlp;      /**< LP number for which the currently stored solution direction vector is valid */
+   SCIP_Longint          validdegeneracylp;  /**< LP number for which the currently stored degeneracy information is valid */
    SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */

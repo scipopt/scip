@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -287,6 +287,15 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var                 /**< variable that was fixed */
+   );
+
+/** creates an event for a changeing the type of a variable */
+SCIP_RETCODE SCIPeventCreateTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VARTYPE          oldtype,            /**< old variable type */
+   SCIP_VARTYPE          newtype             /**< new variable type */
    );
 
 /** creates an event for the addition of a linear row to the separation storage */

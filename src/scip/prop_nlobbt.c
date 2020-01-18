@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_nlobbt.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  nlobbt propagator
  * @author Benjamin Mueller
  */
@@ -518,7 +519,7 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateNlpiProb(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            propdata->nlpiprob, propdata->var2nlpiidx, NULL, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
       assert(propdata->randnumgen != NULL);
@@ -681,7 +682,7 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    assert(propdata != NULL);
 
    if( propdata->skipprop || SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip)
-      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowObjProp(scip) || SCIPgetNNlpis(scip) == 0 )
+      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowWeakDualReds(scip) || SCIPgetNNlpis(scip) == 0 )
    {
       SCIPdebugMsg(scip, "skip nlobbt propagator\n");
       return SCIP_OKAY;

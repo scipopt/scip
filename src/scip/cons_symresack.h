@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the added constraint is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -125,6 +126,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -165,7 +167,8 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in vars array */
+   int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    );
 
 /* @} */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that fixes variables with integral LP value
  * @author Tobias Achterberg
  */
@@ -44,7 +45,7 @@
 
 #define HEUR_NAME             "intdiving"
 #define HEUR_DESC             "LP diving heuristic that fixes binary variables with large LP value to one"
-#define HEUR_DISPCHAR         'n'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003500
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          9
@@ -649,7 +650,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
 
    SCIPdebugMsg(scip, "intdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

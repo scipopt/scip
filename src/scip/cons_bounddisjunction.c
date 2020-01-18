@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bounddisjunction.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for bound disjunction constraints \f$(x_1 \{\leq,\geq\} b_1) \vee \ldots \vee (x_n \{\leq,\geq\} b_n)\f$
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -291,7 +292,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data for bound disjunction constraint handler */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -300,8 +301,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** creates a bound disjunction constraint data object */
@@ -436,7 +435,7 @@ SCIP_RETCODE consdataCreate(
 
 /** frees a bound disjunction constraint data */
 static
-SCIP_RETCODE consdataFree(
+void consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata            /**< pointer to the bound disjunction constraint */
    )
@@ -448,8 +447,6 @@ SCIP_RETCODE consdataFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->boundtypes, (*consdata)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bounds, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
-
-   return SCIP_OKAY;
 }
 
 /** prints bound disjunction constraint to file stream */
@@ -1360,13 +1357,12 @@ SCIP_RETCODE processWatchedVars(
    return SCIP_OKAY;
 }
 
-/** checks constraint for violation, returns TRUE iff constraint is feasible */
+/** checks constraint for violation, returns TRUE iff constraint is violated */
 static
-SCIP_RETCODE checkCons(
+SCIP_Bool isConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< bound disjunction constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            violated            /**< pointer to store whether the given solution violates the constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1380,9 +1376,6 @@ SCIP_RETCODE checkCons(
    int nvars;
    int v;
 
-   assert(violated != NULL);
-
-   *violated = FALSE;
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -1397,7 +1390,6 @@ SCIP_RETCODE checkCons(
    /* check the given solution */
    absviol = SCIP_REAL_MAX;
    violpos = -1;
-   *violated = TRUE;
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
@@ -1413,8 +1405,7 @@ SCIP_RETCODE checkCons(
       if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, vars[v], solval, bounds[v]))
          || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, vars[v], solval, bounds[v])) )
       {
-         *violated = FALSE;
-         break;
+         return FALSE;
       }
    }
    /* update constraint violation in solution */
@@ -1431,7 +1422,7 @@ SCIP_RETCODE checkCons(
 
       SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
    }
-   return SCIP_OKAY;
+   return TRUE;
 }
 
 /* registers variables of a constraint as branching candidates 
@@ -1556,10 +1547,7 @@ SCIP_RETCODE enforceCurrentSol(
 
    if( mustcheck )
    {
-      SCIP_Bool violated;
-
-      SCIP_CALL( checkCons(scip, cons, sol, &violated) );
-      if( violated )
+      if( isConsViolated(scip, cons, sol) )
       {
          /* constraint was infeasible -> reset age */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -2218,7 +2206,7 @@ SCIP_DECL_CONSFREE(consFreeBounddisjunction)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -2283,7 +2271,7 @@ SCIP_DECL_CONSDELETE(consDeleteBounddisjunction)
    assert(*consdata != NULL);
 
    /* free LP row and bound disjunction constraint */
-   SCIP_CALL( consdataFree(scip, consdata) );
+   consdataFree(scip, consdata);
 
    return SCIP_OKAY;
 }
@@ -2424,14 +2412,11 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
    /* check all bound disjunction constraints for feasibility */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
-      SCIP_Bool violated;
-
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIP_CALL( checkCons(scip, cons, sol, &violated) );
-      if( violated )
+      if( isConsViolated(scip, cons, sol) )
       {
          if( printreason )
          {
@@ -2499,7 +2484,7 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -3433,7 +3418,7 @@ SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    return SCIP_OKAY;
 }
 
-/** gets number of variables in bound disjunction constraint */
+/** gets number of variables in bound disjunction constraint */   /*lint -e{715}*/
 int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -3454,7 +3439,7 @@ int SCIPgetNVarsBounddisjunction(
    return consdata->nvars;
 }
 
-/** gets array of variables in bound disjunction constraint */
+/** gets array of variables in bound disjunction constraint */   /*lint -e{715}*/
 SCIP_VAR** SCIPgetVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -3475,7 +3460,7 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    return consdata->vars;
 }
 
-/** gets array of bound types in bound disjunction constraint */
+/** gets array of bound types in bound disjunction constraint */   /*lint -e{715}*/
 SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -3496,7 +3481,7 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    return consdata->boundtypes;
 }
 
-/** gets array of bounds in bound disjunction constraint */
+/** gets array of bounds in bound disjunction constraint */   /*lint -e{715}*/
 SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

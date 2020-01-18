@@ -1,7 +1,7 @@
 #! /bin/bash -x
 
 # Usage:
-# make testcluster | TESTSET=testset SETTINGS=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results_cmake.sh
+# make testcluster | TESTSET=testset SETTINGS=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERFORMANCE=performance check/jenkins_check_results_cmake.sh
 # or export the above mentioned variables and simply run
 # make testcluster | check/jenkins_check_results_cmake.sh
 
@@ -9,7 +9,7 @@
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck_cmake.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
-# optional: EXECUTABLE specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck_cmake.sh.
+# optional: EXECUTABLE specifies the scip binary which should be used, PERFORMANCE=performance enables rubberband support in jenkins_failcheck_cmake.sh.
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
 echo "This is jenkins_check_results_cmake.sh running."
@@ -44,12 +44,7 @@ export SETTINGS
 export EXECUTABLE
 export GITBRANCH
 export MODE
-
-# get some relevant information
-# process optional variables
-if [ "${PERF}" != "" ]; then
-  export PERFORMANCE=${PERF}
-fi
+export OPT
 
 # if SEEDS is not a number, set it to 0
 re='^[0-9]+$'

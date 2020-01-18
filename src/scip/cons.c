@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for constraints and constraint handlers
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2231,7 +2232,7 @@ SCIP_RETCODE doConshdlrCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/proptiming", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*conshdlr)->proptiming), TRUE, proptiming, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+         (int*)(&(*conshdlr)->proptiming), TRUE, (int) proptiming, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -2257,7 +2258,7 @@ SCIP_RETCODE doConshdlrCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the constraint handler's presolving method (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
       SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
+         (int*)&(*conshdlr)->presoltiming, TRUE, (int) presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
 }
@@ -2620,20 +2621,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
          }
       }
    }
-
-#if 0
-   /* check if all initial constraints are included in the initconss array */
-   {
-      int c;
-
-      for( c = 0; c < conshdlr->nconss; ++c )
-      {
-         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
-         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
-            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
-      }
-   }
-#endif
 
    return SCIP_OKAY;
 }
@@ -3504,6 +3491,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
             && *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
+            && *result != SCIP_SOLVELP
             && *result != SCIP_BRANCHED
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
@@ -4587,6 +4575,19 @@ SCIP_CONS** SCIPconshdlrGetCheckConss(
    return conshdlr->checkconss;
 }
 
+/** gets array with delayed update constraints
+ *
+ * @attention Usually, there should be no need to access this array. Use this only if you are absolutely sure what you are doing.
+ */
+SCIP_CONS** SCIPconshdlrGetUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->updateconss;
+}
+
 /** gets total number of existing transformed constraints of constraint handler */
 int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -4639,6 +4640,16 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets number of constraints that have delayed updates */
+int SCIPconshdlrGetNUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nupdateconss;
 }
 
 /** enables or disables all clocks of \p conshdlr, depending on the value of the flag */
@@ -7253,7 +7264,7 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(cons->nlockspos[locktype] >= 0);
    assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
@@ -8446,7 +8457,7 @@ SCIP_Bool SCIPconsIsLockedTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlockspos[locktype] > 0);
 }
@@ -8458,7 +8469,7 @@ SCIP_Bool SCIPconsIsLockedTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlocksneg[locktype] > 0);
 }
@@ -8470,7 +8481,7 @@ SCIP_Bool SCIPconsIsLockedType(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
 }
@@ -8482,7 +8493,7 @@ int SCIPconsGetNLocksTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return cons->nlockspos[locktype];
 }
@@ -8494,7 +8505,7 @@ int SCIPconsGetNLocksTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return cons->nlocksneg[locktype];
 }
@@ -8528,5 +8539,5 @@ int SCIPconsGetNUpgradeLocks(
 {
    assert(cons != NULL);
 
-   return cons->nupgradelocks;
+   return (int) cons->nupgradelocks;
 }

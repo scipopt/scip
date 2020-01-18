@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -894,6 +894,34 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ * Relaxation-only variables do not appear in the objective.
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks that this variable has only been introduced to define a relaxation
+ *
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarIsRelaxationOnly
+ */
+SCIP_EXPORT
+void SCIPvarMarkRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -990,6 +1018,8 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
+#define SCIPvarIsRelaxationOnly(var)((var)->relaxationonly)
+#define SCIPvarMarkRelaxationOnly(var)((var)->relaxationonly = TRUE)
 
 #endif
 

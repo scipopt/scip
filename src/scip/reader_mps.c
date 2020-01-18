@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -283,19 +284,6 @@ const char* mpsinputField5(
 
    return mpsi->f5;
 }
-
-#if 0
-/** returns the problem name */
-static
-const char* mpsinputProbname(
-   const MPSINPUT*       mpsi                /**< mps input structure */
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->probname;
-}
-#endif
 
 /** returns the objective name */
 static

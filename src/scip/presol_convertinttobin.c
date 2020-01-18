@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_convertinttobin.c
- * @ingroup PRESOLVERS
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver that converts integer variables to binaries
  * @author Michael Winkler
  *
@@ -27,6 +27,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
+#include "scip/debug.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -238,6 +239,37 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          newbinvarcoeffs[v2] = (SCIP_Real)scalar;
          weights[v2] = scalar;
       }
+
+#ifdef WITH_DEBUG_SOLUTION
+      /* set the debug solution values */
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         SCIP_Real varval;
+
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &varval) );
+         assert(SCIPisIntegral(scip, varval));
+
+         if( SCIPisPositive(scip, varval) )
+         {
+            SCIP_Real resvarval = varval;
+
+            for( v2 = nnewbinvars - 1; v2 >= 0; --v2 )
+            {
+               assert(SCIPisPositive(scip, resvarval));
+               assert(SCIPisIntegral(scip, resvarval));
+
+               if( SCIPisLE(scip, newbinvarcoeffs[v2], resvarval) )
+               {
+                  SCIP_CALL( SCIPdebugAddSolVal(scip, newbinvars[v2], 1.0) );
+                  resvarval -= newbinvarcoeffs[v2];
+               }
+
+               if( SCIPisZero(scip, resvarval) )
+                  break;
+            }
+         }
+      }
+#endif
 
       /* aggregate integer and binary variable */
       SCIP_CALL( SCIPmultiaggregateVar(scip, vars[v], nnewbinvars, newbinvars, (SCIP_Real*)newbinvarcoeffs, lb, &infeasible, &aggregated) );

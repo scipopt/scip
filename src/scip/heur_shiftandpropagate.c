@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -82,6 +83,7 @@
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
+#define DEFAULT_MINFIXINGRATELP    0.0  /**< minimum fixing rate over all variables (including continuous) to solve LP */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -108,6 +110,7 @@ struct SCIP_HeurData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to register and process variable bound changes */
 
    SCIP_Real             maxcutoffquot;      /**< maximum percentage of allowed cutoffs before stopping the heuristic */
+   SCIP_Real             minfixingratelp;    /**< minimum fixing rate over all variables (including continuous) to solve LP */
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
    SCIP_Bool             collectstats;       /**< should variable statistics be collected during probing? */
@@ -366,7 +369,7 @@ void relaxVar(
 
       SCIPdebugMsg(scip, "Row <%s> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
          SCIProwGetName(colrow), colval, lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
-   }
+   } /*lint !e438*/
 }
 
 /** transforms bounds of a given variable s.t. its lower bound equals zero afterwards.
@@ -1204,7 +1207,7 @@ SCIP_RETCODE updateTransformation(
          /* violations have to be rechecked for rows in which variable appears */
          checkviolations = TRUE;
 
-         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
          assert(SCIPisLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
       }
       break;
@@ -1569,7 +1572,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else
       SCIPdisableVarHistory(scip);
 
-   /* this should always be fulfilled becase we perform shift and propagate only at the root node */
+   /* this should always be fulfilled because we perform shift and propagate only at the root node */
    assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
    /* @todo check if this node is necessary (I don't think so) */
@@ -2137,6 +2140,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       SCIP_Bool stored;
       SCIP_Bool trysol;
+      SCIP_Bool solvelp;
 
       for( v = 0; v <= lastindexofsusp; ++v )
       {
@@ -2172,11 +2176,38 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       trysol = TRUE;
 
+      /* check if enough variables have been fixed (including continuous) to solve the remaining LP */
+      if( nlpcols != matrix->ndiscvars )
+      {
+         SCIP_VAR** vars;
+         int nvars = SCIPgetNVars(scip);
+         int nminfixings = (int)(SCIPceil(scip, heurdata->minfixingratelp * nvars));
+         int nfixedvars = ndiscvars;
+
+         vars = SCIPgetVars(scip);
+
+         /* count fixed variables */
+         for( v = ndiscvars; v < nvars && nfixedvars < nminfixings; ++v )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+               ++nfixedvars;
+         }
+
+         solvelp = (nfixedvars >= nminfixings);
+         trysol = solvelp;
+         SCIPdebugMsg(scip, "Fixed %d of %d (%.1f %%) variables after probing -> %s\n",
+            nfixedvars, nvars, (100.0 * nfixedvars / (SCIP_Real)nvars),
+         solvelp ? "continue and solve LP for remaining variables" : "terminate without LP");
+      }
+      else /* no need to solve an LP */
+         solvelp = FALSE;
+
       /* if the constructed solution might still be extendable to a feasible solution, try this by
        * solving the remaining LP
        */
-      if( nlpcols != matrix->ndiscvars )
+      if( solvelp )
       {
+         char strbuf[SCIP_MAXSTRLEN];
          /* case that remaining LP has to be solved */
          SCIP_Bool lperror;
 
@@ -2195,6 +2226,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
 #endif
 
+         /* print probing stats before LP */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+            SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
 #ifdef SCIP_DEBUG
@@ -2455,6 +2489,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxcutoffquot",
          "maximum percentage of allowed cutoffs before stopping the heuristic",
          &heurdata->maxcutoffquot, TRUE, DEFAULT_MAXCUTOFFQUOT, 0.0, 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingratelp",
+         "minimum fixing rate over all variables (including continuous) to solve LP",
+         &heurdata->minfixingratelp, TRUE, DEFAULT_MINFIXINGRATELP, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

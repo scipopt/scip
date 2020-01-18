@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_sol.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -710,7 +711,7 @@ SCIP_RETCODE setupAndSolveFiniteSolSubscip(
 
    /* copy the original problem to the sub-SCIP */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
-   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, FALSE, TRUE, &valid) );
 
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
@@ -3193,7 +3194,19 @@ SCIP_RETCODE SCIPtrySol(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted solution not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3292,7 +3305,19 @@ SCIP_RETCODE SCIPtrySolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3334,7 +3359,19 @@ SCIP_RETCODE SCIPtryCurrentSol(
    if( *stored )
    {
       if( bestsol != SCIPgetBestSol(scip) )
+      {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+         SCIP_Bool feasible;
+         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+         if( ! feasible )
+         {
+            SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+            SCIPABORT();
+         }
+#endif
          SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;

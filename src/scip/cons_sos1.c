@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -176,6 +177,8 @@
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
+
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
 
 /* defines */
 #define DIVINGCUTOFFVALUE     1e6
@@ -745,7 +748,8 @@ SCIP_RETCODE lockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -764,7 +768,8 @@ SCIP_RETCODE unlockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -824,7 +829,7 @@ SCIP_RETCODE handleNewVariableSOS1(
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
       /* if the variable if fixed to nonzero */
@@ -1079,7 +1084,7 @@ SCIP_RETCODE deleteVarSOS1(
    SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -1650,8 +1655,8 @@ SCIP_RETCODE presolRoundConsSOS1(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
@@ -5636,17 +5641,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode1; ++j)
    {
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode1);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5701,18 +5705,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode2; ++j)
    {
       SCIP_VAR* var;
 
-      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode2);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6001,14 +6003,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = 0; j <= ind; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/(SCIP_Real)(ind + 1.0);
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -6020,14 +6021,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = ind+1; j < nvars; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) (nvars - ind - 1));
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6405,7 +6405,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6452,7 +6452,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6460,7 +6460,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6528,7 +6528,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6575,7 +6575,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6583,7 +6583,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6730,7 +6730,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          }
          else
             *stopsolving = TRUE;
-      }
+      } /*lint !e438*/
    }
 }
 
@@ -7147,7 +7147,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasGT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7156,7 +7156,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasLT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7670,6 +7670,7 @@ SCIP_RETCODE makeSOS1conflictgraphFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -7798,6 +7799,7 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -9094,7 +9096,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
 
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
                (SCIP_EVENTDATA*)cons, -1) ); /*lint !e737 !e740*/
       }
    }
@@ -9201,7 +9203,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nvars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)*targetcons, NULL) ); /*lint !e740*/
    }
 
@@ -9701,7 +9703,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       assert( inferinfo >= -conshdlrdata->nsos1vars );
       assert( inferinfo <= -1 );
 
-      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);  /*lint !e2704*/
    }
    else
    {
@@ -9776,13 +9778,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
       var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
@@ -10003,6 +10005,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
+   SCIP_VAR* var;
    SCIP_Real oldbound;
    SCIP_Real newbound;
 
@@ -10076,6 +10079,30 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
+      break;
+
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global lower bound is not negative anymore -> remove down lock */
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+      /* global lower bound turned negative -> add down lock */
+      else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+      break;
+
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global upper bound is not positive anymore -> remove up lock */
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+      /* global upper bound turned positive -> add up lock */
+      else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
       break;
 
    default:
@@ -10804,7 +10831,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       SCIP_CALL( makeSOS1conflictgraphFeasible(scip, conshdlr, sol, changed, &allroundable) );
    }
 
-   if ( ! allroundable )
+   if ( ! allroundable ) /*lint !e774*/
       return SCIP_OKAY;
 
    /* check whether objective value of rounded solution is good enough */

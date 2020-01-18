@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -535,6 +535,15 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Checks and indicates whether the quadratic constraint is convex. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPisConvexConsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool*            result              /**< buffer where to store whether constraint is convex (under given variable fixing) */
+   );
+
 /** Gets the violation of a constraint by a solution. */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetViolationQuadratic(
@@ -824,11 +833,20 @@ int SCIPscaleRowprep(
 
 /** generates a SCIP_ROW from a rowprep */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetRowprepRowCons(
+SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
+
+/** generates a SCIP_ROW from a rowprep */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetRowprepRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONS*            cons                /**< constraint */
 );
 
 /** generates a SCIP_ROW from a rowprep */

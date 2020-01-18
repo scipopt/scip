@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_countsols.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for counting feasible solutions
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -255,7 +256,7 @@ void multInt(
 }
 
 
-/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
+/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */   /*lint -e{715}*/
 static
 void toString(
    Int                   value,              /**< number */
@@ -1843,13 +1844,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    int symcomptiming = 2;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 )
+   if ( usesymmetry == 1 || usesymmetry == 3 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )
@@ -1960,13 +1961,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    }
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 )
+   if ( usesymmetry == 1 || usesymmetry == 3 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )

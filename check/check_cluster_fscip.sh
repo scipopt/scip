@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -24,11 +24,13 @@
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
-# results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
+# $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.eval in directory check/
 # This leads to result files
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.out
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.res
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.err
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.out
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.res
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -97,6 +99,7 @@ then
 fi
 
 # configure cluster-related environment variables
+# defines the following environment variables: NICE, ACCOUNT, CLUSTERQUEUE
 . ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
@@ -109,9 +112,12 @@ else
     TIMEFORMAT="sec"
     MEMFORMAT="B"
 fi
+
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
-. ./configuration_set_fscip.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
+# defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
+#                                              TIMELIMLIST, HARDTIMELIMLIST
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 
 # at the first time, some files need to be initialized. set to "" after the innermost loop
@@ -158,6 +164,8 @@ do
 	    for SETNAME in ${SETTINGSLIST[@]}
 	    do
 		# infer the names of all involved files from the arguments
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
 		  $THREADS $GLBSEEDSHIFT $STARTPERM
 
@@ -167,12 +175,17 @@ do
 		    continue
 		fi
 
-		# find out the solver that should be used
-		SOLVER=`stripversion $BINNAME`
-
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 
-		export EXECNAME=$SCIPPATH/../bin/$BINNAME
+		# check if binary exists. The second condition checks whether there is a binary of that name directly available
+                # independent of whether it is a symlink, file in the working directory, or application in the path
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
 
 		# check queue type
 		if test  "$QUEUETYPE" = "srun"
@@ -191,8 +204,19 @@ do
                     export THREADS
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=verbose,cores -v -v "
-		    sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
+		    export SRUN="srun --cpu_bind=verbose,cores ${SRUN_FLAGS} "
+
+		    if test "$SLURMACCOUNT" == "default"
+	            then
+                        SLURMACCOUNT=$ACCOUNT
+                    fi
+
+                    if test "$CLUSTERNODES" = "all"
+		    then
+			sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
+		    else
+			sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run_fscip.sh
+		    fi
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \

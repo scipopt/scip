@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_objpscostdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */
@@ -44,7 +45,7 @@
 
 #define HEUR_NAME             "objpscostdiving"
 #define HEUR_DESC             "LP diving heuristic that changes variable's objective values instead of bounds, using pseudo costs as guide"
-#define HEUR_DISPCHAR         'o'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_OBJDIVING
 #define HEUR_PRIORITY         -1004000
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          4
@@ -618,7 +619,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
    SCIPdebugMsg(scip, "objpscostdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

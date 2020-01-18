@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,6 +102,7 @@ SCIP_RETCODE SCIPrelaxExitsol(
 SCIP_RETCODE SCIPrelaxExec(
    SCIP_RELAX*           relax,              /**< relaxator */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Real*            lowerbound,         /**< pointer to lower bound computed by the relaxator */
@@ -157,8 +158,8 @@ SCIP_Bool SCIPrelaxIsSolved(
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-/* 
- *  methods for the global relaxation data 
+/*
+ *  methods for the global relaxation data
  */
 
 /** enables or disables all clocks of \p relax, depending on the value of the flag */
@@ -234,6 +235,17 @@ void SCIPrelaxationUpdateVarObj(
    SCIP_VAR*             var,                /**< variable with changed objective coefficient */
    SCIP_Real             oldobj,             /**< old objective coefficient */
    SCIP_Real             newobj              /**< new objective coefficient */
+   );
+
+/** store the most recent relaxation handler \p relax responsible for the solution */
+void SCIPrelaxationSetSolRelax(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_RELAX*           relax               /**< relaxation handler responsible for the most recent relaxation solution */
+   );
+
+/** returns the most recent relaxation handler responsible for the solution, or NULL if unspecified */
+SCIP_RELAX* SCIPrelaxationGetSolRelax(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
 #ifdef __cplusplus

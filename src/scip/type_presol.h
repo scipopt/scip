@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,11 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for presolvers
  * @author Tobias Achterberg
+ */
+
+/** @defgroup DEFPLUGINS_PRESOL Default Presolvers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default presolvers of SCIP
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -125,8 +130,8 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  @note the counters state the changes since the last call including the changes of this presolver during its last
  *        last call
  *
- *  @note if the presolver uses dual information it is nesassary to check via calling SCIPallowDualReds if dual
- *        reductions are allowed.
+ *  @note if the presolver uses dual information it is nesassary to check via calling SCIPallowWeakDualReds and
+ *        SCIPallowStrongDualReds if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers

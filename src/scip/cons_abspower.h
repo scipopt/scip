@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -204,6 +204,16 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
+   );
+
+/** returns whether constraint is convex w.r.t. global bounds
+ *
+ * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisConvexAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
 /* @} */

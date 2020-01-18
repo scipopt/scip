@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,6 +72,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
@@ -86,7 +87,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt               /**< reoptimization data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                               *  the current relaxation only? */
    );
 
 /** adds a constraint to the pool of proof constraints based on dual solutions
@@ -102,7 +105,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
-   SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             updateside,         /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                               *  the current relaxation only? */
    );
 
 /** adds a conflict to the conflict store

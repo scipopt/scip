@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zirounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  zirounding primal heuristic
  * @author Gregor Hendel
  */
@@ -39,7 +40,7 @@
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
-#define HEUR_DISPCHAR         'z'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -500
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

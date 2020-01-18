@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cardinality.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for cardinality constraints
  * @author Tobias Fischer
  *
@@ -93,6 +94,8 @@
 #define EVENTHDLR_NAME         "cardinality"
 #define EVENTHDLR_DESC         "bound change event handler for cardinality constraints"
 
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
+
 
 /** constraint data for cardinality constraints */
 struct SCIP_ConsData
@@ -166,7 +169,7 @@ SCIP_RETCODE catchVarEventCardinality(
    (*eventdata)->pos = (unsigned int)pos;
 
    /* catch bound change events of each variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, *eventdata, NULL) );
    SCIP_CALL( SCIPcatchVarEvent(scip, indvar, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, NULL) );
 
    return SCIP_OKAY;
@@ -190,7 +193,7 @@ SCIP_RETCODE dropVarEventCardinality(
    assert(eventdata != NULL);
 
    /* drop bound change events of each variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, *eventdata, -1) );
    SCIP_CALL( SCIPdropVarEvent(scip, indvar, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, -1) );
 
    /* free event data of indicator variable */
@@ -345,8 +348,8 @@ SCIP_RETCODE lockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
-         SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
    SCIP_CALL( SCIPlockVarCons(scip, indvar, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
@@ -366,8 +369,8 @@ SCIP_RETCODE unlockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
-         SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
    SCIP_CALL( SCIPunlockVarCons(scip, indvar, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
@@ -791,7 +794,7 @@ SCIP_RETCODE polishPrimalSolution(
 
 /** unmark variables that are marked for propagation */
 static
-SCIP_RETCODE consdataUnmarkEventdataVars(
+void consdataUnmarkEventdataVars(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
@@ -811,8 +814,6 @@ SCIP_RETCODE consdataUnmarkEventdataVars(
       eventdata->varmarked = FALSE;
       eventdata->indvarmarked = FALSE;
    }
-
-   return SCIP_OKAY;
 }
 
 /** perform one presolving round
@@ -865,7 +866,7 @@ SCIP_RETCODE presolRoundCardinality(
    /* reset number of events stored for propagation, since presolving already performs a
     * complete propagation of all variables */
    consdata->neventdatascurrent = 0;
-   SCIP_CALL( consdataUnmarkEventdataVars(consdata) );
+   consdataUnmarkEventdataVars(consdata);
 
    j = 0;
    allvarsbinary = TRUE;
@@ -1374,7 +1375,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
 
       /* calculate node selection and objective estimate for node 2 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       cnt = 0;
       for( j = 0; j < nvars; ++j )
       {
@@ -1383,16 +1384,14 @@ SCIP_RETCODE branchUnbalancedCardinality(
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
             ++cnt;
          }
       }
+      assert(objest >= SCIPgetLocalTransEstimate(scip));
       assert(cnt == nvars - (1 + branchnnonzero));
       assert(cnt > 0);
-
-      /* take the average of the individual estimates */
-      objest = objest / (SCIP_Real) cnt;
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1593,17 +1592,15 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = 0; j <= ind; ++j )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
-
-         /* take the average of the individual estimates */
-         objest = objest/(SCIP_Real)(ind + 1.0);
+         assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1638,18 +1635,16 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = ind+1; j < nbranchvars; ++j )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
          assert(nbranchvars - (ind + 1) > 0);
-
-         /* take the average of the individual estimates */
-         objest = objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
+         assert(objest >= SCIPgetLocalTransEstimate(scip));
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -2054,7 +2049,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create upper bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardub#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, cons, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
@@ -2097,7 +2092,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create lower bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardlb#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, cons, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, nvars, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
@@ -2847,13 +2842,13 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       indvar = indvars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
@@ -3145,21 +3140,42 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    }
 #endif
 
+   if( eventtype & SCIP_EVENTTYPE_GBDCHANGED )
+   {
+      if( eventtype == SCIP_EVENTTYPE_GLBCHANGED )
+      {
+         /* global lower bound is not negative anymore -> remove down lock */
+         if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 1, 0) );
+         /* global lower bound turned negative -> add down lock */
+         else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 1, 0) );
+
+         return SCIP_OKAY;
+      }
+      if( eventtype == SCIP_EVENTTYPE_GUBCHANGED )
+      {
+         /* global upper bound is not positive anymore -> remove up lock */
+         if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 0, 1) );
+         /* global upper bound turned positive -> add up lock */
+         else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 0, 1) );
+
+         return SCIP_OKAY;
+      }
+   }
+
    /* if variable is an indicator variable */
    if( var == eventdata->indvar )
    {
       assert(SCIPvarIsBinary(var));
       assert(consdata->cons != NULL);
 
-      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED || eventtype == SCIP_EVENTTYPE_LBRELAXED )
-      {
-         if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
-            ++(consdata->ntreatnonzeros);
-         else if( eventtype == SCIP_EVENTTYPE_LBRELAXED )
-            --(consdata->ntreatnonzeros);
-
-         assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
-      }
+      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
+         ++(consdata->ntreatnonzeros);
+      else if( eventtype == SCIP_EVENTTYPE_LBRELAXED )
+         --(consdata->ntreatnonzeros);
       else if( eventtype == SCIP_EVENTTYPE_UBTIGHTENED && ! eventdata->indvarmarked )
       {
          assert(oldbound == 1.0 && newbound == 0.0 );
@@ -3172,6 +3188,7 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
          assert(consdata->neventdatascurrent <= 4 * consdata->maxvars);
          assert(var == eventdata->indvar );
       }
+      assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
    }
 
    /* if variable is an implied variable,
@@ -3275,8 +3292,8 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/balancedcutoff",
-         "determines that balanced branching is only used if the branching cut off value \
-         w.r.t. the current LP solution is greater than a given value",
+         "determines that balanced branching is only used if the branching cut off value "
+         "w.r.t. the current LP solution is greater than a given value",
          &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.01, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -44,7 +44,8 @@ if [ "${GITBRANCH}" != "master" ]; then
     if [[ ${GITBRANCH} =~ "bugfix" ]]; then
       GITBRANCH=bugfix
     else
-      echo "Branch is neither 'master' nor 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      export FAILREASON="Branch is neither 'master', 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      echo ${FAILREASON}
       exit 1
     fi
   fi
@@ -71,6 +72,17 @@ export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create all required directories
 mkdir -p settings
+
+# SAP settings
+
+SAPSETTINGS=sap-600-pure-diff
+if [ "${GITBRANCH}" != "bugfix" ]; then
+    SAPSETTINGS=sap-next-release-pure-diff
+fi
+
+# symlink to SAP settings for the next release settings
+ln -fs ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-600-pure-diff.set settings/.
 
 ####################################
 ### jobs configuration variables ###
@@ -99,44 +111,45 @@ declare -A JOBS
 
 # the following jobs run on all branches
 # jobs running on monday
-JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default"
+JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on tuesday
-JOBS[2,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default_${RANDOMSEED}"
+JOBS[2,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default_${RANDOMSEED}"
 
 # jobs running on wednesday
-JOBS[3,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 
 # jobs running on thursday
-JOBS[4,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_heuraggr_${RANDOMSEED}"
+JOBS[4,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_heuraggr_${RANDOMSEED}"
 
 # jobs running on friday
-JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default"
+JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
+JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
 
 # mip tests don't run on consexpr
 if [ "${GITBRANCH}" != "consexpr" ]; then
   # jobs running on monday
-  JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default"
-  JOBS[1,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=miplib2017_benchmark_hard TIME=7200 SETTINGS=default"
+  JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default"
+  JOBS[1,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=miplib2017_benchmark_hard TIME=7200 SETTINGS=default"
 
   # jobs running on tuesday
-  JOBS[2,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=miplib2017_benchmark TIME=7200 SETTINGS=default_${RANDOMSEED}"
-  JOBS[2,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=miplib2017_benchmark TIME=7200 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
 
   # jobs running on wednesday
-  JOBS[3,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+  JOBS[3,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 
   # jobs running on thursday
-  JOBS[4,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
+  JOBS[4,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
+  JOBS[4,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=sap-benchmark TIME=1 SETTINGS=${SAPSETTINGS}"
 
   # jobs running on friday
-  JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default"
+  JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdebug TIME=60 SETTINGS=default"
 
   # jobs running on saturday
-  JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdev2-solvable TIME=7200 SETTINGS=default"
+  JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} OPT=dbg MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=mipdev2-solvable TIME=7200 SETTINGS=default"
 fi
 
 #########################
@@ -236,7 +249,7 @@ cp check/IP/instancedata/testsets/*.test check/testset/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+  for j in "OPT SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}

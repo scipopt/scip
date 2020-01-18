@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -623,7 +623,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
-   (*problem)->ipopt->Options()->SetStringValue("expect_infeasible_problem", "yes");
    (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -data->infinity, false);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  data->infinity, false);
@@ -647,7 +646,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
 #endif
       {
-         SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
+         SCIPerrorMessage("Error when modifying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
       }
    }
@@ -1164,9 +1163,15 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       case Invalid_Option:
       case Unrecoverable_Exception:
       case NonIpopt_Exception_Thrown:
-      case Internal_Error:
          SCIPerrorMessage("Ipopt returned with application return status %d\n", status);
          return SCIP_ERROR;
+      case Internal_Error:
+         // could be a fail in the linear solver
+         SCIPerrorMessage("Ipopt returned with status \"Internal Error\"\n");
+         invalidateSolution(problem);
+         problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+         break;
       case Insufficient_Memory:
          SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
          return SCIP_NOMEMORY;
@@ -1175,6 +1180,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          invalidateSolution(problem);
          problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+         break;
       default: ;
       }
 
@@ -2108,7 +2114,8 @@ void* SCIPgetNlpiOracleIpopt(
  */
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   const char*           optionsstring,      /**< string with options as in Ipopt options file */
+   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    )
 {
    SCIP_NLPIDATA* data;
@@ -2118,7 +2125,10 @@ void SCIPsetModifiedDefaultSettingsIpopt(
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   data->defoptions = optionsstring;
+   if( append )
+      data->defoptions += optionsstring;
+   else
+      data->defoptions = optionsstring;
 }
 
 /** Method to return some info about the nlp */

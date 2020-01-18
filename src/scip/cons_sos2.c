@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos2.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
  *
@@ -59,9 +60,8 @@
  *   SOS2 constraint: \f$ \min \{l_x, l_y\} \leq x + y \leq \max \{u_x, u_y\}\f$, where \f$l_x, u_x,
  *   l_y, u_y\f$ are the lower and upper bounds of x and y, respectively.
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would affect lhs/rhs of rows)
- * @todo Try to compute better ChildEstimates in enforceSOS2 when called for relaxation solution,
- *   currently this uses SCIPcalcChildEstimate, which uses SCIPvarGetSol and can only get either the
- *   LP or the pseudo solution, as well as pseudo costs, which are not computed for the relaxation.
+ * @todo Try to compute better estimations for the child nodes in enforceSOS2 when called for a relaxation solution;
+ *   currently pseudo costs are used, which are not computed for the relaxation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -116,6 +116,8 @@
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS2"
 #define EVENTHDLR_DESC         "bound change event handler for SOS2 constraints"
+
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
 
 
 /** constraint data for SOS2 constraints */
@@ -243,7 +245,8 @@ SCIP_RETCODE lockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -262,7 +265,8 @@ SCIP_RETCODE unlockVariableSOS2(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -324,8 +328,8 @@ SCIP_RETCODE handleNewVariableSOS2(
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)cons, NULL) );
 
       /* if the variable if fixed to nonzero */
       assert( consdata->nfixednonzeros >= 0 );
@@ -495,7 +499,7 @@ SCIP_RETCODE deleteVarSOS2(
    SCIP_CALL( unlockVariableSOS2(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -619,8 +623,8 @@ SCIP_RETCODE presolRoundSOS2(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS2(scip, cons, consdata->vars[j]) );
@@ -908,7 +912,7 @@ SCIP_RETCODE propSOS2(
             ++(*ngen);
       }
       /* cannot locally delete constraint, since position of second entry is not fixed! */
-   }
+   } /*lint !e438*/
    /* if exactly two variables are fixed to be nonzero */
    else if ( consdata->nfixednonzeros == 2 )
    {
@@ -1164,14 +1168,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < maxInd; ++j)
    {
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) maxInd);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1184,14 +1187,13 @@ SCIP_RETCODE enforceSOS2(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = maxInd+1; j < nvars; ++j)
    {
+      objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) (nvars-maxInd-1));
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1306,7 +1308,7 @@ SCIP_RETCODE generateRowSOS2(
    if ( ! SCIPisInfinity(scip, REALABS(lhs)) || ! SCIPisInfinity(scip, REALABS(rhs)) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos2bnd#%s", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, lhs, rhs, local, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, lhs, rhs, local, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nvars, vars, 1.0) );
       consdata->row = row;
 
@@ -1412,8 +1414,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
 
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-               (SCIP_EVENTDATA*)*consdata, -1) );
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)cons, -1) );
       }
    }
 
@@ -1504,8 +1506,8 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nvars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-            (SCIP_EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)*targetcons, NULL) );
    }
 
 #ifdef SCIP_DEBUG
@@ -2001,11 +2003,11 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
       var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
    }
 
@@ -2214,7 +2216,9 @@ static
 SCIP_DECL_EVENTEXEC(eventExecSOS2)
 {
    SCIP_EVENTTYPE eventtype;
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    SCIP_Real oldbound, newbound;
 
    assert( eventhdlr != NULL );
@@ -2222,7 +2226,9 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
    assert( event != NULL );
 
-   consdata = (SCIP_CONSDATA*)eventdata;
+   cons = (SCIP_CONS*)eventdata;
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( 0 <= consdata->nfixednonzeros && consdata->nfixednonzeros <= consdata->nvars );
 
@@ -2251,6 +2257,28 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
+      break;
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global lower bound is not negative anymore -> remove down lock */
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+      /* global lower bound turned negative -> add down lock */
+      else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+      break;
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global upper bound is not positive anymore -> remove up lock */
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+      /* global upper bound turned positive -> add up lock */
+      else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
       break;
    default:
       SCIPerrorMessage("invalid event type.\n");
