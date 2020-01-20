@@ -709,7 +709,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    {
       SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
 
-      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
+      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
       sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
       if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
       {
@@ -1152,7 +1152,9 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_INTERVAL exprhdlrinterval = interval;
 
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-               /* TODO always do this?, or only if none of the nlhdlr implemented inteval? */
+               /* TODO always do this?, or only if none of the nlhdlr implemented inteval?
+                *   the default nlhdlr already calls the exprhdlr's inteval, unless another nlhdlr already said that it does inteval
+                */
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG
