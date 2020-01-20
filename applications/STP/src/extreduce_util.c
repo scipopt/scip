@@ -552,7 +552,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
          else
          {
             assert(closenodes_edges == NULL);
-            SCIP_CALL( distDataPathRootsInsertRoot(scip, g, prededge[k] / 2, k, distdata) );
+            SCIP_CALL( distDataPathRootsInsertRoot(scip, g, prededge[k] / 2, startvertex, distdata) );
          }
 
          range_closenodes[startvertex].end++;
@@ -714,6 +714,8 @@ SCIP_RETCODE extreduce_distDataInit(
    distdata->dheap = dheap;
 
    SCIPfreeMemoryArray(scip, &closenodes_edges);
+
+   assert(extreduce_distCloseNodesAreValid(scip, g, distdata));
 
    return SCIP_OKAY;
 }
@@ -1122,9 +1124,11 @@ void extreduce_edgeRemove(
    const int head = graph->head[edge];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("remove edge ");
+   SCIPdebugMessage("removing edge ");
    graph_edge_printInfo(graph, edge);
 #endif
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
 
    graph_edge_delFull(scip, graph, edge, TRUE);
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
@@ -1152,7 +1156,10 @@ void extreduce_edgeRemove(
          graph->mark[head] = FALSE;
       }
    }
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
 }
+
 
 /** get maximum allowed stack size */
 int extreduce_getMaxStackSize(void)

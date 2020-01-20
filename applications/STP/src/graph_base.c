@@ -1944,6 +1944,8 @@ void graph_edge_delFull(
 
       csredge = g->dcsr_storage->id2csredge[e];
       graph_dcsr_deleteEdgeBi(scip, g->dcsr_storage, csredge);
+
+      assert(graph_valid_dcsr(g, FALSE));
    }
 
    if( g->csr_storage )

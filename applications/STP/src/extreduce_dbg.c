@@ -46,6 +46,225 @@ int extStackGetPosition(
    return (extdata->extstack_ncomponents - 1);
 }
 
+/** Helper.
+ *  Gives maximum cost among all close nodes. */
+static inline
+SCIP_Real distCloseNodesGetMaxCost(
+   int                   vertex,             /**< vertex for which to get the maximum cost*/
+   const DISTDATA*       distdata            /**< distance data */
+   )
+{
+   const SCIP_Real* const distances = distdata->closenodes_distances;
+   const RANGE* const range = distdata->closenodes_range;
+   const int range_start = range[vertex].start;
+   const int range_end = range[vertex].end;
+   SCIP_Real maxcost = -FARAWAY;
+
+   for( int i = range_start; i < range_end; ++i )
+   {
+      const SCIP_Real dist = distances[i];
+
+      if( dist > maxcost )
+         maxcost = dist;
+   }
+
+   assert(GE(maxcost, 0.0) || range_start == range_end);
+
+   return maxcost;
+}
+
+
+/** Gets close nodes and corresponding distances.
+ *  NOTE: needs to correspond to 'distDataComputeCloseNodes' in 'extreduce_dbg.c' */
+static
+SCIP_RETCODE distCloseNodesCompute(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   startvertex,        /**< start vertex */
+   int*                  closenodes_indices, /**< indices of close nodes */
+   SCIP_Real*            closenodes_dists,   /**< distances of close nodes */
+   int*                  nclosenodes         /**< number of added close nodes */
+   )
+{
+   SCIP_Real* dist;
+   DHEAP* dheap = NULL;
+   int* state;
+   DCSR* const dcsr = g->dcsr_storage;
+   const RANGE* const RESTRICT range_csr = dcsr->range;
+   const int* const RESTRICT head_csr = dcsr->head;
+   const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   const int nnodes = g->knots;
+   const SCIP_Real closenodes_maxcost = distCloseNodesGetMaxCost(startvertex, distdata);
+   int clodenode_count;
+
+   assert(dcsr && g && distdata);
+   assert(startvertex >= 0 && startvertex < g->knots);
+
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &dist, nnodes) );
+
+   state = dheap->position;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      dist[k] = FARAWAY;
+      assert(state[k] == UNKNOWN);
+   }
+
+   clodenode_count = 0;
+   dist[startvertex] = 0.0;
+   graph_heap_correct(startvertex, 0.0, dheap);
+
+   assert(dheap->size == 1);
+
+   /* main loop */
+   while( dheap->size > 0 )
+   {
+      /* get nearest labeled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+
+      if( k != startvertex )
+      {
+         if( GT(dist[k], closenodes_maxcost) )
+            break;
+
+         closenodes_indices[clodenode_count] = k;
+         closenodes_dists[clodenode_count] = dist[k];
+
+         clodenode_count++;
+      }
+
+      /* correct adjacent nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+         assert(g->mark[m]);
+
+         if( state[m] != CONNECT )
+         {
+            const SCIP_Real distnew = dist[k] + cost_csr[e];
+
+            if( distnew < dist[m] )
+            {
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &dist);
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
+
+   *nclosenodes = clodenode_count;
+
+   return SCIP_OKAY;
+}
+
+/* Is each original close node to 'vertex' included in the 'closenodes_indices' array?
+ * And if so, with correct costs? */
+static
+SCIP_Bool distCloseNodesIncluded(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   vertex,             /**< vertex for check */
+   const int*            closenodes_indices, /**< indices of newly found close nodes */
+   const SCIP_Real*      closenodes_dists,   /**< distances of newly found close nodes */
+   int                   nclosenodes         /**< number of newly found close nodes */
+)
+{
+   RANGE* const org_range = distdata->closenodes_range;
+   int* const org_indices = distdata->closenodes_indices;
+   SCIP_Real* const org_dists = distdata->closenodes_distances;
+   int* newnodeindex;
+   const int nnodes = graph_get_nNodes(g);
+   const int org_start = org_range[vertex].start;
+   const int org_end = org_range[vertex].end;
+   const int org_nclosenodes = org_end - org_start;
+   SCIP_Bool isIncluded = TRUE;
+
+   if( nclosenodes < org_nclosenodes )
+   {
+      SCIPdebugMessage("too few new closenodes! %d < %d \n", nclosenodes, org_nclosenodes);
+      return FALSE;
+   }
+
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &newnodeindex, nnodes) );
+
+   /* mark the indices of new close nodes */
+   for( int j = 0; j < nclosenodes; j++ )
+   {
+      const int cnode = closenodes_indices[j];
+
+      assert(newnodeindex[cnode] == 0);
+
+      newnodeindex[cnode] = j + 1;
+   }
+
+   /* the actual checks */
+   for( int i = org_start; i < org_end; ++i )
+   {
+      const SCIP_Real org_dist = org_dists[i];
+      const int org_node = org_indices[i];
+      const int new_index = newnodeindex[org_node] - 1;
+
+      assert(new_index >= -1);
+
+      if( new_index == -1 )
+      {
+         SCIPdebugMessage("could not find vertex %d in new close nodes \n", org_node);
+#ifdef SCIP_DEBUG
+         printf("new nodes: \n");
+
+         for( int k = 0; k < nclosenodes; ++k )
+         {
+            printf("(idx=%d dist=%f) ", k, closenodes_dists[k]);
+            graph_knot_printInfo(g, closenodes_indices[k]);
+         }
+
+         printf("original nodes: \n");
+
+         for( int k = org_start; k < org_end; ++k )
+         {
+            printf("(dist=%f) ", org_dists[k]);
+            graph_knot_printInfo(g, org_indices[k]);
+         }
+#endif
+
+         isIncluded = FALSE;
+         break;
+      }
+
+      assert(org_node == closenodes_indices[new_index]);
+
+      if( !EQ(closenodes_dists[new_index], org_dist) )
+      {
+         SCIPdebugMessage("wrong distances: %f != %f \n", org_dists[i], closenodes_dists[new_index]);
+
+         isIncluded = FALSE;
+         break;
+      }
+   }
+
+   /* unmark the new close nodes */
+   for( int j = 0; j < nclosenodes; j++ )
+   {
+      const int cnode = closenodes_indices[j];
+
+      assert(newnodeindex[cnode] == j + 1);
+
+      newnodeindex[cnode] = 0;
+   }
+
+   SCIPfreeCleanBufferArray(scip, &newnodeindex);
+
+   return isIncluded;
+}
+
 
 /** is current tree flawed? */
 SCIP_Bool extreduce_treeIsFlawed(
@@ -274,6 +493,53 @@ SCIP_Bool extreduce_nodeIsInStackTop(
    }
 
    return FALSE;
+}
+
+
+/** Are the close-nodes still valid?
+ *  NOTE: expensive method, just designed for debugging! */
+SCIP_Bool extreduce_distCloseNodesAreValid(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata            /**< distance data */
+)
+{
+   SCIP_Real* closenodes_dists;
+   int* closenodes_indices;
+   int nclosenodes;
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool isValid = TRUE;
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &closenodes_indices, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &closenodes_dists, nnodes) );
+
+   assert(scip && distdata);
+   assert(distdata->pathroot_isdirty);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( distdata->pathroot_isdirty[i] )
+         continue;
+
+      SCIP_CALL_ABORT( distCloseNodesCompute(scip, g, distdata, i,
+            closenodes_indices, closenodes_dists, &nclosenodes) );
+
+      if( !distCloseNodesIncluded(scip, g, distdata, i, closenodes_indices, closenodes_dists, nclosenodes) )
+      {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("corrupted node: ");
+         graph_knot_printInfo(g, i);
+#endif
+
+         isValid = FALSE;
+         break;
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &closenodes_dists);
+   SCIPfreeMemoryArray(scip, &closenodes_indices);
+
+   return isValid;
 }
 
 
