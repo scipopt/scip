@@ -142,10 +142,18 @@ typedef struct extension_data
 
 /* extreduce_base.c
  */
-extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern SCIP_RETCODE    extreduce_pseudodeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern int             extreduce_getMaxTreeDepth(const GRAPH*);
+extern int             extreduce_getMaxStackSize(void);
+
+
+/* extreduce_core.c
+ */
 extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
 
 /* extreduce_util.c
@@ -162,9 +170,7 @@ extern SCIP_Bool       extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
 extern void            extreduce_reddataClean(REDDATA*);
 extern SCIP_Bool       extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
-extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*);
-extern int             extreduce_getMaxTreeDepth(const GRAPH*);
-extern int             extreduce_getMaxStackSize(void);
+
 
 /* extreduce_dbg.c
  */
