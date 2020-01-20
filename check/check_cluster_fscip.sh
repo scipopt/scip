@@ -60,11 +60,13 @@ REOPT=${25}
 OPTCOMMAND=${26}
 SETCUTOFF=${27}
 VISUALIZE=${28}
+CLUSTERNODES=${29}
+SLURMACCOUNT=${30}
 
 SOLVER=fscip
 
 # check if all variables defined (by checking the last one)
-if test -z $VISUALIZE
+if test -z $SLURMACCOUNT
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -95,6 +97,8 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
+    echo "CLUSTERNODES  = $CLUSTERNODES"
+    echo "SLURMACCOUNT  = $SLURMACCOUNT"
     exit 1;
 fi
 
@@ -192,31 +196,32 @@ do
 		then
 		# additional environment variables needed by run.sh
 		    export SOLVERPATH=$SCIPPATH
-		    export BASENAME=$FILENAME
-		    export FILENAME=$INSTANCE
-		    export CLIENTTMPDIR
-                    export OUTPUTDIR
-		    export HARDTIMELIMIT
-		    export HARDMEMLIMIT
-		    export CHECKERPATH=$SCIPPATH/solchecker
-		    export SETFILE
-                    export SETNAME
-                    export THREADS
+        export BASENAME=$FILENAME
+        export FILENAME=$INSTANCE
+        export CLIENTTMPDIR
+        export OUTPUTDIR
+        export HARDTIMELIMIT
+        export HARDMEMLIMIT
+        export CHECKERPATH=$SCIPPATH/solchecker
+        export SETFILE
+        export SETNAME
+        export THREADS
 		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=verbose,cores ${SRUN_FLAGS} "
 
-		    if test "$SLURMACCOUNT" == "default"
-	            then
-                        SLURMACCOUNT=$ACCOUNT
-                    fi
+        if test "$SLURMACCOUNT" == "default"
+        then
+          SLURMACCOUNT=$ACCOUNT
+        fi
 
-                    if test "$CLUSTERNODES" = "all"
-		    then
-			sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
-		    else
-			sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run_fscip.sh
-		    fi
+        # CLUSTERNODES will never be empty (see check on top)
+        if test "$CLUSTERNODES" = "all"
+        then
+          sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
+        else
+          sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run_fscip.sh
+        fi
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
