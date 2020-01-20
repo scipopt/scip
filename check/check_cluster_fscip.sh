@@ -215,11 +215,7 @@ do
           SLURMACCOUNT=$ACCOUNT
         fi
 
-        if test "$CLUSTERNODES" = ""
-        then
-          export CLUSTERNODES=all
-        fi
-
+        # CLUSTERNODES will never be empty (see check on top)
         if test "$CLUSTERNODES" = "all"
         then
           sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
