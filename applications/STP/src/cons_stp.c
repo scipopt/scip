@@ -1109,7 +1109,7 @@ SCIP_RETCODE sep_2cut(
    SCIP_CALL( SCIPallocBufferArray(scip, &start, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rootcut, nnodes + 1) );
 
-#if 0
+#ifdef STP_MAXFLOW_TIME
    clock_t startt, endt;
    double cpu_time_used;
    startt = clock();
@@ -1253,7 +1253,7 @@ SCIP_RETCODE sep_2cut(
 
    SCIPdebugMessage("Cut Pretest: %d eliminations\n", g->terms - terms - 1);
 
-#if 0
+#ifdef STP_MAXFLOW_TIME
    endt = clock();
    cpu_time_used = ((double) (endt - startt)) / CLOCKS_PER_SEC;
    startt = clock();
@@ -1280,7 +1280,7 @@ SCIP_RETCODE sep_2cut(
 
       do
       {
-#if 0
+#ifdef STP_MAXFLOW_WRITE
          /* write flow problem in extended dimacs format */
          FILE *fptr;
 
@@ -1352,7 +1352,7 @@ SCIP_RETCODE sep_2cut(
    } /* while terms > 0 */
 
 
-#if 0
+#ifdef STP_MAXFLOW_TIME
    endt = clock();
    cpu_time_used = ((double) (endt - startt)) / CLOCKS_PER_SEC;
 #endif
@@ -1680,7 +1680,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
 
    for( int i = 0; i < nconss; i++ )
    {
-      int todo; // allow cyles???
       consdata = SCIPconsGetData(conss[i]);
 
       SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), FALSE, &feasible) );
@@ -1707,7 +1706,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 
    for( int i = 0; i < nconss; i++ )
    {
-      int todo; // allow cyles???
       const SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
 
       SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), FALSE, &feasible) );
