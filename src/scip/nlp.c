@@ -989,6 +989,9 @@ SCIP_RETCODE nlrowAddToLinearCoef(
          return SCIP_OKAY;
       }
    }
+   else if( SCIPsetIsZero(set, coef) )
+      return SCIP_OKAY;
+
    assert(!removefixed || SCIPvarIsActive(var));
 
    pos = nlrowSearchLinearCoef(nlrow, var);
