@@ -2063,10 +2063,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             cutoff = TRUE;
             break;
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) && origsolval > -1.0 / SCIPfeastol(scip) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible; if the bound is too small do not even bother
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
              */
             assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(var), origsolval + 1.0));
 
@@ -2077,10 +2077,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) && origsolval < 1.0 / SCIPfeastol(scip) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible; if the bound is too large do not even bother
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
              */
             assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), origsolval - 1.0));
 
