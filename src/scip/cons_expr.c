@@ -1204,15 +1204,23 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
-               /* if previnterval allow a further tightening, then reversepropagation
-                * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                * TODO we might want to require a mimimal tightening?
-                */
-               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval) && !expr->inqueue )
+               if( reversepropqueue != NULL && !expr->inqueue && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
                {
-                  /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
-                  SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
-                  expr->inqueue = TRUE;
+                  /* if previnterval allow a further tightening, then do reversepropagation
+                   * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+                   * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded
+                   */
+                  if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval)) ||
+                     (!force &&
+                        ((interval.inf <= -SCIP_INTERVAL_INFINITY && previnterval.inf > -SCIP_INTERVAL_INFINITY) ||
+                         (interval.sup >=  SCIP_INTERVAL_INFINITY && previnterval.sup >  SCIP_INTERVAL_INFINITY) ||
+                         SCIPisLbBetter(scip, previnterval.inf, interval.inf, interval.sup) ||
+                         SCIPisUbBetter(scip, previnterval.sup, interval.inf, interval.sup))) )
+                  {
+                     /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
+                     SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+                     expr->inqueue = TRUE;
+                  }
                }
                /* else
                {
