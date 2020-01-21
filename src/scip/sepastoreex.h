@@ -46,21 +46,21 @@ extern "C" {
 
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreexCreate(
-   SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
+   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreexFree(
-   SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
+   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreexAddCut(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
 
 /** adds cuts to the LP and clears separation storage */
 SCIP_RETCODE SCIPsepastoreexSyncLPs(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
 
 /** clears the separation storage without adding the cuts to the LP */
 SCIP_RETCODE SCIPsepastoreexClearCuts(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -94,27 +94,27 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROWEX** SCIPsepastoreexGetCuts(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreexGetNCuts(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 
 /** get total number of cuts found so far */
 int SCIPsepastoreexGetNCutsFound(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreexGetNCutsFoundRound(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreexGetNCutsApplied(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 
 #ifdef __cplusplus

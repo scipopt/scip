@@ -307,7 +307,7 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROWEX** SCIPsepastoreexGetCuts(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {
    assert(sepastoreex != NULL);
@@ -327,7 +327,7 @@ int SCIPsepastoreexGetNCuts(
 
 /** get total number of cuts found so far */
 int SCIPsepastoreexGetNCutsFound(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {
    assert(sepastoreex != NULL);
@@ -337,7 +337,7 @@ int SCIPsepastoreexGetNCutsFound(
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreexGetNCutsFoundRound(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {
    assert(sepastoreex != NULL);
@@ -347,7 +347,7 @@ int SCIPsepastoreexGetNCutsFoundRound(
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreexGetNCutsApplied(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {
    assert(sepastoreex != NULL);
