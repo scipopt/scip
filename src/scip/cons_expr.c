@@ -959,14 +959,17 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    ub = SCIPvarGetUbLocal(var);
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
-   /* TODO maybe we should not relax fixed variables? */
+   /* relax variable bounds, if there are bounds and variable is not fixed
+    * (actually some assert complains if trying SCIPisRelEQ if both bounds are at different infinity)
+    */
+   if( !(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub)) && !SCIPisRelEQ(scip, lb, ub) )
+   {
+      if( !SCIPisInfinity(scip, -lb) )
+         lb -= SCIPfeastol(scip);
 
-   /* relax variable bounds */
-   if( !SCIPisInfinity(scip, -lb) )
-      lb -= SCIPfeastol(scip);
-
-   if( !SCIPisInfinity(scip, ub) )
-      ub += SCIPfeastol(scip);
+      if( !SCIPisInfinity(scip, ub) )
+         ub += SCIPfeastol(scip);
+   }
 
    /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
    lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
