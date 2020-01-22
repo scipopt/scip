@@ -556,6 +556,11 @@ SCIP_Bool SCIPisObjChangedProbing(
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
  *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
  *
+ *  @note Conflict analysis can run if the propagation finds infeasibilities. SCIPpropagateProbing can even find
+ *  globally valid bound changes. For this reason, the function restores the original objective (i.e. undoes the changes
+ *  done by SCIPchgVarObjProbing before performing the propagation, as the propagators don't know that the objective
+ *  might have changed. Thus, SCIPpropagateProbing can have an effect on the problem after probing ends.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
