@@ -821,7 +821,7 @@ SCIP_RETCODE stptest_extreduce(
 
    SCIP_CALL( extDistTest(scip) );
 
-   printf("reduce_extTest: all ok \n");
+   printf("extreduce test: all ok \n");
 
    return SCIP_OKAY;
 }

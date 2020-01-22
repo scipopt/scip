@@ -82,6 +82,10 @@ typedef struct fixed_graph_components FIXED;
 typedef struct pseudo_ancestors PSEUDOANS;
 
 
+/** depository for several CSR storages */
+typedef struct compressed_sparse_storages_depository CSRDEPO;
+
+
 /** CSR like graph storage */
 typedef struct csr_storage
 {
@@ -352,7 +356,20 @@ extern SCIP_Bool graph_heap_isClean(const DHEAP*);
 /* CSR storage: */
 extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
 extern void           graph_free_csr(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_csr_alloc(SCIP*, int, int, CSR**);
+extern void           graph_csr_free(SCIP*, CSR**);
 extern SCIP_Bool      graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
+/* CSR depository: */
+extern SCIP_RETCODE   graph_csrdepo_init(SCIP*, CSRDEPO**, int, int);
+extern void           graph_csrdepo_free(SCIP*, CSRDEPO**);
+extern void           graph_csrdepo_getCSR(const CSRDEPO*, int, CSR*);
+extern int            graph_csrdepo_getNcsrs(const CSRDEPO*);
+extern int            graph_csrdepo_getDataSize(const CSRDEPO*);
+extern void           graph_csrdepo_removeTop(CSRDEPO*);
+extern void           graph_csrdepo_addEmptyTop(CSRDEPO*, int, int);
+extern SCIP_Bool      graph_csrdepo_isEmpty(const CSRDEPO*);
+extern SCIP_Bool      graph_csrdepo_hasEmptyTop(const CSRDEPO*);
+extern void           graph_csrdepo_getEmptyTop(const CSRDEPO*, CSR*);
 /* Dynamic CSR storage: */
 extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
 extern void           graph_update_dcsr(SCIP*, GRAPH*);
@@ -368,12 +385,17 @@ extern void          graph_dijkLimited_freeMembers(SCIP*, DIJK*);
 
 /* graph_base.c
  */
+extern void   graph_mark(GRAPH*);
 extern void   graph_show(const GRAPH*);
+extern void   graph_printInfo(const GRAPH*);
+extern void   graph_uncover(GRAPH*);
+extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
+extern void   graph_free_history(SCIP*, GRAPH*);
+extern void   graph_free_historyDeep(SCIP*, GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
 extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
-extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_addSubgraph(SCIP*, const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
@@ -382,22 +404,26 @@ extern void   graph_edge_delBlocked(SCIP*, GRAPH*, const SCIP_Bool*, SCIP_Bool);
 extern void   graph_edge_delHistory(SCIP*, GRAPH*, int);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_edge_printInfo(const GRAPH*, int);
+extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
+extern SCIP_Bool graph_edge_isBlocked(SCIP*, const GRAPH*, int);
 extern void   graph_knot_printInfo(const GRAPH*, int);
-extern void   graph_printInfo(const GRAPH*);
-extern void   graph_uncover(GRAPH*);
-extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
-extern void   graph_free_history(SCIP*, GRAPH*);
-extern void   graph_free_historyDeep(SCIP*, GRAPH*);
+extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
+extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
 extern int    graph_get_nNodes(const GRAPH*);
 extern int    graph_get_nEdges(const GRAPH*);
 extern int    graph_get_nTerms(const GRAPH*);
 extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
-extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
-extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
 extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
-extern void   graph_mark(GRAPH*);
+extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
+extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
+extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
+extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
+extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
+extern SCIP_Bool      graph_isMarked(const GRAPH*);
+extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_knot_contractFixed(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
@@ -409,28 +435,18 @@ extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*);
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
-extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
-extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
-extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_trail_costAware(SCIP*, const GRAPH*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
-extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
-extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
 extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
-extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
-extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
-extern SCIP_Bool graph_isMarked(const GRAPH*);
-extern SCIP_Bool graph_edge_isBlocked(SCIP*, const GRAPH*, int);
+extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
-extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 extern SCIP_Real graph_sol_getObj(const GRAPH*, const int*, SCIP_Real, int);
-extern SCIP_Real graph_get_avgDeg(const GRAPH*);
+extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 
 
 /* graph_pcbase.c

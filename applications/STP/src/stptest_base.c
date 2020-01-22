@@ -37,6 +37,7 @@ SCIP_RETCODE stptest_all(
 {
    assert(scip);
 
+   SCIP_CALL( stptest_csrdepo(scip) );
    SCIP_CALL( stptest_completegraph(scip) );
    SCIP_CALL( stptest_heur_extendPcMw(scip) );
    SCIP_CALL( stptest_heur_local(scip) );

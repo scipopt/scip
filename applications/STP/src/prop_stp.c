@@ -1428,9 +1428,9 @@ void blockEdgesWithGlobalFixings(
       /* both e and its anti-parallel edge fixed to zero? */
       if( SCIPvarGetUbGlobal(vars[e]) < 0.5 && SCIPvarGetUbGlobal(vars[erev]) < 0.5 && LT(graph->cost[e], BLOCKED) )
       {
-         int todo; // for pc/rpc can we maybe also block edges with unequal costs??
          assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
 
+         // todo for pc/rpc can we maybe also block edges with unequal costs? Seems to lead to bugs so far...
          if( EQ(graph->cost[e], graph->cost[erev]) )
          {
             graph->cost[e] = BLOCKED;

@@ -36,8 +36,82 @@
 #include "misc_stp.h"
 
 
+/** internal method for combining the siblings after the root has been deleted */
+static
+SCIP_RETCODE pairheapCombineSiblings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE**              p,                  /**< the first sibling */
+   int                   size                /**< the size of the heap */
+   )
+{
+   PHNODE** treearray;
+   int i;
+   int j;
+   int nsiblings;
+   if( (*p)->sibling == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &treearray, size) );
+
+   /* store all siblings in an array */
+   for( nsiblings = 0; (*p) != NULL; nsiblings++ )
+   {
+      assert(size > nsiblings);
+      treearray[nsiblings] = (*p);
+      if( (*p)->prev != NULL )
+         (*p)->prev->sibling = NULL;
+      (*p) = (*p)->sibling;
+   }
+   assert(size > nsiblings);
+   treearray[nsiblings] = NULL;
+
+   /* combine the subtrees (two at a time) */
+   for( i = 0; i < nsiblings - 1; i += 2 )
+   {
+      treearray[i] = SCIPpairheapMergeheaps(scip, treearray[i], treearray[i + 1]);
+   }
+   j = i - 2;
+
+   /* if the number of trees is odd, get the last one */
+   if( j == nsiblings - 3 )
+   {
+      treearray[j] = SCIPpairheapMergeheaps(scip, treearray[j], treearray[j + 2]);
+   }
+
+   for( ; j >= 2; j -= 2 )
+   {
+      treearray[j - 2] = SCIPpairheapMergeheaps(scip, treearray[j - 2], treearray[j]);
+   }
+
+   (*p) = treearray[0];
+
+   SCIPfreeBufferArray(scip, &treearray);
+
+   return SCIP_OKAY;
+}
+
+
+/** internal method used by 'pairheap_buffarr' */
+static
+void pairheapRec(
+   const PHNODE* p,
+   int* RESTRICT arr,
+   int* RESTRICT n
+   )
+{
+   if( p == NULL )
+   {
+      return;
+   }
+
+   arr[(*n)++] = p->element;
+   pairheapRec(p->sibling, arr, n);
+   pairheapRec(p->child, arr, n);
+}
+
+
 /** returns maximum of given SCIP_Real values */
-SCIP_Real misc_stp_maxReal(
+SCIP_Real miscstp_maxReal(
    SCIP_Real*            realarr,            /**< array of reals */
    unsigned              nreals              /**< size of array of reals */
   )
@@ -549,60 +623,6 @@ PHNODE* SCIPpairheapAddtoheap(
    }
 }
 
-/** internal method for combining the siblings after the root has been deleted */
-static
-SCIP_RETCODE pairheapCombineSiblings(
-   SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE**              p,                  /**< the first sibling */
-   int                   size                /**< the size of the heap */
-   )
-{
-   PHNODE** treearray;
-   int i;
-   int j;
-   int nsiblings;
-   if( (*p)->sibling == NULL )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &treearray, size) );
-
-   /* store all siblings in an array */
-   for( nsiblings = 0; (*p) != NULL; nsiblings++ )
-   {
-      assert(size > nsiblings);
-      treearray[nsiblings] = (*p);
-      if( (*p)->prev != NULL )
-         (*p)->prev->sibling = NULL;
-      (*p) = (*p)->sibling;
-   }
-   assert(size > nsiblings);
-   treearray[nsiblings] = NULL;
-
-   /* combine the subtrees (two at a time) */
-   for( i = 0; i < nsiblings - 1; i += 2 )
-   {
-      treearray[i] = SCIPpairheapMergeheaps(scip, treearray[i], treearray[i + 1]);
-   }
-   j = i - 2;
-
-   /* if the number of trees is odd, get the last one */
-   if( j == nsiblings - 3 )
-   {
-      treearray[j] = SCIPpairheapMergeheaps(scip, treearray[j], treearray[j + 2]);
-   }
-
-   for( ; j >= 2; j -= 2 )
-   {
-      treearray[j - 2] = SCIPpairheapMergeheaps(scip, treearray[j - 2], treearray[j]);
-   }
-
-   (*p) = treearray[0];
-
-   SCIPfreeBufferArray(scip, &treearray);
-
-   return SCIP_OKAY;
-}
-
 
 /** inserts a new node into the pairing heap */
 SCIP_RETCODE SCIPpairheapInsert(
@@ -728,36 +748,18 @@ void SCIPpairheapFree(
 }
 
 
-/** internal method used by 'pairheap_buffarr' */
-static
-void pairheapRec(
-   PHNODE* p,
-   int** arr,
-   int* n
-   )
-{
-   if( p == NULL )
-   {
-      return;
-   }
-   (*arr)[(*n)++] = p->element;
-   pairheapRec(p->sibling, arr, n);
-   pairheapRec(p->child, arr, n);
-}
-
-
 /** stores all elements of the pairing heap in an array */
 SCIP_RETCODE SCIPpairheapBuffarr(
    SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root,               /**< root of the heap */
+   const PHNODE*         root,               /**< root of the heap */
    int                   size,               /**< size of the array */
-   int**                 elements            /**< pointer to array */
+   int**                 elements            /**< pointer to array (will be allocated) */
    )
 {
    int n = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, elements, size) );
-   pairheapRec(root, elements, &n);
+   pairheapRec(root, *elements, &n);
 
    return SCIP_OKAY;
 }

@@ -27,9 +27,13 @@
 
 #include "scip/scip.h"
 
-/* reduce_base.c
+/* stptest_base.c
  */
 extern SCIP_RETCODE    stptest_all(SCIP*);
+
+/* stptest_graph.c
+ */
+extern SCIP_RETCODE    stptest_csrdepo(SCIP*);
 
 /* stptest_extreduce.c
  */

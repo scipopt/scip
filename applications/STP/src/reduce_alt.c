@@ -1814,7 +1814,7 @@ SCIP_RETCODE reduce_getSdPcMw(
                assert(tailmaxterm == l);
                assert(SCIPisPositive(scip, g->prize[tailmaxterm]));
 
-               dist = misc_stp_maxReal((SCIP_Real []) {
+               dist = miscstp_maxReal((SCIP_Real []) {
                       pathhead[headmaxterm].dist,
                       pathtail[tailmaxterm].dist,
                       pathhead[l].dist + pathtail[l].dist - g->prize[l]
@@ -1831,7 +1831,7 @@ SCIP_RETCODE reduce_getSdPcMw(
                assert(!SCIPisNegative(scip, distl2headmax));
                assert(SCIPisPositive(scip, g->prize[tailmaxterm]) && SCIPisPositive(scip, g->prize[headmaxterm]));
 
-               dist = misc_stp_maxReal((SCIP_Real []) {
+               dist = miscstp_maxReal((SCIP_Real []) {
                       pathhead[headmaxterm].dist,
                       pathtail[tailmaxterm].dist,
                       distl2tailmax + distl2headmax,
@@ -1848,7 +1848,7 @@ SCIP_RETCODE reduce_getSdPcMw(
                assert(headmaxterm < 0);
                assert(SCIPisPositive(scip, g->prize[tailmaxterm]));
 
-               dist = misc_stp_maxReal((SCIP_Real []) {
+               dist = miscstp_maxReal((SCIP_Real []) {
                       pathtail[tailmaxterm].dist,
                       distl2tailmax + pathhead[l].dist,
                       pathhead[l].dist + pathtail[l].dist - g->prize[tailmaxterm]
@@ -1862,7 +1862,7 @@ SCIP_RETCODE reduce_getSdPcMw(
                assert(tailmaxterm < 0);
                assert(SCIPisPositive(scip, g->prize[headmaxterm]));
 
-               dist = misc_stp_maxReal((SCIP_Real []) {
+               dist = miscstp_maxReal((SCIP_Real []) {
                       pathhead[headmaxterm].dist,
                       distl2headmax + pathtail[l].dist,
                       pathhead[l].dist + pathtail[l].dist - g->prize[headmaxterm]
@@ -1880,7 +1880,7 @@ SCIP_RETCODE reduce_getSdPcMw(
 
          if( Is_term(g->term[l]) )
          {
-            dist = misc_stp_maxReal((SCIP_Real []) {
+            dist = miscstp_maxReal((SCIP_Real []) {
                    pathhead[l].dist,
                    pathtail[l].dist,
                    pathhead[l].dist + pathtail[l].dist - g->prize[l]

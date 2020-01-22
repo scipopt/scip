@@ -350,7 +350,7 @@ SCIP_RETCODE presolveStp(
 
    probdata->norgedges = graph->edges;
 
-//#define UNIT_TEST_STP
+#define UNIT_TEST_STP
 #ifdef UNIT_TEST_STP
    SCIP_CALL( stptest_all(scip) );
 #endif
@@ -2447,7 +2447,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph;
 
    /* reduce the graph (and do some house-holding) */
-   presolveStp(scip, probdata, &offset);
+   SCIP_CALL( presolveStp(scip, probdata, &offset) );
 
    graph = probdata->graph;
 

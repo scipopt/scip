@@ -32,27 +32,22 @@ extern "C" {
 #endif
 
 
-/** returns maximum of given SCIP_Real values */
-SCIP_Real misc_stp_maxReal(
-   SCIP_Real*            realarr,            /**< array of reals */
-   unsigned              nreals              /**< size of array of reals */
-  );
-
 /** graph node structure storing number and distance */
 typedef struct Graph_Node
 {
    int                   number;             /**< node number   */
    SCIP_Real             dist;               /**< node distance */
-}GNODE;
+} GNODE;
 
-/** voronoi list node structure storing distance, incoming edge,base and pointer to next list node */
+
+/** Voronoi list node structure storing distance, incoming edge,base and pointer to next list node */
 typedef struct Vnoi_List_Node
 {
    double                dist;               /**< Distance to the end of the path             */
    signed int            edge;               /**< First edge to go                            */
    signed int            base;               /**< Voronoi base                                */
    struct Vnoi_List_Node *next;
-}VLIST;
+} VLIST;
 
 /** link-cut_node */
 typedef struct link_cut_node
@@ -90,6 +85,12 @@ typedef struct PHeap_Node
    int                   element;            /**< integer data value        */
 } PHNODE;
 
+
+/** returns maximum of given SCIP_Real values */
+SCIP_Real miscstp_maxReal(
+   SCIP_Real*            realarr,            /**< array of reals */
+   unsigned              nreals              /**< size of array of reals */
+  );
 
 /**
  * Int List
@@ -235,9 +236,9 @@ void SCIPpairheapFree(
 /** stores all elements of the pairing heap in an array */
 SCIP_RETCODE SCIPpairheapBuffarr(
    SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root,               /**< root of the heap */
+   const PHNODE*         root,               /**< root of the heap */
    int                   size,               /**< size of the array */
-   int**                 elements            /**< pointer to array */
+   int**                 elements            /**< pointer to array (will be allocated) */
    );
 
 /*

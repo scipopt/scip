@@ -99,6 +99,7 @@ CMAINOBJ	=	cmain.o \
 			solpool.o \
 			stptest_base.o \
 			stptest_extreduce.o \
+			stptest_graph.o \
 			stptest_heur.o \
 			stptest_misc.o \
 			stptest_reduce.o \

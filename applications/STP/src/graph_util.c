@@ -32,6 +32,352 @@
 #include "graph.h"
 #include "portab.h"
 
+
+/** CSR like graph storage */
+struct compressed_sparse_storages_depository
+{
+   int*                  all_starts;         /**< all start positions (size datasize_max) */
+   int*                  all_heads;          /**< all edge heads      (size datasize_max) */
+   SCIP_Real*            all_costs;          /**< all edge costs      (size datasize_max) */
+   int*                  csr_ptrsStart;      /**< gives start index to start of start array (size ncsrs_max + 1) */
+   int*                  csr_ptrsData;       /**< gives start index to start of heads/costs arrays (size ncsrs_max + 1) */
+   SCIP_Bool*            csr_isEmpty;        /**< per entry: is empty?       (size ncsrs_max) */
+   int                   datasize_max;       /**< maximum size of depository */
+   int                   ncsrs_curr;         /**< current number of CSRS */
+   int                   ncsrs_max;          /**< maximum number of CSRS */
+#ifndef NDEBUG
+   int*                  csr_nedges;         /**< per entry: number of (directed!) edges (size ncsrs_max) */
+   int*                  csr_nnodes;         /**< per entry: number of nodes (size ncsrs_max) */
+#endif
+};
+
+
+/** gets top index */
+static inline
+int csrdepoGetTopIndex(
+   const CSRDEPO*        depository          /**< the depository */
+)
+{
+   assert(depository);
+   assert(depository->ncsrs_curr >= 1);
+
+   return (depository->ncsrs_curr - 1);
+}
+
+
+/** gets number of nodes of CSR stored at position 'index' */
+static inline
+int csrdepoGetNnodes(
+   const CSRDEPO*        depository,         /**< the depository */
+   int                   index               /**< the index of the CSR */
+   )
+{
+   assert(index >= 0 && index < depository->ncsrs_curr);
+
+#ifndef NDEBUG
+   {
+      const int nnodes = depository->csr_ptrsStart[index + 1] - depository->csr_ptrsStart[index] - 1;
+      assert(nnodes == depository->csr_nnodes[index]);
+      assert(nnodes >= 1);
+   }
+#endif
+
+   return (depository->csr_ptrsStart[index + 1] - depository->csr_ptrsStart[index] - 1);
+}
+
+
+/** gets number of edges of CSR stored at position 'index' */
+static inline
+int csrdepoGetNedges(
+   const CSRDEPO*        depository,         /**< the depository */
+   int                   index               /**< the index of the CSR */
+   )
+{
+   assert(index >= 0 && index < depository->ncsrs_curr);
+
+#ifndef NDEBUG
+   {
+      const int nedges = depository->csr_ptrsData[index + 1] - depository->csr_ptrsData[index];
+      assert(nedges == depository->csr_nedges[index]);
+   }
+#endif
+
+
+   return (depository->csr_ptrsData[index + 1] - depository->csr_ptrsData[index]);
+}
+
+
+/** fills the CSR structure */
+static inline
+void csrdepoFillCSR(
+   const CSRDEPO*        depository,         /**< the depository */
+   int                   index,              /**< the index */
+   CSR*                  csr                 /**< pointer to CSR struct to fill */
+)
+{
+   const int nnodes = csrdepoGetNnodes(depository, index);
+   const int nedges = csrdepoGetNedges(depository, index);
+   const int ptr_start = depository->csr_ptrsStart[index];
+   const int ptr_data = depository->csr_ptrsData[index];
+
+   /* fill the entries of the CSR */
+   csr->start = &(depository->all_starts[ptr_start]);
+   csr->head = &(depository->all_heads[ptr_data]);
+   csr->cost = &(depository->all_costs[ptr_data]);
+   csr->nedges = nedges;
+   csr->nnodes = nnodes;
+}
+
+
+/*
+ * CSR Depository
+ */
+
+/** initializes CSR depository */
+SCIP_RETCODE graph_csrdepo_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CSRDEPO**             depository,         /**< the depository */
+   int                   ncsrs_max,          /**< maximum number of CSRs */
+   int                   datasize_max        /**< the maximum capacity */
+   )
+{
+   CSRDEPO* depo;
+
+   assert(scip);
+   assert(ncsrs_max >= 1);
+   assert(ncsrs_max < datasize_max);
+
+   SCIP_CALL( SCIPallocMemory(scip, depository) );
+
+   depo = *depository;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->all_starts), datasize_max) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->all_heads), datasize_max) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->all_costs), datasize_max) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_ptrsStart), ncsrs_max + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_ptrsData), ncsrs_max + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_isEmpty), ncsrs_max) );
+
+   depo->ncsrs_curr = 0;
+   depo->ncsrs_max = ncsrs_max;
+   depo->datasize_max = datasize_max;
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_nedges), ncsrs_max) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_nnodes), ncsrs_max) );
+
+   for( int i = 0; i < ncsrs_max; ++i )
+   {
+      depo->csr_nedges[i] = -1;
+      depo->csr_nnodes[i] = -1;
+   }
+#endif
+
+   depo->all_starts[0] = 0;
+   depo->csr_ptrsStart[0] = 0;
+   depo->csr_ptrsData[0] = 0;
+
+   assert(graph_csrdepo_isEmpty(*depository));
+
+   return SCIP_OKAY;
+}
+
+
+/** frees CSR depository */
+void graph_csrdepo_free(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CSRDEPO**             depository          /**< the depository */
+   )
+{
+   CSRDEPO* depo;
+
+   assert(scip && depository && *depository);
+
+   depo = *depository;
+
+#ifndef NDEBUG
+   SCIPfreeMemoryArray(scip, &(depo->csr_nnodes));
+   SCIPfreeMemoryArray(scip, &(depo->csr_nedges));
+#endif
+
+   SCIPfreeMemoryArray(scip, &(depo->csr_isEmpty));
+   SCIPfreeMemoryArray(scip, &(depo->csr_ptrsData));
+   SCIPfreeMemoryArray(scip, &(depo->csr_ptrsStart));
+
+   SCIPfreeMemoryArray(scip, &(depo->all_costs));
+   SCIPfreeMemoryArray(scip, &(depo->all_heads));
+   SCIPfreeMemoryArray(scip, &(depo->all_starts));
+
+   SCIPfreeMemory(scip, depository);
+}
+
+
+/** gets CSR from depository */
+void graph_csrdepo_getCSR(
+   const CSRDEPO*        depository,         /**< the depository */
+   int                   index,              /**< the index of the CSR to get */
+   CSR*                  csr                 /**< pointer to CSR struct to fill */
+   )
+{
+   assert(depository && csr);
+   assert(index >= 0 && index < depository->ncsrs_curr);
+   assert(!depository->csr_isEmpty[index]);
+
+   csrdepoFillCSR(depository, index, csr);
+
+   assert(csr->start[0] == 0);
+}
+
+
+/** gets current size of data (from all CSRs) in depository */
+int graph_csrdepo_getDataSize(
+   const CSRDEPO*        depository          /**< the depository */
+   )
+{
+   assert(depository);
+   assert(depository->ncsrs_curr >= 0);
+
+   if( depository->ncsrs_curr == 0 )
+   {
+      return 0;
+   }
+   else
+   {
+      const int top_index = csrdepoGetTopIndex(depository);
+      const int top_nedges = csrdepoGetNedges(depository, top_index);
+      const int datasize = depository->csr_ptrsData[top_index] + top_nedges;
+
+#ifndef NDEBUG
+      const int top_nnodes = csrdepoGetNnodes(depository, top_index);
+
+      assert(top_nedges >= 0);
+      assert(top_nnodes >= 0);
+      assert(depository->csr_ptrsData[top_index] + top_nnodes + 1 <= datasize);
+      assert(datasize <= depository->datasize_max);
+#endif
+
+      return datasize;
+   }
+}
+
+
+/** gets number of CSRs in depository */
+int graph_csrdepo_getNcsrs(
+   const CSRDEPO*        depository          /**< the depository */
+   )
+{
+   assert(depository);
+   assert(depository->ncsrs_curr >= 0);
+
+   return depository->ncsrs_curr;
+}
+
+
+/** removes top of CSR depository */
+void graph_csrdepo_removeTop(
+   CSRDEPO*              depository          /**< the depository */
+   )
+{
+   assert(depository);
+   assert(depository->ncsrs_curr >= 1);
+
+#ifndef NDEBUG
+   {
+      const int top_index = csrdepoGetTopIndex(depository);
+      depository->csr_nedges[top_index] = -1;
+      depository->csr_nnodes[top_index] = -1;
+   }
+#endif
+
+   depository->ncsrs_curr--;
+
+   assert(graph_csrdepo_isEmpty(depository) || !graph_csrdepo_hasEmptyTop(depository));
+}
+
+
+/** adds empty top to CSR depository */
+void graph_csrdepo_addEmptyTop(
+   CSRDEPO*              depository,         /**< the depository */
+   int                   nnodes,             /**< nodes of new top */
+   int                   nedges              /**< number of (directed!) edges of new top */
+   )
+{
+   int topindex;
+
+   assert(depository);
+   assert(nnodes >= 1 && nedges >= 1);
+   assert(graph_csrdepo_isEmpty(depository) || !graph_csrdepo_hasEmptyTop(depository));
+   assert(nedges >= nnodes);
+   assert(nedges + graph_csrdepo_getDataSize(depository) < depository->datasize_max);
+   assert(depository->ncsrs_curr < depository->ncsrs_max);
+
+   depository->ncsrs_curr++;
+
+   topindex = csrdepoGetTopIndex(depository);
+
+   depository->csr_ptrsStart[topindex + 1] = depository->csr_ptrsStart[topindex] + nnodes + 1;
+   depository->csr_ptrsData[topindex + 1] = depository->csr_ptrsData[topindex] + nedges;
+   depository->csr_isEmpty[topindex] = TRUE;
+
+#ifndef NDEBUG
+   assert(-1 == depository->csr_nnodes[topindex]);
+   assert(-1 == depository->csr_nedges[topindex]);
+
+   depository->csr_nnodes[topindex] = nnodes;
+   depository->csr_nedges[topindex] = nedges;
+
+   assert(graph_csrdepo_hasEmptyTop(depository));
+#endif
+}
+
+
+/** is the CSR depository empty? */
+SCIP_Bool graph_csrdepo_isEmpty(
+   const CSRDEPO*        depository          /**< the depository */
+   )
+{
+   assert(depository);
+   assert(depository->ncsrs_curr >= 0);
+
+   return (depository->ncsrs_curr == 0);
+}
+
+
+/** is top of CSR depository empty? */
+SCIP_Bool graph_csrdepo_hasEmptyTop(
+   const CSRDEPO*        depository          /**< the depository */
+   )
+{
+   const int topindex = csrdepoGetTopIndex(depository);
+
+   return depository->csr_isEmpty[topindex];
+}
+
+
+/** Gets empty top of current depository.
+ *  Will be assumed to not be empty anymore! */
+void graph_csrdepo_getEmptyTop(
+   const CSRDEPO*        depository,         /**< the depository */
+   CSR*                  csr                 /**< pointer to csr struct to fill */
+   )
+{
+   const int topindex = csrdepoGetTopIndex(depository);
+
+   assert(depository->csr_isEmpty[topindex]);
+   assert(topindex >= 0 && topindex < depository->ncsrs_max);
+   assert(csr);
+
+   csrdepoFillCSR(depository, topindex, csr);
+
+   depository->csr_isEmpty[topindex] = FALSE;
+}
+
+
+/*
+ * Dijkstra heap
+ */
+
 /** clean the heap */
 void
 graph_heap_clean(
@@ -145,7 +491,7 @@ void graph_heap_free(
    if( freeEntries )
       SCIPfreeMemoryArray(scip, &((*heap)->entries));
 
-   SCIPfreeMemoryArray(scip, heap);
+   SCIPfreeMemory(scip, heap);
 }
 
 /** deletes heap minimum */
@@ -321,7 +667,62 @@ void graph_heap_correct(
 }
 
 
-/** initializes CSR storage */
+/*
+ * CSR
+ */
+
+
+/** allocates empty (and invalid!) CSR storage */
+SCIP_RETCODE graph_csr_alloc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nnodes,             /**< nodes */
+   int                   nedges,             /**< edges */
+   CSR**                 csr                 /**< CSR */
+   )
+{
+   CSR* csrd;
+
+   assert(scip);
+   assert(nnodes >= 1 && nedges >= 0);
+
+   SCIP_CALL( SCIPallocMemory(scip, csr) );
+
+   csrd = *csr;
+
+   csrd->nedges = nedges;
+   csrd->nnodes = nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->start), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->head), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->cost), nedges) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees dynamic CSR storage */
+void graph_csr_free(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CSR**                 csr                 /**< CSR */
+   )
+{
+   CSR* csrd;
+
+   assert(scip && csr);
+
+   csrd = *csr;
+
+   assert(csrd != NULL && csrd->nnodes >= 1);
+
+   SCIPfreeMemoryArray(scip, &(csrd->cost));
+   SCIPfreeMemoryArray(scip, &(csrd->head));
+   SCIPfreeMemoryArray(scip, &(csrd->start));
+
+   SCIPfreeMemory(scip, csr);
+}
+
+
+/** initializes CSR storage of graph */
 SCIP_RETCODE graph_init_csr(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< the graph */
@@ -340,19 +741,12 @@ SCIP_RETCODE graph_init_csr(
    assert(g->csr_storage == NULL);
    assert(!pcmw || !g->extended);
 
-   SCIP_CALL( SCIPallocMemory(scip, &csr) );
-   g->csr_storage = csr;
+   SCIP_CALL( graph_csr_alloc(scip, nnodes, nedges, &(g->csr_storage)) );
 
-   csr->nedges = nedges;
-   csr->nnodes = nnodes;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(start_csr), nnodes + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges) );
-
-   csr->start = start_csr;
-   csr->head = head_csr;
-   csr->cost = cost_csr;
+   csr = g->csr_storage;
+   start_csr = csr->start;
+   head_csr = csr->head;
+   cost_csr = csr->cost;
 
    /* now fill the data in */
 
@@ -390,22 +784,16 @@ SCIP_RETCODE graph_init_csr(
 }
 
 
-/** frees dynamic CSR storage */
+/** frees dynamic CSR storage of graph */
 void graph_free_csr(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< the graph */
    )
 {
-   CSR* csr = g->csr_storage;
+   assert(g->csr_storage);
 
-   assert(scip && g);
-   assert(csr != NULL && csr->nnodes >= 1);
+   graph_csr_free(scip, &(g->csr_storage));
 
-   SCIPfreeMemoryArray(scip, &(csr->cost));
-   SCIPfreeMemoryArray(scip, &(csr->head));
-   SCIPfreeMemoryArray(scip, &(csr->start));
-
-   SCIPfreeMemoryArray(scip, &(g->csr_storage));
    assert(g->csr_storage == NULL);
 }
 
@@ -445,6 +833,11 @@ SCIP_Bool graph_valid_csr(
 
    return TRUE;
 }
+
+
+/*
+ * DCSR
+ */
 
 
 /** initializes dynamic CSR storage */
@@ -550,7 +943,7 @@ void graph_free_dcsr(
    SCIPfreeMemoryArray(scip, &(dcsr->head));
    SCIPfreeMemoryArray(scip, &(dcsr->range));
 
-   SCIPfreeMemoryArray(scip, &(g->dcsr_storage));
+   SCIPfreeMemory(scip, &(g->dcsr_storage));
 
    assert(g->dcsr_storage == NULL);
 }
@@ -709,6 +1102,10 @@ SCIP_Bool graph_valid_dcsr(
 
    return TRUE;
 }
+
+/*
+ * Limited Dijkstra storage
+ */
 
 
 /** initializes (allocates and fills) limited Dijkstra structure members */
