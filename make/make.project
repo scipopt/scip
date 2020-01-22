@@ -515,7 +515,8 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PRESOL),true)
-LDFLAGS		+=	-ltbb
+LDFLAGS		+=	-l:libtbb.so.2
+CXXFLAGS	+=	-std=c++14 -Wno-shadow -Wno-implicit-fallthrough -Wno-unused-variable -Wno-ctor-dtor-privacy
 endif
 
 #-----------------------------------------------------------------------------

@@ -351,7 +351,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PRESOL),true)
-FLAGS		+=	-DSCIP_WITH_PRESOLLIB -I$(LIBDIR)/include/presollib/external/tbb/include -I$(LIBDIR)/include/presollib/external -I$(LIBDIR)/include/presollib/src
+FLAGS		+=	-DSCIP_WITH_PRESOLVELIB -I$(LIBDIR)/include/presollib/external/tbb/include -I$(LIBDIR)/include/presollib/external -I$(LIBDIR)/include/presollib/src
 SOFTLINKS	+=	$(LIBDIR)/include/presollib
 LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the presolve library directory\n"
 endif
