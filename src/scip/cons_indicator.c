@@ -5587,7 +5587,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( (*consdata)->binvar != NULL );
 
       /* free events only in correct stages */
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_EXITSOLVE )
       {
          if ( (*consdata)->linconsactive )
          {
