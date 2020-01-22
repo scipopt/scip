@@ -5065,7 +5065,7 @@ SCIP_RETCODE SCIPsolveCIP(
                }
             }
          }
-         else if( !unbounded )
+         else if( !unbounded || branched )
          {
             /* node solution is not feasible */
             if( !branched )
