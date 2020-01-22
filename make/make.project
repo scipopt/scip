@@ -89,6 +89,7 @@ COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
 SYM		=	none
+PRESOL		=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
