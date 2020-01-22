@@ -351,11 +351,9 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PRESOL),true)
-FLAGS		+=	-DSCIP_WITH_PRESOLLIB -I$(LIBDIR)/include/
+FLAGS		+=	-DSCIP_WITH_PRESOLLIB -I$(LIBDIR)/include/presollib/external/tbb/include -I$(LIBDIR)/include/presollib/external -I$(LIBDIR)/include/presollib/src
 SOFTLINKS	+=	$(LIBDIR)/include/presollib
-LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the presolve library directory\n"
 endif
 
 #-----------------------------------------------------------------------------
