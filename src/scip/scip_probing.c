@@ -793,6 +793,9 @@ SCIP_RETCODE solveProbingLP(
  *
  *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
  *
+ *  @note if the LP is infeasible or the objective limit is reached, and if all columns are in the LP and no external
+ *  pricers exist then conflict analysis will be run. This can have an effect on the problem after probing ends.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
