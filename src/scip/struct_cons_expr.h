@@ -160,7 +160,7 @@ struct SCIP_ConsExpr_QuadExpr
    SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterms;  /**< bilinear expression terms array */
 
    SCIP_EXPRCURV                curvature;       /**< curvature of the quadratic representation of the expression */
-   SCIP_Bool                    curvaturechecked;
+   SCIP_Bool                    curvaturechecked;/**< whether curvature has been checked */
 };
 
 /** data structure to store a single term associated to a quadratic variable */

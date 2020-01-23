@@ -94,6 +94,7 @@ Test(exprquad, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_QUADEXPR* quaddata = NULL;
    SCIP_CONSEXPR_QUADEXPRTERM quad;
+   SCIP_EXPRCURV curv;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_VAR* var;
@@ -122,6 +123,9 @@ Test(exprquad, detectandfree1, .init = setup, .fini = teardown)
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
@@ -136,6 +140,7 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_QUADEXPRTERM quad;
    SCIP_CONSEXPR_BILINEXPRTERM bilin;
    SCIP_CONS* cons;
+   SCIP_EXPRCURV curv;
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
@@ -188,6 +193,9 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
          SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprAuxVar(bilin.expr1)));
    cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
+
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

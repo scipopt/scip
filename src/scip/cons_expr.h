@@ -1465,6 +1465,20 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
    );
 
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
+   );
+
 /** @} */
 
 /**@name Nonlinear Handler Methods */
