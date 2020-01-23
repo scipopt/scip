@@ -1456,6 +1456,15 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
+/** checks whether an expression is quadratic and returns the corresponding coefficients */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
+   );
+
 /** @} */
 
 /**@name Nonlinear Handler Methods */

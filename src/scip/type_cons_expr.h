@@ -935,6 +935,10 @@ typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< 
 #define SCIP_MAXVERTEXPOLYDIM 14
 
 
+typedef struct SCIP_ConsExpr_QuadExpr      SCIP_CONSEXPR_QUADEXPR;      /**< representation of expression as quadratic */
+typedef struct SCIP_ConsExpr_QuadExprTerm  SCIP_CONSEXPR_QUADEXPRTERM;  /**< a single term associated to a quadratic variable */
+typedef struct SCIP_ConsExpr_BilinExprTerm SCIP_CONSEXPR_BILINEXPRTERM; /**< a single bilinear term */
+
 #ifdef __cplusplus
 }
 #endif
