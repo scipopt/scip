@@ -1366,8 +1366,7 @@ int calcCliqueMaximums(
 
 /** apply ConvComb with clique extension to given rows (see above) */
 static
-SCIP_RETCODE applyConvComb
-(
+SCIP_RETCODE applyConvComb(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   row1,               /**< index of first row */
@@ -1377,7 +1376,7 @@ SCIP_RETCODE applyConvComb
    SCIP_Real*            lbs,                /**< lower variable bounds */
    SCIP_Real*            ubs,                /**< upper variable bounds */
    SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
-)
+   )
 {
    int i;
    int j;
