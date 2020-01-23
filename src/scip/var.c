@@ -6049,7 +6049,7 @@ SCIP_RETCODE varEventObjChanged(
    assert(SCIPvarIsTransformed(var));
 
    /* In the case where the objcetive value of a variable is very close to epsilon, and it is aggregated
-   * into a variable with a big objective value, round-off errors might make the assert oldobj == newobj fail.
+   * into a variable with a big objective value, round-off errors might make the assert oldobj != newobj fail.
    * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
    * that make comparison with values close to epsilon inaccurate.
    */
