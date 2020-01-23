@@ -35,6 +35,11 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
 
+/* to access quadexpr data
+ * TODO remove
+ */
+#include "scip/struct_cons_expr.h"
+
 /* fundamental nonlinear handler properties */
 #define CONVEX_NLHDLR_NAME     "convex"
 #define CONVEX_NLHDLR_DESC     "handler that identifies and estimates convex expressions"
@@ -46,6 +51,7 @@
 
 #define DEFAULT_DETECTSUM      FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
+#define DEFAULT_CVXQUADRATIC   FALSE
 #define DEFAULT_CVXSIGNOMIAL   TRUE
 #define DEFAULT_CVXPRODCOMP    TRUE
 #define DEFAULT_HANDLETRIVIAL  FALSE
@@ -75,6 +81,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
 
    /* advanced parameters (maybe remove some day) */
+   SCIP_Bool             cvxquadratic;       /**< whether to use convexity check on quadratics */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
    SCIP_Bool             cvxprodcomp;        /**< whether to use convexity check on product composition f(h)*h */
    SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
@@ -300,6 +307,100 @@ SCIP_Bool exprstackIsEmpty(
    assert(exprstack != NULL);
 
    return exprstack->stackpos < 0;
+}
+
+/** looks whether given expression is (proper) quadratic and has a given curvature
+ *
+ * If having a given curvature, currently require all arguments of quadratic to be linear.
+ * Hence, not using this for a simple square term, as curvCheckExprhdlr may provide a better condition on argument curvature then.
+ * Also we wouldn't do anything useful for a single bilinear term.
+ * Thus, run on sum's only.
+ */
+static
+DECL_CURVCHECK(curvCheckQuadratic)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_QUADEXPR* quaddata;
+   SCIP_EXPRCURV presentcurv;
+   SCIP_EXPRCURV wantedcurv;
+   int i;
+
+   assert(nlexpr != NULL);
+   assert(stack != NULL);
+   assert(nlexpr2origexpr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( !nlhdlrdata->cvxquadratic )
+      return SCIP_OKAY;
+
+   if( SCIPgetConsExprExprHdlr(nlexpr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return SCIP_OKAY;
+
+   wantedcurv = SCIPgetConsExprExprCurvature(nlexpr);
+   if( wantedcurv == SCIP_EXPRCURV_LINEAR )
+      return SCIP_OKAY;
+   assert(wantedcurv == SCIP_EXPRCURV_CONVEX || wantedcurv == SCIP_EXPRCURV_CONCAVE);
+
+   expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
+   assert(expr != NULL);
+
+   /* check whether quadratic */
+   SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
+
+   /* if not quadratic or only square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
+   if( quaddata == NULL || quaddata->nquadexprs <= 1 )
+      return SCIP_OKAY;
+
+   /* get curvature of quadratic
+    * TODO as we know what curvature we want, we could first do some simple checks like computing xQx for a random x
+    */
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv) );
+
+   /* if not having desired curvature, return */
+   if( presentcurv != wantedcurv )
+      return SCIP_OKAY;
+
+   *success = TRUE;
+
+   /* add immediate children to nlexpr */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
+
+   /* put children that are not square or product on stack
+    * grow child for children that are square or product and put this child on stack
+    * require all children to be linear
+    */
+   for( i = 0; i < SCIPgetConsExprExprNChildren(nlexpr); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_EXPRCURV curvlinear[2] = { SCIP_EXPRCURV_LINEAR, SCIP_EXPRCURV_LINEAR };
+
+      child = SCIPgetConsExprExprChildren(nlexpr)[i];
+      assert(child != NULL);
+
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
+         SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
+         assert(SCIPgetConsExprExprNChildren(child) == 1);
+         SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(child)) );
+      }
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+         SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
+      {
+         SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
+         assert(SCIPgetConsExprExprNChildren(child) == 2);
+         SCIP_CALL( exprstackPush(scip, stack, 2, SCIPgetConsExprExprChildren(child)) );
+      }
+      else
+      {
+         SCIPsetConsExprExprCurvature(child, SCIP_EXPRCURV_LINEAR);
+         SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** looks whether top of given expression looks like a signomial that can have a given curvature
@@ -697,7 +798,7 @@ TERMINATE:
  * some day this could be plugins added by users at runtime, but for now we have a fixed list here
  * NOTE: curvCheckExprhdlr should be last
  */
-static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckSignomial, curvCheckExprhdlr };
+static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckSignomial, curvCheckQuadratic, curvCheckExprhdlr };
 /** number of curvcheck methods */
 static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 
@@ -1277,7 +1378,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    /* ignore sums if > 1 children
     * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
     * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
-    * today, I prefer handling this here, as it avoid introducing an extra auxiliary variable
+    * today, I prefer handling this here, as it avoids introducing an extra auxiliary variable
+    * TODO move this into curvCheckExprhdlr and apply there only if root expression
     */
    if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
       return SCIP_OKAY;
@@ -1483,6 +1585,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/preferextended",
       "whether to prefer extended formulations",
       &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxquadratic",
+      "whether to use convexity check on quadratics",
+      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
@@ -1825,6 +1931,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
       &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );*/
    /* "extended" formulations of a concave expressions can give worse estimators */
    nlhdlrdata->preferextended = FALSE;
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxquadratic",
+      "whether to use convexity check on quadratics",
+      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
