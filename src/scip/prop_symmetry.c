@@ -3200,6 +3200,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
+      SCIP_VAR* leadingvar = NULL;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -3462,6 +3463,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                   TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
+            leadingvar = orbitopevarmatrix[0][0];
 
             /* do not release constraint here - will be done later */
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
@@ -3608,6 +3610,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             activeorb = !activeorb;
 
             vars[0] = propdata->permvars[orbit[activeorb][0]];
+            if ( leadingvar != NULL )
+               vars[0] = leadingvar;
 
             assert(chosencolor > -1);
             SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
