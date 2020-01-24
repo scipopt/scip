@@ -613,34 +613,6 @@ SCIP_Bool checkSymmetryDataFree(
 #endif
 
 
-/** checks whether an array has to be resized and in that case performs the reallocation */
-static
-SCIP_RETCODE checkLoadAndResize(
-   SCIP*                 scip,               /**< SCIP pointer */
-   void**                arrayptr,           /**< pointer to the array to be checked */
-   int*                  arraysize,          /**< pointer to the size of the array (will be updated) */
-   int                   requiredslots       /**< number of required slots in the array */
-   )
-{
-   assert( scip != NULL);
-   assert( arrayptr != NULL);
-   assert( arraysize != NULL );
-   assert( requiredslots > 0 );
-
-   if ( requiredslots >= *arraysize )
-   {
-      int newsize = SCIPcalcMemGrowSize(scip, requiredslots + 1);
-      assert( newsize > requiredslots );
-
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, arrayptr, *arraysize, newsize) );
-
-      *arraysize = newsize;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -2626,8 +2598,10 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int nusedperms;
    int nfilledcols;
    int coltoextend;
+   int ntestedperms;
    int row;
    int j;
+   SCIP_Bool foundperm;
 
    assert(scip != NULL);
    assert(perms != NULL);
@@ -2640,38 +2614,53 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    assert(ntwocycles > 0);
    assert(npermvars > 0);
 
+   *isorbitope = TRUE;
+
    /* whether a permutation was considered to contribute to orbitope */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, nactiveperms) );
    nusedperms = 0;
 
    /* fill first two columns of orbitopevaridx matrix */
    row = 0;
-   for (j = 0; j < npermvars; ++j)
+   ntestedperms = 0;
+   foundperm = FALSE;
+
+   while (!foundperm)
    {
       int permidx;
 
-      permidx = activeperms[0];
+      assert(ntestedperms <= nactiveperms);
 
-      if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) )
-         continue;
+      permidx = activeperms[ntestedperms];
 
-      assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) );
-
-      /* avoid adding the same 2-cycle twice */
-      if ( perms[permidx][j] > j )
+      for (j = 0; j < npermvars; ++j)
       {
-         (*orbitopevaridx)[row][0] = j;
-         (*orbitopevaridx)[row++][1] = perms[permidx][j];
-         (*nusedelems)[j] += 1;
-         (*nusedelems)[perms[permidx][j]] += 1;
+
+         if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) )
+            continue;
+
+         assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) );
+
+         /* avoid adding the same 2-cycle twice */
+         if ( perms[permidx][j] > j )
+         {
+            (*orbitopevaridx)[row][0] = j;
+            (*orbitopevaridx)[row++][1] = perms[permidx][j];
+            (*nusedelems)[j] += 1;
+            (*nusedelems)[perms[permidx][j]] += 1;
+
+            foundperm = TRUE;
+         }
+
+         if ( row == ntwocycles )
+            break;
       }
 
-      if ( row == ntwocycles )
-         break;
+      ++ntestedperms;
    }
    assert( row == ntwocycles );
 
-   usedperm[0] = TRUE;
+   usedperm[ntestedperms - 1] = TRUE;
    ++nusedperms;
    (*columnorder)[0] = 0;
    (*columnorder)[1] = 1;
@@ -2681,7 +2670,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       * intersect the last added left column in each row in exactly one entry, starting with
       * column 0 */
    coltoextend = 0;
-   for (j = 1; j < nactiveperms; ++j)
+   for (j = ntestedperms; j < nactiveperms; ++j)
    {  /* lint --e{850} */
       SCIP_Bool success = FALSE;
       SCIP_Bool infeasible = FALSE;
@@ -2693,7 +2682,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
          continue;
 
       SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[j], TRUE, nusedelems, &success, &infeasible) );
+            perms[activeperms[j]], TRUE, nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2717,7 +2706,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    }
 
    coltoextend = 1;
-   for (j = 1; j < nactiveperms; ++j)
+   for (j = ntestedperms; j < nactiveperms; ++j)
    {  /*lint --e(850)*/
       SCIP_Bool success = FALSE;
       SCIP_Bool infeasible = FALSE;
@@ -2729,7 +2718,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
          continue;
 
       SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[j], FALSE, nusedelems, &success, &infeasible) );
+            perms[activeperms[j]], FALSE, nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2747,8 +2736,12 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       }
    }
 
-   if ( nusedperms < nactiveperms ) /*lint !e850*/
+   if ( activevars == NULL && nusedperms < nactiveperms ) /*lint !e850*/
       *isorbitope = FALSE;
+
+   assert( activevars == NULL || nusedperms == SCIPhashsetGetNElements(activevars) / ntwocycles - 1 );
+
+   SCIPfreeBufferArray(scip, &usedperm);
 
    return SCIP_OKAY;
 }
@@ -3038,7 +3031,15 @@ SCIP_RETCODE buildSubgroupGraph(
       assert( firstcolor > -1 );
 
       /* check whether we need to resize */
-      SCIP_CALL( checkLoadAndResize( scip, (void**) usedperms, &usedpermssize, *nusedperms) );
+      if ( *nusedperms >= usedpermssize )
+      {
+         int newsize = SCIPcalcMemGrowSize(scip, (*nusedperms) + 1);
+         assert( newsize > usedpermssize );
+
+         SCIP_CALL( SCIPreallocBufferArray(scip, usedperms, newsize) );
+
+         usedpermssize = newsize;
+      }
 
       (*usedperms)[*nusedperms] = components[componentbegins[compidx] + genorder[j]];
       ++(*nusedperms);
@@ -3139,7 +3140,6 @@ SCIP_RETCODE buildSubgroupGraph(
 
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
-   SCIPfreeBufferArray(scip, &usedperms);
    SCIPfreeBufferArray(scip, &componentslastperm);
    SCIPdigraphFree(&graph);
    SCIPfreeDisjointset(scip, &comptocolor);
@@ -3298,6 +3298,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int chosencomp = -1;
          int chosencompsize = 0;
          int colorcompsize = 0;
+         int nbinarycomps = 0;
          int k;
          SCIP_Bool isorbitope = TRUE;
 #ifdef SCIP_DEBUG
@@ -3338,11 +3339,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
 
-            if ( compsize != colorcompsize  || ! SCIPvarIsBinary(firstvar) )
+            if ( compsize != colorcompsize )
             {
                isorbitope = FALSE;
                break;
             }
+
+            if ( SCIPvarIsBinary(firstvar) )
+               ++nbinarycomps;
          }
 
 #ifdef SCIP_DEBUG
@@ -3376,13 +3380,13 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int ncols;
             int colorstart;
             int l;
-            SCIP_Bool infeasible;
+            SCIP_Bool infeasible = FALSE;
 
             assert(colorcompsize > 2);
 
             chosencomppercolor[j] = 0;
 
-            nrows = compcolorbegins[j+1] - compcolorbegins[j];
+            nrows = nbinarycomps;
             ncols = colorcompsize;
 
             SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
@@ -3393,15 +3397,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             /* orbitope matrix for indices of variables in permvars array */
             SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, nrows) );
-            for (j = 0; j < nrows; ++j)
+            for (k = 0; k < nrows; ++k)
             {
-               SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], ncols) ); /*lint !e866*/
+               SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[k], ncols) ); /*lint !e866*/
             }
 
             /* order of columns of orbitopevaridx */
             SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, ncols) );
-            for (j = 0; j < ncols; ++j)
-               columnorder[j] = ncols + 1;
+            for (k = 0; k < ncols; ++k)
+               columnorder[k] = ncols + 1;
 
             /* count how often an element was used in the potential orbitope */
             SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, propdata->npermvars) );
@@ -3411,14 +3415,20 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* mark variables in this subgroup orbitope */
             for (k = 0; k < nrows; ++k)
             {
+               SCIP_VAR* firstvar;
                int compstart;
-               int varidx;
 
                compstart = graphcompbegins[colorstart + k];
-               varidx = graphcomponents[compstart + l];
+               firstvar = propdata->permvars[graphcomponents[compstart]];
+
+               if ( ! SCIPvarIsBinary(firstvar) )
+                  continue;
 
                for (l = 0; l < ncols; ++l)
                {
+                  int varidx;
+
+                  varidx = graphcomponents[compstart + l];
                   assert( !SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) );
 
                   SCIP_CALL( SCIPhashsetInsert(activevars, SCIPblkmem(scip),
@@ -3429,9 +3439,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* build the variable index matrix for the orbitope */
             SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
                   propdata->npermvars, nrows, nusedperms, &orbitopevaridx, &columnorder,
-                  &nusedelems, &infeasible, activevars) );
+                  &nusedelems, &isorbitope, activevars) );
 
-            assert( ! infeasible );
+            assert( isorbitope );
 
             /* prepare orbitope variable matrix */
             SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
@@ -3460,7 +3470,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             propdata->componentblocked[i] = TRUE;
             ++propdata->ncompblocked;
 
-            for (k = nrows - 1; k >= 0; ++k)
+            for (k = nrows - 1; k >= 0; --k)
                SCIPfreeBufferArray(scip, &orbitopevarmatrix[k]);
             SCIPfreeBufferArray(scip, &orbitopevarmatrix);
             SCIPfreeBufferArray(scip, &nusedelems);
@@ -3473,8 +3483,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          else
             chosencomppercolor[j] = -1;
       }
-#if 0
 
+#if 0
          assert( chosencomp >= 0 );
          assert( chosencomp < ngraphcomponents );
          assert( chosencompsize > 0 );
@@ -3512,8 +3522,16 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
             /* check whether we need to resize */
-            SCIP_CALL( checkLoadAndResize(scip, (void**) propdata->genlinconss,
-                  &(propdata->genlinconssize), propdata->ngenlinconss) );
+            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+            {
+               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+               assert( newsize > propdata->ngenlinconss );
+
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                  propdata->genlinconsssize, newsize) );
+
+               propdata->genlinconsssize = newsize;
+            }
 
             propdata->genlinconss[propdata->ngenlinconss] = cons;
             ++propdata->ngenlinconss;
@@ -3622,8 +3640,16 @@ SCIP_RETCODE detectAndHandleSubgroups(
    #endif
 
                /* check whether we need to resize */
-               SCIP_CALL( checkLoadAndResize(scip, (void**) propdata->genlinconss,
-                     &(propdata->genlinconsssize), propdata->ngenlinconss) );
+               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+               {
+                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+                  assert( newsize > propdata->ngenlinconss );
+
+                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                     propdata->genlinconsssize, newsize) );
+
+                  propdata->genlinconsssize = newsize;
+               }
 
                propdata->genlinconss[propdata->ngenlinconss] = cons;
                ++propdata->ngenlinconss;
