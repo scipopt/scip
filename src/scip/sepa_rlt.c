@@ -1285,44 +1285,6 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_CALL( createRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
       nrelated_vars, &nvars_in_2rels, row_list) );
 
-   for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
-   {
-      foundhashdata = (HASHDATA *) SCIPhashtableGetEntry(hashtable2, i);
-      if( foundhashdata == NULL )
-         continue;
-
-      SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
-                   SCIPvarGetName(foundhashdata->vars[1]));
-
-      SCIPinfoMessage(scip, NULL, "\nrow array:");
-      r = foundhashdata->firstrow;
-      while( r != -1 )
-      {
-         assert(r < nrows && r >= 0);
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(prob_rows[r]));
-         r = row_list[r];
-      }
-   }
-
-   for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
-   {
-      foundhashdata = (HASHDATA *) SCIPhashtableGetEntry(hashtable3, i);
-      if( foundhashdata == NULL )
-         continue;
-
-      SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
-                   SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
-
-      SCIPinfoMessage(scip, NULL, "\nrow array:");
-      r = foundhashdata->firstrow;
-      while( r != -1 )
-      {
-         assert(r < nrows && r >= 0);
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(prob_rows[r]));
-         r = row_list[r];
-      }
-   }
-
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "\nrelated vars:");
    for( i = 0; i < nvars_in_2rels; ++i )
