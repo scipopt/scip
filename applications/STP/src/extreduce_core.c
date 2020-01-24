@@ -1841,6 +1841,17 @@ SCIP_Bool extTreeRuleOutPeriph(
 
       /* now compute the MST */
 
+#ifdef STP_EXT_DEBUG
+      {
+         // todo compute weight!
+         const SCIP_Real mstweight = extreduce_treeGetMstWeight(scip, graph, extdata);
+
+
+         printf("mstobj=%f \n", mstweight);
+      }
+#endif
+
+
 #ifndef NDEBUG
       for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
          assert( graph_edge_nPseudoAncestors(graph, extstack_data[i]) == 0 || graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, extstack_data[i], reddata->pseudoancestor_mark));
