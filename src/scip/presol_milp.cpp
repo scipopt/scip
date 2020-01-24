@@ -78,8 +78,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
-#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros is at most this
-                                              *   factor times the number of nonzeros before presolving */
+#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+                                              *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
@@ -109,8 +109,8 @@ struct SCIP_PresolData
    SCIP_Bool enabledualinfer;                /**< should the dualinfer presolver be enabled within the presolve library? */
    SCIP_Bool enablemultiaggr;                /**< should the multi-aggregation presolver be enabled within the presolve library? */
    SCIP_Bool enableparallelrows;             /**< should the parallel rows presolver be enabled within the presolve library? */
-   SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros is at most this
-                                              *   factor times the number of nonzeros before presolving */
+   SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+                                              *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 };
@@ -403,8 +403,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
    int newnnz = problem.getConstraintMatrix().getNnz();
    bool constraintsReplaced = false;
-   if( allowconsmodification && (data->modifyconsfac == 1.0 ||
-         newnnz <= data->modifyconsfac * oldnnz) )
+   if( newnnz == 0 || (allowconsmodification &&
+         (problem.getNRows() <= data->modifyconsfac * data->lastnrows ||
+          newnnz <= data->modifyconsfac * oldnnz)) )
    {
       int oldnrows = SCIPmatrixGetNRows(matrix);
       int newnrows = problem.getNRows();
@@ -697,7 +698,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/" PRESOL_NAME "/modifyconsfac",
-         "modify SCIP constraints when the number of nonzeros is at most this factor times the number of nonzeros before presolving",
+         "modify SCIP constraints when the number of nonzeros or rows is at most this factor "
+         "times the number of nonzeros or rows before presolving",
          &presoldata->modifyconsfac, FALSE, DEFAULT_MODIFYCONSFAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
