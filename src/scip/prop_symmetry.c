@@ -2593,8 +2593,6 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    )
 {
    SCIP_Bool* usedperm;
-   int* components;
-   int* componentbegins;
    int nusedperms;
    int nfilledcols;
    int coltoextend;
@@ -3223,46 +3221,46 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPdebugMsg(scip, "component %d has %d permutations consisting of 2-cycles\n", i, ntwocycleperms);
 
 #ifdef SCIP_MORE_DEBUG
-   SCIP_Bool* used;
-   int perm;
-   int p;
-   int k;
+      SCIP_Bool* used;
+      int perm;
+      int p;
+      int k;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
-   for (p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p)
-   {
-      perm = propdata->components[p];
-
-      for (k = 0; k < propdata->npermvars; ++k)
-         used[k] = FALSE;
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", perm);
-
-      for (k = 0; k < propdata->npermvars; ++k)
+      SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
+      for (p = propdata->componentbegins[i]; p < propdata->componentbegins[i+1]; ++p)
       {
-         if ( used[k] )
-            continue;
+         perm = propdata->components[p];
 
-         j = propdata->perms[perm][k];
+         for (k = 0; k < propdata->npermvars; ++k)
+            used[k] = FALSE;
 
-         if ( k == j )
-            continue;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "permutation %d\n", perm);
 
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
-         used[k] = TRUE;
-         while (j != k)
+         for (k = 0; k < propdata->npermvars; ++k)
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
-            used[j] = TRUE;
+            if ( used[k] )
+               continue;
 
-            j = propdata->perms[perm][j];
+            j = propdata->perms[perm][k];
+
+            if ( k == j )
+               continue;
+
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "(%s,", SCIPvarGetName(propdata->permvars[k]));
+            used[k] = TRUE;
+            while (j != k)
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s,", SCIPvarGetName(propdata->permvars[j]));
+               used[j] = TRUE;
+
+               j = propdata->perms[perm][j];
+            }
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")");
          }
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
-   }
 
-   SCIPfreeBufferArray(scip, &used);
+      SCIPfreeBufferArray(scip, &used);
 #endif
 
       if ( ntwocycleperms < 2 )
@@ -3294,10 +3292,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       for (j = 0; j < ncompcolors; ++j)
       {
-         SCIP_VAR* vars[2];
-         SCIP_Real vals[2] = {1, -1};
-         int chosencomp = -1;
-         int chosencompsize = 0;
          int colorcompsize = 0;
          int nbinarycomps = 0;
          int k;
@@ -3487,57 +3481,58 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
 
 #if 0
-         assert( chosencomp >= 0 );
-         assert( chosencomp < ngraphcomponents );
-         assert( chosencompsize > 0 );
+      assert( chosencomp >= 0 );
+      assert( chosencomp < ngraphcomponents );
+      assert( chosencompsize > 0 );
 
-         chosencomppercolor[j] = chosencomp;
+      chosencomppercolor[j] = chosencomp;
 
-         SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
-            chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
+      SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
+         chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
 
 #ifdef SCIP_DEBUG
-         nstrongsbcs += graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp] - 1;
+      nstrongsbcs += graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp] - 1;
 #endif
 
-         /* add strong SBCs (lex-max order) for chosen graph component */
-         for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
-         {
-            SCIP_CONS* cons;
-            char name[SCIP_MAXSTRLEN];
+      /* add strong SBCs (lex-max order) for chosen graph component */
+      for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
+      {
+         SCIP_CONS* cons;
+         char name[SCIP_MAXSTRLEN];
+         SCIP_VAR* vars[2];
 
-            vars[0] = propdata->permvars[graphcomponents[k-1]];
-            vars[1] = propdata->permvars[graphcomponents[k]];
+         vars[0] = propdata->permvars[graphcomponents[k-1]];
+         vars[1] = propdata->permvars[graphcomponents[k]];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
-               i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
+            i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
 
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-                  SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-                  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+               SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+               FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
 #ifdef SCIP_MORE_DEBUG
-            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-            /* check whether we need to resize */
-            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-            {
-               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-               assert( newsize > propdata->ngenlinconss );
+         /* check whether we need to resize */
+         if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+         {
+            int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+            assert( newsize > propdata->ngenlinconss );
 
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
                   propdata->genlinconsssize, newsize) );
 
-               propdata->genlinconsssize = newsize;
-            }
-
-            propdata->genlinconss[propdata->ngenlinconss] = cons;
-            ++propdata->ngenlinconss;
+            propdata->genlinconsssize = newsize;
          }
+
+         propdata->genlinconss[propdata->ngenlinconss] = cons;
+         ++propdata->ngenlinconss;
+      }
 #endif
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
@@ -3617,9 +3612,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
                orbitsize[activeorb]-1, chosencolor);
 
-   #ifdef SCIP_DEBUG
+#ifdef SCIP_DEBUG
             nweaksbcs += orbitsize[activeorb] - 1;
-   #endif
+#endif
 
             /* add weak SBCs for rest of enclosing orbit */
             for (j = 1; j < orbitsize[activeorb]; ++j)
@@ -3638,10 +3633,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
                SCIP_CALL( SCIPaddCons(scip, cons) );
 
-   #ifdef SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
-   #endif
+#endif
 
                /* check whether we need to resize */
                if ( propdata->ngenlinconss >= propdata->genlinconsssize )
@@ -3650,7 +3645,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                   assert( newsize > propdata->ngenlinconss );
 
                   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                     propdata->genlinconsssize, newsize) );
+                        propdata->genlinconsssize, newsize) );
 
                   propdata->genlinconsssize = newsize;
                }
@@ -3737,19 +3732,14 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_VAR*** vars;
       SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
-      SCIP_Bool* usedperm;
       SCIP_Bool isorbitope = TRUE;
       SCIP_Bool infeasibleorbitope;
       int** orbitopevaridx;
       int* columnorder;
       int npermsincomponent;
       int ntwocyclescomp = INT_MAX;
-      int nfilledcols;
-      int nusedperms;
       int* nusedelems;
-      int coltoextend;
       int j;
-      int row;
 
       /* orbitopes are detected first, so no component should be blocked */
       assert( ! propdata->componentblocked[i] );
@@ -3855,7 +3845,6 @@ FREEDATASTRUCTURES:
          SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
       }
       SCIPfreeBufferArray(scip, &orbitopevaridx);
-      SCIPfreeBufferArray(scip, &usedperm);
    }
 
    return SCIP_OKAY;
