@@ -260,7 +260,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    }
 
    /* only allow communication of constraint modifications by deleting all constraints they have not been upgraded yet */
-   bool allowconsmodification = SCIPgetNUpgrConss(scip) == 0;
+   bool allowconsmodification = (SCIPgetNUpgrConss(scip) == 0);
 
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
