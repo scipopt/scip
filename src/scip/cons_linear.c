@@ -4087,6 +4087,15 @@ SCIP_RETCODE scaleCons(
    assert(consdata->row == NULL);
    assert(!SCIPisEQ(scip, scalar, 1.0));
 
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -consdata->lhs * scalar))
+      || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, consdata->rhs * scalar)) )
+   {
+      SCIPwarningMessage(scip, "skipped scaling for linear constraint <%s> to avoid numerical troubles (scalar: %.15g)\n",
+         SCIPconsGetName(cons), scalar);
+
+      return SCIP_OKAY;
+   }
+
    /* scale the coefficients */
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
