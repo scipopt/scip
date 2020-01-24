@@ -2301,7 +2301,7 @@ SCIP_RETCODE reduce_da(
 
                FILE *fp;
 
-               fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/deleteme/testNEW.txt", "a+");
+               fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/STATS/stpall_hash.txt", "a+");
                fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
                fclose(fp);
                exit(1);

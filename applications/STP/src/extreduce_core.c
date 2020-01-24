@@ -2844,5 +2844,9 @@ SCIP_RETCODE extreduce_checkNode(
 )
 {
    // todo: fill!
+
+   // todo: this function (or subfunction) should put one MST after the other on the stack, in order to be able to find
+   // pseudo-deletable edges!
+
    return SCIP_OKAY;
 }
