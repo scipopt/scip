@@ -1785,8 +1785,8 @@ SCIP_RETCODE applyConvComb(
       }
 
       /* Breakpoints that are close to each other but not idential lead to numerical issues */
-      if(i > 0 && !SCIPisEQ(scip, breakpoints[i], breakpoints[i-1])
-         && SCIPisFeasZero(scip, breakpoints[i] - breakpoints[i-1]))
+      if( i > 0 && !SCIPisEQ(scip, breakpoints[i], breakpoints[i-1])
+         && SCIPisFeasZero(scip, breakpoints[i] - breakpoints[i-1]) )
       {
          numericsokay = FALSE;
 #ifdef SCIP_DEBUG_BREAKPOINTS
