@@ -2585,9 +2585,9 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int                   npermvars,          /**< number of permutation variables */
    int                   ntwocycles,         /**< number of 2-cycles in the permutations */
    int                   nactiveperms,       /**< number of active permutations */
-   int***                orbitopevaridx,     /**< pointer to store variable index matrix */
-   int**                 columnorder,        /**< pointer to store column order */
-   int**                 nusedelems,         /**< pointer to store how often each element was used */
+   int**                 orbitopevaridx,     /**< pointer to store variable index matrix */
+   int*                  columnorder,        /**< pointer to store column order */
+   int*                  nusedelems,         /**< pointer to store how often each element was used */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
    SCIP_HASHSET*         activevars          /**< hashset of relevant variable indices (+1) (or NULL) */
    )
@@ -2644,10 +2644,10 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
          {
-            (*orbitopevaridx)[row][0] = j;
-            (*orbitopevaridx)[row++][1] = perms[permidx][j];
-            (*nusedelems)[j] += 1;
-            (*nusedelems)[perms[permidx][j]] += 1;
+            orbitopevaridx[row][0] = j;
+            orbitopevaridx[row++][1] = perms[permidx][j];
+            nusedelems[j] += 1;
+            nusedelems[perms[permidx][j]] += 1;
 
             foundperm = TRUE;
          }
@@ -2662,8 +2662,8 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
    usedperm[ntestedperms - 1] = TRUE;
    ++nusedperms;
-   (*columnorder)[0] = 0;
-   (*columnorder)[1] = 1;
+   columnorder[0] = 0;
+   columnorder[1] = 1;
    nfilledcols = 2;
 
    /* extend orbitopevaridx matrix to the left, i.e., iteratively find new permutations that
@@ -2681,8 +2681,8 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       if ( usedperm[j] )
          continue;
 
-      SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[activeperms[j]], TRUE, nusedelems, &success, &infeasible) );
+      SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
+            perms[activeperms[j]], TRUE, &nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2694,7 +2694,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
          usedperm[j] = TRUE;
          ++nusedperms;
          coltoextend = nfilledcols;
-         (*columnorder)[nfilledcols++] = -1; /* mark column to be filled from the left */
+         columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
          j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
       }
    }
@@ -2717,8 +2717,8 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       if ( usedperm[j] )
          continue;
 
-      SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[activeperms[j]], FALSE, nusedelems, &success, &infeasible) );
+      SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
+            perms[activeperms[j]], FALSE, &nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2730,7 +2730,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
          usedperm[j] = TRUE;
          ++nusedperms;
          coltoextend = nfilledcols;
-         (*columnorder)[nfilledcols] = 1; /* mark column to be filled from the right */
+         columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
          ++nfilledcols;
          j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
       }
@@ -3438,8 +3438,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             /* build the variable index matrix for the orbitope */
             SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
-                  propdata->npermvars, nrows, nusedperms, &orbitopevaridx, &columnorder,
-                  &nusedelems, &isorbitope, activevars) );
+                  propdata->npermvars, nrows, nusedperms, orbitopevaridx, columnorder,
+                  nusedelems, &isorbitope, activevars) );
 
             assert( isorbitope );
 
@@ -3797,7 +3797,7 @@ SCIP_RETCODE detectOrbitopes(
 
       /* check if the permutations fulfill properties of an orbitope */
       SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, perms, &(components[componentbegins[i]]), npermvars,
-            ntwocyclescomp, npermsincomponent, &orbitopevaridx, &columnorder, &nusedelems, &isorbitope, NULL) );
+            ntwocyclescomp, npermsincomponent, orbitopevaridx, columnorder, nusedelems, &isorbitope, NULL) );
 
       if ( ! isorbitope )
          goto FREEDATASTRUCTURES;
