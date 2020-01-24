@@ -1240,7 +1240,6 @@ int calcCliqueMaximums(
       SCIPdebugMsg(scip, "var_%d: %g + %g * lambda\n", i, row2coefs[varinds[cliquevarpos[i]]], gradients[i]);
 #endif
 
-
    /* find maximum for lambda = 0 */
    maxpos = 0;
    for( i = 1; i < cliquesize; i++ )
@@ -1262,7 +1261,7 @@ int calcCliqueMaximums(
                 maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
 #endif
 
-   /* find next maximum */
+   /* find other maximums */
    minlambda = 0.0;
    if( firstmaxpos == -1 )
       maxidx = -1;
@@ -1328,7 +1327,7 @@ int calcCliqueMaximums(
       else
       {
          breakpointval = row2coefs[varinds[cliquevarpos[newmaxpos]]] + minlambda * gradients[newmaxpos];
-         assert(maxidx == -1 || SCIPisEQ(scip, breakpointval, row2coefs[maxidx] + minlambda * gradients[maxpos]));
+         assert(maxidx == -1 || SCIPisFeasZero(scip, breakpointval - (row2coefs[maxidx] + minlambda * gradients[maxpos])));
 
          /* check if next segment can become negative */
          if( SCIPisNegative(scip, breakpointval) || (SCIPisZero(scip, breakpointval) && !SCIPisPositive(scip, gradients[newmaxpos])) )
@@ -1367,8 +1366,7 @@ int calcCliqueMaximums(
 
 /** apply ConvComb with clique extension to given rows (see above) */
 static
-SCIP_RETCODE applyConvComb
-(
+SCIP_RETCODE applyConvComb(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   row1,               /**< index of first row */
@@ -1378,7 +1376,7 @@ SCIP_RETCODE applyConvComb
    SCIP_Real*            lbs,                /**< lower variable bounds */
    SCIP_Real*            ubs,                /**< upper variable bounds */
    SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
-)
+   )
 {
    int i;
    int j;
@@ -1421,6 +1419,7 @@ SCIP_RETCODE applyConvComb
    int* currentmaxinds;
    int cliqueidx;
    SCIP_Real* gradients;
+   SCIP_Bool numericsokay;
 
 #ifdef SCIP_DEBUG_SUBSCIP
    SCIP* subscip;
@@ -1767,8 +1766,25 @@ SCIP_RETCODE applyConvComb
    }
 #endif
 
+   /* Check row combination for numerically difficult breakpoints */
+   numericsokay = TRUE;
+   for( i = 0; i < nvars; i++ )
+   {
+      idx = varinds[i];
+      if (signs[idx] != CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0)) )
+      {
+         numericsokay = FALSE;
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoint %g of variable %s is numerically unstable, row-pair will be skipped\n",
+                      breakpoints[i], SCIPmatrixGetColName(matrix, idx));
+#endif
+      }
+      /* assert that computation of breakpoints for clique variables has been numerically stable */
+      assert(!(signs[idx] == CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0))));
+   }
+
    /* The obvious preconditions for bound tightenings are met, so we try to calculate new bounds. */
-   if( nbreakpoints >= 1 )
+   if( numericsokay && nbreakpoints >= 1 )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &newubs, nvars) );
@@ -1796,8 +1812,9 @@ SCIP_RETCODE applyConvComb
          idx = varinds[i];
          if( signs[idx] == UP || signs[idx] == NEG )
          {
-            assert(SCIPisNegative(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisNegative(scip, row1coefs[idx])));
+            assert(SCIPisNegative(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisNegative(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, -lbs[idx]) )
             {
                l1 -= row1coefs[idx] * lbs[idx];
@@ -1810,8 +1827,9 @@ SCIP_RETCODE applyConvComb
          }
          else if( signs[idx] == DN || signs[idx] == POS )
          {
-            assert(SCIPisPositive(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisPositive(scip, row1coefs[idx])));
+            assert(SCIPisPositive(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisPositive(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, ubs[idx]) )
             {
                l1 -= row1coefs[idx] * ubs[idx];
@@ -2086,12 +2104,12 @@ SCIP_RETCODE applyConvComb
 #endif
 
 #ifdef SCIP_DEBUG_CLIQUE
-      SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
-      for( j = 1; j < ncliques+1; j++ )
-         if( currentmaxinds[j] >= 0 )
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", j, currentmaxinds[j], SCIPmatrixGetColName(matrix, currentmaxinds[j]));
-         else
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", j, currentmaxinds[j]);
+         SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
+         for( j = 1; j < ncliques+1; j++ )
+            if( currentmaxinds[j] >= 0 )
+               SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", j, currentmaxinds[j], SCIPmatrixGetColName(matrix, currentmaxinds[j]));
+            else
+               SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", j, currentmaxinds[j]);
 #endif
 
          assert(ninfs >= 0);
@@ -2119,8 +2137,19 @@ SCIP_RETCODE applyConvComb
                coef = breakpoints[i] * row1coefs[idx] + (1 - breakpoints[i]) * row2coefs[idx];
                assert(!SCIPisEQ(scip, breakpoints[i], 2.0));
 
-               /* skip if the coefficient is too close to zero as computations become numerically unstable */
-               if( SCIPisFeasZero(scip, coef) )
+               /* To improve numerical stability, we skip if either of the following is too close to zero
+                * 1. The variable coefficient itself
+                * 2. The variable coefficient divided by the variable activity
+                * 3. The variable coefficient divided by the range of the coefficient for lambda \in [0,1]
+                * As a result we have a dynamic tolerance for the coefficient depending on the ranges of the variable
+                */
+               if( SCIPisFeasZero(scip, coef)
+                   || (SCIPisGT(scip, ubs[idx], lbs[idx])
+                       && SCIPisFeasZero(scip, coef / (ubs[idx] - lbs[idx])))
+                   || (SCIPisGT(scip, row1coefs[idx], row2coefs[idx])
+                       && SCIPisFeasZero(scip, coef / (row1coefs[idx] - row2coefs[idx])))
+                   || (SCIPisGT(scip, row2coefs[idx], row1coefs[idx])
+                       && SCIPisFeasZero(scip, coef / (row2coefs[idx] - row1coefs[idx]))) )
                   continue;
 
                if( signs[idx] == POS || signs[idx] == DN )

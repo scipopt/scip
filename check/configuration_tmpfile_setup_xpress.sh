@@ -14,7 +14,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-### resets and fills a batch file TMPFILE to run CPLEX with
+### resets and fills a batch file TMPFILE to run XPRESS with
 ### sets correct limits, reads in settings, and controls
 ### display of the solving process
 
@@ -39,91 +39,77 @@ SOLBASENAME=${17}  # - base name for solution file
 VISUALIZE=${18}    # - true, if the branch-and-bound search should be visualized
 SOLUFILE=${19}     # - solu file, only necessary if $SETCUTOFF is 1
 
-#args=("$@")
-#for ((i=0; i < $#; i++)) {
-#   echo "argument $((i+1)): ${args[$i]}"
-#}
-
 # new environment variables after running this script
 # -None
 
-#set solfile
+# set solfile
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
-# reset TMPFILE
-echo > $TMPFILE
-echo ""                              > $TMPFILE
-
-# read in settings (even when using default, see bugzilla 600)
-SETTINGS=$SCIPPATH/../settings/$SETNAME.prm
-if test $SETNAME != "default"
-then
-    echo read $SETTINGS                  >> $TMPFILE
-    echo disp settings changed           >> $TMPFILE
-fi
-
-# set non-default feasibility tolerance
-if test $FEASTOL != "default"
-then
-    echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-    echo set mip tolerances integrality $FEASTOL >> $TMPFILE
-fi
-
-# if permutation counter is positive add permutation seed (0 = default)
 if test $p -gt 0
 then
-    echo "Warning: CPlex configuration currently cannot handle instance permutation"
+    echo "Warning: XPRESS configuration currently cannot handle instance permutation"
+    exit 1
+fi
+
+if test "$SETNAME" != "default"
+then
+    echo "Warning: XPRESS configuration currently cannot handle non-default settings"
     exit 1
 fi
 
 if test "$REOPT" = true
 then
-    # exit because reoptimization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle reoptimization"
+    echo "Warning: XPRESS configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "$VISUALIZE" = true
 then
-    # exit because visualization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle visualization"
+    echo "Warning: XPRESS configuration currently cannot handle visualization"
     exit 1
 fi
 
-# set objective limit: optimal solution value from solu file, if existent
 if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
-    # TODO setting cutoff requires knowledge about whether the objective sense is minimization or maximization
-    echo "Warning: Setting a cutoff is currently not supported for Cplex configuration"
+    echo "Warning: Setting a cutoff is currently not supported for XPRESS configuration"
     exit 1
 fi
 
-echo set timelimit $TIMELIMIT           >> $TMPFILE
-echo set clocktype 0                    >> $TMPFILE
-echo set mip display 3                  >> $TMPFILE
-echo set mip interval $DISPFREQ         >> $TMPFILE
-echo set mip tolerances mipgap 0.0      >> $TMPFILE
-echo set mip limits nodes $NODELIMIT    >> $TMPFILE
-echo set mip limits treememory $MEMLIMIT >> $TMPFILE
-echo set threads $THREADS               >> $TMPFILE
-echo set parallel 1                     >> $TMPFILE
-echo set lpmethod 4                     >> $TMPFILE
-echo set barrier crossover -1           >> $TMPFILE
-#echo write $SETFILE                     >> $TMPFILE
-echo read $INSTANCE                     >> $TMPFILE
-echo display problem stats              >> $TMPFILE
-echo $OPTCOMMAND                        >> $TMPFILE
-echo display solution quality           >> $TMPFILE
-echo quit                               >> $TMPFILE
+# The following variables are ignored:
+# $DISPFREQ, $OPTCOMMAND
 
-# currently, the solution checker only supports .mps-files.
-# compare instance name (without .gz) to instance name stripped by .mps.
-#if they are unequal, we have an mps-file
-# TMPINSTANCE=`basename $INSTANCE .gz`
-# TMPINSTANCEB=`basename $TMPINSTANCE .mps`
-# if test "$TMPINSTANCEB" != "$TMPINSTANCE"
-# then
-   # TODO Solution checker implementation for CPLEX
-   #echo write $SOLFILE             >> $TMPFILE
-# fi
-echo quit                              >> $TMPFILE
+# reset TMPFILE
+echo > $TMPFILE
+echo ""                              > $TMPFILE
+
+echo maxtime = -$TIMELIMIT              >> $TMPFILE
+# use wallclock time:
+echo cputime = 0                        >> $TMPFILE
+# set mip gap:
+echo miprelstop = 0.0                   >> $TMPFILE
+# set non-default feasibility tolerance
+if test $FEASTOL != "default"
+then
+    echo miptol = $FEASTOL              >> $TMPFILE
+fi
+echo maxnode = $NODELIMIT               >> $TMPFILE
+echo threads = $THREADS                 >> $TMPFILE
+echo crossover = 0                      >> $TMPFILE
+
+# the following should enforce the memory limit, but still it is only
+# a soft limit and a temporary file is also written
+echo treememorylimit = $MEMLIMIT        >> $TMPFILE
+echo treememorysavingtarget = 0.0       >> $TMPFILE
+
+echo format \"timelimit %g\" \$maxtime  >> $TMPFILE
+echo format \"mipgap %g\" \$miprelstop  >> $TMPFILE
+echo format \"feastol %g\" \$miptol     >> $TMPFILE
+echo format \"nodelimit %g\" \$maxnode  >> $TMPFILE
+echo format \"memlimit %g\" \$treememorylimit >> $TMPFILE
+echo format \"percentmemtofile %g\" \$treememorysavingtarget >> $TMPFILE
+
+echo readprob $INSTANCE                 >> $TMPFILE
+echo time [ mipoptimize ]               >> $TMPFILE
+echo echo simplexiter:                  >> $TMPFILE
+echo simplexiter                        >> $TMPFILE
+echo quit                               >> $TMPFILE

@@ -4,8 +4,12 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | sed 's/\(portal\|tes
 
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
+# -------------------------------------------------------------------------------------------------
+# scripts for testing on local machine
+# -------------------------------------------------------------------------------------------------
+
 .PHONY: testfscip
-testfscip: check_fscip.sh check/configuration_set_fscip.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
+testfscip: check/check_fscip.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check_fscip.awk
 		cd check; \
 		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
@@ -14,14 +18,16 @@ testfscip: check_fscip.sh check/configuration_set_fscip.sh check/configuration_l
 .PHONY: testcplex
 testcplex:
 		cd check; \
-		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+		$(SHELL) ./check.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
 
 .PHONY: testxpress
 testxpress:
 		cd check; \
-		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
-		$(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(notdir $(XPRESS_BIN)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
 
 .PHONY: testmosek
 testmosek:
@@ -31,17 +37,16 @@ testmosek:
 .PHONY: testcbc
 testcbc:
 		cd check; \
-		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
-
-.PHONY: testcbcparallel
-testcbcparallel:
-		cd check; \
-		$(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
+		$(SHELL) ./check.sh $(TEST) $(CBC) $(SETTINGS) $(notdir $(CBC)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
 
 .PHONY: testgurobi
 testgurobi:
 		cd check; \
-		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check.sh $(TEST) $(GUROBI) $(SETTINGS) $(notdir $(GUROBI)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
 
 .PHONY: testglpk
 testglpk:
@@ -54,62 +59,68 @@ testsymphony:
 		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
 		$(DISPFREQ) $(CONTINUE);
 
-.PHONY: testblis
-testblis:
-		cd check; \
-		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+# -------------------------------------------------------------------------------------------------
+# scripts for testing on cluster
+# -------------------------------------------------------------------------------------------------
+
+# solvers using the general scripts setting up tmpfiles:
 
 .PHONY: testcluster
 testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/configuration_tmpfile_setup_scip.sh check/evalcheck_cluster.sh check/check.awk check/run.sh
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) \
-		$(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
+		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: testclusterfscip
-testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
+testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
-		$(SHELL) ./check_cluster_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) \
-		$(notdir $(FSCIP)) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) \
-		$(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(SHELL) ./check_cluster_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: testclustercpx
-testclustercpx:
+testclustercpx: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/configuration_tmpfile_setup_cplex.sh check/evalcheck_cluster.sh check/check_cplex.awk check/run.sh
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(CPLEX) $(SETTINGS) \
-                $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-                $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
+		$(SHELL) ./check_cluster.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
+
+.PHONY: testclusterxpress
+testclusterxpress: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/configuration_tmpfile_setup_xpress.sh check/evalcheck_cluster.sh check/check_xpress.awk check/run.sh
+		cd check; \
+		$(SHELL) ./check_cluster.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(notdir $(XPRESS_BIN)).$(OSTYPE).$(ARCH) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: testclustercbc
 testclustercbc:
 		cd check; \
-		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		$(SHELL) ./check_cluster.sh $(TEST) $(CBC) $(SETTINGS) $(notdir $(CBC)).$(OSTYPE).$(ARCH) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: testclustergurobi
 testclustergurobi:
 		cd check; \
-		$(SHELL) ./check_cluster_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		$(SHELL) ./check_cluster.sh $(TEST) $(GUROBI) $(SETTINGS) $(notdir $(GUROBI)).$(OSTYPE).$(ARCH) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
-.PHONY: testclusterxpress
-testclusterxpress:
-		cd check; \
-		$(SHELL) ./check_cluster_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+# solvers with a specialized interface:
 
 .PHONY: testclustermosek
 testclustermosek:

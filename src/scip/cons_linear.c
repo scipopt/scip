@@ -6145,7 +6145,13 @@ SCIP_RETCODE rangedRowPropagation(
          {
 	    value2 = value + gcd * (SCIPceil(scip, (lhs - value) / gcd));
 
-	    if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+             /* value2 might violate lhs due to numerics, in this case take the next divisible number */
+             if( !SCIPisGE(scip, value2, lhs) )
+             {
+                value2 += gcd;
+             }
+
+	    if( SCIPisLE(scip, value2, rhs) )
 	    {
 	       ++nsols;
 
@@ -6175,7 +6181,13 @@ SCIP_RETCODE rangedRowPropagation(
             {
                value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
 
-               if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+               /* value2 might violate rhs due to numerics, in this case take the next divisible number */
+               if( !SCIPisLE(scip, value2, rhs) )
+               {
+                  value2 -= gcd;
+               }
+
+               if( SCIPisGE(scip, value2, lhs) )
                {
                   maxvalue = value;
                   assert(maxvalue > minvalue);
@@ -8289,7 +8301,7 @@ SCIP_RETCODE extractCliques(
             threshold = consdata->rhs - consdata->glbminactivity;
 
             j = 1;
-#if 0 /* assertion should only hold when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[0], threshold));
 #endif

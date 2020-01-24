@@ -2464,7 +2464,7 @@ SCIP_RETCODE determineSymmetry(
    {
       for (p = 0; p < propdata->nperms; ++p)
       {
-         SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], nvars);
+         SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], propdata->npermvars);
       }
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
    }

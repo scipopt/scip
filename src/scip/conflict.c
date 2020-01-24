@@ -2447,6 +2447,7 @@ SCIP_RETCODE detectImpliedBounds(
       {
          SCIPsetDebugMsg(set, "conflict set (%p) is redundant because at least one global reduction, fulfills the conflict constraint\n", (void*)conflictset);
 
+         /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
       }
       else if( *nredvars > 0 )
@@ -2476,6 +2477,11 @@ SCIP_RETCODE detectImpliedBounds(
 
          SCIPsetDebugMsg(set, "removed %d redundant of %d variables from conflictset (%p)\n", (*nredvars), conflictset->nbdchginfos, (void*)conflictset);
          conflictset->nbdchginfos = nbdchginfos;
+      }
+      else
+      {
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
       }
 
      TERMINATE:
@@ -9449,12 +9455,19 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       pseudocoefs[v] = -SCIPvarGetObj(var);
       curvarlbs[v] = SCIPvarGetLbLocal(var);
       curvarubs[v] = SCIPvarGetUbLocal(var);
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
+
+      if( SCIPsetIsZero(set, pseudocoefs[v]) )
+      {
+         pseudocoefs[v] = 0.0;
+         continue;
+      }
+
       if( pseudocoefs[v] > 0.0 )
          pseudoact += pseudocoefs[v] * curvarubs[v];
       else
          pseudoact += pseudocoefs[v] * curvarlbs[v];
-      lbchginfoposs[v] = var->nlbchginfos-1;
-      ubchginfoposs[v] = var->nubchginfos-1;
    }
    assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, transprob)));
    SCIPsetDebugMsg(set, "  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);

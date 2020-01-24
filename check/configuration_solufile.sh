@@ -14,40 +14,29 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-export LANG=C
+# configures SOLUFILE environment variable for test runs and evaluation runs
 
-AWKARGS=""
-FILES=""
-for i in $@
+# input environment - these environment variables should be set before invoking this script
+TSTNAME=$1       # name of the test set
+
+# new environment variables defined by this script:
+#    SOLUFILE - .solu file for this test set, for parsing optimal solution values
+
+# look for solufiles under the name of the test, the name of the test with everything after the first "_" or "-" stripped, and all;
+# prefer more specific solufile names over general ones and the instance database solufiles over those in testset/
+SOLUFILE=""
+for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
 do
-    if test ! -e $i
-    then
-        AWKARGS="$AWKARGS $i"
-    else
-        FILES="$FILES $i"
-    fi
-done
-
-for i in $FILES
-do
-    NAME=`basename $i .out`
-    DIR=`dirname $i`
-    OUTFILE=$DIR/$NAME.out
-    RESFILE=$DIR/$NAME.res
-    TEXFILE=$DIR/$NAME.tex
-
-    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
-    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-    SOLUFILE=""
-    for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
+    for d in instancedata/testsets testset
     do
-        if test -f testset/${f}.solu
+        if test -f ${d}/${f}.solu
         then
-            SOLUFILE=testset/${f}.solu
-            break
+	    SOLUFILE=${d}/${f}.solu
+	    break
         fi
     done
-
-    awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
+    if ! test "$SOLUFILE" = ""
+    then
+	break
+    fi
 done

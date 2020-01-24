@@ -91,6 +91,7 @@
 
 #define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
 #define DEFAULT_CHECKMONOTONICITY  TRUE /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether symresack constraints should be forced to be copied to sub SCIPs */
 
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
@@ -107,6 +108,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
    SCIP_Bool             checkmonotonicity;  /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
    int                   maxnvars;           /**< maximal number of variables in a symresack constraint */
+   SCIP_Bool             forceconscopy;      /**< whether symresack constraints should be forced to be copied to sub SCIPs */
 };
 
 
@@ -2357,6 +2359,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 static
 SCIP_DECL_CONSCOPY(consCopySymresack)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** vars;
@@ -2382,8 +2385,11 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
    assert( sourcedata->perm != NULL );
    assert( sourcedata->nvars > 0 );
 
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
    /* do not copy non-model constraints */
-   if ( !sourcedata->ismodelcons )
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
    {
       *valid = FALSE;
 
@@ -2583,7 +2589,10 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
          "Check whether permutation is monotone when upgrading to packing/partioning symresacks?",
          &conshdlrdata->checkmonotonicity, TRUE, DEFAULT_CHECKMONOTONICITY, NULL, NULL) );
 
-   
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether symresack constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 

@@ -112,8 +112,8 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define SESCOEFF                0.75    /**< coefficient of single exponential smoothing of estimation */
 
 /* double exponential smoothing parameters for different time series */
-#define DES_ALPHA_PROGRESS 0.65
-#define DES_BETA_PROGRESS  0.15
+#define DES_ALPHA_TREEWEIGHT 0.65
+#define DES_BETA_TREEWEIGHT  0.15
 
 #define DES_ALPHA_GAP 0.6
 #define DES_BETA_GAP  0.15
@@ -134,27 +134,27 @@ typedef enum RestartPolicy RESTARTPOLICY;
 /* computation of search completion */
 #define COMPLETIONTYPE_AUTO      'a'             /**< automatic (regression forest if available, else monotone regression on binary and SSG on nonbinary trees) */
 #define COMPLETIONTYPE_REGFOREST 'r'             /**< regression forest (must be provided by user) */
-#define COMPLETIONTYPE_MONOREG   'm'             /**< monotone regression (using progress and SSG) */
-#define COMPLETIONTYPE_PROGRESS  'p'             /**< use progress value as approximation of search tree completion */
+#define COMPLETIONTYPE_MONOREG   'm'             /**< monotone regression (using tree weight and SSG) */
+#define COMPLETIONTYPE_TREEWEIGHT 'w'            /**< use tree weight value as approximation of search tree completion */
 #define COMPLETIONTYPE_SSG       's'             /**< use SSG value as approximation of search tree completion */
 #define COMPLETIONTYPE_GAP       'g'             /**< use gap value as approximation of search tree completion */
 
 
 /* tree size estimation method */
 #define ESTIMMETHOD_COMPL        'c'             /**< estimation based on projection of current search completion */
+#define ESTIMMETHOD_WBE          'b'             /**< weighted backtrack estimation */
 #define ESTIMMETHOD_ENSMBL       'e'             /**< estimation based on an ensemble of the individual estimations */
 #define ESTIMMETHOD_GAP          'g'             /**< estimation based on double exponential smoothing for open nodes */
 #define ESTIMMETHOD_LFREQ        'l'             /**< estimation based on double exponential smoothing for leaf frequency */
 #define ESTIMMETHOD_OPEN         'o'             /**< estimation based on double exponential smoothing for open nodes */
-#define ESTIMMETHOD_PROG         'p'             /**< estimation based on double exponential smoothing for (tree) progress */
 #define ESTIMMETHOD_SSG          's'             /**< estimation based on double exponential smoothing for sum of subtree gaps */
 #define ESTIMMETHOD_TPROF        't'             /**< estimation based on tree profile method */
-#define ESTIMMETHOD_WBE          'w'             /**< weighted backtrack estimation */
+#define ESTIMMETHOD_TREEWEIGHT   'w'             /**< estimation based on double exponential smoothing for tree weight */
 
-#define ESTIMMETHODS "ceglopstw"
+#define ESTIMMETHODS "bceglostw"
 
 /* constants and default values for treeprofile parameters */
-#define TREEPRROFILE_MINSIZE    512               /**< minimum size (depth) that tree profile can hold */
+#define TREEPROFILE_MINSIZE    512                /**< minimum size (depth) that tree profile can hold */
 #define SSG_STARTPRIMBOUND  SCIP_INVALID          /**< initial value of primal bound used within SSG */
 
 /** double exponential smoothing data structure */
@@ -174,7 +174,7 @@ typedef struct DoubleExpSmooth DOUBLEEXPSMOOTH;
  *
  *  These time series are the basic ingredient for tree size estimation via forecasting.
  *
- *  This general class represents concrete time series such as the closed gap, progress, and leaf frequency.
+ *  This general class represents concrete time series such as the closed gap, tree weight, and leaf frequency.
  *  Through callbacks for data (de-)initialization and value queries, it provides a common interface
  *  to which double exponential smoothing or window forecasts can be applied.
  */
@@ -191,7 +191,7 @@ enum TsPos
 {
    TSPOS_NONE         = -1,                  /**< invalid array position */
    TSPOS_GAP          =  0,                  /**< time series position of gap */
-   TSPOS_PROG         =  1,                  /**< time series position of progress */
+   TSPOS_TREEWEIGHT   =  1,                  /**< time series position of tree weight */
    TSPOS_LFREQ        =  2,                  /**< time series position of leaf frequency */
    TSPOS_SSG          =  3,                  /**< time series position of SSG */
    TSPOS_OPEN         =  4                   /**< time series position of open nodes */
@@ -230,12 +230,12 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_USELEAFTS            TRUE    /**< Use leaf nodes as basic observations for time series, or all nodes? */
 #define DEFAULT_REPORTFREQ           -1      /**< report frequency on estimation: -1: never, 0: always, k >= 1: k times evenly during search */
 #define DEFAULT_REGFORESTFILENAME    "-"     /**< default file name of user regression forest in RFCSV format */
-#define DEFAULT_COEFMONOPROG         0.3667  /**< coefficient of progress in monotone approximation of search completion */
+#define DEFAULT_COEFMONOWEIGHT       0.3667  /**< coefficient of tree weight in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_PROG    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
-                                                            * (g)ap, (l)-eaf frequency, (o)open nodes,
-                                                            * (p)rogress, (s)sg, or (t)ree profile or (w)be */
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_TREEWEIGHT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+                                                            * (g)ap, (l)eaf frequency, (o)open nodes,
+                                                            * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
@@ -257,9 +257,9 @@ struct SCIP_EventhdlrData
    TREEPROFILE*          treeprofile;        /**< tree profile data structure */
    char*                 regforestfilename;  /**< file name of user regression forest in RFCSV format */
    SCIP_Real             restartfactor;      /**< factor by which the estimated number of nodes should exceed the current number of nodes */
-   SCIP_Real             proglastreport;     /**< progress at which last report was printed */
+   SCIP_Real             weightlastreport;   /**< tree weight at which last report was printed */
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
-   SCIP_Real             coefmonoprog;       /**< coefficient of progress in monotone approximation of search completion */
+   SCIP_Real             coefmonoweight;     /**< coefficient of tree weight in monotone approximation of search completion */
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
@@ -271,10 +271,10 @@ struct SCIP_EventhdlrData
    int                   lastrestartrun;     /**< the last run at which this event handler triggered restart */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimmethod;        /**< tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
-                                               * (g)ap, (l)-eaf frequency, (o)open nodes,
-                                               * (p)rogress, (s)sg, or (t)ree profile or (w)be */
+                                               * (g)ap, (l)eaf frequency, (o)open nodes,
+                                               * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
    char                  completiontypeparam;/**< approximation of search tree completion:
-                                              *   (a)uto, (g)ap, (p)rogress, (m)onotone regression, (r)egression forest, (s)sg */
+                                              *   (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg */
    SCIP_Bool             countonlyleaves;    /**< Should only leaves count for the minnodes parameter? */
    SCIP_Bool             useleafts;          /**< Use leaf nodes as basic observations for time series, or all nodes? */
    SCIP_Bool             treeprofile_enabled;/**< Should the event handler collect treeprofile data? */
@@ -290,7 +290,7 @@ struct TreeData
    SCIP_Longint          ninner;             /**< the number of inner nodes */
    SCIP_Longint          nleaves;            /**< the number of final leaf nodes */
    SCIP_Longint          nvisited;           /**< the number of visited nodes */
-   long double           progress;           /**< the current progress (sum of leaf weights) */
+   long double           weight;             /**< the current tree weight (sum of leaf weights) */
    SUBTREESUMGAP*        ssg;                /**< subtree sum gap data structure */
 };
 
@@ -371,7 +371,7 @@ char* real2String(
    if( num == SCIP_INVALID )/*lint !e777*/
       (void) SCIPsnprintf(buf, 1, "-");
    else
-      (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%11.*f", digits, num);
+      (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%10.*f", digits, num);
 
    return buf;
 }
@@ -664,7 +664,7 @@ SCIP_RETCODE createTreeProfile(
 
    (*treeprofile)->profile = NULL;
    (*treeprofile)->profilesize = 0;
-   SCIP_CALL( extendMemoryTreeProfile(scip, *treeprofile, TREEPRROFILE_MINSIZE) );
+   SCIP_CALL( extendMemoryTreeProfile(scip, *treeprofile, TREEPROFILE_MINSIZE) );
 
    resetTreeProfileStats(&(*treeprofile)->stats);
    resetTreeProfileStats(&(*treeprofile)->lastestimatestats);
@@ -1167,10 +1167,10 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       assert(nodeinfofirst == NULL || subtreeidx == nodeinfofirst->subtreeidx);
       newgap = calcGap(scip, nodeinfofirst != NULL ? nodeinfofirst->lowerbound : SCIPinfinity(scip) );
 
-      assert(newgap <= oldgap);
+      assert(SCIPisLE(scip, newgap, oldgap));
 
       /* the SSG value is always up-to-date because it is recomputed when the primal bound changes */
-      ssg->value += ssg->scalingfactor * (newgap - oldgap);
+      ssg->value += ssg->scalingfactor * MIN(newgap - oldgap, 0.0);
    }
 
    SCIP_CALL( SCIPhashmapRemove(ssg->nodes2info, (void*)node) );
@@ -1496,7 +1496,7 @@ SCIP_RETCODE resetTreeData(
 {
    /* simply set everything to 0 */
    treedata->ninner = treedata->nleaves = treedata->nvisited = 0L;
-   treedata->progress = 0.0;
+   treedata->weight = 0.0;
 
    /* set up root node */
    treedata->nnodes = 1;
@@ -1560,7 +1560,7 @@ SCIP_RETCODE updateTreeData(
    {
       int depth = SCIPnodeGetDepth(node);
       treedata->nleaves++;
-      treedata->progress += pow(0.5, (SCIP_Real)depth);
+      treedata->weight += pow(0.5, (SCIP_Real)depth);
    }
    else
    {
@@ -1584,10 +1584,10 @@ SCIP_Real treeDataGetWbe(
    TREEDATA*             treedata            /**< tree data */
    )
 {
-   if( treedata->progress <= 0.0 || treedata->nleaves == 0 )
+   if( treedata->weight <= 0.0 || treedata->nleaves == 0 )
       return -1.0;
 
-   return 2.0 * treedata->nleaves / (SCIP_Real)treedata->progress - 1.0;
+   return 2.0 * treedata->nleaves / (SCIP_Real)treedata->weight - 1.0;
 }
 
 #ifdef SCIP_DEBUG
@@ -1604,13 +1604,13 @@ char* treeDataPrint(
       "%" SCIP_LONGINT_FORMAT " inner, "
       "%" SCIP_LONGINT_FORMAT " leaves, "
       "%" SCIP_LONGINT_FORMAT " open), "
-      "progress: %.4Lf, ssg %.4f",
+      "weight: %.4Lf, ssg %.4f",
       treedata->nnodes,
       treedata->nvisited,
       treedata->ninner,
       treedata->nleaves,
       treedata->nopen,
-      treedata->progress,
+      treedata->weight,
       treedata->ssg->value
       );
    return strbuf;
@@ -2004,34 +2004,34 @@ SCIP_Real getEnsembleEstimation(
 
    TSPOS tsposs[] = {
       TSPOS_GAP,
-      TSPOS_PROG,
+      TSPOS_TREEWEIGHT,
       TSPOS_LFREQ,
       TSPOS_SSG,
       TSPOS_OPEN
    };
 
-   /* coefficients for the early stage (tree progress <= 0.3) */
+   /* coefficients for the early stage (tree weight <= 0.3) */
    SCIP_Real coeffs_early[] = {
       0.002, /* gap */
-      0.381, /* progress */
+      0.381, /* tree weight */
       0.469, /* leaf-frequency */
       0.292, /* SSG */
       0.004  /* open-nodes */
    };
 
-   /* coefficients for the intermediate stage (0.3 < tree progress <= 0.6) */
+   /* coefficients for the intermediate stage (0.3 < tree weight <= 0.6) */
    SCIP_Real coeffs_intermediate[] = {
       0.011, /* gap */
-      0.193, /* progress */
+      0.193, /* tree weight */
       0.351, /* leaf-frequency */
       0.012, /* SSG */
       0.051  /* open-nodes */
    };
 
-   /* coefficients for the late stage (tree progress > 0.6) */
+   /* coefficients for the late stage (tree weight > 0.6) */
    SCIP_Real coeffs_late[] = {
       0.000, /* gap */
-      0.033, /* progress */
+      0.033, /* tree weight */
       0.282, /* leaf-frequency */
       0.003, /* SSG */
       0.024  /* open-nodes */
@@ -2041,14 +2041,14 @@ SCIP_Real getEnsembleEstimation(
    treedata = eventhdlrdata->treedata;
 
    /* assign coeffs based on stage */
-   if( treedata->progress <= 0.3 )
+   if( treedata->weight <= 0.3 )
    {
       estim = 0.0;
       coeffs = coeffs_early;
       /* ensure that coeffs and time series are still aligned */
       assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES);
    }
-   else if( treedata->progress <= 0.6 )
+   else if( treedata->weight <= 0.6 )
    {
       coeffs = coeffs_intermediate;
       /* ensure that coeffs and time series are still aligned */
@@ -2105,23 +2105,23 @@ SCIP_RETCODE getSearchCompletion(
     *
     *  use regression forest if available,
     *  or
-    *  use monotone regression if both SSG and progress are meaningful;
+    *  use monotone regression if both SSG and tree weight are meaningful;
     *  or
-    *  use progress or ssg, depending which one is available,
+    *  use tree weight or SSG, depending which one is available,
     *  or
     *  use gap, which is always available
     */
    if( completiontype == COMPLETIONTYPE_AUTO )
    {
-      SCIP_Bool useprogress = eventhdlrdata->treeisbinary;
+      SCIP_Bool useweight = eventhdlrdata->treeisbinary;
       SCIP_Bool usessg = treedata->ssg->pblastsplit != SSG_STARTPRIMBOUND;/*lint !e777*/
 
       if( eventhdlrdata->regforest != NULL )
          completiontype = COMPLETIONTYPE_REGFOREST;
-      else if( useprogress && usessg )
+      else if( useweight && usessg )
          completiontype = COMPLETIONTYPE_MONOREG;
-      else if( useprogress )
-         completiontype = COMPLETIONTYPE_PROGRESS;
+      else if( useweight )
+         completiontype = COMPLETIONTYPE_TREEWEIGHT;
       else if( usessg )
          completiontype = COMPLETIONTYPE_SSG;
       else
@@ -2133,8 +2133,8 @@ SCIP_RETCODE getSearchCompletion(
    {
    /* use regression forest */
    case COMPLETIONTYPE_REGFOREST:
-      values[0] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_PROG]);
-      values[1] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
+      values[0] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_TREEWEIGHT]);
+      values[1] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_TREEWEIGHT]->des);
       values[2] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_SSG]);
       values[3] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
       values[4] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_LFREQ]);
@@ -2146,14 +2146,14 @@ SCIP_RETCODE getSearchCompletion(
       *completed = SCIPregForestPredict(eventhdlrdata->regforest, values);
       break;
 
-   /* interpolate between ssg and progress */
+   /* interpolate between ssg and tree weight */
    case COMPLETIONTYPE_MONOREG:
-      *completed = eventhdlrdata->coefmonoprog * (SCIP_Real)treedata->progress +
+      *completed = eventhdlrdata->coefmonoweight * (SCIP_Real)treedata->weight +
          eventhdlrdata->coefmonossg * (1.0 - treedata->ssg->value);
       break;
 
-   case COMPLETIONTYPE_PROGRESS:
-      *completed = (SCIP_Real)treedata->progress;
+   case COMPLETIONTYPE_TREEWEIGHT:
+      *completed = (SCIP_Real)treedata->weight;
       break;
 
    case COMPLETIONTYPE_GAP:
@@ -2237,16 +2237,16 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
 
 /** update callback at nodes */
 static
-DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
+DECL_TIMESERIESUPDATE(timeseriesUpdateTreeWeight)
 { /*lint --e{715}*/
-   *value = (SCIP_Real)treedata->progress;
+   *value = (SCIP_Real)treedata->weight;
 
    return SCIP_OKAY;
 }
 
 /** update callback at nodes */
 static
-DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
+DECL_TIMESERIESUPDATE(timeseriesUpdateLeafFreq)
 { /*lint --e{715}*/
    if( treedata->nvisited == 0 )
       *value = -0.5;
@@ -2294,13 +2294,13 @@ SCIP_RETCODE includeTimeseries(
    SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_GAP], "gap", 1.0, 0.0,
             DES_ALPHA_GAP, DES_BETA_GAP, timeseriesUpdateGap) );
 
-   /* include progress time series */
-   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_PROG], "progress", 1.0, 0.0,
-            DES_ALPHA_PROGRESS, DES_BETA_PROGRESS, timeseriesUpdateProgress) );
+   /* include tree weight time series */
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_TREEWEIGHT], "tree-weight", 1.0, 0.0,
+            DES_ALPHA_TREEWEIGHT, DES_BETA_TREEWEIGHT, timeseriesUpdateTreeWeight) );
 
    /* include leaf time series */
    SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_LFREQ], "leaf-frequency", 0.5, -0.5,
-            DES_ALPHA_LEAFFREQUENCY, DES_BETA_LEAFFREQUENCY, timeseriesUpdateLeaffreq) );
+            DES_ALPHA_LEAFFREQUENCY, DES_BETA_LEAFFREQUENCY, timeseriesUpdateLeafFreq) );
 
    /* include SSG time series */
    SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_SSG], "ssg", 0.0, 1.0,
@@ -2516,14 +2516,14 @@ char* printReport(
          "%" SCIP_LONGINT_FORMAT " inner, "
          "%" SCIP_LONGINT_FORMAT " leaves, "
          "%" SCIP_LONGINT_FORMAT " open), "
-         "progress: %.4Lf completed %.4f\n",
+         "weight: %.4Lf completed %.4f\n",
          "Estimation Tree",
          treedata->nnodes,
          treedata->nvisited,
          treedata->ninner,
          treedata->nleaves,
          treedata->nopen,
-         treedata->progress,
+         treedata->weight,
          completed
          );
 
@@ -2639,7 +2639,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->restarthitcounter = 0;
-   eventhdlrdata->proglastreport = 0.0;
+   eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
 
    /* reset tree data */
@@ -2730,14 +2730,14 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       /* should a new report be printed? */
       if( eventhdlrdata->reportfreq >= 0 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN &&
          (eventhdlrdata->reportfreq == 0
-         || treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
+         || treedata->weight >= eventhdlrdata->weightlastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
 
          if( eventhdlrdata->reportfreq > 0 )
-            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, ((SCIP_Real)treedata->progress * eventhdlrdata->reportfreq));
+            eventhdlrdata->weightlastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, ((SCIP_Real)treedata->weight * eventhdlrdata->reportfreq));
          else
-            eventhdlrdata->proglastreport = (SCIP_Real)treedata->progress;
+            eventhdlrdata->weightlastreport = (SCIP_Real)treedata->weight;
       }
    }
 
@@ -2821,7 +2821,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
 
    completed = MIN(completed, 1.0);
 
-   if( treedata->progress >= 0.005 && completed > 0 )
+   if( treedata->weight >= 0.005 && completed > 0 )
       SCIPinfoMessage(scip, file, "%7.2f%%", 100.0 * completed);
    else
       SCIPinfoMessage(scip, file, " unknown");
@@ -2861,8 +2861,8 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/method",
             "tree size estimation method: (c)ompletion, (e)nsemble, "
-            "time series forecasts on either (g)ap, (l)-eaf frequency, (o)open nodes, (p)rogress, (s)sg, "
-            "or (t)ree profile or (w)be",
+            "time series forecasts on either (g)ap, (l)eaf frequency, (o)open nodes, tree (w)eight, (s)sg, "
+            "or (t)ree profile or w(b)e",
          &eventhdlrdata->estimmethod, FALSE, DEFAULT_ESTIMMETHOD, ESTIMMETHODS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/restarts/restartlimit", "restart limit",
@@ -2878,9 +2878,9 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->restartfactor, FALSE, DEFAULT_RESTARTFACTOR, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "estimation/coefmonoprog",
-         "coefficient of progress in monotone approximation of search completion",
-         &eventhdlrdata->coefmonoprog, FALSE, DEFAULT_COEFMONOPROG, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "estimation/coefmonoweight",
+         "coefficient of tree weight in monotone approximation of search completion",
+         &eventhdlrdata->coefmonoweight, FALSE, DEFAULT_COEFMONOWEIGHT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "estimation/coefmonossg",
          "coefficient of 1 - SSG in monotone approximation of search completion",
@@ -2897,7 +2897,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
          &eventhdlrdata->regforestfilename, FALSE, DEFAULT_REGFORESTFILENAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/completiontype",
-         "approximation of search tree completion: (a)uto, (g)ap, (p)rogress, (m)onotone regression, (r)egression forest, (s)sg",
+         "approximation of search tree completion: (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg",
          &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/treeprofile/enabled",
@@ -2981,8 +2981,8 @@ SCIP_Real SCIPgetTreesizeEstimation(
       tspos = TSPOS_OPEN;
       break;
 
-   case ESTIMMETHOD_PROG:
-      tspos = TSPOS_PROG;
+   case ESTIMMETHOD_TREEWEIGHT:
+      tspos = TSPOS_TREEWEIGHT;
       break;
 
    case ESTIMMETHOD_SSG:
