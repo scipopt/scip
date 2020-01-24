@@ -195,9 +195,6 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, TRUE);
    detect("log(4-<x1>)*<x1>", SCIP_EXPRCURV_CONCAVE, TRUE);   /* similar to arki0017 */
 
-   /* FIXME should not need this */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/convex/detectsum", TRUE) );
-
    /* quadratic */
    detect("<x1>^2+<x2>^2", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);

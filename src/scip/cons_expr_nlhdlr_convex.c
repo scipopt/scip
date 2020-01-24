@@ -77,7 +77,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_SOL*             vpevalsol;          /**< solution used when evaluating vertex-polyhedral function in facet computation */
 
    /* parameters */
-   SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
+   SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a non-quadratic sum */
    SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
 
    /* advanced parameters (maybe remove some day) */
@@ -108,6 +108,7 @@ typedef struct
    SCIP*                 scip,               /**< SCIP data structure */ \
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */ \
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr to check */ \
+   SCIP_Bool             isrootexpr,         /**< whether nlexpr is the root from where detection has been started */ \
    EXPRSTACK*            stack,              /**< stack where to add generated leafs */ \
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */ \
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< data of nlhdlr */ \
@@ -318,7 +319,7 @@ SCIP_Bool exprstackIsEmpty(
  */
 static
 DECL_CURVCHECK(curvCheckQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_EXPRCURV presentcurv;
@@ -410,7 +411,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
  */
 static
 DECL_CURVCHECK(curvCheckSignomial)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_Real* exponents;
@@ -531,7 +532,7 @@ TERMINATE:
  */
 static
 DECL_CURVCHECK(curvCheckProductComposite)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* f;
    SCIP_CONSEXPR_EXPR* h = NULL;
@@ -731,7 +732,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
 /** use expression handlers curvature callback to check whether given curvature can be achieved */
 static
 DECL_CURVCHECK(curvCheckExprhdlr)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* origexpr;
    int nchildren;
    SCIP_EXPRCURV* childcurv;
@@ -753,6 +754,14 @@ DECL_CURVCHECK(curvCheckExprhdlr)
 
       return SCIP_OKAY;
    }
+
+   /* ignore sums if > 1 children
+    * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
+    * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
+    * today, I prefer handling this here, as it avoids introducing an extra auxiliary variable
+    */
+   if( isrootexpr && !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(nlexpr) == SCIPgetConsExprExprHdlrSum(conshdlr) && nchildren > 1 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, nchildren) );
 
@@ -860,6 +869,7 @@ SCIP_RETCODE constructExpr(
    SCIP_CONSEXPR_EXPR* nlexpr;
    EXPRSTACK stack; /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
    int oldstackpos;
+   SCIP_Bool isrootexpr = TRUE;
 
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
@@ -912,7 +922,7 @@ SCIP_RETCODE constructExpr(
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
          {
-            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
+            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, isrootexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
             if( success )
                break;
          }
@@ -928,6 +938,8 @@ SCIP_RETCODE constructExpr(
          SCIP_CALL( exprstackPush(scip, &stack, SCIPgetConsExprExprNChildren(nlexpr), SCIPgetConsExprExprChildren(nlexpr)) );
       }
       assert(stack.stackpos >= oldstackpos);  /* none of the methods above should have removed something from the stack */
+
+      isrootexpr = FALSE;
 
       /* if nothing was added, then none of the successors of nlexpr were added to the stack
        * this is either because nlexpr was already a variable or value expressions, thus a leaf,
@@ -1375,15 +1387,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(nlhdlrdata != NULL);
    assert(nlhdlrdata->isnlhdlrconvex);
 
-   /* ignore sums if > 1 children
-    * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
-    * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
-    * today, I prefer handling this here, as it avoids introducing an extra auxiliary variable
-    * TODO move this into curvCheckExprhdlr and apply there only if root expression
-    */
-   if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
-      return SCIP_OKAY;
-
    /* ignore pure constants and variables */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
@@ -1579,7 +1582,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    assert(nlhdlr != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/detectsum",
-      "whether to run convexity detection when the root of an expression is a sum",
+      "whether to run convexity detection when the root of an expression is a non-quadratic sum",
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/preferextended",
