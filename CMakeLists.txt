@@ -5,10 +5,16 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-# for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
+   # this happens with the cplex static lib
+   if(LPS MATCHES "cpx")
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
+   endif()
 endif()
 
 set(SCIP_VERSION_MAJOR 7)
