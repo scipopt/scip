@@ -700,6 +700,27 @@ SCIP_RETCODE graph_csr_alloc(
 }
 
 
+/** copies CSR storage */
+void graph_csr_copy(
+   const CSR*            csr_in,             /**< CSR source */
+   CSR*                  csr_out             /**< CSR target */
+   )
+{
+   assert(csr_in && csr_out);
+   assert(csr_in->nnodes == csr_out->nnodes);
+   assert(csr_in->nedges == csr_out->nedges);
+   assert(csr_in->nnodes > 0 && csr_in->nedges > 0);
+
+   assert(graph_csr_isValid(csr_in, FALSE));
+
+   BMScopyMemoryArray(csr_out->start, csr_in->start, csr_in->nnodes + 1);
+   BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges);
+   BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges);
+
+   assert(graph_csr_isValid(csr_out, FALSE));
+}
+
+
 /** frees dynamic CSR storage */
 void graph_csr_free(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -797,28 +818,33 @@ void graph_free_csr(
    assert(g->csr_storage == NULL);
 }
 
-/** is CSR storage of graph valid? */
-SCIP_Bool graph_valid_csr(
-   const GRAPH*          g,                  /**< the graph */
+
+/** is CSR storage valid? */
+SCIP_Bool graph_csr_isValid(
+   const CSR*            csr,                /**< the CSR graph */
    SCIP_Bool             verbose             /**< be verbose? */
 )
 {
-   const CSR* csr = g->csr_storage;
    const int* start = csr->start;
-   const int nedges = g->edges;
-   const int nnodes = g->knots;
+   const int nedges = csr->nedges;
+   const int nnodes = csr->nnodes;
+   const int* head = csr->head;
 
-   assert(g && csr && start && csr->head && csr->cost);
-
-   if( nnodes != g->knots || nedges != g->edges )
+   if( start[0] != 0 )
    {
       if( verbose )
-         printf("CSR: wrong node/edge cound \n");
+         printf("CSR: start first corrupted \n");
+
       return FALSE;
    }
 
-   if( start[0] != 0 )
+   if( start[nnodes] != nedges )
+   {
+      if( verbose )
+         printf("CSR: start last corrupted \n");
+
       return FALSE;
+   }
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -831,7 +857,42 @@ SCIP_Bool graph_valid_csr(
       }
    }
 
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int v = head[i];
+
+      if( v < 0 || v >= nnodes )
+      {
+         if( verbose )
+            printf("CSR: neighbor entry corrupted \n");
+
+         return FALSE;
+      }
+   }
+
    return TRUE;
+}
+
+
+/** is CSR storage of graph valid? */
+SCIP_Bool graph_valid_csr(
+   const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool             verbose             /**< be verbose? */
+)
+{
+   const CSR* csr = g->csr_storage;
+
+   assert(csr && csr->head && csr->cost);
+
+   if( csr->nnodes != g->knots || csr->nedges != g->edges )
+   {
+      if( verbose )
+         printf("CSR: wrong node/edge count \n");
+
+      return FALSE;
+   }
+
+   return graph_csr_isValid(csr, verbose);
 }
 
 

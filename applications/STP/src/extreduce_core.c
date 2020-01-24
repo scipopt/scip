@@ -2542,7 +2542,7 @@ void extCheckArcFromHead(
    assert(extstack_state[0] == EXT_STATE_MARKED);
    assert(success || 1 == extdata->extstack_ncomponents);
 
-   // todo put this loop in some 'extMain' and add extProcessInitialEdge, extProcessInitialPseudoNode
+   // todo put this loop in some 'extCheckComponent' and add extProcessInitialEdge, extProcessInitialPseudoNode
    /* limited DFS backtracking; stops once back at 'edge' */
    while( extdata->extstack_ncomponents > 1 )
    {
@@ -2674,6 +2674,7 @@ SCIP_RETCODE extreduce_checkArc(
 
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
+      // todo: mode the initialization to extra method! Avoids also code dublication
       {
          REDDATA reddata = { .cmst = extpermanent->cmst, .cgraph = extpermanent->cgraph,
             .cgraphEdgebuffer = extpermanent->cgraphEdgebuffer,

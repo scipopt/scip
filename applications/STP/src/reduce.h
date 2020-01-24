@@ -33,8 +33,8 @@
 #define STP_REDUCTION_ADVANCED  2
 
 
-/** minimum spanning tree on the terminal distance graph */
-typedef struct special_distance_minimum_spanning_tree SDMST;
+/** lightweight minimum spanning tree structure that allows to add vertices to given MST on complete graph (in CSR format) */
+typedef struct dynamic_complete_minimum_spanning_tree DCMST;
 
 
 /** reduced cost result data */
@@ -153,10 +153,13 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 
 /* reduce_util.c
  */
-extern SCIP_RETCODE    reduce_sdmstInit(SCIP*, const GRAPH*, SDMST**);
-extern SCIP_Real       reduce_sdmstGetSd(const SDMST*, int, int);
-extern SCIP_Real       reduce_sdmstGetSdAbort(const SDMST*, int, int, SCIP_Real);
-extern const SCIP_Bool* reduce_sdmstUsedEdges(const SDMST*);
-extern void            reduce_sdmstFree(SCIP*, SDMST*);
+extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
+extern void            reduce_dcmstFree(SCIP*, DCMST**);
+extern void            reduce_dcmstAddNode(SCIP*, const CSR*, const SCIP_Real*, DCMST*, CSR*);
+extern void            reduce_dcmstGet1NodeMst(SCIP*, CSR*);
+extern void            reduce_dcmstGet2NodeMst(SCIP*, SCIP_Real, CSR*);
+extern void            reduce_dcmstGet3NodeMst(SCIP*, SCIP_Real, SCIP_Real, SCIP_Real, CSR*);
+extern SCIP_Real       reduce_dcmstGetWeight(SCIP*, const CSR*);
+
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

@@ -45,6 +45,7 @@ SCIP_RETCODE stptest_all(
    SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_dheap(scip) );
    SCIP_CALL( stptest_reduce_sdpcmw(scip) );
+   SCIP_CALL( stptest_dcmst(scip) );
 
    printf("all unit tests passed! \n");
 

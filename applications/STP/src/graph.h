@@ -357,7 +357,9 @@ extern SCIP_Bool graph_heap_isClean(const DHEAP*);
 extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
 extern void           graph_free_csr(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_csr_alloc(SCIP*, int, int, CSR**);
+extern void           graph_csr_copy(const CSR*, CSR*);
 extern void           graph_csr_free(SCIP*, CSR**);
+extern SCIP_Bool      graph_csr_isValid(const CSR*, SCIP_Bool verbose);
 extern SCIP_Bool      graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
 /* CSR depository: */
 extern SCIP_RETCODE   graph_csrdepo_init(SCIP*, CSRDEPO**, int, int);

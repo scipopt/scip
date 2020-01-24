@@ -32,8 +32,7 @@
 #include "reduce.h"
 #include "heur_local.h"
 #include "heur_tm.h"
-
-
+#include "portab.h"
 
 
 static
@@ -117,6 +116,260 @@ SCIP_RETCODE checkSdWalk(
 
    return SCIP_OKAY;
 }
+
+/** builds up 3x3 MST */
+static
+SCIP_RETCODE dcmstTest1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DCMST* dcmst;
+   CSR* csr_base;
+   CSR* csr_extended;
+   SCIP_Real adjcosts[] = { -1.0, -1.0 };
+
+   SCIP_CALL( reduce_dcmstInit(scip, 3, &dcmst) );
+   SCIP_CALL( graph_csr_alloc(scip, 2, 2, &csr_base) );
+   SCIP_CALL( graph_csr_alloc(scip, 3, 4, &csr_extended) );
+
+   csr_base->nnodes = 1;
+   csr_base->nedges = 0;
+
+   reduce_dcmstGet1NodeMst(scip, csr_base);
+
+   csr_extended->nnodes = 2;
+   csr_extended->nedges = 2;
+
+   adjcosts[0] = 2.5;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 2.5) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   csr_base->nnodes = 2;
+   csr_base->nedges = 2;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 3;
+   csr_extended->nedges = 4;
+
+   adjcosts[0] = 1.0;
+   adjcosts[1] = 1.2;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 2.2) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   adjcosts[0] = 3.0;
+   adjcosts[1] = 3.2;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 5.5) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   reduce_dcmstFree(scip, &dcmst);
+   graph_csr_free(scip, &csr_base);
+   graph_csr_free(scip, &csr_extended);
+
+   return SCIP_OKAY;
+}
+
+
+/** builds up 4x4 MST */
+static
+SCIP_RETCODE dcmstTest2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DCMST* dcmst;
+   CSR* csr_base;
+   CSR* csr_extended;
+   SCIP_Real adjcosts[] = { -1.0, -1.0, -1.0 };
+
+   SCIP_CALL( reduce_dcmstInit(scip, 4, &dcmst) );
+   SCIP_CALL( graph_csr_alloc(scip, 3, 4, &csr_base) );
+   SCIP_CALL( graph_csr_alloc(scip, 4, 6, &csr_extended) );
+
+   csr_base->nnodes = 2;
+   csr_base->nedges = 2;
+
+   reduce_dcmstGet2NodeMst(scip, 1.0, csr_base);
+
+   csr_extended->nnodes = 3;
+   csr_extended->nedges = 4;
+
+   adjcosts[0] = 1.5;
+   adjcosts[1] = 0.7;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 1.7) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   csr_base->nnodes = 3;
+   csr_base->nedges = 4;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 4;
+   csr_extended->nedges = 6;
+
+   adjcosts[0] = 0.5;
+   adjcosts[1] = 2.7;
+   adjcosts[2] = 2.7;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 2.2) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+
+   reduce_dcmstFree(scip, &dcmst);
+   graph_csr_free(scip, &csr_base);
+   graph_csr_free(scip, &csr_extended);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** builds up 6x6 MST */
+static
+SCIP_RETCODE dcmstTest3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DCMST* dcmst;
+   CSR* csr_base;
+   CSR* csr_extended;
+   SCIP_Real adjcosts[] = { -1.0, -1.0, -1.0, -1.0, -1.0 };
+
+   SCIP_CALL( reduce_dcmstInit(scip, 6, &dcmst) );
+   SCIP_CALL( graph_csr_alloc(scip, 5, 8, &csr_base) );
+   SCIP_CALL( graph_csr_alloc(scip, 6, 10, &csr_extended) );
+
+   csr_base->nnodes = 2;
+   csr_base->nedges = 2;
+
+   reduce_dcmstGet2NodeMst(scip, 3.1, csr_base);
+
+   /* build on 3x3 */
+   csr_extended->nnodes = 3;
+   csr_extended->nedges = 4;
+
+   adjcosts[0] = 1.2;
+   adjcosts[1] = 7.3;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 4.3) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   /* build on 4x4 */
+   csr_base->nnodes = 3;
+   csr_base->nedges = 4;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 4;
+   csr_extended->nedges = 6;
+
+   adjcosts[0] = 1.6;
+   adjcosts[1] = 0.1;
+   adjcosts[2] = 0.3;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 1.6) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   /* build on 5x5 */
+   csr_base->nnodes = 4;
+   csr_base->nedges = 6;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 5;
+   csr_extended->nedges = 8;
+
+   adjcosts[0] = 0.2;
+   adjcosts[1] = 0.01;
+   adjcosts[2] = 2.6;
+   adjcosts[3] = 4.1;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 0.61) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   /* build on 6x6 */
+   csr_base->nnodes = 5;
+   csr_base->nedges = 8;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 6;
+   csr_extended->nedges = 10;
+
+   adjcosts[0] = 0.3;
+   adjcosts[1] = 0.2;
+   adjcosts[2] = 0.6;
+   adjcosts[3] = 4.1;
+   adjcosts[4] = 5.1;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 0.81) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   reduce_dcmstFree(scip, &dcmst);
+   graph_csr_free(scip, &csr_base);
+   graph_csr_free(scip, &csr_extended);
+
+   return SCIP_OKAY;
+}
+
+
 
 static
 SCIP_RETCODE sdPcMwTest1(
@@ -262,6 +515,21 @@ SCIP_RETCODE sdPcMwTest4(
 }
 
 
+/** tests DCMST */
+SCIP_RETCODE stptest_dcmst(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( dcmstTest1(scip) );
+   SCIP_CALL( dcmstTest2(scip) );
+   SCIP_CALL( dcmstTest3(scip) );
+
+   printf("dcmst test: all ok \n");
+
+   return SCIP_OKAY;
+}
+
+
 /** tests PCMW special distance methods */
 SCIP_RETCODE stptest_reduce_sdpcmw(
    SCIP*                 scip                /**< SCIP data structure */
@@ -271,7 +539,7 @@ SCIP_RETCODE stptest_reduce_sdpcmw(
    SCIP_CALL( sdPcMwTest2(scip) );
    SCIP_CALL( sdPcMwTest4(scip) );
 
-   printf("stptest_reduce_sdpcmw: all ok \n");
+   printf("sdpcmw test: all ok \n");
 
    return SCIP_OKAY;
 }
