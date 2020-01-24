@@ -618,6 +618,7 @@ Fixed bugs
 - avoid using implications on multiaggregated variables when propagating implications
 - fixed creation of (Lagrangian) variable bounds in the OBBT propagator
 - fixed sorting of primal solutions
+- fixed cleaning of clean buffer in conflict analysis
 - avoid probing on variables with huge bounds in shift and propagate heuristic
 
 Miscellaneous

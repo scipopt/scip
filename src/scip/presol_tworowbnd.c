@@ -1366,8 +1366,7 @@ int calcCliqueMaximums(
 
 /** apply ConvComb with clique extension to given rows (see above) */
 static
-SCIP_RETCODE applyConvComb
-(
+SCIP_RETCODE applyConvComb(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   row1,               /**< index of first row */
@@ -1377,7 +1376,7 @@ SCIP_RETCODE applyConvComb
    SCIP_Real*            lbs,                /**< lower variable bounds */
    SCIP_Real*            ubs,                /**< upper variable bounds */
    SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
-)
+   )
 {
    int i;
    int j;
@@ -1767,11 +1766,15 @@ SCIP_RETCODE applyConvComb
    }
 #endif
 
+   /* Sort breakpoints as they will be processed in ascending order */
+   SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
+
    /* Check row combination for numerically difficult breakpoints */
    numericsokay = TRUE;
    for( i = 0; i < nvars; i++ )
    {
       idx = varinds[i];
+      /* Breakpoints close to zero and one are troublesome */
       if (signs[idx] != CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0)) )
       {
          numericsokay = FALSE;
@@ -1780,6 +1783,19 @@ SCIP_RETCODE applyConvComb
                       breakpoints[i], SCIPmatrixGetColName(matrix, idx));
 #endif
       }
+
+      /* Breakpoints that are close to each other but not idential lead to numerical issues */
+      if( i > 0 && !SCIPisEQ(scip, breakpoints[i], breakpoints[i-1])
+         && SCIPisFeasZero(scip, breakpoints[i] - breakpoints[i-1]) )
+      {
+         numericsokay = FALSE;
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoints %g and %g of variables %s and %s are numerically difficult, row-pair will be skipped\n",
+                      breakpoints[i], breakpoint[i-1],
+                      SCIPmatrixGetColName(matrix, idx), SCIPmatrixGetColName(matrix, varinds[i-1]));
+#endif
+      }
+
       /* assert that computation of breakpoints for clique variables has been numerically stable */
       assert(!(signs[idx] == CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0))));
    }
@@ -1793,8 +1809,6 @@ SCIP_RETCODE applyConvComb
       SCIP_CALL( SCIPallocBufferArray(scip, &subsciplbs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subscipubs, nvars) );
 #endif
-
-      SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
 
       for( i = 0; i < nvars; i++)
       {
