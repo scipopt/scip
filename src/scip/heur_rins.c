@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -63,7 +63,7 @@
 #define DEFAULT_MINNODES      50        /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RINS should at least improve the incumbent          */
 #define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_NODESQUOT     0.3       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
@@ -515,7 +515,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward RINS if it succeeded often */
-   nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nnodes = (SCIP_Longint)(nnodes * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    nnodes -= (SCIP_Longint)(100.0 * SCIPheurGetNCalls(heur));  /* count the setup costs for the sub-MIP as 100 nodes */
    nnodes += heurdata->nodesofs;
 

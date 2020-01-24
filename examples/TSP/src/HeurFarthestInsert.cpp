@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,7 @@ using namespace tsp;
 using namespace std;
 
 /** method finding the edge going from the node with id index1 to the node with id index2 */
+static
 GRAPHEDGE* findEdge(
    GRAPHNODE*            nodes,              /**< all nodes of the graph */
    int                   index1,             /**< id of the node where the searched edge starts */
@@ -54,6 +55,7 @@ GRAPHEDGE* findEdge(
 
 
 /** method updating the distances of the nodes to the tour after having inserted one node with id index */
+static
 void updateDistances(
    GRAPHNODE*            nodes,              /**< all nodes of the graph */
    double*               dist,               /**< array with current distances of all nodes to the subtour */

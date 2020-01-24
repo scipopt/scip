@@ -322,7 +322,7 @@ void computeSecant(
       }
       else
       {
-         assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb)));
+         /* assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb))); */
          return;
       }
    }
@@ -1455,7 +1455,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, childinterval.inf, exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1469,7 +1469,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing upper bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing upper bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, childinterval.sup, -exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1713,7 +1713,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, interval.inf, exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1727,7 +1727,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, interval.sup, -exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,9 @@ void SCIPhistoryReset(
    history->inferencesum[1] = 0.0;
    history->cutoffsum[0] = 0.0;
    history->cutoffsum[1] = 0.0;
+   history->ratio = 0.0;
+   history->ratiovalid = FALSE;
+   history->balance = 0.0;
    history->nactiveconflicts[0] = 0;
    history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
@@ -303,7 +306,7 @@ SCIP_RETCODE SCIPvaluehistoryFind(
       SCIPsortedvecInsertRealPtr(valuehistory->values, (void**)valuehistory->histories, value, (void*)(*history), &valuehistory->nvalues, NULL);
    }
    else
-      (*history) = valuehistory->histories[pos];
+      (*history) = valuehistory->histories[pos]; /*lint !e530*/
 
    assert(*history != NULL);
 
@@ -409,6 +412,10 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetCutoffSum
 #undef SCIPhistoryGetAvgCutoffs
 #undef SCIPhistoryGetAvgBranchdepth
+#undef SCIPhistoryIsRatioValid
+#undef SCIPhistoryGetLastRatio
+#undef SCIPhistorySetRatioHistory
+#undef SCIPhistoryGetLastBalance
 
 /** returns the opposite direction of the given branching direction */
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -688,6 +695,53 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
    assert((int)dir == 0 || (int)dir == 1);
 
    return history->nbranchings[dir] > 0 ? (SCIP_Real)history->branchdepthsum[dir]/(SCIP_Real)history->nbranchings[dir] : 1.0;
+}
+
+/** returns true if the given history contains a valid ratio */
+SCIP_Bool SCIPhistoryIsRatioValid(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->ratiovalid;
+}
+
+/** returns the most recent ratio computed given the variable history */
+SCIP_Real SCIPhistoryGetLastRatio(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+   assert(history->ratiovalid);
+
+   return history->ratio;
+}
+
+/** returns the most recent value of r/l used to compute this variable's ratio */
+SCIP_Real SCIPhistoryGetLastBalance(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+   assert(history->ratiovalid);
+
+   return history->balance;
+}
+
+/** sets the ratio history for a particular variable */
+void SCIPhistorySetRatioHistory(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Bool             valid,              /**< True iff the ratio computed is valid */
+   SCIP_Real             ratio,              /**< Ratio of the characteristic polynomial with gains (1, rightgain/leftgain) */
+   SCIP_Real             balance             /**< The value of rightgain/leftgain */
+   )
+{
+   assert(history != NULL);
+
+   history->ratiovalid = valid;
+   history->ratio = ratio;
+   history->balance = balance;
 }
 
 #endif

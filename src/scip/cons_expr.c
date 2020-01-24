@@ -353,15 +353,11 @@ SCIP_RETCODE freeAuxVar(
     */
    /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
 
-   /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
-    * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
-    * locks when freeing a variable
+   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
+    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
+    * variable might be still captured by SCIP's NLP or some other plugin
     */
-   assert(SCIPvarGetNUses(expr->auxvar) >= 2);
-   if( SCIPvarGetNUses(expr->auxvar) == 2 )
-   {
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
-   }
+   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
    if( expr->auxfilterpos >= 0 )
    {
@@ -713,7 +709,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    {
       SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
 
-      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
+      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
       sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
       if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
       {
@@ -963,14 +959,17 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    ub = SCIPvarGetUbLocal(var);
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
-   /* TODO maybe we should not relax fixed variables? */
+   /* relax variable bounds, if there are bounds and variable is not fixed
+    * (actually some assert complains if trying SCIPisRelEQ if both bounds are at different infinity)
+    */
+   if( !(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub)) && !SCIPisRelEQ(scip, lb, ub) )
+   {
+      if( !SCIPisInfinity(scip, -lb) )
+         lb -= SCIPfeastol(scip);
 
-   /* relax variable bounds */
-   if( !SCIPisInfinity(scip, -lb) )
-      lb -= SCIPfeastol(scip);
-
-   if( !SCIPisInfinity(scip, ub) )
-      ub += SCIPfeastol(scip);
+      if( !SCIPisInfinity(scip, ub) )
+         ub += SCIPfeastol(scip);
+   }
 
    /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
    lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
@@ -1014,13 +1013,23 @@ SCIP_RETCODE forwardPropExpr(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
+   /* if value is valid and empty, then we cannot improve, so do nothing */
+   if( rootexpr->activitytag >= conshdlrdata->lastboundrelax && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
+   {
+      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%u)), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
+
+      if( infeasible != NULL )
+         *infeasible = TRUE;
+
+      return SCIP_OKAY;
+   }
+
    /* if value is up-to-date, then nothing to do */
    if( rootexpr->activitytag == conshdlrdata->curboundstag )
    {
       SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
 
-      if( infeasible != NULL && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
-         *infeasible = TRUE;
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity)); /* handled in previous if() */
 
       return SCIP_OKAY;
    }
@@ -1085,7 +1094,7 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               /* if already empty, then don't try to compute even better activitiy
+               /* if already empty, then don't try to compute even better activity
                 * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
                 */
                assert(infeasible == NULL || *infeasible);
@@ -1146,7 +1155,9 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_INTERVAL exprhdlrinterval = interval;
 
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-               /* TODO always do this?, or only if none of the nlhdlr implemented inteval? */
+               /* TODO always do this?, or only if none of the nlhdlr implemented inteval?
+                *   the default nlhdlr already calls the exprhdlr's inteval, unless another nlhdlr already said that it does inteval
+                */
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG
@@ -1193,15 +1204,23 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
-               /* if previnterval allow a further tightening, then reversepropagation
-                * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                * TODO we might want to require a mimimal tightening?
-                */
-               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval) && !expr->inqueue )
+               if( reversepropqueue != NULL && !expr->inqueue && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
                {
-                  /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
-                  SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
-                  expr->inqueue = TRUE;
+                  /* if previnterval allow a further tightening, then do reversepropagation
+                   * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+                   * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded
+                   */
+                  if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval)) ||
+                     (!force &&
+                        ((interval.inf <= -SCIP_INTERVAL_INFINITY && previnterval.inf > -SCIP_INTERVAL_INFINITY) ||
+                         (interval.sup >=  SCIP_INTERVAL_INFINITY && previnterval.sup >  SCIP_INTERVAL_INFINITY) ||
+                         SCIPisLbBetter(scip, previnterval.inf, interval.inf, interval.sup) ||
+                         SCIPisUbBetter(scip, previnterval.sup, interval.inf, interval.sup))) )
+                  {
+                     /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
+                     SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+                     expr->inqueue = TRUE;
+                  }
                }
                /* else
                {
@@ -1466,6 +1485,8 @@ SCIP_RETCODE propConss(
 
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
+          * (TODO: do we still need this since we have the tag's???
+          * this means that we propagate all constraints even if there was only very few boundchanges that related to only a few constraints)
           * in other rounds, we skip already propagated constraints
           */
          if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
@@ -1593,7 +1614,7 @@ SCIP_RETCODE propConss(
  *
  * Also removes constraints of the form lhs <= variable <= rhs.
  *
- * @TODO it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
+ * @todo it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
  *
  * @note This could should not run during solving, because the forwardProp takes the bounds of auxiliary variables into account.
  * For the root expression, these bounds are already set to the constraint sides, so that the activity of every expression
@@ -2252,7 +2273,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(eventdata != NULL);
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
 
-   SCIPdebugMsg(scip, "  exec event %u for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
+   SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
 
    /* for real variables notify constraints to repropagate and possibly resimplify */
    if( SCIPisConsExprExprVar(expr) )
@@ -2664,7 +2685,6 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
  *  algorithm consists of two steps:
  *
@@ -6984,7 +7004,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
 #endif
 
    /*
-    * transform the facet to original space and compute value at x^*, i.e., \alpha x + \beta
+    * transform the facet to original space and compute value at x^*, i.e., alpha x + beta
     */
 
    SCIPdebugMsg(scip, "facet in orig. space: ");
@@ -7001,10 +7021,10 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       ub = box[2 * varpos + 1];
       assert(!SCIPisEQ(scip, lb, ub));
 
-      /* \alpha_i := \bar \alpha_i / (ub_i - lb_i) */
+      /* alpha_i := alpha_bar_i / (ub_i - lb_i) */
       facetcoefs[varpos] = facetcoefs[varpos] / (ub - lb);
 
-      /* \beta = \bar \beta - \sum_i \alpha_i * lb_i */
+      /* beta = beta_bar - sum_i alpha_i * lb_i */
       *facetconstant -= facetcoefs[varpos] * lb;
 
       /* evaluate */
@@ -7014,7 +7034,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    }
    SCIPdebugMsgPrint(scip, "%3.4e ", *facetconstant);
 
-   /* add \beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
+   /* add beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
    facetvalue += *facetconstant;
 
    SCIPdebugMsgPrint(scip, "has value %g, target = %g\n", facetvalue, targetvalue);
@@ -7666,8 +7686,7 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
    /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
-    * unlocked and freed
+    * removed all of his captures on variables
     */
    if( SCIPgetNRuns(scip) > 1 )
    {
@@ -8020,10 +8039,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
       consdata = SCIPconsGetData(conss[c]);
       if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
-      {
          *result = SCIP_INFEASIBLE;
-         break;
-      }
    }
 
    if( *result == SCIP_FEASIBLE )
@@ -8255,7 +8271,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 || *nchgbds > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -11379,8 +11395,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
+   /* force tightening if it would mean fixing the variable */
+   force = force || SCIPisEQ(scip, newlb, newub);
+
    /* check which bound can be tightened
-    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will lightly have tightenlb|tightenub */
+    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will likely have tightenlb|tightenub */
    if( force )
    {
       tightenlb = !SCIPisHugeValue(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
@@ -11780,9 +11799,9 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  * Different type expressions:
  * OR6: u value, v other: u < v always
  * OR7: u sum, v var or func: u < v <=> u < 0+v
- *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ *      In other words, u = sum_{i = 1}^n alpha_i u_i, then u < v <=> u_n < v or if u_n = v and alpha_n < 1
  * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
- *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
+ *      In other words, u = Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
  * OR9: u pow, v sum, var or func: u < v <=> u < v^1
@@ -12485,6 +12504,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for signed power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrSignpower(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "signpower") == 0);
+   conshdlrdata->exprsignpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include handler for entropy expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );
@@ -12924,6 +12944,26 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    return SCIP_OKAY;
 }
 
+/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+ *
+ *  @note this method is only used for testing purposes
+ */
+SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+
+   return SCIP_OKAY;
+}
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
@@ -13625,6 +13665,9 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real midval;
+      SCIP_Real feastol;
+
+      feastol = SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetLPFeastol(scip) : SCIPfeastol(scip);
 
       /* evaluate function in middle point to get some idea for a scaling */
       for( j = 0; j < nvars; ++j )
@@ -13637,7 +13680,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       assert(conshdlrdata != NULL);
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * SCIPlpfeastol(scip) * fabs(midval) )
+      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * feastol * fabs(midval) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g (midval=%g).\n", maxfaceterror, midval);
          *success = FALSE;

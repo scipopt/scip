@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -398,12 +398,12 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
 
          if( integral )
          {
-            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX,
+            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, FALSE,
                   skipdown[c] ? NULL : &down, skipup[c] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          }
          else
          {
-            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX,
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX, FALSE,
                   skipdown[c] ? NULL : &down, skipup[c] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          }
          nsbcalls++;

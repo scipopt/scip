@@ -711,7 +711,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * x  y  x  y
  * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
  * f
- * |   is d_s f [where d is actually \partial]
+ * |   is d_s f [where d is actually \f$ \partial \f$]
  * s
  * The weight of a path is the product of the weight of the edges in the path.
  * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
@@ -1231,6 +1231,19 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_VAR**            var,                /**< pointer to store the variable */
    SCIP_Real*            coef                /**< pointer to store the coefficient */
+   );
+
+/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+ *
+ *  @note this method is only used for testing purposes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
 /** @} */

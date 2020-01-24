@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,6 +64,7 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp)); /**< a comparator for defining the solving order of the subproblems */
    SCIP_BENDERSDATA*     bendersdata;        /**< Benders' decomposition local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this Benders' decomposition for the next stages */
    SCIP_CLOCK*           bendersclock;       /**< Benders' decomposition execution time */
@@ -90,6 +91,12 @@ struct SCIP_Benders
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
+   SCIP_Real             solutiontol;        /**< storing the tolerance for optimality in Benders' decomposition */
+   int                   numthreads;         /**< the number of threads to use when solving the subproblem */
+   SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
+                                                  adding slack variables to constraints to ensure feasibility */
+   SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
+   SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -99,13 +106,18 @@ struct SCIP_Benders
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
+   SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
    SCIP_Real*            subproblowerbound;  /**< a lower bound on the subproblem - used for the integer cuts */
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
+   SCIP_BENDERSSUBTYPE*  subprobtype;        /**< the convexity type of the subproblem */
    SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
+   SCIP_Bool*            subprobisnonlinear; /**< does the subproblem contain non-linear constraints */
    int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
+   int                   nnonlinearsubprobs; /**< the number of subproblems that are non-linear */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
@@ -114,8 +126,8 @@ struct SCIP_Benders
    SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
    int                   nactivesubprobs;    /**< the number of active subproblems */
-   int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
-   int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
+   SCIP_Bool             freesubprobs;       /**< do the subproblems need to be freed by the Benders' decomposition core? */
+   SCIP_Bool             masterisnonlinear;  /**< flag to indicate whether the master problem contains non-linear constraints */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */
@@ -136,6 +148,7 @@ struct SCIP_Benders
 
    /* solving process information */
    int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
+   SCIP_Bool             feasibilityphase;   /**< is the Benders' decomposition in a feasibility phase, i.e. using slack variables */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
@@ -149,6 +162,14 @@ struct SCIP_Benders
    int                   storedcutssize;     /**< the size of the added cuts array */
    int                   nstoredcuts;        /**< the number of the added cuts */
 
+};
+
+/** statistics for solving the subproblems. Used for prioritising the solving of the subproblem */
+struct SCIP_SubproblemSolveStat
+{
+   int                   idx;                /**< the index of the subproblem */
+   int                   ncalls;             /**< the number of times this subproblems has been solved */
+   SCIP_Real             avgiter;            /**< the average number of LP/NLP iterations performed */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

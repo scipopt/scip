@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -1703,7 +1703,8 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
    assert( var != NULL );
    SCIP_CALL( SCIPcheckStage(scip, "SCIPflattenVarAggregationGraph", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+
    return SCIP_OKAY;
 }
 
@@ -2923,6 +2924,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -2940,6 +2942,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    )
 {
    SCIP_COL* col;
+   SCIP_Real localdown;
+   SCIP_Real localup;
+   SCIP_Bool localdownvalid;
+   SCIP_Bool localupvalid;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -2986,16 +2992,35 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    }
 
    /* call strong branching for column with fractional value */
-   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
-         down, up, downvalid, upvalid, lperror) );
+   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
+         &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      if( !idempotent )
+      {
+         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      }
+      else
+      {
+         if( downinf != NULL )
+            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+         if( upinf != NULL )
+            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
+      }
    }
+
+   if( down != NULL )
+      *down = localdown;
+   if( up != NULL )
+      *up = localup;
+   if( downvalid != NULL )
+      *downvalid = localdownvalid;
+   if( upvalid != NULL )
+      *upvalid = localupvalid;
 
    return SCIP_OKAY;
 }
@@ -3623,7 +3648,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    scip->set->conf_enable = enabledconflict;
 
    return SCIP_OKAY;
-}
+}  /*lint !e438*/
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch
  *  is (val -1.0) and the up brach ins (val +1.0)
@@ -3642,6 +3667,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -3659,6 +3685,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    )
 {
    SCIP_COL* col;
+   SCIP_Real localdown;
+   SCIP_Real localup;
+   SCIP_Bool localdownvalid;
+   SCIP_Bool localupvalid;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -3702,16 +3732,35 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    }
 
    /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
-         down, up, downvalid, upvalid, lperror) );
+   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
+         &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      if( !idempotent )
+      {
+         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      }
+      else
+      {
+         if( downinf != NULL )
+            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+         if( upinf != NULL )
+            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
+      }
    }
+
+   if( down != NULL )
+      *down = localdown;
+   if( up != NULL )
+      *up = localup;
+   if( downvalid != NULL )
+      *downvalid = localdownvalid;
+   if( upvalid != NULL )
+      *upvalid = localupvalid;
 
    return SCIP_OKAY;
 }
@@ -4526,7 +4575,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -4534,7 +4583,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -5387,8 +5436,8 @@ SCIP_RETCODE SCIPinferVarFixCons(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            fixedval, infeasible, &fixed) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter,
+            scip->eventqueue, scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
 	 *tightened = fixed;
@@ -5519,7 +5568,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5632,7 +5682,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5709,8 +5760,8 @@ SCIP_RETCODE SCIPinferBinvarCons(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               (SCIP_Real)fixedval, infeasible, &fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
       /*lint -fallthrough*/
@@ -5779,8 +5830,8 @@ SCIP_RETCODE SCIPinferVarFixProp(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            fixedval, infeasible, &fixed) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
 	 *tightened = fixed;
@@ -5912,7 +5963,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6026,7 +6078,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6104,8 +6157,8 @@ SCIP_RETCODE SCIPinferBinvarProp(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               (SCIP_Real)fixedval, infeasible, &fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
       /*lint -fallthrough*/
@@ -6249,7 +6302,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    }  /*lint !e788*/
 
    /* coverity: unreachable code */
-   if( tightened != NULL )
+   if( tightened != NULL && lb < SCIPcomputeVarLbGlobal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6369,7 +6422,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    }  /*lint !e788*/
 
    /* coverity: unreachable code */
-   if( tightened != NULL )
+   if( tightened != NULL && ub > SCIPcomputeVarUbGlobal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -8258,8 +8311,8 @@ SCIP_RETCODE SCIPfixVar(
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               fixedval, infeasible, fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
       /*lint -fallthrough*/
@@ -8395,8 +8448,8 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       SCIP_CALL( SCIPvarFix(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            rhs/scalary, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs/scalary, infeasible, aggregated) );
       *redundant = TRUE;
    }
    else if( vary == NULL )
@@ -8406,8 +8459,8 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            rhs/scalarx, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       *redundant = TRUE;
    }
    else if( varx == vary )
@@ -8423,8 +8476,8 @@ SCIP_RETCODE SCIPaggregateVars(
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               rhs/scalarx, infeasible, aggregated) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       }
       *redundant = TRUE;
    }

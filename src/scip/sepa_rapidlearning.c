@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -246,16 +246,12 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     *
     * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
     * but no variables should be missing because we stop earlier anyway if pricers are present).
-    * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+    * By disabling dual presolving, conflicts and bound changes found in a relaxation are still valid for the original problem.
     */
    if( ! valid )
    {
-      for( i = 0; i < nvars; i++ )
-      {
-         if( subvars[i] == NULL )
-            continue;
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
-      }
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/allowweakdualreds", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/allowstrongdualreds", FALSE) );
    }
 
    SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
@@ -355,9 +351,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPtransformProb(subscip) );
    for( i = 0; i < nvars; ++i)
    {
-      if( subvars[i] == NULL )
-         continue;
-      SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
+      if( subvars[i] != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
+      }
    }
 
    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
@@ -677,21 +674,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
    SCIPhashmapFree(&varmapbw);
-
-   /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-
-   if( !valid )
-   {
-      /* remove all locks that were added to avoid dual presolving */
-      for( i = 0; i < nvars; i++ )
-      {
-         if( subvars[i] == NULL )
-            continue;
-
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
-      }
-   }
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);

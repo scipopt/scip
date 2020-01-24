@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,6 +234,8 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             updatecol,          /**< should col be updated, or should it stay in its current state ? */
+   SCIP_Bool             updatestat,         /**< should stat be updated, or should it stay in its current state ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -304,7 +306,6 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -995,6 +996,27 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             cutoffbound         /**< new upper objective limit */
+   );
+
+/** gets current primal feasibility tolerance of LP solver */
+SCIP_Real SCIPlpGetFeastol(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** sets primal feasibility tolerance of LP solver */
+void SCIPlpSetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   );
+
+/** resets primal feasibility tolerance of LP solver
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+void SCIPlpResetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** applies all cached changes to the LP solver */

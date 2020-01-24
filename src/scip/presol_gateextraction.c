@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -195,7 +195,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    assert(hashdata->nvars == 2);
 
    /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
-   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
+   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + (unsigned int) SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
@@ -257,9 +257,9 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars >= 2);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0])), \
-                      SCIPcombineTwoInt(SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]), \
-                                        SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1])));
+   return SCIPhashFour(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0]), \
+                     SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]), \
+                     SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1]));
 }
 
 /** initialize gateextraction presolver data */

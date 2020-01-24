@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -427,7 +427,8 @@ SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
    SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos)) /**< callback to act on position change of elem in priority queue, or NULL */
    );
 
 /** frees priority queue, but not the data elements themselves */
@@ -447,6 +448,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    void*                 elem                /**< element to be inserted */
+   );
+
+/** delete element at specified position, maintaining the heap property */
+SCIP_EXPORT
+void SCIPpqueueDelPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   int                   pos                 /**< position of element that should be deleted */
    );
 
 /** removes and returns best element from the priority queue */
@@ -473,6 +481,13 @@ void** SCIPpqueueElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
+/** return the position of @p elem in the priority queue, or -1 if element is not found */
+SCIP_EXPORT
+int SCIPpqueueFind(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
+   );
+
 /**@} */
 
 
@@ -487,20 +502,30 @@ void** SCIPpqueueElems(
  *@{
  */
 
-/* fast 2-universal hash functions for two and four elements */
+/* fast 2-universal hash functions for two to seven 32bit elements with 32bit output */
 
 #define SCIPhashSignature64(a)              (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(a)))>>26))
-#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) + \
-                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint32_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-/* helpers to use above hashfuncions */
-#define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
+#define SCIPhashThree(a, b, c)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                        (uint32_t)(c) * 0xd37e9a1ce2148403ULL)>>32 ))
 
-#define SCIPcombineThreeInt(a, b, c)        (((uint64_t) (a) << 43) + ((uint64_t) (b) << 21) + ((uint64_t) (c)) )
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
 
-#define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
+#define SCIPhashFive(a, b, c, d, e)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                           (uint32_t)(e) * 0xf48d4cd331e14327ULL)>>32 ))
+
+#define SCIPhashSix(a, b, c, d, e, f)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                         ((uint32_t)(e) + 0xf48d4cd331e14327ULL) * ((uint32_t)(f) + 0x80791a4edfc44c75ULL))>>32 ))
+
+#define SCIPhashSeven(a, b, c, d, e, f, g)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                         ((uint32_t)(e) + 0xf48d4cd331e14327ULL) * ((uint32_t)(f) + 0x80791a4edfc44c75ULL) + \
+                                                         (uint32_t)(g) * 0x7f497d9ba3bd83c0ULL)>>32 ))
 
 /** computes a hashcode for double precision floating point values containing
  *  15 significant bits, the sign and the exponent
@@ -1368,6 +1393,16 @@ SCIP_EXPORT
 void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
+   );
+
+/** identifies the articulation points in a given directed graph
+ *  uses the helper recursive function findArticulationPointsUtil
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdigraphGetArticulationPoints(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
    );
 
 /** Compute undirected connected components on the given graph.

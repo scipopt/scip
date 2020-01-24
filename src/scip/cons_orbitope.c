@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,6 +137,7 @@
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 #define DEFAULT_USEDYNAMICPROP     TRUE /**< whether we use a dynamic version of the propagation routine */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 
 /*
  * Data structures
@@ -148,6 +149,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
    SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
+   SCIP_Bool             forceconscopy;      /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 };
 
 /** constraint data for orbitope constraints */
@@ -310,9 +312,9 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/** strenghten full orbitopes to packing/partitioning orbitopes if possible  */
+/** strengthen full orbitopes to packing/partitioning orbitopes if possible */
 static
-SCIP_RETCODE strenghtenOrbitopeConstraint(
+SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
    int*                  nrows,              /**< pointer to number of rows of variable matrix */
@@ -323,13 +325,16 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
    SCIP_CONSHDLR* setppcconshdlr;
    SCIP_CONS** setppcconss;
    int nsetppcconss;
-   SCIP_Bool* covered;
+   int* covered;
    int nprobvars;
    int* rowidxvar;
+   int* rowcoveragesetppc;
+   int* rowsinsetppc;
    int ncovered;
+   int ncoveredpart;
    int i;
    int j;
-   SCIP_Bool success = TRUE;
+   int c;
 
    assert( scip != NULL );
    assert( vars != NULL );
@@ -354,159 +359,139 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
    /* whether a row is contained in packing/partitioning constraint */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, *nrows) );
    ncovered = 0;
+   ncoveredpart = 0;
 
    /* array storing index of orbitope row a variable is contained in */
-   nprobvars = SCIPgetNVars(scip);
+   nprobvars = SCIPgetNTotalVars(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rowidxvar, nprobvars) );
 
    for (i = 0; i < nprobvars; ++i)
       rowidxvar[i] = -1;
 
-   for (i = 0; i < *nrows && success; ++i)
+   for (i = 0; i < *nrows; ++i)
    {
       for (j = 0; j < ncols; ++j)
       {
-         if ( SCIPvarIsNegated(vars[i][j]) )
-         {
-            success = FALSE;
-            break;
-         }
-
-         rowidxvar[SCIPvarGetProbindex(vars[i][j])] = i;
+         assert( SCIPvarGetIndex(vars[i][j]) >= 0 && SCIPvarGetIndex(vars[i][j]) < nprobvars );
+         rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
       }
    }
 
-   if ( ! success )
-      goto FREEUPGRADESTRUCTURES;
+   /* storage for number of vars per row that are contained in current setppc cons and
+    * labels of rows intersecting with current setppc cons
+    */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcoveragesetppc, *nrows) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowsinsetppc, *nrows) );
 
-   /* iterate over rows of orbitope and check whether rows are contained in partitioning constraints
-    *
-    * @todo sort constraints within the setppcconss array: first by type and then by increasing number of
-    * contained variables */
-   for (i = 0; i < *nrows && success; ++i)
+   /* iterate over set packing and partitioning constraints and check whether the constraint's
+    * support is a row r of the orbitope (covered[r] = 2) or contains row r (covered[r] = 1)
+    */
+   for (c = 0; c < nsetppcconss && ncoveredpart < ncols; ++c)
    {
-      /* iterate over constraints */
-      int c;
-      for (c = 0; c < nsetppcconss && success; ++c)
-      {
-         int nsetppcvars;
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int nfound = 0;
+      int nsetppcvars;
+      SCIP_VAR** setppcvars;
+      SCIP_VAR* var;
+      int nrowintersect = 0;
+      int nvarsinorbitope;
 
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
-            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
-            continue;
-         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING );
-
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
-
-         /* partitioning constraint contains wrong number of variables */
-         if ( nsetppcvars != ncols )
-            continue;
-         assert( nsetppcvars == ncols );
-
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether i-th row is contained in partitioning constraint */
-         for (j = 0; j < nsetppcvars; ++j)
-         {
-            int idx;
-
-            var = setppcvars[j];
-            if ( SCIPvarIsNegated(var) )
-               break;
-
-            idx = SCIPvarGetProbindex(var);
-
-            if ( rowidxvar[idx] == i )
-               ++nfound;
-            else
-               break;
-         }
-
-         if ( nfound == ncols )
-         {
-            assert( ! covered[i] );
-            covered[i] = TRUE;
-            ++ncovered;
-
-            break;
-         }
-      }
-   }
-
-   if ( ncovered == *nrows )
-   {
-      *type = SCIP_ORBITOPETYPE_PARTITIONING;
-      goto FREEUPGRADESTRUCTURES;
-   }
-
-   /* iterate over rows of orbitope and check whether rows are contained in packing constraints */
-   for (i = 0; i < *nrows; ++i)
-   {
-      int c;
-
-      if ( covered[i] )
+      /* skip covering constraints */
+      if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
          continue;
 
-      /* iterate over constraints */
-      for (c = 0; c < nsetppcconss; ++c)
+      /* get set packing/partitioning variables */
+      nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+      assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
+
+      /* constraint does not contain enough variables */
+      if ( nsetppcvars < ncols )
+         continue;
+
+      setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
+      assert( setppcvars != NULL );
+
+      /* upper bound on variables potentially contained in orbitope */
+      nvarsinorbitope = nsetppcvars;
+
+      /* for each setppc var, check whether it appears in a row of the orbitope and store
+       * for each row the number of such variables; can be terminated early, if less than
+       * ncols variables are contained in the orbitope
+       */
+      for (i = 0; i < nsetppcvars && nvarsinorbitope >= ncols; ++i)
       {
-         int nsetppcvars;
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int nfound = 0;
+         int idx;
+         int rowidx;
 
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
-            continue;
+         var = setppcvars[i];
+         idx = SCIPvarGetIndex(var);
 
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
+         assert( idx < nprobvars );
+         assert( idx >= 0 );
 
-         /* packing/partitioning constraint contains too few variables */
-         if ( nsetppcvars < ncols )
-            continue;
-         assert( nsetppcvars >= ncols );
+         rowidx = rowidxvar[idx];
 
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether i-th row is contained in packing constraint */
-         for (j = 0; j < nsetppcvars && nfound < ncols; ++j)
+         /* skip variables not contained in the orbitope */
+         if ( rowidx < 0 )
          {
-            int idx;
-
-            var = setppcvars[j];
-            if ( SCIPvarIsNegated(var) )
-               continue;
-
-            idx = SCIPvarGetProbindex(var);
-
-            if ( rowidxvar[idx] == i )
-               ++nfound;
+            --nvarsinorbitope;
+            continue;
          }
 
-         if ( nfound == ncols )
+         /* skip variables corresponding to already treated rows */
+         if ( covered[rowidx] == 2 || (covered[rowidx] == 1 && (nsetppcvars > ncols || nrowintersect > 1)) )
          {
-            assert( ! covered[i] );
-            covered[i] = TRUE;
-            ++ncovered;
+            --nvarsinorbitope;
+            continue;
+         }
 
-            break;
+         /* store information which rows intersect the setppc cons's support */
+         if ( rowcoveragesetppc[rowidx] == 0 )
+            rowsinsetppc[nrowintersect++] = rowidx;
+         rowcoveragesetppc[rowidx] += 1;
+      }
+
+      /* store whether rows coincide with set partitioning cons's support or whether
+       * row is covered by a set packing/partitioning cons's support
+       */
+      if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING
+           && nrowintersect == 1 && rowcoveragesetppc[rowsinsetppc[0]] == ncols )
+      {
+         if ( covered[rowsinsetppc[0]] == 1 )
+            --ncovered;
+         covered[rowsinsetppc[0]] = 2;
+         ++ncoveredpart;
+         ++ncovered;
+      }
+      else
+      {
+         for (i = 0; i < nrowintersect; ++i)
+         {
+            if ( covered[rowsinsetppc[i]] == 0 && rowcoveragesetppc[rowsinsetppc[i]] >= ncols )
+            {
+               covered[rowsinsetppc[i]] = 1;
+               ++ncovered;
+            }
          }
       }
+
+      /* reset data */
+      for (i = 0; i < nrowintersect; ++i)
+         rowcoveragesetppc[rowsinsetppc[i]] = 0;
    }
 
+   /* check type of orbitope */
    if ( ncovered == *nrows )
-      *type = SCIP_ORBITOPETYPE_PACKING;
+   {
+      if ( ncoveredpart == *nrows )
+         *type = SCIP_ORBITOPETYPE_PARTITIONING;
+      else
+         *type = SCIP_ORBITOPETYPE_PACKING;
+   }
+   /* If only some rows are contained in set packing/partitioning constraints, it may still be worth it
+    * to exploit the packing/partitioning structure on these rows, because packing/partitioning orbitopes
+    * or more restrictive than full orbitopes. If at least three rows have this property, we discard
+    * all rows not contained in set packing/partitioning constraints and add the smaller sub packing orbitope.
+    */
    else if ( ncovered >= 3 )
    {
       int r = *nrows - 1;
@@ -527,13 +512,13 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
       *type = SCIP_ORBITOPETYPE_PACKING;
    }
 
- FREEUPGRADESTRUCTURES:
+   SCIPfreeBufferArray(scip, &rowsinsetppc);
+   SCIPfreeBufferArray(scip, &rowcoveragesetppc);
    SCIPfreeBufferArray(scip, &rowidxvar);
    SCIPfreeBufferArray(scip, &covered);
 
    return SCIP_OKAY;
 }
-
 
 #ifdef PRINT_MATRIX
 /** debug method, prints variable matrix */
@@ -1607,6 +1592,8 @@ SCIP_RETCODE findLexMinFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmin != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmin[j] = nrowsused - 1;
@@ -1721,6 +1708,8 @@ SCIP_RETCODE findLexMaxFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmax != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmax[j] = nrowsused - 1;
@@ -1961,9 +1950,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of the corresponding constraint */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -2153,9 +2140,7 @@ static
 SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -2957,6 +2942,54 @@ SCIP_RETCODE separateConstraints(
    return SCIP_OKAY;
 }
 
+
+/** check whether all variables in an orbitope constraint are fixed */
+static
+SCIP_RETCODE checkRedundantCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
+   SCIP_Bool*            redundant           /**< pointer to store whether constraint is redundant (contains no active vars) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int nrows;
+   int ncols;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( redundant != NULL );
+
+   *redundant = FALSE;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+
+   vars = consdata->vars;
+   nrows = consdata->nspcons;
+   ncols = consdata->nblocks;
+
+   /* check whether there exists an active variable in the orbitope */
+   for (i = 0; i < nrows; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+      {
+         if ( SCIPvarIsActive(vars[i][j]) )
+            return SCIP_OKAY;
+      }
+   }
+
+   *redundant = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of constraint handler
  */
@@ -3288,6 +3321,7 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    SCIP_Bool infeasible = FALSE;
    int noldfixedvars;
    int c;
+   SCIP_Bool redundant;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -3300,7 +3334,10 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* propagate all useful constraints */
+   /* propagate all useful constraints
+    *
+    * @todo use an event handler to only propagate if a variable in the orbitope has been fixed
+    */
    for (c = 0; c < nconss && !infeasible; ++c)
    {
       int nfixed = 0;
@@ -3309,8 +3346,24 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
       SCIPdebugMsg(scip, "Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
+      /* first propagate */
       SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
+
+      if ( ! infeasible )
+      {
+         SCIP_CALL( checkRedundantCons(scip, conss[c], &redundant) );
+
+         if ( redundant )
+         {
+            SCIPdebugMsg(scip, "Orbitope constraint <%s> is redundant: it does not contain active variables\n",
+               SCIPconsGetName(conss[c]));
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            assert( ! SCIPconsIsActive(conss[c]) );
+            (*ndelconss)++;
+            continue;
+         }
+      }
    }
 
    if ( infeasible )
@@ -3353,11 +3406,11 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
-      SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, result) );
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
@@ -3470,6 +3523,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
 static
 SCIP_DECL_CONSCOPY(consCopyOrbitope)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
@@ -3498,11 +3552,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcedata->nblocks > 0 );
    assert( sourcedata->vars != NULL );
 
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
    /* do not copy non-model constraints */
-   if ( !sourcedata->ismodelcons )
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
@@ -3775,6 +3832,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Whether we use a dynamic version of the propagation routine.",
          &conshdlrdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether orbitope constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -3887,7 +3948,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
+      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
    }
 
    /* create constraint data */

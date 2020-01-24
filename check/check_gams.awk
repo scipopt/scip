@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -297,22 +297,16 @@ END {
             timeouttime += tottime;
             timeouts++;
          }
-         else if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # found and proven optimal value
-            status = "ok";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # found and proven optimal value w.r.t. gaplimit
+            # found and proven optimal value (w.r.t. tolerances/gaplimit)
             status = "ok";
             pass++;
          }
          else
          {
             # gap not closed, but no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }
@@ -349,22 +343,16 @@ END {
                timeouts++;
             }
          }
-         else if( abs(pb - db) <= max(abstol, reltol) )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # proven optimal
-            status = "solved not verified";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # proven optimal w.r.t. gap
+            # proven optimal (w.r.t. tolerances/gaplimit)
             status = "solved not verified";
             pass++;
          }
          else
          {
             # gap not closed, but also no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }

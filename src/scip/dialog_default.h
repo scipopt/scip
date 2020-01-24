@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -341,6 +341,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp);
 /** dialog execution method for the set emphasis optimality command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
+
+/** dialog execution method for the set emphasis numerics command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics);
 
 /** dialog execution method for the set limits objective command */
 SCIP_EXPORT

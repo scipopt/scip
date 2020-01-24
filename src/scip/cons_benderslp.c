@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -69,15 +69,15 @@ struct SCIP_ConshdlrData
    /* parameters for controlling the two-phase method for Benders' decomposition */
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
    int                   freq;               /**< the depth frequency of generating LP cuts after the max depth is reached */
-   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
-   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    SCIP_Bool             active;             /**< is the constraint handler active? */
 
    /* variable used to control the behaviour of the two-phase method for Benders' decomposition */
    SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
    SCIP_NODE*            currnode;           /**< the current node */
    SCIP_Real             prevbound;          /**< the previous dual bound */
+   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    int                   stallcount;         /**< the number of nodes processed since the last lower bound increase */
+   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
 };
 
 
@@ -306,5 +306,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
 
+   conshdlrdata->stallcount = 0;
    return SCIP_OKAY;
 }

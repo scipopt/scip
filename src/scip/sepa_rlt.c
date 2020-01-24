@@ -56,7 +56,6 @@
 #define DEFAULT_MAXLINEXPRS          10 /**< default value for parameter maxlinexprs */
 #define DEFAULT_MAXUNKNOWNTERMS      -1 /**< default value for parameter maxunknownterms */
 #define DEFAULT_MAXUSEDVARS          -1 /**< default value for parameter maxusedvars */
-#define DEFAULT_MAXNONZEROPROP      0.0 /**< default value for parameter maxnonzeroprop */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
@@ -120,7 +119,6 @@ struct SCIP_SepaData
 
    /* parameters */
    int                   maxlinexprs;        /**< maximum number of linearisation expressions per bilinear term */
-   SCIP_Real             maxnonzeroprop;     /**< maximum acceptable proportion of known bilinear terms to non-zeroes */
    int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used */
    int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts */
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
@@ -213,8 +211,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
    /* vars should already be sorted by index */
    assert(minidx <= mididx && mididx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx));
+   return SCIPhashFour(hashdata->nvars, minidx, mididx, maxidx);
 }
 
 
@@ -1947,7 +1944,6 @@ SCIP_RETCODE isAcceptableRow(
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_ROW*             row,                /**< the row to be tested */
    SCIP_VAR*             var,                /**< the variable that is to be multiplied with row */
-   int                   nlocks,             /**< the number of locks of the variable */
    int*                  currentnunknown,    /**< number of unknown terms in current row */
    SCIP_Bool*            acceptable,         /**< buffer to store the result */
    SCIP_SOL*             sol                 /**< solution to be separated */
@@ -1960,13 +1956,6 @@ SCIP_RETCODE isAcceptableRow(
 
    assert(row != NULL);
    assert(var != NULL);
-
-   /* test if the ratio of non-zeroes and known terms of this variable is ok */
-   if( SCIProwGetNNonz(row) * sepadata->maxnonzeroprop > nlocks )
-   {
-      *acceptable = FALSE;
-      return SCIP_OKAY;
-   }
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms); ++i )
    {
@@ -2282,12 +2271,22 @@ SCIP_RETCODE computeRltCuts(
    *cut = NULL;
 
    /* get data for given variable */
-   lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
-   ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   if( computeEqCut )
+   {
+      lbvar = 0.0;
+      ubvar = 0.0;
+   }
+   else
+   {
+      lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+      ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   }
+
    constside = uselhs ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
 
    /* if the bounds are too large or the respective side is infinity, skip this cut */
-   if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
+   if( (uselb && REALABS(lbvar) > MAXVARBOUND) || (!uselb && REALABS(ubvar) > MAXVARBOUND)
+      || SCIPisInfinity(scip, REALABS(constside)) )
    {
       SCIPdebugMsg(scip, "cut generation for row %s, %s and variable %s with its %s %g not possible\n",
          SCIProwGetName(row), uselhs ? "lhs" : "rhs", SCIPvarGetName(var),
@@ -2879,7 +2878,7 @@ SCIP_RETCODE separateRltCuts(
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &currentnunknown, &accepted, sol) );
+         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, &currentnunknown, &accepted, sol) );
          if( !accepted )
          {
             SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
@@ -3320,10 +3319,6 @@ SCIP_RETCODE SCIPincludeSepaRlt(
          "separating/" SEPA_NAME "/maxusedvars",
          "maximal number of variables used to compute rlt cuts (-1: unlimited)",
          &sepadata->maxusedvars, FALSE, DEFAULT_MAXUSEDVARS, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/maxnonzeroprop",
-         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is accepted",
-         &sepadata->maxnonzeroprop, FALSE, DEFAULT_MAXNONZEROPROP, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
       "separating/" SEPA_NAME "/maxrounds",

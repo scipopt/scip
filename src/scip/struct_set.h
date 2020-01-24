@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -252,6 +252,7 @@ struct SCIP_Set
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
+   SCIP_Bool             conf_uselocalrows;  /**< use local rows to construct infeasibility proofs */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -406,7 +407,7 @@ struct SCIP_Set
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
    SCIP_Real             num_checkfeastolfac;/**< factor to change the feasibility tolerance when testing the best
                                               *   solution for feasibility (after solving process) */
-   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
+   SCIP_Real             num_lpfeastolfactor;/**< factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
@@ -422,6 +423,7 @@ struct SCIP_Set
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int                   presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
+   SCIP_Real             presol_clqtablefac; /**< limit on number of entries in clique table relative to number of problem nonzeros */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
    SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an
@@ -441,6 +443,13 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
+
+   /* Decomposition settings */
+   SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
+                                                *   decomposition */
+   SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
+
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
    SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */

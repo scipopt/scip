@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -195,4 +195,4 @@ TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
 # even if we decide to skip this instance, we write the basename to the eval file
-echo $BASENAME >> $EVALFILE
+echo ${OUTPUTDIR}/${FILENAME} >> $EVALFILE

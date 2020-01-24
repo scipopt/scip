@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -272,6 +272,7 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
+   SCIP_Real             feastol;            /**< current feasibility tolerance */
    SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */

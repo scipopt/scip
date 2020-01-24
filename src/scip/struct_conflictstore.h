@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,6 +46,8 @@ struct SCIP_ConflictStore
                                               *   based on a dual solution was found */
    SCIP_Real*            scalefactors;       /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool*            updateside;         /**< array to store whether the side should be updated whenever a new incumbent is found */
+   SCIP_Bool*            drayrelaxonly;      /**< array to store whether the dual proof is valid for the current relaxation only */
+   SCIP_Bool*            dsolrelaxonly;      /**< array to store whether the dual proof is valid for the current relaxation only */
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Real             lastcutoffbound;    /**< last cutoff bound for which the conflict store was cleaned */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */

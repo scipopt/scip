@@ -1530,6 +1530,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
 
    SCIPintervalSet(interval, exprdata->coefficient);
 
+   SCIPdebugMsg(scip, "inteval %p with %d children: %.20g", (void*)expr, SCIPgetConsExprExprNChildren(expr), exprdata->coefficient);
+
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       SCIP_INTERVAL childinterval;
@@ -1543,7 +1545,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
 
       /* multiply childinterval with the so far computed interval */
       SCIPintervalMul(SCIP_INTERVAL_INFINITY, interval, *interval, childinterval);
+
+      SCIPdebugMsgPrint(scip, " *[%.20g,%.20g]", childinterval.inf, childinterval.sup);
+
    }
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
 
    return SCIP_OKAY;
 }
@@ -1613,16 +1619,40 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       SCIP_VAR* y;
       SCIP_Real refpointx;
       SCIP_Real refpointy;
+      SCIP_INTERVAL bndx;
+      SCIP_INTERVAL bndy;
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
       x = SCIPgetConsExprExprAuxVar(child);
       assert(x != NULL);
+      if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+      {
+         bndx = SCIPgetConsExprExprActivity(scip, child);
+         bndx.inf = MAX(bndx.inf, SCIPvarGetLbLocal(x));  /*lint !e666*/
+         bndx.sup = MIN(bndx.sup, SCIPvarGetUbLocal(x));  /*lint !e666*/
+      }
+      else
+      {
+         bndx.inf = SCIPvarGetLbLocal(x);
+         bndx.sup = SCIPvarGetUbLocal(x);
+      }
 
       /* collect second variable */
       child = SCIPgetConsExprExprChildren(expr)[1];
       y = SCIPgetConsExprExprAuxVar(child);
       assert(y != NULL);
+      if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+      {
+         bndy = SCIPgetConsExprExprActivity(scip, child);
+         bndy.inf = MAX(bndy.inf, SCIPvarGetLbLocal(y));  /*lint !e666*/
+         bndy.sup = MIN(bndy.sup, SCIPvarGetUbLocal(y));  /*lint !e666*/
+      }
+      else
+      {
+         bndy.inf = SCIPvarGetLbLocal(y);
+         bndy.sup = SCIPvarGetUbLocal(y);
+      }
 
       coefs[0] = 0.0;
       coefs[1] = 0.0;
@@ -1633,19 +1663,20 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       refpointy = SCIPgetSolVal(scip, sol, y);
 
       /* adjust the reference points */
-      refpointx = MIN(MAX(refpointx, SCIPvarGetLbLocal(x)),SCIPvarGetUbLocal(x)); /*lint !e666*/
-      refpointy = MIN(MAX(refpointy, SCIPvarGetLbLocal(y)),SCIPvarGetUbLocal(y)); /*lint !e666*/
+      refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup); /*lint !e666*/
+      refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup); /*lint !e666*/
       assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
       assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
-      SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
-            SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &coefs[0], &coefs[1], constant,
+      SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, refpointx,
+            bndy.inf, bndy.sup, refpointy, overestimate, &coefs[0], &coefs[1], constant,
             success);
 
       return SCIP_OKAY;
    }
    else
    {
+      SCIP_INTERVAL childbnds;
       SCIP_Real* box;
       SCIP_Real* xstar;
       int i;
@@ -1660,15 +1691,26 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       {
          child = SCIPgetConsExprExprChildren(expr)[i];
          var = SCIPgetConsExprExprAuxVar(child);
+         if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+         {
+            childbnds = SCIPgetConsExprExprActivity(scip, child);
+            childbnds.inf = MAX(childbnds.inf, SCIPvarGetLbLocal(var));  /*lint !e666*/
+            childbnds.sup = MIN(childbnds.sup, SCIPvarGetUbLocal(var));  /*lint !e666*/
+         }
+         else
+         {
+            childbnds.inf = SCIPvarGetLbLocal(var);
+            childbnds.sup = SCIPvarGetUbLocal(var);
+         }
 
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
          {
             SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
             goto CLEANUP;
          }
 
-         box[2*i] = SCIPvarGetLbLocal(var);
-         box[2*i+1] = SCIPvarGetUbLocal(var);
+         box[2*i] = childbnds.inf;
+         box[2*i+1] = childbnds.sup;
 
          xstar[i] = SCIPgetSolVal(scip, sol, var);
 

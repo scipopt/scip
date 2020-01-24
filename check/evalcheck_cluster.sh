@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -82,6 +82,32 @@ do
       echo ""
       echo create overall output and error file for $EVALFILE
 
+      # check first if all out, err, and set files exist for this eval-file.
+      NMISSING=0
+      for i in `cat $DIR/$EVALFILE.eval` DONE
+      do
+        if test "$i" = "DONE"
+        then
+            break
+        fi
+
+        for extension in out err set
+        do
+            FILE=${i}.${extension}
+            if ! test -e ${FILE}
+            then
+                echo Missing $FILE
+                ((NMISSING++))
+            fi
+        done
+      done
+
+      if [ ${NMISSING} -gt 0 -a ${REMOVE} -eq 1 ]
+      then
+        echo "Exiting because ${NMISSING} out/err/set file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
+        exit
+      fi
+
       for i in `cat $DIR/$EVALFILE.eval` DONE
         do
         if test "$i" = "DONE"
@@ -98,8 +124,6 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $FILE --
-
             echo @01 $FILE ==MISSING==  >> $OUTFILE
             echo                        >> $OUTFILE
         fi
@@ -113,8 +137,6 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $FILE --
-
             echo @01 $FILE ==MISSING==  >> $ERRFILE
             echo                        >> $ERRFILE
         fi
@@ -202,7 +224,7 @@ do
       then
           if test "$EXPIRE" = "1"
           then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+6 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               if test -z "$RBCLI_TAG"
