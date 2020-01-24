@@ -6047,7 +6047,15 @@ SCIP_RETCODE varEventObjChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldobj, newobj));
+
+   /* In the case where the objcetive value of a variable is very close to epsilon, and it is aggregated
+   * into a variable with a big objective value, round-off errors might make the assert oldobj != newobj fail.
+   * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
+   * that make comparison with values close to epsilon inaccurate.
+   */
+   assert(!SCIPsetIsEQ(set, oldobj, newobj) || 
+          (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set))
+   );
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
