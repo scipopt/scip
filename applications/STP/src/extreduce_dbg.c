@@ -81,6 +81,78 @@ SCIP_Real extGetSD(
    return sd;
 }
 
+
+/** get SD MST weight */
+static
+SCIP_Real sdmstGetWeight(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            nodes,              /**< nodes (from graph) for MST computation */
+   int                   nnodes,             /**< number of nodes for MST computation*/
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   SCIP_Real mstweight;
+   CGRAPH* cgraph;
+   CMST* cmst;
+   SCIP_Real* adjcosts;
+
+   SCIP_CALL_ABORT( cgraph_init(scip, &cgraph, STP_EXTTREE_MAXNLEAVES_GUARD) );
+   SCIP_CALL_ABORT( cmst_init(scip, &cmst, STP_EXTTREE_MAXNLEAVES_GUARD) );
+
+   adjcosts = cgraph->adjedgecosts;
+
+   assert(adjcosts);
+   assert(nnodes > 0 && nnodes <= STP_EXTTREE_MAXNLEAVES_GUARD);
+
+   /* build the MST graph */
+   for( int i = 0; i < nnodes; i++ )
+      cgraph_node_append(cgraph, i);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int startnode = nodes[i];
+
+      for( int j = 0; j < nnodes; j++ )
+      {
+         SCIP_Real specialDist;
+
+         if( i == j )
+         {
+            specialDist = FARAWAY;
+         }
+         else
+         {
+            const int endnode = nodes[j];
+            specialDist = extGetSD(scip, graph, startnode, endnode, extdata);
+
+            if( specialDist <= 0.0 )
+            {
+               assert(EQ(specialDist, -1.0));
+               specialDist = BLOCKED;
+            }
+         }
+
+         adjcosts[j] = specialDist;
+      }
+
+      cgraph_node_applyMinAdjCosts(cgraph, i, i);
+   }
+
+   /* compute the MST */
+   cmst_computeMst(cgraph, 0, cmst);
+
+   mstweight = cmst->mstobj;
+
+   cmst_free(scip, &cmst);
+   cgraph_free(scip, &cgraph);
+
+   assert(GE(mstweight, 0.0));
+
+   return mstweight;
+}
+
+
 /** Helper.
  *  Gives maximum cost among all close nodes. */
 static inline
@@ -468,64 +540,53 @@ SCIP_Bool extreduce_treeIsHashed(
 /** gets MST weight for SD MST spanning all leaves
  *  NOTE: only for debugging! very slow!
  * */
-SCIP_Real extreduce_treeGetMstWeight(
+SCIP_Real extreduce_treeGetSdMstWeight(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   SCIP_Real mstweight;
-   CGRAPH* cgraph;
-   CMST* cmst;
-   SCIP_Real* adjcosts;
    const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
 
-   SCIP_CALL_ABORT( cgraph_init(scip, &cgraph, STP_EXTTREE_MAXNLEAVES_GUARD) );
-   SCIP_CALL_ABORT( cmst_init(scip, &cmst, STP_EXTTREE_MAXNLEAVES_GUARD) );
+   return sdmstGetWeight(scip, graph, leaves, nleaves, extdata);
+}
 
-   adjcosts = cgraph->adjedgecosts;
 
-   assert(adjcosts);
+/** gets MST weight for SD MST spanning all leaves and extension vertex
+ *  NOTE: only for debugging! very slow!
+ * */
+SCIP_Real extreduce_treeGetSdMstExtWeight(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extvert,            /**< extended vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Real mstweight;
+   int* extleaves;
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+
+   assert(extvert >= 0 && extvert < graph->knots);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &extleaves, STP_EXTTREE_MAXNLEAVES_GUARD + 1) );
+
    assert(nleaves <= STP_EXTTREE_MAXNLEAVES_GUARD);
 
-   /* build the MST graph */
-   for( int i = 0; i < nleaves; i++ )
-      cgraph_node_append(cgraph, i);
-
-   for( int i = 0; i < nleaves; i++ )
+   for( int i = 0; i < nleaves; ++i )
    {
-      const int startleaf = leaves[i];
+      const int leaf = leaves[i];
+      assert(extvert != leaf);
 
-      for( int j = 0; j < nleaves; j++ )
-      {
-         SCIP_Real specialDist;
-
-         if( i == j )
-         {
-            specialDist = FARAWAY;
-         }
-         else
-         {
-            const int endleaf = leaves[j];
-            specialDist = extGetSD(scip, graph, startleaf, endleaf, extdata);
-         }
-
-         adjcosts[j] = specialDist;
-      }
-
-      cgraph_node_applyMinAdjCosts(cgraph, i, i);
+      extleaves[i] = leaf;
    }
 
-   /* compute the MST */
-   cmst_computeMst(cgraph, 0, cmst);
+   extleaves[nleaves] = extvert;
 
-   mstweight = cmst->mstobj;
+   mstweight = sdmstGetWeight(scip, graph, extleaves, nleaves + 1, extdata);
 
-   cmst_free(scip, &cmst);
-   cgraph_free(scip, &cgraph);
-
-   assert(GE(mstweight, 0.0));
+   SCIPfreeBufferArray(scip, &extleaves);
 
    return mstweight;
 }

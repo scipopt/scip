@@ -25,14 +25,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 //#define SCIP_DEBUG
+//#define STP_EXT_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "graph.h"
 #include "portab.h"
 #include "extreduce.h"
-
-
 #define EXT_REDCOST_NRECOMP 10
 #define EXT_SDMAXVISITS 10
 
@@ -1743,6 +1743,18 @@ SCIP_Bool extTreeRuleOutEdge(
    // check for rule out
    /* remove 'extvert' again (but don't delete the computed SDs!) */
 
+
+#ifdef STP_EXT_DEBUG
+      {
+         // todo compute weight!
+         const SCIP_Real mstweight = extreduce_treeGetSdMstExtWeight(scip, graph, extvert, extdata);
+
+         assert(GE(mstweight, 0.0));
+
+        // printf("ext. mstobj=%f \n", mstweight);
+      }
+#endif
+
    extMSTremoveTreeNeighbor(extvert, extdata);
 
    assert(extreduce_cgraphInSyncWithTree(extdata));
@@ -1844,10 +1856,11 @@ SCIP_Bool extTreeRuleOutPeriph(
 #ifdef STP_EXT_DEBUG
       {
          // todo compute weight!
-         const SCIP_Real mstweight = extreduce_treeGetMstWeight(scip, graph, extdata);
+         const SCIP_Real mstweight = extreduce_treeGetSdMstWeight(scip, graph, extdata);
 
+         assert(GE(mstweight, 0.0));
 
-         printf("mstobj=%f \n", mstweight);
+      //   printf("mstobj=%f \n", mstweight);
       }
 #endif
 
