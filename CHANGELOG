@@ -619,6 +619,7 @@ Fixed bugs
 - fixed creation of (Lagrangian) variable bounds in the OBBT propagator
 - fixed sorting of primal solutions
 - fixed cleaning of clean buffer in conflict analysis
+- fixed wrong assert in updateLazyBounds()
 
 Miscellaneous
 -------------
