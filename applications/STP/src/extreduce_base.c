@@ -335,6 +335,17 @@ int extreduce_getMaxStackSize(void)
 }
 
 
+/** get maximum allowed number of components */
+int extreduce_getMaxStackNcomponents(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+	assert(graph);
+
+	return STP_EXT_MAXNCOMPS;
+}
+
+
 /** get maximum allowed depth for extended tree in given graph */
 int extreduce_getMaxTreeDepth(
    const GRAPH*          graph               /**< graph data structure */

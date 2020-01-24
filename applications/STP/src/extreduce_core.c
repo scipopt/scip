@@ -299,6 +299,8 @@ void extStackAddCompsNonExpanded(
 #endif
 
    extdata->extstack_ncomponents = stackpos + 1;
+
+   assert(extdata->extstack_ncomponents <= extdata->extstack_maxncomponents);
 }
 
 
@@ -2029,6 +2031,7 @@ SCIP_Bool extTruncate(
    const int stackpos = extStackGetPosition(extdata);
 
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
+   assert(extstack_start[stackpos] < extdata->extstack_maxsize);
 
    if( extdata->tree_depth >= extdata->tree_maxdepth )
    {
@@ -2048,9 +2051,9 @@ SCIP_Bool extTruncate(
       return TRUE;
    }
 
-   if( extstack_start[stackpos] >= extdata->extstack_maxedges )
+   if( extdata->extstack_ncomponents >= extdata->extstack_maxncomponents - 1 )
    {
-      SCIPdebugMessage("truncate (too many edges on stack) \n");
+      SCIPdebugMessage("truncate (too many stack components) \n");
       return TRUE;
    }
 
@@ -2125,6 +2128,7 @@ void extBacktrack(
 
    extdata->extstack_ncomponents = stackpos + 1;
 
+   assert(extdata->extstack_ncomponents <= extdata->extstack_maxncomponents);
    assert(!extreduce_treeIsFlawed(scip, graph, extdata));
 }
 
@@ -2148,13 +2152,17 @@ void extStackAddCompsExpanded(
    int stackpos = extStackGetPosition(extdata);
    int datasize = extstack_start[stackpos];
    const uint32_t powsize = (uint32_t) pow(2.0, nextedges);
+   const int newstacksize_upper = (datasize + (int) powsize * (nextedges + 1) / 2);
+   const int newncomponents_upper = extdata->extstack_ncomponents + powsize;
 
    assert(nextedges > 0 && nextedges < 32);
    assert(powsize >= 2);
 
    /* stack too full? */
-   if( (datasize + (int) powsize * (nextedges + 1) / 2) > extdata->extstack_maxsize )
+   if( newstacksize_upper > extdata->extstack_maxsize || newncomponents_upper >= extdata->extstack_maxncomponents )
    {
+	  SCIPdebugMessage("stack too full, cannot expand \n");
+
       *success = FALSE;
       extBacktrack(scip, graph, *success, FALSE, extdata);
 
@@ -2190,6 +2198,8 @@ void extStackAddCompsExpanded(
    assert(stackpos >= extdata->extstack_ncomponents);
 
    extdata->extstack_ncomponents = stackpos;
+
+   assert(extdata->extstack_ncomponents <= extdata->extstack_maxncomponents);
 }
 
 
@@ -2397,7 +2407,7 @@ void extProcessInitialComponent(
 
    assert(compedges);
    assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
-   assert(ncompedges < extdata->extstack_maxedges);
+   assert(ncompedges < extdata->extstack_maxsize);
    assert(root >= 0 && root < graph->knots);
    assert(!(*ruledOut));
 
@@ -2474,11 +2484,7 @@ void extProcessInitialComponent(
 
    extExtend(scip, graph, extdata, &success);
 
-   {
-      int todo; // remove once the stack is larger and simply assert!
-     // assert(success);
-
-   }
+   assert(success);
 
    *finished = success;
 }
@@ -2658,12 +2664,12 @@ SCIP_RETCODE extreduce_checkArc(
       SCIP_Real* tree_redcostSwap;
       int* pseudoancestor_mark;
       const int nnodes = graph->knots;
-      const int maxstackedges = MIN(nnodes / 2, STP_EXT_MAXEDGES);
-      int todo; // increase maxstack size extreduce_getMaxStackSize
+      const int maxstacksize = extreduce_getMaxStackSize();
+      const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, maxncomponents + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, maxncomponents + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_edges, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
@@ -2686,10 +2692,11 @@ SCIP_RETCODE extreduce_checkArc(
             .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1,
+            .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
+			.extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
             .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
-            .extstack_maxedges = maxstackedges,
-            .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
+			.tree_maxdepth = extreduce_getMaxTreeDepth(graph),
+            .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          extCheckArcFromHead(scip, graph, edge, &extdata, edgeIsDeletable);
@@ -2763,12 +2770,12 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIP_Real* tree_redcostSwap;
       int* pseudoancestor_mark;
       const int nnodes = graph->knots;
-      const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
-      const int maxstackedges = MIN(nnodes / 2, STP_EXT_MAXEDGES);
+      const int maxstacksize = extreduce_getMaxStackSize();
+      const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, maxncomponents + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, maxncomponents + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_edges, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
@@ -2790,9 +2797,11 @@ SCIP_RETCODE extreduce_checkEdge(
             .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1,
+            .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
+			.extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
             .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
-            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
+			.tree_maxdepth = extreduce_getMaxTreeDepth(graph),
+			.tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          /* can we extend from head? */

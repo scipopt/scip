@@ -27,7 +27,8 @@
 #define APPLICATIONS_STP_SRC_EXTREDUCE_H_
 
 #define STP_EXT_CLOSENODES_MAXN 64
-#define STP_EXT_MAXSTACKSIZE 10000
+#define STP_EXT_MAXSTACKSIZE  5000
+#define STP_EXT_MAXNCOMPS     1000
 #define STP_EXT_MAXDFSDEPTH 6
 #define STP_EXT_MINDFSDEPTH 4
 #define STP_EXT_MAXGRAD 8
@@ -132,8 +133,8 @@ typedef struct extension_data
    int tree_nleaves;
    int nPcSdCands;                             /**< needed only for PC */
    int extstack_ncomponents;
+   const int extstack_maxncomponents;
    const int extstack_maxsize;
-   const int extstack_maxedges;
    const int tree_maxnleaves;
    const int tree_maxdepth;
    const int tree_maxnedges;
@@ -147,6 +148,8 @@ extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, 
 extern SCIP_RETCODE    extreduce_pseudodeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
+extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
+extern int             extreduce_getMaxStackNedges(const GRAPH*);
 
 
 /* extreduce_core.c
