@@ -613,6 +613,34 @@ SCIP_Bool checkSymmetryDataFree(
 #endif
 
 
+/** checks whether an array has to be resized and in that case performs the reallocation */
+static
+SCIP_RETCODE checkLoadAndResize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   void**                arrayptr,           /**< pointer to the array to be checked */
+   int*                  arraysize,          /**< pointer to the size of the array (will be updated) */
+   int                   requiredslots       /**< number of required slots in the array */
+   )
+{
+   assert( scip != NULL);
+   assert( arrayptr != NULL);
+   assert( arraysize != NULL );
+   assert( requiredslots > 0 );
+
+   if ( requiredslots >= *arraysize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, requiredslots + 1);
+      assert( newsize > requiredslots );
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, arrayptr, *arraysize, newsize) );
+
+      *arraysize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -2580,10 +2608,11 @@ SCIP_RETCODE determineSymmetry(
 static
 SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   int                   comp,               /**< index of the component that we are handling */
+   int**                 perms,              /**< array of all permutations of the symmety group */
+   int*                  activeperms,        /**< indices of the relevant permutations in perms */
+   int                   npermvars,          /**< number of permutation variables */
    int                   ntwocycles,         /**< number of 2-cycles in the permutations */
-   int                   nperms,             /**< number of permutations */
+   int                   nactiveperms,       /**< number of active permutations */
    int***                orbitopevaridx,     /**< pointer to store variable index matrix */
    int**                 columnorder,        /**< pointer to store column order */
    int**                 nusedelems,         /**< pointer to store how often each element was used */
@@ -2592,73 +2621,57 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    )
 {
    SCIP_Bool* usedperm;
-   int** perms;
    int* components;
    int* componentbegins;
    int nusedperms;
    int nfilledcols;
    int coltoextend;
-   int ntestedperms;
    int row;
    int j;
-   SCIP_Bool foundperm;
 
    assert(scip != NULL);
-   assert(propdata != NULL);
+   assert(perms != NULL);
+   assert(activeperms != NULL);
    assert(orbitopevaridx != NULL);
    assert(columnorder != NULL);
    assert(nusedelems != NULL);
    assert(isorbitope != NULL);
-   assert(nperms > 0);
-   assert(nperms <= propdata->nperms);
+   assert(nactiveperms > 0);
    assert(ntwocycles > 0);
-
-   perms = propdata->perms;
-   components = propdata->components;
-   componentbegins = propdata->componentbegins;
+   assert(npermvars > 0);
 
    /* whether a permutation was considered to contribute to orbitope */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, nperms) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, nactiveperms) );
    nusedperms = 0;
 
    /* fill first two columns of orbitopevaridx matrix */
    row = 0;
-   ntestedperms = 0;
-   foundperm = FALSE;
-
-   while (!foundperm)
+   for (j = 0; j < npermvars; ++j)
    {
       int permidx;
 
-      permidx = components[componentbegins[comp] + ntestedperms];
+      permidx = activeperms[0];
 
-      for (j = 0; j < propdata->npermvars; ++j)
+      if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) )
+         continue;
+
+      assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) );
+
+      /* avoid adding the same 2-cycle twice */
+      if ( perms[permidx][j] > j )
       {
-         if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) )
-            continue;
-
-         assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) );
-
-         /* avoid adding the same 2-cycle twice */
-         if ( perms[permidx][j] > j )
-         {
-            (*orbitopevaridx)[row][0] = j;
-            (*orbitopevaridx)[row++][1] = perms[permidx][j];
-            (*nusedelems)[j] += 1;
-            (*nusedelems)[perms[permidx][j]] += 1;
-
-            foundperm = TRUE;
-         }
-
-         if ( row == ntwocycles )
-            break;
+         (*orbitopevaridx)[row][0] = j;
+         (*orbitopevaridx)[row++][1] = perms[permidx][j];
+         (*nusedelems)[j] += 1;
+         (*nusedelems)[perms[permidx][j]] += 1;
       }
 
-      ++ntestedperms;
+      if ( row == ntwocycles )
+         break;
    }
    assert( row == ntwocycles );
 
-   usedperm[ntestedperms-1] = TRUE;
+   usedperm[0] = TRUE;
    ++nusedperms;
    (*columnorder)[0] = 0;
    (*columnorder)[1] = 1;
@@ -2668,19 +2681,19 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       * intersect the last added left column in each row in exactly one entry, starting with
       * column 0 */
    coltoextend = 0;
-   for (j = ntestedperms; j < nperms; ++j)
+   for (j = 1; j < nactiveperms; ++j)
    {  /* lint --e{850} */
       SCIP_Bool success = FALSE;
       SCIP_Bool infeasible = FALSE;
 
-      if ( nusedperms == nperms )
+      if ( nusedperms == nactiveperms )
          break;
 
       if ( usedperm[j] )
          continue;
 
       SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[components[componentbegins[comp] + j]], TRUE, nusedelems, &success, &infeasible) );
+            perms[j], TRUE, nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2704,19 +2717,19 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    }
 
    coltoextend = 1;
-   for (j = ntestedperms; j < nperms; ++j)
+   for (j = 1; j < nactiveperms; ++j)
    {  /*lint --e(850)*/
       SCIP_Bool success = FALSE;
       SCIP_Bool infeasible = FALSE;
 
-      if ( nusedperms == nperms )
+      if ( nusedperms == nactiveperms )
          break;
 
       if ( usedperm[j] )
          continue;
 
       SCIP_CALL( SCIPextendSubOrbitope(*orbitopevaridx, ntwocycles, nfilledcols, coltoextend,
-            perms[components[componentbegins[comp] + j]], FALSE, nusedelems, &success, &infeasible) );
+            perms[j], FALSE, nusedelems, &success, &infeasible) );
 
       if ( infeasible )
       {
@@ -2734,7 +2747,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
       }
    }
 
-   if ( activevars == NULL && nusedperms < nperms ) /*lint !e850*/
+   if ( nusedperms < nactiveperms ) /*lint !e850*/
       *isorbitope = FALSE;
 
    return SCIP_OKAY;
@@ -2892,7 +2905,9 @@ SCIP_RETCODE buildSubgroupGraph(
    int**                 compcolorbegins,    /**< buffer to store at which indices a new color begins */
    int*                  ngraphcomponents,   /**< pointer to store the number of graph components */
    int*                  ncompcolors,        /**< pointer to store the number of different colors */
-   int*                  nusedperms          /**< pointer to store the number of used permutations in the graph */
+   int**                 usedperms,          /**< buffer to store the indices of permutations that were used */
+   int*                  nusedperms,         /**< pointer to store the number of used permutations in the graph */
+   int                   usedpermssize       /**< initial size of usedperms */
    )
 {
    SCIP_DISJOINTSET* vartocomponent;
@@ -2916,8 +2931,10 @@ SCIP_RETCODE buildSubgroupGraph(
    assert( compcolorbegins != NULL );
    assert( ngraphcomponents != NULL );
    assert( ncompcolors != NULL );
-   assert( nusedperms != NULL );
    assert( genorder != NULL );
+   assert( usedperms != NULL );
+   assert( nusedperms != NULL );
+   assert( usedpermssize > 0 );
    assert( ntwocycleperms >= 0 );
    assert( compidx >= 0 );
    assert( compidx < propdata->ncomponents );
@@ -3019,6 +3036,11 @@ SCIP_RETCODE buildSubgroupGraph(
       }
 
       assert( firstcolor > -1 );
+
+      /* check whether we need to resize */
+      SCIP_CALL( checkLoadAndResize( scip, (void**) usedperms, &usedpermssize, *nusedperms) );
+
+      (*usedperms)[*nusedperms] = components[componentbegins[compidx] + genorder[j]];
       ++(*nusedperms);
 
       /* if the generator can be added, update the datastructures for graph components and colors */
@@ -3117,6 +3139,7 @@ SCIP_RETCODE buildSubgroupGraph(
 
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
+   SCIPfreeBufferArray(scip, &usedperms);
    SCIPfreeBufferArray(scip, &componentslastperm);
    SCIPdigraphFree(&graph);
    SCIPfreeDisjointset(scip, &comptocolor);
@@ -3168,6 +3191,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* graphcompbegins;
       int* compcolorbegins;
       int* chosencomppercolor;
+      int* usedperms;
+      int usedpermssize;
       int ngraphcomponents;
       int ncompcolors;
       int ntwocycleperms;
@@ -3245,8 +3270,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
          continue;
       }
 
-      SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
-            &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
+      usedpermssize = ntwocycleperms / 2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, usedpermssize) );
+
+      SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i,
+            &graphcomponents, &graphcompbegins, &compcolorbegins, &ngraphcomponents,
+            &ncompcolors, &usedperms, &nusedperms, usedpermssize) );
 
       SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
 
@@ -3397,8 +3426,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
                }
             }
 
-            SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata, i, nrows, npermsincomp,
-                  &orbitopevaridx, &columnorder, &nusedelems, &infeasible, activevars) );
+            /* build the variable index matrix for the orbitope */
+            SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
+                  propdata->npermvars, nrows, nusedperms, &orbitopevaridx, &columnorder,
+                  &nusedelems, &infeasible, activevars) );
 
             assert( ! infeasible );
 
@@ -3409,6 +3440,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix[k], ncols) );
             }
 
+            /* build the matrix containing the actual variables of the orbitope */
             SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&orbitopevarmatrix, nrows, ncols,
                   propdata->permvars, propdata->npermvars, orbitopevaridx, columnorder,
                   nusedelems, &infeasible) );
@@ -3480,16 +3512,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
             /* check whether we need to resize */
-            if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-            {
-               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-               assert( newsize > propdata->ngenlinconss );
-
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                  propdata->genlinconsssize, newsize) );
-
-               propdata->genlinconsssize = newsize;
-            }
+            SCIP_CALL( checkLoadAndResize(scip, (void**) propdata->genlinconss,
+                  &(propdata->genlinconssize), propdata->ngenlinconss) );
 
             propdata->genlinconss[propdata->ngenlinconss] = cons;
             ++propdata->ngenlinconss;
@@ -3598,16 +3622,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
    #endif
 
                /* check whether we need to resize */
-               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-               {
-                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-                  assert( newsize > propdata->ngenlinconss );
-
-                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                     propdata->genlinconsssize, newsize) );
-
-                  propdata->genlinconsssize = newsize;
-               }
+               SCIP_CALL( checkLoadAndResize(scip, (void**) propdata->genlinconss,
+                     &(propdata->genlinconsssize), propdata->ngenlinconss) );
 
                propdata->genlinconss[propdata->ngenlinconss] = cons;
                ++propdata->ngenlinconss;
@@ -3628,6 +3644,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
+      SCIPfreeBufferArrayNull(scip, &usedperms);
    }
 
 #ifdef SCIP_DEBUG
@@ -3753,8 +3770,8 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
       /* check if the permutations fulfill properties of an orbitope */
-      SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata, i, ntwocyclescomp, npermsincomponent,
-            &orbitopevaridx, &columnorder, &nusedelems, &isorbitope, NULL) );
+      SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, perms, &(components[componentbegins[i]]), npermvars,
+            ntwocyclescomp, npermsincomponent, &orbitopevaridx, &columnorder, &nusedelems, &isorbitope, NULL) );
 
       if ( ! isorbitope )
          goto FREEDATASTRUCTURES;
@@ -3800,7 +3817,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIPfreeBufferArray(scip, &varsallocorder);
       SCIPfreeBufferArray(scip, &vars);
 
-   FREEDATASTRUCTURES:
+FREEDATASTRUCTURES:
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
       for (j = ntwocyclescomp - 1; j >= 0; --j)
