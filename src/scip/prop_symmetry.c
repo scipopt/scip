@@ -2261,10 +2261,11 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* do not compute symmetry if there are no binary variables */
-   if ( ! propdata->detectsubgroups && SCIPgetNBinVars(scip) == 0 )
+   if ( SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
-      propdata->symconsenabled = FALSE;
+      if ( ! propdata->detectsubgroups )
+         propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2419,18 +2420,24 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* exit if no binary variables are affected by symmetry */
-   if ( ! propdata->binvaraffected && ! propdata->detectsubgroups )
+   if ( ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* free data and exit */
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
+      /* if no subgroups shall be detected, free symmetry data*/
+      if ( ! propdata->detectsubgroups )
+      {
+         /* free data and exit */
+         SCIP_CALL( freeSymmetryData(scip, propdata) );
 
-      /* disable OF and symmetry handling constraints */
+         /* disable OF and symmetry handling constraints */
+         propdata->symconsenabled = FALSE;
+
+         return SCIP_OKAY;
+      }
+
+      /* disable OF */
       propdata->ofenabled = FALSE;
-      propdata->symconsenabled = FALSE;
-
-      return SCIP_OKAY;
    }
 
    assert( propdata->nperms > 0 );
@@ -2445,8 +2452,8 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   /* we only need the components for orbital fixing and orbitope detection */
-   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
+   /* we only need the components for orbital fixing, orbitope detection and subgroup detection  */
+   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) || propdata->detectsubgroups )
    {
       SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
