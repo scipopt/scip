@@ -3363,7 +3363,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             binaffected, intaffected, contaffected);
 #endif
 
-         if ( isorbitope )
+         /* build data structures and add constraints for orbitopes containing binary variables */
+         if ( isorbitope && nbinarycomps > 0 )
          {
             SCIP_VAR*** orbitopevarmatrix;
             SCIP_HASHSET* activevars;
