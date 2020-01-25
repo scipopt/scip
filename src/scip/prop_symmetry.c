@@ -654,7 +654,7 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
-   if ( propdata->binvaraffected )
+   if ( propdata->binvaraffected || propdata->detectsubgroups )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
