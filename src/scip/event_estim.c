@@ -2493,8 +2493,9 @@ char* printReport(
 {
    TREEDATA* treedata = eventhdlrdata->treedata;
    char* ptr = strbuf;
-   int t;
    SCIP_Real completed;
+   SCIP_Real wbeestim;
+   int t;
 
    /* print report number */
    if( reportnum > 0 )
@@ -2532,8 +2533,12 @@ char* printReport(
             "estim", "value", "trend", "resolution", "smooth");
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "\n");
 
-   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10.0f %10s %10s %10s %10s\n",
-            treeDataGetWbe(eventhdlrdata->treedata), "-", "-", "-", "-");
+   wbeestim = treeDataGetWbe(eventhdlrdata->treedata);
+   if ( ! SCIPisInfinity(scip, wbeestim) )
+      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10.0f %10s %10s %10s %10s\n", wbeestim, "-", "-", "-", "-");
+   else
+      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10s %10s %10s %10s %10s\n", "inf", "-", "-", "-", "-");
+
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  tree-profile     : %10.0f %10s %10s %10s %10s\n",
             predictTotalSizeTreeProfile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
             "-", "-", "-", "-");
