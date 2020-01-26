@@ -370,6 +370,8 @@ char* real2String(
 {
    if( num == SCIP_INVALID )/*lint !e777*/
       (void) SCIPsnprintf(buf, 1, "-");
+   else if( num >= 1e+20 ) /*lint !e777*/
+      (void) SCIPsnprintf(buf, 3, "inf");
    else
       (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%10.*f", digits, num);
 
@@ -2495,6 +2497,7 @@ char* printReport(
    char* ptr = strbuf;
    SCIP_Real completed;
    SCIP_Real wbeestim;
+   char wbeestimstr[SCIP_MAXSTRLEN];
    int t;
 
    /* print report number */
@@ -2514,7 +2517,7 @@ char* printReport(
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
          "%-19s: %" SCIP_LONGINT_FORMAT " nodes ("
          "%" SCIP_LONGINT_FORMAT " visited, "
-         "%" SCIP_LONGINT_FORMAT " inner, "
+         "%" SCIP_LONGINT_FORMAT " internal, "
          "%" SCIP_LONGINT_FORMAT " leaves, "
          "%" SCIP_LONGINT_FORMAT " open), "
          "weight: %.4Lf completed %.4f\n",
@@ -2534,10 +2537,8 @@ char* printReport(
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "\n");
 
    wbeestim = treeDataGetWbe(eventhdlrdata->treedata);
-   if ( ! SCIPisInfinity(scip, wbeestim) )
-      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10.0f %10s %10s %10s %10s\n", wbeestim, "-", "-", "-", "-");
-   else
-      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10s %10s %10s %10s %10s\n", "inf", "-", "-", "-", "-");
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10s %10s %10s %10s %10s\n",
+            real2String(wbeestim, wbeestimstr, 0), "-", "-", "-", "-");
 
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  tree-profile     : %10.0f %10s %10s %10s %10s\n",
             predictTotalSizeTreeProfile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
