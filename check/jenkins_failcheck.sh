@@ -195,7 +195,8 @@ while [ $PERM -le $PERMUTE ]; do
   # we use a name that is unique per test sent to the cluster (a jenkins job
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
+  LOCINFO=$(cd ..; pwd)
+  DATABASE="/nfs/OPTI/adm_timo/databases/${LOCINFO##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"

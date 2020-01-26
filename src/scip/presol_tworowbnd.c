@@ -1261,7 +1261,7 @@ int calcCliqueMaximums(
                 maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
 #endif
 
-   /* find next maximum */
+   /* find other maximums */
    minlambda = 0.0;
    if( firstmaxpos == -1 )
       maxidx = -1;
@@ -1366,8 +1366,7 @@ int calcCliqueMaximums(
 
 /** apply ConvComb with clique extension to given rows (see above) */
 static
-SCIP_RETCODE applyConvComb
-(
+SCIP_RETCODE applyConvComb(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   row1,               /**< index of first row */
@@ -1377,7 +1376,7 @@ SCIP_RETCODE applyConvComb
    SCIP_Real*            lbs,                /**< lower variable bounds */
    SCIP_Real*            ubs,                /**< upper variable bounds */
    SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
-)
+   )
 {
    int i;
    int j;
@@ -1420,6 +1419,7 @@ SCIP_RETCODE applyConvComb
    int* currentmaxinds;
    int cliqueidx;
    SCIP_Real* gradients;
+   SCIP_Bool numericsokay;
 
 #ifdef SCIP_DEBUG_SUBSCIP
    SCIP* subscip;
@@ -1766,8 +1766,42 @@ SCIP_RETCODE applyConvComb
    }
 #endif
 
+   /* Sort breakpoints as they will be processed in ascending order */
+   SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
+
+   /* Check row combination for numerically difficult breakpoints */
+   numericsokay = TRUE;
+   for( i = 0; i < nvars; i++ )
+   {
+      idx = varinds[i];
+      /* Breakpoints close to zero and one are troublesome */
+      if (signs[idx] != CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0)) )
+      {
+         numericsokay = FALSE;
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoint %g of variable %s is numerically unstable, row-pair will be skipped\n",
+                      breakpoints[i], SCIPmatrixGetColName(matrix, idx));
+#endif
+      }
+
+      /* Breakpoints that are close to each other but not idential lead to numerical issues */
+      if( i > 0 && !SCIPisEQ(scip, breakpoints[i], breakpoints[i-1])
+         && SCIPisFeasZero(scip, breakpoints[i] - breakpoints[i-1]) )
+      {
+         numericsokay = FALSE;
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoints %g and %g of variables %s and %s are numerically difficult, row-pair will be skipped\n",
+                      breakpoints[i], breakpoint[i-1],
+                      SCIPmatrixGetColName(matrix, idx), SCIPmatrixGetColName(matrix, varinds[i-1]));
+#endif
+      }
+
+      /* assert that computation of breakpoints for clique variables has been numerically stable */
+      assert(!(signs[idx] == CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0))));
+   }
+
    /* The obvious preconditions for bound tightenings are met, so we try to calculate new bounds. */
-   if( nbreakpoints >= 1 )
+   if( numericsokay && nbreakpoints >= 1 )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &newubs, nvars) );
@@ -1775,8 +1809,6 @@ SCIP_RETCODE applyConvComb
       SCIP_CALL( SCIPallocBufferArray(scip, &subsciplbs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subscipubs, nvars) );
 #endif
-
-      SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
 
       for( i = 0; i < nvars; i++)
       {
@@ -1795,8 +1827,9 @@ SCIP_RETCODE applyConvComb
          idx = varinds[i];
          if( signs[idx] == UP || signs[idx] == NEG )
          {
-            assert(SCIPisNegative(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisNegative(scip, row1coefs[idx])));
+            assert(SCIPisNegative(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisNegative(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, -lbs[idx]) )
             {
                l1 -= row1coefs[idx] * lbs[idx];
@@ -1809,8 +1842,9 @@ SCIP_RETCODE applyConvComb
          }
          else if( signs[idx] == DN || signs[idx] == POS )
          {
-            assert(SCIPisPositive(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
-                                                            && SCIPisPositive(scip, row1coefs[idx])));
+            assert(SCIPisPositive(scip, row2coefs[idx])
+                   || (SCIPisZero(scip, row2coefs[idx])
+                       && SCIPisPositive(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, ubs[idx]) )
             {
                l1 -= row1coefs[idx] * ubs[idx];
