@@ -23,7 +23,6 @@
  *
  * @todo add infrastructure to SCIP for handling parallel columns
  * @todo better communication of constraint changes by adding more information to the postsolve structure
- * @todo allow to disable weak and strong dual reductions in the presolve library via parameters
  * @todo allow to pass additional external locks to the presolve library that are considered when doing reductions
  *
  */
