@@ -710,7 +710,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    {
       SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
 
-      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
+      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
       sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
       if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
       {
@@ -960,14 +960,17 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    ub = SCIPvarGetUbLocal(var);
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
-   /* TODO maybe we should not relax fixed variables? */
+   /* relax variable bounds, if there are bounds and variable is not fixed
+    * (actually some assert complains if trying SCIPisRelEQ if both bounds are at different infinity)
+    */
+   if( !(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub)) && !SCIPisRelEQ(scip, lb, ub) )
+   {
+      if( !SCIPisInfinity(scip, -lb) )
+         lb -= SCIPfeastol(scip);
 
-   /* relax variable bounds */
-   if( !SCIPisInfinity(scip, -lb) )
-      lb -= SCIPfeastol(scip);
-
-   if( !SCIPisInfinity(scip, ub) )
-      ub += SCIPfeastol(scip);
+      if( !SCIPisInfinity(scip, ub) )
+         ub += SCIPfeastol(scip);
+   }
 
    /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
    lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
@@ -1153,7 +1156,9 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_INTERVAL exprhdlrinterval = interval;
 
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-               /* TODO always do this?, or only if none of the nlhdlr implemented inteval? */
+               /* TODO always do this?, or only if none of the nlhdlr implemented inteval?
+                *   the default nlhdlr already calls the exprhdlr's inteval, unless another nlhdlr already said that it does inteval
+                */
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG
@@ -1200,15 +1205,23 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
-               /* if previnterval allow a further tightening, then reversepropagation
-                * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                * TODO we might want to require a mimimal tightening?
-                */
-               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval) && !expr->inqueue )
+               if( reversepropqueue != NULL && !expr->inqueue && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
                {
-                  /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
-                  SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
-                  expr->inqueue = TRUE;
+                  /* if previnterval allow a further tightening, then do reversepropagation
+                   * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+                   * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded
+                   */
+                  if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval)) ||
+                     (!force &&
+                        ((interval.inf <= -SCIP_INTERVAL_INFINITY && previnterval.inf > -SCIP_INTERVAL_INFINITY) ||
+                         (interval.sup >=  SCIP_INTERVAL_INFINITY && previnterval.sup >  SCIP_INTERVAL_INFINITY) ||
+                         SCIPisLbBetter(scip, previnterval.inf, interval.inf, interval.sup) ||
+                         SCIPisUbBetter(scip, previnterval.sup, interval.inf, interval.sup))) )
+                  {
+                     /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
+                     SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+                     expr->inqueue = TRUE;
+                  }
                }
                /* else
                {
