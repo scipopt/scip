@@ -1803,7 +1803,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
    /* check whether aggregation row is in the LP */
-   if( !SCIProwIsInLP(nlhdlrexprdata->row) )
+   if( !SCIProwIsInLP(nlhdlrexprdata->row)
+      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->row, sol), mincutviolation ) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->row, FALSE, &infeasible) );
 
@@ -1813,7 +1814,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
          return SCIP_OKAY;
       }
 
-      *result = SCIP_SUCCESS;
+      *result = SCIP_SEPARATED;
    }
 
    for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
@@ -1836,7 +1837,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
             if( infeasible )
                *result = SCIP_CUTOFF;
             else
-               *result = SCIP_SUCCESS;
+               *result = SCIP_SEPARATED;
          }
 
          /* release row */
