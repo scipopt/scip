@@ -169,6 +169,7 @@
 #define DEFAULT_SCHREIERSIMSLEADERVARTYPE 0  /**< variable type of leader in orbit */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 #define DEFAULT_SCHREIERSIMSADDCUTS   TRUE   /**< Should Schreier Sims cuts be added? */
+#define DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS FALSE /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -279,6 +280,7 @@ struct SCIP_PropData
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
    SCIP_Bool             schreiersimsaddcuts; /**< Should Schreier Sims cuts be added? */
+   SCIP_Bool             schreiersimsmixedcomponents; /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -3840,6 +3842,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_Bool conflictgraphcreated = FALSE;
+   SCIP_Bool mixedcomponents;
    SCIP_Bool success;
    int* norbitleadercomponent;
 
@@ -3876,6 +3879,7 @@ SCIP_RETCODE addSchreierSimsConss(
    leaderrule = propdata->schreiersimsleaderrule;
    tiebreakrule = propdata->schreiersimstiebreakrule;
    leadervartype = propdata->schreiersimsleadervartype;
+   mixedcomponents = propdata->schreiersimsmixedcomponents;
 
    /* if not already computed, get number of affected vars */
    if ( nmovedpermvars == 0 )
@@ -3933,11 +3937,17 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &componentcompatible, ncomponents) );
    for (c = 0; c < ncomponents; ++c)
    {
-      for (i = componentbegins[c]; i < componentbegins[c + 1]; ++i)
+      for (v = componentbegins[c]; v < componentbegins[c + 1]; ++v)
       {
-         if ( SCIPvarGetType(permvars[components[i]]) == leadervartype )
+         if ( (int) SCIPvarGetType(permvars[components[v]]) == leadervartype )
          {
             componentcompatible[c] = TRUE;
+            if ( mixedcomponents )
+               break;
+         }
+         else if ( ! mixedcomponents )
+         {
+            componentcompatible[c] = FALSE;
             break;
          }
       }
@@ -5163,6 +5173,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/schreiersimsaddcuts",
          "Should Schreier Sims cuts be added?",
          &propdata->schreiersimsaddcuts, TRUE, DEFAULT_SCHREIERSIMSADDCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsmixedcomponents",
+         "Should Schreier Sims cuts be added if a symmetry component contains variables of different types?",
+         &propdata->schreiersimsmixedcomponents, TRUE, DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
