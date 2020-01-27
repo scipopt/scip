@@ -49,12 +49,12 @@
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
-#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
@@ -245,11 +245,12 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
 #define DEFAULT_RESTARTFACTOR        50.0    /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+#define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
+#define DEFAULT_RESTARTACTPRICERS    FALSE   /**< whether to apply a restart when active pricers are used */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
-#define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -283,6 +284,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             treeprofile_enabled;/**< Should the event handler collect treeprofile data? */
    SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
    SCIP_Bool             restartnonlinear;   /**< whether to apply a restart when nonlinear constraints are present */
+   SCIP_Bool             restartactpricers;  /**< whether to apply a restart when active pricers are used */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -2350,8 +2352,8 @@ SCIP_Bool isRestartApplicable(
 {
    SCIP_Longint nnodes;
 
-   /* disable restarts when not all columns are in the LP, e.g., for column generation */
-   if( ! SCIPallColsInLP(scip) )
+   /* check whether to apply restarts when there are active pricers available */
+   if( SCIPgetNActivePricers(scip) > 0 && ! eventhdlrdata->restartactpricers )
       return FALSE;
 
    /* check whether to apply a restart when nonlinear constraints are present */
@@ -2891,6 +2893,14 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->restartfactor, FALSE, DEFAULT_RESTARTFACTOR, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restarts/restartnonlinear",
+         "whether to apply a restart when nonlinear constraints are present",
+         &eventhdlrdata->restartnonlinear, FALSE, DEFAULT_RESTARTNONLINEAR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restarts/restartactpricers",
+         "whether to apply a restart when active pricers are used",
+         &eventhdlrdata->restartactpricers, FALSE, DEFAULT_RESTARTACTPRICERS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "estimation/coefmonoweight",
          "coefficient of tree weight in monotone approximation of search completion",
          &eventhdlrdata->coefmonoweight, FALSE, DEFAULT_COEFMONOWEIGHT, 0.0, 1.0, NULL, NULL) );
@@ -2933,10 +2943,6 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddLongintParam(scip, "estimation/ssg/nminnodeslastsplit",
          "minimum number of nodes to process between two consecutive SSG splits",
          &eventhdlrdata->treedata->ssg->nminnodeslastsplit, FALSE, DEFAULT_SSG_NMINNODESLASTSPLIT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restartnonlinear",
-         "whether to apply a restart when nonlinear constraints are present",
-         &eventhdlrdata->restartnonlinear, FALSE, DEFAULT_RESTARTNONLINEAR, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
