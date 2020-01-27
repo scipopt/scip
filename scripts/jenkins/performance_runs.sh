@@ -77,7 +77,7 @@ PRESOLVEBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-  PRESOLVEBRANCHNAME="bugfix"
+  PRESOLVEBRANCHNAME="master"
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
   PRESOLVEBRANCHNAME="master"
@@ -135,7 +135,6 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
 
   mkdir build
   cd build
-  # WHAT ABOUT SCIP DIR?
   cmake -DQUADMATH=off -DCMAKE_INSTALL_PREFIX=${PRESOLVELIB_DIR} -DCMAKE_BUILD_TYPE=Release -DSCIP_DIR=../../build -DSOPLEX_DIR=../../soplex/build ..
   rm -rf ${PRESOLVELIB_DIR}
   make install -j4
