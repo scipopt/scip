@@ -127,10 +127,10 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   rm -rf presolve
   git clone git@git.zib.de:bzfgottw/presolve
   cd presolve
-  git checkout ${PRESOLVBRANCHNAME}
+  git checkout ${PRESOLVEBRANCHNAME}
   git pull
   git checkout -f performance-${GITBRANCH}
-  git merge ${PRESOLVBRANCHNAME} --ff-only
+  git merge ${PRESOLVEBRANCHNAME} --ff-only
   git push
 
   mkdir build
