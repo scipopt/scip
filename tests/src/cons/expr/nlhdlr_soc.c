@@ -860,20 +860,20 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
    cr_expect(nlhdlrexprdata->disvars[1] != NULL);
    cr_expect(nlhdlrexprdata->disvars[2] != NULL);
 
-   cr_expect(SCIProwGetNNonz(nlhdlrexprdata->row) == 4);
+   cr_expect(SCIProwGetNNonz(nlhdlrexprdata->disrow) == 4);
 
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->row)[0], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->row)[0]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->row)[1], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->row)[1]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->row)[2], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->row)[2]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->row)[3], -1.0, "expected %f, but got %f\n", -1.0, SCIProwGetVals(nlhdlrexprdata->row)[3]);
+   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[0], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[0]);
+   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[1], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[1]);
+   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[2], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[2]);
+   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[3], -1.0, "expected %f, but got %f\n", -1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[3]);
 
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[0]) == nlhdlrexprdata->disvars[0]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[1]) == nlhdlrexprdata->disvars[1]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[2]) == nlhdlrexprdata->disvars[2]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[3]) == nlhdlrexprdata->vars[2]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]) == nlhdlrexprdata->disvars[0]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]) == nlhdlrexprdata->disvars[1]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]) == nlhdlrexprdata->disvars[2]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]) == nlhdlrexprdata->vars[2]);
 
-   cr_expect(SCIProwGetLhs(nlhdlrexprdata->row) == -SCIPinfinity(scip));
-   cr_expect(SCIProwGetRhs(nlhdlrexprdata->row) == 0.0);
+   cr_expect(SCIProwGetLhs(nlhdlrexprdata->disrow) == -SCIPinfinity(scip));
+   cr_expect(SCIProwGetRhs(nlhdlrexprdata->disrow) == 0.0);
 
    /* free disaggregation */
    SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
