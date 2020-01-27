@@ -3318,17 +3318,8 @@ SCIP_RETCODE addSymresackConss(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
 
-         /* adapt permutation to leader */
-         if ( propdata->nleaders > 0 )
-         {
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[p], modifiedpermvars, npermvars, FALSE,
+         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
-                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         }
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
