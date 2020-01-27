@@ -3287,7 +3287,7 @@ SCIP_RETCODE addSymresackConss(
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
-   if ( propdata->nleaders > 0 )
+   if ( propdata->nleaders > 0 && propdata->schreiersimsleadervartype == SCIP_VARTYPE_BINARY )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
       for (p = 0; p < nperms; ++p)
