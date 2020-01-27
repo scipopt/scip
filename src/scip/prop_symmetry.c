@@ -607,7 +607,6 @@ SCIP_RETCODE freeSymmetryData(
    )
 {
    int i;
-   int ub;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -641,10 +640,19 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
-   ub = propdata->schreiersimsenabled ? propdata->npermvars : propdata->nbinpermvars;
-   for (i = 0; i < ub; ++i)
+   if ( propdata->schreiersimsenabled )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      }
+   }
+   else if ( propdata->binvaraffected )
+   {
+      for (i = 0; i < propdata->nbinpermvars; ++i)
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      }
    }
 
    /* free lists for orbitopal fixing */
