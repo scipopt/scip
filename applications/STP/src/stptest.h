@@ -38,6 +38,7 @@ extern SCIP_RETCODE    stptest_csrdepo(SCIP*);
 /* stptest_extreduce.c
  */
 extern SCIP_RETCODE    stptest_extreduce(SCIP*);
+extern SCIP_RETCODE    stptest_extmldists(SCIP*);
 
 /* stptest_reduce.c
  */

@@ -36,6 +36,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define UNIT_TEST_STP
 
 #include <string.h>
 #include "probdata_stp.h"
@@ -350,7 +351,6 @@ SCIP_RETCODE presolveStp(
 
    probdata->norgedges = graph->edges;
 
-//#define UNIT_TEST_STP
 #ifdef UNIT_TEST_STP
    SCIP_CALL( stptest_all(scip) );
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,17 +34,49 @@
 #include <time.h>
 #endif
 
+#define MLDISTS_EMPTYSLOT_NONE -1
+#define MLDISTS_ID_UNSET      -1
+#define MLDISTS_VAL_UNSET     -1.0
+
+/** Structure for storing distances in the extension tree.
+ *  Organized in slots that can be filled by the user.
+ *  On each level there are number of slots available.
+ *  Each slots consists of a base (id) and a number of targets (distances, ids).
+ *  Each slot on a level has the same number of targets, namely level_ntargets[level].  */
+struct multi_level_distances_storage
+{
+#ifndef NDEBUG
+   int*                  target_ids;        /**< target ids only in DEBUG mode! */
+#endif
+   SCIP_Real*            target_dists;      /**< target ids */
+   int*                  base_ids;          /**< bases ids */
+   int*                  level_basestart;   /**< start of bases for given level */
+   int*                  level_targetstart; /**< start of targets for given level */
+   int*                  level_ntargets;    /**< number of targets per base on given level */
+   int                   level_maxntargets; /**< maximum number of targets per level */
+   int                   level_maxnslots;   /**< maximum number of bases per level */
+   int                   nlevels;           /**< number of levels */
+   int                   maxnlevels;        /**< maximum number of levels */
+   int                   maxntargets;       /**< total maximum number of targets */
+   int                   maxnslots;         /**< total maximum number of bases */
+   int                   emptyslot_base;    /**< base (0,...) of current empty slot, or EMPTYSLOT_NONE if none exists */
+};
+
+
 /** returns entry of element within sorted array of size arraysize, or -1 if element could not be found */
 static inline
 int findEntryFromSorted(
-   const int* array,
-   int arraysize,
-   int element)
+   const int*            array,              /**< array */
+   int                   arraysize,          /**< size */
+   int                   element             /**< element to look for */
+   )
 {
    int l = 0;
    int u = arraysize - 1;
 
 #ifndef NDEBUG
+   assert(u >= 0);
+
    for( int i = 1; i < arraysize; i++ )
       assert(array[i - 1] < array[i] );
 #endif
@@ -63,6 +95,175 @@ int findEntryFromSorted(
    // try http://eigenjoy.com/2011/09/09/binary-search-revisited/ ?
 
    return -1;
+}
+
+
+/** gets current level */
+static inline
+int mldistsGetTopLevel(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   assert(mldists);
+   assert(mldists->nlevels > 0 && mldists->nlevels <= mldists->maxnlevels);
+
+   return (mldists->nlevels - 1);
+}
+
+
+/** gets start of bases */
+static inline
+int mldistsGetPosBasesStart(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level               /**< the level */
+)
+{
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(mldists->level_basestart[level] >= 0 && mldists->level_basestart[level] < mldists->maxnslots);
+
+   return mldists->level_basestart[level];
+}
+
+
+/** gets start of bases */
+static inline
+int mldistsGetPosBasesEnd(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level               /**< the level */
+)
+{
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(mldists->level_basestart[level + 1] >= 0 && mldists->level_basestart[level] <= mldists->maxnslots);
+
+   return mldists->level_basestart[level + 1];
+}
+
+
+/** Gets (internal) position of given base id,
+ *  or -1 if it could not be found. */
+static
+int mldistsGetPosBase(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid              /**< the base id */
+)
+{
+   const int start = mldistsGetPosBasesStart(mldists, level);
+   const int end = mldistsGetPosBasesEnd(mldists, level);
+   const int* const base_ids = mldists->base_ids;
+
+   assert(baseid >= 0);
+
+   /* top level? */
+   if( level == mldistsGetTopLevel(mldists) )
+   {
+      const int emptyslot_base = mldists->emptyslot_base;
+
+      for( int i = start; i < end; ++i )
+      {
+         const int id = base_ids[i];
+
+         if( i == emptyslot_base )
+            break;
+
+         if( id == baseid )
+            return i;
+      }
+   }
+   else
+   {
+      for( int i = start; i < end; ++i )
+      {
+         const int id = base_ids[i];
+
+         if( id == baseid )
+            return i;
+      }
+   }
+
+   return -1;
+}
+
+
+/** gets (internal) position of targets for given base id */
+static inline
+int mldistsGetPosTargetsStart(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid              /**< the base id */
+)
+{
+   int targetpos;
+   int offset = 0;
+   const int ntargets = mldists->level_ntargets[level];
+
+   assert(extreduce_mldistsLevelContainsBase(mldists, level, baseid));
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(baseid);
+
+   offset = mldistsGetPosBase(mldists, level, baseid) - mldists->level_basestart[level];
+
+   assert(offset >= 0);
+   assert(ntargets > 0);
+
+   targetpos = mldists->level_targetstart[level] + offset * ntargets;
+
+   assert(targetpos >= 0 && targetpos < mldists->maxntargets);
+
+   return targetpos;
+}
+
+
+/** gets targets start of current empty slot */
+static inline
+int mldistsGetPosEmptyTargetsStart(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   const int level = mldistsGetTopLevel(mldists);
+   const int ntargets = mldists->level_ntargets[level];
+   const int start = mldists->level_targetstart[level] + mldists->emptyslot_base * ntargets;
+
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+   assert(start >= 0 && start < mldists->maxntargets);
+   assert(ntargets > 0 && ntargets <= mldists->level_maxntargets);
+
+   return start;
+}
+
+
+/** only for debugging */
+static inline
+void mldistsTopLevelUnset(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+#ifndef NDEBUG
+   const int nlevels = mldists->nlevels;
+   const int start_base = mldists->level_basestart[nlevels - 1];
+   const int end_base = mldists->level_basestart[nlevels];
+   const int start_target = mldists->level_targetstart[nlevels - 1];
+   const int end_target = mldists->level_targetstart[nlevels];
+
+   assert(start_base >= 0);
+   assert(start_base < end_base);
+   assert(end_base <= mldists->maxnslots);
+
+   for( int i = start_base; i < end_base; ++i )
+   {
+      mldists->base_ids[i] = MLDISTS_ID_UNSET;
+   }
+
+   assert(start_target >= 0);
+   assert(start_target < end_target);
+   assert(end_target <= mldists->maxntargets);
+
+   for( int i = start_target; i < end_target; ++i )
+   {
+      mldists->target_ids[i] = MLDISTS_ID_UNSET;
+      mldists->target_dists[i] = MLDISTS_VAL_UNSET;
+   }
+#endif
 }
 
 
@@ -643,6 +844,39 @@ SCIP_RETCODE distDataAllocateNodesArrays(
    return SCIP_OKAY;
 }
 
+/*
+ * Interface methods
+ */
+
+/** is the edge valid? */
+SCIP_Bool extreduce_edgeIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   e                   /**< edge to be checked */
+)
+{
+   if( EAT_FREE == graph->oeat[e] )
+   {
+      return FALSE;
+   }
+   else if( graph_pc_isPcMw(graph) )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      if( (!graph->mark[tail] || !graph->mark[head]) )
+      {
+         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
+
+         return FALSE;
+      }
+
+      assert(!graph_pc_knotIsDummyTerm(graph, tail));
+      assert(!graph_pc_knotIsDummyTerm(graph, head));
+   }
+
+   return TRUE;
+}
+
 
 /** initializes distance data */
 SCIP_RETCODE extreduce_distDataInit(
@@ -1081,32 +1315,306 @@ SCIP_Bool extreduce_reddataIsClean(
 }
 
 
-
-/** is the edge valid? */
-SCIP_Bool extreduce_edgeIsValid(
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   e                   /**< edge to be checked */
+/** initializes multi-level distances structure */
+SCIP_RETCODE extreduce_mldistsInit(
+   SCIP*                 scip,               /**< SCIP */
+   int                   maxnlevels,         /**< maximum number of levels that can be handled */
+   int                   maxnslots,          /**< maximum number of of slots (per level) that can be handled */
+   int                   maxntargets,        /**< maximum number of of targets (per slot) that can be handled */
+   MLDISTS**             mldistances         /**< to be initialized */
 )
 {
-   if( EAT_FREE == graph->oeat[e] )
+   MLDISTS* mldists;
+
+   assert(scip && mldistances);
+   assert(maxnlevels >= 1 && maxnslots >= 1 && maxntargets >= 1);
+
+   SCIP_CALL( SCIPallocMemory(scip, mldistances) );
+
+   mldists = *mldistances;
+   mldists->nlevels = 0;
+   mldists->maxnlevels = maxnlevels;
+   mldists->level_maxntargets = maxntargets;
+   mldists->level_maxnslots = maxnslots;
+   mldists->maxnslots = maxnlevels * maxnslots;
+   mldists->maxntargets = maxnlevels * maxnslots * maxntargets;
+   mldists->emptyslot_base = MLDISTS_EMPTYSLOT_NONE;
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->target_ids), mldists->maxntargets) );
+#endif
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->target_dists), mldists->maxntargets) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->base_ids), mldists->maxnslots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->level_basestart), maxnlevels + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->level_targetstart), maxnlevels + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->level_ntargets), maxnlevels) );
+
+   mldists->level_basestart[0] = 0;
+   mldists->level_targetstart[0] = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees  multi-level distances structure */
+void extreduce_mldistsFree(
+   SCIP*                 scip,               /**< SCIP */
+   MLDISTS**             mldistances         /**< to be freed */
+)
+{
+   MLDISTS* mldists;
+
+   assert(scip && mldistances);
+
+   mldists = *mldistances;
+
+   SCIPfreeMemoryArray(scip, &(mldists->level_ntargets));
+   SCIPfreeMemoryArray(scip, &(mldists->level_targetstart));
+   SCIPfreeMemoryArray(scip, &(mldists->level_basestart));
+   SCIPfreeMemoryArray(scip, &(mldists->base_ids));
+   SCIPfreeMemoryArray(scip, &(mldists->target_dists));
+#ifndef NDEBUG
+   SCIPfreeMemoryArray(scip, &(mldists->target_ids));
+#endif
+
+
+   SCIPfreeMemory(scip, mldistances);
+}
+
+
+/** does an empty slot exits? (on current level) */
+SCIP_Bool extreduce_mldistsEmptySlotExists(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   assert(mldists);
+   assert(MLDISTS_EMPTYSLOT_NONE == mldists->emptyslot_base || mldists->emptyslot_base >= 0);
+
+   return (mldists->emptyslot_base != MLDISTS_EMPTYSLOT_NONE);
+}
+
+
+/** gets targets IDs memory from clean slot (to be filled in) */
+int* extreduce_mldistsEmptySlotTargetIds(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+#ifndef NDEBUG
+   const int start = mldistsGetPosEmptyTargetsStart(mldists);
+   const int level = mldistsGetTopLevel(mldists);
+   const int end = start + mldists->level_ntargets[level];
+
+   for( int i = start; i < end; ++i )
    {
-      return FALSE;
+      assert(mldists->target_ids[i] == MLDISTS_ID_UNSET);
    }
-   else if( graph_pc_isPcMw(graph) )
+
+   return &(mldists->target_ids[start]);
+
+#else
+   return NULL;
+#endif
+}
+
+
+/** gets targets distances memory from clean slot (to be filled in) */
+SCIP_Real* extreduce_mldistsEmptySlotTargetDists(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   const int start = mldistsGetPosEmptyTargetsStart(mldists);
+
+#ifndef NDEBUG
+   const int level = mldistsGetTopLevel(mldists);
+   const int end = start + mldists->level_ntargets[level];
+
+   for( int i = start; i < end; ++i )
    {
-      const int tail = graph->tail[e];
-      const int head = graph->head[e];
-
-      if( (!graph->mark[tail] || !graph->mark[head]) )
-      {
-         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
-
-         return FALSE;
-      }
-
-      assert(!graph_pc_knotIsDummyTerm(graph, tail));
-      assert(!graph_pc_knotIsDummyTerm(graph, head));
+      assert(EQ(mldists->target_dists[i], MLDISTS_VAL_UNSET));
    }
+#endif
 
-   return TRUE;
+   return &(mldists->target_dists[start]);
+}
+
+
+/** gets level of current empty slot */
+int extreduce_mldistsEmptySlotLevel(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+
+   return mldistsGetTopLevel(mldists);
+}
+
+
+/** sets base of empty slot */
+void extreduce_mldistsEmtpySlotSetBase(
+   MLDISTS*              mldists,            /**< multi-level distances */
+   int                   baseid              /**< base */
+)
+{
+   const int level = mldistsGetTopLevel(mldists);
+   const int position = mldists->level_basestart[level] + mldists->emptyslot_base;
+
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+   assert(position >= 0 && position < mldists->maxnslots);
+   assert(baseid >= 0);
+   assert(mldists->base_ids[position] == MLDISTS_ID_UNSET);
+
+   mldists->base_ids[position] = baseid;
+}
+
+
+/** marks current empty slot as filled */
+void extreduce_mldistsEmptySlotSetFilled(
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   const int level = mldistsGetTopLevel(mldists);
+
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+   assert(mldists->emptyslot_base < extreduce_mldistsLevelNSlots(mldists, level));
+
+
+#ifndef NEDBUG
+   {
+      const int position = mldists->level_basestart[level] + mldists->emptyslot_base;
+
+      assert(mldists->base_ids[position] != MLDISTS_ID_UNSET);
+   }
+#endif
+
+
+   mldists->emptyslot_base++;
+
+   /* all slots of current level used? */
+   if( mldists->emptyslot_base >= extreduce_mldistsLevelNSlots(mldists, level) )
+   {
+      mldists->emptyslot_base = MLDISTS_EMPTYSLOT_NONE;
+   }
+}
+
+
+/** adds another level of slots at top */
+void extreduce_mldistsLevelAddTop(
+   int                   nslots,             /**< number of slots per this level */
+   int                   nslottargets,       /**< number of targets per slot */
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   int nlevels;
+
+   assert(!extreduce_mldistsEmptySlotExists(mldists));
+   assert(nslots > 0 && nslots <= mldists->level_maxnslots);
+   assert(nslottargets > 0 && nslottargets <= mldists->level_maxntargets);
+   assert(mldists->nlevels < mldists->maxnlevels);
+
+   mldists->emptyslot_base = 0;
+   mldists->nlevels++;
+
+   nlevels = mldists->nlevels;
+
+   assert(nlevels > 0);
+
+   mldists->level_basestart[nlevels] = mldists->level_basestart[nlevels - 1] + nslots;
+   mldists->level_targetstart[nlevels] = mldists->level_targetstart[nlevels - 1] + nslots * nslottargets;
+
+   mldists->level_ntargets[nlevels - 1] = nslottargets;
+
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+
+   mldistsTopLevelUnset(mldists);
+}
+
+
+/** removes top level of slots */
+void extreduce_mldistsLevelRemoveTop(
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   assert(mldists);
+   assert(!extreduce_mldistsEmptySlotExists(mldists));
+   assert(mldists->nlevels > 0);
+
+   mldistsTopLevelUnset(mldists);
+
+   mldists->nlevels--;
+
+   assert(!extreduce_mldistsEmptySlotExists(mldists));
+}
+
+
+/** gets number of targets (per slots) for given level */
+int extreduce_mldistsLevelNTargets(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level               /**< level */
+)
+{
+   assert(mldists);
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(mldists->level_ntargets[level] >= 0 && mldists->level_ntargets[level] <= mldists->level_maxntargets);
+
+   return mldists->level_ntargets[level];
+}
+
+
+/** gets number of slots for given level */
+int extreduce_mldistsLevelNSlots(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level               /**< level */
+)
+{
+   assert(mldists);
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(mldists->level_basestart[level + 1] - mldists->level_basestart[level] >= 0);
+   assert(mldists->level_basestart[level + 1] - mldists->level_basestart[level] <= mldists->level_maxnslots);
+
+   return (mldists->level_basestart[level + 1] - mldists->level_basestart[level]);
+}
+
+
+/** is the base contained in a slot of the given level? */
+SCIP_Bool extreduce_mldistsLevelContainsBase(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid              /**< the base id */
+)
+{
+   assert(mldists);
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+   assert(baseid >= 0);
+
+   return (mldistsGetPosBase(mldists, level, baseid) != -1);
+}
+
+
+/** Gets targets ids */
+const int* extreduce_mldistsTargetIds(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid              /**< the base */
+)
+{
+#ifndef NDEBUG
+   const int targetpos = mldistsGetPosTargetsStart(mldists, level, baseid);
+
+   return &(mldists->target_ids[targetpos]);
+#else
+   return NULL;
+#endif
+}
+
+
+/** gets targets distances */
+const SCIP_Real* extreduce_mldistsTargetDists(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid              /**< the base */
+)
+{
+   const int targetpos = mldistsGetPosTargetsStart(mldists, level, baseid);
+
+   return &(mldists->target_dists[targetpos]);
 }

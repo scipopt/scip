@@ -47,6 +47,9 @@
 #include "reduce.h"
 #include "completegraph.h"
 
+/** structure for storing distances in the extension tree */
+typedef struct multi_level_distances_storage MLDISTS;
+
 /** permanent extension data */
 typedef struct extension_data_permanent
 {
@@ -161,18 +164,33 @@ extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, 
 
 /* extreduce_util.c
  */
-extern SCIP_RETCODE    extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
-extern SCIP_Real       extreduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
-extern void            extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
-extern void            extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
-extern SCIP_RETCODE    extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
-extern SCIP_Bool       extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
-extern void            extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
-extern void            extreduce_extdataClean(EXTDATA*);
-extern SCIP_Bool       extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
-extern void            extreduce_reddataClean(REDDATA*);
-extern SCIP_Bool       extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
-extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
+extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
+extern SCIP_Real          extreduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
+extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
+extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
+extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
+extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
+extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
+extern void               extreduce_extdataClean(EXTDATA*);
+extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
+extern void               extreduce_reddataClean(REDDATA*);
+extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
+extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
+extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, MLDISTS**);
+extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
+extern SCIP_Bool          extreduce_mldistsEmptySlotExists(const MLDISTS*);
+extern int*               extreduce_mldistsEmptySlotTargetIds(const MLDISTS*);
+extern SCIP_Real*         extreduce_mldistsEmptySlotTargetDists(const MLDISTS*);
+extern int                extreduce_mldistsEmptySlotLevel(const MLDISTS*);
+extern void               extreduce_mldistsEmtpySlotSetBase(MLDISTS*, int);
+extern void               extreduce_mldistsEmptySlotSetFilled(MLDISTS*);
+extern void               extreduce_mldistsLevelAddTop(int, int, MLDISTS*);
+extern void               extreduce_mldistsLevelRemoveTop(MLDISTS*);
+extern int                extreduce_mldistsLevelNTargets(const MLDISTS*, int);
+extern int                extreduce_mldistsLevelNSlots(const MLDISTS*, int);
+extern SCIP_Bool          extreduce_mldistsLevelContainsBase(const MLDISTS*, int, int);
+extern const int*         extreduce_mldistsTargetIds(const MLDISTS*, int, int);
+extern const SCIP_Real*   extreduce_mldistsTargetDists(const MLDISTS*, int, int);
 
 
 /* extreduce_dbg.c

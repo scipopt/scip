@@ -25,9 +25,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <assert.h>
 #include "stptest.h"
+#include "portab.h"
 #include "graph.h"
 #include "reduce.h"
 #include "extreduce.h"
@@ -75,6 +77,83 @@ SCIP_RETCODE extArc(
    return SCIP_OKAY;
 }
 
+/** helper */
+static
+void mldistsAddLevel(
+   int                   nslots,
+   int                   ntargets,
+   const int             bases[nslots],
+   const SCIP_Real       dists[nslots][ntargets],
+   MLDISTS*              mldists
+ )
+{
+   assert(nslots > 0 && ntargets > 0);
+
+   extreduce_mldistsLevelAddTop(nslots, ntargets, mldists);
+
+   for( int i = 0; i < nslots; i++ )
+   {
+      SCIP_Real* emptydists;
+
+      extreduce_mldistsEmtpySlotSetBase(mldists, bases[i]);
+      emptydists = extreduce_mldistsEmptySlotTargetDists(mldists);
+
+      BMScopyMemoryArray(emptydists, dists[i], ntargets);
+
+      extreduce_mldistsEmptySlotSetFilled(mldists);
+   }
+}
+
+/** helper */
+static
+SCIP_Bool mldistsEqualDists(
+   const MLDISTS*        mldists,
+   const SCIP_Real       dists[],
+   int                   level,
+   int                   baseid,
+   int                   ntargets
+   )
+{
+   const SCIP_Real* dists_ml = extreduce_mldistsTargetDists(mldists, level, baseid);
+
+   assert(ntargets == extreduce_mldistsLevelNTargets(mldists, level));
+
+   for( int i = 0; i < ntargets; i++ )
+   {
+      if( !EQ(dists_ml[i], dists[i]) )
+      {
+         SCIPdebugMessage("wrong distance at %d: %f!=%f \n", i, dists_ml[i], dists[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
+/** helper */
+static
+SCIP_Bool mldistsContainsBases(
+   const MLDISTS*        mldists,
+   const int             bases[],
+   int                   level,
+   int                   nslots
+   )
+{
+   assert(nslots == extreduce_mldistsLevelNSlots(mldists, level));
+
+   for( int i = 0; i < nslots; i++ )
+   {
+      if( !extreduce_mldistsLevelContainsBase(mldists, level, bases[i]) )
+      {
+         SCIPdebugMessage("bases %d not contained! \n", bases[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
 
 static
 void ext0InitRedCostArrays(
@@ -102,6 +181,153 @@ void ext0InitRedCostArrays(
       redcost[i] = 0.0;
 }
 
+
+/** tests building and un-building */
+static
+SCIP_RETCODE mldistsTest1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   const int maxnlevels = 3;
+   const int maxnslots = 12;
+   const int maxntargets = 7;
+   const SCIP_Real* dists;
+
+   MLDISTS* mldists;
+
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, &mldists) );
+
+   /* add */
+
+   extreduce_mldistsLevelAddTop(2, 7, mldists);
+
+   dists = extreduce_mldistsEmptySlotTargetDists(mldists);
+   assert(dists);
+
+   for( int i = 0; i < 2; i++ )
+   {
+      extreduce_mldistsEmtpySlotSetBase(mldists, i + 10);
+      extreduce_mldistsEmptySlotSetFilled(mldists);
+   }
+
+   extreduce_mldistsLevelAddTop(12, 5, mldists);
+
+   for( int i = 0; i < 12; i++ )
+   {
+      extreduce_mldistsEmtpySlotSetBase(mldists, i);
+      extreduce_mldistsEmptySlotSetFilled(mldists);
+   }
+
+   extreduce_mldistsLevelAddTop(2, 7, mldists);
+
+   for( int i = 0; i < 2; i++ )
+   {
+      extreduce_mldistsEmtpySlotSetBase(mldists, i);
+      extreduce_mldistsEmptySlotSetFilled(mldists);
+   }
+
+   /* remove */
+
+   extreduce_mldistsLevelRemoveTop(mldists);
+   extreduce_mldistsLevelRemoveTop(mldists);
+   extreduce_mldistsLevelRemoveTop(mldists);
+
+   extreduce_mldistsFree(scip, &mldists);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests correct storing */
+static
+SCIP_RETCODE mldistsTest2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   const int maxnlevels = 4;
+   const int maxnslots = 3;
+   const int maxntargets = 4;
+
+   const int nslots1 = 2;
+   const int ntargets1 = 3;
+   const int bases1[] = { 1, 4 };
+   const SCIP_Real dists1[2][3] = { {1.0, 2.5,   4.5},
+                                  {1.3, 0.5, 225.7} };
+
+   const int nslots2 = 2;
+   const int ntargets2 = 4;
+   const int bases2[] = { 2, 22 };
+   const SCIP_Real dists2[2][4] = { {15.0, 22.5, 455.2, 5.3},
+                                  {65.0,  7.5,   5.2, 5.7} };
+
+   const int nslots3 = 3;
+   const int ntargets3 = 2;
+   const int bases3[] = { 2, 22, 6 };
+   const SCIP_Real dists3[3][2] = { { 0.1, 0.05},
+                                  { 4.1, 2.11},
+                                  {44.1, 9.14} };
+
+   MLDISTS* mldists;
+
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, &mldists) );
+
+   /* add first */
+   mldistsAddLevel(nslots1, ntargets1, bases1, dists1, mldists);
+
+   /* add second */
+   mldistsAddLevel(nslots2, ntargets2, bases2, dists2, mldists);
+
+   if( !mldistsEqualDists(mldists, dists1[1], 0, 4, ntargets1) )
+   {
+      return SCIP_ERROR;
+   }
+
+   if( !mldistsContainsBases(mldists, bases1, 0, nslots1) )
+   {
+      SCIPdebugMessage("bases fail \n");
+      return SCIP_ERROR;
+   }
+
+   /* add third */
+   mldistsAddLevel(nslots3, ntargets3, bases3, dists3, mldists);
+
+   if( !mldistsEqualDists(mldists, dists3[2], 2, 6, ntargets3) )
+   {
+      return SCIP_ERROR;
+   }
+
+   /* remove third */
+
+   extreduce_mldistsLevelRemoveTop(mldists);
+
+
+   if( !mldistsEqualDists(mldists, dists2[0], 1, 2, ntargets2) )
+   {
+      return SCIP_ERROR;
+   }
+
+   if( !mldistsContainsBases(mldists, bases2, 1, nslots2) )
+   {
+      SCIPdebugMessage("bases fail \n");
+      return SCIP_ERROR;
+   }
+
+   /* remove second */
+   extreduce_mldistsLevelRemoveTop(mldists);
+
+   if( !mldistsEqualDists(mldists, dists1[0], 0, 1, ntargets1) )
+   {
+      return SCIP_ERROR;
+   }
+
+   /* remove first */
+   extreduce_mldistsLevelRemoveTop(mldists);
+
+   extreduce_mldistsFree(scip, &mldists);
+
+   return SCIP_OKAY;
+}
 
 
 static
@@ -792,7 +1018,19 @@ SCIP_RETCODE extDistTest(
    return SCIP_OKAY;
 }
 
+/** tests for mldists */
+SCIP_RETCODE stptest_extmldists(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( mldistsTest1(scip) );
+   SCIP_CALL( mldistsTest2(scip) );
 
+
+   printf("mldists test: all ok \n");
+
+   return SCIP_OKAY;
+}
 
 
 /** tests extended reduction techniques */
