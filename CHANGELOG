@@ -21,6 +21,11 @@ Interface changes
 ### Interfaces to external software
 ### Changed parameters
 ### New parameters
+
+- It is now possible to add orbitope constraints to handle symmetries even if not all variables
+  in a component of the symmetry group are binary. This feature can be enabled using the
+  parameter "propagating/symmetry/onlybinorbitope".
+
 ### Data structures
 
 Deleted files
