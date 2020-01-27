@@ -49,8 +49,10 @@
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
@@ -247,6 +249,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
+#define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -279,6 +282,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             useleafts;          /**< Use leaf nodes as basic observations for time series, or all nodes? */
    SCIP_Bool             treeprofile_enabled;/**< Should the event handler collect treeprofile data? */
    SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
+   SCIP_Bool             restartnonlinear;   /**< whether to apply a restart when nonlinear constraints are present */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -2340,10 +2344,19 @@ RESTARTPOLICY getRestartPolicy(
 /** check if a restart is applicable considering limit and threshold user parameters */
 static
 SCIP_Bool isRestartApplicable(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
    SCIP_Longint nnodes;
+
+   /* disable restarts when not all columns are in the LP, e.g., for column generation */
+   if( ! SCIPallColsInLP(scip) )
+      return FALSE;
+
+   /* check whether to apply a restart when nonlinear constraints are present */
+   if( SCIPisNLPConstructed(scip) && ! eventhdlrdata->restartnonlinear )
+      return FALSE;
 
    /* check if max number of restarts has been reached */
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
@@ -2746,7 +2759,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
-   if( ! isRestartApplicable(eventhdlrdata) )
+   if( ! isRestartApplicable(scip, eventhdlrdata) )
       return SCIP_OKAY;
 
    /* test if a restart should be applied */
@@ -2920,6 +2933,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddLongintParam(scip, "estimation/ssg/nminnodeslastsplit",
          "minimum number of nodes to process between two consecutive SSG splits",
          &eventhdlrdata->treedata->ssg->nminnodeslastsplit, FALSE, DEFAULT_SSG_NMINNODESLASTSPLIT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restartnonlinear",
+         "whether to apply a restart when nonlinear constraints are present",
+         &eventhdlrdata->restartnonlinear, FALSE, DEFAULT_RESTARTNONLINEAR, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
