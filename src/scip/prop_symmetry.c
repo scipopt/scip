@@ -159,6 +159,9 @@
 #define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
 #define DEFAULT_ADDWEAKSBCS          TRUE    /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
+#define DEFAULT_ROWCOLUMNRATIO        3.0    /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
+                                              *   greater than this value. */
+#define DEFAULT_MAXNCONSSSUBGROUP  500000    /**< Maximum number of constraints up to which subgroup structures are detected */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -248,6 +251,9 @@ struct SCIP_PropData
    SCIP_Bool             detectsubgroups;    /**< Should we try to detect symmetric subgroups of the symmetry group? */
    SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
    int                   norbitopes;         /**< number of orbitope constraints */
+   SCIP_Real             rowcolumnratio;     /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
+                                              *   greater than this value. */
+   int                   maxnconsssubgroup;  /**< Maximum number of constraints up to which subgroup structures are detected */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -3167,6 +3173,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nstrongsbcs = 0;
    int nweaksbcs = 0;
 #endif
+   SCIP_Real rowcolumnratio;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3180,10 +3187,16 @@ SCIP_RETCODE detectAndHandleSubgroups(
    if ( propdata->nperms == 0 )
       return SCIP_OKAY;
 
+   /* exit if instance is too large */
+   if ( SCIPgetNConss(scip) > propdata->maxnconsssubgroup )
+      return SCIP_OKAY;
+
    assert( propdata->nperms > 0 );
    assert( propdata->perms != NULL );
    assert( propdata->npermvars > 0 );
    assert( propdata->permvars != NULL );
+
+   rowcolumnratio = propdata->rowcolumnratio;
 
    /* create array for permutation order */
    SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
@@ -3207,6 +3220,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int ntrivialcolors = 0;
       int j;
       SCIP_VAR* leadingvar = NULL;
+      SCIP_Bool useorbitope;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -3372,7 +3386,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
          /* build data structures and add constraints for orbitopes containing binary variables */
-         if ( isorbitope && nbinarycomps > 0 )
+         useorbitope = TRUE;
+         if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) colorcompsize) )
+            useorbitope = FALSE;
+         if ( isorbitope && nbinarycomps > 0 && useorbitope )
          {
             SCIP_VAR*** orbitopevarmatrix;
             SCIP_HASHSET* activevars;
@@ -5058,9 +5075,19 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->compressthreshold, TRUE, DEFAULT_COMPRESSTHRESHOLD, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-     "propagating/" PROP_NAME "/usecolumnsparsity",
+         "propagating/" PROP_NAME "/usecolumnsparsity",
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/rowcolumnratio",
+         "If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is greater than this value",
+         &propdata->rowcolumnratio, TRUE, DEFAULT_ROWCOLUMNRATIO, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/maxnconsssubgroup",
+         "maximum number of constraints up to which subgroup structures are detected",
+         &propdata->maxnconsssubgroup, TRUE, DEFAULT_MAXNCONSSSUBGROUP, 0, INT_MAX, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
