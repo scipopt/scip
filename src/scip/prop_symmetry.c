@@ -3819,6 +3819,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int* vartocomponent;
    int ncomponents;
    SCIP_Shortbool* componentblocked;
+   SCIP_Shortbool* componentcompatible;
 
    int orbitidx;
    int orbitleaderidx;
@@ -3888,9 +3889,9 @@ SCIP_RETCODE addSchreierSimsConss(
    nvars = SCIPgetNVars(scip);
 
    /* possibly create conflict graph */
-   if ( leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+   if ( leadervartype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
       || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS
-      || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+         || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
       SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
             permvarmap, &conflictgraphcreated) );
@@ -3920,18 +3921,34 @@ SCIP_RETCODE addSchreierSimsConss(
    if ( nchgbds != NULL )
       *nchgbds = 0;
 
-   /* ignore permutations of blocked components*/
+   /* check whether components are compatible with the variable type of the leader */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentcompatible, ncomponents) );
    for (c = 0; c < ncomponents; ++c)
    {
-      if ( componentblocked[c] )
+      for (i = componentbegins[c]; i < componentbegins[c + 1]; ++i)
       {
-         for(p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         if ( SCIPvarGetType(permvars[components[i]]) == leadervartype )
+         {
+            componentcompatible[c] = TRUE;
+            break;
+         }
+      }
+   }
+
+   /* ignore permutations of blocked components or incompatible components */
+   for (c = 0; c < ncomponents; ++c)
+   {
+      if ( componentblocked[c] || ! componentcompatible[c] )
+      {
+         for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
          {
             inactiveperms[components[p]] = TRUE;
             ++ninactiveperms;
          }
       }
    }
+
+   SCIPfreeBufferArray(scip, &componentcompatible);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &norbitleadercomponent, ncomponents) );
 
