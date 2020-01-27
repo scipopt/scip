@@ -216,8 +216,8 @@ struct SCIP_PropData
                                               *   component i in components array */
    int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool*       componentblocked;   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   int*                  componentblocked;   /**< array to store which symmetry methods have been applied to a component using
+                                              *   the same bitset as for misc/usesymmetry */
 
    /* further symmetry information */
    int                   nmovedvars;         /**< number of variables moved by some permutation */
@@ -3828,7 +3828,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int* componentbegins;
    int* vartocomponent;
    int ncomponents;
-   SCIP_Shortbool* componentblocked;
+   int* componentblocked;
    SCIP_Shortbool* componentcompatible;
 
    int orbitidx;
