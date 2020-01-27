@@ -172,6 +172,16 @@ export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
+# We have to export these variables to make them available to cmake.
+# Scripts will also use nonexported variables correctly.
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
+  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_master/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
+  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_${GITBRANCH}/
+fi
+
 ###################
 ### Compilation ###
 ###################
@@ -183,16 +193,7 @@ BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-git clone git@git.zib.de:integer/soplex.git
-cd soplex
-git checkout performance-${GITBRANCH}
-mkdir build
-cd build
-cmake ..
-make -j4
-cd ../../
-
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=$(pwd -P)/soplex/build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPRESOLVELIB_DIR=${PRESOLVELIB_DIR}
 make -j4
 cd ..
 

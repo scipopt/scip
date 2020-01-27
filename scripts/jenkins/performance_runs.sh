@@ -54,15 +54,6 @@ export FULLGITHASH=$(git show -s --pretty=%H)
 export GITBRANCH
 export MODE=performance
 
-# This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
-# We have to export these variables to make them available to cmake.
-# Scripts will also use nonexported variables correctly.
-if [ "${GITBRANCH}" == "consexpr" ]; then
-  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_master_Release/
-else
-  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
-fi
-
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
@@ -81,13 +72,27 @@ export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 BRANCHNAME=${GITBRANCH}
 SOPLEXBRANCHNAME=${GITBRANCH}
+PRESOLVEBRANCHNAME=${GITBRANCH}
+
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-fi
-if [ "${GITBRANCH}" == "consexpr" ]; then
+  PRESOLVEBRANCHNAME="bugfix"
+elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
+  PRESOLVEBRANCHNAME="master"
 fi
+
+# We have to export these variables to make them available to cmake.
+# Scripts will also use nonexported variables correctly.
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
+  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_master/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
+  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_${GITBRANCH}/
+fi
+
 if [ "${DAY_OF_WEEK}" == "6" ]; then
   git checkout -f ${BRANCHNAME}
   git pull
@@ -104,8 +109,38 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   git checkout -f performance-${GITBRANCH}
   git merge ${SOPLEXBRANCHNAME} --ff-only
   git push
+
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${SOPLEX_DIR}
+  rm -rf ${SOPLEX_DIR}
+  make install -j4
   cd ..
-  rm -rf soplex
+
+  # cmake scip for presolvelib
+  cd ..
+  mkdir -p scip-build
+  cd scip-build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DSOPLEX_DIR=${SOPLEX_DIR}
+  cd ..
+
+  rm -rf presolve
+  git clone git@git.zib.de:bzfgottw/presolve
+  cd presolve
+  git checkout ${PRESOLVBRANCHNAME}
+  git pull
+  git checkout -f performance-${GITBRANCH}
+  git merge ${PRESOLVBRANCHNAME} --ff-only
+  git push
+
+  mkdir build
+  cd build
+  # WHAT ABOUT SCIP DIR?
+  cmake -DQUADMATH=off -DCMAKE_INSTALL_PREFIX=${PRESOLVELIB_DIR} -DCMAKE_BUILD_TYPE=Release -DSCIP_DIR=../../build -DSOPLEX_DIR=../../soplex/build ..
+  rm -rf ${PRESOLVELIB_DIR}
+  make install -j4
+  cd ../..
+
 fi
 
 ####################################
@@ -219,12 +254,9 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPRESOLVELIB_DIR=${PRESOLVELIB_DIR}
   make -j4
   cd ..
-
-  # TODO tag this
-
 
   ######################
   ### Setup testruns ###
