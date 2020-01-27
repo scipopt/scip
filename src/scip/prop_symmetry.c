@@ -2829,7 +2829,7 @@ SCIP_RETCODE detectOrbitopes(
          propdata->genconss[propdata->ngenconss++] = cons;
          ++propdata->norbitopes;
 
-         propdata->componentblocked[i] = TRUE;
+         propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
       }
 
       /* free data structures */
@@ -3342,8 +3342,11 @@ SCIP_RETCODE addSymresackConss(
       /* loop through components */
       for (i = 0; i < ncomponents; ++i)
       {
-         /* skip components that were treated by different symmetry handling techniques */
-         if ( propdata->componentblocked[i] )
+         /* skip components that were treated by incompatible symmetry handling techniques */
+         if ( (propdata->componentblocked[i] & SYM_HANDLETYPE_SYMBREAK) != 0
+            || (propdata->componentblocked[i] & SYM_HANDLETYPE_ORBITALFIXING) != 0
+            || ((propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0
+               && propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY) )
             continue;
 
          /* loop through perms in component i and add symresack constraints */
@@ -3360,6 +3363,8 @@ SCIP_RETCODE addSymresackConss(
             /* adapt permutation to leader */
             if ( propdata->nleaders > 0 )
             {
+               assert( (propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0 );
+
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[permidx], modifiedpermvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             }
@@ -4023,7 +4028,7 @@ SCIP_RETCODE addSchreierSimsConss(
    for (c = 0; c < ncomponents; ++c)
    {
       if ( norbitleadercomponent[c] > 0 )
-         componentblocked[c] = TRUE;
+         componentblocked[c] |= SYM_HANDLETYPE_SCHREIERSIMS;
    }
    SCIPfreeBufferArray(scip, &norbitleadercomponent);
 
