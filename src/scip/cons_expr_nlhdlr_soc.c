@@ -14,12 +14,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_soc.h
- * @brief  nonlinear handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (v_i^T x + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
  *
- * @todo Add row that is stored in the nonlinear handler expression data to the LP if not happened so far.
+ * This is a nonlinear handler for second order cone constraints of the form
+ *
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (v_i^T x + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ *
+ * where \f$\gamma \geq 0\f$ and \f$\alpha_{n+1}\, (x_{n+1}+\beta_{n+1}) \geq 0\f$.
  */
 
 #include <string.h>
@@ -43,7 +47,48 @@
  * Data structures
  */
 
-/** nonlinear handler expression data */
+/** nonlinear handler expression data. The data is structured the following way:
+ *
+ *  A 'term' is one of the quadratic terms of the form alpha_i * (v_i^T x + beta_i))^2.
+ *  The last term is always the one on the right-hand side. This means that nterms is
+ *  equal to n+1 in the above description.
+ *
+ *  - vars contains a list of all variables that appear in the expression (no duplicates)
+ *  - coefs contains the coefficients alpha_i of each term
+ *  - offsets contains the constants beta_i of each term
+ *  - transcoefs contains the non-zero values of the transformation vectors v_i of each term
+ *  - transcoefsidx contains for each entry of transcoefs the position of the resp. variable in vars
+ *  - termbegins contains the index at which the transcoefs of each term start
+ *  - nnonzeroes contains the number of non-zeroes in v_i of each term
+ *  - constant is the constant of the square root gamma
+ *  - nvars is the total number of unique variables appearing
+ *  - nterms is the total number of terms appearing on both sides
+ *  - ntranscoefs is the total number of entries in transcoefs and transcoefsidx
+ *
+ *  The disaggregation is implicitly stored in the variables disvars and disrow. An SOC as
+ *  described above is replaced by n+1 (or n if gamma = 0) smaller SOCs
+ *
+ *   alpha_i * (v_i^T x + beta_i))^2 <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1})
+ *                             gamma <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1})
+ *
+ *  and the row       sum_i disvar_i <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1}).
+ *
+ *
+ *  Example: The constraint SQRT(5 + 2*(3x + 4y + 2)^2 + y^2 - 7z^2) <= 5x + y - 1
+ *           results in the following nlhdlrexprdata:
+ *
+ *           vars = {x, y, z}
+ *           coefs = {2, 1, -7, 1}
+ *           offsets = {2, 0, 0, -1}
+ *           transcoefs = {3, 4, 1, 1, 5, 1}
+ *           transcoefsidx = {0, 1, 1, 2, 0, 1}
+ *           termbegins = {0, 2, 3, 4}
+ *           nnonzeroes = {2, 1, 1, 2}
+ *           constant = 5
+ *           nvars = 3
+ *           nterms = 4
+ *           ntranscoefs = 6
+ */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_VAR**            vars;               /**< variables appearing on both sides (x) */
@@ -61,7 +106,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    /* variables for cone disaggregation */
    SCIP_VAR**            disvars;            /**< disaggregation variables for each expression; the last entry
                                                *  corresponds to the constant term */
-   SCIP_ROW*             row;                /**< disaggregation row */
+   SCIP_ROW*             disrow;             /**< disaggregation row */
 };
 
 struct SCIP_ConsExpr_NlhdlrData
@@ -218,9 +263,9 @@ SCIP_RETCODE createDisaggr(
 
    /* create row */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
-         nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->disrow, conshdlr, name,
+         -SCIPinfinity(scip), nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->disrow, nvars, vars, coefs) );
 
    /* free memory */
    SCIPfreeBufferArray(scip, &coefs);
@@ -251,9 +296,9 @@ SCIP_RETCODE freeDisaggr(
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
-   if( nlhdlrexprdata->row != NULL )
+   if( nlhdlrexprdata->disrow != NULL )
    {
-      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->disrow) );
    }
 
    /* free memory */
@@ -1798,17 +1843,17 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
    SCIP_Bool infeasible;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->row != NULL);
+   assert(nlhdlrexprdata->disrow != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
    /* check whether aggregation row is in the LP */
-   if( !SCIProwIsInLP(nlhdlrexprdata->row)
-      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->row, sol), mincutviolation ) )
+   if( !SCIProwIsInLP(nlhdlrexprdata->disrow)
+      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol), mincutviolation ) )
    {
-      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->row, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
 
       if( infeasible )
       {
