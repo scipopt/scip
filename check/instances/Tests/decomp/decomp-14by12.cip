@@ -1,0 +1,35 @@
+STATISTICS
+  Problem name     : decomptest.cip
+  Variables        : 12 (12 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 14 maC0imal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary]  <C01>: obj=1, original bounds=[0,1]
+  [binary]  <C02>: obj=1, original bounds=[0,1]
+  [binary]  <C03>: obj=1, original bounds=[0,1]
+  [binary]  <C04>: obj=1, original bounds=[0,1]
+  [binary]  <C05>: obj=1, original bounds=[0,1]
+  [binary]  <C06>: obj=1, original bounds=[0,1]
+  [binary]  <C07>: obj=1, original bounds=[0,1]
+  [binary]  <C08>: obj=1, original bounds=[0,1]
+  [binary]  <C09>: obj=1, original bounds=[0,1]
+  [binary]  <C10>: obj=1, original bounds=[0,1]
+  [binary]  <C11>: obj=1, original bounds=[0,1]
+  [binary]  <C12>: obj=1, original bounds=[0,1]
+CONSTRAINTS
+  [linear] <R01> : <C01> +<C02> +<C03> >= 1;
+  [linear] <R02> : <C02> +<C03> >= 1;
+  [linear] <R03> : <C03> +<C04> >= 1;
+  [linear] <R04> : <C04> +<C05> +<C06> >= 1;
+  [linear] <R05> : <C04> +<C06> >= 1;
+  [linear] <R06> : <C04> -<C05> +<C06> >= 1;
+  [linear] <R07> : <C03> +<C05> +<C07> +<C08> >= 1;
+  [linear] <R08> : <C07> +<C08> >= 1;
+  [linear] <R09> : -<C07> +<C08> >= 1;
+  [linear] <R10> : <C09> +<C10> >= 1;
+  [linear] <R11> : <C11> +<C12> >= 1;
+  [linear] <R12> : <C01> +<C02> +<C03> +<C05> +<C07> >= 1;
+  [linear] <R13> : +<C09> +<C10> +<C11> +<C12> >= 1;
+  [linear] <R14> : +<C09> +<C10> +<C12> >= 1;
+END

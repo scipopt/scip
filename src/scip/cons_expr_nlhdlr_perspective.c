@@ -805,7 +805,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 
 /** callback to detect structure in expression tree
  *
- * We are looking for expressions of the form: \sum\limits_{i=1}^p g_i(x_i) + g_0(x_0), where:
+ * We are looking for expressions of the form: sum_{i=1}^p g_i(x_i) + g_0(x_0), where:
  *  each vector x_i has a single fixed value x^{off}_i when a binary var b_i is 0;
  *  g_i, i=1,..,p are nonlinear and either all convex or all concave;
  *  g_0 is either linear or has the same curvature as g_i, i=1,..,p;

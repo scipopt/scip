@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2684,8 +2684,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx));
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** add extra clique-constraints resulting from a given cliquepartition to SCIP */
@@ -2895,7 +2894,7 @@ SCIP_RETCODE collectCliqueConss(
       }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** creating all necessary data in array structure, collect all clique constraint variables and occurrences,
@@ -6439,7 +6438,7 @@ SCIP_RETCODE fixAdditionalVars(
 
       assert(v1 < consdata1->nvars);
       index0 = SCIPvarGetIndex(consdata0->vars[v0]);
-      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 )
+      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 ) /*lint !e445*/
       {
          SCIP_Bool fixed;
 
@@ -8024,7 +8023,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    else if( nfixedvars > 0 )
       *result = SCIP_REDUCEDDOM;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -9246,6 +9245,8 @@ int SCIPgetNVarsSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9266,6 +9267,8 @@ SCIP_VAR** SCIPgetVarsSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9288,6 +9291,8 @@ SCIP_SETPPCTYPE SCIPgetTypeSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9307,6 +9312,8 @@ SCIP_Real SCIPgetDualsolSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9331,6 +9338,8 @@ SCIP_Real SCIPgetDualfarkasSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9358,6 +9367,8 @@ SCIP_ROW* SCIPgetRowSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9378,6 +9389,8 @@ int SCIPgetNFixedonesSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9401,6 +9414,8 @@ int SCIPgetNFixedzerosSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9414,3 +9429,54 @@ int SCIPgetNFixedzerosSetppc(
    return consdata->nfixedzeros;
 }
 
+/** cleans up (multi-)aggregations and fixings from setppc constraints */
+SCIP_RETCODE SCIPcleanupConssSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (setppc) constraints */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nfixedvars != NULL);
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
+
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_CONS* cons = conss[i];
+
+      SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, infeasible) );
+
+      if( *infeasible )
+         break;
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      /* merging unmerged constraints */
+      SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelconss, nchgcoefs, infeasible) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}

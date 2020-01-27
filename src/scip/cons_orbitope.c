@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,6 +137,7 @@
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 #define DEFAULT_USEDYNAMICPROP     TRUE /**< whether we use a dynamic version of the propagation routine */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 
 /*
  * Data structures
@@ -148,6 +149,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
    SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
+   SCIP_Bool             forceconscopy;      /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 };
 
 /** constraint data for orbitope constraints */
@@ -1590,6 +1592,8 @@ SCIP_RETCODE findLexMinFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmin != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmin[j] = nrowsused - 1;
@@ -1704,6 +1708,8 @@ SCIP_RETCODE findLexMaxFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmax != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmax[j] = nrowsused - 1;
@@ -1944,9 +1950,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of the corresponding constraint */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -2136,9 +2140,7 @@ static
 SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -3404,11 +3406,11 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
-      SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, result) );
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
@@ -3521,6 +3523,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
 static
 SCIP_DECL_CONSCOPY(consCopyOrbitope)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
@@ -3549,11 +3552,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcedata->nblocks > 0 );
    assert( sourcedata->vars != NULL );
 
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
    /* do not copy non-model constraints */
-   if ( !sourcedata->ismodelcons )
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
@@ -3825,6 +3831,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usedynamicprop",
          "Whether we use a dynamic version of the propagation routine.",
          &conshdlrdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether orbitope constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
 
    return SCIP_OKAY;
 }

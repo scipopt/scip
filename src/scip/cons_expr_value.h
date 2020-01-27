@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_constant.h
+/**@file   cons_expr_value.h
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  */

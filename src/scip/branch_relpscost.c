@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,12 +19,14 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
 #include "scip/branch_relpscost.h"
+#include "scip/treemodel.h"
 #include "scip/cons_and.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_cons.h"
@@ -48,6 +50,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/prop_symmetry.h"
+#include "scip/symmetry.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "relpscost"
@@ -91,6 +95,10 @@
                                               *   infeasible and objective leaf counters? */
 #define DEFAULT_DEGENERACYAWARE  1           /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always)*/
 
+/* symmetry handling */
+#define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
+#define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -133,11 +141,228 @@ struct SCIP_BranchruleData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
+   SCIP_TREEMODEL*       treemodel;          /**< Parameters for the Treemodel branching rules */
+
+   /* for symmetry */
+   SCIP_Bool             filtercandssym;     /**< Use symmetry to filter branching candidates? */
+   SCIP_Bool             transsympscost;     /**< Transfer pscost information to symmetric variables? */
+
+   SCIP_Bool             nosymmetry;         /**< No symmetry present? */
+   int*                  orbits;             /**< array of non-trivial orbits */
+   int*                  orbitbegins;        /**< array containing begin positions of new orbits in orbits array */
+   int                   norbits;            /**< pointer to number of orbits currently stored in orbits */
+   int*                  varorbitmap;        /**< array for storing indices of the containing orbit for each variable */
+   int*                  orbitrep;           /**< representative variable of each orbit */
+   SCIP_VAR**            permvars;           /**< variables on which permutations act */
+   int                   npermvars;          /**< number of variables for permutations */
+   SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
 };
 
 /*
  * local methods
  */
+
+/** initialize orbits */
+static
+SCIP_RETCODE initOrbits(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   int** permstrans = NULL;
+   int* components = NULL;
+   int* componentbegins = NULL;
+   int* vartocomponent = NULL;
+   int ncomponents = 0;
+   int nperms = -1;
+
+   assert( scip != NULL );
+   assert( branchruledata != NULL );
+   assert( branchruledata->filtercandssym );
+
+   /* exit if no symmetry or orbits already available */
+   if( branchruledata->nosymmetry || branchruledata->orbits != NULL )
+      return SCIP_OKAY;
+
+   assert( branchruledata->orbitbegins ==  NULL );
+   assert( branchruledata->varorbitmap == NULL );
+   assert( branchruledata->orbitrep == NULL );
+
+   /* obtain symmetry including permutations */
+   SCIP_CALL( SCIPgetSymmetry(scip, &branchruledata->npermvars, &branchruledata->permvars, &branchruledata->permvarmap,
+         &nperms, NULL, &permstrans, NULL, NULL, &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   /* turn off symmetry handling if there is no symmetry or the number of variables is not equal */
+   if( nperms <= 0 || branchruledata->npermvars != SCIPgetNVars(scip) )
+   {
+      branchruledata->nosymmetry = TRUE;
+      return SCIP_OKAY;
+   }
+   assert( branchruledata->permvars != NULL );
+   assert( branchruledata->permvarmap != NULL );
+   assert( branchruledata->npermvars > 0 );
+   assert( permstrans != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( vartocomponent != NULL );
+   assert( ncomponents > 0 );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->orbits, branchruledata->npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->orbitbegins, branchruledata->npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->varorbitmap, branchruledata->npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->orbitrep, branchruledata->npermvars) );
+
+   /* Compute orbits on all variables, since this might help for branching and this computation is only done once. */
+   SCIP_CALL( SCIPcomputeOrbitsComponentsSym(scip, branchruledata->npermvars, permstrans, nperms,
+         components, componentbegins, vartocomponent, ncomponents,
+         branchruledata->orbits, branchruledata->orbitbegins, &branchruledata->norbits, branchruledata->varorbitmap) );
+   assert( branchruledata->norbits < branchruledata->npermvars );
+
+   return SCIP_OKAY;
+}
+
+/** filter out symmetric variables from branching variables */
+static
+SCIP_RETCODE filterSymmetricVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
+   SCIP_VAR**            origbranchcands,    /**< original branching candidates */
+   SCIP_Real*            origbranchcandssol, /**< original solution value for the branching candidates */
+   SCIP_Real*            origbranchcandsfrac,/**< original fractional part of the branching candidates */
+   int                   norigbranchcands,   /**< original number of branching candidates */
+   SCIP_VAR**            branchcands,        /**< branching candidates */
+   SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
+   SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int*                  branchorbitidx,     /**< array of indices of orbit of branching candidates */
+   int*                  nbranchcands        /**< pointer to store number of branching candidates */
+   )
+{
+   int i;
+
+   assert( scip != NULL );
+   assert( branchruledata != NULL );
+   assert( origbranchcands != NULL );
+   assert( origbranchcandssol != NULL );
+   assert( origbranchcandsfrac != NULL );
+   assert( branchcands != NULL );
+   assert( branchcandssol != NULL );
+   assert( branchcandsfrac != NULL );
+   assert( nbranchcands != NULL );
+
+   assert( ! branchruledata->nosymmetry );
+   assert( branchruledata->orbitbegins != NULL );
+   assert( branchruledata->orbits != NULL );
+   assert( branchruledata->permvarmap != NULL );
+   assert( branchruledata->varorbitmap != NULL );
+   assert( branchruledata->orbitrep != NULL );
+   assert( branchruledata->norbits < branchruledata->npermvars );
+
+   /* init representatives (used to see whether variable is the first in an orbit) */
+   for( i = 0; i < branchruledata->norbits; ++i )
+      branchruledata->orbitrep[i] = -1;
+
+   /* loop through branching variables, determine orbit and whether they are the first ones */
+   *nbranchcands = 0;
+   for( i = 0; i < norigbranchcands; ++i )
+   {
+      int orbitidx = -1;
+      int varidx;
+
+      varidx = SCIPhashmapGetImageInt(branchruledata->permvarmap, (void*) origbranchcands[i]);
+      if( varidx != INT_MAX )
+      {
+         assert( 0 <= varidx && varidx < branchruledata->npermvars );
+         orbitidx = branchruledata->varorbitmap[varidx];
+      }
+      assert( -1 <= orbitidx && orbitidx < branchruledata->norbits );
+
+      /* Check whether the variable is not present (can happen if variable was added after computing symmetries or is in
+       * a singleton orbit). */
+      if( orbitidx == -1 )
+      {
+         branchcands[*nbranchcands] = origbranchcands[i];
+         branchcandssol[*nbranchcands] = origbranchcandssol[i];
+         branchcandsfrac[*nbranchcands] = origbranchcandsfrac[i];
+         branchorbitidx[*nbranchcands] = -1;
+         ++(*nbranchcands);
+      }
+      else if( branchruledata->orbitrep[orbitidx] == -1 )
+      {
+         /* if variable is the first in a nontrivial orbit */
+         assert( 0 <= varidx && varidx < branchruledata->npermvars );
+         branchruledata->orbitrep[orbitidx] = varidx;
+         branchcands[*nbranchcands] = origbranchcands[i];
+         branchcandssol[*nbranchcands] = origbranchcandssol[i];
+         branchcandsfrac[*nbranchcands] = origbranchcandsfrac[i];
+         branchorbitidx[*nbranchcands] = orbitidx;
+         ++(*nbranchcands);
+      }
+   }
+
+   SCIPdebugMsg(scip, "Filtered out %d variables by symmetry.\n", norigbranchcands - *nbranchcands);
+
+   return SCIP_OKAY;
+}
+
+/** updates the pseudo costs of the given variable and all its symmetric variables */
+static
+SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
+   SCIP_VAR*             branchvar,          /**< branching variable candidate */
+   int*                  branchorbitidx,     /**< array of orbit indices */
+   int                   branchvaridx,       /**< index of variable in branchorbitidx */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   )
+{
+   int orbitidx;
+   int j;
+
+   assert( scip != NULL );
+   assert( branchruledata != NULL );
+
+   if( branchruledata->nosymmetry || ! branchruledata->transsympscost || branchorbitidx == NULL )
+   {
+      /* use original update function */
+      SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+   }
+
+   assert( branchruledata->orbitbegins != NULL );
+   assert( branchruledata->orbits != NULL );
+   assert( 0 <= branchvaridx && branchvaridx < branchruledata->npermvars );
+
+   orbitidx = branchorbitidx[branchvaridx];
+   if( orbitidx < 0 )
+   {
+      /* only update given variable */
+      SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+   }
+   assert( 0 <= orbitidx && orbitidx < branchruledata->norbits );
+
+   /* loop through orbit containing variable and update pseudo costs for all variables */
+   for( j = branchruledata->orbitbegins[orbitidx]; j < branchruledata->orbitbegins[orbitidx+1]; ++j )
+   {
+      SCIP_VAR* var;
+      int idx;
+
+      idx = branchruledata->orbits[j];
+      assert( 0 <= idx && idx < branchruledata->npermvars );
+
+      var = branchruledata->permvars[idx];
+      assert( var != NULL );
+
+      if( SCIPvarIsActive(var) )
+      {
+         SCIP_CALL( SCIPupdateVarPseudocost(scip, var, solvaldelta, objdelta, weight) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /**! [SnippetCodeStyleStaticAsserts] */
 
@@ -531,6 +756,7 @@ SCIP_RETCODE execRelpscost(
    SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int*                  branchorbitidx,     /**< indices of orbit (or NULL) */
    int                   nbranchcands,       /**< number of branching candidates */
    SCIP_Bool             executebranch,      /**< execute a branching step or run probing only */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
@@ -550,6 +776,14 @@ SCIP_RETCODE execRelpscost(
    SCIP_Bool exactsolve;
    int ninitcands;
    int bestcand;
+
+   /* remember which variables strong branching is performed on, and the
+    * recorded lp bound changes that are observed */
+   SCIP_Bool* sbvars = NULL;
+   SCIP_Real* sbdown = NULL;
+   SCIP_Real* sbup = NULL;
+   SCIP_Bool* sbdownvalid = NULL;
+   SCIP_Bool* sbupvalid = NULL;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -580,11 +814,21 @@ SCIP_RETCODE execRelpscost(
    bestsbupcutoff = FALSE;
    provedbound = lpobjval;
 
+   /* Allocate memory to store the lp bounds of the up and down children
+    * for those of the variables that we performed sb on
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sbdown, nbranchcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sbup, nbranchcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sbdownvalid, nbranchcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sbupvalid, nbranchcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sbvars, nbranchcands) );
+
    if( nbranchcands == 1 )
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
       SCIPdebug(ninitcands = 0);
+      sbvars[0] = FALSE;
    }
    else
    {
@@ -593,6 +837,12 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real* initcandscores;
       SCIP_Real* newlbs = NULL;
       SCIP_Real* newubs = NULL;
+      SCIP_Real* mingains = NULL;
+      SCIP_Real* maxgains = NULL;
+      /* scores computed from pseudocost branching */
+      SCIP_Real* scores = NULL;
+      SCIP_Real* scoresfrompc = NULL;
+      SCIP_Real* scoresfromothers = NULL;
       int* bdchginds;
       SCIP_BOUNDTYPE* bdchgtypes;
       SCIP_Real* bdchgbounds;
@@ -710,6 +960,13 @@ SCIP_RETCODE execRelpscost(
       SCIP_CALL( SCIPallocBufferArray(scip, &initcands, maxninitcands+1) ); /* allocate one additional slot for convenience */
       SCIP_CALL( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
       ninitcands = 0;
+
+      /* Allocate memory for the down and up gains, and the computed pseudocost scores */
+      SCIP_CALL( SCIPallocBufferArray(scip, &mingains, nbranchcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &maxgains, nbranchcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scores, nbranchcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scoresfrompc, nbranchcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scoresfromothers, nbranchcands) );
 
       /* get current node number */
       nodenum = SCIPgetNNodes(scip);
@@ -833,9 +1090,23 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real nlscore;
          SCIP_Real score;
          SCIP_Bool usesb;
+         SCIP_Real downgain;
+         SCIP_Real upgain;
+         SCIP_Real fracpart;
 
          assert(branchcands[c] != NULL);
          assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, SCIPvarGetLPSol(branchcands[c])));
+
+         /* Record the variables current pseudocosts. These may be overwritten if
+          * strong branching is performed.
+          */
+         sbvars[c] = FALSE;
+         fracpart = SCIPfeasFrac(scip, SCIPvarGetLPSol(branchcands[c]));
+         downgain = SCIPgetVarPseudocostVal(scip, branchcands[c], 0.0 - fracpart);
+         upgain = SCIPgetVarPseudocostVal(scip, branchcands[c], 1.0 - fracpart);
+         mingains[c] = MIN(downgain, upgain);
+         maxgains[c] = MAX(downgain, upgain);
 
          /* get conflict, inference, cutoff, nonlinear, and pseudo cost scores for candidate */
          conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
@@ -855,14 +1126,15 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real down;
             SCIP_Real up;
             SCIP_Real lastlpobjval;
-            SCIP_Real downgain;
-            SCIP_Real upgain;
 
             /* use the score of the strong branching call at the current node */
             SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
+
+            mingains[c] = MIN(downgain, upgain);
+            maxgains[c] = MAX(downgain, upgain);
 
             SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
@@ -911,13 +1183,23 @@ SCIP_RETCODE execRelpscost(
          }
 
          /* combine the five score values */
-         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+         scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
+                                      0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+         scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+         score = scoresfrompc[c] + scoresfromothers[c];
+         scores[c] = score;
+         /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
             inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-            degeneracyfactor);
-
+            degeneracyfactor);*/
          if( usesb )
          {
             int j;
+
+            mingains[c] = 0;
+            maxgains[c] = 0;
+            scoresfrompc[c] = 0;
+            scoresfromothers[c] = 0;
 
             /* assign a random score to this uninitialized candidate */
             if( branchruledata->randinitorder )
@@ -937,7 +1219,7 @@ SCIP_RETCODE execRelpscost(
          /* in the case of hypothesis reliability, the best pseudo candidate has been determined already */
          else if( !branchruledata->usehyptestforreliability )
          {
-            /* variable will keep it's pseudo cost value: check for better score of candidate */
+            /* variable will keep its pseudo cost value: check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
             {
                SCIP_Real fracscore;
@@ -1217,7 +1499,7 @@ SCIP_RETCODE execRelpscost(
                weight = 1.0;
 
             /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, weight) );
+            SCIP_CALL( SCIPupdateVarPseudocostSymmetric(scip, branchruledata, branchcands[c], branchorbitidx, c, 0.0 - branchcandsfrac[c], downgain, weight) );
          }
          if( !upinf
 #ifdef WITH_LPSOLSTAT
@@ -1233,7 +1515,8 @@ SCIP_RETCODE execRelpscost(
             else
                weight = 1.0;
 
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, weight) );
+            /* update pseudo cost values */
+            SCIP_CALL( SCIPupdateVarPseudocostSymmetric(scip, branchruledata, branchcands[c], branchorbitidx, c, 1.0 - branchcandsfrac[c], upgain, weight) );
          }
 
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
@@ -1311,6 +1594,15 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real nlscore;
             SCIP_Real score;
 
+            mingains[c] = MIN(downgain, upgain);
+            maxgains[c] = MAX(downgain, upgain);
+
+            sbdown[c] = down;
+            sbup[c] = up;
+            sbdownvalid[c] = downvalid;
+            sbupvalid[c] = upvalid;
+            sbvars[c] = TRUE;
+
             /* check for a better score */
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
@@ -1324,9 +1616,15 @@ SCIP_RETCODE execRelpscost(
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
-            score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+            scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
+                                         0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+            scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
+                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+            score = scoresfrompc[c] + scoresfromothers[c];
+            scores[c] = score;
+            /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
                inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-               degeneracyfactor);
+               degeneracyfactor);*/
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
@@ -1440,6 +1738,59 @@ SCIP_RETCODE execRelpscost(
          freeBdchgs(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs);
       }
 
+      /* Apply the Treemodel branching rule to potentially select a better branching candidate than the current one. */
+      if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && SCIPtreemodelIsEnabled(scip, branchruledata->treemodel) )
+      {
+	 SCIP_Real smallpscost;
+	 SCIP_Bool usetreemodel;
+
+	 usetreemodel = TRUE;
+
+         /* If the pseudocosts are zero, use SCIPs best variable since the Treemodel is not applicable */
+         if( SCIPisZero(scip, maxgains[bestcand]))
+         {
+             usetreemodel = FALSE;
+         }
+
+         /* If SCIPs best candidate was selected due to hybrid branching scores
+          * rather than because of pseudocosts, then we keep it.
+          */
+         SCIP_CALL( SCIPgetRealParam(scip, "branching/treemodel/smallpscost", &smallpscost) );
+         if( usetreemodel == TRUE && avgpscostscore <= smallpscost )
+         {
+            int cand;
+            for( cand = 0; cand < nbranchcands; ++cand )
+            {
+               if( scoresfrompc[cand] > scoresfrompc[bestcand] )
+               {
+                  usetreemodel = FALSE;
+		  break;
+               }
+            }
+         }
+
+         if( usetreemodel == TRUE )
+         {
+            SCIP_CALL( SCIPtreemodelSelectCandidate(
+               scip,                        /* SCIP data structure */
+               branchruledata->treemodel,   /* branching rule */
+               branchcands,                 /* branching candidate storage */
+               mingains,                    /* minimum gain of rounding downwards or upwards */
+               maxgains,                    /* maximum gain of rounding downwards or upwards */
+               scoresfromothers,            /* scores from other branching methods */
+               nbranchcands,                /* the number of branching candidates */
+               &bestcand                    /* the best branching candidate found by SCIP */
+            ) );
+         }
+      }
+
+      /* free buffer for the lp gains and pseudocost scores */
+      SCIPfreeBufferArray(scip, &scoresfromothers);
+      SCIPfreeBufferArray(scip, &scoresfrompc);
+      SCIPfreeBufferArray(scip, &scores);
+      SCIPfreeBufferArray(scip, &maxgains);
+      SCIPfreeBufferArray(scip, &mingains);
+
       /* free buffer for the unreliable candidates */
       SCIPfreeBufferArray(scip, &initcandscores);
       SCIPfreeBufferArray(scip, &initcands);
@@ -1469,23 +1820,24 @@ SCIP_RETCODE execRelpscost(
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS),
          SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
+      SCIP_UNUSED(bestisstrongbranch);
       SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
 
       /* update the lower bounds in the children */
-      if( bestisstrongbranch && allcolsinlp && !exactsolve )
+      if( sbvars[bestcand] && allcolsinlp && !exactsolve )
       {
-         if( bestsbdownvalid )
+         if( sbdownvalid[bestcand] )
          {
-            assert(SCIPisLT(scip, bestsbdown, SCIPgetCutoffbound(scip)));
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestsbdown) );
+            assert(SCIPisLT(scip, sbdown[bestcand], SCIPgetCutoffbound(scip)));
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, sbdown[bestcand]) );
             assert(SCIPisGE(scip, SCIPgetNodeLowerbound(scip, downchild), provedbound));
          }
-         if( bestsbupvalid )
+         if( sbupvalid[bestcand] )
          {
-            assert(SCIPisLT(scip, bestsbup, SCIPgetCutoffbound(scip)));
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestsbup) );
+            assert(SCIPisLT(scip, sbup[bestcand], SCIPgetCutoffbound(scip)));
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, sbup[bestcand]) );
             assert(SCIPisGE(scip, SCIPgetNodeLowerbound(scip, upchild), provedbound));
          }
       }
@@ -1497,6 +1849,13 @@ SCIP_RETCODE execRelpscost(
 
       *result = SCIP_BRANCHED;
    }
+
+   /* free buffer for the strong branching lp gains */
+   SCIPfreeBufferArray(scip, &sbvars);
+   SCIPfreeBufferArray(scip, &sbupvalid);
+   SCIPfreeBufferArray(scip, &sbdownvalid);
+   SCIPfreeBufferArray(scip, &sbup);
+   SCIPfreeBufferArray(scip, &sbdown);
 
    return SCIP_OKAY;
 }
@@ -1525,9 +1884,12 @@ static
 SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   branchruledata = SCIPbranchruleGetData(branchrule);
+
+   /* free Treemodel parameter data structure */
+   SCIP_CALL( SCIPtreemodelFree(scip, &branchruledata->treemodel) );
 
    /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -1569,6 +1931,16 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    /* free random number generator */
    SCIPfreeRandom(scip, &branchruledata->randnumgen);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbitrep, branchruledata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->varorbitmap, branchruledata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbitbegins, branchruledata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbits, branchruledata->npermvars);
+   branchruledata->nosymmetry = FALSE;
+   branchruledata->norbits = 0;
+   branchruledata->permvars = NULL;
+   branchruledata->permvarmap = NULL;
+   branchruledata->npermvars = 0;
+
    return SCIP_OKAY;
 }
 
@@ -1577,12 +1949,16 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 {  /*lint --e{715}*/
-   SCIP_VAR** tmplpcands;
+   SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** lpcands;
-   SCIP_Real* tmplpcandssol;
    SCIP_Real* lpcandssol;
-   SCIP_Real* tmplpcandsfrac;
    SCIP_Real* lpcandsfrac;
+   SCIP_VAR** filteredlpcands;
+   SCIP_Real* filteredlpcandssol;
+   SCIP_Real* filteredlpcandsfrac;
+   SCIP_Bool runfiltering;
+   int* filteredlpcandsorbitidx = NULL;
+   int nfilteredlpcands;
    int nlpcands;
 
    assert(branchrule != NULL);
@@ -1601,22 +1977,49 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    }
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
-   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-    * solution
-    */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* determine whether we should run filtering */
+   runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
+
+   /* init orbits if necessary */
+   if( runfiltering )
+   {
+      SCIP_CALL( initOrbits(scip, branchruledata) );
+   }
+
+   /* determine fractional variables (possibly filter by using symmetries) */
+   if( runfiltering && branchruledata->norbits != 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcands, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandssol, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsfrac, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsorbitidx, nlpcands) );
+
+      /* determine filtered fractional variables */
+      SCIP_CALL( filterSymmetricVariables(scip, branchruledata, lpcands, lpcandssol, lpcandsfrac, nlpcands,
+            filteredlpcands, filteredlpcandssol, filteredlpcandsfrac, filteredlpcandsorbitidx, &nfilteredlpcands) );
+   }
+   else
+   {
+      /* No orbits available. Copy all (unfiltered) branching candidates, because they will be updated w.r.t. the strong branching LP solution */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcands, lpcands, nlpcands) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcandssol, lpcandssol, nlpcands) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcandsfrac, lpcandsfrac, nlpcands) );
+      nfilteredlpcands = nlpcands;
+   }
 
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, filteredlpcands, filteredlpcandssol, filteredlpcandsfrac, filteredlpcandsorbitidx, nfilteredlpcands, TRUE, result) );
 
-   SCIPfreeBufferArray(scip, &lpcandsfrac);
-   SCIPfreeBufferArray(scip, &lpcandssol);
-   SCIPfreeBufferArray(scip, &lpcands);
+   SCIPfreeBufferArrayNull(scip, &filteredlpcandsorbitidx);
+   SCIPfreeBufferArray(scip, &filteredlpcandsfrac);
+   SCIPfreeBufferArray(scip, &filteredlpcandssol);
+   SCIPfreeBufferArray(scip, &filteredlpcands);
 
    return SCIP_OKAY;
 }
@@ -1636,6 +2039,16 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    /* create relpscost branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
+
+   branchruledata->nosymmetry = FALSE;
+   branchruledata->orbits = NULL;
+   branchruledata->orbitbegins = NULL;
+   branchruledata->orbitrep = NULL;
+   branchruledata->varorbitmap = NULL;
+   branchruledata->norbits = 0;
+   branchruledata->permvars = NULL;
+   branchruledata->npermvars = 0;
+   branchruledata->permvarmap = NULL;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -1780,6 +2193,17 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/filtercandssym",
+         "Use symmetry to filter branching candidates?",
+         &branchruledata->filtercandssym, TRUE, DEFAULT_FILTERCANDSSYM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/transsympscost",
+         "Transfer pscost information to symmetric variables?",
+         &branchruledata->transsympscost, TRUE, DEFAULT_TRANSSYMPSCOST, NULL, NULL) );
+
+   /* initialise the Treemodel parameters */
+   SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );
+
    return SCIP_OKAY;
 }
 
@@ -1804,7 +2228,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    assert(branchrule != NULL);
 
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, branchcands, branchcandssol, branchcandsfrac, nbranchcands, executebranching, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, branchcands, branchcandssol, branchcandsfrac, NULL, nbranchcands, executebranching, result) );
 
    return SCIP_OKAY;
 }

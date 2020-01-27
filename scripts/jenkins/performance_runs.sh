@@ -82,8 +82,8 @@ export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 BRANCHNAME=${GITBRANCH}
 SOPLEXBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
-  BRANCHNAME="v60-bugfix"
-  SOPLEXBRANCHNAME="bugfix-40"
+  BRANCHNAME="v70-bugfix"
+  SOPLEXBRANCHNAME="bugfix-50"
 fi
 if [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
@@ -149,7 +149,7 @@ if [ "${GITBRANCH}" == "master" ]; then
   TRIGGER[6,3]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_presolve_master_weekly/build?token=weeklysaptoken"
 
   # jobs running on sunday
-  #JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   # running on saturday
@@ -162,7 +162,7 @@ else # on bugfix
   TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
   # jobs running on sunday
-  #JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 fi
 

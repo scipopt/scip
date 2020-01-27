@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -284,6 +284,7 @@ void SCIPstatReset(
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
+   stat->nnodezeroitlps = 0;
    stat->nisstoppedcalls = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
@@ -856,6 +857,8 @@ void SCIPstatDebugMessagePrint(
    )
 {  /*lint --e{715}*/
    va_list ap;
+
+   assert(stat != NULL);
 
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);

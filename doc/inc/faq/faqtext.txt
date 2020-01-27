@@ -555,6 +555,30 @@ SECTION: Using SCIP as a standalone solver
         class of optimization problems, you should test which of both methods performs better.
     </p>
 
+    QUESTION: SCIP's incumbent solution is infeasible in the original space. What can I do?
+    LABEL:useemphasisnumericssetting
+    ANSWER:
+    <p>
+        SCIP uses a relative feasibility tolerance to check if a solution satisfies a constraint.
+        Thus, the acceptable violation of a constraint (in absolute terms) is higher for large left/right hand sides.
+        Certain computations that change the lhs/rhs of constraints can lead to an increased tolerance in the
+        transformed space while solving. In such cases,
+        SCIP may find solutions that are infeasible in the original problem space, since the feasibility tolerance in
+        the original space is smaller. Most of the time, this is due to (multi-)aggregations of variables,
+        because SCIP cannot centrally guarantee that a (multi-)aggregation requested by one constraint handler does not lead to numerical
+        instability of other constraints.
+    </p>
+    <p>
+       The emphasis/numerics setting disables and enables different settings in SCIP to prevent violations in the original problem space.
+       This numerical stability comes at the sacrifice of performance.
+       You can enable it in one of the following ways:
+       <ul>
+            <li>In the interactive shell: <code> SCIP&gt; set emphasis numerics</code>,</li>
+            <li>Through the C API: <code> SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code></li>
+        </ul>
+       If even this emphasis setting does not help, consider disabling (multi-)aggregations completely and decreasing the feasibility tolerance.
+    </p>
+
 
 SECTION: Using SCIP included in another source code
 

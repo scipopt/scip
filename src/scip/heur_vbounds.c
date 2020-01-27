@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1066,7 +1066,12 @@ SCIP_RETCODE applyVbounds(
    /* solve lp only if the problem is still feasible */
    if( solvelp )
    {
+      char strbuf[SCIP_MAXSTRLEN];
       SCIPdebugMsg(scip, "starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+
+      /* print probing stats before LP */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
@@ -1185,7 +1190,7 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPendProbing(scip) );
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -1293,32 +1298,32 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    /* try variable bounds */
    skipobj1 = FALSE;
    skipobj2 = FALSE;
-   if( (heurdata->feasvariant & VBOUNDVARIANT_NOOBJ) != 0 )
+   if( ((unsigned)heurdata->feasvariant & VBOUNDVARIANT_NOOBJ) != 0 )
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 0,
             &skipobj1, &skipobj2, result) );
    }
-   if( !skipobj1 && (heurdata->feasvariant & VBOUNDVARIANT_BESTBOUND) != 0)
+   if( !skipobj1 && ((unsigned) heurdata->feasvariant & VBOUNDVARIANT_BESTBOUND) != 0)
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 1, NULL, NULL, result) );
    }
-   if( !skipobj2 && (heurdata->feasvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
+   if( !skipobj2 && ((unsigned) heurdata->feasvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 2, NULL, NULL, result) );
    }
 
    skipobj1 = FALSE;
    skipobj2 = FALSE;
-   if( (heurdata->tightenvariant & VBOUNDVARIANT_NOOBJ) != 0 )
+   if( ((unsigned) heurdata->tightenvariant & VBOUNDVARIANT_NOOBJ) != 0 )
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 0,
             &skipobj1, &skipobj2, result) );
    }
-   if( !skipobj1 && (heurdata->tightenvariant & VBOUNDVARIANT_BESTBOUND) != 0)
+   if( !skipobj1 && ((unsigned) heurdata->tightenvariant & VBOUNDVARIANT_BESTBOUND) != 0)
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 1, NULL, NULL, result) );
    }
-   if( !skipobj2 && (heurdata->tightenvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
+   if( !skipobj2 && ((unsigned) heurdata->tightenvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
    {
       SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 2, NULL, NULL, result) );
    }
@@ -1409,11 +1414,11 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
 
       SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/feasvariant",
          "which variants of the vbounds heuristic that try to stay feasible should be called? (0: off, 1: w/o looking at obj, 2: only fix to best bound, 4: only fix to worst bound",
-         &heurdata->feasvariant, TRUE, DEFAULT_FEASVARIANT, 0, 7, NULL, NULL) );
+            &heurdata->feasvariant, TRUE, (int) DEFAULT_FEASVARIANT, 0, 7, NULL, NULL) );
 
       SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/tightenvariant",
          "which tightening variants of the vbounds heuristic should be called? (0: off, 1: w/o looking at obj, 2: only fix to best bound, 4: only fix to worst bound",
-         &heurdata->tightenvariant, TRUE, DEFAULT_TIGHTENVARIANT, 0, 7, NULL, NULL) );
+            &heurdata->tightenvariant, TRUE, (int) DEFAULT_TIGHTENVARIANT, 0, 7, NULL, NULL) );
 
    return SCIP_OKAY;
 }

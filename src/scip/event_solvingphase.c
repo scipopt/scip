@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -919,7 +919,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e593*/
 
 /** fix/unfix relevant solving parameters that should not accidentally be set to default values */
 static

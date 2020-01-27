@@ -354,15 +354,11 @@ SCIP_RETCODE freeAuxVar(
     */
    /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
 
-   /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
-    * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
-    * locks when freeing a variable
+   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
+    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
+    * variable might be still captured by SCIP's NLP or some other plugin
     */
-   assert(SCIPvarGetNUses(expr->auxvar) >= 2);
-   if( SCIPvarGetNUses(expr->auxvar) == 2 )
-   {
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
-   }
+   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
    if( expr->auxfilterpos >= 0 )
    {
@@ -1606,7 +1602,7 @@ SCIP_RETCODE propConss(
  *
  * Also removes constraints of the form lhs <= variable <= rhs.
  *
- * @TODO it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
+ * @todo it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
  *
  * @note This could should not run during solving, because the forwardProp takes the bounds of auxiliary variables into account.
  * For the root expression, these bounds are already set to the constraint sides, so that the activity of every expression
@@ -2677,7 +2673,6 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
  *  algorithm consists of two steps:
  *
@@ -6997,7 +6992,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
 #endif
 
    /*
-    * transform the facet to original space and compute value at x^*, i.e., \alpha x + \beta
+    * transform the facet to original space and compute value at x^*, i.e., alpha x + beta
     */
 
    SCIPdebugMsg(scip, "facet in orig. space: ");
@@ -7014,10 +7009,10 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       ub = box[2 * varpos + 1];
       assert(!SCIPisEQ(scip, lb, ub));
 
-      /* \alpha_i := \bar \alpha_i / (ub_i - lb_i) */
+      /* alpha_i := alpha_bar_i / (ub_i - lb_i) */
       facetcoefs[varpos] = facetcoefs[varpos] / (ub - lb);
 
-      /* \beta = \bar \beta - \sum_i \alpha_i * lb_i */
+      /* beta = beta_bar - sum_i alpha_i * lb_i */
       *facetconstant -= facetcoefs[varpos] * lb;
 
       /* evaluate */
@@ -7027,7 +7022,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    }
    SCIPdebugMsgPrint(scip, "%3.4e ", *facetconstant);
 
-   /* add \beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
+   /* add beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
    facetvalue += *facetconstant;
 
    SCIPdebugMsgPrint(scip, "has value %g, target = %g\n", facetvalue, targetvalue);
@@ -7679,8 +7674,7 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
    /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
-    * unlocked and freed
+    * removed all of his captures on variables
     */
    if( SCIPgetNRuns(scip) > 1 )
    {
@@ -8265,7 +8259,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 || *nchgbds > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -11793,9 +11787,9 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  * Different type expressions:
  * OR6: u value, v other: u < v always
  * OR7: u sum, v var or func: u < v <=> u < 0+v
- *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ *      In other words, u = sum_{i = 1}^n alpha_i u_i, then u < v <=> u_n < v or if u_n = v and alpha_n < 1
  * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
- *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
+ *      In other words, u = Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
  * OR9: u pow, v sum, var or func: u < v <=> u < v^1
@@ -12935,6 +12929,26 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    return SCIP_OKAY;
 }
 
+/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+ *
+ *  @note this method is only used for testing purposes
+ */
+SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+
+   return SCIP_OKAY;
+}
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
