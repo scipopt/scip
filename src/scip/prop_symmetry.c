@@ -2431,6 +2431,7 @@ SCIP_RETCODE determineSymmetry(
          SCIP_CALL( freeSymmetryData(scip, propdata) );
 
          /* disable OF and symmetry handling constraints */
+         propdata->ofenabled = FALSE;
          propdata->symconsenabled = FALSE;
 
          return SCIP_OKAY;
