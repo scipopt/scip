@@ -5821,7 +5821,7 @@ SCIP_RETCODE enforceConstraint(
 
 /** try to separate violated constraints and, if in enforcement, register branching scores */
 static
-SCIP_RETCODE enforceConstraints2(
+SCIP_RETCODE enforceConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
@@ -5849,7 +5849,7 @@ SCIP_RETCODE enforceConstraints2(
 
    /* increase tag to tell whether branching scores in expression belong to this sweep
     * and which expressions have already been enforced in this sweep
-    * (we also want to distinguish sepa rounds, so this need to be here and not in enforceConstraints)
+    * (we also want to distinguish sepa rounds, so this need to be here and not in consEnfo)
     */
    ++(conshdlrdata->enforound);
 
@@ -6227,9 +6227,9 @@ SCIP_RETCODE analyzeViolation(
    return SCIP_OKAY;
 } /*lint !e715*/
 
-/** helper function to enforce constraints */
+/** enforcement of constraints called by enfolp and enforelax */
 static
-SCIP_RETCODE enforceConstraints(
+SCIP_RETCODE consEnfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
@@ -6308,7 +6308,7 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxviol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
    {
@@ -6371,7 +6371,7 @@ SCIP_RETCODE enforceConstraints(
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " registered %d unfixed variables as branching candidates\n", nnotify); )
       ++conshdlrdata->ndesperatebranch;
 
-      *result = SCIP_INFEASIBLE;  /* enforceConstraints2 may have changed it to SCIP_DIDNOTFIND */
+      *result = SCIP_INFEASIBLE;  /* enforceConstraints may have changed it to SCIP_DIDNOTFIND */
 
       return SCIP_OKAY;
    }
@@ -6392,9 +6392,9 @@ SCIP_RETCODE enforceConstraints(
    return SCIP_OKAY;
 }
 
-/** helper function to call separate for all violated constraints */
+/** separation for all violated constraints to be used by SEPA callbacks */
 static
-SCIP_RETCODE separateConstraints(
+SCIP_RETCODE consSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
@@ -6445,7 +6445,7 @@ SCIP_RETCODE separateConstraints(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
 
    return SCIP_OKAY;
 }
@@ -8251,7 +8251,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, NULL, result) );
+   SCIP_CALL( consSepa(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8261,7 +8261,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, sol, result) );
+   SCIP_CALL( consSepa(scip, conshdlr, conss, nconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -8271,7 +8271,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, NULL, result) );
+   SCIP_CALL( consEnfo(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8280,7 +8280,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, result) );
+   SCIP_CALL( consEnfo(scip, conshdlr, conss, nconss, sol, result) );
 
    return SCIP_OKAY;
 }
