@@ -73,6 +73,7 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
+#ifdef SCIP_DEBUG
 /** prints the  nlhdlr expression data */
 static
 void printNlhdlrExprData(
@@ -139,6 +140,7 @@ void printNlhdlrExprData(
 
    SCIPinfoMessage(scip, NULL, "\n");
 }
+#endif
 
 /** helper method to create variables for the cone disaggregation */
 static
