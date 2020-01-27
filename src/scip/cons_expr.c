@@ -5452,8 +5452,7 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_Real auxvarcoef = 0.0;
                int i;
 
-               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be...
-                */
+               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than it should be... */
                for( i = 0; i < rowprep->nvars; ++i )
                {
                   if( rowprep->vars[i] == auxvar )
@@ -5625,7 +5624,7 @@ SCIP_RETCODE enforceExpr(
    if( !overestimate && !underestimate )
       return SCIP_OKAY;
 
-   /* call the separation and branchscore callbacks of the nonlinear handlers */
+   /* check aux-violation w.r.t. each nonlinear handlers and try to enforce when there is a decent violation */
    for( e = 0; e < expr->nenfos; ++e )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -5657,6 +5656,7 @@ SCIP_RETCODE enforceExpr(
          continue;
       }
 
+      /* if aux-violation is small (below feastol) and we look only for strong cuts, then it's unlikely to give a strong cut, so skip it */
       if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )  /*lint !e777*/
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
@@ -5819,7 +5819,7 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
-/** helper function to enforce constraints */
+/** try to separate violated constraints and, if in enforcement, register branching scores */
 static
 SCIP_RETCODE enforceConstraints2(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5849,10 +5849,7 @@ SCIP_RETCODE enforceConstraints2(
 
    /* increase tag to tell whether branching scores in expression belong to this sweep
     * and which expressions have already been enforced in this sweep
-    * (this could be moved into enforceConstraints, if we were sure that no branching scores
-    *  will be left from a previous enforceConstraints2 call in the same enfo round where we
-    *  could not register branching candidates, but at the moment we can register branching scores
-    *  but if they all point to fixed variables, we wouldn't add branching candidates)
+    * (we also want to distinguish sepa rounds, so this need to be here and not in enforceConstraints)
     */
    ++(conshdlrdata->enforound);
 
@@ -5916,11 +5913,11 @@ SCIP_RETCODE enforceConstraints2(
 
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
+   /* if having branching scores, then propagate them from expressions with children to variable expressions */
    if( *result != SCIP_BRANCHED )
       return SCIP_OKAY;
 
-   /* propagate branching scores from expressions with children to variable expressions
-    * TODO maybe integrate this into previous loop, i.e., after enforceExpr on all exprs of one constraint,
+   /* TODO maybe integrate this into previous loop, i.e., after enforceExpr on all exprs of one constraint,
     * propagate its branching scores to the variables for this one constraint
     */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -6037,13 +6034,10 @@ SCIP_RETCODE enforceConstraints2(
    return SCIP_OKAY;
 }
 
-/** prints violation information
+/** collect (and print (if debugging enfo)) information on violation in expressions
  *
- *  assumes that constraint violations have been computed
+ * assumes that constraint violations have been computed
  */
-#ifdef __GNUC__
-__attribute__((unused))
-#endif
 static
 SCIP_RETCODE analyzeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6105,9 +6099,9 @@ SCIP_RETCODE analyzeViolation(
          SCIP_Real auxviol;
          int e;
 
-         /* it only makes sense to call the separation callback if there is a variable attached to the expression */
          if( expr->auxvar == NULL )
          {
+            /* check violation of variable bounds of original variable */
             if( SCIPisConsExprExprVar(expr) )
             {
                SCIP_VAR* var;
@@ -6143,15 +6137,13 @@ SCIP_RETCODE analyzeViolation(
          auxvarlb = SCIPvarGetLbLocal(expr->auxvar);
          auxvarub = SCIPvarGetUbLocal(expr->auxvar);
 
+         /* check violation of variable bounds of auxiliary variable */
          if( auxvarlb - auxvarvalue > *maxvarboundviol && !SCIPisInfinity(scip, -auxvarlb) )
             *maxvarboundviol = auxvarlb - auxvarvalue;
          else if( auxvarvalue - auxvarub > *maxvarboundviol && !SCIPisInfinity(scip,  auxvarub) )
             *maxvarboundviol = auxvarvalue - auxvarub;
 
-         /* make sure that this expression has been evaluated - so far we assume that this happened */
-         /* SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) ); */
-
-         /* compute violation and decide whether under- or overestimate is required */
+         /* compute violation in expr w.r.t. original variables and decide whether under- or overestimate would be required */
          if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
          {
             /* the expression could be evaluated, then look how much and on which side it is violated */
@@ -6195,10 +6187,11 @@ SCIP_RETCODE analyzeViolation(
          if( !violover && !violunder )
             continue;
 
+         /* TODO remove? origviol shouldn't be mixed up with auxviol */
          *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
          *minauxviol = MIN(*minauxviol, REALABS(origviol));  /*lint !e666*/
 
-         /* compute aux-violation (nonlinear handlers) */
+         /* compute aux-violation for each nonlinear handlers */
          for( e = 0; e < expr->nenfos; ++e )
          {
             SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -6304,6 +6297,7 @@ SCIP_RETCODE enforceConstraints(
       }
    }
 
+   /* tighten the LP tolerance if violation in variables bounds is larger than aux-violation (max |expr - auxvar| over all violated expr/auxvar in violated constraints) */
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));  /*lint !e666*/
@@ -8267,7 +8261,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, NULL, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, sol, result) );
 
    return SCIP_OKAY;
 }
