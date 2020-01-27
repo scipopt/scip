@@ -478,7 +478,8 @@ SCIP_RETCODE assembleRowprep(
       linconst += lincoef * M_PI_2;
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s", iscos ? "cos" : "sin", name, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s_%lld", iscos ? "cos" : "sin", name,
+      SCIPvarGetName(childvar), SCIPgetNLPs(scip));
 
    SCIPaddRowprepConstant(*rowprep, linconst);
 

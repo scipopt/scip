@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -6932,13 +6932,14 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
    if( *valid )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->z, &z, varmap, consmap, global, valid) );
-   }
 
-   if( *valid )
-   {
-      SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
-            x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      if( *valid )
+      {
+         assert(z != NULL); /* for lint */
+         SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+               x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
+               initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      }
    }
 
    return SCIP_OKAY;
@@ -7403,7 +7404,7 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
    return SCIP_OKAY;
 }
 
-/** gets nonlinear variable x in absolute power constraint */
+/** gets nonlinear variable x in absolute power constraint */  /*lint -e715*/
 SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7420,7 +7421,7 @@ SCIP_VAR* SCIPgetNonlinearVarAbspower(
    return consdata->x;
 }
 
-/** gets linear variable z in absolute power constraint */
+/** gets linear variable z in absolute power constraint */  /*lint -e715*/
 SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7442,7 +7443,7 @@ SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7459,7 +7460,7 @@ SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7476,7 +7477,7 @@ SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7493,7 +7494,7 @@ SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7510,7 +7511,7 @@ SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);

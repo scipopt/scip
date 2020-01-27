@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -106,7 +106,6 @@ struct SCIP_PropData
 /** reset structure memember of propagator data structure */
 static
 void propdataReset(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data to reset */
    )
 {
@@ -161,7 +160,7 @@ SCIP_RETCODE propdataCreate(
 {
    SCIP_CALL( SCIPallocBlockMemory(scip, propdata) );
 
-   propdataReset(scip, *propdata);
+   propdataReset(*propdata);
 
    return SCIP_OKAY;
 }
@@ -212,7 +211,7 @@ SCIP_RETCODE propdataExit(
    /* free memory for non-zero reduced cost variables */
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->redcostvars, propdata->nredcostvars);
 
-   propdataReset(scip, propdata);
+   propdataReset(propdata);
 
    return SCIP_OKAY;
 }

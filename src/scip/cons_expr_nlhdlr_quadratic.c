@@ -352,7 +352,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
          rhs.inf, rhs.sup);
 #endif
 
-   /* compute solution of a*x^2 + b*x \in rhs */
+   /* compute solution of a*x^2 + b*x in rhs */
    SCIPintervalSet(&a, quadexpr.sqrcoef);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprActivity(scip, quadexpr.expr));
 
@@ -1087,7 +1087,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 
 
 /** nonlinear handler reverse propagation callback
- * @note: the implemented technique is a proxy for solving the OBBT problem min/max{ x_i : quad expr \in [quad expr] }
+ * @note: the implemented technique is a proxy for solving the OBBT problem min/max{ x_i : quad expr in [quad expr] }
  * and as such can be improved.
  *
  * input:

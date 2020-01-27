@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,6 +102,69 @@ SCIP_RETCODE polishSolution(
    return SCIP_OKAY;
 }
 
+/** when solving NLP subproblems, numerical issues are addressed by tightening the feasibility tolerance */
+static
+SCIP_RETCODE resolveNLPWithTighterFeastol(
+   SCIP*                 subproblem,         /**< the SCIP data structure */
+   SCIP_Real             multiplier,         /**< the amount by which to decrease the tolerance */
+   SCIP_Bool*            success             /**< TRUE is the resolving of the LP was successful */
+   )
+{
+   SCIP_NLPSOLSTAT nlpsolstat;
+#ifdef SCIP_DEBUG
+   SCIP_NLPTERMSTAT nlptermstat;
+#endif
+#ifdef SCIP_MOREDEBUG
+   SCIP_SOL* nlpsol;
+#endif
+   SCIP_Real feastol;
+   SCIP_Real objtol;
+
+   assert(subproblem != NULL);
+   assert(SCIPinProbing(subproblem));
+
+   (*success) = FALSE;
+
+#ifdef SCIP_MOREDEBUG
+   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
+
+   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
+
+   /* getting the feasibility tolerance currently used for the NLP */
+   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, &feastol) );
+   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, &objtol) );
+
+   /* setting the feasibility tolerance to 0.01x the current tolerance */
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol*multiplier) );
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, objtol*multiplier) );
+
+   SCIP_CALL( SCIPsolveNLP(subproblem) );
+
+   nlpsolstat = SCIPgetNLPSolstat(subproblem);
+#ifdef SCIP_DEBUG
+   nlptermstat = SCIPgetNLPTermstat(subproblem);
+   SCIPdebugMsg(subproblem, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
+#endif
+
+   if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
+      || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+      SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+      SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+#endif
+
+      (*success) = TRUE;
+   }
+
+   /* resetting the feasibility tolerance to 0.01x the current tolerance */
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol) );
+
+   return SCIP_OKAY;
+}
+
 /** adds a variable and value to the constraint/row arrays */
 static
 SCIP_RETCODE addVariableToArray(
@@ -136,6 +199,32 @@ SCIP_RETCODE addVariableToArray(
    (*nvars)++;
 
    return SCIP_OKAY;
+}
+
+/** returns the variable solution either from the NLP or from the primal vals array */
+static
+SCIP_Real getNlpVarSol(
+   SCIP_VAR*             var,                /**< the variable for which the solution is requested */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_HASHMAP*         var2idx             /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
+   )
+{
+   SCIP_Real varsol;
+   int idx;
+
+   assert(var != NULL);
+   assert((primalvals == NULL && var2idx == NULL) || (primalvals != NULL && var2idx != NULL));
+
+   if( var2idx != NULL && primalvals != NULL )
+   {
+      assert(SCIPhashmapExists(var2idx, (void*)var) );
+      idx = SCIPhashmapGetImageInt(var2idx, (void*)var);
+      varsol = primalvals[idx];
+   }
+   else
+      varsol = SCIPvarGetNLPSol(var);
+
+   return varsol;
 }
 
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
@@ -295,6 +384,13 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    SCIP_Real*            rhs,                /**< the right hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize,           /**< the number of variables in the array */
+   SCIP_Real             objective,          /**< the objective function of the subproblem */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_Real*            consdualvals,       /**< dual variables for the constraints, can be NULL */
+   SCIP_Real*            varlbdualvals,      /**< the dual variables for the variable lower bounds, can be NULL */
+   SCIP_Real*            varubdualvals,      /**< the dual variables for the variable upper bounds, can be NULL */
+   SCIP_HASHMAP*         row2idx,            /**< mapping between the row in the subproblem to the index in the dual array, can be NULL */
+   SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
    SCIP_Real*            checkobj,           /**< stores the objective function computed from the dual solution */
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
@@ -307,6 +403,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    SCIP_Real dirderiv;
    SCIP_Real dualsol;
    int nrows;
+   int idx;
    int i;
 
    (*checkobj) = 0;
@@ -315,10 +412,21 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(SCIPisNLPConstructed(subproblem));
-   assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT);
-   assert(SCIPhasNLPSolution(subproblem));
+   assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE || consdualvals != NULL);
+   assert(SCIPhasNLPSolution(subproblem) || consdualvals != NULL);
 
    (*success) = FALSE;
+
+   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
+         && row2idx == NULL && var2idx == NULL)
+      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
+         && row2idx != NULL && var2idx != NULL) )
+   {
+      SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
+      (*success) = FALSE;
+
+      return SCIP_ERROR;
+   }
 
    nsubvars = SCIPgetNNLPVars(subproblem);
    subvars = SCIPgetNLPVars(subproblem);
@@ -334,7 +442,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(SCIPgetTransObjscale(subproblem) == 1.0);
    assert(SCIPgetObjsense(subproblem) == SCIP_OBJSENSE_MINIMIZE);
 
-   (*lhs) = SCIPgetNLPObjval(subproblem);
+   (*lhs) = objective;
    assert(!SCIPisInfinity(subproblem, REALABS(*lhs)));
 
    (*rhs) = SCIPinfinity(masterprob);
@@ -352,14 +460,21 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       nlrow = SCIPgetNLPNlRows(subproblem)[i];
       assert(nlrow != NULL);
 
-      dualsol = SCIPnlrowGetDualsol(nlrow);
+      if( row2idx != NULL && consdualvals != NULL )
+      {
+         assert(SCIPhashmapExists(row2idx, (void*)nlrow) );
+         idx = SCIPhashmapGetImageInt(row2idx, (void*)nlrow);
+         dualsol = consdualvals[idx];
+      }
+      else
+         dualsol = SCIPnlrowGetDualsol(nlrow);
       assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
 
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
       SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter,
-            -dualsol, &dirderiv, vars, vals, nvars, varssize) );
+            -dualsol, primalvals, var2idx, &dirderiv, vars, vals, nvars, varssize) );
    }
 
    SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
@@ -373,12 +488,19 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
       var = subvars[i];
 
-      (*checkobj) += SCIPvarGetUnchangedObj(var) * SCIPvarGetNLPSol(var);
+      (*checkobj) += SCIPvarGetObj(var) * getNlpVarSol(var, primalvals, var2idx);
 
       /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
-      dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
+      if( var2idx != NULL && varubdualvals != NULL && varlbdualvals != NULL )
+      {
+         assert(SCIPhashmapExists(var2idx, (void*)var) );
+         idx = SCIPhashmapGetImageInt(var2idx, (void*)var);
+         dualsol = varubdualvals[idx] - varlbdualvals[idx];
+      }
+      else
+         dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
 
       /* checking whether the subproblem variable has a corresponding master variable. */
       if( mastervar == NULL || dualsol == 0.0 )
@@ -389,11 +511,11 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       /* adding the variable to the storage */
       SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
 
-      dirderiv += coef * SCIPvarGetNLPSol(var);
+      dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
    }
 
    for( i = 0; i < nfixedvars; i++ )
-      *checkobj += SCIPvarGetUnchangedObj(fixedvars[i]) * SCIPvarGetNLPSol(fixedvars[i]);
+      *checkobj += SCIPvarGetUnchangedObj(fixedvars[i]) * getNlpVarSol(fixedvars[i], primalvals, var2idx);
 
    *lhs += dirderiv;
 
@@ -442,207 +564,6 @@ SCIP_RETCODE addAuxiliaryVariableToCut(
 }
 
 
-/** generates and applies Benders' cuts */
-static
-SCIP_RETCODE generateAndApplyBendersCuts(
-   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
-   SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
-   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnumber,         /**< the number of the pricing problem */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
-   SCIP_RESULT*          result              /**< the result from solving the subproblems */
-   )
-{
-   SCIP_BENDERSCUTDATA* benderscutdata;
-   SCIP_CONSHDLR* consbenders;
-   SCIP_CONS* cons;
-   SCIP_ROW* row;
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int nvars;
-   int varssize;
-   int nmastervars;
-   char cutname[SCIP_MAXSTRLEN];
-   SCIP_Bool optimal;
-   SCIP_Bool addcut;
-   SCIP_Bool success;
-
-   SCIP_Real checkobj;
-   SCIP_Real verifyobj;
-
-   assert(masterprob != NULL);
-   assert(subproblem != NULL);
-   assert(benders != NULL);
-   assert(benderscut != NULL);
-   assert(result != NULL);
-
-   row = NULL;
-   cons = NULL;
-
-   /* retrieving the Benders' cut data */
-   benderscutdata = SCIPbenderscutGetData(benderscut);
-
-   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
-    * added to the master problem.
-    */
-   if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )
-      addcut = FALSE;
-   else
-      addcut = benderscutdata->addcuts;
-
-   /* retrieving the Benders' decomposition constraint handler */
-   consbenders = SCIPfindConshdlr(masterprob, "benders");
-
-   /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
-    * objective value of the subproblem */
-   SCIP_CALL( SCIPcheckBendersSubproblemOptimality(masterprob, benders, sol, probnumber, &optimal) );
-
-   if( optimal )
-   {
-      (*result) = SCIP_FEASIBLE;
-      SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
-      return SCIP_OKAY;
-   }
-
-   /* allocating memory for the variable and values arrays */
-   nmastervars = SCIPgetNVars(masterprob) + SCIPgetNFixedVars(masterprob);
-   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vars, nmastervars) );
-   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vals, nmastervars) );
-   lhs = 0.0;
-   rhs = SCIPinfinity(masterprob);
-   nvars = 0;
-   varssize = nmastervars;
-
-   /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
-      SCIPbenderscutGetNFound(benderscut) );
-
-   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
-   {
-      /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
-            &varssize, &checkobj, &success) );
-   }
-   else
-   {
-      /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
-            &varssize, &checkobj, &success) );
-   }
-
-   /* if success is FALSE, then there was an error in generating the optimality cut. No cut will be added to the master
-    * problem. Otherwise, the constraint is added to the master problem.
-    */
-   if( !success )
-   {
-      (*result) = SCIP_DIDNOTFIND;
-      SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
-   }
-   else
-   {
-      /* creating an empty row or constraint for the Benders' cut */
-      if( addcut )
-      {
-         SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, lhs, rhs, FALSE, FALSE, TRUE) );
-         SCIP_CALL( SCIPaddVarsToRow(masterprob, row, nvars, vars, vals) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, nvars, vars, vals, lhs, rhs) );
-         SCIP_CALL( SCIPsetConsDynamic(masterprob, cons, TRUE) );
-         SCIP_CALL( SCIPsetConsRemovable(masterprob, cons, TRUE) );
-      }
-
-      /* computing the objective function from the cut activity to verify the accuracy of the constraint */
-      verifyobj = 0.0;
-      if( addcut )
-      {
-         verifyobj += SCIProwGetLhs(row) - SCIPgetRowSolActivity(masterprob, row, sol);
-      }
-      else
-      {
-         verifyobj += SCIPgetLhsLinear(masterprob, cons) - SCIPgetActivityLinear(masterprob, cons, sol);
-      }
-
-      /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
-       * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
-       * that the Benders' cut could not find a valid cut.
-       */
-      if( !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
-      {
-         success = FALSE;
-         SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
-            verifyobj);
-#ifdef SCIP_DEBUG
-         SCIPABORT();
-#endif
-      }
-
-      if( success )
-      {
-         /* adding the auxiliary variable to the optimality cut */
-         SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, vars, vals, &nvars, probnumber) );
-
-         /* adding the constraint to the master problem */
-         if( addcut )
-         {
-            SCIP_Bool infeasible;
-
-            /* adding the auxiliary variable coefficient to the row */
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
-
-            if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
-            {
-               SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
-               assert(!infeasible);
-            }
-            else
-            {
-               assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
-               SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
-            }
-
-            (*result) = SCIP_SEPARATED;
-         }
-         else
-         {
-            /* adding the auxiliary variable coefficient to the constraint */
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
-
-            SCIP_CALL( SCIPaddCons(masterprob, cons) );
-
-            SCIPdebugPrintCons(masterprob, cons, NULL);
-
-            (*result) = SCIP_CONSADDED;
-         }
-
-         /* storing the data that is used to create the cut */
-         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, rhs, nvars) );
-      }
-
-      /* releasing the row or constraint */
-      if( addcut )
-      {
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
-      }
-      else
-      {
-         /* release the constraint */
-         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
-      }
-   }
-
-   SCIPfreeBufferArray(masterprob, &vals);
-   SCIPfreeBufferArray(masterprob, &vars);
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of Benders' decomposition cuts
  */
@@ -673,13 +594,31 @@ static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 {  /*lint --e{715}*/
    SCIP* subproblem;
+   SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_Bool nlprelaxation;
+   SCIP_Bool addcut;
+   char cutname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   /* retrieving the Benders' cut data */
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be
+    * added to the master problem.
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+      addcut = FALSE;
+   else
+      addcut = benderscutdata->addcuts;
+
+   /* setting the name of the generated cut */
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
+      SCIPbenderscutGetNFound(benderscut) );
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
@@ -700,29 +639,56 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
     */
    if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
       ((!nlprelaxation && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
-       (nlprelaxation && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT)) )
+       (nlprelaxation && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE)) )
    {
       /* generating a cut for a given subproblem */
-      SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
-            sol, probnumber, type, result) );
+      SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
+            SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
+            FALSE, result) );
 
       /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
        * resolved and the generation of the cut is reattempted. For NLPs, we do not have such a polishing yet.
        */
-      if( (*result) == SCIP_DIDNOTFIND && !nlprelaxation )
+      if( (*result) == SCIP_DIDNOTFIND )
       {
          SCIP_Bool success;
 
-         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
-            "polish the LP solution to find an alternative dual extreme point.\n", probnumber);
+         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d.", probnumber);
 
-         SCIP_CALL( polishSolution(subproblem, &success) );
-
-         /* only attempt to generate a cut if the solution polishing was successful */
-         if( success )
+         if( !nlprelaxation )
          {
-            SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
-                  sol, probnumber, type, result) );
+            SCIPdebugMsg(scip, "Attempting to polish the LP solution to find an alternative dual extreme point.\n");
+
+            SCIP_CALL( polishSolution(subproblem, &success) );
+
+            /* only attempt to generate a cut if the solution polishing was successful */
+            if( success )
+            {
+               SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
+                     SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
+                     FALSE, result) );
+            }
+         }
+         else
+         {
+            SCIP_Real multiplier = 0.01;
+
+            SCIPdebugMsg(scip, "Attempting to resolve the NLP with a tighter feasibility tolerance to find an "
+               "alternative dual extreme point.\n");
+
+            while( multiplier > 1e-06 && (*result) == SCIP_DIDNOTFIND )
+            {
+               SCIP_CALL( resolveNLPWithTighterFeastol(subproblem, multiplier, &success) );
+
+               if( success )
+               {
+                  SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
+                        SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
+                        FALSE, result) );
+               }
+
+               multiplier *= 0.1;
+            }
          }
       }
    }
@@ -771,6 +737,234 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    return SCIP_OKAY;
 }
 
+/** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
+ *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.
+ *  This method can also be used to generate a feasibility cut, if a problem to minimise the infeasibilities has been solved
+ *  to generate the dual solutions
+ */
+SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition */
+   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnumber,         /**< the number of the pricing problem */
+   char*                 cutname,            /**< the name for the cut to be generated */
+   SCIP_Real             objective,          /**< the objective function of the subproblem */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_Real*            consdualvals,       /**< dual variables for the constraints, can be NULL */
+   SCIP_Real*            varlbdualvals,      /**< the dual variables for the variable lower bounds, can be NULL */
+   SCIP_Real*            varubdualvals,      /**< the dual variables for the variable upper bounds, can be NULL */
+   SCIP_HASHMAP*         row2idx,            /**< mapping between the row in the subproblem to the index in the dual array, can be NULL */
+   SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             addcut,             /**< should the Benders' cut be added as a cut or constraint */
+   SCIP_Bool             feasibilitycut,     /**< is this called for the generation of a feasibility cut */
+   SCIP_RESULT*          result              /**< the result from solving the subproblems */
+   )
+{
+   SCIP_CONSHDLR* consbenders;
+   SCIP_CONS* cons;
+   SCIP_ROW* row;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nvars;
+   int varssize;
+   int nmastervars;
+   SCIP_Bool optimal;
+   SCIP_Bool success;
+
+   SCIP_Real checkobj;
+   SCIP_Real verifyobj;
+
+   assert(masterprob != NULL);
+   assert(subproblem != NULL);
+   assert(benders != NULL);
+   assert(benderscut != NULL);
+   assert(result != NULL);
+   assert((primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
+         && row2idx == NULL && var2idx == NULL)
+      || (primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
+         && row2idx != NULL && var2idx != NULL));
+
+   row = NULL;
+   cons = NULL;
+
+   /* retrieving the Benders' decomposition constraint handler */
+   consbenders = SCIPfindConshdlr(masterprob, "benders");
+
+   /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
+    * objective value of the subproblem */
+   if( feasibilitycut )
+      optimal = FALSE;
+   else
+   {
+      SCIP_CALL( SCIPcheckBendersSubproblemOptimality(masterprob, benders, sol, probnumber, &optimal) );
+   }
+
+   if( optimal )
+   {
+      (*result) = SCIP_FEASIBLE;
+      SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
+      return SCIP_OKAY;
+   }
+
+   /* allocating memory for the variable and values arrays */
+   nmastervars = SCIPgetNVars(masterprob) + SCIPgetNFixedVars(masterprob);
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vars, nmastervars) );
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vals, nmastervars) );
+   lhs = 0.0;
+   rhs = SCIPinfinity(masterprob);
+   nvars = 0;
+   varssize = nmastervars;
+
+   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
+   {
+      /* computing the coefficients of the optimality cut */
+      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
+            &varssize, objective, primalvals, consdualvals, varlbdualvals, varubdualvals, row2idx,
+            var2idx, &checkobj, &success) );
+   }
+   else
+   {
+      /* computing the coefficients of the optimality cut */
+      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
+            &varssize, &checkobj, &success) );
+   }
+
+   /* if success is FALSE, then there was an error in generating the optimality cut. No cut will be added to the master
+    * problem. Otherwise, the constraint is added to the master problem.
+    */
+   if( !success )
+   {
+      (*result) = SCIP_DIDNOTFIND;
+      SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
+   }
+   else
+   {
+      /* creating an empty row or constraint for the Benders' cut */
+      if( addcut )
+      {
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, lhs, rhs, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPaddVarsToRow(masterprob, row, nvars, vars, vals) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, nvars, vars, vals, lhs, rhs) );
+         SCIP_CALL( SCIPsetConsDynamic(masterprob, cons, TRUE) );
+         SCIP_CALL( SCIPsetConsRemovable(masterprob, cons, TRUE) );
+      }
+
+      /* computing the objective function from the cut activity to verify the accuracy of the constraint */
+      verifyobj = 0.0;
+      if( addcut )
+      {
+         verifyobj += SCIProwGetLhs(row) - SCIPgetRowSolActivity(masterprob, row, sol);
+      }
+      else
+      {
+         verifyobj += SCIPgetLhsLinear(masterprob, cons) - SCIPgetActivityLinear(masterprob, cons, sol);
+      }
+
+      /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
+       * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
+       * that the Benders' cut could not find a valid cut.
+       */
+      if( !feasibilitycut && !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
+      {
+         success = FALSE;
+         SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
+            verifyobj);
+
+#ifdef SCIP_DEBUG
+         /* we only need to abort if cut strengthen is not used. If cut strengthen has been used in this round and the
+          * cut could not be generated, then another subproblem solving round will be executed
+          */
+         if( !SCIPbendersInStrengthenRound(benders) )
+         {
+            SCIPABORT();
+         }
+#endif
+      }
+
+      if( success )
+      {
+         /* adding the auxiliary variable to the optimality cut */
+         if( !feasibilitycut )
+         {
+            SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, vars, vals, &nvars, probnumber) );
+         }
+
+         /* adding the constraint to the master problem */
+         if( addcut )
+         {
+            SCIP_Bool infeasible;
+
+            /* adding the auxiliary variable coefficient to the row */
+            if( !feasibilitycut )
+            {
+               SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
+            }
+
+            if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
+            {
+               SCIP_CALL( SCIPaddRow(masterprob, row, FALSE, &infeasible) );
+               assert(!infeasible);
+            }
+            else
+            {
+               assert(type == SCIP_BENDERSENFOTYPE_CHECK || type == SCIP_BENDERSENFOTYPE_PSEUDO);
+               SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
+            }
+
+            (*result) = SCIP_SEPARATED;
+         }
+         else
+         {
+            /* adding the auxiliary variable coefficient to the constraint */
+            if( !feasibilitycut )
+            {
+               SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
+            }
+
+            SCIPdebugPrintCons(masterprob, cons, NULL);
+
+            SCIP_CALL( SCIPaddCons(masterprob, cons) );
+
+            (*result) = SCIP_CONSADDED;
+         }
+
+         /* storing the data that is used to create the cut */
+         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, rhs, nvars) );
+      }
+      else
+      {
+         (*result) = SCIP_DIDNOTFIND;
+         SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
+      }
+
+      /* releasing the row or constraint */
+      if( addcut )
+      {
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+      }
+      else
+      {
+         /* release the constraint */
+         SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+      }
+   }
+
+   SCIPfreeBufferArray(masterprob, &vals);
+   SCIPfreeBufferArray(masterprob, &vars);
+
+   return SCIP_OKAY;
+}
+
+
 /** adds the gradient of a nonlinear row in the current NLP solution of a subproblem to a linear row or constraint in the master problem
  *
  * Only computes gradient w.r.t. master problem variables.
@@ -783,6 +977,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
+   SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
+   SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
    SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
    SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
@@ -801,6 +997,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    assert(benders != NULL);
    assert(nlrow != NULL);
    assert(exprint != NULL);
+   assert((primalvals == NULL && var2idx == NULL) || (primalvals != NULL && var2idx != NULL));
    assert(mult != 0.0);
    assert(dirderiv != NULL);
    assert(vars != NULL);
@@ -822,7 +1019,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       /* adding the variable to the storage */
       SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
 
-      *dirderiv += coef * SCIPvarGetNLPSol(var);
+      *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
    }
 
    /* quadratic part */
@@ -845,8 +1042,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var1, &mastervar1) );
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var2, &mastervar2) );
 
-      coef1 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var2);
-      coef2 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var1);
+      coef1 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * getNlpVarSol(var2, primalvals, var2idx);
+      coef2 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * getNlpVarSol(var1, primalvals, var2idx);
 
       /* adding the variable to the storage */
       if( mastervar1 != NULL )
@@ -859,10 +1056,10 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       }
 
       if( mastervar1 != NULL )
-         *dirderiv += coef1 * SCIPvarGetNLPSol(var1);
+         *dirderiv += coef1 * getNlpVarSol(var1, primalvals, var2idx);
 
       if( mastervar2 != NULL )
-         *dirderiv += coef2 * SCIPvarGetNLPSol(var2);
+         *dirderiv += coef2 * getNlpVarSol(var2, primalvals, var2idx);
    }
 
    /* tree part */
@@ -884,7 +1081,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
 
       /* sets the solution value */
       for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         x[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(tree)[i]);
+         x[i] = getNlpVarSol(SCIPexprtreeGetVars(tree)[i], primalvals, var2idx);
 
       SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
 
@@ -904,7 +1101,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
          /* adding the variable to the storage */
          SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
 
-         *dirderiv += coef * SCIPvarGetNLPSol(var);
+         *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
       }
 
       SCIPfreeBufferArray(subproblem, &treegrad);

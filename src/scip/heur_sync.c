@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   heur_sync.c
  * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that adds solutions from synchronization
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  * This heuristic takes solutions during synchronization and then adds them.
  */

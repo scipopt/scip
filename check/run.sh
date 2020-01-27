@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -89,7 +89,12 @@ echo @05 $TIMELIMIT                 >> $OUTFILE
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
-eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+if test -e $TMPFILE
+then
+    eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+else
+    eval $EXECNAME                           2>>$ERRFILE  | tee -a $OUTFILE
+fi
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then

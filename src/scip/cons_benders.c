@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,7 +48,7 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benders"
 #define CONSHDLR_DESC          "constraint handler to execute Benders' Decomposition"
-#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -95,9 +95,7 @@ SCIP_RETCODE constructValidSolution(
    int nsubproblems;
    int i;
    int j;
-   SCIP_Bool success;
-
-   success = TRUE;
+   SCIP_Bool success = TRUE;
 
    /* don't propose new solutions if not in presolve or solving */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
@@ -119,18 +117,18 @@ SCIP_RETCODE constructValidSolution(
    {
       switch( type )
       {
-         case SCIP_BENDERSENFOTYPE_LP:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_PSEUDO:
-            SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_RELAX:
-            SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
-            break;
-         default:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
+      case SCIP_BENDERSENFOTYPE_LP:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_PSEUDO:
+         SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_RELAX:
+         SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
+         break;
+      default:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
       }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
@@ -166,7 +164,7 @@ SCIP_RETCODE constructValidSolution(
    }
 
    /* if setting the variable values was successful, then we try to add the solution */
-   if( success )
+   if( success ) /*lint !e774*/
    {
       /* checking the size of the checkedsols array and extending it is there is not enough memory */
       assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
@@ -204,6 +202,37 @@ SCIP_RETCODE constructValidSolution(
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
    return SCIP_OKAY;
+}
+
+/** checks the Benders' decomposition auxiliary variables for unboundedness. */
+static
+SCIP_Bool unboundedAuxiliaryVariables(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   SCIP_SOL*             sol                 /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
+   )
+{
+   int nsubproblems;
+   SCIP_Bool unbounded = FALSE;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   /* checking the auxiliary variable values for unboundedness */
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      if( SCIPisInfinity(scip, SCIPgetBendersAuxiliaryVarVal(scip, benders, sol, i))
+         || SCIPisInfinity(scip, -SCIPgetBendersAuxiliaryVarVal(scip, benders, sol, i)) )
+      {
+         unbounded = TRUE;
+         break;
+      }
+   }
+
+   return unbounded;
 }
 
 /** enforces Benders' constraints for given solution
@@ -252,7 +281,27 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
          case SCIP_BENDERSENFOTYPE_LP:
             if( SCIPbendersCutLP(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
+               SCIP_Bool unbounded = FALSE;
+
+               /* if the solution is unbounded, then it may not be possible to generate any Benders' decomposition
+                * cuts. If the unboundedness is from the auxiliary variables, then cuts are required. Otherwise, if
+                * the unboundedness comes from original variables, then the unboundedness needs to be handled by other
+                * constraint handlers or the problem is reported as unbounded
+                * */
+               if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+               {
+                  if( !unboundedAuxiliaryVariables(scip, benders[i], NULL) )
+                  {
+                     (*result) = SCIP_FEASIBLE;
+                     auxviol = FALSE;
+                     unbounded = TRUE;
+                  }
+               }
+
+               if( !unbounded )
+               {
+                  SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
+               }
             }
             break;
          case SCIP_BENDERSENFOTYPE_RELAX:

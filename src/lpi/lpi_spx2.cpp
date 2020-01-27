@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3256,23 +3256,39 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       if( primsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getPrimalReal(primsol, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), primsol);
          (void)lpi->spx->getPrimalReal(tmp);
+#endif
       }
       if( dualsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getDualReal(dualsol, lpi->spx->numRowsReal());
+#else
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
          (void)lpi->spx->getDualReal(tmp);
+#endif
       }
       if( activity != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getSlacksReal(activity, lpi->spx->numRowsReal());  /* in SoPlex, the activities are called "slacks" */
+#else
          Vector tmp(lpi->spx->numRowsReal(), activity);
          (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+#endif
       }
       if( redcost != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+         (void)lpi->spx->getRedCostReal(redcost, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), redcost);
          (void)lpi->spx->getRedCostReal(tmp);
+#endif
       }
    }
 #ifndef NDEBUG
@@ -3305,8 +3321,12 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getPrimalRayReal(ray, lpi->spx->numColsReal());
+#else
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3338,8 +3358,12 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getDualFarkasReal(dualfarkas, lpi->spx->numRowsReal());
+#else
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )

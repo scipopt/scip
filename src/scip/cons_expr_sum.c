@@ -1383,7 +1383,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions to propagate */
    SCIP_Real*            weights,            /**< weights of expressions in sum */
    SCIP_Real             constant,           /**< constant in sum */
-   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i \in interval */
+   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i in interval */
    SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
    int*                  nreductions,        /**< buffer to store the number of interval reductions */
