@@ -3308,6 +3308,7 @@ SCIP_RETCODE addSymresackConss(
    {
       assert( ! propdata->ofenabled );
       assert( ! propdata->detectorbitopes );
+      assert( ! propdata->schreiersimsenabled );
 
       /* loop through perms and add symresack constraints */
       for (p = 0; p < propdata->nperms; ++p)
