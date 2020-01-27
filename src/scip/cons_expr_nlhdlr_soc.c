@@ -812,7 +812,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    constant = SCIPgetConsExprExprSumConstant(expr);
 
    /* we duplicate the child coefficients since we have to manipulate them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprSumCoefs(expr), nchildren) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprSumCoefs(expr), nchildren) ); /*lint !e666*/
 
    /* initialize data */
    lhsidx = -1;
@@ -1150,8 +1150,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    nnonzeroes = NULL;
    termbegins = NULL;
    bp = NULL;
-   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs); /*lint !e788*/
-   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs); /*lint !e788*/
+   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs); /*lint !e777*/
+   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs); /*lint !e777*/
 
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), nchildren) );
@@ -1243,7 +1243,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       }
    }
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &eigvecmatrix, nvars * nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &eigvecmatrix, nvars * nvars) ); /*lint !e647*/
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nvars) );
@@ -1770,7 +1770,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
          }
       }
 #endif
-}
+   }
 
    return SCIP_OKAY;
 }
