@@ -5299,9 +5299,9 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
    return SCIP_OKAY;
 }
 
-/** call separation or estimator callback of nonlinear handler
+/** call enforcement or estimator callback of nonlinear handler
  *
- * Calls the separation callback, if available.
+ * Calls the enforcement callback, if available.
  * Otherwise, calls the estimator callback, if available, and constructs a cut from the estimator.
  *
  * If cut is weak, but estimator is not tight, tries to add branching candidates.
@@ -5564,7 +5564,10 @@ SCIP_RETCODE enforceExprNlhdlr(
    return SCIP_OKAY;
 }
 
-/** tries to enforce violation in an expression by separation or finding a branching candidate */
+/** tries to enforce violation in an expression by separation, bound tightening, or finding a branching candidate
+ *
+ * if not inenforcement, then we should be called by consSepa, and thus only try separation
+ */
 static
 SCIP_RETCODE enforceExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5684,8 +5687,16 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
+            expr->lastenforced = conshdlrdata->enforound;
+            /* TODO or should we always just stop here? */
+         }
+
+         if( hdlrresult == SCIP_REDUCEDDOM )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
+            *result = SCIP_REDUCEDDOM;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
          }
@@ -5695,8 +5706,8 @@ SCIP_RETCODE enforceExpr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
             assert(inenforcement);
 
-            /* separation takes precedence over branching */
-            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
+            /* separation and domain reduction takes precedence over branching */
+            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED);
             if( *result == SCIP_DIDNOTFIND )
                *result = SCIP_BRANCHED;
             expr->lastenforced = conshdlrdata->enforound;
@@ -5720,8 +5731,16 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
+            expr->lastenforced = conshdlrdata->enforound;
+            /* TODO or should we always just stop here? */
+         }
+
+         if( hdlrresult == SCIP_REDUCEDDOM )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
+            *result = SCIP_REDUCEDDOM;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
          }
@@ -5732,7 +5751,7 @@ SCIP_RETCODE enforceExpr(
             assert(inenforcement);
 
             /* separation takes precedence over branching */
-            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
+            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED);
             if( *result == SCIP_DIDNOTFIND )
                *result = SCIP_BRANCHED;
             expr->lastenforced = conshdlrdata->enforound;
@@ -5798,7 +5817,7 @@ SCIP_RETCODE enforceConstraint(
 
       SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, &resultexpr) );
 
-      /* if not enforced, then we must not have found a cutoff, cut, or branchscore */
+      /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((expr->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
       if( expr->lastenforced == conshdlrdata->enforound )
          *success = TRUE;
@@ -5812,7 +5831,10 @@ SCIP_RETCODE enforceConstraint(
       if( resultexpr == SCIP_SEPARATED )
          *result = SCIP_SEPARATED;
 
-      if( resultexpr == SCIP_BRANCHED && *result != SCIP_SEPARATED )
+      if( resultexpr == SCIP_REDUCEDDOM && *result != SCIP_SEPARATED )
+         *result = SCIP_REDUCEDDOM;
+
+      if( resultexpr == SCIP_BRANCHED && *result != SCIP_SEPARATED && *result != SCIP_REDUCEDDOM )
          *result = SCIP_BRANCHED;
    }
 
@@ -6310,12 +6332,13 @@ SCIP_RETCODE consEnfo(
 
    SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxviol, result) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
+   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED )
    {
       if( *result == SCIP_BRANCHED )
          *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
    }
+   assert(*result == SCIP_INFEASIBLE);
 
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxviol, SCIPgetLPFeastol(scip)); )
 

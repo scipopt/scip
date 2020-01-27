@@ -797,12 +797,18 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler enforcement callback
  *
- * The method tries to find an affine hyperplane (a cut) that separates a given point
- * from the set defined by either
+ * The method tries to separate the given solution from the set defined by either
  *   expr - auxvar <= 0 (if !overestimate)
  * or
  *   expr - auxvar >= 0 (if  overestimate),
  * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ *
+ * It can do so by
+ * - separation, i.e., finding an affine hyperplane (a cut) that separates
+ *   the given point,
+ * - bound tightening, i.e., changing bounds on a variable so that the given point is
+ *   outside the updated domain,
+ * - adding branching scores to potentially split the current problem into 2 subproblems
  *
  * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
  * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
@@ -815,11 +821,14 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * cons_expr core may call this callback first with allowweakcuts=FALSE and repeat later with
  * allowweakcuts=TRUE, if it didn't succeed to enforce a solution without using weak cuts.
- * If it cannot enforce by separation and addbranchscores is TRUE, the nlhdlr should register
+ * If it cannot enforce by separation or bound tightening and addbranchscores is TRUE, the nlhdlr should register
  * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ * Currently, bound tightening is prohibited if addbranchscores is FALSE
+ * (TODO: should probably rename addbranchscores to something more expressive)
  *
- * The nlhdlr must set result to SCIP_SEPARATED if it added a cut and to SCIP_BRANCHED if it
- * added branching scores. Otherwise, it may set result to SCIP_DIDNOTRUN or SCIP_DIDNOTFIND.
+ * The nlhdlr must set result to SCIP_SEPARATED if it added a cut, to SCIP_REDUCEDDOM if it added
+ * a bound change, and to SCIP_BRANCHED if it added branching scores.
+ * Otherwise, it may set result to SCIP_DIDNOTRUN or SCIP_DIDNOTFIND.
  *
  * input:
  *  - scip : SCIP main data structure
