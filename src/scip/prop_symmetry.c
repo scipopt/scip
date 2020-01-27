@@ -607,6 +607,7 @@ SCIP_RETCODE freeSymmetryData(
    )
 {
    int i;
+   int ub;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -640,12 +641,10 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
-   if ( propdata->binvaraffected )
+   ub = propdata->schreiersimsenabled ? propdata->npermvars : propdata->nbinpermvars;
+   for (i = 0; i < ub; ++i)
    {
-      for (i = 0; i < propdata->nbinpermvars; ++i)
-      {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-      }
+      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
    }
 
    /* free lists for orbitopal fixing */
@@ -2189,6 +2188,7 @@ SCIP_RETCODE determineSymmetry(
    int nvars;
    int j;
    int p;
+   int ub;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -2403,15 +2403,13 @@ SCIP_RETCODE determineSymmetry(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* free data and exit */
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
-
-      /* disable OF and symmetry handling constraints */
+      /* disable OF and symmetry handling constraints based on symretopes */
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
-      propdata->schreiersimsenabled = FALSE;
 
-      return SCIP_OKAY;
+      /* currently we can only handle non-binary symmetries by Schreier-Sims cuts */
+      if ( ! propdata->schreiersimsenabled )
+         return SCIP_OKAY;
    }
 
    assert( propdata->nperms > 0 );
@@ -2536,9 +2534,10 @@ SCIP_RETCODE determineSymmetry(
 
    /* capture binary variables and forbid multi-aggregation of symmetric variables
     *
-    * note: binary variables are in the beginning of pervars
+    * note: binary variables are in the beginning of permvars
     */
-   for (j = 0; j < propdata->nbinpermvars; ++j)
+   ub = propdata->schreiersimsenabled ? propdata->npermvars : propdata->nbinpermvars;
+   for (j = 0; j < ub; ++j)
    {
       SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
 
@@ -4052,7 +4051,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected );
+   assert( propdata->binvaraffected || propdata->schreiersimsenabled );
    propdata->triedaddconss = TRUE;
 
    if ( propdata->symconsenabled )
