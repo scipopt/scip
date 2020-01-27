@@ -3868,10 +3868,6 @@ SCIP_RETCODE addSchreierSimsConss(
    tiebreakrule = propdata->schreiersimstiebreakrule;
    leadervartype = propdata->schreiersimsleadervartype;
 
-   /* ensure leadervartype is binary if symretopes are active */
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-      leadervartype = SCIP_VARTYPE_BINARY;
-
    /* if not already computed, get number of affected vars */
    if ( nmovedpermvars == 0 )
    {
@@ -4066,14 +4062,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->schreiersimsenabled )
    {
-      /* Schreier Sims cuts for non-binary variables and symretopes are not compatible */
-      if ( propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY )
-         propdata->symconsenabled = FALSE;
       SCIP_CALL( addSchreierSimsConss(scip, propdata, nchgbds) );
    }
-
-   if ( ! propdata->symconsenabled )
-      return SCIP_OKAY;
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
