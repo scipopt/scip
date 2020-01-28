@@ -50,7 +50,6 @@ static SCIP_CONSHDLR* conshdlr;
 static
 void setup(void)
 {
-   int h;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    SCIP_CALL( SCIPcreate(&scip) );
