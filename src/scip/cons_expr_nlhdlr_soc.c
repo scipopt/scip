@@ -780,7 +780,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int* termbegins = NULL;
    int* nnonzeroes = NULL;
    SCIP_Real constant;
-   SCIP_Real sideconstant;
+   SCIP_Real lhsconstant;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nposquadterms;
@@ -902,8 +902,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    ishyperbolic = (nposbilinterms + nnegbilinterms > 0);
 
    /* detect case and store lhs/rhs information */
-   if( nnegquadterms + nnegbilinterms <= 1)
+   if( (ishyperbolic && nnegbilinterms > 0) || (!ishyperbolic && nnegquadterms < 2) )
    {
+      assert(nnegbilinterms == 1 || nnegquadterms == 1);
       assert(rhsidx != -1);
 
       /* if rhs is infinity, it can't be soc */
@@ -911,7 +912,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
 
       specialtermidx = rhsidx;
-      sideconstant = constant - rhs;
+      lhsconstant = constant - rhs;
    }
    else
    {
@@ -922,7 +923,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
 
       specialtermidx = lhsidx;
-      sideconstant = lhs - constant;
+      lhsconstant = lhs - constant;
 
       /* negate all coefficients */
       for( i = 0; i < nchildren; ++i )
@@ -938,7 +939,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
       }
 
-      sideconstant *= 4.0 / -childcoefs[specialtermidx];
+      lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
    else
    {
@@ -947,7 +948,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
    }
 
-   if( SCIPisNegative(scip, sideconstant) )
+   if( SCIPisNegative(scip, lhsconstant) )
       goto CLEANUP;
 
    /**
@@ -1054,7 +1055,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, sideconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+         termbegins, nnonzeroes, lhsconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 CLEANUP:
