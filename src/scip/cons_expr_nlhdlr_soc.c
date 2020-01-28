@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_soc.h
+/**@file   cons_expr_nlhdlr_soc.c
  * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller
