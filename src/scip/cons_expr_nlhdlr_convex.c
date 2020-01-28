@@ -197,33 +197,6 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    return SCIP_OKAY;
 }
 
-/** shrink nlhdlr-expression by removing children
- *
- * reverse of nlhdlrExprGrowChildren
- */
-static
-SCIP_RETCODE nlhdlrExprContractChildren(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from copied to original expression */
-   SCIP_CONSEXPR_EXPR*   nlhdlrexpr          /**< expression for which to remove children */
-   )
-{
-   assert(scip != NULL);
-   assert(nlhdlrexpr != NULL);
-   assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) > 0);
-
-   /* TODO remove children from nlexpr2origexpr ?
-    * should also do this if they are not used somewhere else; we could check nuses for this
-    * however, it shouldn't matter to have some stray entries in the hashmap either
-    */
-
-   SCIP_CALL( SCIPremoveConsExprExprChildren(scip, nlhdlrexpr) );
-   assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) == 0);
-
-   return SCIP_OKAY;
-}
-
 static
 SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
 {
@@ -895,13 +868,18 @@ SCIP_RETCODE constructExpr(
             SCIPinfoMessage(scip, NULL, "... is a multivariate linear sum that we'll treat as auxvar instead (postprocess)\n");
 #endif
 
-            SCIP_CALL( nlhdlrExprContractChildren(scip, conshdlr, nlexpr2origexpr, child) );
+            /* TODO remove children from nlexpr2origexpr ?
+             * should also do this if they are not used somewhere else; we could check nuses for this
+             * however, it shouldn't matter to have some stray entries in the hashmap either
+             */
+            SCIP_CALL( SCIPremoveConsExprExprChildren(scip, child) );
+            assert(SCIPgetConsExprExprNChildren(child) == 0);
 
-            SCIPexpriteratorSkipDFS(it);
+            (void) SCIPexpriteratorSkipDFS(it);
          }
          else
          {
-            SCIPexpriteratorGetNext(it);
+            (void) SCIPexpriteratorGetNext(it);
          }
       }
 
@@ -1006,7 +984,7 @@ SCIP_RETCODE collectLeafs(
              * if it doesn't reappear, though, but the memory address is reused, we need to make sure it points to the right origexpr
              */
             /* SCIP_CALL( SCIPhashmapRemove(nlexpr2origexpr, (void*)child) ); */
-            SCIPhashmapSetImage(nlexpr2origexpr, (void*)newchild, (void*)origexpr);
+            SCIP_CALL( SCIPhashmapSetImage(nlexpr2origexpr, (void*)newchild, (void*)origexpr) );
 
             if( !SCIPhashmapExists(leaf2index, (void*)newchild) )
             {
@@ -1407,7 +1385,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitConcave)
 
    if( nlhdlrdata->vpevalsol != NULL )
    {
-      SCIPfreeSol(scip, &nlhdlrdata->vpevalsol);
+      SCIP_CALL( SCIPfreeSol(scip, &nlhdlrdata->vpevalsol) );
    }
 
    return SCIP_OKAY;
@@ -1609,7 +1587,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
          allfixed = FALSE;
 
       xstar[i] = SCIPgetSolVal(scip, sol, var);
-      assert(xstar[i] != SCIP_INVALID);
+      assert(xstar[i] != SCIP_INVALID);  /*lint !e777*/
    }
 
    if( allfixed )
@@ -1673,7 +1651,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
 
       /* TODO should/could do something more elaborate as in cons_expr_product */
       for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-         SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[i]), REALABS(violation));
+         SCIPaddConsExprExprBranchScore(scip, conshdlr, (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[i]), REALABS(violation));
 
       *addedbranchscores = TRUE;
    }
