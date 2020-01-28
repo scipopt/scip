@@ -16026,7 +16026,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen,
+         exprgraph->varbounds[i].inf < -100.0 ? MIN(-100.0, exprgraph->varbounds[i].sup) : exprgraph->varbounds[i].inf,
+         exprgraph->varbounds[i].sup >  100.0 ? MAX( 100.0, exprgraph->varbounds[i].inf) : exprgraph->varbounds[i].sup);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
