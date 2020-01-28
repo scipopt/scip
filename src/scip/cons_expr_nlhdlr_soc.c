@@ -1556,7 +1556,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
+   SCIPinfoMessage(scip, NULL, " <= %f\n", rhs);
 #endif
 
    /* create and store nonlinear handler expression data */
@@ -1747,13 +1747,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
          if( debugsol != NULL )
          {
-            ndisaggvars = SCIPisZero(scip, (*nlhdlrexprdata)->constant) ? nterms-1 : nterms;
+            SCIP_Real disvarval;
+            SCIP_Real lhsval;
 
-            for( i = 0; i < ndisaggvars; ++i )
+            for( i = 0; i < nterms - 1; ++i )
             {
-               SCIP_Real disvarval;
-               SCIP_Real lhsval;
-
                if( SCIPisZero(scip, rhsval) )
                   disvarval = 0.0;
                else
@@ -1763,9 +1761,19 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
                   disvarval = (*nlhdlrexprdata)->coefs[i] * SQR(lhsval) / rhsval;
                }
                /* store debug solution value of disaggregation variable
-               * assumes that expression has been evaluated in debug solution before
-               */
+                * assumes that expression has been evaluated in debug solution before
+                */
                SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
+            }
+
+            if( !SCIPisZero(scip, (*nlhdlrexprdata)->constant) )
+            {
+               if( SCIPisZero(scip, rhsval) )
+                  disvarval = 0.0;
+               else
+                  disvarval = (*nlhdlrexprdata)->constant / rhsval;
+
+               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[nterms-1], disvarval) );
             }
          }
       }
