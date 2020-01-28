@@ -2198,7 +2198,6 @@ SCIP_RETCODE determineSymmetry(
    int nvars;
    int j;
    int p;
-   int ub;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -2418,7 +2417,7 @@ SCIP_RETCODE determineSymmetry(
       propdata->symconsenabled = FALSE;
 
       /* currently we can only handle non-binary symmetries by Schreier-Sims cuts */
-      if ( ! propdata->schreiersimsenabled )
+      if ( ! propdata->schreiersimsenabled || propdata->schreiersimsleadervartype == (int) SCIP_VARTYPE_BINARY )
          return SCIP_OKAY;
    }
 
@@ -2542,27 +2541,59 @@ SCIP_RETCODE determineSymmetry(
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-   /* capture binary variables and forbid multi-aggregation of symmetric variables
+   /* capture symmetric variables and forbid multi aggregation */
+
+   /* binary symmetries are always handled
     *
     * note: binary variables are in the beginning of permvars
     */
-   ub = propdata->schreiersimsenabled ? propdata->npermvars : propdata->nbinpermvars;
-   for (j = 0; j < ub; ++j)
+   if ( propdata->binvaraffected )
    {
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+      for (j = 0; j < propdata->nbinpermvars; ++j)
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
 
-      if ( propdata->compressed )
-      {
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-      }
-      else
-      {
-         for (p = 0; p < propdata->nperms; ++p)
+         if ( propdata->compressed )
          {
-            if ( propdata->perms[p][j] != j )
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         }
+         else
+         {
+            for (p = 0; p < propdata->nperms; ++p)
             {
-               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-               break;
+               if ( propdata->perms[p][j] != j )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+                  break;
+               }
+            }
+         }
+      }
+   }
+
+   /* if Schreier-Sims cuts are enabled, also apply this rule to variables of the handable type */
+   if ( propdata->schreiersimsenabled && propdata->schreiersimsleadervartype != (int) SCIP_VARTYPE_BINARY )
+   {
+      for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
+      {
+         if ( (int) SCIPvarGetType(propdata->permvars[j]) != propdata->schreiersimsleadervartype )
+            continue;
+
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
+         if ( propdata->compressed )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         }
+         else
+         {
+            for (p = 0; p < propdata->nperms; ++p)
+            {
+               if ( propdata->perms[p][j] != j )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+                  break;
+               }
             }
          }
       }
