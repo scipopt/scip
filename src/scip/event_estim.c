@@ -51,8 +51,10 @@
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
@@ -243,6 +245,8 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
 #define DEFAULT_RESTARTFACTOR        50.0    /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+#define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
+#define DEFAULT_RESTARTACTPRICERS    FALSE   /**< whether to apply a restart when active pricers are used */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
@@ -279,6 +283,8 @@ struct SCIP_EventhdlrData
    SCIP_Bool             useleafts;          /**< Use leaf nodes as basic observations for time series, or all nodes? */
    SCIP_Bool             treeprofile_enabled;/**< Should the event handler collect treeprofile data? */
    SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
+   SCIP_Bool             restartnonlinear;   /**< whether to apply a restart when nonlinear constraints are present */
+   SCIP_Bool             restartactpricers;  /**< whether to apply a restart when active pricers are used */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -2340,10 +2346,19 @@ RESTARTPOLICY getRestartPolicy(
 /** check if a restart is applicable considering limit and threshold user parameters */
 static
 SCIP_Bool isRestartApplicable(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
    SCIP_Longint nnodes;
+
+   /* check whether to apply restarts when there are active pricers available */
+   if( SCIPgetNActivePricers(scip) > 0 && ! eventhdlrdata->restartactpricers )
+      return FALSE;
+
+   /* check whether to apply a restart when nonlinear constraints are present */
+   if( SCIPisNLPConstructed(scip) && ! eventhdlrdata->restartnonlinear )
+      return FALSE;
 
    /* check if max number of restarts has been reached */
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
@@ -2746,7 +2761,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
-   if( ! isRestartApplicable(eventhdlrdata) )
+   if( ! isRestartApplicable(scip, eventhdlrdata) )
       return SCIP_OKAY;
 
    /* test if a restart should be applied */
@@ -2877,6 +2892,14 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddRealParam(scip, "estimation/restarts/restartfactor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->restartfactor, FALSE, DEFAULT_RESTARTFACTOR, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restarts/restartnonlinear",
+         "whether to apply a restart when nonlinear constraints are present",
+         &eventhdlrdata->restartnonlinear, FALSE, DEFAULT_RESTARTNONLINEAR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/restarts/restartactpricers",
+         "whether to apply a restart when active pricers are used",
+         &eventhdlrdata->restartactpricers, FALSE, DEFAULT_RESTARTACTPRICERS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "estimation/coefmonoweight",
          "coefficient of tree weight in monotone approximation of search completion",
