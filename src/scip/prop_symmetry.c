@@ -642,14 +642,17 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
-   if ( propdata->schreiersimsenabled )
+   if ( propdata->schreiersimsenabled && propdata->schreiersimsleadervartype != (int) SCIP_VARTYPE_BINARY )
    {
-      for (i = 0; i < propdata->npermvars; ++i)
+      for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         if ( (int) SCIPvarGetType(propdata->permvars[i]) == propdata->schreiersimsleadervartype )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         }
       }
    }
-   else if ( propdata->binvaraffected )
+   if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
