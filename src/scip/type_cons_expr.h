@@ -795,7 +795,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
 
-/** nonlinear handler enforcement callback
+/** nonlinear handler separation and enforcement callback
  *
  * The method tries to separate the given solution from the set defined by either
  *   expr - auxvar <= 0 (if !overestimate)
@@ -809,6 +809,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - bound tightening, i.e., changing bounds on a variable so that the given point is
  *   outside the updated domain,
  * - adding branching scores to potentially split the current problem into 2 subproblems
+ * If parameter inenforcement is FALSE, then only the first option (separation) is allowed.
  *
  * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
  * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
@@ -821,10 +822,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * cons_expr core may call this callback first with allowweakcuts=FALSE and repeat later with
  * allowweakcuts=TRUE, if it didn't succeed to enforce a solution without using weak cuts.
- * If it cannot enforce by separation or bound tightening and addbranchscores is TRUE, the nlhdlr should register
+ * If in enforcement and the NLHDLR cannot enforce by separation or bound tightening, it should register
  * branching scores for those expressions where branching may help to compute tighter cuts in children.
- * Currently, bound tightening is prohibited if addbranchscores is FALSE
- * (TODO: should probably rename addbranchscores to something more expressive)
  *
  * The nlhdlr must set result to SCIP_SEPARATED if it added a cut, to SCIP_REDUCEDDOM if it added
  * a bound change, and to SCIP_BRANCHED if it added branching scores.
@@ -842,7 +841,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - overestimate : whether the expression needs to be over- or underestimated
  *  - allowweakcuts : whether we should only look for "strong" cuts, or anything that separates is fine
  *  - separated : whether another nonlinear handler already added a cut for this expression
- *  - addbranchscores: whether to add branching scores
+ *  - inenforcement: whether we are in enforcement, or only in separation
  *  - result : pointer to store the result
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRENFO(x) SCIP_RETCODE x (\
