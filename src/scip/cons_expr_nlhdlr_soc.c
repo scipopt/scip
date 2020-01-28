@@ -198,6 +198,7 @@ SCIP_RETCODE createDisaggr(
 {
    SCIP_VAR** vars;
    SCIP_Real* coefs;
+   SCIP_Real disrowrhs;
    char name[SCIP_MAXSTRLEN];
    int nvars;
    int size;
@@ -261,10 +262,12 @@ SCIP_RETCODE createDisaggr(
       ++nvars;
    }
 
+   disrowrhs = nlhdlrexprdata->offsets[nterms-1] * nlhdlrexprdata->coefs[nterms-1];
+
    /* create row */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->disrow, conshdlr, name,
-         -SCIPinfinity(scip), nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
+         -SCIPinfinity(scip), disrowrhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->disrow, nvars, vars, coefs) );
 
    /* free memory */
@@ -1556,7 +1559,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, " <= %f\n", rhs);
+   SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
 #endif
 
    /* create and store nonlinear handler expression data */
