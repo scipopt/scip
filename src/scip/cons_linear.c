@@ -11787,8 +11787,8 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* early termination if the activities deceed the gcd */
-        if( (offsetv == -1 && hasrhs && !SCIPisFeasGT(scip, maxactsub, siderest) && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-              (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && !SCIPisFeasLT(scip, minactsub, siderest - gcd)) )
+         if( (offsetv == -1 && hasrhs && SCIPisFeasLT(scip, maxactsub, siderest) && !SCIPisFeasLT(scip, minactsub, siderest - gcd)) ||
+              (haslhs && !SCIPisFeasGT(scip, maxactsub, siderest) && SCIPisFeasGT(scip, minactsub, siderest - gcd)) )
          {
             redundant = TRUE;
             break;
@@ -11819,8 +11819,8 @@ SCIP_RETCODE simplifyInequalities(
 
       /* check if we can remove redundant variables */
       if( v < nvars && (redundant ||
-            (offsetv == -1 && hasrhs && !SCIPisFeasGT(scip, maxactsub, siderest) && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-            (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && !SCIPisFeasLT(scip, minactsub, siderest - gcd))) )
+            (offsetv == -1 && hasrhs && SCIPisFeasLT(scip, maxactsub, siderest) && !SCIPisFeasLT(scip, minactsub, siderest - gcd)) ||
+            (haslhs && !SCIPisFeasGT(scip, maxactsub, siderest) && SCIPisFeasGT(scip, minactsub, siderest - gcd))) )
       {
          SCIP_Real oldcoef;
 
@@ -11868,8 +11868,8 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* is the redundancy really fulfilled */
-         assert((hasrhs && !SCIPisFeasGT(scip, tmpmaxactsub, siderest) && SCIPisFeasGT(scip, tmpminactsub, siderest - gcd)) ||
-               (haslhs && SCIPisFeasLT(scip, tmpmaxactsub, siderest) && !SCIPisFeasLT(scip, tmpminactsub, siderest - gcd)));
+         assert((hasrhs && SCIPisFeasLT(scip, tmpmaxactsub, siderest) && !SCIPisFeasLT(scip, tmpminactsub, siderest - gcd)) ||
+               (haslhs && !SCIPisFeasGT(scip, tmpmaxactsub, siderest) && SCIPisFeasGT(scip, tmpminactsub, siderest - gcd)));
 #endif
 
          SCIPdebugMsg(scip, "removing %d last variables from constraint <%s>, because they never change anything on the feasibility of this constraint\n",
