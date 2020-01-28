@@ -2985,7 +2985,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             if( SCIPintervalIsEmpty(infinity, childval) )
             {
                SCIPintervalSetEmpty(result);
-               break;
+               return SCIP_OKAY;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
             continue;
