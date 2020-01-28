@@ -3857,7 +3857,6 @@ SCIP_RETCODE addSchreierSimsConss(
    int* vartocomponent;
    int ncomponents;
    int* componentblocked;
-   SCIP_Shortbool* componentcompatible;
 
    int orbitidx;
    int orbitleaderidx;
@@ -3961,30 +3960,10 @@ SCIP_RETCODE addSchreierSimsConss(
    if ( nchgbds != NULL )
       *nchgbds = 0;
 
-   /* check whether components are compatible with the variable type of the leader */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentcompatible, ncomponents) );
+   /* ignore permutations of blocked components */
    for (c = 0; c < ncomponents; ++c)
    {
-      for (v = componentbegins[c]; v < componentbegins[c + 1]; ++v)
-      {
-         if ( (int) SCIPvarGetType(permvars[components[v]]) == leadervartype )
-         {
-            componentcompatible[c] = TRUE;
-            if ( mixedcomponents )
-               break;
-         }
-         else if ( ! mixedcomponents )
-         {
-            componentcompatible[c] = FALSE;
-            break;
-         }
-      }
-   }
-
-   /* ignore permutations of blocked components or incompatible components */
-   for (c = 0; c < ncomponents; ++c)
-   {
-      if ( componentblocked[c] || ! componentcompatible[c] )
+      if ( componentblocked[c] )
       {
          for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
          {
@@ -3993,8 +3972,6 @@ SCIP_RETCODE addSchreierSimsConss(
          }
       }
    }
-
-   SCIPfreeBufferArray(scip, &componentcompatible);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &norbitleadercomponent, ncomponents) );
 
@@ -4006,6 +3983,22 @@ SCIP_RETCODE addSchreierSimsConss(
       SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
             orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
             componentblocked, ncomponents, nmovedpermvars) );
+
+      /* stop if we require pure components and a component contains variables of different types */
+      if ( ! mixedcomponents )
+      {
+         for (p = 0; p < norbits; ++p)
+         {
+            if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != leadervartype )
+            {
+               success = FALSE;
+               break;
+            }
+         }
+      }
+
+      if ( ! success )
+         break;
 
       /* update symmetry information of conflict graph */
       if ( conflictgraphcreated )
