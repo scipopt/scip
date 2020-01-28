@@ -3963,7 +3963,7 @@ SCIP_RETCODE addSchreierSimsConss(
    if ( nchgbds != NULL )
       *nchgbds = 0;
 
-   /* ignore permutations of blocked components */
+   /* initialize array indicating whether permutations shall not be considered for orbit permutations */
    for (c = 0; c < ncomponents; ++c)
    {
       if ( componentblocked[c] )
@@ -3971,77 +3971,92 @@ SCIP_RETCODE addSchreierSimsConss(
          for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
          {
             inactiveperms[components[p]] = TRUE;
-            ++ninactiveperms;
          }
       }
    }
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &norbitleadercomponent, ncomponents) );
 
-   while ( ninactiveperms < nperms )
+   /* iterate over components and compute orbits */
+   for (c = 0; c < ncomponents; ++c)
    {
-      int nchanges = 0;
+      success = TRUE;
 
-      /* compute orbits w.r.t. active perms */
-      SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
-            orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
-            componentblocked, ncomponents, nmovedpermvars) );
+      if ( componentblocked[c] )
+         continue;
 
-      /* stop if we require pure components and a component contains variables of different types */
-      if ( ! mixedcomponents )
+      for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         inactiveperms[components[p]] = FALSE;
+      ninactiveperms = nperms - componentbegins[c + 1] + componentbegins[c];
+
+      while ( ninactiveperms < nperms )
       {
-         for (p = 0; p < norbits; ++p)
+         int nchanges = 0;
+
+         /* compute orbits w.r.t. active perms */
+         SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
+               orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
+               componentblocked, ncomponents, nmovedpermvars) );
+
+         /* stop if we require pure components and a component contains variables of different types */
+         if ( ! mixedcomponents )
          {
-            if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != leadervartype )
+            for (p = 0; p < norbits; ++p)
             {
-               success = FALSE;
-               break;
+               if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != leadervartype )
+               {
+                  success = FALSE;
+                  break;
+               }
+            }
+         }
+
+         if ( ! success )
+            break;
+
+         /* update symmetry information of conflict graph */
+         if ( conflictgraphcreated )
+         {
+            SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
+                  varmap, orbits, orbitbegins, norbits) );
+         }
+
+         /* select orbit and leader */
+         SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
+               permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
+               &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
+
+         if ( ! success )
+            break;
+
+         SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
+
+         /* add Schreier Sims cuts */
+         SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
+               orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
+
+         norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
+
+         if ( nchgbds != NULL )
+            *nchgbds += nchanges;
+
+         /* deactivate permutations that move the orbit leader */
+         posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( inactiveperms[p] )
+               continue;
+
+            if ( permstrans[posleader][p] != posleader )
+            {
+               inactiveperms[p] = TRUE;
+               ++ninactiveperms;
             }
          }
       }
 
-      if ( ! success )
-         break;
-
-      /* update symmetry information of conflict graph */
-      if ( conflictgraphcreated )
-      {
-         SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
-               varmap, orbits, orbitbegins, norbits) );
-      }
-
-      /* select orbit and leader */
-      SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
-            permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
-            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
-
-      if ( ! success )
-         break;
-
-      SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
-
-      /* add Schreier Sims cuts */
-      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
-            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
-
-      norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
-
-      if ( nchgbds != NULL )
-         *nchgbds += nchanges;
-
-      /* deactivate permutations that move the orbit leader */
-      posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
-      for (p = 0; p < nperms; ++p)
-      {
-         if ( inactiveperms[p] )
-            continue;
-
-         if ( permstrans[posleader][p] != posleader )
-         {
-            inactiveperms[p] = TRUE;
-            ++ninactiveperms;
-         }
-      }
+      for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         inactiveperms[components[p]] = TRUE;
    }
 
    for (c = 0; c < ncomponents; ++c)
