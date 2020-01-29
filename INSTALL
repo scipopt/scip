@@ -248,6 +248,9 @@ Here is what you have to do to get SCIP running:
    - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
    - "SYM=none"        to disable symmetry handling in mixed integer programs
 
+   - "PRESOL=true"     to use the presolve library and enable the MILP-sepcific presolver
+   - "PRESOL=false"    to disable the presolve library (default)
+
    On some machines, you should use gmake instead of make.
 
    On your first compilation you will be asked for some soft-link targets, depending on the
