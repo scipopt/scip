@@ -4140,7 +4140,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
 
    /* possibly stop */
-   if ( SCIPisStopped(scip) )
+   if ( SCIPisStopped(scip) || ! propdata->symconsenabled )
       return SCIP_OKAY;
 
    /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
