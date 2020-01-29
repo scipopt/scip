@@ -111,17 +111,18 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
+/* check a linearisation by comparing simplified expressions */
 static
 void checkLinearisation(
-   SCIP_SEPADATA*        sepadata,
-   int                   prodidx,
-   int                   linidx,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   int                   nvars,
-   SCIP_Real             cst,
-   SCIP_Bool             underestimate,
-   SCIP_Bool             overestimate
+   SCIP_SEPADATA*        sepadata,           /* separator data */
+   int                   prodidx,            /* product index */
+   int                   linidx,             /* linearisation index */
+   SCIP_VAR**            vars,               /* expected variables */
+   SCIP_Real*            vals,               /* expected coefficients */
+   int                   nvars,              /* expected number of variables */
+   SCIP_Real             cst,                /* expected constant */
+   SCIP_Bool             underestimate,      /* should the linearisation underestimate the product? */
+   SCIP_Bool             overestimate        /* should the linearisation overestimate the product? */
    )
 {
    SCIP_CONSEXPR_EXPR* linexpr;
@@ -145,6 +146,8 @@ void checkLinearisation(
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &linchildren[i], vars[i]) );
+
+      /* we don't want to fail if an expected number is different than the actual number by less than epsilon */
       if( SCIPisEQ(scip, vals[i], datacoefs[i]) )
       {
          vals[i] = datacoefs[i];
@@ -626,15 +629,12 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
    SCIPfreeBuffer(scip, &sepadata);
 }
 
+/* TODO proper checks */
 Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .description = "test creating linked lists of rows")
 {
-   SCIP_CONS* cons1;
-   SCIP_CONS* cons2;
-   SCIP_CONS* cons3;
-   SCIP_CONS* cons4;
-   SCIP_CONS* cons5;
+   SCIP_CONS* conss[5];
    SCIP_VAR* vars[3];
-   SCIP_Real coefs1[3];
+   SCIP_Real* coefs;
    SCIP_Bool cutoff;
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -659,30 +659,29 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
    vars[2] = b1;
 
    /* 0 <= 2x1 + 2x2 <= 1 */
-   coefs1[0] = 2.0; coefs1[1] = 2.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 2, vars, coefs1, 0.0, 1.0) );
+   coefs = (SCIP_Real[2]) {2.0, 2.0};
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conss[0], "c1", 2, vars, coefs, 0.0, 1.0) );
 
    /* 0 <= 2x1 + 1.5x2 + 3b1 <= 1 */
-   coefs1[0] = 2.0; coefs1[1] = 1.5; coefs1[2] = 3.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons2, "c2", 3, vars, coefs1, 0.0, 1.0) );
+   coefs = (SCIP_Real[3]) {2.0, 1.5, 3.0};
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conss[1], "c2", 3, vars, coefs, 0.0, 1.0) );
 
    /* 4x1 + 2x2 - b1 <= 1 */
-   coefs1[0] = 4.0; coefs1[1] = 2.0; coefs1[2] = -1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons3, "c3", 3, vars, coefs1, -SCIPinfinity(scip), 1.0) );
+   coefs = (SCIP_Real[3]) {4.0, 2.0, -1.0};
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conss[2], "c3", 3, vars, coefs, -SCIPinfinity(scip), 1.0) );
 
    /* x1 + 3x2 + b1 <= 2 */
-   coefs1[0] = 1.0; coefs1[1] = 3.0; coefs1[2] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons4, "c4", 3, vars, coefs1, -SCIPinfinity(scip), 2.0) );
+   coefs = (SCIP_Real[3]) {1.0, 3.0, 1.0};
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conss[3], "c4", 3, vars, coefs, -SCIPinfinity(scip), 2.0) );
 
    /* x1 - 2x2 <= 1 */
-   coefs1[0] = 1.0; coefs1[1] = -2.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons5, "c5", 2, vars, coefs1, -SCIPinfinity(scip), 1.0) );
+   coefs = (SCIP_Real[2]) {1.0, -2.0};
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conss[4], "c5", 2, vars, coefs, -SCIPinfinity(scip), 1.0) );
 
-   SCIP_CALL( SCIPaddCons(scip, cons1) );
-   SCIP_CALL( SCIPaddCons(scip, cons2) );
-   SCIP_CALL( SCIPaddCons(scip, cons3) );
-   SCIP_CALL( SCIPaddCons(scip, cons4) );
-   SCIP_CALL( SCIPaddCons(scip, cons5) );
+   for( i = 0; i < 5; ++i )
+   {
+      SCIP_CALL( SCIPaddCons(scip, conss[i]) );
+   }
 
    /* construct the LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
@@ -771,9 +770,8 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
 
    SCIPfreeBufferArray(scip, &prob_rows);
 
-   SCIP_CALL( SCIPreleaseCons(scip, &cons5) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons4) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons3) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   for( i = 4; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );
+   }
 }
