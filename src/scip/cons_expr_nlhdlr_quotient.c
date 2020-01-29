@@ -25,7 +25,7 @@
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "quotient"
-#define NLHDLR_DESC         "quotient handler for expressions"
+#define NLHDLR_DESC         "quotient handler for quotient expressions"
 #define NLHDLR_PRIORITY     0
 
 /*
@@ -37,6 +37,12 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
+   SCIP_VAR*             nomvar;             /**< variable of the nominator */
+   SCIP_Real             nomcoef;            /**< coefficient of the nominator */
+   SCIP_Real             nomconst;           /**< constant of the nominator */
+   SCIP_VAR*             denomvar;           /**< variable of the denominator */
+   SCIP_Real             denomcoef;          /**< coefficient of the denominator */
+   SCIP_Real             denomconst;         /**< constant of the denominator */
 };
 
 /** nonlinear handler data */
@@ -48,54 +54,111 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
-/* TODO: put your local methods here, and declare them static */
+/** helper method to create nonlinear handler expression data */
+static
+SCIP_RETCODE exprdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_VAR*             nomvar,             /**< variable of the nominator */
+   SCIP_Real             nomcoef,            /**< coefficient of the nominator */
+   SCIP_Real             nomconst,           /**< constant of the nominator */
+   SCIP_VAR*             denomvar,           /**< variable of the denominator */
+   SCIP_Real             denomcoef,          /**< coefficient of the denominator */
+   SCIP_Real             denomconst          /**< constant of the denominator */
+   )
+{
+   assert(nlhdlrexprdata != NULL);
+   assert(nomvar != NULL);
+   assert(denomvar != NULL);
+   assert(!SCIPisZero(scip, nomcoef));
+   assert(!SCIPisZero(scip, denomcoef));
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
+
+   /* store values */
+   (*nlhdlrexprdata)->nomvar = nomvar;
+   (*nlhdlrexprdata)->nomcoef = nomcoef;
+   (*nlhdlrexprdata)->nomconst = nomconst;
+   (*nlhdlrexprdata)->denomvar = denomvar;
+   (*nlhdlrexprdata)->denomcoef = denomcoef;
+   (*nlhdlrexprdata)->denomconst = denomconst;
+
+   /* capture variables */
+   SCIP_CALL( SCIPcaptureVar(scip, nomvar) );
+   SCIP_CALL( SCIPcaptureVar(scip, denomvar) );
+
+   return SCIP_OKAY;
+}
+
+/** helper method to free nonlinear handler expression data */
+static
+SCIP_RETCODE exprdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata  /**< nonlinear handler expression data */
+   )
+{
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata != NULL);
+   assert((*nlhdlrexprdata)->nomvar != NULL);
+   assert((*nlhdlrexprdata)->denomvar != NULL);
+
+   /* release variables */
+   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->denomvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->nomvar) );
+
+   /* free expression data of nonlinear handler */
+   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
+
+/** helper method to detect an expression of the form (a*x + b) / (c*y + d) */
+static
+SCIP_Bool isExpressionQuotient(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   /* TODO */
+
+   return FALSE;
+}
 
 /*
  * Callback methods of nonlinear handler
  */
 
 /** nonlinear handler copy callback */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrQuotient)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuotient(targetscip, targetconsexprhdlr) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrCopyhdlrQuotient NULL
-#endif
-
-/** callback to free data of handler */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataQuotient)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrFreehdlrdataQuotient NULL
-#endif
 
 
 /** callback to free expression specific data */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataQuotient)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata != NULL);
+
+   /* free expression data of nonlinear handler */
+   SCIP_CALL( exprdataFree(scip, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrFreeExprDataQuotient NULL
-#endif
 
 
 /** callback to be called in initialization */
@@ -220,20 +283,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 #endif
 
 
-/** nonlinear handler callback for reformulation */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulateQuotient)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrReformulateQuotient NULL
-#endif
-
 /*
  * nonlinear handler specific interface methods
  */
@@ -259,12 +308,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrQuotient);
-   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataQuotient);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataQuotient);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitQuotient, nlhdlrExitQuotient);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaQuotient, NULL, nlhdlrEstimateQuotient, nlhdlrExitSepaQuotient);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuotient, nlhdlrReversepropQuotient);
-   SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateQuotient);
 
    return SCIP_OKAY;
 }
