@@ -31,28 +31,33 @@ Test(separation, exponential, .init = setup, .fini = teardown,
    SCIP_Real constant;
    SCIP_Bool local;
    SCIP_Bool success;
+   SCIP_Bool branchcand = TRUE;
 
    SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expr, xexpr) );
 
    /* compute an overestimation (secant) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
 
-   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   branchcand = TRUE;
+   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, (exp(5) + 5 * exp(-1)) / 6.0, SCIPepsilon(scip));
    cr_assert_float_eq(coef, (exp(5) - exp(-1)) / 6.0, SCIPepsilon(scip));
    cr_assert(local);
+   cr_assert(branchcand);
 
    /* compute an underestimation (linearization) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
 
-   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   branchcand = TRUE;
+   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -exp(2), SCIPepsilon(scip));
    cr_assert_float_eq(coef, exp(2), SCIPepsilon(scip));
    cr_assert(!local);
+   cr_assert(!branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

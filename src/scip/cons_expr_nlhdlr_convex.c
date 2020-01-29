@@ -1091,6 +1091,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    assert(success != NULL);
 
    *success = FALSE;
+   *addedbranchscores = FALSE;
 
    /* if estimating on non-convex side, then do nothing */
    curvature = SCIPgetConsExprExprCurvature(nlexpr);
@@ -1147,9 +1148,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       SCIPaddRowprepConstant(rowprep, -deriv * varval);
    }
 
-   if( !*success )
-      return SCIP_OKAY;
-
    /* next add f(sol) */
    SCIPaddRowprepConstant(rowprep, auxvalue);
    rowprep->local = FALSE;
@@ -1159,58 +1157,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       (void*)expr,
       sol != NULL ? "sol" : "lp",
       sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
-{ /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* nlexpr;
-   SCIP_CONSEXPR_EXPR* origexpr;
-   SCIP_Real violation;
-   int i;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(success != NULL);
-
-   nlexpr = nlhdlrexprdata->nlexpr;
-   assert(nlexpr != NULL);
-
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
-
-   *success = FALSE;
-
-   /* we separate only convex functions here, so there should be little use for branching
-    * if violations are small or there are numerical issues, then we will not have generated a cut, though
-    * in that case, we will still branch, that is, register branchscores for all depending var exprs
-    */
-
-   /* compute violation */
-   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
-      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
-   else if( SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX  )
-      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-   else
-      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
-
-   /* if violation is not on the side that we need to enforce, then no need for branching */
-   if( violation <= 0.0 )
-      return SCIP_OKAY;
-
-   /* register violation as branchscore in all leafs */
-   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-   {
-      origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr);
-      assert(origexpr != NULL);
-
-      SCIPaddConsExprExprBranchScore(scip, origexpr, brscoretag, violation);
-   }
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1269,7 +1215,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;
 }

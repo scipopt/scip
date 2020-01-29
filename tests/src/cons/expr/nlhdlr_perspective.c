@@ -286,7 +286,7 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success, infeas;
    SCIP_CONS* cons;
-   int nbndchgs, ncuts;
+   int nbndchgs;
    SCIP_RESULT result;
    SCIP_SOL* sol;
    SCIP_ROW** cuts;
@@ -334,7 +334,7 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
    SCIPsetSolVal(scip, sol, z_2, 0.5);
    SCIPsetSolVal(scip, sol, z_3, 1);
 
-   SCIP_CALL( nlhdlrSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, SCIPfeastol(scip), FALSE, &result, &ncuts) );
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, TRUE, FALSE, FALSE, &result) );
    cr_assert(result == SCIP_SEPARATED);
    cuts = SCIPgetCuts(scip);
    cr_expect_eq(SCIPgetNCuts(scip), 2, "expecting number of cuts = 2, got %d\n", SCIPgetNCuts(scip));

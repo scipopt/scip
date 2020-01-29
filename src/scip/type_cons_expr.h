@@ -369,6 +369,8 @@ typedef enum
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
  * the constant part in \par constant.
+ * The callback shall set branchcand[i] to FALSE if branching in the i-th child would not
+ * improve the estimator. That is, branchcand[i] will be initialized to TRUE for all children.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -380,6 +382,7 @@ typedef enum
  *  - constant : buffer to store constant part of estimator
  *  - islocal : buffer to store whether estimator is valid locally only
  *  - success : buffer to indicate whether an estimator could be computed
+ *  - branchcand: array to indicate which children (not) to consider for branching
  */
 #define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -391,7 +394,8 @@ typedef enum
    SCIP_Real* coefs, \
    SCIP_Real* constant, \
    SCIP_Bool* islocal, \
-   SCIP_Bool* success)
+   SCIP_Bool* success, \
+   SCIP_Bool* branchcand)
 
 /** expression simplify callback
  *
@@ -463,57 +467,6 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPREXITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSEXPR_EXPR* expr)
-
-/** expression separation callback
- *
- * The method tries to separate a given point by using linearization variables stored at each expression.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr : expression constraint handler
- *  - cons : expression constraint
- *  - expr : expression
- *  - sol  : solution to be separated (NULL for the LP solution)
- *  - overestimate : whether the expression needs to be over- or underestimated
- *  - mincutviolation : minimal violation of a cut if it should be added to the LP
- *  - result : pointer to store the result
- *  - ncuts : pointer to store the number of added cuts
- */
-#define SCIP_DECL_CONSEXPR_EXPRSEPA(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONS* cons, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Bool overestimate, \
-   SCIP_Real mincutviolation, \
-   SCIP_RESULT* result, \
-   int* ncuts)
-
-/** expression branching score callback
- *
- * The method adds branching scores to its children if it finds that the value of the
- * linearization variables does not coincide with the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its children.
- * It shall return TRUE in success if no branching is necessary or branching scores have been added.
- * If returning FALSE in success, then other scoring methods will be applied, e.g., a fallback that
- * adds a score to every child.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression
- *  - sol  : solution (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
- *  - success: buffer to store whether the branching score callback was successful
- */
-#define SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   unsigned int brscoretag, \
-   SCIP_Bool* success)
 
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
@@ -593,8 +546,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA;  /**< prin
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
 #define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
-#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x10u /**< setting branching scores */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) /**< all enforcement methods */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) /**< all enforcement methods */
 
 typedef unsigned int                  SCIP_CONSEXPR_EXPRENFO_METHOD; /**< exprenfo bitflags */
 typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expression enforcement data */
@@ -843,14 +795,21 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
 
-/** nonlinear handler separation callback
+/** nonlinear handler separation and enforcement callback
  *
- * The method tries to find an affine hyperplane (a cut) that separates a given point
- * from the set defined by either
+ * The method tries to separate the given solution from the set defined by either
  *   expr - auxvar <= 0 (if !overestimate)
  * or
  *   expr - auxvar >= 0 (if  overestimate),
  * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ *
+ * It can do so by
+ * - separation, i.e., finding an affine hyperplane (a cut) that separates
+ *   the given point,
+ * - bound tightening, i.e., changing bounds on a variable so that the given point is
+ *   outside the updated domain,
+ * - adding branching scores to potentially split the current problem into 2 subproblems
+ * If parameter inenforcement is FALSE, then only the first option (separation) is allowed.
  *
  * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
  * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
@@ -860,6 +819,15 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * This is especially useful in situations where expr is the root expression of a constraint
  * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
  * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
+ *
+ * cons_expr core may call this callback first with allowweakcuts=FALSE and repeat later with
+ * allowweakcuts=TRUE, if it didn't succeed to enforce a solution without using weak cuts.
+ * If in enforcement and the NLHDLR cannot enforce by separation or bound tightening, it should register
+ * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ *
+ * The nlhdlr must set result to SCIP_SEPARATED if it added a cut, to SCIP_REDUCEDDOM if it added
+ * a bound change, and to SCIP_BRANCHED if it added branching scores.
+ * Otherwise, it may set result to SCIP_DIDNOTRUN or SCIP_DIDNOTFIND.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -871,12 +839,12 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - sol : solution to be separated (NULL for the LP solution)
  *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - mincutviolation :  minimal violation of a cut if it should be added to the LP
+ *  - allowweakcuts : whether we should only look for "strong" cuts, or anything that separates is fine
  *  - separated : whether another nonlinear handler already added a cut for this expression
+ *  - inenforcement: whether we are in enforcement, or only in separation
  *  - result : pointer to store the result
- *  - ncuts : pointer to store the number of added cuts
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_NLHDLRENFO(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONS* cons, \
@@ -886,10 +854,10 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
-   SCIP_Real mincutviolation, \
+   SCIP_Bool allowweakcuts, \
    SCIP_Bool separated, \
-   SCIP_RESULT* result, \
-   int* ncuts)
+   SCIP_Bool addbranchscores, \
+   SCIP_RESULT* result)
 
 /** nonlinear handler under/overestimation callback
  *
@@ -914,6 +882,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
  *  - rowprep : a rowprep where to store the estimator
  *  - success : buffer to indicate whether an estimator could be computed
+ *  - addbranchscores: indicates whether to register branching scores
+ *  - addedbranchscores: buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -926,35 +896,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool overestimate, \
    SCIP_Real targetvalue, \
    SCIP_ROWPREP* rowprep, \
-   SCIP_Bool* success)
-
-/** nonlinear handler callback for branching scores
- *
- * The method adds branching scores to successors if it finds that this is how to enforce
- * the relation between the auxiliary variable and the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its successors.
- * It shall return TRUE in success if no branching is necessary or branching scores have been added.
- * If returning FALSE in success, then other scoring methods will be applied.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression to be hashed
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - sol  : solution (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
- *  - success: buffer to store whether the branching score callback was successful
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   unsigned int brscoretag, \
-   SCIP_Bool* success)
+   SCIP_Bool* success, \
+   SCIP_Bool addbranchscores, \
+   SCIP_Bool* addedbranchscores)
 
 typedef struct SCIP_ConsExpr_Nlhdlr         SCIP_CONSEXPR_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< nonlinear handler data */

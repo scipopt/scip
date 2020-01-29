@@ -1065,7 +1065,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaBilinear)
 /** nonlinear handler separation callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaBilinear)
+SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoBilinear)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -1073,7 +1073,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaBilinear)
    return SCIP_OKAY;
 }
 #else
-#define nlhdlrSepaBilinear NULL
+#define nlhdlrEnfoBilinear NULL
 #endif
 
 
@@ -1095,6 +1095,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    SCIP_Bool mccsuccess = TRUE;
 
    *success = FALSE;
+   *addedbranchscores = FALSE;
 
    /* check whether an inequality is available */
    if( nlhdlrexprdata->noverineqs == 0 && nlhdlrexprdata->nunderineqs == 0 )
@@ -1286,21 +1287,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
    }
    return SCIP_OKAY;
 }
-
-
-/** nonlinear handler callback for branching scores */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrBranchscoreBilinear NULL
-#endif
 
 
 /*
@@ -1516,9 +1502,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataBilinear);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataBilinear);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitBilinear, nlhdlrExitBilinear);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaBilinear, nlhdlrSepaBilinear, nlhdlrEstimateBilinear, nlhdlrExitSepaBilinear);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaBilinear, nlhdlrEnfoBilinear, nlhdlrEstimateBilinear, nlhdlrExitSepaBilinear);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalBilinear, nlhdlrReversepropBilinear);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreBilinear);
 
    /* parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/useinteval",

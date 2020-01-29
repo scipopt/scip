@@ -810,12 +810,16 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    assert(success != NULL);
 
    *success = FALSE;
+   *addedbranchscores = FALSE;
 
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
     * propagate them, but it does not separate these
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+   {
+      SCIPdebugMsg(scip, "not estimating due to unknown curvature\n");
       return SCIP_OKAY;
+   }
 
    /* if estimating on non-convex side, then do nothing */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
@@ -1276,56 +1280,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
-{ /*lint --e{715}*/
-   SCIP_Real side;
-   SCIP_Real violation;
-   int i;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them; however, we only separate for convex quadratics, so we only provide branchscore in that case
-    * normally, we should not need to branch, but there could be small violations or numerical issues that
-    * prevented separation to succeed
-    */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
-      return SCIP_OKAY;
-
-   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
-
-   side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-   SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
-      SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
-         "concave");
-
-   /* if convex, then we enforce expr <= auxvar, so violation is expr - auxvar = activity - side, if positive
-    * if concave, then we enforce expr >= auxvar, so violation is auxvar - expr = side - activity, if positive
-    */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
-      violation = MAX(0.0, auxvalue - side);
-   else /* nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE */
-      violation = MAX(0.0, side - auxvalue);
-
-   /* if there is violation, then add branchscore for all expr in quadratic part */
-   if( violation > 0.0 )
-   {
-      for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
-         SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->quadexprterms[i].expr, brscoretag, violation);
-
-      *success = TRUE;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** nonlinear handler copy callback
  *
  * the method includes the nonlinear handler into a expression constraint handler
@@ -1363,7 +1317,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateQuadratic, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreQuadratic);
 
    return SCIP_OKAY;
 }

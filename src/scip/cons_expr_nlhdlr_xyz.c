@@ -179,10 +179,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 #endif
 
 
-/** nonlinear handler separation callback */
+/** nonlinear handler enforcement callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaXyz)
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrEnfoXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -190,7 +190,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaXyz)
    return SCIP_OKAY;
 }
 #else
-#define nlhdlrSepaXyz NULL
+#define nlhdlrEnfoXyz NULL
 #endif
 
 
@@ -239,23 +239,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 #endif
 
 
-/** nonlinear handler callback for branching scores */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreXyz)
-{ /*lint --e{715}*/
-   *success = FALSE;
-
-   SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrBranchscoreXyz NULL
-#endif
-
-
 /** nonlinear handler callback for reformulation */
 #if 0
 static
@@ -298,9 +281,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataXyz);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataXyz);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrSepaXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreXyz);
    SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateXyz);
 
    return SCIP_OKAY;

@@ -862,6 +862,32 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
 );
 
+
+/* Cleans up and attempts to improve rowprep
+ *
+ * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ * Scales coefficients and side to have maximal coefficient in [1/maxcoefbound,maxcoefbound].
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
+ *
+ * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ * Thus, the coef.range can be obtained via REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) (if nvars>0).
+ *
+ * success is set to TRUE if and only if the rowprep satisfies the following:
+ * - the coef.range is below maxcoefrange
+ * - the absolute value of coefficients are below SCIPs value of infinity
+ * - the absolute value of the side is below SCIPs value of infinity
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupRowprep2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
+   SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
+   SCIP_Real             maxcoefbound,       /**< bound on absolute value of largest coefficient */
+   SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
+   );
+
 /** Scales up a rowprep to increase coefficients/sides that are within epsilon to an integer value, if possible.
  *
  * Computes the minimal fractionality of all fractional coefficients and the side of the rowprep.
