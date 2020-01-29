@@ -404,9 +404,10 @@ SCIP_RETCODE setupAggregationData(
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrows, aggrrowsminsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrowscoef, aggrrowsminsize) );
+               aggrdata->aggrrowssize = aggrrowsminsize;
             }
-            assert(aggrdata->aggrrows != NULL);
-            assert(aggrdata->aggrrowscoef != NULL);
+            assert(aggrdata->aggrrows != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowscoef != NULL || aggrdata->aggrrowssize == 0);
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
