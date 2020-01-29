@@ -109,7 +109,6 @@ static
 void checkData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
    SCIP_VAR**            vars,
-   SCIP_Real*            coefs,
    SCIP_Real*            offsets,
    SCIP_Real*            transcoefs,
    int*                  transcoefsidx,
@@ -123,7 +122,6 @@ void checkData(
    int i;
 
    cr_assert_not_null(nlhdlrexprdata->vars);
-   cr_assert_not_null(nlhdlrexprdata->coefs);
    cr_assert_not_null(nlhdlrexprdata->offsets);
    cr_assert_not_null(nlhdlrexprdata->nnonzeroes);
    cr_assert_not_null(nlhdlrexprdata->transcoefs);
@@ -140,12 +138,6 @@ void checkData(
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
       cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected variable %d to be %s, but got %s\n",
          i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(nlhdlrexprdata->vars[i]));
-   }
-
-   for( i = 0; i < nterms; ++i )
-   {
-      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->coefs[i], coefs[i]), "expected coef %d to be %f, but got %f\n",
-         i + 1, coefs[i], nlhdlrexprdata->coefs[i]);
    }
 
    for( i = 0; i < nterms; ++i )
@@ -235,14 +227,13 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(expr)};
-   SCIP_Real coefs[4] = {1.0, 1.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
    SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
    int transcoefsidx[4] = {0, 1, 2, 3};
    int nnonzeroes[4] = {1, 1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -284,20 +275,19 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(normexpr)};
-   SCIP_Real coefs[4] = {1.0, 1.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
    SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
    int transcoefsidx[4] = {0, 1, 2, 3};
    int nnonzeroes[4] = {1, 1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects sqrt( 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) as soc expression */
+/* detects SQRT(8 +  2*(x + 1)^2 + 4*(sin(y) - 2)^2 ) as soc expression */
 Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expression")
 {
    SCIP_CONS* cons;
@@ -309,7 +299,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 4*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -337,14 +327,13 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* setup expected data */
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[2]);
    SCIP_VAR* vars[3] = {x, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
-   SCIP_Real coefs[3] = {2.0, 3.0, 1.0};
-   SCIP_Real offsets[3] = {1.0, -2.0, 0.0};
-   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   SCIP_Real offsets[3] = {SQRT(2.0), -4.0, 0.0};
+   SCIP_Real transcoefs[3] = {SQRT(2.0), 2.0, 1.0};
    int transcoefsidx[3] = {0, 1, 2};
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 8.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 8.0);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -388,20 +377,19 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* setup expected data */
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {x, sinauxvar, y};
-   SCIP_Real coefs[3] = {2.0, 1.0, SQRT(9.0)};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[3] = {SQRT(2.0), 1.0, 3.0};
    int transcoefsidx[3] = {0, 1, 2};
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 0.0);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects 5 - 7cos(x)^2 + y^2 + 2sin(z)^2 <= 4 as soc expression */
+/* detects 5 - 9cos(x)^2 + y^2 + 2sin(z)^2 <= 4 as soc expression */
 Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadratic expression")
 {
    SCIP_CONS* cons;
@@ -412,7 +400,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 5 - 7*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 5 - 9*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -440,14 +428,13 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
-   SCIP_Real coefs[3] = {1.0, 2.0, SQRT(7.0)};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -503,7 +490,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 1 + 7*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 1 + 8*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -529,14 +516,13 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real coefs[4] = {14.0, 4.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[6] = {1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
    int nnonzeroes[4] = {1, 1, 2, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -592,7 +578,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -5 + 7*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -5 + 9*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -620,14 +606,13 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
-   SCIP_Real coefs[3] = {1.0, 2.0, SQRT(7.0)};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -644,7 +629,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -1 - 7*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -1 - 8*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -670,14 +655,13 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real coefs[4] = {14.0, 4.0, 1.0, 1.0};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[6] = {1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
+   SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
    int nnonzeroes[4] = {1, 1, 2, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -721,16 +705,15 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
 
    /* setup expected data */
    SCIP_VAR* vars[3] = {x, y, z};
-   SCIP_Real coefs[3] = {1.221024161223004, 2.45699535030454, -1.2360121980419372};
-   SCIP_Real offsets[3] = {0.43579753197260707, 0.4739266455634833, -2.650186894292017};
-   SCIP_Real transcoefs[9] = { 0.1299461082832169,  0.7137532837947576, -0.688237065853218,
-                               0.5722025535583013,  0.5128905029681603,  0.6399434113001139,
-                              -0.3417633267618488, -0.4769691623546202,  0.8097519661250633};
+   SCIP_Real offsets[3] = {0.5321193159399078, 1.1644355645349063, 3.275663328435811};
+   SCIP_Real transcoefs[9] = { 0.15866733787070855, 0.8715100046656585, -0.8403540860560068,
+                               1.4058990135251308,  1.2601695810081268,  1.5723379860224058,
+                               0.42242364072103755, 0.5895397027601558, -1.0008633075190196};
    int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
    int nnonzeroes[3] = {3, 3, 3};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -774,22 +757,21 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
 
    /* setup expected data */
    SCIP_VAR* vars[3] = {x, y, z};
-   SCIP_Real coefs[3] = {2.45699535030454, 1.221024161223004, -1.2360121980419372};
-   SCIP_Real offsets[3] = {0.4739266455634833, 0.43579753197260707, -2.650186894292017};
-   SCIP_Real transcoefs[9] = { 0.5722025535583013,  0.5128905029681603,  0.6399434113001139,
-                               0.1299461082832169,  0.7137532837947576, -0.688237065853218,
-                              -0.3417633267618488, -0.4769691623546202,  0.8097519661250633};
+   SCIP_Real offsets[3] = {1.1644355645349063, 0.5321193159399078, 3.275663328435811};
+   SCIP_Real transcoefs[9] = { 1.4058990135251308,  1.2601695810081268,  1.5723379860224058,
+                               0.15866733787070855, 0.8715100046656585, -0.8403540860560068,
+                               0.42242364072103755, 0.5895397027601558, -1.0008633075190196};
    int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
    int nnonzeroes[3] = {3, 3, 3};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* disaggregates sqrt( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
+/* disaggregates SQRT( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
 {
    SCIP_CONS* cons;
