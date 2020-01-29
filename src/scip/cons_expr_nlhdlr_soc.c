@@ -21,9 +21,9 @@
  *
  * This is a nonlinear handler for second order cone constraints of the form
  *
- * \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (v_i^T x + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} \alpha_i\, (v_i^T x + \beta_i)^2} \leq \alpha_{n+1}\, (v_{n+1}^T x + \beta_{n+1})\f$
  *
- * where \f$\gamma \geq 0\f$ and \f$\alpha_{n+1}\, (x_{n+1}+\beta_{n+1}) \geq 0\f$.
+ * where \f$\gamma \geq 0\f$, \f$\alpha_i \geq 0 \forall i\f$, and \f$\v_{n+1}^T x +\beta_{n+1} \geq 0\f$.
  */
 
 #include <string.h>
@@ -49,7 +49,7 @@
 
 /** nonlinear handler expression data. The data is structured in the following way:
  *
- *  A 'term' is one of the quadratic terms of the form alpha_i * (v_i^T x + beta_i))^2.
+ *  A 'term' is one of the quadratic terms of the form alpha_i * (v_i^T x + beta_i)^2.
  *  The last term is always the one on the right-hand side. This means that nterms is
  *  equal to n+1 in the above description.
  *
@@ -60,7 +60,7 @@
  *  - transcoefsidx contains for each entry of transcoefs the position of the respective variable in vars
  *  - termbegins contains the index at which the transcoefs of each term start
  *  - nnonzeroes contains the number of non-zeroes in v_i of each term
- *  - constant is the constant of the square root gamma
+ *  - constant is gamma which is the constant inside the square root
  *  - nvars is the total number of unique variables appearing
  *  - nterms is the total number of terms appearing on both sides
  *  - ntranscoefs is the total number of entries in transcoefs and transcoefsidx
@@ -69,16 +69,16 @@
  *  described above is replaced by n+1 (or n if gamma = 0) smaller SOCs
  *
  *   alpha_i * (v_i^T x + beta_i))^2 <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1})
- *                             gamma <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1})
+ *                             gamma <= disvar_{n+1} * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1})
  *
- *  and the row       sum_i disvar_i <= disvar_i * alpha_{n+1} * (v_{n+1}^T x + beta_{n+1}).
+ *  and the row       sum_i disvar_i <= alpha_{n+1} * (v_{n+1}^T x + beta_{n+1}).
  *
  *
- *  Example: The constraint SQRT(5 + 2*(3x + 4y + 2)^2 + y^2 - 7z^2) <= 5x + y - 1
+ *  Example: The constraint SQRT(5 + 2*(3x + 4y + 2)^2 + y^2 + 7z^2) <= 5x + y - 1
  *           results in the following nlhdlrexprdata:
  *
  *           vars = {x, y, z}
- *           coefs = {2, 1, -7, 1}
+ *           coefs = {2, 1, 7, 1}
  *           offsets = {2, 0, 0, -1}
  *           transcoefs = {3, 4, 1, 1, 5, 1}
  *           transcoefsidx = {0, 1, 1, 2, 0, 1}
