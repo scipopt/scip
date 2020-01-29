@@ -17,6 +17,8 @@
  * @brief  tests quadratic nonlinear handler methods
  * @author Fabian Wegscheider
  *
+ * @TODO: make the coefficient and variables checks independent of their order
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -137,37 +139,37 @@ void checkData(
    {
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
       cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected variable %d to be %s, but got %s\n",
-         i+1, SCIPvarGetName(vars[i]), SCIPvarGetName(nlhdlrexprdata->vars[i]));
+         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(nlhdlrexprdata->vars[i]));
    }
 
    for( i = 0; i < nterms; ++i )
    {
       cr_expect(SCIPisEQ(scip, nlhdlrexprdata->coefs[i], coefs[i]), "expected coef %d to be %f, but got %f\n",
-         i+1, coefs[i], nlhdlrexprdata->coefs[i]);
+         i + 1, coefs[i], nlhdlrexprdata->coefs[i]);
    }
 
    for( i = 0; i < nterms; ++i )
    {
       cr_expect(SCIPisEQ(scip, nlhdlrexprdata->offsets[i], offsets[i]), "expected offset %d to be %f, but got %f\n",
-         i+1, offsets[i], nlhdlrexprdata->offsets[i]);
+         i + 1, offsets[i], nlhdlrexprdata->offsets[i]);
    }
 
    for( i = 0; i < nterms; ++i )
    {
       cr_expect_eq(nlhdlrexprdata->nnonzeroes[i], nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
-         i+1, nnonzeroes[i], nlhdlrexprdata->nnonzeroes[i]);
+         i + 1, nnonzeroes[i], nlhdlrexprdata->nnonzeroes[i]);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
       cr_expect(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef %d to be %f, but got %f\n",
-         i+1, transcoefs[i], nlhdlrexprdata->transcoefs[i]);
+         i + 1, transcoefs[i], nlhdlrexprdata->transcoefs[i]);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
       cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefsidx[i], "expected transcoefsidx %d to be %d, but got %d\n",
-         i+1, transcoefsidx[i], nlhdlrexprdata->transcoefsidx[i]);
+         i + 1, transcoefsidx[i], nlhdlrexprdata->transcoefsidx[i]);
    }
 }
 
@@ -193,8 +195,8 @@ void checkCut(
    for( i = 0; i < nvars; ++i )
    {
       cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(cut)[i]), vars[i], "expected var%d = %s, but got %s\n",
-         i+1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(cut)[i])));
-      cr_expect_eq(SCIProwGetVals(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i+1, vals[i],
+         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(cut)[i])));
+      cr_expect_eq(SCIProwGetVals(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
          SCIProwGetVals(cut)[i]);
    }
 }
@@ -787,8 +789,8 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* disaggregates sqrt( 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) */
-Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expression")
+/* disaggregates sqrt( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
+Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -806,12 +808,11 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect(!infeasible);
+   cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
    cr_assert_not(infeasible);
-
 
    expr = SCIPgetExprConsExpr(scip, cons);
    normexpr = SCIPgetConsExprExprChildren(expr)[1];
@@ -825,24 +826,24 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
    cr_assert_not_null(nlhdlrexprdata);
 
    /* check disvars */
-   cr_expect(nlhdlrexprdata->disvars[0] != NULL);
-   cr_expect(nlhdlrexprdata->disvars[1] != NULL);
-   cr_expect(nlhdlrexprdata->disvars[2] != NULL);
+   cr_expect_not_null(nlhdlrexprdata->disvars[0]);
+   cr_expect_not_null(nlhdlrexprdata->disvars[1]);
+   cr_expect_not_null(nlhdlrexprdata->disvars[2]);
 
-   cr_expect(SCIProwGetNNonz(nlhdlrexprdata->disrow) == 4);
+   cr_expect_eq(SCIProwGetNNonz(nlhdlrexprdata->disrow), 4);
 
    cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[0], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[0]);
    cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[1], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[1]);
    cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[2], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[2]);
    cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[3], -1.0, "expected %f, but got %f\n", -1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[3]);
 
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]) == nlhdlrexprdata->disvars[0]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]) == nlhdlrexprdata->disvars[1]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]) == nlhdlrexprdata->disvars[2]);
-   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]) == nlhdlrexprdata->vars[2]);
+   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]), nlhdlrexprdata->disvars[0]);
+   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]), nlhdlrexprdata->disvars[1]);
+   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]), nlhdlrexprdata->disvars[2]);
+   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), nlhdlrexprdata->vars[2]);
 
-   cr_expect(SCIProwGetLhs(nlhdlrexprdata->disrow) == -SCIPinfinity(scip));
-   cr_expect(SCIProwGetRhs(nlhdlrexprdata->disrow) == 0.0);
+   cr_expect_eq(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
+   cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0);
 
    /* free expr and cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
