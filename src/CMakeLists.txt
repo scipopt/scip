@@ -72,6 +72,7 @@ set(scipsources
     scip/cons_expr_nlhdlr_default.c
     scip/cons_expr_nlhdlr_perspective.c
     scip/cons_expr_nlhdlr_quadratic.c
+    scip/cons_expr_nlhdlr_quotient.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -523,6 +524,7 @@ set(scipheaders
     scip/cons_expr_nlhdlr_convex.h
     scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
+    scip/cons_expr_nlhdlr_quotient.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
