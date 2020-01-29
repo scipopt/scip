@@ -196,15 +196,15 @@ while [ $PERM -le $PERMUTE ]; do
   # can have several tests sent to the cluster, that is why the jenkins job
   # name (i.e, the directory name) is not enough)
   LOCINFO=$(cd ..; pwd)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${LOCINFO##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
+  DATABASE="/nfs/OPTI/adm_timo/databases/${LOCINFO##*/}_${TESTSET}_${SETTING}_${IDENT}_${LPS}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
   OUTPUT="${DATABASE}_output.tmp"
   touch ${STILLFAILING}
 
   SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [OPT: $OPT] [LPS: $LPS] [GITHASH: $GITHASH] [PERM: $PERM]"
-  if [ "${PSSUBJECT}" != "" ]; then
-    SUBJECTINFO="${SUBJECTINFO} ${PSSUBJECT}"
+  if [ "${IDENT}" != "" ]; then
+    SUBJECTINFO="${SUBJECTINFO} ${IDENT}"
   fi
 
   AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
