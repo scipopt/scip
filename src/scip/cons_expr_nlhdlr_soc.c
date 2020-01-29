@@ -1833,7 +1833,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 
 /** nonlinear handler separation callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
+SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
    int naggrs;
    int k;
@@ -1848,7 +1848,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
 
    /* check whether aggregation row is in the LP */
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow)
-      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol), mincutviolation ) )
+      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol), SCIPgetLPFeastol(scip) ) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
 
@@ -1866,7 +1866,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
       SCIP_ROW* row;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
+      SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), &row) );
 
       if( row != NULL )
       {
@@ -1875,8 +1875,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
             SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
-
-            *ncuts += 1;
 
             if( infeasible )
                *result = SCIP_CUTOFF;
@@ -1995,10 +1993,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataSoc);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataSoc);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrSepaSoc, nlhdlrEstimateSoc, nlhdlrExitSepaSoc);
-   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalSoc, nlhdlrReversepropSoc);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreSoc);
-   SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateSoc);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, nlhdlrEstimateSoc, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/alloweigenvaluecomps",
