@@ -222,6 +222,7 @@
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
+ * - @subpage TRAINESTIMATION "How to train custom custom tree size estimation for SCIP"
  */
 
 /**@page AUTHORS SCIP Authors
