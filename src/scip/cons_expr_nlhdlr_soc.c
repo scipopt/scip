@@ -47,7 +47,7 @@
  * Data structures
  */
 
-/** nonlinear handler expression data. The data is structured the following way:
+/** nonlinear handler expression data. The data is structured in the following way:
  *
  *  A 'term' is one of the quadratic terms of the form alpha_i * (v_i^T x + beta_i))^2.
  *  The last term is always the one on the right-hand side. This means that nterms is
