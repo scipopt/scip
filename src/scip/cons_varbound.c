@@ -2700,16 +2700,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
 
@@ -3119,6 +3119,11 @@ SCIP_RETCODE applyFixings(
       }
       else if( var != consdata->var )
       {
+         /* release and unlock old variable */
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          /* replace aggregated variable x in the constraint by its aggregation */
          if( varscalar > 0.0 )
          {
@@ -3163,10 +3168,6 @@ SCIP_RETCODE applyFixings(
 
             consdata->tightened = FALSE;
          }
-         /* release and unlock old variable */
-         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
-               !SCIPisInfinity(scip, consdata->rhs)) );
-         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
 
          consdata->var = var;
 
