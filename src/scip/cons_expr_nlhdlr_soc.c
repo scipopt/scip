@@ -57,7 +57,7 @@
  *  - coefs contains the coefficients alpha_i of each term
  *  - offsets contains the constants beta_i of each term
  *  - transcoefs contains the non-zero values of the transformation vectors v_i of each term
- *  - transcoefsidx contains for each entry of transcoefs the position of the resp. variable in vars
+ *  - transcoefsidx contains for each entry of transcoefs the position of the respective variable in vars
  *  - termbegins contains the index at which the transcoefs of each term start
  *  - nnonzeroes contains the number of non-zeroes in v_i of each term
  *  - constant is the constant of the square root gamma
