@@ -11887,6 +11887,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
+ * @note this function can only be called in SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11903,6 +11904,12 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
+      return SCIP_INVALIDCALL;
+   }
 
    /* if we already have auxvar, then just return it */
    if( expr->auxvar != NULL )
