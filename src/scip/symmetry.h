@@ -200,7 +200,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    );
 
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

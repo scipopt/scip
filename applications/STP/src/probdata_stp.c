@@ -3682,3 +3682,4 @@ void initReceivedSubproblem(
    assert(0 && "only call me when using UG");
 #endif
 }
+/**@} */

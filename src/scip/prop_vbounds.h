@@ -62,7 +62,7 @@ SCIP_RETCODE SCIPexecPropVbounds(
    SCIP_RESULT*          result              /**< pointer to store result */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

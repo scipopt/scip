@@ -147,6 +147,7 @@ typedef enum Proprule PROPRULE;
 
 /**@name Local methods
  *
+ * @{
  */
 
 /** compares two varbound constraints   cons1: \f$ lhs1 \le x1 + c1 y1 \le rhs1 \f$   and   cons2: \f$ lhs2 \le x2 + c2 y2 \le rhs2 \f$
@@ -4017,6 +4018,7 @@ SCIP_RETCODE upgradeConss(
 
 /**@name Linear constraint upgrading
  *
+ * @{
  */
 
 /** tries to upgrade a linear constraint into a variable bound constraint */

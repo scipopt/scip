@@ -109,7 +109,7 @@ enum SideChange
 };
 typedef enum SideChange SIDECHANGE;
 
-/** Signum for convex-combined variable coefficients (\lambda * A_{ri} + (1 - \lambda) * A_{si})
+/** Signum for convex-combined variable coefficients \f$(\lambda * A_{ri} + (1 - \lambda) * A_{si})\f$
  *  UP  - Coefficient changes from negative to positive for increasing lambda
  *  DN  - Coefficient changes from positive to negative for increasing lambda
  *  POS - Coefficient is positive for all lambda in (0,1)

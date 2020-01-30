@@ -146,9 +146,9 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

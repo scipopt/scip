@@ -181,7 +181,7 @@ int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
-/* @} */
+/** @} */
 
 /** get the heuristic to which this diving setting belongs */
 SCIP_EXPORT
@@ -404,7 +404,7 @@ SCIP_Bool SCIPdivesetIsPublic(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/* @} */
+/** @} */
 
 /**@defgroup PublicVariableGraphMethods Public Variable Graph Methods
  * @ingroup MiscellaneousMethods
@@ -464,7 +464,7 @@ void SCIPvariableGraphFree(
    SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
    );
 
-/* @} */
+/** @} */
 
 
 #ifdef __cplusplus

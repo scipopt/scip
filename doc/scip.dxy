@@ -1076,10 +1076,11 @@ INPUT_FILTER           = "sed 's/^EXTERN\([ ]*\)$/extern/g; /^SCIP_DEPRECATED/d'
 # properly processed by doxygen.
 
 # works with doxygen 1.8.13 but not with 1.8.11
-FILTER_PATTERNS        = "*/CHANGELOG=sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/\"/\&quot;/g' -e 's/ \#/ \\#/g'"
+FILTER_PATTERNS        = "*/CHANGELOG=sed -e 's#/\*#/\&lowast;#g' -e '1s/^/\/**/g' -e '$s/$/*\//' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/\"/\&quot;/g' -e 's/ \#/ \\#/g'"
 
 # depending on your doxygen version you might need to add/remove the outer pair of escaped quotes:
-# FILTER_PATTERNS        = "*/CHANGELOG=\"sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'\""
+#FILTER_PATTERNS        = "*/CHANGELOG=sed -e 's#/\*#/\&lowast;#g' -e '1s/^/\/**/g' -e '$s/$/*\//' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/\"/\&quot;/g' -e 's/ \#/ \\#/g'"
+#FILTER_PATTERNS        = "*/CHANGELOG=\"sed -e 's#/\*#/\&lowast;#g' -e '1s/^/\/**/g' -e '$s/$/*\//' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/ \#/ \\#/g'\""
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -2277,12 +2278,6 @@ EXTERNAL_GROUPS        = NO
 
 EXTERNAL_PAGES         = YES
 
-# The PERL_PATH should be the absolute path and name of the perl script
-# interpreter (i.e. the result of 'which perl').
-# The default file (with absolute path) is: /usr/bin/perl.
-
-PERL_PATH              =
-
 #---------------------------------------------------------------------------
 # Configuration options related to the dot tool
 #---------------------------------------------------------------------------
@@ -2295,15 +2290,6 @@ PERL_PATH              =
 # The default value is: YES.
 
 CLASS_DIAGRAMS         = NO
-
-# You can define message sequence charts within doxygen comments using the \msc
-# command. Doxygen will then run the mscgen tool (see:
-# http://www.mcternan.me.uk/mscgen/)) to produce the chart and insert it in the
-# documentation. The MSCGEN_PATH tag allows you to specify the directory where
-# the mscgen tool resides. If left empty the tool is assumed to be found in the
-# default search path.
-
-MSCGEN_PATH            =
 
 # You can include diagrams made with dia in doxygen documentation. Doxygen will
 # then run dia to produce the diagram and insert it in the documentation. The

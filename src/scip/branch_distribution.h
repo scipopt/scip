@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPupdateDistributionScore(
    char                  scoreparam          /**< parameter to determine the way the score is calculated */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

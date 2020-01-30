@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPdeleteSubproblemProximity(
    SCIP*                 scip                /** SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

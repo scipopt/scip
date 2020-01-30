@@ -89,7 +89,7 @@ SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Event methods
@@ -253,7 +253,7 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

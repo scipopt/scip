@@ -175,9 +175,9 @@ SCIP_Real SCIPgetRhsBivariate(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

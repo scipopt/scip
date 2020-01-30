@@ -413,9 +413,9 @@ int SCIPcomputeHmax(
    );
 
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

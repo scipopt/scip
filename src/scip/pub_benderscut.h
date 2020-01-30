@@ -122,7 +122,7 @@ void SCIPbenderscutSetEnabled(
    SCIP_Bool             enabled             /**< flag to indicate whether the Benders' decomposition cut is enabled */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -41,7 +41,7 @@ SCIP_RETCODE SCIPcreateNlpSolverXyz(
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
