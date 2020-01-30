@@ -392,6 +392,20 @@ SCIP_INTERVAL intEval(
    }
 
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
+   if( a*d - b*c > 0.0 ) /* monotone increasing */
+   {
+      /* TODO */
+   }
+   else if( a*d - b*c < 0.0 ) /* monotone decreasing */
+   {
+      /* TODO */
+   }
+   else /* a d = b c implies that f(x) = b / d + e, i.e., f is constant */
+   {
+      assert(a*d - b*c == 0.0);
+
+      /* TODO */
+   }
 
    /* don't forget the constant */
 
