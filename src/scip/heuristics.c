@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_crossoversub" */
+      /* set name to the original problem name and possibly add a suffix */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
       /* create the subproblem */

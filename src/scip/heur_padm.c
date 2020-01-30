@@ -86,6 +86,9 @@
 #define DEFAULT_MINNODES      50LL
 #define DEFAULT_MAXNODES      5000LL
 #define DEFAULT_NODEFAC       0.8
+#define DEFAULT_ADMIT         4
+#define DEFAULT_PENALTYIT     100
+#define DEFAULT_GAP           2.0
 
 /*
  * Data structures
@@ -1448,6 +1451,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                            assert(binfoout != NULL);
 
                            sol = SCIPgetBestSol((problem->blocks[b]).subscip);
+                           assert(sol != NULL);
                            var = binfoout->linkvar;
                            val = SCIPgetSolVal((problem->blocks[b]).subscip, sol, var);
 
@@ -1698,7 +1702,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip, "maximum number of penalty loops reached\n");
       *result = SCIP_DIDNOTFIND;
    }
-   
+
 
 TERMINATE:
    /* release variables, constraints and free memory */
@@ -1831,13 +1835,13 @@ SCIP_RETCODE SCIPincludeHeurPADM(
       "factor to control nodelimits of subproblems", &heurdata->nodefac, TRUE, DEFAULT_NODEFAC, 0.0, 0.99, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
-      "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 1, 100, NULL, NULL) );
+      "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, DEFAULT_ADMIT, 1, 100, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/penaltyiterations",
-      "maximal number of penalty iterations", &heurdata->penaltyiterations, TRUE, 100, 1, 100000, NULL, NULL) );
+      "maximal number of penalty iterations", &heurdata->penaltyiterations, TRUE, DEFAULT_PENALTYIT, 1, 100000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gap",
-      "mipgap at start", &heurdata->gap, TRUE, 8.0, 0.0, 16.0, NULL, NULL) );
+      "mipgap at start", &heurdata->gap, TRUE, DEFAULT_GAP, 0.0, 16.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scaling",
       "enable sigmoid rescaling of penalty parameters", &heurdata->scaling, TRUE, TRUE, NULL, NULL) );

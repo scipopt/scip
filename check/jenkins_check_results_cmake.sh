@@ -44,6 +44,7 @@ export SETTINGS
 export EXECUTABLE
 export GITBRANCH
 export MODE
+export OPT
 
 # if SEEDS is not a number, set it to 0
 re='^[0-9]+$'

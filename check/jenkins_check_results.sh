@@ -14,7 +14,7 @@
 
 echo "This is jenkins_check_results.sh running."
 export PSMESSAGE=$PSMESSAGE
-export PSSUBJECT=$PSSUBJECT
+export IDENT=$IDENT
 
 # set up environment for jenkins_failcheck.sh
 export TESTSET=$1

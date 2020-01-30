@@ -21,6 +21,11 @@ Interface changes
 ### Interfaces to external software
 ### Changed parameters
 ### New parameters
+
+- It is now possible to add orbitope constraints to handle symmetries even if not all variables
+  in a component of the symmetry group are binary. This feature can be enabled using the
+  parameter "propagating/symmetry/onlybinorbitope".
+
 ### Data structures
 
 Deleted files
@@ -662,6 +667,14 @@ Fixed bugs
 - fixed treatment of multi-aggregated variables in logicor constraint handler
 - handle special case of redundant implications
 - fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
+- fixed numerical issue related to very large greatest common dividers in linear constraint handler
+- avoid using implications on multiaggregated variables when propagating implications
+- fixed creation of (Lagrangian) variable bounds in the OBBT propagator
+- fixed sorting of primal solutions
+- fixed cleaning of clean buffer in conflict analysis
+- avoid probing on variables with huge bounds in shift and propagate heuristic
+- fix issue in printing solutions for variables that have been added by the dual sparsify presolver
+- fix issue related to fixing redundant logic-or constraints after presolving
 
 Miscellaneous
 -------------

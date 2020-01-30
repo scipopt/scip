@@ -3039,7 +3039,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
    case SCIP_LPPAR_MARKOWITZ:
       *dval = lpi->parameters->markowitz_singularity_threshold();
@@ -3091,7 +3091,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->conditionlimit = dval;
       lpi->checkcondition = (dval >= 0.0);
       break;
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
    case SCIP_LPPAR_MARKOWITZ:
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_MARKOWITZ -> %f.\n", dval);
