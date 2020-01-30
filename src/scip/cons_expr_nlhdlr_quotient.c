@@ -22,6 +22,7 @@
 
 #include "scip/cons_expr_nlhdlr_quotient.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr.h"
@@ -46,6 +47,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_VAR*             denomvar;           /**< variable of the denominator */
    SCIP_Real             denomcoef;          /**< coefficient of the denominator */
    SCIP_Real             denomconst;         /**< constant of the denominator */
+   SCIP_Real             constant;           /**< constant */
 };
 
 /** nonlinear handler data */
@@ -67,7 +69,8 @@ SCIP_RETCODE exprdataCreate(
    SCIP_Real             nomconst,           /**< constant of the nominator */
    SCIP_VAR*             denomvar,           /**< variable of the denominator */
    SCIP_Real             denomcoef,          /**< coefficient of the denominator */
-   SCIP_Real             denomconst          /**< constant of the denominator */
+   SCIP_Real             denomconst,         /**< constant of the denominator */
+   SCIP_Real             constant            /**< constant */
    )
 {
    assert(nlhdlrexprdata != NULL);
@@ -86,6 +89,7 @@ SCIP_RETCODE exprdataCreate(
    (*nlhdlrexprdata)->denomvar = denomvar;
    (*nlhdlrexprdata)->denomcoef = denomcoef;
    (*nlhdlrexprdata)->denomconst = denomconst;
+   (*nlhdlrexprdata)->constant = constant;
 
    /* capture variables */
    SCIP_CALL( SCIPcaptureVar(scip, nomvar) );
@@ -162,8 +166,8 @@ SCIP_Bool isExprUnivariateLinear(
    return FALSE;
 }
 
-/** helper method to detect an expression of the form (a*x + b) / (c*y + d); due to the expansion of products, there
-  * are two types of expressions that can be detected:
+/** helper method to detect an expression of the form (a*x + b) / (c*y + d) + e; due to the expansion of products,
+  * there are two types of expressions that can be detected:
   *
   * 1. prod(f(x), pow(g(y),-1))
   * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
@@ -181,18 +185,24 @@ SCIP_RETCODE detectExpr(
    SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
    SCIP_CONSEXPR_EXPRHDLR* powhdlr;
    SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONSEXPR_EXPR* denomexpr = NULL;
+   SCIP_CONSEXPR_EXPR* nomexpr = NULL;
    SCIP_VAR* x = NULL;
    SCIP_VAR* y = NULL;
-   SCIP_Real a, b, c, d;
-   SCIP_VAR* var;
-   SCIP_Real constant;
-   SCIP_Real coef;
+   SCIP_Real a, b, c, d, e;
+   SCIP_Real nomfac = 1.0;
+   SCIP_Real nomconst = 0.0;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
    *success = FALSE;
+   a = 0.0;
+   b = 0.0;
+   c = 0.0;
+   d = 0.0;
+   e = 0.0;
 
    /* possible structures only have two children */
    if( SCIPgetConsExprExprNChildren(expr) != 2 )
@@ -213,9 +223,6 @@ SCIP_RETCODE detectExpr(
    /* case: prod(f(x), pow(g(y),-1)) */
    if( SCIPgetConsExprExprHdlr(expr) == prodhdlr )
    {
-      SCIP_CONSEXPR_EXPR* denomexpr = NULL;
-      SCIP_CONSEXPR_EXPR* nomexpr = NULL;
-
       if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1 )
       {
          denomexpr = SCIPgetConsExprExprChildren(children[0])[0];
@@ -227,54 +234,106 @@ SCIP_RETCODE detectExpr(
          nomexpr = children[0];
       }
 
-      if( denomexpr != NULL && nomexpr != NULL )
-      {
-         /* nominator and denominator are univariate linear functions -> no auxiliary variables are needed */
-         if( isExprUnivariateLinear(nomexpr, conshdlr, &x, &a, &b)
-            && isExprUnivariateLinear(denomexpr, conshdlr, &y, &c, &d) )
-         {
-            SCIPdebugMsg(scip, "detected nominator (%g * %s + %g) and denominator (%g * %s + %g) to be univariate and linear\n",
-               a, SCIPvarGetName(x), b, c, SCIPvarGetName(y), d);
-
-            /* during presolving, it only makes sense to detect the quotient if both variables are the same */
-            *success = (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) || (x == y);
-         }
-         /* create auxiliary variables if we are in the solving stage */
-         else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-         {
-            if( x == NULL )
-            {
-               SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
-               a = 1.0;
-               b = 0.0;
-
-#ifdef SCIP_DEBUG
-               SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
-               SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
-               SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
-#endif
-            }
-            if( y == NULL )
-            {
-               SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
-               c = 1.0;
-               d = 0.0;
-
-#ifdef SCIP_DEBUG
-               SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
-               SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
-               SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(y));
-#endif
-            }
-
-            *success = TRUE;
-         }
-      }
+      /* remember to scale the nominator by the coefficient stored in the product expression */
+      nomfac = SCIPgetConsExprExprProductCoef(expr);
    }
    /* case: sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1)) */
    else
    {
+      SCIP_Real* sumcoefs;
+
       assert(SCIPgetConsExprExprHdlr(expr) == sumhdlr);
+      sumcoefs = SCIPgetConsExprExprSumCoefs(expr);
+
+      /* children[0] is 1/g(y) and children[1] is a product of f(x) and 1/g(y) */
+      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1
+         && SCIPgetConsExprExprHdlr(children[1]) == prodhdlr && SCIPgetConsExprExprNChildren(children[1]) == 2 )
+      {
+         SCIP_Real prodcoef = SCIPgetConsExprExprProductCoef(children[1]);
+
+         if( children[0] == SCIPgetConsExprExprChildren(children[1])[0] )
+         {
+            denomexpr = SCIPgetConsExprExprChildren(children[0])[0];
+            nomexpr = SCIPgetConsExprExprChildren(children[1])[1];
+         }
+         else if( children[0] == SCIPgetConsExprExprChildren(children[1])[1] )
+         {
+            denomexpr = SCIPgetConsExprExprChildren(children[0])[0];
+            nomexpr = SCIPgetConsExprExprChildren(children[1])[0];
+         }
+
+         /* remember scalar and constant for nominator */
+         nomfac = sumcoefs[1] * prodcoef;
+         nomconst = sumcoefs[0];
+      }
+      /* children[1] is 1/g(y) and children[0] is a product of f(x) and 1/g(y) */
+      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1
+         && SCIPgetConsExprExprHdlr(children[0]) == prodhdlr && SCIPgetConsExprExprNChildren(children[0]) == 2 )
+      {
+         SCIP_Real prodcoef = SCIPgetConsExprExprProductCoef(children[0]);
+
+         if( children[1] == SCIPgetConsExprExprChildren(children[0])[0] )
+         {
+            denomexpr = SCIPgetConsExprExprChildren(children[1])[0];
+            nomexpr = SCIPgetConsExprExprChildren(children[0])[1];
+         }
+         else if( children[1] == SCIPgetConsExprExprChildren(children[0])[1] )
+         {
+            denomexpr = SCIPgetConsExprExprChildren(children[1])[0];
+            nomexpr = SCIPgetConsExprExprChildren(children[0])[0];
+         }
+
+         /* remember scalar and constant for nominator */
+         nomfac = sumcoefs[0] * prodcoef;
+         nomconst = sumcoefs[1];
+      }
+
+      /* remember the constant of the sum expression */
+      e = SCIPgetConsExprExprSumConstant(expr);
+   }
+
+   if( denomexpr != NULL && nomexpr != NULL )
+   {
+      /* nominator and denominator are univariate linear functions -> no auxiliary variables are needed */
+      if( isExprUnivariateLinear(nomexpr, conshdlr, &x, &a, &b)
+         && isExprUnivariateLinear(denomexpr, conshdlr, &y, &c, &d) )
+      {
+         SCIPdebugMsg(scip, "detected nominator (%g * %s + %g) and denominator (%g * %s + %g) to be univariate and linear\n",
+            a, SCIPvarGetName(x), b, c, SCIPvarGetName(y), d);
+
+         /* during presolving, it only makes sense to detect the quotient if both variables are the same */
+         *success = (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) || (x == y);
+      }
+      /* create auxiliary variables if we are in the solving stage */
+      else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         if( x == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
+            a = 1.0;
+            b = 0.0;
+
+#ifdef SCIP_DEBUG
+            SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
+            SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
+#endif
+         }
+         if( y == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
+            c = 1.0;
+            d = 0.0;
+
+#ifdef SCIP_DEBUG
+            SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
+            SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(y));
+#endif
+         }
+
+         *success = TRUE;
+      }
    }
 
    /* create nonlinear handler expression data */
@@ -285,9 +344,14 @@ SCIP_RETCODE detectExpr(
       assert(a != 0.0);
       assert(c != 0.0);
 
-      SCIPdebugMsg(scip, "detected quotient expression (%g * %s + %g) / (%g * %s + %g)\n", a, SCIPvarGetName(x), b, c,
-         SCIPvarGetName(y), d);
-      SCIP_CALL( exprdataCreate(scip, nlhdlrexprdata, x, a, b, y, c, d) );
+      a = nomfac * a;
+      b = nomfac * b + nomconst;
+
+      SCIPdebug( SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) ); )
+      SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
+      SCIPdebugMsg(scip, "detected quotient expression (%g * %s + %g) / (%g * %s + %g) + %g\n", a, SCIPvarGetName(x),
+         b, c, SCIPvarGetName(y), d, e);
+      SCIP_CALL( exprdataCreate(scip, nlhdlrexprdata, x, a, b, y, c, d, e) );
    }
 
    return SCIP_OKAY;
