@@ -89,7 +89,7 @@ COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
 SYM		=	none
-PRESOL		=	false
+PRESOLLIB	=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -514,7 +514,7 @@ endif
 # Presolving Library
 #-----------------------------------------------------------------------------
 
-ifeq ($(PRESOL),true)
+ifeq ($(PRESOLLIB),true)
 LDFLAGS		+=	-l:libtbb.so.2
 CXXFLAGS	+=	-std=c++14 -Wno-shadow -Wno-implicit-fallthrough -Wno-unused-variable -Wno-ctor-dtor-privacy
 endif

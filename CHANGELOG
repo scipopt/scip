@@ -674,6 +674,7 @@ Fixed bugs
 - fixed cleaning of clean buffer in conflict analysis
 - avoid probing on variables with huge bounds in shift and propagate heuristic
 - fix issue in printing solutions for variables that have been added by the dual sparsify presolver
+- fix issue related to fixing redundant logic-or constraints after presolving
 
 Miscellaneous
 -------------
