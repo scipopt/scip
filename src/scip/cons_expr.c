@@ -1233,10 +1233,11 @@ SCIP_RETCODE forwardPropExpr(
                {
                   /* if previnterval allow a further tightening, then do reversepropagation
                    * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                   * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded
+                   * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
+                   * but skip if interval is beyond SCIP-infinity (something like [-5e20,-2e20]; mainly because asserts in SCIPisXbBetter fail then)
                    */
                   if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval)) ||
-                     (!force &&
+                     (!force && !SCIPisInfinity(scip, interval.inf) && !SCIPisInfinity(scip, -interval.sup) &&
                         ((interval.inf <= -SCIP_INTERVAL_INFINITY && previnterval.inf > -SCIP_INTERVAL_INFINITY) ||
                          (interval.sup >=  SCIP_INTERVAL_INFINITY && previnterval.sup >  SCIP_INTERVAL_INFINITY) ||
                          SCIPisLbBetter(scip, previnterval.inf, interval.inf, interval.sup) ||
