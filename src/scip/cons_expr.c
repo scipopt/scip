@@ -247,6 +247,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                forcestrongcut;  /**< whether to force "strong" cuts in enforcement */
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
+   char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -2229,6 +2230,57 @@ SCIP_Real getConsAbsViolation(
    assert(consdata != NULL);
 
    return MAX3(0.0, consdata->lhsviol, consdata->rhsviol);
+}
+
+/** returns relative violation of a constraint
+ *
+ * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_Real getConsRelViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real absviol;
+   SCIP_Real scale;
+
+   assert(cons != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   absviol = getConsAbsViolation(cons);
+
+   if( conshdlrdata->violscale == 'n' )
+      return absviol;
+
+   if( SCIPisInfinity(scip, absviol) )
+      return SCIPinfinity(scip);
+
+   /* if not 'n', then it has to be 'a' at the moment */
+   assert(conshdlrdata->violscale == 'a');
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));
+
+   if( !SCIPisInfinity(scip, -consdata->lhs) && REALABS(consdata->lhs) > scale )
+      scale = REALABS(consdata->lhs);
+
+   if( !SCIPisInfinity(scip,  consdata->rhs) && REALABS(consdata->rhs) > scale )
+      scale = REALABS(consdata->rhs);
+
+   assert(scale >= 1.0);
+
+   return absviol / scale;
 }
 
 /** returns whether constraint is currently violated
@@ -5883,7 +5935,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
-   SCIP_Real             maxviol,            /**< largest violation among all expr-constraints, only used if in enforcement */
+   SCIP_Real             maxrelconsviol,     /**< largest scaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -5949,7 +6001,7 @@ SCIP_RETCODE enforceConstraints(
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement && getConsAbsViolation(conss[c]) > conshdlrdata->weakcutminviolfactor * maxviol )
+      if( !consenforced && inenforcement && getConsRelViolation(scip, conss[c]) > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
@@ -6100,7 +6152,8 @@ SCIP_RETCODE analyzeViolation(
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    unsigned int          soltag,             /**< tag of solution */
-   SCIP_Real*            maxconsviol,        /**< buffer to store maximal violation of constraints */
+   SCIP_Real*            maxabsconsviol,     /**< buffer to store maximal absolute violation of constraints */
+   SCIP_Real*            maxrelconsviol,     /**< buffer to store maximal relative violation of constraints */
    SCIP_Real*            minauxviol,         /**< buffer to store minimal (nonzero) violation of auxiliaries */
    SCIP_Real*            maxauxviol,         /**< buffer to store maximal violation of auxiliaries (violation in "extended formulation") */
    SCIP_Real*            maxvarboundviol     /**< buffer to store maximal violation of variable bounds */
@@ -6109,17 +6162,20 @@ SCIP_RETCODE analyzeViolation(
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Real v;
    int c;
 
    assert(conss != NULL || nconss == 0);
-   assert(maxconsviol != NULL);
+   assert(maxabsconsviol != NULL);
+   assert(maxrelconsviol != NULL);
    assert(maxauxviol != NULL);
    assert(maxvarboundviol != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
-   *maxconsviol = 0.0;
+   *maxabsconsviol = 0.0;
+   *maxrelconsviol = 0.0;
    *minauxviol = SCIPinfinity(scip);
    *maxauxviol = 0.0;
    *maxvarboundviol = 0.0;
@@ -6136,11 +6192,15 @@ SCIP_RETCODE analyzeViolation(
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
-      *maxconsviol = MAX(*maxconsviol, getConsAbsViolation(conss[c]));
+      v = getConsAbsViolation(conss[c]);
+      *maxabsconsviol = MAX(*maxabsconsviol, v);
 
       /* skip non-violated constraints */
       if( !isConsViolated(scip, conss[c]) )
          continue;
+
+      v = getConsRelViolation(scip, conss[c]);
+      *maxrelconsviol = MAX(*maxrelconsviol, v);
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
@@ -6293,7 +6353,8 @@ SCIP_RETCODE consEnfo(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real maxviol;
+   SCIP_Real maxabsconsviol;
+   SCIP_Real maxrelconsviol;
    SCIP_Real minauxviol;
    SCIP_Real maxauxviol;
    SCIP_Real maxvarboundviol;
@@ -6304,28 +6365,27 @@ SCIP_RETCODE consEnfo(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlr != NULL);
 
-   maxviol = 0.0;
    soltag = ++conshdlrdata->lastsoltag;
 
+   *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
 
-      /* update max violation */
-      maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
+      if( isConsViolated(scip, conss[c]) )
+         *result = SCIP_INFEASIBLE;
    }
-   *result = maxviol > SCIPfeastol(scip) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
    if( *result == SCIP_FEASIBLE )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: skip enforcing constraints with maxviol=%e\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: all expr-constraints feasible, skip enforcing\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &minauxviol, &maxauxviol, &maxvarboundviol) );
+   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol, &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
-      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), auxviolations in %g..%g, variable bounds violated by at most %g\n",
+      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol, maxvarboundviol); )
 
    assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
 
@@ -6360,7 +6420,7 @@ SCIP_RETCODE consEnfo(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxviol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxrelconsviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED )
    {
@@ -6370,7 +6430,7 @@ SCIP_RETCODE consEnfo(
    }
    assert(*result == SCIP_INFEASIBLE);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxviol, SCIPgetLPFeastol(scip)); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxabsconsviol, SCIPgetLPFeastol(scip)); )
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
@@ -6436,7 +6496,7 @@ SCIP_RETCODE consEnfo(
     * - but if the LP solution is really within bounds and since variables are fixed, cutting off the node is
     *   actually not "desperate", but a pretty obvious thing to do
     */
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " enforcement with max. violation %g failed; cutting off node\n", maxviol); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " enforcement with max. violation %g failed; cutting off node\n", maxabsconsviol); )
    *result = SCIP_CUTOFF;
    /* it's only "desperate" if the LP solution does not coincide with variable fixings (should we use something tighter than epsilon here?) */
    if( !SCIPisZero(scip, maxvarboundviol) )
@@ -12759,6 +12819,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/weakcutminviolfactor",
          "retry enfo of constraint with weak cuts if violation is least this factor of maximal violated constraints",
          &conshdlrdata->weakcutminviolfactor, TRUE, 0.5, 0.0, 2.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
+         "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side",
+         &conshdlrdata->violscale, TRUE, 'n', "na", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
