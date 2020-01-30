@@ -362,16 +362,18 @@ extern void           graph_csr_free(SCIP*, CSR**);
 extern SCIP_Bool      graph_csr_isValid(const CSR*, SCIP_Bool verbose);
 extern SCIP_Bool      graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
 /* CSR depository: */
-extern SCIP_RETCODE   graph_csrdepo_init(SCIP*, CSRDEPO**, int, int);
+extern SCIP_RETCODE   graph_csrdepo_init(SCIP*, int, int, CSRDEPO**);
 extern void           graph_csrdepo_free(SCIP*, CSRDEPO**);
 extern void           graph_csrdepo_getCSR(const CSRDEPO*, int, CSR*);
 extern int            graph_csrdepo_getNcsrs(const CSRDEPO*);
 extern int            graph_csrdepo_getDataSize(const CSRDEPO*);
+extern void           graph_csrdepo_clean(CSRDEPO*);
 extern void           graph_csrdepo_removeTop(CSRDEPO*);
 extern void           graph_csrdepo_addEmptyTop(CSRDEPO*, int, int);
 extern SCIP_Bool      graph_csrdepo_isEmpty(const CSRDEPO*);
 extern SCIP_Bool      graph_csrdepo_hasEmptyTop(const CSRDEPO*);
 extern void           graph_csrdepo_getEmptyTop(const CSRDEPO*, CSR*);
+extern void           graph_csrdepo_getTop(const CSRDEPO*, CSR*);
 /* Dynamic CSR storage: */
 extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
 extern void           graph_update_dcsr(SCIP*, GRAPH*);

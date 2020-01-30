@@ -136,9 +136,9 @@ void csrdepoFillCSR(
 /** initializes CSR depository */
 SCIP_RETCODE graph_csrdepo_init(
    SCIP*                 scip,               /**< SCIP data structure */
-   CSRDEPO**             depository,         /**< the depository */
    int                   ncsrs_max,          /**< maximum number of CSRs */
-   int                   datasize_max        /**< the maximum capacity */
+   int                   datasize_max,       /**< the maximum capacity */
+   CSRDEPO**             depository          /**< the depository */
    )
 {
    CSRDEPO* depo;
@@ -246,14 +246,14 @@ int graph_csrdepo_getDataSize(
    {
       const int top_index = csrdepoGetTopIndex(depository);
       const int top_nedges = csrdepoGetNedges(depository, top_index);
-      const int datasize = depository->csr_ptrsData[top_index] + top_nedges;
+      const int top_nnodes = csrdepoGetNnodes(depository, top_index);
+      const int datasize_edges = depository->csr_ptrsData[top_index] + top_nedges;
+      const int datasize_nodes = depository->csr_ptrsStart[top_index] + top_nnodes + 1;
+      const int datasize = MAX(datasize_edges, datasize_nodes);
 
 #ifndef NDEBUG
-      const int top_nnodes = csrdepoGetNnodes(depository, top_index);
-
       assert(top_nedges >= 0);
       assert(top_nnodes >= 0);
-      assert(depository->csr_ptrsData[top_index] + top_nnodes + 1 <= datasize);
       assert(datasize <= depository->datasize_max);
 #endif
 
@@ -296,6 +296,22 @@ void graph_csrdepo_removeTop(
 }
 
 
+/** cleans CSR depository */
+void graph_csrdepo_clean(
+   CSRDEPO*              depository          /**< the depository */
+   )
+{
+   assert(depository);
+
+   for( int i = depository->ncsrs_curr - 1; i >= 0; ++i )
+   {
+      graph_csrdepo_removeTop(depository);
+   }
+
+   assert(graph_csrdepo_isEmpty(depository));
+}
+
+
 /** adds empty top to CSR depository */
 void graph_csrdepo_addEmptyTop(
    CSRDEPO*              depository,         /**< the depository */
@@ -306,10 +322,9 @@ void graph_csrdepo_addEmptyTop(
    int topindex;
 
    assert(depository);
-   assert(nnodes >= 1 && nedges >= 1);
+   assert(nnodes >= 1 && nedges >= 0);
    assert(graph_csrdepo_isEmpty(depository) || !graph_csrdepo_hasEmptyTop(depository));
-   assert(nedges >= nnodes);
-   assert(nedges + graph_csrdepo_getDataSize(depository) < depository->datasize_max);
+   assert(MAX(nnodes, nedges) + graph_csrdepo_getDataSize(depository) < depository->datasize_max);
    assert(depository->ncsrs_curr < depository->ncsrs_max);
 
    depository->ncsrs_curr++;
@@ -371,6 +386,21 @@ void graph_csrdepo_getEmptyTop(
    csrdepoFillCSR(depository, topindex, csr);
 
    depository->csr_isEmpty[topindex] = FALSE;
+}
+
+/** Gets non-empty (!) top of current depository. */
+void graph_csrdepo_getTop(
+   const CSRDEPO*        depository,         /**< the depository */
+   CSR*                  csr                 /**< pointer to csr struct to fill */
+   )
+{
+   const int topindex = csrdepoGetTopIndex(depository);
+
+   assert(topindex >= 0 && topindex < depository->ncsrs_max);
+   assert(!depository->csr_isEmpty[topindex]);
+   assert(csr);
+
+   csrdepoFillCSR(depository, topindex, csr);
 }
 
 

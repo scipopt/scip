@@ -53,9 +53,11 @@ typedef struct multi_level_distances_storage MLDISTS;
 /** permanent extension data */
 typedef struct extension_data_permanent
 {
-   CMST*                 cmst;               /**< complete MST */
-   CGRAPH*               cgraph;             /**< complete graph */
-   int*                  cgraphEdgebuffer;   /**< complete graph edge buffer */
+   DCMST*                dcmst;              /**< dynamic MST */
+   CSRDEPO*              msts;               /**< storage for MSTs with extending node */
+   CSRDEPO*              msts_reduced;       /**< storage for MSTs without extending node */
+   MLDISTS*              sds_horizontal;     /**< SDs from deepest leaves to remaining ones */
+   MLDISTS*              sds_vertical;       /**< SDs between leaves of same depth */
    STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
    SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
    SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
@@ -91,12 +93,16 @@ typedef struct distance_data
 } DISTDATA;
 
 
-/** reduction data; just used internally */
+/** Reduction data; just used internally.
+ *  Stores information for SDs between tree vertices,
+ *  reduced costs, and pseudo-ancestor conflicts. */
 typedef struct reduction_data
 {
-   CMST* const cmst;
-   CGRAPH* const cgraph;
-   int* const cgraphEdgebuffer;
+   DCMST* const dcmst;
+   CSRDEPO* const msts;
+   CSRDEPO* const msts_reduced;
+   MLDISTS* const sds_horizontal;
+   MLDISTS* const sds_vertical;
    const SCIP_Real* const redCosts;
    const SCIP_Real* const rootToNodeDist;
    const PATH* const nodeTo3TermsPaths;
@@ -153,7 +159,7 @@ extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
 extern int             extreduce_getMaxStackNedges(const GRAPH*);
-
+extern void            extreduce_removeEdge(SCIP*, int, GRAPH*, DISTDATA*);
 
 /* extreduce_core.c
  */
@@ -178,26 +184,33 @@ extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*)
 extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
+extern SCIP_Bool          extreduce_mldistsIsEmpty(const MLDISTS*);
 extern SCIP_Bool          extreduce_mldistsEmptySlotExists(const MLDISTS*);
 extern int*               extreduce_mldistsEmptySlotTargetIds(const MLDISTS*);
 extern SCIP_Real*         extreduce_mldistsEmptySlotTargetDists(const MLDISTS*);
 extern int                extreduce_mldistsEmptySlotLevel(const MLDISTS*);
-extern void               extreduce_mldistsEmtpySlotSetBase(MLDISTS*, int);
+extern void               extreduce_mldistsEmtpySlotSetBase(int, MLDISTS*);
+extern void               extreduce_mldistsEmtpySlotReset(MLDISTS*);
 extern void               extreduce_mldistsEmptySlotSetFilled(MLDISTS*);
 extern void               extreduce_mldistsLevelAddTop(int, int, MLDISTS*);
+extern void               extreduce_mldistsLevelCloseTop(MLDISTS*);
 extern void               extreduce_mldistsLevelRemoveTop(MLDISTS*);
+extern void               extreduce_mldistsLevelRemoveTopNonClosed(MLDISTS*);
 extern int                extreduce_mldistsLevelNTargets(const MLDISTS*, int);
+extern int                extreduce_mldistsLevelNTopTargets(const MLDISTS*);
 extern int                extreduce_mldistsLevelNSlots(const MLDISTS*, int);
+extern int                extreduce_mldistsNlevels(const MLDISTS*);
 extern SCIP_Bool          extreduce_mldistsLevelContainsBase(const MLDISTS*, int, int);
 extern const int*         extreduce_mldistsTargetIds(const MLDISTS*, int, int);
 extern const SCIP_Real*   extreduce_mldistsTargetDists(const MLDISTS*, int, int);
+extern const int*         extreduce_mldistsTopTargetIds(const MLDISTS*, int);
+extern const SCIP_Real*   extreduce_mldistsTopTargetDists(const MLDISTS*, int);
 
 
 /* extreduce_dbg.c
  */
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
-extern SCIP_Bool       extreduce_cgraphInSyncWithTree(const EXTDATA*);
 extern SCIP_Bool       extreduce_nodeIsInStackTop(const GRAPH*, const EXTDATA*, int);
 extern SCIP_Bool       extreduce_distCloseNodesAreValid(SCIP*, const GRAPH*, const DISTDATA*);
 extern SCIP_Real       extreduce_treeGetSdMstWeight(SCIP*, const GRAPH*, EXTDATA*);

@@ -127,7 +127,7 @@ SCIP_RETCODE csrdepoTest1(
    CSRDEPO* depo;
    CSR csr;
 
-   SCIP_CALL( graph_csrdepo_init(scip, &depo, 8, 1000) );
+   SCIP_CALL( graph_csrdepo_init(scip, 8, 1000, &depo) );
 
    /* add first */
    graph_csrdepo_addEmptyTop(depo, nnodes1, nedges1);
@@ -187,7 +187,7 @@ SCIP_RETCODE csrdepoTest2(
    CSR* csr1;
    CSR* csr2;
 
-   SCIP_CALL( graph_csrdepo_init(scip, &depo, 8, 1000) );
+   SCIP_CALL( graph_csrdepo_init(scip, 8, 1000, &depo) );
 
    /* add first */
    graph_csrdepo_addEmptyTop(depo, nnodes0, nedges0);

@@ -1781,6 +1781,16 @@ SCIP_RETCODE redLoopStp(
          int brednelims = 0;
          int degtnelims = 0;
 
+         // for debugging of extended reductions todo deleteme
+#if 0
+         if( fullreduce && da)
+         {
+           const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
+           int extendedelims = 0;
+           SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint, nodearrchar, &extendedelims, randnumgen) );
+         }
+#endif
+
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
 

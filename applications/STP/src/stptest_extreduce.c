@@ -60,10 +60,8 @@ SCIP_RETCODE extArc(
 
    if( edgedelete >= 0 )
    {
-      graph_edge_delFull(scip, graph, edgedelete, TRUE);
-      extreduce_distDataDeleteEdge(scip, graph, edgedelete, &distdata);
-
-      graph_mark(graph);
+      extreduce_removeEdge(scip, edgedelete, graph, &distdata);
+      assert(graph_isMarked(graph));
    }
 
    /* actual test */
@@ -95,7 +93,7 @@ void mldistsAddLevel(
    {
       SCIP_Real* emptydists;
 
-      extreduce_mldistsEmtpySlotSetBase(mldists, bases[i]);
+      extreduce_mldistsEmtpySlotSetBase(bases[i], mldists);
       emptydists = extreduce_mldistsEmptySlotTargetDists(mldists);
 
       BMScopyMemoryArray(emptydists, dists[i], ntargets);
@@ -206,7 +204,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 2; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(mldists, i + 10);
+      extreduce_mldistsEmtpySlotSetBase(i + 10, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 
@@ -214,7 +212,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 12; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(mldists, i);
+      extreduce_mldistsEmtpySlotSetBase(i, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 
@@ -222,7 +220,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 2; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(mldists, i);
+      extreduce_mldistsEmtpySlotSetBase(i, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 

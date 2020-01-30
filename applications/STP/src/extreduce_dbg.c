@@ -721,20 +721,42 @@ void extreduce_extendInitDebug(
 }
 
 
-
-/** does the cgraph correspond to the current tree? */
-SCIP_Bool extreduce_cgraphInSyncWithTree(
-   const EXTDATA*        extdata             /**< extension data */
-   )
+#if 0
+/** does the stack top correspond to MST depository top? */
+SCIP_Bool extreduce_stackTopMstDepoInSync(
+   const GRAPH*          graph,             /**< graph data structure */
+   const EXTDATA*        extdata            /**< extension data */
+)
 {
-   CGRAPH* cgraph;
+   const REDDATA* const reddata = extdata->reddata;
+   const CSRDEPO* const msts = reddata->msts;
+   CSR topmst;
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extStackGetPosition(extdata);
+   const int topsize = (extstack_start[stackpos + 1] - extstack_start[stackpos]);
 
-   assert(extdata);
-   assert(extdata->reddata);
+   graph_csrdepo_getTop(msts, &topmst);
 
-   cgraph = extdata->reddata->cgraph;
+   assert(topsize > 0);
 
-   assert(cgraph);
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int head = graph->head[edge];
+
+      if( reduce )
+      {
+
+      }
+
+   }
+
+   assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
+
+   return TRUE;
+}
+#endif
 
 
 // assert that the costs of the tree all coincide with the actual SD etc distances!
@@ -742,8 +764,4 @@ SCIP_Bool extreduce_cgraphInSyncWithTree(
 // need some flag (in cgraph?) to see whether a leaf in the cgraph does not actually have valid costs (or any)
 // and should be recomputed!
 
-   if( !cgraph_idsInSync(cgraph, extdata->tree_leaves, extdata->tree_nleaves) )
-      return FALSE;
 
-   return TRUE;
-}

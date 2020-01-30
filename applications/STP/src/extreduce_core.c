@@ -25,7 +25,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 //#define SCIP_DEBUG
-//#define STP_EXT_DEBUG
+//#define STP_DEBUG_EXT
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -453,6 +453,7 @@ void extLeafRemove(
 )
 {
    int* const tree_leaves = extdata->tree_leaves;
+   int nleaves;
    int position;
 
    assert(extdata->tree_deg[leaf] == 1);
@@ -465,12 +466,17 @@ void extLeafRemove(
 
    extdata->tree_nleaves--;
 
-   tree_leaves[position] = tree_leaves[extdata->tree_nleaves];
+   nleaves = extdata->tree_nleaves;
+
+   for( int p = position; p < nleaves; p++ )
+   {
+      tree_leaves[p] = tree_leaves[p + 1];
+   }
 }
 
 
 /** Remove top component from leaves, and restore the root of the component as a leaf
- *  NOTE: assumes that the tree_deg has already been adapted*/
+ *  NOTE: assumes that the tree_deg has already been adapted */
 static inline
 void extLeafRemoveTop(
    int                   topsize,           /**< size of top to remove */
@@ -1093,6 +1099,8 @@ SCIP_Real extTreeGetRedcostBound(
    {
       const int leaf = tree_leaves[i];
       const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, extdata, leaf);
+      int todo;
+      // break early here!
 
       tree_redcost = MIN(tree_redcost, tree_redcost_new);
    }
@@ -1104,32 +1112,29 @@ SCIP_Real extTreeGetRedcostBound(
 /** adds the initial vertex */
 static inline
 void extMSTaddRoot(
+   SCIP*                 scip,               /**< SCIP */
    int                   root,               /**< the root */
-   EXTDATA*              extdata             /**< extension data */
+   REDDATA*              reddata             /**< reduction data */
 )
 {
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
+   int todo; // move mst and bottleneck computation to extra file
+   // maybe extreduce_extmst.c . Maybe need to add interface method for some static methods here
+   // also these weird pcsd methods could be put there
+   CSR* mst1;
+   CSRDEPO* const mstdepo = reddata->msts;
 
    assert(root >= 0);
-   assert(cgraph_isEmpty(cgraph));
+   assert(graph_csrdepo_isEmpty(mstdepo));
 
-   cgraph_node_append(cgraph, root);
-}
+   // todo
+#if 0
+   graph_csrdepo_addEmptyTop(mstdepo, 1, 0);
+   graph_csrdepo_getEmptyTop(mstdepo, mst1);
 
+   assert(!graph_csrdepo_hasEmptyTop(mstdepo));
 
-/** Add tree leaf of current component for MST calculation.
- *  Note: Not yet initialized! */
-static inline
-void extMSTaddTopCompLeaf(
-   int                   extleaf,            /**< the leaf */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
-
-   assert(!cgraph_isEmpty(cgraph));
-
-   cgraph_node_append(cgraph, extleaf);
+   reduce_dcmstGet1NodeMst(scip, mst1);
+#endif
 }
 
 
@@ -1138,7 +1143,7 @@ void extMSTaddTopCompLeaf(
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: Only restricted bottleneck tests are performed! */
 static inline
-void extMSTinitTopLeafToSiblings(
+void extMSTcompAddLeafToSiblings(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2top,           /**< edge to the top component leaf */
@@ -1166,8 +1171,6 @@ void extMSTinitTopLeafToSiblings(
       assert(extdata->tree_deg[sibling] == 1);
       assert(graph->tail[edge2top] == graph->tail[edge2sibling]);
 
-      /* todo here update the adjcosts from storage and set specialDist */
-
       if( sibling == topleaf )
       {
          hitTopLeaf = TRUE;
@@ -1179,6 +1182,8 @@ void extMSTinitTopLeafToSiblings(
       {
          //continue; // todo
       }
+
+      /* todo here get the adjcosts from horizontal storage */
 
       specialDist = extGetSD(scip, graph, topleaf, graph->head[edge2sibling], extdata);
 
@@ -1195,11 +1200,11 @@ void extMSTinitTopLeafToSiblings(
 
 
 /** Initializes edges from leaf of top tree component to ancestors for MST calculation.
- *  I.e. adds SD adjacency costs.
+ *  I.e. extends top MST from
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: Only restricted bottleneck tests are performed, UNLESS the leaf has no siblings! */
 static inline
-void extMSTinitTopLeafToAncestors(
+void extMSTcompAddLeafToAncestors(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2leaf,          /**< edge to the top component leaf */
@@ -1207,20 +1212,23 @@ void extMSTinitTopLeafToAncestors(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
    )
 {
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
-   SCIP_Real* const adjedgecosts = cgraph->adjedgecosts;
+   const MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
    const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
    const int topleaf = graph->head[edge2leaf];
+   const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sds_vertical, topleaf);
    const int compsize = extStackGetTopSize(extdata);
    const int nleaves_old = nleaves - compsize;
    const SCIP_Bool hasSiblings = (compsize > 1);
    const SCIP_Bool isPc = graph_pc_isPc(graph);
+#ifndef NDEBUG
+   const int* const adjids = extreduce_mldistsTopTargetIds(sds_vertical, topleaf);
+#endif
 
    assert(adjedgecosts);
    assert(!(*leafRuledOut));
-   assert(cgraph_idIsContained(cgraph, topleaf));
    assert(nleaves_old > 0 && nleaves_old < nleaves);
+   assert(extreduce_mldistsLevelNTopTargets(sds_vertical) == nleaves_old);
 
    /* if there are no siblings, then there is a chance to find a non-trivial bottleneck rule-out */
    if( !hasSiblings )
@@ -1242,9 +1250,17 @@ void extMSTinitTopLeafToAncestors(
       assert(extdata->tree_deg[leaf] == 1);
       assert(leaf != topleaf);
 
-      adjedgecosts[j] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+      {
+         // todo extra debug method that makes this check for all nleaves_old
+         const SCIP_Real sd = (specialDist >= -0.5) ? specialDist : FARAWAY;
 
-      /* any chance for rule-out */
+     //    printf("%d: id=%d leaf=%d\n", topleaf, adjids[j], leaf);
+
+         assert(adjids[j] == leaf);
+         assert(EQ(adjedgecosts[j], sd));
+      }
+
+      /* any chance for rule-out? */
       if( !hasSiblings )
       {
          if( extTreeBottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata) )
@@ -1267,13 +1283,12 @@ void extMSTinitTopLeafToAncestors(
 }
 
 
-
-/** Initializes leaf from top component of current tree for MST calculation. I.e. adds SD adjacency costs.
+/** Adds leaf from top component of current tree to MST. I.e., adds SD adjacency costs updates MST.
  * 'edge2leaf' must be in top component of the stack.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: SDs are not computed but taken from storage! */
 static inline
-void extMSTinitTopCompLeaf(
+void extMSTcompAddLeaf(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2leaf,          /**< edge to the top component leaf */
@@ -1283,22 +1298,21 @@ void extMSTinitTopCompLeaf(
 {
    assert(leafRuledOut && !(*leafRuledOut));
 
-   extMSTinitTopLeafToSiblings(scip, graph, edge2leaf, extdata, leafRuledOut);
+   extMSTcompAddLeafToSiblings(scip, graph, edge2leaf, extdata, leafRuledOut);
 
    if( *leafRuledOut )
       return;
 
-   extMSTinitTopLeafToAncestors(scip, graph, edge2leaf, extdata, leafRuledOut);
+   extMSTcompAddLeafToAncestors(scip, graph, edge2leaf, extdata, leafRuledOut);
 
    if( *leafRuledOut )
       return;
 
-   /* todo: update node of cgraph with stored SDs! Should be just applying the adjcosts */
-
-
-
+   // todo update mst from mst (in-place)
+   // reduce_dcmstAddNodeInplace
 
 #ifndef NDEBUG
+   // todo put into debug method!
    /* go over entire leaves and make sure nothing can be ruled out! */
    /* todo: remove the !graph_pc_isPc(graph) once everything is updated from the storages! */
    if( !graph_pc_isPc(graph) )
@@ -1327,12 +1341,108 @@ void extMSTinitTopCompLeaf(
 }
 
 
+/** adds current component (subset of the top level) */
+static inline
+void extMSTcompInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2leaf,          /**< edge to the top component leaf */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
+)
+{
+   assert(leafRuledOut && !(*leafRuledOut));
+
+   extMSTcompAddLeafToSiblings(scip, graph, edge2leaf, extdata, leafRuledOut);
+
+   if( *leafRuledOut )
+      return;
+
+   extMSTcompAddLeafToAncestors(scip, graph, edge2leaf, extdata, leafRuledOut);
+
+   if( *leafRuledOut )
+      return;
+
+   // todo update mst from mst_reduce of previous!:
+   // reduce_dcmstAddNode
+
+#ifndef NDEBUG
+   // todo put into debug method!
+   /* go over entire leaves and make sure nothing can be ruled out! */
+   /* todo: remove the !graph_pc_isPc(graph) once everything is updated from the storages! */
+   if( !graph_pc_isPc(graph) )
+   {
+      const int* const leaves = extdata->tree_leaves;
+      const int nleaves = extdata->tree_nleaves;
+      const int topleaf = graph->head[edge2leaf];
+
+      extTreeBottleneckMarkRootPath(graph, topleaf, extdata);
+
+      for( int j = 0; j < nleaves; j++ )
+      {
+         const int leaf = leaves[j];
+
+         if( leaf != topleaf )
+         {
+            const SCIP_Real specialDist = extGetSD(scip, graph, topleaf, leaf, extdata);
+
+            assert(!extTreeBottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata));
+         }
+      }
+
+      extTreeBottleneckUnmarkRootPath(graph, topleaf, extdata);
+   }
+#endif
+}
+
+
+/** Removes current component (subset of the top level) from MST storages */
+static inline
+void extMSTcompRemove(
+   const GRAPH*          graph,             /**< graph data structure */
+   EXTDATA*              extdata            /**< extension data */
+   )
+{
+   REDDATA* const reddata = extdata->reddata;
+   CSRDEPO* const msts = reddata->msts;
+
+//   assert(extreduce_stackTopMstDepoInSync(graph, extdata));
+//   assert(graph_csrdepo_getNcsrs(msts) == extdata->tree_depth);
+
+//   graph_csrdepo_removeTop(msts); todo
+}
+
+
+/** adds a full new level at the top */
+static inline
+void extMSTlevelInit(
+   REDDATA*              reddata,            /**< reduction data */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+
+   /* Reserve space for the SDs from each potential vertex of the new level to all leaves
+    * of the tree except for the extending vertex.
+    * But for the initial component we need to keep the root! */
+   if( extStackGetPosition(extdata) == 0 )
+      extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
+   else
+      extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sds_vertical);
+
+   SCIPdebugMessage("init MST level %d \n", extreduce_mldistsNlevels(sds_vertical) - 1);
+
+   assert(extdata->tree_depth == extreduce_mldistsNlevels(sds_vertical) - 1);
+}
+
+
 /** Adds neighbor of tree for MST calculation.
+ *  Basically, SDs to all leafs are computed and stored in 'reddata->sds_vertical'.
  *  Neighbor is given by head of edge 'edge2neighbor'.
- *  Returns early (with leafRuledOut == TRUE) if extension via this edge can be ruled out already.
- *  NOTE: SDs to all leafs are computed and stored in 'cgraph->adjedgecosts'! */
+ *  Returns early (with leafRuledOut == TRUE, and without adding the neighbor)
+ *  if extension via this edge can be ruled out already by using a bottleneck argument or MST. */
 static
-void extMSTaddTreeNeighbor(
+void extMSTlevelAddLeaf(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
@@ -1340,19 +1450,26 @@ void extMSTaddTreeNeighbor(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
-   SCIP_Real* const adjedgecosts = cgraph->adjedgecosts;
+   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_vertical);
    const int* const leaves = extdata->tree_leaves;
    int nPcSdCands = 0;
    const int neighbor = graph->head[edge2neighbor];
    const int neighbor_base = graph->tail[edge2neighbor];
+   const int neighbor_base_proper = (neighbor_base == extdata->tree_root)? -1 : neighbor_base;
    const int nleaves = extdata->tree_nleaves;
    SCIP_Bool ruledOut = FALSE;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
+#ifndef NDEBUG
+   int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_vertical);
+   SCIP_Bool basehit = FALSE;
+#endif
 
    assert(adjedgecosts && leaves);
    assert(extdata->tree_deg[neighbor_base] == 1);
    assert(extdata->tree_deg[neighbor] == 0);
+
+   extreduce_mldistsEmtpySlotSetBase(neighbor, sds_vertical);
 
    /* Initialization for bottleneck. We start from the base of the neighbor! */
    extTreeBottleneckMarkRootPath(graph, neighbor_base, extdata);
@@ -1360,7 +1477,8 @@ void extMSTaddTreeNeighbor(
    if( isPc )
       extPcSdToNodeMark(graph, neighbor, extdata);
 
-   for( int j = 0; j < nleaves; j++ )
+   // todo move this to an extra function
+   for( int j = 0, k = 0; j < nleaves; j++ )
    {
       SCIP_Real specialDist;
       const int leaf = leaves[j];
@@ -1368,7 +1486,23 @@ void extMSTaddTreeNeighbor(
       assert(extdata->tree_deg[leaf] == 1 && leaf != neighbor);
 
       specialDist = extGetSD(scip, graph, neighbor, leaf, extdata);
-      adjedgecosts[j] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+
+      /* save the SD? */
+      if( leaf != neighbor_base_proper )
+      {
+         adjedgecosts[k] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+#ifndef NDEBUG
+         adjids[k] = leaf;
+#endif
+         k++;
+      }
+      else
+      {
+#ifndef NDEBUG
+         assert(!basehit);
+         basehit = TRUE;
+#endif
+      }
 
       if( extTreeBottleneckIsDominated(graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
       {
@@ -1378,8 +1512,30 @@ void extMSTaddTreeNeighbor(
       }
    }
 
-   // todo might be worthwhile to check here always the bottleneck distances to some or all internal tree
-   // nodes. Apart from the base!
+
+   if( !ruledOut )
+   {
+      assert(basehit || neighbor_base_proper != neighbor_base);
+
+       // todo compute MST (call add node method)
+
+       // check for rule out
+
+#ifdef STP_DEBUG_EXT
+      {
+         // todo compute weight!
+         const SCIP_Real mstweight = extreduce_treeGetSdMstExtWeight(scip, graph, extvert, extdata);
+
+         assert(GE(mstweight, 0.0));
+
+        // printf("ext. mstobj=%f \n", mstweight);
+      }
+#endif
+   }
+
+   // todo check here always the bottleneck distances to some or all internal tree
+   // nodes. Apart from the base! Need to keep them in a list similar to the leaves!
+   // todo move this to an extra function
    if( isPc && !ruledOut )
    {
       const int* const pcSdCands = extdata->pcSdCands;
@@ -1410,11 +1566,10 @@ void extMSTaddTreeNeighbor(
       }
    }
 
-   if( !ruledOut )
-   {
-      /* todo add SDs to graph, just apply adjcosts */
-      cgraph_node_append(cgraph, neighbor);
-   }
+   if( ruledOut )
+      extreduce_mldistsEmtpySlotReset(sds_vertical);
+   else
+      extreduce_mldistsEmptySlotSetFilled(sds_vertical);
 
    extTreeBottleneckUnmarkRootPath(graph, neighbor_base, extdata);
 
@@ -1424,86 +1579,49 @@ void extMSTaddTreeNeighbor(
    *leafRuledOut = ruledOut;
 }
 
-
-/** Removes neighbor of tree added last for MST calculation.
- *  NOTE: SDs to all leafs remain in adjacency array of cgraph! */
+/** closes top MST level for further additions */
 static inline
-void extMSTremoveTreeNeighbor(
-   int                   neighbor,           /**< the neighbor (only for debug purposes)*/
-   EXTDATA*              extdata             /**< extension data */
+void extMSTlevelClose(
+   REDDATA*              reddata             /**< reduction data */
 )
 {
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+   int nslots;
 
-   assert(cgraph_idIsContained(cgraph, neighbor));
+   extreduce_mldistsLevelCloseTop(sds_vertical);
 
-   cgraph_node_deleteTop(cgraph);
+   nslots = extreduce_mldistsLevelNSlots(sds_vertical, extreduce_mldistsNlevels(sds_vertical) - 1);
 
-   assert(!cgraph_idIsContained(cgraph, neighbor));
+   SCIPdebugMessage("close MST level %d, nslots=%d\n", extreduce_mldistsNlevels(sds_vertical) - 1,
+         nslots);
+
+   if( nslots > 0 )
+   {
+      // todo initialize mst_reduced for this level! If there is a positive number of slots!
+
+   }
+   else
+   {
+      // todo just add dummy entry?
+   }
+
 }
 
 
-/** Removes top stack component root from the MST. */
+/** Removes top MST level.
+ *  NOTE: SDs from level vertices to all leafs will be discarded! */
 static inline
-void extMSTremoveStackTopRoot(
-   const GRAPH*          graph,              /**< graph data structure */
-   EXTDATA*              extdata             /**< extension data */
+void extMSTlevelRemove(
+   REDDATA*              reddata             /**< reduction data */
 )
 {
-   CGRAPH* const cgraph = extdata->reddata->cgraph;
-   const int comproot = extStackGetTopRoot(graph, extdata);
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
 
-   assert(extdata->tree_deg[comproot] == 1);
+   SCIPdebugMessage("remove MST level %d \n", extreduce_mldistsNlevels(sds_vertical) - 1);
 
-   /* replace component root with top component of cgraph */
-   cgraph_node_repositionTop(cgraph, comproot);
-}
+   extreduce_mldistsLevelRemoveTop(sds_vertical);
 
-
-/** Removes all vertices of stack top that have been used for MST calculation (if any)
- *  and restores component root.
- *  NOTE: SDs from component vertices to all leafs will be discarded! */
-static inline
-void extMSTremoveStackTop(
-   const GRAPH*          graph,             /**< graph data structure */
-   int                   topsize,           /**< size of top to remove */
-   int                   toproot,           /**< root of the top component */
-   EXTDATA*              extdata            /**< extension data */
-)
-{
-   REDDATA* const reddata = extdata->reddata;
-   CGRAPH* const cgraph = reddata->cgraph;
-
-#ifndef NDEBUG
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extStackGetPosition(extdata);
-
-   assert(topsize > 0);
-   assert(topsize == (extstack_start[stackpos + 1] - extstack_start[stackpos]));
-
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-   {
-      const int edge = extstack_data[i];
-      const int tail = graph->tail[edge];
-      const int head = graph->head[edge];
-
-      assert(tail == toproot);
-      assert(cgraph_idIsContained(cgraph, head));
-   }
-
-   assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
-#endif
-
-   for( int i = 0; i < topsize; i++ )
-   {
-      cgraph_node_deleteTop(cgraph);
-   }
-
-   // todo restore SDs (saved in storage)
-   cgraph_node_append(cgraph, toproot);
-
-   assert(extreduce_cgraphInSyncWithTree(extdata));
+   // todo also remove msts_reduced here?
 }
 
 
@@ -1520,8 +1638,6 @@ void extTreeStackTopRootRemove(
    if( comproot != extdata->tree_root )
    {
       extLeafRemove(comproot, extdata);
-      /* todo if expensive, postpone it */
-      extMSTremoveStackTopRoot(graph, extdata);
    }
    else
    {
@@ -1531,6 +1647,7 @@ void extTreeStackTopRootRemove(
       extdata->tree_deg[comproot] = 0;
    }
 }
+
 
 /** adds top component of stack to tree */
 static
@@ -1576,7 +1693,6 @@ void extTreeStackTopAdd(
 
       extRedcostAddEdge(graph, edge, noReversedRedCostTree, reddata, extdata);
       extLeafAdd(head, extdata);
-      extMSTaddTopCompLeaf(head, extdata);
 
       tree_deg[head] = 1;
       tree_edges[(extdata->tree_nedges)++] = edge;
@@ -1666,9 +1782,9 @@ void extTreeStackTopRemove(
    (extdata->tree_nedges) -= compsize;
    (extdata->tree_depth)--;
 
-   /* finally, remove top component from leaves and MST and restore the component root */
+   /* finally, remove top component from leaves and MST storages and restore the component root */
    extLeafRemoveTop(compsize, comproot, extdata);
-   extMSTremoveStackTop(graph, compsize, comproot, extdata);
+   extMSTcompRemove(graph, extdata);
 
    assert(extdata->tree_nedges >= 0 && extdata->tree_depth >= 0);
 }
@@ -1722,44 +1838,17 @@ SCIP_Bool extTreeRuleOutEdge(
    int                   edge                /**< edge to be tested */
 )
 {
-   const int extvert = graph->head[edge];
    SCIP_Bool ruledOut = FALSE;
 
    assert(graph && extdata);
    assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
 
-   assert(extreduce_cgraphInSyncWithTree(extdata));
+   /*  add 'extvert' with edge weights corresponding to special distances from extvert to tree leaves
+    *  (and check for early rule-out) */
+   extMSTlevelAddLeaf(scip, graph, edge, extdata, &ruledOut);
 
-   /* add 'extvert' with edge weights corresponding to special distances from extvert to tree leaves
-    *  (and compare with tree bottleneck distances for early rule-out) */
-   extMSTaddTreeNeighbor(scip, graph, edge, extdata, &ruledOut);
-
-   if( ruledOut )
-      return TRUE;
-
-   /* now compute the MST with graph->tail[edge] (should already be in the graph! (assert!)): */
-
-   // compute MST (call add node method)
-   // check for rule out
-   /* remove 'extvert' again (but don't delete the computed SDs!) */
-
-
-#ifdef STP_EXT_DEBUG
-      {
-         // todo compute weight!
-         const SCIP_Real mstweight = extreduce_treeGetSdMstExtWeight(scip, graph, extvert, extdata);
-
-         assert(GE(mstweight, 0.0));
-
-        // printf("ext. mstobj=%f \n", mstweight);
-      }
-#endif
-
-   extMSTremoveTreeNeighbor(extvert, extdata);
-
-   assert(extreduce_cgraphInSyncWithTree(extdata));
-
-   return FALSE;
+   // todo cant we just move the whole thing?
+   return ruledOut;
 }
 
 
@@ -1805,10 +1894,9 @@ SCIP_Bool extRuleOutEdgeCombinations(
 #endif
 
 
-/** Can current tree be peripherally ruled out?
- *  NOTE: If tree cannot be ruled-out, the current component will be put into the MST */
+/** Can current tree be peripherally ruled out by using reduced costs arguments? */
 static inline
-SCIP_Bool extTreeRuleOutPeriph(
+SCIP_Bool extTreeRuleOutPeriphRedcosts(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata             /**< extension data */
@@ -1818,64 +1906,97 @@ SCIP_Bool extTreeRuleOutPeriph(
    const SCIP_Real tree_redcost = extTreeGetRedcostBound(graph, extdata);
    const SCIP_Real cutoff = reddata->cutoff;
 
-   if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
+   if( reddata->equality ? GE(tree_redcost, cutoff) : GT(tree_redcost, cutoff) )
    {
       SCIPdebugMessage("Rule-out periph (with red.cost=%f) \n", tree_redcost);
       return TRUE;
    }
-   else
+
+   return FALSE;
+}
+
+
+/** Can current tree be peripherally ruled out by using MST based arguments? */
+static inline
+SCIP_Bool extTreeRuleOutPeriphMst(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extStackGetPosition(extdata);
+   const int stackstart = extstack_start[stackpos];
+   const int stackend = extstack_start[stackpos + 1];
+   SCIP_Bool ruledOut = FALSE;
+
+   assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
+
+   /* add nodes (with special distances) to MST
+    * and compare with tree bottleneck distances for early rule-out */
+   for( int i = stackstart; i != stackend; i++ )
    {
-      const int* const extstack_data = extdata->extstack_data;
-      const int* const extstack_start = extdata->extstack_start;
-      const int stackpos = extStackGetPosition(extdata);
-      SCIP_Bool ruledOut = FALSE;
+      const int edge2leaf = extstack_data[i];
 
-      assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
+      /* add vertex to MST graph and check for bottleneck shortcut */
 
-      /* add nodes (with special distances) for MST test
-       * and compare with tree bottleneck distances for early rule-out */
-      for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+      if( i == stackstart )
+         extMSTcompInit(scip, graph, edge2leaf, extdata, &ruledOut);
+      else
+         extMSTcompAddLeaf(scip, graph, edge2leaf, extdata, &ruledOut);
+
+      /* early rule-out? */
+      if( ruledOut )
       {
-         const int edge2leaf = extstack_data[i];
-
-         /* add vertex to MST graph and check for bottleneck shortcut */
-         extMSTinitTopCompLeaf(scip, graph, edge2leaf, extdata, &ruledOut);
-
-         /* early rule-out? */
-         if( ruledOut )
-         {
-            SCIPdebugMessage("Rule-out periph (via bottleneck) \n");
-            return TRUE;
-         }
+         SCIPdebugMessage("Rule-out periph (via bottleneck) \n");
+         return TRUE;
       }
+   }
 
-      assert(extreduce_cgraphInSyncWithTree(extdata));
+   /* todo now we have the MST! compute its cost */
 
-      /* now compute the MST */
-
-#ifdef STP_EXT_DEBUG
-      {
-         // todo compute weight!
-         const SCIP_Real mstweight = extreduce_treeGetSdMstWeight(scip, graph, extdata);
-
-         assert(GE(mstweight, 0.0));
-
-      //   printf("mstobj=%f \n", mstweight);
-      }
+#ifdef STP_DEBUG_EXT
+   {
+      // todo assert that the weights are the same! weight!
+      const SCIP_Real mstweight = extreduce_treeGetSdMstWeight(scip, graph, extdata);
+   //   printf("mstobj=%f \n", mstweight);
+   }
 #endif
 
 
 #ifndef NDEBUG
-      for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-         assert( graph_edge_nPseudoAncestors(graph, extstack_data[i]) == 0 || graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, extstack_data[i], reddata->pseudoancestor_mark));
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      assert( graph_edge_nPseudoAncestors(graph, extstack_data[i]) == 0
+            || graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, extstack_data[i], extdata->reddata->pseudoancestor_mark));
+   }
 #endif
 
-      if( ruledOut )
-      {
-         SCIPdebugMessage("Rule-out periph (via MST) \n");
-         return TRUE;
-      }
+   if( ruledOut )
+   {
+      SCIPdebugMessage("Rule-out periph (via MST) \n");
+      return TRUE;
    }
+
+   return FALSE;
+}
+
+
+/** Can current tree be peripherally ruled out?
+ *  NOTE: If tree cannot be ruled-out, the current component will be put into the MST storage 'reddata->msts' */
+static inline
+SCIP_Bool extTreeRuleOutPeriph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   if( extTreeRuleOutPeriphRedcosts(scip, graph, extdata) )
+      return TRUE;
+
+   if( extTreeRuleOutPeriphMst(scip, graph, extdata) )
+      return TRUE;
 
    return FALSE;
 }
@@ -1952,7 +2073,7 @@ void extTreeFindExtensions(
    assert(*nextendableleaves <= STP_EXT_MAXGRAD);
 }
 
-
+// todo: move into extreduce_util
 /** recompute reduced costs */
 static
 void extTreeRecompRedCosts(
@@ -2054,7 +2175,7 @@ SCIP_Bool extTruncate(
    const SCIP_Bool* const  isterm = extdata->node_isterm;
    const int stackpos = extStackGetPosition(extdata);
 
-   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
+   assert(extdata->extstack_state[stackpos] == EXT_STATE_MARKED);
    assert(extstack_start[stackpos] < extdata->extstack_maxsize);
 
    if( extdata->tree_depth >= extdata->tree_maxdepth )
@@ -2114,12 +2235,13 @@ void extBacktrack(
 {
    int* const extstack_state = extdata->extstack_state;
    int stackpos = extStackGetPosition(extdata);
+   const int extstate_top = extstack_state[stackpos];
 
    assert(graph && extdata);
    assert(extdata->extstack_start[stackpos + 1] - extdata->extstack_start[stackpos] > 0);
 
-   /* top component already expanded? */
-   if( extstack_state[stackpos] != EXT_STATE_NONE )
+   /* top component already expanded (including marked)? */
+   if( extstate_top != EXT_STATE_NONE )
    {
       extTreeStackTopRemove(graph, ancestor_conflict, extdata);
    }
@@ -2129,6 +2251,12 @@ void extBacktrack(
    /* backtrack */
    if( success )
    {
+      if( extstack_state[stackpos] != EXT_STATE_EXPANDED  )
+      {
+         /* the MST level associated top component cannot be used anymore, because the next component is not a sibling */
+         extMSTlevelRemove(extdata->reddata);
+      }
+
       while( extstack_state[stackpos] == EXT_STATE_NONE )
       {
          stackpos--;
@@ -2140,6 +2268,9 @@ void extBacktrack(
    }
    else
    {
+      /* the MST level associated with top component cannot be used anymore, because siblings will be removed */
+      extMSTlevelRemove(extdata->reddata);
+
       while( extstack_state[stackpos] == EXT_STATE_EXPANDED )
       {
          stackpos--;
@@ -2185,7 +2316,10 @@ void extStackAddCompsExpanded(
    /* stack too full? */
    if( newstacksize_upper > extdata->extstack_maxsize || newncomponents_upper >= extdata->extstack_maxncomponents )
    {
-	  SCIPdebugMessage("stack too full, cannot expand \n");
+	   SCIPdebugMessage("stack too full, cannot expand \n");
+
+	  // assert(extstack_state[stackpos] != EXT_STATE_MARKED );
+	   assert(extstack_state[stackpos] == EXT_STATE_NONE );
 
       *success = FALSE;
       extBacktrack(scip, graph, *success, FALSE, extdata);
@@ -2194,12 +2328,13 @@ void extStackAddCompsExpanded(
    }
 
    /* compute and add components (overwrite previous, non-expanded component) */
+   // todo we probably want to order so that the smallest components are put last!
    for( uint32_t counter = 1; counter < powsize; counter++ )
    {
-      for( unsigned int j = 0; j < (unsigned) nextedges; j++ )
+      for( unsigned int j = 0; j < (unsigned int) nextedges; j++ )
       {
          /* Check if jth bit in counter is set */
-         if( counter & (1 << j) )
+         if( counter & ((unsigned int) 1 << j) )
          {
             assert(datasize < extdata->extstack_maxsize);
             assert(extedges[j] >= 0);
@@ -2255,8 +2390,10 @@ void extStackTopCollectExtEdges(
       assert(edge >= 0 && edge < graph->edges);
       assert(extdata->tree_deg[graph->head[edge]] == 0);
 
-      /* NOTE: as a side-effect this method computes the SDs from 'leaf' to all tree leaves,
-       * unless the edge is ruled out */
+      /* NOTE: as a side-effect this method computes the SDs from 'leaf' to all tree leaves in 'sds_vertical',
+       * unless the edge is ruled out
+       * todo remove this intermediary function!
+       * */
       if( extTreeRuleOutEdge(scip, graph, extdata, edge) )
       {
          continue;
@@ -2270,18 +2407,13 @@ void extStackTopCollectExtEdges(
      }
 #endif
 
-      /* todo save the SDs from 'leaf' to all tree leaves (computed in 'extRuleOutEdge') */
-
-      /* now the SDs from 'leaf' to all tree leaves reside in cgraph->adjedge */
-      // todo call extra method that bring them into the storage
-      // extSaveLeafSds(leaf) give leaf for debugging purposes
-
       extedges[(*nextedges)++] = edge;
    }
 }
 
 
 /** Expands top component of stack.
+ *  I.e.. adds all possible subsets of the top component that cannot be ruled-out.
  *  Note: This method can backtrack:
  *        1. If stack is full (with success set to FALSE),
  *        2. If all edges of the component can be ruled-out (with success set to TRUE).
@@ -2295,6 +2427,7 @@ void extStackTopExpand(
 )
 {
    int extedges[STP_EXT_MAXGRAD];
+   REDDATA* const reddata = extdata->reddata;
    int nextedges = 0;
    const int stackpos = extStackGetPosition(extdata);
 #ifndef NDEBUG
@@ -2304,11 +2437,15 @@ void extStackTopExpand(
       extedges[i] = -1;
 #endif
 
-   assert(extdata && scip && graph && success);
+   assert(scip && graph && success);
    assert(EXT_STATE_NONE == extstack_state[stackpos]);
 
-   /* Note: Also computes SDs for remaining leaves! */
+   extMSTlevelInit(reddata, extdata);
+
+   /* Note: Also computes SDs for leaves that are not ruled-out! */
    extStackTopCollectExtEdges(scip, graph, extdata, extedges, &nextedges);
+
+   extMSTlevelClose(reddata);
 
    /* everything ruled out already? */
    if( nextedges == 0 )
@@ -2321,6 +2458,10 @@ void extStackTopExpand(
       if( stackpos != 0 )
       {
          extBacktrack(scip, graph, *success, FALSE, extdata);
+      }
+      else
+      {
+         extMSTlevelRemove(reddata);
       }
    }
    else
@@ -2339,33 +2480,30 @@ void extStackTopExpand(
 
 
 /** Extends top component of stack.
- *  Backtracks if stack is full. */
+ *  Backtracks if stack is full.
+ *  Will not add anything in case of rule-out of at least one extension node. */
 static
 void extExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            success             /**< success pointer */
+   SCIP_Bool*            success             /**< success pointer, FALSE iff no extension was possible */
 )
 {
    int* extedges = NULL;
    int* extedgesstart = NULL;
    int* const extstack_start = extdata->extstack_start;
-   int* const extstack_state = extdata->extstack_state;
    const int stackpos = extStackGetPosition(extdata);
    int nextendable_leaves = 0;
    int nextensions = 0;
    SCIP_Bool has_ruledout_leaf = FALSE;
 
    assert(stackpos >= 0);
-   assert(extstack_state[stackpos] == EXT_STATE_EXPANDED );
+   assert(EXT_STATE_MARKED == extdata->extstack_state[stackpos]);
    assert(extstack_start[stackpos + 1] - extstack_start[stackpos] <= STP_EXT_MAXGRAD);
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &extedges, STP_EXT_MAXGRAD * STP_EXT_MAXGRAD) );
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &extedgesstart, STP_EXT_MAXGRAD + 1) );
-
-   /* the top component could not be ruled-out, so set its stage to 'marked' */
-   extstack_state[stackpos] = EXT_STATE_MARKED;
 
    extTreeFindExtensions(scip, graph, extdata, extedgesstart, extedges, &nextensions,
          &nextendable_leaves, &has_ruledout_leaf);
@@ -2392,6 +2530,7 @@ void extExtend(
       if( stacksize_new > extdata->extstack_maxsize )
       {
          *success = FALSE;
+         assert(EXT_STATE_MARKED == extdata->extstack_state[extStackGetPosition(extdata)]);
 
          SCIPdebugMessage("stack is full! need to backtrack \n");
 
@@ -2403,7 +2542,7 @@ void extExtend(
 
          extStackAddCompsNonExpanded(graph, extedgesstart, extedges, nextendable_leaves, extdata);
 
-         /* try to expand last (and smallest!) component */
+         /* try to expand last (and smallest!) component, which currently is just a set of edges */
          extStackTopExpand(scip, graph, extdata, success);
       }
    }
@@ -2413,7 +2552,8 @@ void extExtend(
 }
 
 
-/** adds initial component to stack (needs to be star component rooted in root) */
+/** Adds extensions initial component to stack (needs to be star component rooted in root).
+  * If no extensions are added, then the component has been ruled-out. */
 static
 void extProcessInitialComponent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2422,8 +2562,7 @@ void extProcessInitialComponent(
    int                   ncompedges,         /**< number of component edges */
    int                   root,               /**< root of the component */
    EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            ruledOut,           /**< initial component ruled out? */
-   SCIP_Bool*            finished            /**< todo delete */
+   SCIP_Bool*            ruledOut            /**< initial component ruled out? */
 )
 {
    SCIP_Bool success;
@@ -2456,7 +2595,7 @@ void extProcessInitialComponent(
 
       extdata->extstack_data[i] = e;
       extLeafAdd(tail, extdata);
-      extMSTaddRoot(tail, extdata);
+      extMSTaddRoot(scip, tail, extdata->reddata);
    }
 
    extdata->tree_root = root;
@@ -2506,11 +2645,12 @@ void extProcessInitialComponent(
       return;
    }
 
+   /* the single edge component could not be ruled-out, so set its stage to 'marked' */
+   extdata->extstack_state[extStackGetPosition(extdata)] = EXT_STATE_MARKED;
+
    extExtend(scip, graph, extdata, &success);
 
    assert(success);
-
-   *finished = success;
 }
 
 
@@ -2523,12 +2663,19 @@ void extCheckArcPostClean(
    EXTDATA*              extdata             /**< extension data */
 )
 {
+   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
    int* const tree_deg = extdata->tree_deg;
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
+   const int vert_nlevels = extreduce_mldistsNlevels(sds_vertical);
 
    tree_deg[head] = 0;
    tree_deg[tail] = 0;
+
+   assert(vert_nlevels == 1 || vert_nlevels == 0);
+
+   if( vert_nlevels == 1 )
+      extreduce_mldistsLevelRemoveTop(sds_vertical);
 
    graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
    extreduce_extdataClean(extdata);
@@ -2560,7 +2707,7 @@ void extCheckArcFromHead(
    assert(!(*deletable));
 
    /* put 'edge' on the stack */
-   extProcessInitialComponent(scip, graph, &edge, 1, tail, extdata, deletable, &success);
+   extProcessInitialComponent(scip, graph, &edge, 1, tail, extdata, deletable);
 
    /* early rule-out? */
    if( *deletable )
@@ -2570,7 +2717,6 @@ void extCheckArcFromHead(
    }
 
    assert(extstack_state[0] == EXT_STATE_MARKED);
-   assert(success || 1 == extdata->extstack_ncomponents);
 
    // todo put this loop in some 'extCheckComponent' and add extProcessInitialEdge, extProcessInitialPseudoNode
    /* limited DFS backtracking; stops once back at 'edge' */
@@ -2605,6 +2751,9 @@ void extCheckArcFromHead(
          extBacktrack(scip, graph, success, conflict, extdata);
          continue;
       }
+
+      /* the component could not be ruled-out, so set its stage to 'marked' */
+      extstack_state[stackposition] = EXT_STATE_MARKED;
 
       if( extTruncate(graph, extdata) )
       {
@@ -2706,8 +2855,9 @@ SCIP_RETCODE extreduce_checkArc(
 
       // todo: mode the initialization to extra method! Avoids also code dublication
       {
-         REDDATA reddata = { .cmst = extpermanent->cmst, .cgraph = extpermanent->cgraph,
-            .cgraphEdgebuffer = extpermanent->cgraphEdgebuffer,
+         REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts = extpermanent->msts,
+            .msts_reduced = extpermanent->msts_reduced,
+            .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
             .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
             .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = edgedeleted,
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
@@ -2811,8 +2961,9 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
-         REDDATA reddata = { .cmst = extpermanent->cmst, .cgraph = extpermanent->cgraph,
-            .cgraphEdgebuffer = extpermanent->cgraphEdgebuffer,
+         REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts = extpermanent->msts,
+            .msts_reduced = extpermanent->msts_reduced,
+            .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
             .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
             .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
             .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };

@@ -56,7 +56,7 @@ SCIP_Bool graphmarkIsClean(
 
 
 /** deletes an edge and makes corresponding adaptations */
-static
+static inline
 void removeEdge(
    SCIP*                 scip,               /**< SCIP */
    int                   edge,               /**< edge to delete */
@@ -327,6 +327,17 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
    return SCIP_OKAY;
 }
 
+
+/** deletes an edge and makes corresponding adaptations */
+void extreduce_removeEdge(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                graph,              /**< graph data structure (in/out) */
+   DISTDATA*             distdata            /**< distance data (in/out) */
+)
+{
+   removeEdge(scip, edge, graph, distdata);
+}
 
 /** get maximum allowed stack size */
 int extreduce_getMaxStackSize(void)

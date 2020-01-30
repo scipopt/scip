@@ -322,6 +322,31 @@ void reduce_dcmstAddNode(
 }
 
 
+/** Adds node to CSR "mst".
+ *  NOTE: There needs to be enough space in CSR arrays for one more node! */
+void reduce_dcmstAddNodeInplace(
+   SCIP*                 scip,               /**< SCIP */
+   const SCIP_Real*      adjcosts,           /**< (undirected) adjacency costs for new node */
+   DCMST*                dmst,               /**< underlying structure */
+   CSR*                  mst                 /**< source/target */
+)
+{
+   assert(mst && adjcosts && dmst);
+
+   assert(isValidCMST(scip, mst));
+   assert(mst->nnodes < dmst->maxnnodes);
+
+   dcmstAddNode(mst, adjcosts, dmst);
+
+   mst->nnodes += 1;
+   mst->nedges += 2;
+
+   dcmstGetCSRfromStore(dmst, mst);
+
+   assert(isValidCMST(scip, mst));
+}
+
+
 /** computes MST on 1 node */
 void reduce_dcmstGet1NodeMst(
    SCIP*                 scip,               /**< SCIP */
