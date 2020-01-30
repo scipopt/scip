@@ -2212,6 +2212,38 @@ SCIP_RETCODE computeViolation(
    return SCIP_OKAY;
 }
 
+/** returns absolute violation of a constraint
+ *
+ * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_Real getConsAbsViolation(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return MAX3(0.0, consdata->lhsviol, consdata->rhsviol);
+}
+
+/** returns whether constraint is currently violated
+ *
+ * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_Bool isConsViolated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   return getConsAbsViolation(cons) > SCIPfeastol(scip);
+}
+
 /** catch variable events */
 static
 SCIP_RETCODE catchVarEvents(
@@ -5278,7 +5310,7 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
       assert(consdata != NULL);
 
       /* consider only violated constraints */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( !isConsViolated(scip, conss[c]) )
          continue;
 
       /* register all variables that have not been fixed yet */
@@ -5290,7 +5322,7 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, var, getConsAbsViolation(conss[c]), SCIP_INVALID) );
             ++(*nnotify);
          }
       }
@@ -5895,7 +5927,7 @@ SCIP_RETCODE enforceConstraints(
       assert(consdata != NULL);
 
       /* skip non-violated constraints */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( !isConsViolated(scip, conss[c]) )
          continue;
 
       ENFOLOG(
@@ -5903,7 +5935,7 @@ SCIP_RETCODE enforceConstraints(
          int i;
          SCIPinfoMessage(scip, enfologfile, " constraint ");
          SCIP_CALL( SCIPprintCons(scip, conss[c], enfologfile) );
-         SCIPinfoMessage(scip, enfologfile, "\n with viol %g and point\n", MAX(consdata->lhsviol, consdata->rhsviol));
+         SCIPinfoMessage(scip, enfologfile, "\n with viol %g and point\n", getConsAbsViolation(conss[c]));
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_VAR* var;
@@ -5917,7 +5949,7 @@ SCIP_RETCODE enforceConstraints(
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement && MAX(consdata->lhsviol, consdata->rhsviol) > conshdlrdata->weakcutminviolfactor * maxviol )
+      if( !consenforced && inenforcement && getConsAbsViolation(conss[c]) > conshdlrdata->weakcutminviolfactor * maxviol )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
@@ -5952,7 +5984,7 @@ SCIP_RETCODE enforceConstraints(
       assert(consdata != NULL);
 
       /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( !isConsViolated(scip, conss[c]) )
          continue;
 
       /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
@@ -6008,7 +6040,7 @@ SCIP_RETCODE enforceConstraints(
       assert(consdata->varexprs != NULL);
 
       /* consider only violated constraints */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( !isConsViolated(scip, conss[c]) )
          continue;
 
       for( i = 0; i < consdata->nvarexprs; ++i )
@@ -6104,10 +6136,10 @@ SCIP_RETCODE analyzeViolation(
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
-      *maxconsviol = MAX3(*maxconsviol, consdata->lhsviol, consdata->rhsviol);
+      *maxconsviol = MAX(*maxconsviol, getConsAbsViolation(conss[c]));
 
       /* skip non-violated constraints */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( !isConsViolated(scip, conss[c]) )
          continue;
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
@@ -6261,7 +6293,6 @@ SCIP_RETCODE consEnfo(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
    SCIP_Real minauxviol;
    SCIP_Real maxauxviol;
@@ -6279,10 +6310,9 @@ SCIP_RETCODE consEnfo(
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
-      consdata = SCIPconsGetData(conss[c]);
 
-      /* compute max violation */
-      maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
+      /* update max violation */
+      maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
    }
    *result = maxviol > SCIPfeastol(scip) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
@@ -6454,7 +6484,7 @@ SCIP_RETCODE consSepa(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
+      if( isConsViolated(scip, conss[c]) )
          haveviol = TRUE;
    }
 
@@ -8313,7 +8343,6 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
@@ -8329,8 +8358,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    {
       SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
 
-      consdata = SCIPconsGetData(conss[c]);
-      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
+      if( isConsViolated(scip, conss[c]) )
          *result = SCIP_INFEASIBLE;
    }
 
@@ -8401,13 +8429,13 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       assert(conss != NULL && conss[c] != NULL);
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
 
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
+      if( isConsViolated(scip, conss[c]) )
       {
          *result = SCIP_INFEASIBLE;
-         maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
+         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
 
          /* print reason for infeasibility */
          if( printreason )
@@ -8431,7 +8459,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
          }
 
          /* do not try to shift linear variables if violation is at infinity (leads to setting variable to infinity in solution, which is not allowed) */
-         if( maypropfeasible && (SCIPisInfinity(scip, consdata->lhsviol) || SCIPisInfinity(scip, consdata->rhsviol)) )
+         if( maypropfeasible && SCIPisInfinity(scip, getConsAbsViolation(conss[c])) )
             maypropfeasible = FALSE;
 
          if( maypropfeasible )
