@@ -258,8 +258,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       return SCIP_OKAY;
    }
 
-   /* only allow communication of constraint modifications by deleting all constraints they have not been upgraded yet */
-   bool allowconsmodification = (SCIPgetNUpgrConss(scip) == 0);
+   /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
+   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
+   assert(linconshdlr != NULL);
+   bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
 
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
@@ -294,7 +296,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.getPresolveOptions().threads = data->threads;
 
    /* disable dual reductions that are not permitted */
-   if( SCIPallowStrongDualReds(scip) )
+   if( !complete )
+      presolve.getPresolveOptions().dualreds = 0;
+   else if( SCIPallowStrongDualReds(scip) )
       presolve.getPresolveOptions().dualreds = 2;
    else if( SCIPallowWeakDualReds(scip) )
       presolve.getPresolveOptions().dualreds = 1;
