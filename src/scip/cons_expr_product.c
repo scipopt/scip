@@ -1629,33 +1629,23 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       child = SCIPgetConsExprExprChildren(expr)[0];
       x = SCIPgetConsExprExprAuxVar(child);
       assert(x != NULL);
+
+      bndx.inf = SCIPvarGetLbLocal(x);
+      bndx.sup = SCIPvarGetUbLocal(x);
       if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
-      {
-         bndx = SCIPgetConsExprExprActivity(scip, child);
-         bndx.inf = MAX(bndx.inf, SCIPvarGetLbLocal(x));  /*lint !e666*/
-         bndx.sup = MIN(bndx.sup, SCIPvarGetUbLocal(x));  /*lint !e666*/
-      }
-      else
-      {
-         bndx.inf = SCIPvarGetLbLocal(x);
-         bndx.sup = SCIPvarGetUbLocal(x);
-      }
+         SCIPintervalIntersectEps(&bndx, SCIPfeastol(scip), bndx, SCIPgetConsExprExprActivity(scip, child));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndx));
 
       /* collect second variable */
       child = SCIPgetConsExprExprChildren(expr)[1];
       y = SCIPgetConsExprExprAuxVar(child);
       assert(y != NULL);
+
+      bndy.inf = SCIPvarGetLbLocal(y);
+      bndy.sup = SCIPvarGetUbLocal(y);
       if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
-      {
-         bndy = SCIPgetConsExprExprActivity(scip, child);
-         bndy.inf = MAX(bndy.inf, SCIPvarGetLbLocal(y));  /*lint !e666*/
-         bndy.sup = MIN(bndy.sup, SCIPvarGetUbLocal(y));  /*lint !e666*/
-      }
-      else
-      {
-         bndy.inf = SCIPvarGetLbLocal(y);
-         bndy.sup = SCIPvarGetUbLocal(y);
-      }
+         SCIPintervalIntersectEps(&bndy, SCIPfeastol(scip), bndy, SCIPgetConsExprExprActivity(scip, child));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndy));
 
       coefs[0] = 0.0;
       coefs[1] = 0.0;
@@ -1692,17 +1682,12 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       {
          child = SCIPgetConsExprExprChildren(expr)[i];
          var = SCIPgetConsExprExprAuxVar(child);
+
+         childbnds.inf = SCIPvarGetLbLocal(var);
+         childbnds.sup = SCIPvarGetUbLocal(var);
          if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
-         {
-            childbnds = SCIPgetConsExprExprActivity(scip, child);
-            childbnds.inf = MAX(childbnds.inf, SCIPvarGetLbLocal(var));  /*lint !e666*/
-            childbnds.sup = MIN(childbnds.sup, SCIPvarGetUbLocal(var));  /*lint !e666*/
-         }
-         else
-         {
-            childbnds.inf = SCIPvarGetLbLocal(var);
-            childbnds.sup = SCIPvarGetUbLocal(var);
-         }
+            SCIPintervalIntersectEps(&childbnds, SCIPfeastol(scip), childbnds, SCIPgetConsExprExprActivity(scip, child));
+         assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbnds));
 
          if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
          {
