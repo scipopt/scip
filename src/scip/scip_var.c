@@ -3647,8 +3647,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    scip->set->conf_enable = enabledconflict;
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY;   /*lint !e438*/
+}
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch
  *  is (val -1.0) and the up brach ins (val +1.0)
