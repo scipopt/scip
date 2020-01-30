@@ -2239,7 +2239,9 @@ SCIP_Real getConsAbsViolation(
 static
 SCIP_Real getConsRelViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -2264,19 +2266,59 @@ SCIP_Real getConsRelViolation(
    if( SCIPisInfinity(scip, absviol) )
       return SCIPinfinity(scip);
 
-   /* if not 'n', then it has to be 'a' at the moment */
-   assert(conshdlrdata->violscale == 'a');
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));
+   if( conshdlrdata->violscale == 'a' )
+   {
+      scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));
 
-   if( !SCIPisInfinity(scip, -consdata->lhs) && REALABS(consdata->lhs) > scale )
-      scale = REALABS(consdata->lhs);
+      if( !SCIPisInfinity(scip, -consdata->lhs) && REALABS(consdata->lhs) > scale )
+         scale = REALABS(consdata->lhs);
 
-   if( !SCIPisInfinity(scip,  consdata->rhs) && REALABS(consdata->rhs) > scale )
-      scale = REALABS(consdata->rhs);
+      if( !SCIPisInfinity(scip,  consdata->rhs) && REALABS(consdata->rhs) > scale )
+         scale = REALABS(consdata->rhs);
+   }
+   else
+   {
+      /* if not 'n' or 'a', then it has to be 'g' at the moment */
+      assert(conshdlrdata->violscale == 'g');
+
+      /* TODO cache norm of gradient in consdata */
+
+      /* compute gradient */
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, consdata->expr, sol, soltag) );
+
+      /* gradient evaluation error -> no scaling */
+      if( SCIPgetConsExprExprDerivative(consdata->expr) == SCIP_INVALID ) /*lint !e777*/
+      {
+         scale = 1.0;
+      }
+      else
+      {
+         SCIP_Real norm = 0.0;
+         int i;
+
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            SCIP_Real deriv;
+
+            assert(consdata->expr->difftag == consdata->varexprs[i]->difftag);
+            deriv = SCIPgetConsExprExprDerivative(consdata->varexprs[i]);
+            if( deriv == SCIP_INVALID ) /*lint !e777*/
+            {
+               /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
+               norm = 0.0;
+               break;
+            }
+
+            norm += deriv*deriv;
+         }
+
+         norm = sqrt(norm);
+         scale = MAX(1.0, norm);
+      }
+   }
 
    assert(scale >= 1.0);
 
@@ -6001,7 +6043,7 @@ SCIP_RETCODE enforceConstraints(
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement && getConsRelViolation(scip, conss[c]) > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
+      if( !consenforced && inenforcement && getConsRelViolation(scip, conss[c], sol, soltag) > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
@@ -6199,7 +6241,7 @@ SCIP_RETCODE analyzeViolation(
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
-      v = getConsRelViolation(scip, conss[c]);
+      v = getConsRelViolation(scip, conss[c], sol, soltag);
       *maxrelconsviol = MAX(*maxrelconsviol, v);
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
@@ -12821,8 +12863,8 @@ SCIP_RETCODE includeConshdlrExprBasic(
          &conshdlrdata->weakcutminviolfactor, TRUE, 0.5, 0.0, 2.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
-         "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side",
-         &conshdlrdata->violscale, TRUE, 'n', "na", NULL, NULL) );
+         "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
+         &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
