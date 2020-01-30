@@ -348,9 +348,9 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

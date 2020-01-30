@@ -71,7 +71,8 @@ extern "C" {
 
 /** creates the optimality Benders' decomposition cut and includes it in SCIP
  *
- *  @ingroup BenderscutIncludes
+ *  @addtogroup BenderscutIncludes
+ *  @{
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutOpt(
@@ -128,9 +129,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    int*                  varssize            /**< the number of variables in the array */
    );
 
-/* @} */
-
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

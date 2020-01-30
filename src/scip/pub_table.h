@@ -87,7 +87,7 @@ SCIP_Bool SCIPtableIsInitialized(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

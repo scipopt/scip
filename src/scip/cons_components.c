@@ -2525,8 +2525,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 #define consEnfopsComponents NULL
 #define consCheckComponents NULL
 
-/**@} */
-
 /**@name Interface methods
  *
  * @{
@@ -2595,3 +2593,5 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    return SCIP_OKAY;
 }
+
+/**@} */

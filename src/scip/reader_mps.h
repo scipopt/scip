@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPwriteMps(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

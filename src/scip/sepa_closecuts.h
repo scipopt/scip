@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPsetBasePointClosecuts(
    SCIP_SOL*             sol                 /**< base point solution */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

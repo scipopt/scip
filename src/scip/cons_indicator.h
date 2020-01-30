@@ -293,9 +293,9 @@ SCIP_RETCODE SCIPaddRowIndicator(
    SCIP_ROW*             row                 /**< row to add */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

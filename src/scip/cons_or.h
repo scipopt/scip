@@ -141,9 +141,9 @@ SCIP_VAR* SCIPgetResultantOr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

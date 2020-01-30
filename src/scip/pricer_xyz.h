@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludePricerXyz(
 
 /** TODO: add public methods to this group for documentation purposes
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

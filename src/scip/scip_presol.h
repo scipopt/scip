@@ -167,7 +167,7 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

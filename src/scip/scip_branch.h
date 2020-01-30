@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP_Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicBranchingMethods
  *

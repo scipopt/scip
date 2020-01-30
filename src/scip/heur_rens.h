@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

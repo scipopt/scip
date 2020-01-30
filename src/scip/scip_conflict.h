@@ -168,7 +168,7 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicConflictMethods
  *
