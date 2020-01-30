@@ -16,6 +16,8 @@
 /**@file   cons_expr_nlhdlr_quotient.h
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
+ *
+ * @todo implement INITSEPA
  */
 
 #include <string.h>
@@ -357,6 +359,45 @@ SCIP_RETCODE detectExpr(
    return SCIP_OKAY;
 }
 
+/** helper method to compute interval for (a x + b) / (c x + d) + e */
+static
+SCIP_INTERVAL intEval(
+   SCIP_INTERVAL         bnds,               /**< bounds on x */
+   SCIP_Real             a,                  /**< coefficient in nominator */
+   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             c,                  /**< coefficient in denominator */
+   SCIP_Real             d,                  /**< constant in denominator */
+   SCIP_Real             e                   /**< constant */
+   )
+{
+   SCIP_INTERVAL result;
+   SCIP_INTERVAL denom;
+
+   /* return empty interval if the domain of x is empty */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
+   {
+      SCIPintervalSetEmpty(&result);
+      return result;
+   }
+
+   /* compute bounds for denominator */
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &denom, denom, c);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &denom, denom, d);
+
+   /* there is no useful interval if 0 is in the interior of the interval of the denominator */
+   if( SCIPintervalGetInf(denom) < 0.0 && SCIPintervalGetSup(denom) > 0.0 )
+   {
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &result);
+      return result;
+   }
+
+   /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
+
+   /* don't forget the constant */
+
+   return result;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -396,6 +437,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
 
+   /* call detection routine */
    SCIP_CALL( detectExpr(scip, conshdlr, expr, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
@@ -406,41 +448,24 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_Real solvalx;
+   SCIP_Real solvaly;
+   SCIP_Real nomval;
+   SCIP_Real denomval;
+
+   assert(expr != NULL);
+   assert(auxvalue != NULL);
+
+   solvalx = SCIPgetSolVal(scip, sol, nlhdlrexprdata->nomvar);
+   solvaly = SCIPgetSolVal(scip, sol, nlhdlrexprdata->denomvar);
+   nomval = nlhdlrexprdata->nomcoef *  solvalx + nlhdlrexprdata->nomconst;
+   denomval = nlhdlrexprdata->denomcoef *  solvaly + nlhdlrexprdata->denomconst;
+
+   /* return SCIP_INVALID if the denominator evaluates to zero */
+   *auxvalue = (denomval != 0.0) ? nlhdlrexprdata->constant + nomval / denomval : SCIP_INVALID;
 
    return SCIP_OKAY;
 }
-
-
-/** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaQuotient)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrInitSepaQuotient NULL
-#endif
-
-
-/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaQuotient)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrExitSepaQuotient NULL
-#endif
 
 
 /** nonlinear handler under/overestimation callback */
@@ -455,18 +480,31 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 
 
 /** nonlinear handler interval evaluation callback */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_INTERVAL intervalnom;
+   SCIP_INTERVAL intervaldenom;
+   SCIP_INTERVAL result;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nomvar != NULL);
+   assert(nlhdlrexprdata->denomvar != NULL);
+
+   /* it is not possible to compute tighter intervals if both variables are different */
+   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
+      return SCIP_OKAY;
+
+   /* compute bounds for variable in the nominator and in the denominator */
+   intervalnom = intevalvar(scip, nlhdlrexprdata->nomvar, intevalvardata);
+   intervaldenom = intervalnom;
+
+   /* compute bounds for denominator */
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &intervaldenom, intervaldenom, nlhdlrexprdata->denomcoef);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &intervaldenom, intervaldenom, nlhdlrexprdata->denomconst);
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrIntevalQuotient NULL
-#endif
 
 
 /** nonlinear handler callback for reverse propagation */
@@ -503,14 +541,12 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
    /* create nonlinear handler data */
    nlhdlrdata = NULL;
 
-   /* TODO: create and store nonlinear handler specific data here */
-
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectQuotient, nlhdlrEvalauxQuotient, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrQuotient);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataQuotient);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaQuotient, NULL, nlhdlrEstimateQuotient, nlhdlrExitSepaQuotient);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateQuotient, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuotient, nlhdlrReversepropQuotient);
 
    return SCIP_OKAY;
