@@ -408,6 +408,7 @@ SCIP_RETCODE setupAggregationData(
             }
             assert(aggrdata->aggrrows != NULL || aggrdata->aggrrowssize == 0);
             assert(aggrdata->aggrrowscoef != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowssize > 0 || ncolnonzeros == 0);
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
