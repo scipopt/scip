@@ -87,7 +87,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
-		PRESOL=$(PRESOL)\\n\
+		PRESOLLIB=$(PRESOLLIB)\\n\
 		READLINE=$(READLINE)\\n\
 		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
@@ -350,10 +350,10 @@ endif
 # Presolving Library
 #-----------------------------------------------------------------------------
 
-ifeq ($(PRESOL),true)
+ifeq ($(PRESOLLIB),true)
 FLAGS		+=	-DSCIP_WITH_PRESOLVELIB -I$(LIBDIR)/include/presollib/external/tbb/include -I$(LIBDIR)/include/presollib/external -I$(LIBDIR)/include/presollib/src
 SOFTLINKS	+=	$(LIBDIR)/include/presollib
-LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the presolve library directory\n"
+LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the presolving library directory\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -921,7 +921,7 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PRESOL)
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PRESOLLIB)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -1461,7 +1461,7 @@ endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
 endif
-ifneq ($(PRESOL),$(LAST_PRESOL))
+ifneq ($(PRESOLLIB),$(LAST_PRESOLLIB))
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
@@ -1489,7 +1489,7 @@ endif
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
-		@echo "LAST_PRESOL=$(PRESOL)" >> $(LASTSETTINGS)
+		@echo "LAST_PRESOLLIB=$(PRESOLLIB)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1623,9 +1623,9 @@ ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif
 endif
-ifneq ($(PRESOL),true)
-ifneq ($(PRESOL),false)
-		$(error invalid PRESOL flag selected: PRESOL=$(PRESOL). Possible options are: true false)
+ifneq ($(PRESOLLIB),true)
+ifneq ($(PRESOLLIB),false)
+		$(error invalid PRESOLLIB flag selected: PRESOLLIB=$(PRESOLLIB). Possible options are: true false)
 endif
 endif
 

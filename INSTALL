@@ -167,18 +167,21 @@ compilation settings:
               "dbg", "opt", or "prf"
 
 - $(LPS):     the LP solver to use
-              "spx2", "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+              "spx" (= "spx2"), "spx1", "clp", "cpx", "xprs", "msk", "grb", "glop", "qso", "none"
 
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
 
 - $(SYM):     the graph automorphism code (needed to handle symmetries) to use
-             "none", "bliss"
+              "none", "bliss"
+
+- $(TPI):     the task processing interface (needed for concurrent solve) to use
+              "none", "omp", "tny"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
-and neither an expressions interpreter nor symmetry handling techniques you would
-have the following names:
+using the gnu compiler in debug mode, using Soplex version as LP solver,
+and neither an expressions interpreter nor symmetry handling techniques or multi-threading,
+you would have the following names:
 - $(OSTYPE)  = linux
 - $(ARCH)    = x86
 - $(COMP)    = gnu
@@ -186,6 +189,7 @@ have the following names:
 - $(LPS)     = spx
 - $(EXPRINT) = none
 - $(SYM)     = none
+- $(TPI)     = none
 
 -----------------------------------------------------------------------------
 
@@ -233,6 +237,9 @@ Here is what you have to do to get SCIP running:
    - "WORHP=true"      to enable WORHP interface (needs WORHP >= 1.10)
    - "WORHP=false"     to disable WORHP interface (default)
 
+   - "PRESOLLIB=true"  to enable the MILP presolver based on the presolving library
+   - "PRESOLLIB=false" to disable the MILP presolver based on the presolving library (default)
+
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
 
@@ -246,7 +253,11 @@ Here is what you have to do to get SCIP running:
    - "SHARED=true"     to create shared libraries
 
    - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
-   - "SYM=none"        to disable symmetry handling in mixed integer programs
+   - "SYM=none"        to disable symmetry handling in mixed integer programs (default)
+
+   - "TPI=omp"         to use the openmp interface for concurrent solves
+   - "TPI=tny"         to use the tinycthreads interface for concurrent solves
+   - "TPI=none"        to disable the task processing interface (default)
 
    On some machines, you should use gmake instead of make.
 
