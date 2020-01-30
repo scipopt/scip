@@ -2234,14 +2234,15 @@ SCIP_Real getConsAbsViolation(
    return MAX3(0.0, consdata->lhsviol, consdata->rhsviol);
 }
 
-/** returns relative violation of a constraint
+/** computes relative violation of a constraint
  *
- * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ * @note This does not reevaluate the absolute violation, but assumes that @ref computeViolation has been called before.
  */
 static
-SCIP_Real getConsRelViolation(
+SCIP_RETCODE getConsRelViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real*            viol,               /**< buffer to store violation */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
    unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
@@ -2249,10 +2250,10 @@ SCIP_Real getConsRelViolation(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Real absviol;
    SCIP_Real scale;
 
    assert(cons != NULL);
+   assert(viol != NULL);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
@@ -2260,70 +2261,68 @@ SCIP_Real getConsRelViolation(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   absviol = getConsAbsViolation(cons);
+   *viol = getConsAbsViolation(cons);
 
    if( conshdlrdata->violscale == 'n' )
-      return absviol;
+      return SCIP_OKAY;
 
-   if( SCIPisInfinity(scip, absviol) )
-      return SCIPinfinity(scip);
+   if( SCIPisInfinity(scip, *viol) )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( conshdlrdata->violscale == 'a' )
    {
-      scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));
+      scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));  /*lint !e666*/
 
       if( !SCIPisInfinity(scip, -consdata->lhs) && REALABS(consdata->lhs) > scale )
          scale = REALABS(consdata->lhs);
 
       if( !SCIPisInfinity(scip,  consdata->rhs) && REALABS(consdata->rhs) > scale )
          scale = REALABS(consdata->rhs);
+
+      *viol /= scale;
+      return SCIP_OKAY;
    }
-   else
+
+   /* if not 'n' or 'a', then it has to be 'g' at the moment */
+   assert(conshdlrdata->violscale == 'g');
+   if( soltag == 0 || consdata->gradnormsoltag != soltag )
    {
-      /* if not 'n' or 'a', then it has to be 'g' at the moment */
-      assert(conshdlrdata->violscale == 'g');
+      /* update cached value of norm of gradient */
+      consdata->gradnorm = 0.0;
 
-      if( soltag == 0 || consdata->gradnormsoltag != soltag )
+      /* compute gradient */
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, consdata->expr, sol, soltag) );
+
+      /* gradient evaluation error -> no scaling */
+      if( SCIPgetConsExprExprDerivative(consdata->expr) != SCIP_INVALID ) /*lint !e777*/
       {
-         /* update cached value of norm of gradient */
-         consdata->gradnorm = 0.0;
-
-         /* compute gradient */
-         SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, consdata->expr, sol, soltag) );
-
-         /* gradient evaluation error -> no scaling */
-         if( SCIPgetConsExprExprDerivative(consdata->expr) != SCIP_INVALID ) /*lint !e777*/
+         int i;
+         for( i = 0; i < consdata->nvarexprs; ++i )
          {
-            int i;
-            for( i = 0; i < consdata->nvarexprs; ++i )
+            SCIP_Real deriv;
+
+            assert(consdata->expr->difftag == consdata->varexprs[i]->difftag);
+            deriv = SCIPgetConsExprExprDerivative(consdata->varexprs[i]);
+            if( deriv == SCIP_INVALID ) /*lint !e777*/
             {
-               SCIP_Real deriv;
-
-               assert(consdata->expr->difftag == consdata->varexprs[i]->difftag);
-               deriv = SCIPgetConsExprExprDerivative(consdata->varexprs[i]);
-               if( deriv == SCIP_INVALID ) /*lint !e777*/
-               {
-                  /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
-                  consdata->gradnorm = 0.0;
-                  break;
-               }
-
-               consdata->gradnorm += deriv*deriv;
+               /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
+               consdata->gradnorm = 0.0;
+               break;
             }
-         }
-         consdata->gradnorm = sqrt(consdata->gradnorm);
-         consdata->gradnormsoltag = soltag;
-      }
 
-      scale = MAX(1.0, consdata->gradnorm);
+            consdata->gradnorm += deriv*deriv;
+         }
+      }
+      consdata->gradnorm = sqrt(consdata->gradnorm);
+      consdata->gradnormsoltag = soltag;
    }
 
-   assert(scale >= 1.0);
+   *viol /= MAX(1.0, consdata->gradnorm);
 
-   return absviol / scale;
+   return SCIP_OKAY;
 }
 
 /** returns whether constraint is currently violated
@@ -6044,17 +6043,23 @@ SCIP_RETCODE enforceConstraints(
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement && getConsRelViolation(scip, conss[c], sol, soltag) > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
+      if( !consenforced && inenforcement )
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
+         SCIP_Real viol;
 
-         SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
+         SCIP_CALL( getConsRelViolation(scip, conss[c], &viol, sol, soltag) );
+         if( viol > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
-         if( consenforced )
-            ++conshdlrdata->nweaksepa;  /* TODO maybe this should not be counted per constraint, but per enforcement round? */
+            SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
 
-         if( *result == SCIP_CUTOFF )
-            break;
+            if( consenforced )
+               ++conshdlrdata->nweaksepa;  /* TODO maybe this should not be counted per constraint, but per enforcement round? */
+
+            if( *result == SCIP_CUTOFF )
+               break;
+         }
       }
    }
 
@@ -6242,7 +6247,7 @@ SCIP_RETCODE analyzeViolation(
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
-      v = getConsRelViolation(scip, conss[c], sol, soltag);
+      SCIP_CALL( getConsRelViolation(scip, conss[c], &v, sol, soltag) );
       *maxrelconsviol = MAX(*maxrelconsviol, v);
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
@@ -6560,7 +6565,6 @@ SCIP_RETCODE consSepa(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    unsigned int soltag;
    SCIP_Bool haveviol = FALSE;
    int c;
@@ -6583,9 +6587,6 @@ SCIP_RETCODE consSepa(
       assert(SCIPconsIsActive(conss[c]));
 
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
 
       if( isConsViolated(scip, conss[c]) )
          haveviol = TRUE;
@@ -8535,7 +8536,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       if( isConsViolated(scip, conss[c]) )
       {
          *result = SCIP_INFEASIBLE;
-         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
+         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));  /*lint !e666*/
 
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
