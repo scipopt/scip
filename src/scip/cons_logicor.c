@@ -4014,7 +4014,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool redundant;
    int nchgcoefs = 0;
    int c;
    int v;
@@ -4037,8 +4036,19 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 
       if( !SCIPconsIsDeleted(conss[c]) && !consdata->presolved )
       {
+         SCIP_Bool redundant;
+
          /* we are not allowed to detect infeasibility in the exitpre stage */
          SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, &nchgcoefs, NULL, NULL) );
+
+         /* it may happen that a constraint still contains variables that are fixed to one; for example, this happens
+          * when variable fixings have been detected in the last presolving round by some other plugins (see #2941)
+          */
+         if( redundant )
+         {
+            SCIPdebugMsg(scip, "logic or constraint <%s> is redundant (detected during EXITPRE)\n", SCIPconsGetName(conss[c]));
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         }
       }
    }
 

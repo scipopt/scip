@@ -26,7 +26,7 @@
 #    DEBUGTOOLCMD - a debug tool command to use
 #    INSTANCELIST - list of all instances with complete path
 #    TIMELIMLIST - list of time limits for the individual instances
-#    TIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
+#    HARDTIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
 
 # function to capitalize a whole string
 function capitalize {
@@ -92,8 +92,11 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# find out the solver that should be used
+SOLVER=`stripversion $BINNAME`
+
 # figure out the correct settings file extension
-if test $BINNAME = cplex
+if test $SOLVER = cplex
 then
     SETEXTEXTENSION="prm"
 else
@@ -105,7 +108,12 @@ fi
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    if test $SOLVER = fscip
+    then
+	SETTINGS="${SCIPPATH}/../../ug/settings/${SETNAME}.${SETEXTEXTENSION}"
+    else
+	SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    fi
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
@@ -113,22 +121,16 @@ do
     fi
 done
 
-SOLUFILE=""
-for SOLU in testset/$TSTNAME.solu testset/all.solu
-do
-    if test -e $SOLU
-    then
-        SOLUFILE=$SOLU
-        break
-    fi
-done
+# call method to obtain solution file
+# defines the following environment variable: SOLUFILE
+. ./configuration_solufile.sh $TSTNAME
 
 # if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
     if test $SOLUFILE = ""
     then
-        echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+        echo "Skipping test: SETCUTOFF=1 set, but no .solu file ($TSTNAME.solu or all.solu in testset/ or instancedata/testsets/) available"
         exit
     fi
 fi
@@ -163,16 +165,33 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-# echo $POSSIBLEPATHS
 
-#check if we use a ttest or a test file
-if [ -f testset/$TSTNAME.ttest ];
+#search for test file and check if we use a ttest or a test file
+if [ -f instancedata/testsets/$TSTNAME.ttest ];
 then
-    FULLTSTNAME="testset/$TSTNAME.ttest"
+    FULLTSTNAME="instancedata/testsets/$TSTNAME.ttest"
     TIMEFACTOR=$TIMELIMIT
 else
-    FULLTSTNAME="testset/$TSTNAME.test"
-    TIMEFACTOR=1
+    if [ -f instancedata/testsets/$TSTNAME.test ];
+    then
+	FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
+	TIMEFACTOR=1
+    else
+	if [ -f testset/$TSTNAME.ttest ];
+	then
+	    FULLTSTNAME="testset/$TSTNAME.ttest"
+	    TIMEFACTOR=$TIMELIMIT
+	else
+	    if [ -f testset/$TSTNAME.test ];
+	    then
+		FULLTSTNAME="testset/$TSTNAME.test"
+		TIMEFACTOR=1
+	    else
+		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
+		exit
+	    fi
+	fi
+    fi
 fi
 
 if [ ${TIMEFACTOR} -gt 5 ]

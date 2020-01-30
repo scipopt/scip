@@ -997,17 +997,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
     *        - we can also use convex combination of solutions; there is a function SCIPvarGetAvgSol!
     *        - can add an event handler to only update when a new solution has been found
     */
-   if( !sepadata->isintsolavailable && sepadata->computeintsol )
-   {
-      SCIP_Bool success;
-
-      success = FALSE;
-      SCIP_CALL( computeInteriorPoint(scip, sepa, &success) );
-
-      if( success )
-         sepadata->isintsolavailable = TRUE;
-   }
-
    if( !sepadata->isintsolavailable )
    {
       if( SCIPgetNSols(scip) > 0 )
@@ -1016,7 +1005,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
          SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->intsol, SCIPgetBestSol(scip)) );
          sepadata->isintsolavailable = TRUE;
       }
-      else if( SCIPhasNLPSolution(scip, NULL) )
+      else if( SCIPhasNLPSolution(scip) )
       {
          SCIPdebugMsg(scip, "Using NLP solution as interior point!\n");
          SCIP_CALL( SCIPcreateNLPSol(scip, &sepadata->intsol, NULL) );

@@ -2264,10 +2264,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
 
       /* global lower bound is not negative anymore -> remove down lock */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
       /* global lower bound turned negative -> add down lock */
       else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
    case SCIP_EVENTTYPE_GUBCHANGED:
       var = SCIPeventGetVar(event);
@@ -2275,10 +2275,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
 
       /* global upper bound is not positive anymore -> remove up lock */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
       /* global upper bound turned positive -> add up lock */
       else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
    default:
       SCIPerrorMessage("invalid event type.\n");
