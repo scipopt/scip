@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
    int                   nnlpis              /**< total number of nlpis */
    );
 
-/* @} */
+/**@} */
 
 #ifdef __cplusplus
 }

@@ -119,7 +119,7 @@ SCIP_Bool SCIPpricerIsInitialized(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

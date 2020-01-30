@@ -51,6 +51,6 @@ SCIP_RETCODE SCIPincludePresolXyz(
 
 /* TODO place other public methods in this group to facilitate navigation through the documentation */
 
-/* @} */
+/** @} */
 
 #endif

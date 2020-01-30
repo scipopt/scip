@@ -31,7 +31,7 @@
  * with \f$N\f$ the set of variable indexes, \f$R \subseteq N\f$, \f$S \subseteq N\f$, \f$T \subseteq N\f$,
  * \f$R \cap S = \emptyset\f$, \f$R \cap T = \emptyset\f$, \f$S \cap T = \emptyset\f$ and row indices \f$i \not= k\f$.
  *
- * Let $\ell$ and $u$ be bound vectors for x and solve the following two LPs
+ * Let \f$\ell\f$ and \f$u\f$ be bound vectors for x and solve the following two LPs
  * \f{eqnarray*}{
  *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}\\
  *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}
@@ -47,10 +47,10 @@
  *     A_{k\cdot} x \geq b_k \\
  *     \ell \leq x \leq u \\
  * \f}
- * this method determines promising values for $\lambda \in (0,1)$ and
+ * this method determines promising values for \f$\lambda \in (0,1)\f$ and
  * applies feasibility-based bound tightening to the convex combinations
  *
- * $(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k$.
+ * \f$(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k\f$.
  *
  * Additionally, cliques drawn from the SCIPcliqueTable are used
  * to further strengthen the above bound tightening. Full details can be found in

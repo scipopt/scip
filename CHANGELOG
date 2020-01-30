@@ -263,8 +263,8 @@ Interface changes
 
 ### New and changed callbacks
 
-  - new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
-    which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
+- new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
+  which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
 - new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
 
@@ -577,13 +577,13 @@ Interface changes
     low in the tree.
   - new parameter branching/treemodel/maxfpiter to specify the maximum number of fixed-point iterations to use when
     computing the ratio of a variable using the fixed-point method.
-  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly 
+  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly
     before approximating it using the ratio.
   - new parameter branching/treemodel/fallbackinf defines the fallback strategy to use when the tree size estimates
     obtained by SVTS are infinite.
   - new parameter branching/treemodel/fallbacknoprim defines the fallback strategy to use when no primal bound is known
     and thus SVTS would not be able to compute a tree size (it would be infinite).
-  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be 
+  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be
     the deciding factor for branching, in which case it may be better not to use the treemodel.
 
 - new parameters for symmetry handling constraint handlers to enforce that also non-model constraint are copied:

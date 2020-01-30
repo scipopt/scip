@@ -60,7 +60,7 @@ int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

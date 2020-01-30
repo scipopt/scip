@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP_Bool*            tightened           /**< pointer to if the domain was tightened */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -2254,7 +2254,7 @@ char** SCIPnlpiOracleGetVarNames(
  */ 
 int SCIPnlpiOracleGetVarDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx
+   int                   varidx              /**< index of variable which degree should be returned */
    )
 {
    assert(oracle != NULL);

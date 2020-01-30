@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

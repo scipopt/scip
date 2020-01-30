@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -146,9 +146,9 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

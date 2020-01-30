@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPheurPassIndicator(
    SCIP_Real             obj                 /**< objective of solution */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
