@@ -259,6 +259,9 @@ Here is what you have to do to get SCIP running:
    - "TPI=tny"         to use the tinycthreads interface for concurrent solves
    - "TPI=none"        to disable the task processing interface (default)
 
+   - "PRESOL=true"     to use the presolve library and enable the MILP-sepcific presolver
+   - "PRESOL=false"    to disable the presolve library (default)
+
    On some machines, you should use gmake instead of make.
 
    On your first compilation you will be asked for some soft-link targets, depending on the
