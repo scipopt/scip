@@ -5998,7 +5998,7 @@ SCIP_RETCODE enforceConstraints(
    SCIPexpriteratorFree(&it);
 
    /* register external branching candidates */
-   *result = SCIP_DIDNOTFIND;
+   *result = SCIP_INFEASIBLE;
    for( c = 0; c < nconss; ++c )
    {
       int i;
