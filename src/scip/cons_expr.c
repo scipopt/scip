@@ -163,6 +163,8 @@ struct SCIP_ConsData
 
    SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
+   SCIP_Real             gradnorm;           /**< norm of gradient of constraint function in current solution (if evaluated) */
+   unsigned int          gradnormsoltag;     /**< tag of solution used that gradnorm corresponds to */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
    unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
@@ -2284,40 +2286,39 @@ SCIP_Real getConsRelViolation(
       /* if not 'n' or 'a', then it has to be 'g' at the moment */
       assert(conshdlrdata->violscale == 'g');
 
-      /* TODO cache norm of gradient in consdata */
-
-      /* compute gradient */
-      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, consdata->expr, sol, soltag) );
-
-      /* gradient evaluation error -> no scaling */
-      if( SCIPgetConsExprExprDerivative(consdata->expr) == SCIP_INVALID ) /*lint !e777*/
+      if( soltag == 0 || consdata->gradnormsoltag != soltag )
       {
-         scale = 1.0;
-      }
-      else
-      {
-         SCIP_Real norm = 0.0;
-         int i;
+         /* update cached value of norm of gradient */
+         consdata->gradnorm = 0.0;
 
-         for( i = 0; i < consdata->nvarexprs; ++i )
+         /* compute gradient */
+         SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, consdata->expr, sol, soltag) );
+
+         /* gradient evaluation error -> no scaling */
+         if( SCIPgetConsExprExprDerivative(consdata->expr) != SCIP_INVALID ) /*lint !e777*/
          {
-            SCIP_Real deriv;
-
-            assert(consdata->expr->difftag == consdata->varexprs[i]->difftag);
-            deriv = SCIPgetConsExprExprDerivative(consdata->varexprs[i]);
-            if( deriv == SCIP_INVALID ) /*lint !e777*/
+            int i;
+            for( i = 0; i < consdata->nvarexprs; ++i )
             {
-               /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
-               norm = 0.0;
-               break;
+               SCIP_Real deriv;
+
+               assert(consdata->expr->difftag == consdata->varexprs[i]->difftag);
+               deriv = SCIPgetConsExprExprDerivative(consdata->varexprs[i]);
+               if( deriv == SCIP_INVALID ) /*lint !e777*/
+               {
+                  /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
+                  consdata->gradnorm = 0.0;
+                  break;
+               }
+
+               consdata->gradnorm += deriv*deriv;
             }
-
-            norm += deriv*deriv;
          }
-
-         norm = sqrt(norm);
-         scale = MAX(1.0, norm);
+         consdata->gradnorm = sqrt(consdata->gradnorm);
+         consdata->gradnormsoltag = soltag;
       }
+
+      scale = MAX(1.0, consdata->gradnorm);
    }
 
    assert(scale >= 1.0);
