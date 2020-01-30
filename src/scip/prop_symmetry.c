@@ -4055,6 +4055,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedvars = -1;
    propdata->binvaraffected = FALSE;
    propdata->computedsymmetry = FALSE;
+   propdata->islinearproblem = FALSE;
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
