@@ -21,6 +21,9 @@
 #include <string.h>
 
 #include "scip/cons_expr_nlhdlr_quotient.h"
+#include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
 #include "scip/cons_expr.h"
 
 /* fundamental nonlinear handler properties */
@@ -113,19 +116,181 @@ SCIP_RETCODE exprdataFree(
    return SCIP_OKAY;
 }
 
-/** helper method to detect an expression of the form (a*x + b) / (c*y + d) */
+/** helper method to detect whether an expression is of the form a*x + b */
 static
-SCIP_Bool isExpressionQuotient(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+SCIP_Bool isExprUnivariateLinear(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Real*            coef,               /**< pointer to store the coefficient */
+   SCIP_Real*            constant            /**< pointer to store the constant */
    )
 {
-   assert(scip != NULL);
    assert(expr != NULL);
+   assert(conshdlr != NULL);
+   assert(coef != NULL);
+   assert(constant != NULL);
 
-   /* TODO */
+   *var = NULL;
+   *coef = 0.0;
+   *constant = 0.0;
+
+   /* expression is a variable, i.e., a = 1, b = 0 */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+   {
+      *var = SCIPgetConsExprExprVarVar(expr);
+      *coef = 1.0;
+      *constant = 0.0;
+      return TRUE;
+   }
+   /* expression is a sum; check whether it consists only of one variable expression */
+   else if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) == 1 )
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[0];
+      assert(child != NULL);
+
+      /* child must be a variable */
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      {
+         *var = SCIPgetConsExprExprVarVar(child);
+         *coef = SCIPgetConsExprExprSumCoefs(expr)[0];
+         *constant = SCIPgetConsExprExprSumConstant(expr);
+         return TRUE;
+      }
+   }
 
    return FALSE;
+}
+
+/** helper method to detect an expression of the form (a*x + b) / (c*y + d); due to the expansion of products, there
+  * are two types of expressions that can be detected:
+  *
+  * 1. prod(f(x), pow(g(y),-1))
+  * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
+  */
+static
+SCIP_RETCODE detectExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_Bool*            success             /**< pointer to store whether nonlinear handler should be called for this expression */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* prodhdlr;
+   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
+   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_VAR* x = NULL;
+   SCIP_VAR* y = NULL;
+   SCIP_Real a, b, c, d;
+   SCIP_VAR* var;
+   SCIP_Real constant;
+   SCIP_Real coef;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   *success = FALSE;
+
+   /* possible structures only have two children */
+   if( SCIPgetConsExprExprNChildren(expr) != 2 )
+      return SCIP_OKAY;
+
+   /* collect expression handlers */
+   prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
+   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
+   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
+   /* expression must be either a product or a sum */
+   if( SCIPgetConsExprExprHdlr(expr) != prodhdlr && SCIPgetConsExprExprHdlr(expr) != sumhdlr )
+      return SCIP_OKAY;
+
+   children = SCIPgetConsExprExprChildren(expr);
+   assert(children != NULL);
+
+   /* case: prod(f(x), pow(g(y),-1)) */
+   if( SCIPgetConsExprExprHdlr(expr) == prodhdlr )
+   {
+      SCIP_CONSEXPR_EXPR* denomexpr = NULL;
+      SCIP_CONSEXPR_EXPR* nomexpr = NULL;
+
+      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1 )
+      {
+         denomexpr = SCIPgetConsExprExprChildren(children[0])[0];
+         nomexpr = children[1];
+      }
+      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1 )
+      {
+         denomexpr = SCIPgetConsExprExprChildren(children[1])[0];
+         nomexpr = children[0];
+      }
+
+      if( denomexpr != NULL && nomexpr != NULL )
+      {
+         /* nominator and denominator are univariate linear functions -> no auxiliary variables are needed */
+         if( isExprUnivariateLinear(nomexpr, conshdlr, &x, &a, &b)
+            && isExprUnivariateLinear(denomexpr, conshdlr, &y, &c, &d) )
+         {
+            SCIPdebugMsg(scip, "detected nominator (%g * %s + %g) and denominator (%g * %s + %g) to be univariate and linear\n",
+               a, SCIPvarGetName(x), b, c, SCIPvarGetName(y), d);
+
+            /* during presolving, it only makes sense to detect the quotient if both variables are the same */
+            *success = (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) || (x == y);
+         }
+         /* create auxiliary variables if we are in the solving stage */
+         else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         {
+            if( x == NULL )
+            {
+               SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
+               a = 1.0;
+               b = 0.0;
+
+#ifdef SCIP_DEBUG
+               SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
+               SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
+#endif
+            }
+            if( y == NULL )
+            {
+               SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
+               c = 1.0;
+               d = 0.0;
+
+#ifdef SCIP_DEBUG
+               SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
+               SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(y));
+#endif
+            }
+
+            *success = TRUE;
+         }
+      }
+   }
+   /* case: sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1)) */
+   else
+   {
+      assert(SCIPgetConsExprExprHdlr(expr) == sumhdlr);
+   }
+
+   /* create nonlinear handler expression data */
+   if( *success )
+   {
+      assert(x != NULL);
+      assert(y != NULL);
+      assert(a != 0.0);
+      assert(c != 0.0);
+
+      SCIPdebugMsg(scip, "detected quotient expression (%g * %s + %g) / (%g * %s + %g)\n", a, SCIPvarGetName(x), b, c,
+         SCIPvarGetName(y), d);
+      SCIP_CALL( exprdataCreate(scip, nlhdlrexprdata, x, a, b, y, c, d) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -161,41 +326,13 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataQuotient)
 }
 
 
-/** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitQuotient)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrInitQuotient NULL
-#endif
-
-
-/** callback to be called in deinitialization */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitQuotient)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrExitQuotient NULL
-#endif
-
-
 /** callback to detect structure in expression tree */
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
 { /*lint --e{715}*/
-   *success = FALSE;
+   assert(nlhdlrexprdata != NULL);
+
+   SCIP_CALL( detectExpr(scip, conshdlr, expr, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
 }
@@ -309,7 +446,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrQuotient);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataQuotient);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitQuotient, nlhdlrExitQuotient);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaQuotient, NULL, nlhdlrEstimateQuotient, nlhdlrExitSepaQuotient);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuotient, nlhdlrReversepropQuotient);
 
