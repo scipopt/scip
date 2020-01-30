@@ -4337,9 +4337,8 @@ SCIP_RETCODE filterCandidates(
       }
 #endif
 
-   if( isCurrentNodeCutoff(scip) )
-      status->cutoff = TRUE;
-
+      if( isCurrentNodeCutoff(scip) )
+         status->cutoff = TRUE;
    }
    else
    {
