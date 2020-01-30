@@ -1291,6 +1291,7 @@ void SCIPsetConsExprNlhdlrInitExit(
 );
 
 /** set the reformulate callback of a nonlinear handler */
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
