@@ -2700,16 +2700,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
 
@@ -3119,6 +3119,11 @@ SCIP_RETCODE applyFixings(
       }
       else if( var != consdata->var )
       {
+         /* release and unlock old variable */
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          /* replace aggregated variable x in the constraint by its aggregation */
          if( varscalar > 0.0 )
          {
@@ -3163,11 +3168,14 @@ SCIP_RETCODE applyFixings(
 
             consdata->tightened = FALSE;
          }
-         /* release old variable */
-         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          consdata->var = var;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+
       }
 
       /* apply aggregation on y */
@@ -3218,15 +3226,37 @@ SCIP_RETCODE applyFixings(
             consdata->lhs -= consdata->vbdcoef * vbdvarconstant;
          if( !SCIPisInfinity(scip, consdata->rhs) )
             consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
-         consdata->vbdcoef *= vbdvarscalar;
 
          consdata->tightened = FALSE;
 
-         /* release old variable */
+         /* release and unlock old variable */
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
+
+         consdata->vbdcoef *= vbdvarscalar;
          consdata->vbdvar = vbdvar;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
       }
 
       /* catch the events again on the new variables */

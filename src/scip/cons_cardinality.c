@@ -3146,10 +3146,10 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       {
          /* global lower bound is not negative anymore -> remove down lock */
          if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
-            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 1, 0) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, TRUE, FALSE) );
          /* global lower bound turned negative -> add down lock */
          else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
-            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 1, 0) );
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, TRUE, FALSE) );
 
          return SCIP_OKAY;
       }
@@ -3157,10 +3157,10 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       {
          /* global upper bound is not positive anymore -> remove up lock */
          if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
-            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 0, 1) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, FALSE, TRUE) );
          /* global upper bound turned positive -> add up lock */
          else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
-            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 0, 1) );
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, FALSE, TRUE) );
 
          return SCIP_OKAY;
       }
