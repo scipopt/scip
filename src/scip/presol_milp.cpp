@@ -547,8 +547,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             tmpvars.clear();
             tmpvals.clear();
-            tmpvars.reserve(last - first - 1);
-            tmpvals.reserve(last - first - 1);
+            tmpvars.reserve(rowlen);
+            tmpvals.reserve(rowlen);
 
             assert(colCoef != 0.0);
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
