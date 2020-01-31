@@ -6787,7 +6787,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    }
 
    implprobvar = SCIPvarGetProbvar(implvar);
-   /* transform implication containing two binary variables to clique; condition ensures that the active representative
+   /* transform implication containing two binary variables to a clique; the condition ensures that the active representative
     * of implvar is actually binary
     */
    if( SCIPvarIsBinary(implvar) && (SCIPvarIsActive(implvar) || (implprobvar != NULL && SCIPvarIsBinary(implprobvar))) )
@@ -6797,12 +6797,10 @@ SCIP_RETCODE SCIPaddVarImplication(
 
       /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
       if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
-         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
-               )
+          (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5) )
       {
          SCIP_VAR* vars[2];
          SCIP_Bool vals[2];
-
 
          vars[0] = var;
          vars[1] = implvar;
