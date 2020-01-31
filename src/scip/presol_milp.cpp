@@ -38,6 +38,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
    return SCIP_OKAY;
 }
 
