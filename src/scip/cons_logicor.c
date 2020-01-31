@@ -4047,7 +4047,16 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
          if( redundant )
          {
             SCIPdebugMsg(scip, "logic or constraint <%s> is redundant (detected during EXITPRE)\n", SCIPconsGetName(conss[c]));
-            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+
+            if( SCIPconsIsAdded(conss[c]) )
+            {
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            }
+            else
+            {
+               /* we set the presolved flag to FALSE since not all fixing are removed if redundancy is detected */
+               consdata->presolved = FALSE;
+            }
          }
       }
    }
