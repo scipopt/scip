@@ -6771,7 +6771,11 @@ SCIP_RETCODE SCIPaddVarImplication(
    )
 {
    SCIP_VAR* implprobvar;
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
 
    if ( nbdchgs != NULL )
       *nbdchgs = 0;
