@@ -495,51 +495,91 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       {
          int col = res.postsolve.indices[first];
          SCIP_Real side = res.postsolve.values[first];
-         SCIP_Real colCoef = 0.0;
-         tmpvars.clear();
-         tmpvals.clear();
-         tmpvars.reserve(last - first - 1);
-         tmpvals.reserve(last - first - 1);
-         for( int j = first + 1; j < last; ++j )
-         {
-            if( res.postsolve.indices[j] == col )
-            {
-               colCoef = res.postsolve.values[j];
-               break;
-            }
-         }
 
-         assert(colCoef != 0.0);
-         SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
-         while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
-            SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
-            aggrvar = SCIPvarGetAggrVar(aggrvar);
-
-            side -= colCoef * constant;
-            colCoef *= scalar;
-         }
-
-         assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
-
-         for( int j = first + 1; j < last; ++j )
-         {
-            if( res.postsolve.indices[j] == col )
-               continue;
-
-            tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-            tmpvals.push_back(- res.postsolve.values[j] / colCoef);
-         }
-
+         int rowlen = last - first - 1;
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
-         SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
-            tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+         SCIP_Bool redundant = FALSE;
+         if( rowlen == 2 )
+         {
+            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
+            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
+            SCIP_Real scalarx = res.postsolve.values[first + 1];
+            SCIP_Real scalary = res.postsolve.values[first + 2];
+
+            while( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(varx);
+               SCIP_Real constant = SCIPvarGetAggrConstant(varx);
+               varx = SCIPvarGetAggrVar(varx);
+
+               side -= scalarx * constant;
+               scalarx *= scalar;
+            }
+
+            while( SCIPvarGetStatus(vary) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(vary);
+               SCIP_Real constant = SCIPvarGetAggrConstant(vary);
+               vary = SCIPvarGetAggrVar(vary);
+
+               side -= scalary * constant;
+               scalary *= scalar;
+            }
+
+            assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
+            assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+
+            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
+         }
+         else
+         {
+            SCIP_Real colCoef = 0.0;
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+               {
+                  colCoef = res.postsolve.values[j];
+                  break;
+               }
+            }
+
+            tmpvars.clear();
+            tmpvals.clear();
+            tmpvars.reserve(rowlen);
+            tmpvals.reserve(rowlen);
+
+            assert(colCoef != 0.0);
+            SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
+            while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
+               SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
+               aggrvar = SCIPvarGetAggrVar(aggrvar);
+
+               side -= colCoef * constant;
+               colCoef *= scalar;
+            }
+
+            assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+                  continue;
+
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals.push_back(- res.postsolve.values[j] / colCoef);
+            }
+
+            SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
+               tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+         }
 
          if( aggregated )
             *naggrvars += 1;
-         else if( constraintsReplaced )
+         else if( constraintsReplaced && !redundant )
          {
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
@@ -551,7 +591,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
 
             SCIP_CONS* cons;
-            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(aggrvar));
+            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(SCIPmatrixGetVar(matrix, col)));
             SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name.c_str(),
                tmpvars.size(), tmpvars.data(), tmpvals.data(), side, side ) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
