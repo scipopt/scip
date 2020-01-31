@@ -974,7 +974,7 @@ SCIP_RETCODE transformAndSolve(
    /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
    {
-      assert(minobj != SCIP_INVALID);
+      assert(minobj != SCIP_INVALID); /*lint !e777*/
       if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
           || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) ) /*lint !e644*/
          (*redundant) = TRUE;
@@ -992,7 +992,7 @@ SCIP_RETCODE transformAndSolve(
       {
          SCIP_Real activity;
 
-         assert(minobj != SCIP_INVALID);
+         assert(minobj != SCIP_INVALID); /*lint !e777*/
          if( minsolvable && minswapsolvable )
             activity = MAX(minobj, minswapobj) - SCIPmatrixGetRowRhs(matrix, row1idx) - minact;
          else if( minsolvable )
