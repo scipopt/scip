@@ -1505,12 +1505,15 @@ void updateDualBounds(
 
          if( newubdual < ubdual[row] )
          {
-            if( SCIPisInfinity(scip, ubdual[row]) )
-               *ubinfchange = TRUE;
+            /* accept the new upper bound only if the numerics are reliable */
+            if( SCIPisLE(scip,lbdual[row],newubdual) )
+            {
+               if( SCIPisInfinity(scip, ubdual[row]) )
+                  *ubinfchange = TRUE;
 
-            assert(SCIPisLE(scip,lbdual[row],newubdual));
-            ubdual[row] = newubdual;
-            (*boundchanges)++;
+               ubdual[row] = newubdual;
+               (*boundchanges)++;
+            }
          }
       }
       else if( val < 0 )
@@ -1519,12 +1522,15 @@ void updateDualBounds(
 
          if( newlbdual > lbdual[row] )
          {
-            if( SCIPisInfinity(scip, -lbdual[row]) )
-               *lbinfchange = TRUE;
+            /* accept the new lower bound only if the numerics are reliable */
+            if( SCIPisLE(scip,newlbdual,ubdual[row]) )
+            {
+               if( SCIPisInfinity(scip, -lbdual[row]) )
+                  *lbinfchange = TRUE;
 
-            assert(SCIPisLE(scip,newlbdual,ubdual[row]));
-            lbdual[row] = newlbdual;
-            (*boundchanges)++;
+               lbdual[row] = newlbdual;
+               (*boundchanges)++;
+            }
          }
       }
    }

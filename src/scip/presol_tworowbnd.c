@@ -2472,6 +2472,7 @@ SCIP_RETCODE processHashlists(
 
                      SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
                      ncombines++;
+
                      if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                         finished = TRUE;
 
@@ -2482,9 +2483,15 @@ SCIP_RETCODE processHashlists(
                   else
                      finished = TRUE;
                }
+               /* check if SCIP ran into a time limit already */
+               if( j % 10 == 0 && SCIPisStopped(scip) )
+                  finished = TRUE;
                if( finished )
                   break;
             }
+            /* check if SCIP ran into a time limit already */
+            if( SCIPisStopped(scip) )
+               finished = TRUE;
             if( finished )
                break;
          }
