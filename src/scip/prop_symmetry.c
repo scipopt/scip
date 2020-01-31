@@ -169,6 +169,9 @@
 #define DEFAULT_SCHREIERSIMSLEADERVARTYPE 0  /**< variable type of leader in orbit */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 #define DEFAULT_SCHREIERSIMSADDCUTS   TRUE   /**< Should Schreier Sims cuts be added? */
+#define DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS FALSE /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
+#define DEFAULT_MAXLEADERVARTYPE     FALSE   /**< Should the largest group of variables determine the leader's vartype? */
+#define DEFAULT_NOBINLEADER           TRUE   
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -207,6 +210,10 @@ struct SCIP_PropData
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    int**                 permstrans;         /**< pointer to store transposed permutation generators as (npermvars x nperms) matrix */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
+   int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component */
+   int                   nmovedbinpermvars;  /**< number of binary variables moved by any permutation in a symmetry component */
+   int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation in a symmetry component */
+   int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation in a symmetry component */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -215,8 +222,8 @@ struct SCIP_PropData
                                               *   component i in components array */
    int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool*       componentblocked;   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   int*                  componentblocked;   /**< array to store which symmetry methods have been applied to a component using
+                                              *   the same bitset as for misc/usesymmetry */
 
    /* further symmetry information */
    int                   nmovedvars;         /**< number of variables moved by some permutation */
@@ -258,7 +265,6 @@ struct SCIP_PropData
    int                   nbg1;               /**< number of variables in bg1 and bg1list */
    int*                  permvarsevents;     /**< stores events caught for permvars */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
-   int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component that is handled by OF */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
    int                   ofsymcomptiming;    /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -279,6 +285,9 @@ struct SCIP_PropData
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
    SCIP_Bool             schreiersimsaddcuts; /**< Should Schreier Sims cuts be added? */
+   SCIP_Bool             schreiersimsmixedcomponents; /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
+   SCIP_Bool             maxleadervartype;   /**< Should the largest group of variables determine the leader's vartype? */
+   SCIP_Bool             nobinleader;        /**< Should binary variables be never leading variables? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -586,6 +595,9 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nperms == -1 || propdata->nperms == 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->nmovedpermvars == 0 );
+   assert( propdata->nmovedbinpermvars == 0 );
+   assert( propdata->nmovedintpermvars == 0 );
+   assert( propdata->nmovedcontpermvars == 0 );
    assert( propdata->nmovedvars == -1 );
    assert( propdata->binvaraffected == FALSE );
 
@@ -640,6 +652,16 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
+   if ( propdata->schreiersimsenabled && propdata->schreiersimsleadervartype != (int) SCIP_VARTYPE_BINARY )
+   {
+      for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
+      {
+         if ( (int) SCIPvarGetType(propdata->permvars[i]) == propdata->schreiersimsleadervartype )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         }
+      }
+   }
    if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
@@ -766,6 +788,9 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nperms = -1;
       propdata->nmaxperms = 0;
       propdata->nmovedpermvars = 0;
+      propdata->nmovedbinpermvars = 0;
+      propdata->nmovedintpermvars = 0;
+      propdata->nmovedcontpermvars = 0;
       propdata->nmovedvars = -1;
       propdata->log10groupsize = -1.0;
       propdata->binvaraffected = FALSE;
@@ -2412,15 +2437,13 @@ SCIP_RETCODE determineSymmetry(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* free data and exit */
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
-
-      /* disable OF and symmetry handling constraints */
+      /* disable OF and symmetry handling constraints based on symretopes */
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
-      propdata->schreiersimsenabled = FALSE;
 
-      return SCIP_OKAY;
+      /* currently we can only handle non-binary symmetries by Schreier-Sims cuts */
+      if ( ! propdata->schreiersimsenabled )
+         return SCIP_OKAY;
    }
 
    assert( propdata->nperms > 0 );
@@ -2492,10 +2515,19 @@ SCIP_RETCODE determineSymmetry(
          propdata->bg1[v] = FALSE;
          propdata->permvarsevents[v] = -1;
 
-         /* collect number of moved permvars that are handled by OF */
+         /* collect number of moved permvars */
          componentidx = propdata->vartocomponent[v];
          if ( componentidx > -1 && ! propdata->componentblocked[componentidx] )
+         {
             propdata->nmovedpermvars += 1;
+
+            if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
+               propdata->nmovedbinpermvars += 1;
+            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_INTEGER )
+               propdata->nmovedintpermvars += 1;
+            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               propdata->nmovedcontpermvars += 1;
+         }
 
          /* Only catch binary variables, since integer variables should be fixed pointwise; implicit integer variables
           * are not branched on. */
@@ -2543,26 +2575,59 @@ SCIP_RETCODE determineSymmetry(
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-   /* capture binary variables and forbid multi-aggregation of symmetric variables
-    *
-    * note: binary variables are in the beginning of pervars
-    */
-   for (j = 0; j < propdata->nbinpermvars; ++j)
-   {
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+   /* capture symmetric variables and forbid multi aggregation */
 
-      if ( propdata->compressed )
+   /* binary symmetries are always handled
+    *
+    * note: binary variables are in the beginning of permvars
+    */
+   if ( propdata->binvaraffected )
+   {
+      for (j = 0; j < propdata->nbinpermvars; ++j)
       {
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-      }
-      else
-      {
-         for (p = 0; p < propdata->nperms; ++p)
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
+         if ( propdata->compressed )
          {
-            if ( propdata->perms[p][j] != j )
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         }
+         else
+         {
+            for (p = 0; p < propdata->nperms; ++p)
             {
-               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-               break;
+               if ( propdata->perms[p][j] != j )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+                  break;
+               }
+            }
+         }
+      }
+   }
+
+   /* if Schreier-Sims cuts are enabled, also apply this rule to variables of the handable type */
+   if ( propdata->schreiersimsenabled && propdata->schreiersimsleadervartype != (int) SCIP_VARTYPE_BINARY )
+   {
+      for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
+      {
+         if ( (int) SCIPvarGetType(propdata->permvars[j]) != propdata->schreiersimsleadervartype )
+            continue;
+
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
+         if ( propdata->compressed )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         }
+         else
+         {
+            for (p = 0; p < propdata->nperms; ++p)
+            {
+               if ( propdata->perms[p][j] != j )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+                  break;
+               }
             }
          }
       }
@@ -2829,7 +2894,7 @@ SCIP_RETCODE detectOrbitopes(
          propdata->genconss[propdata->ngenconss++] = cons;
          ++propdata->norbitopes;
 
-         propdata->componentblocked[i] = TRUE;
+         propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
       }
 
       /* free data structures */
@@ -3287,7 +3352,7 @@ SCIP_RETCODE addSymresackConss(
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
-   if ( propdata->nleaders > 0 )
+   if ( propdata->nleaders > 0 && propdata->schreiersimsleadervartype == SCIP_VARTYPE_BINARY )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
       for (p = 0; p < nperms; ++p)
@@ -3308,6 +3373,7 @@ SCIP_RETCODE addSymresackConss(
    {
       assert( ! propdata->ofenabled );
       assert( ! propdata->detectorbitopes );
+      assert( ! propdata->schreiersimsenabled );
 
       /* loop through perms and add symresack constraints */
       for (p = 0; p < propdata->nperms; ++p)
@@ -3317,17 +3383,8 @@ SCIP_RETCODE addSymresackConss(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
 
-         /* adapt permutation to leader */
-         if ( propdata->nleaders > 0 )
-         {
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[p], modifiedpermvars, npermvars, FALSE,
+         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
-                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         }
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -3342,8 +3399,11 @@ SCIP_RETCODE addSymresackConss(
       /* loop through components */
       for (i = 0; i < ncomponents; ++i)
       {
-         /* skip components that were treated by different symmetry handling techniques */
-         if ( propdata->componentblocked[i] )
+         /* skip components that were treated by incompatible symmetry handling techniques */
+         if ( (propdata->componentblocked[i] & SYM_HANDLETYPE_SYMBREAK) != 0
+            || (propdata->componentblocked[i] & SYM_HANDLETYPE_ORBITALFIXING) != 0
+            || ((propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0
+               && propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY) )
             continue;
 
          /* loop through perms in component i and add symresack constraints */
@@ -3360,6 +3420,8 @@ SCIP_RETCODE addSymresackConss(
             /* adapt permutation to leader */
             if ( propdata->nleaders > 0 )
             {
+               assert( (propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0 );
+
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[permidx], modifiedpermvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             }
@@ -3818,6 +3880,9 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIP_VAR** permvars;
    int npermvars;
    int nmovedpermvars;
+   int nmovedbinpermvars;
+   int nmovedintpermvars;
+   int nmovedcontpermvars;
    int** permstrans;
    int nperms;
 
@@ -3828,7 +3893,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int* componentbegins;
    int* vartocomponent;
    int ncomponents;
-   SCIP_Shortbool* componentblocked;
+   int* componentblocked;
 
    int orbitidx;
    int orbitleaderidx;
@@ -3841,6 +3906,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_Bool conflictgraphcreated = FALSE;
+   SCIP_Bool mixedcomponents;
    SCIP_Bool success;
    int* norbitleadercomponent;
 
@@ -3862,6 +3928,9 @@ SCIP_RETCODE addSchreierSimsConss(
    vartocomponent = propdata->vartocomponent;
    ncomponents = propdata->ncomponents;
    nmovedpermvars = propdata->nmovedpermvars;
+   nmovedbinpermvars = propdata->nmovedbinpermvars;
+   nmovedintpermvars = propdata->nmovedintpermvars;
+   nmovedcontpermvars = propdata->nmovedcontpermvars;
 
    assert( permvars != NULL );
    assert( npermvars > 0 );
@@ -3873,14 +3942,14 @@ SCIP_RETCODE addSchreierSimsConss(
    assert( vartocomponent != NULL );
    assert( ncomponents > 0 );
    assert( nmovedpermvars > 0 || ! propdata->ofenabled );
+   assert( nmovedbinpermvars > 0 || ! propdata->ofenabled );
+   assert( nmovedintpermvars > 0 || ! propdata->ofenabled );
+   assert( nmovedcontpermvars > 0 || ! propdata->ofenabled );
 
    leaderrule = propdata->schreiersimsleaderrule;
    tiebreakrule = propdata->schreiersimstiebreakrule;
    leadervartype = propdata->schreiersimsleadervartype;
-
-   /* ensure leadervartype is binary if symretopes are active */
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-      leadervartype = SCIP_VARTYPE_BINARY;
+   mixedcomponents = propdata->schreiersimsmixedcomponents;
 
    /* if not already computed, get number of affected vars */
    if ( nmovedpermvars == 0 )
@@ -3892,6 +3961,13 @@ SCIP_RETCODE addSchreierSimsConss(
             if ( permstrans[v][p] != v )
             {
                ++nmovedpermvars;
+
+               if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_BINARY )
+                  nmovedbinpermvars += 1;
+               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_INTEGER )
+                  nmovedintpermvars += 1;
+               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_CONTINUOUS )
+                  nmovedcontpermvars += 1;
                break;
             }
          }
@@ -3901,10 +3977,36 @@ SCIP_RETCODE addSchreierSimsConss(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
+   /* possibly adapt the leader's variable type */
+   if ( propdata->maxleadervartype )
+   {
+      if ( leadervartype == SCIP_VARTYPE_BINARY && nmovedbinpermvars == 0 )
+      {
+         if ( nmovedintpermvars > nmovedcontpermvars )
+            leadervartype = SCIP_VARTYPE_INTEGER;
+         else
+            leadervartype = SCIP_VARTYPE_CONTINUOUS;
+      }
+      else if ( leadervartype == SCIP_VARTYPE_INTEGER && nmovedintpermvars == 0 )
+      {
+         if ( nmovedbinpermvars > nmovedcontpermvars && ! propdata->nobinleader )
+            leadervartype = SCIP_VARTYPE_BINARY;
+         else
+            leadervartype = SCIP_VARTYPE_CONTINUOUS;
+      }
+      else if ( leadervartype == SCIP_VARTYPE_CONTINUOUS && nmovedcontpermvars == 0 )
+      {
+         if ( nmovedbinpermvars > nmovedintpermvars && ! propdata->nobinleader )
+            leadervartype = SCIP_VARTYPE_BINARY;
+         else
+            leadervartype = SCIP_VARTYPE_INTEGER;
+      }
+   }
+
    /* possibly create conflict graph */
-   if ( leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+   if ( leadervartype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
       || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS
-      || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+         || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
       SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
             permvarmap, &conflictgraphcreated) );
@@ -3934,15 +4036,14 @@ SCIP_RETCODE addSchreierSimsConss(
    if ( nchgbds != NULL )
       *nchgbds = 0;
 
-   /* ignore permutations of blocked components*/
+   /* initialize array indicating whether permutations shall not be considered for orbit permutations */
    for (c = 0; c < ncomponents; ++c)
    {
       if ( componentblocked[c] )
       {
-         for(p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
          {
             inactiveperms[components[p]] = TRUE;
-            ++ninactiveperms;
          }
       }
    }
@@ -3951,60 +4052,92 @@ SCIP_RETCODE addSchreierSimsConss(
    for (c = 0; c < ncomponents; ++c)
       norbitleadercomponent[c] = 0;
 
-   while ( ninactiveperms < nperms )
+   /* iterate over components and compute orbits */
+   for (c = 0; c < ncomponents; ++c)
    {
-      int nchanges = 0;
+      success = TRUE;
 
-      /* compute orbits w.r.t. active perms */
-      SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
-            orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
-            componentblocked, ncomponents, nmovedpermvars) );
+      if ( componentblocked[c] )
+         continue;
 
-      /* update symmetry information of conflict graph */
-      if ( conflictgraphcreated )
+      for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         inactiveperms[components[p]] = FALSE;
+      ninactiveperms = nperms - componentbegins[c + 1] + componentbegins[c];
+
+      while ( ninactiveperms < nperms )
       {
-         SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
-               varmap, orbits, orbitbegins, norbits) );
-      }
+         int nchanges = 0;
 
-      /* select orbit and leader */
-      SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
-            permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
-            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
+         /* compute orbits w.r.t. active perms */
+         SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
+               orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
+               componentblocked, ncomponents, nmovedpermvars) );
 
-      if ( ! success )
-         break;
-
-      SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
-
-      /* add Schreier Sims cuts */
-      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
-            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
-
-      norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
-
-      if ( nchgbds != NULL )
-         *nchgbds += nchanges;
-
-      /* deactivate permutations that move the orbit leader */
-      posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
-      for (p = 0; p < nperms; ++p)
-      {
-         if ( inactiveperms[p] )
-            continue;
-
-         if ( permstrans[posleader][p] != posleader )
+         /* stop if we require pure components and a component contains variables of different types */
+         if ( ! mixedcomponents )
          {
-            inactiveperms[p] = TRUE;
-            ++ninactiveperms;
+            for (p = 0; p < norbits; ++p)
+            {
+               if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != leadervartype )
+               {
+                  success = FALSE;
+                  break;
+               }
+            }
+         }
+
+         if ( ! success )
+            break;
+
+         /* update symmetry information of conflict graph */
+         if ( conflictgraphcreated )
+         {
+            SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
+                  varmap, orbits, orbitbegins, norbits) );
+         }
+
+         /* select orbit and leader */
+         SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
+               permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
+               &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
+
+         if ( ! success )
+            break;
+
+         SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
+
+         /* add Schreier Sims cuts */
+         SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
+               orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
+
+         norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
+
+         if ( nchgbds != NULL )
+            *nchgbds += nchanges;
+
+         /* deactivate permutations that move the orbit leader */
+         posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( inactiveperms[p] )
+               continue;
+
+            if ( permstrans[posleader][p] != posleader )
+            {
+               inactiveperms[p] = TRUE;
+               ++ninactiveperms;
+            }
          }
       }
+
+      for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         inactiveperms[components[p]] = TRUE;
    }
 
    for (c = 0; c < ncomponents; ++c)
    {
-      if ( norbitleadercomponent[c] > 5 )
-         componentblocked[c] = TRUE;
+      if ( norbitleadercomponent[c] > 0 )
+         componentblocked[c] |= SYM_HANDLETYPE_SCHREIERSIMS;
    }
    SCIPfreeBufferArray(scip, &norbitleadercomponent);
 
@@ -4063,7 +4196,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected );
+   assert( propdata->binvaraffected || propdata->schreiersimsenabled );
    propdata->triedaddconss = TRUE;
 
    if ( propdata->symconsenabled )
@@ -4078,17 +4211,11 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->schreiersimsenabled )
    {
-      /* Schreier Sims cuts for non-binary variables and symretopes are not compatible */
-      if ( propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY )
-         propdata->symconsenabled = FALSE;
       SCIP_CALL( addSchreierSimsConss(scip, propdata, nchgbds) );
    }
 
-   if ( ! propdata->symconsenabled )
-      return SCIP_OKAY;
-
    /* possibly stop */
-   if ( SCIPisStopped(scip) )
+   if ( SCIPisStopped(scip) || ! propdata->symconsenabled )
       return SCIP_OKAY;
 
    /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
@@ -5026,6 +5153,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->permvarsevents = NULL;
    propdata->inactiveperms = NULL;
    propdata->nmovedpermvars = 0;
+   propdata->nmovedbinpermvars = 0;
+   propdata->nmovedintpermvars = 0;
+   propdata->nmovedcontpermvars = 0;
    propdata->lastrestart = 0;
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
@@ -5160,6 +5290,21 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/schreiersimsaddcuts",
          "Should Schreier Sims cuts be added?",
          &propdata->schreiersimsaddcuts, TRUE, DEFAULT_SCHREIERSIMSADDCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsmixedcomponents",
+         "Should Schreier Sims cuts be added if a symmetry component contains variables of different types?",
+         &propdata->schreiersimsmixedcomponents, TRUE, DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/maxleadervartype",
+         "Should the largest group of variables determine the leader's vartype?",
+         &propdata->maxleadervartype, TRUE, DEFAULT_MAXLEADERVARTYPE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/nobinleader",
+         "Should binary variables be never leading variables?",
+         &propdata->nobinleader, TRUE, DEFAULT_NOBINLEADER, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
