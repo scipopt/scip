@@ -5805,7 +5805,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          SCIP_CONSDATA* consdata;
          SCIP_CONS* cons;
          SCIP_Bool success;
-         SCIP_Bool cutoff = FALSE;
+         SCIP_Bool cutoff;
 
          assert( conss != NULL );
          assert( conss[c] != NULL );
