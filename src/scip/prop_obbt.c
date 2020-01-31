@@ -696,13 +696,12 @@ SCIP_RETCODE createGenVBound(
                activity += genvboundcoefs[k] * SCIPvarGetLPSol(genvboundvars[k]);
 
             SCIPdebugMsg(scip, "LVB activity = %g lpobj = %g\n", activity, SCIPgetLPObjval(scip));
-            assert(SCIPisRelEQ(scip, activity, SCIPgetLPObjval(scip)));
+            assert(EPSZ(SCIPrelDiff(activity, SCIPgetLPObjval(scip)), 10.0 * SCIPdualfeastol(scip)));
 #endif
 
             SCIPdebugMsg(scip, "         adding genvbound\n");
             SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, genvboundvars, xi, genvboundcoefs, ncoefs,
                   gamma_dual < SCIPdualfeastol(scip) ? 0.0 : -gamma_dual, c, bound->boundtype) );
-
             *found = TRUE;
          }
 
