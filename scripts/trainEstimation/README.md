@@ -14,7 +14,7 @@ they can also be combined into even more accurate approximations of the search c
 
 SCIP provides two ways to combine the individual statistics:
 
-1. a linear regression that uses the two values "tree weight" and "SSG" and is guranteed to be monotone.
+1. a linear regression that uses the two values "tree weight" and "SSG" and is guaranteed to be monotone.
 2. a regression forest on all tree statistics
 
 Especially the second method requires **careful training to the instances of interest**. Therefore,
@@ -111,7 +111,7 @@ Now that the data set has been collected in a subdirectory "mydata/", we can inv
 
 to obtain information of the approximation/estimation accuracy of the different estimation methods of SCIP on the newly created data set.
 All information is stored under the default subdirectory "output/".
-The name of the out directory can be changed by providing as  second argument to run_training.sh
+The name of the out directory can be changed by providing it as second argument to run_training.sh
 
 ```
 ./run_training.sh mydata/ /path/to/my/output/
@@ -158,13 +158,14 @@ The column n contains the number of records that were aggregated for this table.
 
 The methods are sorted by their geometric mean approximation ratio of the true tree size.
 We normalize each ratio such that it is bounded from below by 1, which would correspond to a perfect estimate.
-The method at the top, the Random.Forest method, is the method that, yields
+The method at the top, Random.Forest, is the method that yields
 the most accurate estimate of search tree size at termination.
-For methods that approximate search completion, also the Mean Squared Error of the approximation is shown in column "MSE".
+For methods that approximate search completion, the Mean Squared Error of the approximation is shown in column "MSE".
 The columns 2Accurate etc. give the fraction of records that are within a factor of 2 (3,4) of the actual tree size at termination.
 Better methods reach higher values in those columns.
 
-Disclaimer: This table has been produced as a showcase on a subset of 91 publicly available instances almost all of which are solved by SCIP in less than 100 seconds. The figures therein are not representative beyond the data set, and the ranking of the methods may substantially change on other data sources.
+Disclaimer: This table has been produced as a showcase on a subset of 91 publicly available instances almost all of which are solved by SCIP in less than 100 seconds.
+The figures therein are not representative beyond the data set, and the ranking of the methods may substantially change on other data sources.
 
 
 Using the Trained Regression in SCIP
