@@ -2486,7 +2486,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       SCIP_CALL( SCIPcreate(&subscip) );
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
-      sprintf(probnamesuffix, "alns_%s", neighborhood->name);
+      (void) SCIPsnprintf(probnamesuffix, SCIP_MAXSTRLEN, "alns_%s", neighborhood->name);
 
       /* todo later: run global propagation for this set of fixings */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, probnamesuffix, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
@@ -2522,7 +2522,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL( setupSubScip(scip, subscip, subvars, &solvelimits, heur, nchgobjs > 0) );
 
       /* copy the necessary data into the event data to create new solutions */
-      eventdata.nodelimit = solvelimits.nodelimit;
+      eventdata.nodelimit = solvelimits.nodelimit;  /*lint !e644*/
       eventdata.lplimfac = heurdata->lplimfac;
       eventdata.heur = heur;
       eventdata.sourcescip = scip;
