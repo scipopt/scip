@@ -67,6 +67,7 @@ CMAINOBJ	=	cmain.o \
 			extreduce_base.o \
 			extreduce_core.o \
 			extreduce_dbg.o \
+			extreduce_extmst.o \
 			extreduce_util.o \
 			graph_history.o \
 			graph_base.o \

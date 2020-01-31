@@ -150,6 +150,23 @@ typedef struct extension_data
 } EXTDATA;
 
 
+/* inline methods
+ */
+
+/** returns current position in the stack */
+static inline
+int extStackGetPosition(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_ncomponents > 0);
+
+   return (extdata->extstack_ncomponents - 1);
+}
+
+
+
 /* extreduce_base.c
  */
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
@@ -205,6 +222,20 @@ extern const int*         extreduce_mldistsTargetIds(const MLDISTS*, int, int);
 extern const SCIP_Real*   extreduce_mldistsTargetDists(const MLDISTS*, int, int);
 extern const int*         extreduce_mldistsTopTargetIds(const MLDISTS*, int);
 extern const SCIP_Real*   extreduce_mldistsTopTargetDists(const MLDISTS*, int);
+
+
+/* extreduce_extmst.c
+ */
+
+extern void       extreduce_mstAddRoot(SCIP*, int, REDDATA*);
+extern void       extreduce_mstCompAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void       extreduce_mstCompInit(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void       extreduce_mstCompRemove(const GRAPH*, EXTDATA*);
+extern void       extreduce_mstLevelInit(REDDATA*, EXTDATA*);
+extern void       extreduce_mstLevelAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void       extreduce_mstLevelClose(REDDATA*);
+extern void       extreduce_mstLevelRemove(REDDATA*);
+extern SCIP_Real  extreduce_extGetSD(SCIP*, const GRAPH*, int, int, EXTDATA*);
 
 
 /* extreduce_dbg.c

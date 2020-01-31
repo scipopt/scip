@@ -34,54 +34,6 @@
 #include "extreduce.h"
 
 
-/** returns current position in the stack
- *  NOTE: debug duplicate! */
-static inline
-int extStackGetPosition(
-   const EXTDATA*        extdata             /**< extension data */
-)
-{
-   assert(extdata);
-   assert(extdata->extstack_ncomponents > 0);
-
-   return (extdata->extstack_ncomponents - 1);
-}
-
-
-/** returns special distance
- *  NOTE: debug duplicate! */
-static inline
-SCIP_Real extGetSD(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph data structure */
-   int                   vertex1,            /**< first vertex */
-   int                   vertex2,            /**< second vertex */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-   SCIP_Real sd = extreduce_distDataGetSD(scip, g, vertex1, vertex2, extdata->distdata);
-
-   assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
-
-   if( extdata->pcSdToNode )
-   {
-      const SCIP_Real sdpc = extdata->pcSdToNode[vertex2];
-
-      assert(SCIPisEQ(scip, sdpc, -1.0) || SCIPisGE(scip, sdpc, 0.0));
-
-      if( sdpc > -0.5 && (sdpc < sd || sd < -0.5) )
-      {
-         SCIPdebugMessage("special distance update for pc: %f to %f \n", sd, sdpc);
-         sd = sdpc;
-      }
-   }
-
-   assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
-
-   return sd;
-}
-
-
 /** get SD MST weight */
 static
 SCIP_Real sdmstGetWeight(
@@ -124,7 +76,7 @@ SCIP_Real sdmstGetWeight(
          else
          {
             const int endnode = nodes[j];
-            specialDist = extGetSD(scip, graph, startnode, endnode, extdata);
+            specialDist = extreduce_extGetSD(scip, graph, startnode, endnode, extdata);
 
             if( specialDist <= 0.0 )
             {
@@ -763,5 +715,3 @@ SCIP_Bool extreduce_stackTopMstDepoInSync(
 // might be good to have this and reddata extdata stuff in extra method reduce_ext_util.c or just reduce_util.c
 // need some flag (in cgraph?) to see whether a leaf in the cgraph does not actually have valid costs (or any)
 // and should be recomputed!
-
-
