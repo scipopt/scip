@@ -3441,7 +3441,7 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
-   if ( propdata->nleaders > 0 )
+   if ( propdata->nleaders > 0 && propdata->schreiersimsleadervartype == SCIP_VARTYPE_BINARY)
    {
       SCIPfreeBufferArray(scip, &modifiedpermvars);
       for (p = nperms - 1; p >= 0; --p)
