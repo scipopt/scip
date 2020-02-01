@@ -161,6 +161,10 @@ extern void            reduce_dcmstGet1NodeMst(SCIP*, CSR*);
 extern void            reduce_dcmstGet2NodeMst(SCIP*, SCIP_Real, CSR*);
 extern void            reduce_dcmstGet3NodeMst(SCIP*, SCIP_Real, SCIP_Real, SCIP_Real, CSR*);
 extern SCIP_Real       reduce_dcmstGetWeight(SCIP*, const CSR*);
+extern int             reduce_dcmstGetMaxnnodes(const DCMST*);
+extern SCIP_Real*      reduce_dcmstGetAdjcostBuffer(const DCMST*);
+
+
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

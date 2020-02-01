@@ -47,7 +47,6 @@
 
 #define EXT_PC_SDMAXVISITS 10  /**< maximum visits for PC specific SD computation */
 
-
 /** returns special distance */
 static inline
 SCIP_Real extGetSD(
@@ -97,6 +96,34 @@ int extStackGetTopSize(
    return size;
 }
 
+
+/** returns number of ancestor leaves (i.e. number of leaves below current level) */
+static inline
+int extGetNancestorLeaves(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int compsize = extStackGetTopSize(extdata);
+   const int nleaves = extdata->tree_nleaves;
+   const int nleaves_ancestors = nleaves - compsize;
+
+   assert(nleaves_ancestors > 0 && nleaves_ancestors < nleaves);
+
+   return nleaves_ancestors;
+}
+
+
+/** is given SD non-trivial? */
+static inline
+SCIP_Real sdIsNonTrivial(
+   SCIP_Real             specialDist         /**< SD */
+  )
+{
+   assert(specialDist >= 0 || EQ(specialDist, -1.0));
+   assert(LT(specialDist, FARAWAY));
+
+   return (specialDist >= -0.5);
+}
 
 
 /** marks single PcSd array entry */
@@ -421,7 +448,7 @@ SCIP_Bool bottleneckIsDominated(
    )
 {
    SCIP_Real bottleneckDist;
-   const SCIP_Bool hasSpecialDist = (specialDist >= -0.5);
+   const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
 
    assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots);
    assert(vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
@@ -429,7 +456,6 @@ SCIP_Bool bottleneckIsDominated(
 
    if( !hasSpecialDist )
    {
-      assert(EQ(specialDist, -1.0));
       return FALSE;
    }
 
@@ -473,7 +499,7 @@ SCIP_Bool bottleneckToSiblingIsDominated(
    SCIP_Real             specialDist         /**< best computed special distance approximation (-1.0 if unknown) */
    )
 {
-   const SCIP_Bool hasSpecialDist = (specialDist >= -0.5);
+   const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
 
    assert(extedge >= 0 && edge2sibling >= 0);
    assert(extedge != edge2sibling);
@@ -481,7 +507,6 @@ SCIP_Bool bottleneckToSiblingIsDominated(
 
    if( !hasSpecialDist )
    {
-      assert(EQ(specialDist, -1.0));
       return FALSE;
    }
    else
@@ -507,17 +532,105 @@ SCIP_Bool bottleneckToSiblingIsDominated(
 }
 
 
+// todo check here always the bottleneck distances to some or all internal tree
+// nodes. Apart from the base! Need to keep them in a list similar to the leaves!
 
-/** Initializes edges from leaf of top tree component to siblings for MST calculation.
- *  I.e. adds SD adjacency costs.
+/** checks tree bottleneck distances to non-leaves of the tree */
+static inline
+void bottleneckCheckNonLeaves(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            ruledOut            /**< could the extension be ruled out */
+)
+{
+   const int* const pcSdCands = extdata->pcSdCands;
+   const int* const tree_deg = extdata->tree_deg;
+   const int nPcSdCands = extdata->nPcSdCands;
+   const int neighbor = graph->head[edge2neighbor];
+   const int neighbor_base = graph->tail[edge2neighbor];
+
+   assert(pcSdCands);
+   assert(ruledOut);
+   assert(!(*ruledOut));
+   assert(nPcSdCands >= 0);
+
+   /* also check non-leaves */
+   for( int c = 0; c < nPcSdCands; c++ )
+   {
+      SCIP_Real specialDist;
+      const int cand = pcSdCands[c];
+
+      assert(cand >= 0 && cand < graph->knots);
+
+      /* leaf or not contained? */
+      if( tree_deg[cand] <= 1 )
+         continue;
+
+      specialDist = extGetSD(scip, graph, neighbor, cand, extdata);
+
+      if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, cand, specialDist, extdata) )
+      {
+         SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
+         *ruledOut = TRUE;
+
+         return;
+      }
+   }
+}
+
+
+#ifndef NDEBUG
+/** has the leaf a dominated bottleneck with other leaves? */
+static
+SCIP_Bool dbgBottleneckFromLeafIsDominated(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   topleaf,            /**< component leaf to check for */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+   SCIP_Bool ruleOut = FALSE;
+
+   bottleneckMarkRootPath(graph, topleaf, extdata);
+
+   for( int j = 0; j < nleaves; j++ )
+   {
+      const int leaf = leaves[j];
+
+      if( leaf != topleaf )
+      {
+         const SCIP_Real specialDist = extreduce_extGetSD(scip, graph, topleaf, leaf, extdata);
+
+         if( bottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata) )
+         {
+            ruleOut = TRUE;
+            break;
+         }
+      }
+   }
+
+   bottleneckUnmarkRootPath(graph, topleaf, extdata);
+
+   return ruleOut;
+}
+
+#endif
+
+
+/** Gets SDs from leaf of top tree component to siblings for MST calculation.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: Only restricted bottleneck tests are performed! */
 static inline
-void mstCompAddLeafToSiblings(
+void mstCompLeafGetSDsToSiblings(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2top,           /**< edge to the top component leaf */
    EXTDATA*              extdata,            /**< extension data */
+   SCIP_Real             sds[],              /**< array to store the SDs */
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
    )
 {
@@ -531,7 +644,7 @@ void mstCompAddLeafToSiblings(
 
    assert(!(*leafRuledOut));
 
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
    {
       const int edge2sibling = extstack_data[i];
       const int sibling = ghead[edge2sibling];
@@ -540,10 +653,13 @@ void mstCompAddLeafToSiblings(
       assert(extreduce_nodeIsInStackTop(graph, extdata, sibling));
       assert(extdata->tree_deg[sibling] == 1);
       assert(graph->tail[edge2top] == graph->tail[edge2sibling]);
+      assert(EQ(sds[j], -1.0));
 
       if( sibling == topleaf )
       {
          hitTopLeaf = TRUE;
+         sds[j] = FARAWAY;
+
          continue;
       }
 
@@ -557,6 +673,8 @@ void mstCompAddLeafToSiblings(
 
       specialDist = extGetSD(scip, graph, topleaf, graph->head[edge2sibling], extdata);
 
+      sds[j] = specialDist; // todo
+
       if( bottleneckToSiblingIsDominated(graph, edge2top, edge2sibling, specialDist) )
       {
          SCIPdebugMessage("---bottleneck rule-out component (siblings test)---\n");
@@ -569,27 +687,25 @@ void mstCompAddLeafToSiblings(
 }
 
 
-/** Initializes edges from leaf of top tree component to ancestors for MST calculation.
- *  I.e. extends top MST from
+/** Gets SDs from leaf of top tree component to ancestors for MST calculation.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: Only restricted bottleneck tests are performed, UNLESS the leaf has no siblings! */
 static inline
-void mstCompAddLeafToAncestors(
+void mstCompLeafGetSDsToAncestors(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2leaf,          /**< edge to the top component leaf */
+   int                   nleaves_ancestors,  /**< number of leaves to ancestors */
    EXTDATA*              extdata,            /**< extension data */
+   SCIP_Real             sds[],              /**< array to store the SDs */
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
    )
 {
    const MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
    const int* const leaves = extdata->tree_leaves;
-   const int nleaves = extdata->tree_nleaves;
    const int topleaf = graph->head[edge2leaf];
    const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sds_vertical, topleaf);
-   const int compsize = extStackGetTopSize(extdata);
-   const int nleaves_old = nleaves - compsize;
-   const SCIP_Bool hasSiblings = (compsize > 1);
+   const SCIP_Bool hasSiblings = (extStackGetTopSize(extdata) > 1);
    const SCIP_Bool isPc = graph_pc_isPc(graph);
 #ifndef NDEBUG
    const int* const adjids = extreduce_mldistsTopTargetIds(sds_vertical, topleaf);
@@ -597,8 +713,10 @@ void mstCompAddLeafToAncestors(
 
    assert(adjedgecosts);
    assert(!(*leafRuledOut));
-   assert(nleaves_old > 0 && nleaves_old < nleaves);
-   assert(extreduce_mldistsLevelNTopTargets(sds_vertical) == nleaves_old);
+   assert(extreduce_mldistsLevelNTopTargets(sds_vertical) == nleaves_ancestors);
+
+   /* expensive check, maybe only do if STP_DEBUG_EXT is set? */
+   assert(extreduce_sdsverticalInSync(scip, graph, extStackGetTopSize(extdata), topleaf, extdata));
 
    /* if there are no siblings, then there is a chance to find a non-trivial bottleneck rule-out */
    if( !hasSiblings )
@@ -609,26 +727,18 @@ void mstCompAddLeafToAncestors(
          pcSdToNodeMark(graph, topleaf, extdata);
    }
 
-   /* get the SDs to the ancestor (lower) leafs (and try bottleneck rule out if there are no siblings)
-    * todo: replace with SD storage update */
-   for( int j = 0; j < nleaves_old; j++ )
+   /* get the SDs to the ancestor (lower) leafs (and try bottleneck rule out if there are no siblings) */
+   for( int j = 0; j < nleaves_ancestors; j++ )
    {
       const int leaf = leaves[j];
-      const SCIP_Real specialDist = extGetSD(scip, graph, topleaf, leaf, extdata);
+      const SCIP_Real sd = adjedgecosts[j];
+      const SCIP_Real specialDist = EQ(sd, FARAWAY) ? -1.0 : sd;
 
       assert(!extreduce_nodeIsInStackTop(graph, extdata, leaf));
       assert(extdata->tree_deg[leaf] == 1);
       assert(leaf != topleaf);
-
-      {
-         // todo extra debug method that makes this check for all nleaves_old
-         const SCIP_Real sd = (specialDist >= -0.5) ? specialDist : FARAWAY;
-
-     //    printf("%d: id=%d leaf=%d\n", topleaf, adjids[j], leaf);
-
-         assert(adjids[j] == leaf);
-         assert(EQ(adjedgecosts[j], sd));
-      }
+      assert(adjids[j] == leaf);
+      assert(EQ(specialDist, extreduce_extGetSD(scip, graph, topleaf, leaf, extdata)));
 
       /* any chance for rule-out? */
       if( !hasSiblings )
@@ -650,6 +760,173 @@ void mstCompAddLeafToAncestors(
       if( isPc )
          pcSdToNodeUnmark(graph, extdata);
    }
+}
+
+
+/** Gets SDs from leaf (head of 'edge2leaf') to all other leaves of the tree.
+ *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
+ *  NOTE: Only restricted bottleneck tests are performed! */
+static inline
+void mstCompLeafGetSDs(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2leaf,          /**< edge to the top component leaf */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Real             sds[],              /**< array to store the SDs */
+   SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
+   )
+{
+   const int nleaves_ancestors = extGetNancestorLeaves(extdata);
+#ifndef NDEBUG
+   const int compleaf = graph->head[edge2leaf];
+#endif
+
+   assert(leafRuledOut && !(*leafRuledOut));
+
+   /* fill in the first part of the sds array */
+   mstCompLeafGetSDsToAncestors(scip, graph, edge2leaf, nleaves_ancestors, extdata, sds, leafRuledOut);
+
+   if( *leafRuledOut )
+   {
+      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, extdata));
+      return;
+   }
+
+   /* fill in the second part of the sds array */
+   mstCompLeafGetSDsToSiblings(scip, graph, edge2leaf, extdata, &(sds[nleaves_ancestors]), leafRuledOut);
+
+   if( *leafRuledOut )
+   {
+      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, extdata));
+      return;
+   }
+
+   //    if( !graph_pc_isPc(graph) ) //  remove once all is udated from storages
+   assert(!dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, extdata));
+
+   //assert(extreduce_sdsTopInSync(scip, graph, sds, compleaf, extdata)); // todo wont work right now
+
+}
+
+
+/** computes SDs from head of extension edge to all leaves of the tree */
+static inline
+void mstLevelLeafSetVerticalSDs(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            ruledOut            /**< early rule out? */
+)
+{
+   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_vertical);
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+   const int neighbor = graph->head[edge2neighbor];
+   const int neighbor_base = graph->tail[edge2neighbor];
+   const int neighbor_base_proper = (neighbor_base == extdata->tree_root)? -1 : neighbor_base;
+
+#ifndef NDEBUG
+   int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_vertical);
+   SCIP_Bool basehit = FALSE;
+#endif
+
+   assert(adjedgecosts && leaves && ruledOut);
+   assert(*ruledOut == FALSE);
+
+   for( int j = 0, k = 0; j < nleaves; j++ )
+   {
+      SCIP_Real specialDist;
+      const int leaf = leaves[j];
+
+      assert(extdata->tree_deg[leaf] == 1 && leaf != neighbor);
+
+      specialDist = extGetSD(scip, graph, neighbor, leaf, extdata);
+
+      /* save the SD? */
+      if( leaf != neighbor_base_proper )
+      {
+         adjedgecosts[k] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+#ifndef NDEBUG
+         adjids[k] = leaf;
+#endif
+         k++;
+      }
+      else
+      {
+#ifndef NDEBUG
+         assert(!basehit);
+         basehit = TRUE;
+#endif
+      }
+
+      if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
+      {
+         SCIPdebugMessage("---bottleneck rule-out---\n");
+         assert(*ruledOut == FALSE);
+
+         *ruledOut = TRUE;
+
+         break;
+      }
+   }
+
+#ifndef NDEBUG
+   if( !(*ruledOut) )
+   {
+      assert(basehit || neighbor_base_proper != neighbor_base);
+   }
+#endif
+
+}
+
+
+/** initialization for adding a leaf to a level */
+static inline
+void mstLevelLeafInit(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   neighbor_base,      /**< neighbor base */
+   int                   neighbor,           /**< neighbor */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+
+   extreduce_mldistsEmtpySlotSetBase(neighbor, sds_vertical);
+
+   /* Initialization for bottleneck. We start from the base of the neighbor! */
+   bottleneckMarkRootPath(graph, neighbor_base, extdata);
+
+   if( isPc )
+   {
+      pcSdToNodeMark(graph, neighbor, extdata);
+   }
+}
+
+
+/** finalization for adding a leaf to a level */
+static inline
+void mstLevelLeafExit(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   neighbor_base,      /**< neighbor base */
+   SCIP_Bool             ruledOut,           /**< early rule out? */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+
+   if( ruledOut )
+      extreduce_mldistsEmtpySlotReset(sds_vertical);
+   else
+      extreduce_mldistsEmptySlotSetFilled(sds_vertical);
+
+   bottleneckUnmarkRootPath(graph, neighbor_base, extdata);
+
+   if( isPc )
+      pcSdToNodeUnmark(graph, extdata);
 }
 
 
@@ -695,48 +972,17 @@ void extreduce_mstCompAddLeaf(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
+   DCMST* const dcmst = extdata->reddata->dcmst;
+   SCIP_Real* const adjcosts = reduce_dcmstGetAdjcostBuffer(dcmst);
+
    assert(leafRuledOut && !(*leafRuledOut));
 
-   mstCompAddLeafToSiblings(scip, graph, edge2leaf, extdata, leafRuledOut);
-
-   if( *leafRuledOut )
-      return;
-
-   mstCompAddLeafToAncestors(scip, graph, edge2leaf, extdata, leafRuledOut);
-
-   if( *leafRuledOut )
-      return;
+   mstCompLeafGetSDs(scip, graph, edge2leaf, extdata, adjcosts, leafRuledOut);
 
    // todo update mst from mst (in-place)
    // reduce_dcmstAddNodeInplace
 
-#ifndef NDEBUG
-   // todo put into debug method!
-   /* go over entire leaves and make sure nothing can be ruled out! */
-   /* todo: remove the !graph_pc_isPc(graph) once everything is updated from the storages! */
-   if( !graph_pc_isPc(graph) )
-   {
-      const int* const leaves = extdata->tree_leaves;
-      const int nleaves = extdata->tree_nleaves;
-      const int topleaf = graph->head[edge2leaf];
 
-      bottleneckMarkRootPath(graph, topleaf, extdata);
-
-      for( int j = 0; j < nleaves; j++ )
-      {
-         const int leaf = leaves[j];
-
-         if( leaf != topleaf )
-         {
-            const SCIP_Real specialDist = extGetSD(scip, graph, topleaf, leaf, extdata);
-
-            assert(!bottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata));
-         }
-      }
-
-      bottleneckUnmarkRootPath(graph, topleaf, extdata);
-   }
-#endif
 }
 
 
@@ -749,48 +995,18 @@ void extreduce_mstCompInit(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
+   DCMST* const dcmst = extdata->reddata->dcmst;
+   SCIP_Real* const adjcosts = reduce_dcmstGetAdjcostBuffer(dcmst);
+
    assert(leafRuledOut && !(*leafRuledOut));
+   assert(reduce_dcmstGetMaxnnodes(dcmst) >= extdata->tree_nleaves);
 
-   mstCompAddLeafToSiblings(scip, graph, edge2leaf, extdata, leafRuledOut);
-
-   if( *leafRuledOut )
-      return;
-
-   mstCompAddLeafToAncestors(scip, graph, edge2leaf, extdata, leafRuledOut);
-
-   if( *leafRuledOut )
-      return;
+   mstCompLeafGetSDs(scip, graph, edge2leaf, extdata, adjcosts, leafRuledOut);
 
    // todo update mst from mst_reduce of previous!:
    // reduce_dcmstAddNode
 
-#ifndef NDEBUG
-   // todo put into debug method!
-   /* go over entire leaves and make sure nothing can be ruled out! */
-   /* todo: remove the !graph_pc_isPc(graph) once everything is updated from the storages! */
-   if( !graph_pc_isPc(graph) )
-   {
-      const int* const leaves = extdata->tree_leaves;
-      const int nleaves = extdata->tree_nleaves;
-      const int topleaf = graph->head[edge2leaf];
 
-      bottleneckMarkRootPath(graph, topleaf, extdata);
-
-      for( int j = 0; j < nleaves; j++ )
-      {
-         const int leaf = leaves[j];
-
-         if( leaf != topleaf )
-         {
-            const SCIP_Real specialDist = extGetSD(scip, graph, topleaf, leaf, extdata);
-
-            assert(!bottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata));
-         }
-      }
-
-      bottleneckUnmarkRootPath(graph, topleaf, extdata);
-   }
-#endif
 }
 
 
@@ -845,73 +1061,23 @@ void extreduce_mstLevelAddLeaf(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
-   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
-   SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_vertical);
-   const int* const leaves = extdata->tree_leaves;
-   int nPcSdCands = 0;
    const int neighbor = graph->head[edge2neighbor];
    const int neighbor_base = graph->tail[edge2neighbor];
-   const int neighbor_base_proper = (neighbor_base == extdata->tree_root)? -1 : neighbor_base;
-   const int nleaves = extdata->tree_nleaves;
-   SCIP_Bool ruledOut = FALSE;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
-#ifndef NDEBUG
-   int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_vertical);
-   SCIP_Bool basehit = FALSE;
-#endif
 
-   assert(adjedgecosts && leaves);
+   assert(leafRuledOut);
    assert(extdata->tree_deg[neighbor_base] == 1);
    assert(extdata->tree_deg[neighbor] == 0);
+   assert(*leafRuledOut == FALSE);
 
-   extreduce_mldistsEmtpySlotSetBase(neighbor, sds_vertical);
+   mstLevelLeafInit(graph, neighbor_base, neighbor, extdata);
 
-   /* Initialization for bottleneck. We start from the base of the neighbor! */
-   bottleneckMarkRootPath(graph, neighbor_base, extdata);
+   /* compute and store SDs to all leaves */
+   mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
-   if( isPc )
-      pcSdToNodeMark(graph, neighbor, extdata);
-
-   // todo move this to an extra function
-   for( int j = 0, k = 0; j < nleaves; j++ )
+   /* if not yet ruled out, build the MST */
+   if( !(*leafRuledOut) )
    {
-      SCIP_Real specialDist;
-      const int leaf = leaves[j];
-
-      assert(extdata->tree_deg[leaf] == 1 && leaf != neighbor);
-
-      specialDist = extGetSD(scip, graph, neighbor, leaf, extdata);
-
-      /* save the SD? */
-      if( leaf != neighbor_base_proper )
-      {
-         adjedgecosts[k] = (specialDist >= -0.5) ? specialDist : FARAWAY;
-#ifndef NDEBUG
-         adjids[k] = leaf;
-#endif
-         k++;
-      }
-      else
-      {
-#ifndef NDEBUG
-         assert(!basehit);
-         basehit = TRUE;
-#endif
-      }
-
-      if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
-      {
-         SCIPdebugMessage("---bottleneck rule-out---\n");
-         ruledOut = TRUE;
-         break;
-      }
-   }
-
-
-   if( !ruledOut )
-   {
-      assert(basehit || neighbor_base_proper != neighbor_base);
-
        // todo compute MST (call add node method)
 
        // check for rule out
@@ -928,50 +1094,14 @@ void extreduce_mstLevelAddLeaf(
 #endif
    }
 
-   // todo check here always the bottleneck distances to some or all internal tree
-   // nodes. Apart from the base! Need to keep them in a list similar to the leaves!
-   // todo move this to an extra function
-   if( isPc && !ruledOut )
+   /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
+   // todo do this also for STP!
+   if( isPc && !(*leafRuledOut) )
    {
-      const int* const pcSdCands = extdata->pcSdCands;
-      const int* const tree_deg = extdata->tree_deg;
-
-      assert(pcSdCands);
-
-      /* also check non-leaves */
-      for( int c = 0; c < nPcSdCands; c++ )
-      {
-         SCIP_Real specialDist;
-         const int cand = pcSdCands[c];
-
-         assert(cand >= 0 && cand < graph->knots);
-
-         /* leaf or not contained? */
-         if( tree_deg[cand] <= 1 )
-            continue;
-
-         specialDist = extGetSD(scip, graph, neighbor, cand, extdata);
-
-         if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, cand, specialDist, extdata) )
-         {
-            SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
-            ruledOut = TRUE;
-            break;
-         }
-      }
+      bottleneckCheckNonLeaves(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
 
-   if( ruledOut )
-      extreduce_mldistsEmtpySlotReset(sds_vertical);
-   else
-      extreduce_mldistsEmptySlotSetFilled(sds_vertical);
-
-   bottleneckUnmarkRootPath(graph, neighbor_base, extdata);
-
-   if( isPc )
-      pcSdToNodeUnmark(graph, extdata);
-
-   *leafRuledOut = ruledOut;
+   mstLevelLeafExit(graph, neighbor_base, *leafRuledOut, extdata);
 }
 
 /** closes top MST level for further additions */
@@ -1018,7 +1148,8 @@ void extreduce_mstLevelRemove(
 }
 
 
-/** returns special distance */
+/** Returns special distance.
+ *  NOTE: might lead different result if 'vertex1' and 'vertex2' are swapped.  */
 SCIP_Real extreduce_extGetSD(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */

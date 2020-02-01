@@ -43,6 +43,7 @@ typedef struct complete_edge
 struct dynamic_complete_minimum_spanning_tree
 {
    CEDGE*                edgestore;         /**< storage for edges (of size maxnnodes) */
+   SCIP_Real*            adjcost_buffer;    /**< distances buffer (of size maxnnodes) */
    SCIP_Bool*            nodemark;          /**< array for marking nodes (of size maxnnodes) */
    int                   maxnnodes;         /**< maximum number of nodes that can be handled */
 };
@@ -289,6 +290,7 @@ SCIP_RETCODE reduce_dcmstInit(
 
    mst->maxnnodes = maxnnodes;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->edgestore), maxnnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->adjcost_buffer), maxnnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mst->nodemark), maxnnodes) );
 
 
@@ -433,6 +435,35 @@ SCIP_Real reduce_dcmstGetWeight(
 }
 
 
+/** returns maximum number of nodes */
+int reduce_dcmstGetMaxnnodes(
+   const DCMST*          dmst                /**< underlying structure */
+)
+{
+   assert(dmst);
+
+   return dmst->maxnnodes;
+}
+
+
+/** Returns buffer of size 'reduce_dcmstGetMaxnnodes'.
+  * NOTE: buffer is never used within any other function, apart from allocation and freeing.
+  * NOTE: in debug mode the array is initialized to -1.0 */
+SCIP_Real* reduce_dcmstGetAdjcostBuffer(
+   const DCMST*          dmst                /**< underlying structure */
+)
+{
+   assert(dmst);
+   assert(dmst->adjcost_buffer);
+
+#ifndef NDEBUG
+   for( int i = 0; i < dmst->maxnnodes; i++ )
+      dmst->adjcost_buffer[i] = -1.0;
+#endif
+
+   return dmst->adjcost_buffer;
+}
+
 
 /** frees dynamic MST structure */
 void reduce_dcmstFree(
@@ -443,6 +474,7 @@ void reduce_dcmstFree(
    assert(scip && dcmst);
 
    SCIPfreeMemoryArray(scip, &((*dcmst)->nodemark));
+   SCIPfreeMemoryArray(scip, &((*dcmst)->adjcost_buffer));
    SCIPfreeMemoryArray(scip, &((*dcmst)->edgestore));
 
    SCIPfreeMemory(scip, dcmst);

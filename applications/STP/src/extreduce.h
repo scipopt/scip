@@ -248,6 +248,7 @@ extern SCIP_Real       extreduce_treeGetSdMstWeight(SCIP*, const GRAPH*, EXTDATA
 extern SCIP_Real       extreduce_treeGetSdMstExtWeight(SCIP*, const GRAPH*, int, EXTDATA*);
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
 extern void            extreduce_extendInitDebug(int*, int*);
-
+extern SCIP_Bool       extreduce_sdsTopInSync(SCIP*, const GRAPH*, const SCIP_Real[], int, EXTDATA*);
+extern SCIP_Bool       extreduce_sdsverticalInSync(SCIP*, const GRAPH*, int, int, EXTDATA*);
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

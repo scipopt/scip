@@ -673,6 +673,95 @@ void extreduce_extendInitDebug(
 }
 
 
+/** check whether vertical SDs are up to date for given leaf of component */
+SCIP_Bool extreduce_sdsverticalInSync(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   compsize,           /**< size of component */
+   int                   topleaf,            /**< component leaf to check for */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+   const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sds_vertical, topleaf);
+   const int nleaves_old = nleaves - compsize;
+#ifndef NDEBUG
+   const int* const adjids = extreduce_mldistsTopTargetIds(sds_vertical, topleaf);
+#endif
+
+   assert(adjedgecosts);
+   assert(nleaves_old > 0 && nleaves_old < nleaves);
+
+   /* get the SDs to the ancestor (lower) leafs and compare */
+   for( int j = 0; j < nleaves_old; j++ )
+   {
+      const int leaf = leaves[j];
+      const SCIP_Real sd_old = adjedgecosts[j];
+      const SCIP_Real specialDist_new = extreduce_extGetSD(scip, graph, topleaf, leaf, extdata);
+      const SCIP_Real sd_new = (specialDist_new >= -0.5) ? specialDist_new : FARAWAY;
+
+      assert(!extreduce_nodeIsInStackTop(graph, extdata, leaf));
+      assert(extdata->tree_deg[leaf] == 1);
+      assert(leaf != topleaf);
+      assert(adjids[j] == leaf);
+
+       if( !EQ(sd_old, sd_new) )
+       {
+          SCIPdebugMessage("vertical SDs are wrong! %f!=%f \n", sd_old, sd_new);
+
+          return FALSE;
+       }
+   }
+
+   return TRUE;
+}
+
+
+/** are sds from top component leaf corresponding to current tree? */
+SCIP_Bool extreduce_sdsTopInSync(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real       sds[],              /**< SDs from top leaf */
+   int                   topleaf,            /**< component leaf to check for */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+
+   for( int j = 0; j < nleaves; j++ )
+   {
+      const int leaf = leaves[j];
+
+      if( leaf != topleaf )
+      {
+         const SCIP_Real specialDist = extreduce_extGetSD(scip, graph, topleaf, leaf, extdata);
+         const SCIP_Real sd = (specialDist > -0.5)? specialDist : FARAWAY;
+
+         if( !EQ(sds[j], sd) )
+         {
+            SCIPdebugMessage("SD from %d %d not correct! (%f!=%f) \n", topleaf, leaf, sds[j], sd);
+
+            return FALSE;
+         }
+      }
+      else
+      {
+         if( !EQ(sds[j], FARAWAY) )
+         {
+            SCIPdebugMessage("SD to topleaf not FARAWAY! (but %f) \n", sds[j]);
+
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+
 #if 0
 /** does the stack top correspond to MST depository top? */
 SCIP_Bool extreduce_stackTopMstDepoInSync(
