@@ -166,12 +166,11 @@
 /* default parameters for Schreier Sims cuts */
 #define DEFAULT_SCHREIERSIMSTIEBREAKRULE 1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
 #define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
-#define DEFAULT_SCHREIERSIMSLEADERVARTYPE 0  /**< variable type of leader in orbit */
+#define DEFAULT_SCHREIERSIMSLEADERVARTYPE 12 /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
+                                              *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 #define DEFAULT_SCHREIERSIMSADDCUTS   TRUE   /**< Should Schreier Sims cuts be added? */
 #define DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS FALSE /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
-#define DEFAULT_MAXLEADERVARTYPE     FALSE   /**< Should the largest group of variables determine the leader's vartype? */
-#define DEFAULT_NOBINLEADER           TRUE   
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -193,6 +192,11 @@
 #define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
 #define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 #define ISSCHREIERSIMSACTIVE(x)    ((x & SYM_HANDLETYPE_SCHREIERSIMS) != 0)
+
+#define ISSCHREIERSIMSBINACTIVE(x)     ((x & SCIP_SCHREIERSIMSTYPE_BINARY) != 0)
+#define ISSCHREIERSIMSINTACTIVE(x)     ((x & SCIP_SCHREIERSIMSTYPE_INTEGER) != 0)
+#define ISSCHREIERSIMSIMPLINTACTIVE(x) ((x & SCIP_SCHREIERSIMSTYPE_IMPLINT) != 0)
+#define ISSCHREIERSIMSCONTACTIVE(x)    ((x & SCIP_SCHREIERSIMSTYPE_CONTINUOUS) != 0)
 
 
 /** propagator data */
@@ -280,15 +284,14 @@ struct SCIP_PropData
    int                   nschreiersimsconss;  /**< number of generated schreier sims conss */
    int                   schreiersimsleaderrule; /**< rule to select leader  */
    int                   schreiersimstiebreakrule; /**< tie break rule for leader selection */
-   int                   schreiersimsleadervartype; /**< variable type of leader in orbit */
+   int                   schreiersimsleadervartype; /**< bitset encoding which variable types can be leaders;
+                                                     *   if multiple types are allowed, take the one with most affected vars */
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
    SCIP_Bool             schreiersimsaddcuts; /**< Should Schreier Sims cuts be added? */
    SCIP_Bool             schreiersimsmixedcomponents; /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
-   SCIP_Bool             maxleadervartype;   /**< Should the largest group of variables determine the leader's vartype? */
-   SCIP_Bool             nobinleader;        /**< Should binary variables be never leading variables? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -3404,11 +3407,17 @@ SCIP_RETCODE addSymresackConss(
       /* loop through components */
       for (i = 0; i < ncomponents; ++i)
       {
+         SCIP_Bool schreiersimscompatible = TRUE;
+
+         if ( ISSCHREIERSIMSINTACTIVE(propdata->schreiersimsleadervartype)
+            || ISSCHREIERSIMSIMPLINTACTIVE(propdata->schreiersimsleadervartype)
+            || ISSCHREIERSIMSCONTACTIVE(propdata->schreiersimsleadervartype) )
+            schreiersimscompatible = FALSE;
+
          /* skip components that were treated by incompatible symmetry handling techniques */
          if ( (propdata->componentblocked[i] & SYM_HANDLETYPE_SYMBREAK) != 0
             || (propdata->componentblocked[i] & SYM_HANDLETYPE_ORBITALFIXING) != 0
-            || ((propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0
-               && propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY) )
+            || ((propdata->componentblocked[i] & SYM_HANDLETYPE_SCHREIERSIMS) != 0 && ! schreiersimscompatible) )
             continue;
 
          /* loop through perms in component i and add symresack constraints */
@@ -3464,7 +3473,7 @@ SCIP_RETCODE addSymresackConss(
 
 /* add Schreier Sims cuts for a specific orbit */
 static
-SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
+SCIP_RETCODE addSchreierSimsConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL if useconflictgraph == FALSE */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
@@ -3506,7 +3515,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
 
    /* variables in conflict with leader are fixed and not treated by a cut; trailing -1 to not count the leader */
    ncuts = 0;
-   addcuts = TRUE;
+   addcuts = FALSE;
    if ( propdata->schreiersimsaddcuts )
       addcuts = TRUE;
    else if ( propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
@@ -3629,7 +3638,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int*                  orbitbegins,        /**< array storing the begin position of each orbit in orbits */
    int                   norbits,            /**< number of orbits */
    int*                  leaderrule,         /**< pointer to rule to select leader */
-   int*                  tiebreakrule,    /**< pointer to tie break rule to select leader */
+   int*                  tiebreakrule,       /**< pointer to tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
@@ -3676,7 +3685,12 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    if ( (*leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || *leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
       && ! useconflictgraph )
       *leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
+   if ( (*leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || *leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
+      && leadervartype != SCIP_VARTYPE_BINARY )
+      *leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
    if ( *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! useconflictgraph )
+      *tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
+   if ( *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && leadervartype != SCIP_VARTYPE_BINARY )
       *tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
    /* select the leader and its orbit */
@@ -3911,6 +3925,8 @@ SCIP_RETCODE addSchreierSimsConss(
    int leaderrule;
    int tiebreakrule;
    int leadervartype;
+   int selectedtype;
+   int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
    SCIP_Bool success;
@@ -3950,9 +3966,6 @@ SCIP_RETCODE addSchreierSimsConss(
    assert( ncomponents > 0 );
    assert( nmovedpermvars > 0 || ! propdata->ofenabled );
    assert( nmovedbinpermvars > 0 || ! propdata->ofenabled );
-   assert( nmovedintpermvars > 0 || ! propdata->ofenabled );
-   assert( nmovedimplintpermvars > 0 || ! propdata->ofenabled );
-   assert( nmovedcontpermvars > 0 || ! propdata->ofenabled );
 
    leaderrule = propdata->schreiersimsleaderrule;
    tiebreakrule = propdata->schreiersimstiebreakrule;
@@ -3987,35 +4000,36 @@ SCIP_RETCODE addSchreierSimsConss(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   /* possibly adapt the leader's variable type */
-   if ( propdata->maxleadervartype )
+   /* determine the leader's vartype */
+   nvarsselectedtype = 0;
+   if ( ISSCHREIERSIMSBINACTIVE(leadervartype) && nmovedbinpermvars > nvarsselectedtype )
    {
-      if ( leadervartype == SCIP_VARTYPE_BINARY && nmovedbinpermvars == 0 )
-      {
-         if ( nmovedintpermvars > nmovedcontpermvars )
-            leadervartype = SCIP_VARTYPE_INTEGER;
-         else
-            leadervartype = SCIP_VARTYPE_CONTINUOUS;
-      }
-      else if ( leadervartype == SCIP_VARTYPE_INTEGER && nmovedintpermvars == 0 )
-      {
-         if ( nmovedbinpermvars > nmovedcontpermvars && ! propdata->nobinleader )
-            leadervartype = SCIP_VARTYPE_BINARY;
-         else
-            leadervartype = SCIP_VARTYPE_CONTINUOUS;
-      }
-      else if ( leadervartype == SCIP_VARTYPE_CONTINUOUS && nmovedcontpermvars == 0 )
-      {
-         if ( nmovedbinpermvars > nmovedintpermvars && ! propdata->nobinleader )
-            leadervartype = SCIP_VARTYPE_BINARY;
-         else
-            leadervartype = SCIP_VARTYPE_INTEGER;
-      }
+      selectedtype = SCIP_VARTYPE_BINARY;
+      nvarsselectedtype = nmovedbinpermvars;
+   }
+   if ( ISSCHREIERSIMSINTACTIVE(leadervartype) && nmovedintpermvars > nvarsselectedtype )
+   {
+      selectedtype = SCIP_VARTYPE_INTEGER;
+      nvarsselectedtype = nmovedintpermvars;
+   }
+   if ( ISSCHREIERSIMSIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
+   {
+      selectedtype = SCIP_VARTYPE_IMPLINT;
+      nvarsselectedtype = nmovedimplintpermvars;
+   }
+   if ( ISSCHREIERSIMSCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
+   {
+      selectedtype = SCIP_VARTYPE_CONTINUOUS;
+      nvarsselectedtype = nmovedcontpermvars;
    }
 
-   /* possibly create conflict graph */
-   if ( leadervartype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
-      || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS
+   /* terminate if no variables of a possible leader type is affected */
+   if ( nvarsselectedtype == 0 )
+      return SCIP_OKAY;
+
+   /* possibly create conflict graph; graph is not created if no setppc conss are present */
+   if ( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+         || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS
          || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
       SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
@@ -4041,7 +4055,6 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims cuts.\n");
    SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
 
-   /* as long as the stabilizer is non-trivial, add Schreier Sims cuts */
    ninactiveperms = 0;
    if ( nchgbds != NULL )
       *nchgbds = 0;
@@ -4074,6 +4087,7 @@ SCIP_RETCODE addSchreierSimsConss(
          inactiveperms[components[p]] = FALSE;
       ninactiveperms = nperms - componentbegins[c + 1] + componentbegins[c];
 
+      /* as long as the stabilizer is non-trivial, add Schreier Sims cuts */
       while ( ninactiveperms < nperms )
       {
          int nchanges = 0;
@@ -4088,7 +4102,8 @@ SCIP_RETCODE addSchreierSimsConss(
          {
             for (p = 0; p < norbits; ++p)
             {
-               if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != leadervartype )
+               /* stop if the first element of an orbits has the wrong vartype */
+               if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
                {
                   success = FALSE;
                   break;
@@ -4108,7 +4123,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
          /* select orbit and leader */
          SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
-               permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
+               permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, selectedtype,
                &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
 
          if ( ! success )
@@ -4116,8 +4131,8 @@ SCIP_RETCODE addSchreierSimsConss(
 
          SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
-         /* add Schreier Sims cuts */
-         SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
+         /* add Schreier Sims cuts for the selected orbit */
+         SCIP_CALL( addSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
                orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
          norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
@@ -4144,6 +4159,7 @@ SCIP_RETCODE addSchreierSimsConss(
          inactiveperms[components[p]] = TRUE;
    }
 
+   /* if Schreier Sims cuts have been added, store that Schreier Sims has been used for this component */
    for (c = 0; c < ncomponents; ++c)
    {
       if ( norbitleadercomponent[c] > 0 )
@@ -5288,8 +5304,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/schreiersimsleadervartype",
-         "variable type of leader in orbit",
-         &propdata->schreiersimsleadervartype, TRUE, DEFAULT_SCHREIERSIMSLEADERVARTYPE, 0, 3, NULL, NULL) );
+         "bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);" \
+         "if multiple types are allowed, take the one with most affected vars",
+         &propdata->schreiersimsleadervartype, TRUE, DEFAULT_SCHREIERSIMSLEADERVARTYPE, 0, 15, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/addconflictcuts",
@@ -5305,16 +5322,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/schreiersimsmixedcomponents",
          "Should Schreier Sims cuts be added if a symmetry component contains variables of different types?",
          &propdata->schreiersimsmixedcomponents, TRUE, DEFAULT_SCHREIERSIMSMIXEDCOMPONENTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/maxleadervartype",
-         "Should the largest group of variables determine the leader's vartype?",
-         &propdata->maxleadervartype, TRUE, DEFAULT_MAXLEADERVARTYPE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/nobinleader",
-         "Should binary variables be never leading variables?",
-         &propdata->nobinleader, TRUE, DEFAULT_NOBINLEADER, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
