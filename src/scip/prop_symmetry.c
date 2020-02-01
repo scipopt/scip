@@ -3868,7 +3868,7 @@ static
 SCIP_RETCODE addSchreierSimsConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
-   int*                  nchgbds             /** pointer to store number of bound changes (or NULL) */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    SCIP_DIGRAPH* conflictgraph;
