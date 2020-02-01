@@ -213,6 +213,7 @@ struct SCIP_PropData
    int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component */
    int                   nmovedbinpermvars;  /**< number of binary variables moved by any permutation in a symmetry component */
    int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation in a symmetry component */
+   int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation in a symmetry component */
    int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation in a symmetry component */
 
    /* components of symmetry group */
@@ -597,6 +598,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nmovedpermvars == 0 );
    assert( propdata->nmovedbinpermvars == 0 );
    assert( propdata->nmovedintpermvars == 0 );
+   assert( propdata->nmovedimplintpermvars == 0 );
    assert( propdata->nmovedcontpermvars == 0 );
    assert( propdata->nmovedvars == -1 );
    assert( propdata->binvaraffected == FALSE );
@@ -790,6 +792,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nmovedpermvars = 0;
       propdata->nmovedbinpermvars = 0;
       propdata->nmovedintpermvars = 0;
+      propdata->nmovedimplintpermvars = 0;
       propdata->nmovedcontpermvars = 0;
       propdata->nmovedvars = -1;
       propdata->log10groupsize = -1.0;
@@ -2525,7 +2528,9 @@ SCIP_RETCODE determineSymmetry(
                propdata->nmovedbinpermvars += 1;
             else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_INTEGER )
                propdata->nmovedintpermvars += 1;
-            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_IMPLINT )
+               propdata->nmovedimplintpermvars += 1;
+            else
                propdata->nmovedcontpermvars += 1;
          }
 
@@ -3878,12 +3883,13 @@ SCIP_RETCODE addSchreierSimsConss(
 
    SCIP_HASHMAP* permvarmap;
    SCIP_VAR** permvars;
+   int** permstrans;
    int npermvars;
    int nmovedpermvars;
    int nmovedbinpermvars;
    int nmovedintpermvars;
+   int nmovedimplintpermvars;
    int nmovedcontpermvars;
-   int** permstrans;
    int nperms;
 
    int* orbits;
@@ -3930,6 +3936,7 @@ SCIP_RETCODE addSchreierSimsConss(
    nmovedpermvars = propdata->nmovedpermvars;
    nmovedbinpermvars = propdata->nmovedbinpermvars;
    nmovedintpermvars = propdata->nmovedintpermvars;
+   nmovedimplintpermvars = propdata->nmovedimplintpermvars;
    nmovedcontpermvars = propdata->nmovedcontpermvars;
 
    assert( permvars != NULL );
@@ -3944,6 +3951,7 @@ SCIP_RETCODE addSchreierSimsConss(
    assert( nmovedpermvars > 0 || ! propdata->ofenabled );
    assert( nmovedbinpermvars > 0 || ! propdata->ofenabled );
    assert( nmovedintpermvars > 0 || ! propdata->ofenabled );
+   assert( nmovedimplintpermvars > 0 || ! propdata->ofenabled );
    assert( nmovedcontpermvars > 0 || ! propdata->ofenabled );
 
    leaderrule = propdata->schreiersimsleaderrule;
@@ -3966,7 +3974,9 @@ SCIP_RETCODE addSchreierSimsConss(
                   nmovedbinpermvars += 1;
                else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_INTEGER )
                   nmovedintpermvars += 1;
-               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_IMPLINT )
+                  nmovedimplintpermvars += 1;
+               else
                   nmovedcontpermvars += 1;
                break;
             }
@@ -5154,6 +5164,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedpermvars = 0;
    propdata->nmovedbinpermvars = 0;
    propdata->nmovedintpermvars = 0;
+   propdata->nmovedimplintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
    propdata->lastrestart = 0;
    propdata->nfixedzero = 0;
