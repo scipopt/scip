@@ -603,7 +603,7 @@ SCIP_RETCODE transformAndSolve(
    int mininfs;
 
    SCIP_Bool minsolvable;
-   SCIP_Real minobj;
+   SCIP_Real minobj = SCIP_INVALID;
    SCIP_Bool maxsolvable;
    SCIP_Real maxobj;
    SCIP_Bool minswapsolvable;
@@ -974,6 +974,7 @@ SCIP_RETCODE transformAndSolve(
    /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
    {
+      assert(minobj != SCIP_INVALID); /*lint !e777*/
       if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
           || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) ) /*lint !e644*/
          (*redundant) = TRUE;
@@ -991,6 +992,7 @@ SCIP_RETCODE transformAndSolve(
       {
          SCIP_Real activity;
 
+         assert(minobj != SCIP_INVALID); /*lint !e777*/
          if( minsolvable && minswapsolvable )
             activity = MAX(minobj, minswapobj) - SCIPmatrixGetRowRhs(matrix, row1idx) - minact;
          else if( minsolvable )
@@ -2472,6 +2474,7 @@ SCIP_RETCODE processHashlists(
 
                      SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
                      ncombines++;
+
                      if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                         finished = TRUE;
 
@@ -2482,9 +2485,15 @@ SCIP_RETCODE processHashlists(
                   else
                      finished = TRUE;
                }
+               /* check if SCIP ran into a time limit already */
+               if( j % 10 == 0 && SCIPisStopped(scip) )
+                  finished = TRUE;
                if( finished )
                   break;
             }
+            /* check if SCIP ran into a time limit already */
+            if( SCIPisStopped(scip) )
+               finished = TRUE;
             if( finished )
                break;
          }

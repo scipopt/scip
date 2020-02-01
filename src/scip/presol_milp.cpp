@@ -23,7 +23,6 @@
  *
  * @todo add infrastructure to SCIP for handling parallel columns
  * @todo better communication of constraint changes by adding more information to the postsolve structure
- * @todo allow to disable weak and strong dual reductions in the presolve library via parameters
  * @todo allow to pass additional external locks to the presolve library that are considered when doing reductions
  *
  */
@@ -39,6 +38,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
    return SCIP_OKAY;
 }
 
@@ -61,6 +61,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_numerics.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
+#include "scip/scip_randnumgen.h"
 #include "presol/core/Presolve.hpp"
 #include "presol/core/ProblemBuilder.hpp"
 #include "presol/Config.hpp"
@@ -76,8 +77,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
-#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros is at most this
-                                              *   factor times the number of nonzeros before presolving */
+#define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
+#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+                                              *   factor times the number of nonzeros or rows before presolving */
+#define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
+#define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDUALINFER    TRUE      /**< should the dualinfer presolver be enabled within the presolve library? */
@@ -98,14 +102,17 @@ struct SCIP_PresolData
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
+   int randomseed;                           /**< the random seed used for randomization of tie breaking */
    SCIP_Bool enablesparsify;                 /**< should the sparsify presolver be enabled within the presolve library? */
    SCIP_Bool enabledomcol;                   /**< should the dominated column presolver be enabled within the presolve library? */
    SCIP_Bool enableprobing;                  /**< should the probing presolver be enabled within the presolve library? */
    SCIP_Bool enabledualinfer;                /**< should the dualinfer presolver be enabled within the presolve library? */
    SCIP_Bool enablemultiaggr;                /**< should the multi-aggregation presolver be enabled within the presolve library? */
    SCIP_Bool enableparallelrows;             /**< should the parallel rows presolver be enabled within the presolve library? */
-   SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros is at most this
-                                              *   factor times the number of nonzeros before presolving */
+   SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+                                              *   factor times the number of nonzeros or rows before presolving */
+   SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
+   SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 };
 
 using namespace presol;
@@ -216,10 +223,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* at the moment the presolve library does some weak dual reductions within the core */
-   if( !SCIPallowWeakDualReds(scip) )
-      return SCIP_OKAY;
-
    data = SCIPpresolGetData(presol);
 
    int nvars = SCIPgetNVars(scip);
@@ -256,6 +259,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       return SCIP_OKAY;
    }
 
+   /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
+   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
+   assert(linconshdlr != NULL);
+   bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
+
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
 
@@ -273,15 +281,30 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * presolve library those look like normal substitution on the postsolve stack */
    presolve.getPresolveOptions().removeslackvars = false;
 
-   /* communicate the SCIP parameter to the presolve libary */
+   /* communicate the SCIP parameters to the presolve libary */
    presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
-
+   presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
+   presolve.getPresolveOptions().hugeval = data->hugebound;
 
-   presolve.getPresolveOptions().detectlindep = data->detectlineardependency;
+   /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
+   presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
+
+   /* communicate the random seed */
+   presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
 
    /* set number of threads to be used for presolve */
    presolve.getPresolveOptions().threads = data->threads;
+
+   /* disable dual reductions that are not permitted */
+   if( !complete )
+      presolve.getPresolveOptions().dualreds = 0;
+   else if( SCIPallowStrongDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 2;
+   else if( SCIPallowWeakDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 1;
+   else
+      presolve.getPresolveOptions().dualreds = 0;
 
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
@@ -312,18 +335,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( data->enabledualinfer )
       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
 
-   /* domincated columns, stuffing, and if possible in SCIP the future, parallel columns
-    * are strong dual reductions */
-   if( SCIPallowStrongDualReds(scip) )
-   {
-      presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
 
-      if( data->enabledomcol )
-         presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+   if( data->enabledomcol )
+      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
 
-      /* todo: parallel cols cannot be handled by SCIP currently
-       * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
-   }
+   /* todo: parallel cols cannot be handled by SCIP currently
+    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
 
    /* set tolerances */
    presolve.setEpsilon(SCIPepsilon(scip));
@@ -389,7 +407,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
    int newnnz = problem.getConstraintMatrix().getNnz();
    bool constraintsReplaced = false;
-   if( newnnz <= data->modifyconsfac * oldnnz )
+   if( newnnz == 0 || (allowconsmodification &&
+         (problem.getNRows() <= data->modifyconsfac * data->lastnrows ||
+          newnnz <= data->modifyconsfac * oldnnz)) )
    {
       int oldnrows = SCIPmatrixGetNRows(matrix);
       int newnrows = problem.getNRows();
@@ -476,51 +496,91 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       {
          int col = res.postsolve.indices[first];
          SCIP_Real side = res.postsolve.values[first];
-         SCIP_Real colCoef = 0.0;
-         tmpvars.clear();
-         tmpvals.clear();
-         tmpvars.reserve(last - first - 1);
-         tmpvals.reserve(last - first - 1);
-         for( int j = first + 1; j < last; ++j )
-         {
-            if( res.postsolve.indices[j] == col )
-            {
-               colCoef = res.postsolve.values[j];
-               break;
-            }
-         }
 
-         assert(colCoef != 0.0);
-         SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
-         while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
-            SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
-            aggrvar = SCIPvarGetAggrVar(aggrvar);
-
-            side -= colCoef * constant;
-            colCoef *= scalar;
-         }
-
-         assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
-
-         for( int j = first + 1; j < last; ++j )
-         {
-            if( res.postsolve.indices[j] == col )
-               continue;
-
-            tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-            tmpvals.push_back(- res.postsolve.values[j] / colCoef);
-         }
-
+         int rowlen = last - first - 1;
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
-         SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
-            tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+         SCIP_Bool redundant = FALSE;
+         if( rowlen == 2 )
+         {
+            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
+            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
+            SCIP_Real scalarx = res.postsolve.values[first + 1];
+            SCIP_Real scalary = res.postsolve.values[first + 2];
+
+            while( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(varx);
+               SCIP_Real constant = SCIPvarGetAggrConstant(varx);
+               varx = SCIPvarGetAggrVar(varx);
+
+               side -= scalarx * constant;
+               scalarx *= scalar;
+            }
+
+            while( SCIPvarGetStatus(vary) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(vary);
+               SCIP_Real constant = SCIPvarGetAggrConstant(vary);
+               vary = SCIPvarGetAggrVar(vary);
+
+               side -= scalary * constant;
+               scalary *= scalar;
+            }
+
+            assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
+            assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+
+            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
+         }
+         else
+         {
+            SCIP_Real colCoef = 0.0;
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+               {
+                  colCoef = res.postsolve.values[j];
+                  break;
+               }
+            }
+
+            tmpvars.clear();
+            tmpvals.clear();
+            tmpvars.reserve(rowlen);
+            tmpvals.reserve(rowlen);
+
+            assert(colCoef != 0.0);
+            SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
+            while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
+            {
+               SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
+               SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
+               aggrvar = SCIPvarGetAggrVar(aggrvar);
+
+               side -= colCoef * constant;
+               colCoef *= scalar;
+            }
+
+            assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+                  continue;
+
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals.push_back(- res.postsolve.values[j] / colCoef);
+            }
+
+            SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
+               tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+         }
 
          if( aggregated )
             *naggrvars += 1;
-         else if( constraintsReplaced )
+         else if( constraintsReplaced && !redundant )
          {
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
@@ -532,7 +592,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
 
             SCIP_CONS* cons;
-            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(aggrvar));
+            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(SCIPmatrixGetVar(matrix, col)));
             SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name.c_str(),
                tmpvars.size(), tmpvars.data(), tmpvals.data(), side, side ) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -665,6 +725,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "maximal amount of nonzeros allowed to be shifted to make space for substitutions",
          &presoldata->maxshiftperrow, TRUE, DEFAULT_MAXSHIFTPERROW, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/" PRESOL_NAME "/randomseed",
+         "the random seed used for randomization of tie breaking",
+         &presoldata->randomseed, FALSE, DEFAULT_RANDOMSEED, INT_MIN, INT_MAX, NULL, NULL) );
+
    if( DependentRows<double>::Enabled )
    {
       SCIP_CALL( SCIPaddIntParam(scip,
@@ -672,11 +737,24 @@ SCIP_RETCODE SCIPincludePresolMILP(
             "should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always)",
             &presoldata->detectlineardependency, TRUE, DEFAULT_DETECTLINDEP, 0, 2, NULL, NULL) );
    }
+   else
+      presoldata->detectlineardependency = 0;
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/" PRESOL_NAME "/modifyconsfac",
-         "modify SCIP constraints when the number of nonzeros is at most this factor times the number of nonzeros before presolving",
+         "modify SCIP constraints when the number of nonzeros or rows is at most this factor "
+         "times the number of nonzeros or rows before presolving",
          &presoldata->modifyconsfac, FALSE, DEFAULT_MODIFYCONSFAC, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/" PRESOL_NAME "/markowitztolerance",
+         "the markowitz tolerance used for substitutions",
+         &presoldata->markowitztolerance, FALSE, DEFAULT_MARKOWITZTOLERANCE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/" PRESOL_NAME "/hugebound",
+         "absolute bound value that is considered too huge for activitity based calculations",
+         &presoldata->hugebound, FALSE, DEFAULT_HUGEBOUND, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enableparallelrows",
