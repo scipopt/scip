@@ -4159,7 +4159,6 @@ SCIP_RETCODE addSchreierSimsConss(
 
 
 /** finds problem symmetries */
-/* @todo check whether it is worth it to check for orbitopes when using Schreier Sims cuts */
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
