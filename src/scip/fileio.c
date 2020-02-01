@@ -53,7 +53,7 @@ size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
    if ( nbytesread < 0 )
       return 0;
 
-   return (size_t) nbytesread;
+   return (size_t) nbytesread;  /*lint !e571*/
 }
 
 size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
