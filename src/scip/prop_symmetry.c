@@ -2279,10 +2279,22 @@ SCIP_RETCODE determineSymmetry(
    /* do not compute symmetry if there are no binary variables */
    if ( SCIPgetNBinVars(scip) == 0 )
    {
+      SCIP_Bool terminate = TRUE;
+
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
 
-      return SCIP_OKAY;
+      /* terminate if only Schreier Sims for binary variables is selected */
+      if ( propdata->schreiersimsenabled )
+      {
+         if ( (ISSCHREIERSIMSINTACTIVE(propdata->schreiersimsleadervartype) && SCIPgetNIntVars(scip) > 0)
+            || (ISSCHREIERSIMSIMPLINTACTIVE(propdata->schreiersimsleadervartype) && SCIPgetNImplVars(scip) > 0)
+            || (ISSCHREIERSIMSCONTACTIVE(propdata->schreiersimsleadervartype) && SCIPgetNContVars(scip) > 0) )
+            terminate = FALSE;
+      }
+
+      if ( terminate )
+         return SCIP_OKAY;
    }
 
    /* determine symmetry specification */
