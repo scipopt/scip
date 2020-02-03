@@ -1175,6 +1175,27 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gets absolute violation of expression constraint
+ *
+ * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetAbsViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
+/** gets scaled violation of expression constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetRelViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
 /** gives the unique index of an expression constraint
  *
  * Each expression constraint gets an index assigned when it is created.
