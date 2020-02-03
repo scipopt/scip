@@ -31,7 +31,7 @@
  * with \f$N\f$ the set of variable indexes, \f$R \subseteq N\f$, \f$S \subseteq N\f$, \f$T \subseteq N\f$,
  * \f$R \cap S = \emptyset\f$, \f$R \cap T = \emptyset\f$, \f$S \cap T = \emptyset\f$ and row indices \f$i \not= k\f$.
  *
- * Let $\ell$ and $u$ be bound vectors for x and solve the following two LPs
+ * Let \f$\ell\f$ and \f$u\f$ be bound vectors for x and solve the following two LPs
  * \f{eqnarray*}{
  *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}\\
  *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}
@@ -47,10 +47,10 @@
  *     A_{k\cdot} x \geq b_k \\
  *     \ell \leq x \leq u \\
  * \f}
- * this method determines promising values for $\lambda \in (0,1)$ and
+ * this method determines promising values for \f$\lambda \in (0,1)\f$ and
  * applies feasibility-based bound tightening to the convex combinations
  *
- * $(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k$.
+ * \f$(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k\f$.
  *
  * Additionally, cliques drawn from the SCIPcliqueTable are used
  * to further strengthen the above bound tightening. Full details can be found in
@@ -96,7 +96,7 @@
  * Data structures
  */
 
-/** Signum for convex-combined variable coefficients (\lambda * A_{ri} + (1 - \lambda) * A_{si})
+/** Signum for convex-combined variable coefficients \f$(\lambda * A_{ri} + (1 - \lambda) * A_{si})\f$
  *  UP  - Coefficient changes from negative to positive for increasing lambda
  *  DN  - Coefficient changes from positive to negative for increasing lambda
  *  POS - Coefficient is positive for all lambda in (0,1)
@@ -372,7 +372,7 @@ SCIP_RETCODE solveSingleRowLP(
        *  1. x_i \in [0,1]
        *  2. a[i] > 0
        *  3. c[i] >= 0
-       * and calculate its "unit price" c[i]/a[i]. 
+       * and calculate its "unit price" c[i]/a[i].
        */
       if( SCIPisNegative(scip, a[i]) )
       {
@@ -404,7 +404,7 @@ SCIP_RETCODE solveSingleRowLP(
    /* Actual solving starts here.
     * If maxgain > 0 holds, we have a variable that can relax the constraint to an arbitrary degree while yielding
     * a certain profit per unit. This will be called downslack. If mincost < inf holds, we have a variable that can
-    * always satisfy the constraint at a certain unit price. This will be called upslack. 
+    * always satisfy the constraint at a certain unit price. This will be called upslack.
     */
 
    /* Problem is unbounded since the downslack variable yields higher gains than the upslack variable costs */
@@ -603,7 +603,7 @@ SCIP_RETCODE transformAndSolve(
    int mininfs;
 
    SCIP_Bool minsolvable;
-   SCIP_Real minobj;
+   SCIP_Real minobj = SCIP_INVALID;
    SCIP_Bool maxsolvable;
    SCIP_Real maxobj;
    SCIP_Bool minswapsolvable;
@@ -974,6 +974,7 @@ SCIP_RETCODE transformAndSolve(
    /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
    {
+      assert(minobj != SCIP_INVALID); /*lint !e777*/
       if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
           || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) ) /*lint !e644*/
          (*redundant) = TRUE;
@@ -991,6 +992,7 @@ SCIP_RETCODE transformAndSolve(
       {
          SCIP_Real activity;
 
+         assert(minobj != SCIP_INVALID); /*lint !e777*/
          if( minsolvable && minswapsolvable )
             activity = MAX(minobj, minswapobj) - SCIPmatrixGetRowRhs(matrix, row1idx) - minact;
          else if( minsolvable )
@@ -1766,11 +1768,15 @@ SCIP_RETCODE applyConvComb(
    }
 #endif
 
+   /* Sort breakpoints as they will be processed in ascending order */
+   SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
+
    /* Check row combination for numerically difficult breakpoints */
    numericsokay = TRUE;
    for( i = 0; i < nvars; i++ )
    {
       idx = varinds[i];
+      /* Breakpoints close to zero and one are troublesome */
       if (signs[idx] != CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0)) )
       {
          numericsokay = FALSE;
@@ -1779,6 +1785,19 @@ SCIP_RETCODE applyConvComb(
                       breakpoints[i], SCIPmatrixGetColName(matrix, idx));
 #endif
       }
+
+      /* Breakpoints that are close to each other but not idential lead to numerical issues */
+      if( i > 0 && !SCIPisEQ(scip, breakpoints[i], breakpoints[i-1])
+         && SCIPisFeasZero(scip, breakpoints[i] - breakpoints[i-1]) )
+      {
+         numericsokay = FALSE;
+#ifdef SCIP_DEBUG_BREAKPOINTS
+         SCIPdebugMsg(scip, "breakpoints %g and %g of variables %s and %s are numerically difficult, row-pair will be skipped\n",
+                      breakpoints[i], breakpoint[i-1],
+                      SCIPmatrixGetColName(matrix, idx), SCIPmatrixGetColName(matrix, varinds[i-1]));
+#endif
+      }
+
       /* assert that computation of breakpoints for clique variables has been numerically stable */
       assert(!(signs[idx] == CLQ && (SCIPisZero(scip, breakpoints[i]) || SCIPisEQ(scip, breakpoints[i], 1.0))));
    }
@@ -1792,8 +1811,6 @@ SCIP_RETCODE applyConvComb(
       SCIP_CALL( SCIPallocBufferArray(scip, &subsciplbs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subscipubs, nvars) );
 #endif
-
-      SCIPsortRealIntInt(breakpoints, varinds, cliquemaxinds, nvars);
 
       for( i = 0; i < nvars; i++)
       {
@@ -2457,6 +2474,7 @@ SCIP_RETCODE processHashlists(
 
                      SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
                      ncombines++;
+
                      if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                         finished = TRUE;
 
@@ -2467,9 +2485,15 @@ SCIP_RETCODE processHashlists(
                   else
                      finished = TRUE;
                }
+               /* check if SCIP ran into a time limit already */
+               if( j % 10 == 0 && SCIPisStopped(scip) )
+                  finished = TRUE;
                if( finished )
                   break;
             }
+            /* check if SCIP ran into a time limit already */
+            if( SCIPisStopped(scip) )
+               finished = TRUE;
             if( finished )
                break;
          }

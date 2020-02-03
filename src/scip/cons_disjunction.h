@@ -114,9 +114,9 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CONS*            addcons             /**< additional constraint in disjunction */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

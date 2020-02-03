@@ -191,9 +191,9 @@ SCIP_Real* SCIPgetWeightsCardinality(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

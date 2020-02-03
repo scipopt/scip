@@ -6053,7 +6053,7 @@ SCIP_RETCODE varEventObjChanged(
    * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
    * that make comparison with values close to epsilon inaccurate.
    */
-   assert(!SCIPsetIsEQ(set, oldobj, newobj) || 
+   assert(!SCIPsetIsEQ(set, oldobj, newobj) ||
           (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set))
    );
 

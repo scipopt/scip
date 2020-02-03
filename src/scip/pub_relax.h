@@ -151,7 +151,7 @@ void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

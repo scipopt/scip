@@ -1422,3 +1422,5 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
 
    return SCIP_OKAY;
 }
+
+/**@} */

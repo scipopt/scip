@@ -931,7 +931,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
       oldnchgcoefs = *nchgcoefs;
-      for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
+      for( r = 0; r < nrows && nuseless <= maxuseless && !SCIPisStopped(scip); r++ )
       {
          int rowidx;
 

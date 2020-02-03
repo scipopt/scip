@@ -109,7 +109,7 @@ enum SideChange
 };
 typedef enum SideChange SIDECHANGE;
 
-/** Signum for convex-combined variable coefficients (\lambda * A_{ri} + (1 - \lambda) * A_{si})
+/** Signum for convex-combined variable coefficients \f$(\lambda * A_{ri} + (1 - \lambda) * A_{si})\f$
  *  UP  - Coefficient changes from negative to positive for increasing lambda
  *  DN  - Coefficient changes from positive to negative for increasing lambda
  *  POS - Coefficient is positive for all lambda in (0,1)
@@ -1505,12 +1505,15 @@ void updateDualBounds(
 
          if( newubdual < ubdual[row] )
          {
-            if( SCIPisInfinity(scip, ubdual[row]) )
-               *ubinfchange = TRUE;
+            /* accept the new upper bound only if the numerics are reliable */
+            if( SCIPisLE(scip,lbdual[row],newubdual) )
+            {
+               if( SCIPisInfinity(scip, ubdual[row]) )
+                  *ubinfchange = TRUE;
 
-            assert(SCIPisLE(scip,lbdual[row],newubdual));
-            ubdual[row] = newubdual;
-            (*boundchanges)++;
+               ubdual[row] = newubdual;
+               (*boundchanges)++;
+            }
          }
       }
       else if( val < 0 )
@@ -1519,12 +1522,15 @@ void updateDualBounds(
 
          if( newlbdual > lbdual[row] )
          {
-            if( SCIPisInfinity(scip, -lbdual[row]) )
-               *lbinfchange = TRUE;
+            /* accept the new lower bound only if the numerics are reliable */
+            if( SCIPisLE(scip,newlbdual,ubdual[row]) )
+            {
+               if( SCIPisInfinity(scip, -lbdual[row]) )
+                  *lbinfchange = TRUE;
 
-            assert(SCIPisLE(scip,newlbdual,ubdual[row]));
-            lbdual[row] = newlbdual;
-            (*boundchanges)++;
+               lbdual[row] = newlbdual;
+               (*boundchanges)++;
+            }
          }
       }
    }

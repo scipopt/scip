@@ -647,6 +647,7 @@
  * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
  * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
  * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
+ * TPI                  | tny, omp, none                 | TPI=[tny,omp,none]     | enable task processing interface required for concurrent solver |
  *
  * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
  * configuration.

@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which might be expensive) */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

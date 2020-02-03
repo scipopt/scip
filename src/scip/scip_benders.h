@@ -692,7 +692,7 @@ SCIP_RETCODE SCIPapplyBendersDecomposition(
    int                   decompindex         /**< the index of the decomposition that will be applied */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicBenderscutsMethods
  *
@@ -921,7 +921,7 @@ SCIP_RETCODE SCIPapplyBendersStoredCuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

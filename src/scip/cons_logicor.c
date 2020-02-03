@@ -4014,7 +4014,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool redundant;
    int nchgcoefs = 0;
    int c;
    int v;
@@ -4037,8 +4036,28 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 
       if( !SCIPconsIsDeleted(conss[c]) && !consdata->presolved )
       {
+         SCIP_Bool redundant;
+
          /* we are not allowed to detect infeasibility in the exitpre stage */
          SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &redundant, &nchgcoefs, NULL, NULL) );
+
+         /* it may happen that a constraint still contains variables that are fixed to one; for example, this happens
+          * when variable fixings have been detected in the last presolving round by some other plugins (see #2941)
+          */
+         if( redundant )
+         {
+            SCIPdebugMsg(scip, "logic or constraint <%s> is redundant (detected during EXITPRE)\n", SCIPconsGetName(conss[c]));
+
+            if( SCIPconsIsAdded(conss[c]) )
+            {
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            }
+            else
+            {
+               /* we set the presolved flag to FALSE since not all fixing are removed if redundancy is detected */
+               consdata->presolved = FALSE;
+            }
+         }
       }
    }
 
@@ -4856,9 +4875,9 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
 
    if( endptr > startptr )
    {
-      /* copy string for parsing */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
-
+      /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
+      strcopy[endptr-startptr] = '\0';
       varssize = 100;
       nvars = 0;
 

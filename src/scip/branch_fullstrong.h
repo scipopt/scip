@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_RESULT*          result              /**< result pointer                                      */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -613,7 +613,7 @@ int SCIPgetNConshdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicConstraintMethods
  *

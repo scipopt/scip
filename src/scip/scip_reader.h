@@ -182,7 +182,7 @@ int SCIPgetNReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

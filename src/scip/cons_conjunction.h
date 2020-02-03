@@ -109,9 +109,9 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
    SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

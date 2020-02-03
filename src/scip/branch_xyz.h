@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludeBranchruleXyz(
 
 /* TODO place other public methods in this group to facilitate navigation through the documentation */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

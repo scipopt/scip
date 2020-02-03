@@ -1965,7 +1965,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       decompHorizonMarkInterval(scip, decomphorizon, heurdata, sol, currblockstart, currblockend);
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** choose a decomposition from the store or return NULL if none exists/no decomposition was suitable */
