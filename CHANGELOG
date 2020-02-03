@@ -676,6 +676,7 @@ Fixed bugs
 - fix issue in printing solutions for variables that have been added by the dual sparsify presolver
 - fix issue related to fixing redundant logic-or constraints after presolving
 - fixed bug when parsing logic-or and and-constraints
+- fixed wrong assert in updateLazyBounds()
 
 Miscellaneous
 -------------
