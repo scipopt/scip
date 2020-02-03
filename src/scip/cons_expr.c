@@ -5844,10 +5844,12 @@ SCIP_RETCODE enforceExpr(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIP_Real auxvarvalue;
+   SCIP_Real origviol;
    SCIP_Bool underestimate;
    SCIP_Bool overestimate;
-   SCIP_Real minviolation = 0.0;
+   SCIP_Real auxviol;
+   SCIP_Bool auxunderestimate;
+   SCIP_Bool auxoverestimate;
    SCIP_RESULT hdlrresult;
    int e;
 
@@ -5858,28 +5860,11 @@ SCIP_RETCODE enforceExpr(
 
    *result = SCIP_DIDNOTFIND;
 
-   auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
-
    /* make sure that this expression has been evaluated */
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
 
-   /* compute violation and decide whether under- or overestimate is required */
-   if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
-   {
-      /* the expression could be evaluated, then look how much and on which side it is violated */
-
-      /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > minviolation;
-
-      /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > minviolation;
-   }
-   else
-   {
-      /* if expression could not be evaluated, then both under- and overestimate should be considered */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-   }
+   /* decide whether under- or overestimate is required and get amount of violation */
+   origviol = getExprAbsOrigViolation(scip, expr, sol, &underestimate, &overestimate);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5912,8 +5897,11 @@ SCIP_RETCODE enforceExpr(
        * if changing this here, we must also adapt analyzeViolation
        */
 
+      auxviol = getExprAbsAuxViolation(scip, expr, expr->enfos[e], sol, &auxunderestimate, &auxoverestimate);
+      assert(auxviol >= 0.0);
+
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
-      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < conshdlrdata->enfoauxviolfactor * REALABS(expr->evalvalue - auxvarvalue) )  /*lint !e777*/
+      if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
@@ -5921,7 +5909,7 @@ SCIP_RETCODE enforceExpr(
       }
 
       /* if aux-violation is small (below feastol) and we look only for strong cuts, then it's unlikely to give a strong cut, so skip it */
-      if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )  /*lint !e777*/
+      if( !allowweakcuts && auxviol < SCIPfeastol(scip) )  /*lint !e777*/
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
@@ -5930,8 +5918,8 @@ SCIP_RETCODE enforceExpr(
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate, allowweakcuts); )
 
-      /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
-      if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
+      /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
+      if( overestimate && auxoverestimate )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
@@ -5975,7 +5963,8 @@ SCIP_RETCODE enforceExpr(
          }
       }
 
-      if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > minviolation) )  /*lint !e777*/
+      /* if we want underestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
+      if( underestimate && auxunderestimate )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
