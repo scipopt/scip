@@ -841,9 +841,13 @@ SCIP_RETCODE cancelCol(
                   if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) &&
                      (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
+
                   /* skip if the scale is non-integral */
                   if( !SCIPisIntegral(scip, scale) )
                      continue;
+
+                  /* round scale to be exactly integral */
+                  scale = floor(scale + 0.5);
                }
                /* skip if the canceled variable is a continuous variable */
                else
