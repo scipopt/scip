@@ -2290,6 +2290,9 @@ SCIP_RETCODE getConsRelViolation(
    assert(conshdlrdata->violscale == 'g');
    if( soltag == 0 || consdata->gradnormsoltag != soltag )
    {
+      /* we need the varexprs to conveniently access the gradient */
+      SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
       /* update cached value of norm of gradient */
       consdata->gradnorm = 0.0;
 
@@ -8333,8 +8336,6 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert(consdata != NULL);
    assert(*consdata != NULL);
    assert((*consdata)->expr != NULL);
-   assert((*consdata)->nvarexprs == 0);
-   assert((*consdata)->varexprs == NULL);
 
    /* constraint locks should have been removed */
    assert((*consdata)->nlockspos == 0);
