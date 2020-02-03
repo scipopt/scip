@@ -166,7 +166,7 @@
 /* default parameters for Schreier Sims cuts */
 #define DEFAULT_SCHREIERSIMSTIEBREAKRULE 1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
 #define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
-#define DEFAULT_SCHREIERSIMSLEADERVARTYPE 12 /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
+#define DEFAULT_SCHREIERSIMSLEADERVARTYPE 14 /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 #define DEFAULT_SCHREIERSIMSADDCUTS   TRUE   /**< Should Schreier Sims cuts be added? */
