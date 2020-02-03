@@ -5850,7 +5850,9 @@ SCIP_RETCODE branchConstraintInfeasibility(
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Real             maxviol,            /**< maximal violation among all expr-constraints */
+   SCIP_Real             maxrelconsviol,     /**< maximal scaled violation among all expr-constraints */
+   SCIP_SOL*             sol,                /**< solution */
+   unsigned int          soltag,             /**< solution tag */
    SCIP_RESULT*          result              /**< buffer to store result: didnotfind, branched, or reduceddom */
    )
 {
@@ -5899,19 +5901,19 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
          assert(conss != NULL && conss[c] != NULL);
 
+         /* consider only violated constraints */
+         if( !isConsViolated(scip, conss[c]) )
+            continue;
+
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
          assert(consdata->varexprs != NULL);
 
-         consviol = MAX(consdata->lhsviol, consdata->rhsviol);
+         SCIP_CALL( getConsRelViolation(scip, conss[c], &consviol, sol, soltag) );
 
-         /* consider only violated constraints */
-         if( consviol <= SCIPfeastol(scip) )
+         if( attempt == 0 && consviol < conshdlrdata->branchhighviolfactor * maxrelconsviol )
             continue;
-
-         if( attempt == 0 && consviol < conshdlrdata->branchhighviolfactor * maxviol )
-            continue;
-         else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxviol )
+         else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxrelconsviol )
             continue;
 
          if( !conshdlrdata->branchaux )
@@ -6104,7 +6106,8 @@ SCIP_RETCODE branching(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   SCIP_Real             maxviol,            /**< maximal constraint violation */
+   SCIP_Real             maxabsconsviol,     /**< maximal absolute constraint violation */
+   SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_RESULT*          result              /**< pointer to store the result of branching */
@@ -6141,7 +6144,7 @@ SCIP_RETCODE branching(
          assert(consdata != NULL);
 
          /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
-         if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+         if( !isConsViolated(scip, conss[c]) )
             continue;
 
          /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
@@ -6202,7 +6205,7 @@ SCIP_RETCODE branching(
       case 'd' :
       case 'c' :
       {
-         SCIP_CALL( branchConstraintInfeasibility(scip, conshdlr, conss, nconss, maxviol, result) );
+         SCIP_CALL( branchConstraintInfeasibility(scip, conshdlr, conss, nconss, maxrelconsviol, sol, soltag, result) );
 
          break;
       }
@@ -6862,7 +6865,7 @@ SCIP_RETCODE enforceConstraints(
       /* having result set to branched here means only that we have branching candidates,
        * we still need to do the actual branching
        */
-      SCIP_CALL( branching(scip, conshdlr, conss, nconss, maxabsconsviol, sol, soltag, result) );
+      SCIP_CALL( branching(scip, conshdlr, conss, nconss, maxabsconsviol, maxrelconsviol, sol, soltag, result) );
 
       /* branching should either have branched: result == SCIP_BRANCHED,
        * or fixed a variable: result == SCIP_REDUCEDDOM,
