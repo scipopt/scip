@@ -165,8 +165,8 @@ Problem<SCIP_Real> buildProblem(
       SCIP_Real rhs = SCIPmatrixGetRowRhs(matrix, i);
       builder.setRowLhs(i, lhs);
       builder.setRowRhs(i, rhs);
-      builder.setRowLhsInf(i, SCIPisInfinity( scip, -lhs ));
-      builder.setRowRhsInf(i, SCIPisInfinity( scip, rhs ));
+      builder.setRowLhsInf(i, SCIPisInfinity(scip, -lhs));
+      builder.setRowRhsInf(i, SCIPisInfinity(scip, rhs));
    }
 
    return builder.build();
@@ -546,8 +546,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_Real scalarx = res.postsolve.values[first + 1];
             SCIP_Real scalary = res.postsolve.values[first + 2];
 
-            convertToActiveVar( varx, scalarx, side );
-            convertToActiveVar( vary, scalary, side );
+            convertToActiveVar(varx, scalarx, side);
+            convertToActiveVar(vary, scalary, side);
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
          }
@@ -572,7 +572,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             assert(colCoef != 0.0);
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
 
-            convertToActiveVar( aggrvar, colCoef, side );
+            convertToActiveVar(aggrvar, colCoef, side);
 
             for( int j = first + 1; j < last; ++j )
             {
