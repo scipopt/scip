@@ -172,6 +172,44 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
+/** convert a variable that is possibly aggregated or negated to its active representative and
+ *  update the coefficient and side of an equation
+ */
+static
+void convertToActiveVar(
+   SCIP_VAR*&            var,               /**< reference to variable */
+   SCIP_Real&            coef,              /**< reference to coefficient */
+   SCIP_Real&            side               /**< reference to side */
+   )
+{
+   while( TRUE )
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+
+      assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
+
+      switch( SCIPvarGetStatus(var) )
+      {
+         case SCIP_VARSTATUS_AGGREGATED:
+            scalar = SCIPvarGetAggrScalar(var);
+            constant = SCIPvarGetAggrConstant(var);
+            var = SCIPvarGetAggrVar(var);
+            side -= coef * constant;
+            coef *= scalar;
+            break;
+         case SCIP_VARSTATUS_NEGATED:
+            constant = SCIPvarGetNegationConstant(var);
+            var = SCIPvarGetNegationVar(var);
+            side -= coef * constant;
+            coef = -coef;
+            break;
+         default:
+            return;
+      }
+   }
+}
+
 /*
  * Callback methods of presolver
  */
@@ -508,28 +546,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_Real scalarx = res.postsolve.values[first + 1];
             SCIP_Real scalary = res.postsolve.values[first + 2];
 
-            while( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(varx);
-               SCIP_Real constant = SCIPvarGetAggrConstant(varx);
-               varx = SCIPvarGetAggrVar(varx);
-
-               side -= scalarx * constant;
-               scalarx *= scalar;
-            }
-
-            while( SCIPvarGetStatus(vary) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(vary);
-               SCIP_Real constant = SCIPvarGetAggrConstant(vary);
-               vary = SCIPvarGetAggrVar(vary);
-
-               side -= scalary * constant;
-               scalary *= scalar;
-            }
-
-            assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
-            assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+            convertToActiveVar( varx, scalarx, side );
+            convertToActiveVar( vary, scalary, side );
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
          }
@@ -553,17 +571,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             assert(colCoef != 0.0);
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
-            while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
-               SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
-               aggrvar = SCIPvarGetAggrVar(aggrvar);
 
-               side -= colCoef * constant;
-               colCoef *= scalar;
-            }
-
-            assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+            convertToActiveVar( aggrvar, colCoef, side );
 
             for( int j = first + 1; j < last; ++j )
             {
