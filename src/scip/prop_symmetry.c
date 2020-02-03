@@ -3603,7 +3603,7 @@ SCIP_RETCODE addSchreierSimsConssOrbit(
                /* deactivate the fixed variable (cannot contribute to a conflict anymore) */
                nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, orbits[poscur]);
                assert( nodedata != NULL );
-               assert( nodedata->active = TRUE );
+               assert( nodedata->active );
 
                nodedata->active = FALSE;
             }
