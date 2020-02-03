@@ -5831,16 +5831,17 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
+/** gives branchscore for variable associated to expressions, but possibly "post-process" it */
 static
-SCIP_DECL_SORTPTRCOMP(brcandcomp)
+SCIP_Real getUpdatedBranchscore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraints handler */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
 {
-   SCIP_CONSEXPR_EXPR* expr1 = (SCIP_CONSEXPR_EXPR*)elem1;
-   SCIP_CONSEXPR_EXPR* expr2 = (SCIP_CONSEXPR_EXPR*)elem2;
+   assert(expr != NULL);
 
-   assert(expr1 != NULL);
-   assert(expr2 != NULL);
-
-   return expr1->brscore > expr2->brscore ? -1 : (expr1->brscore < expr2->brscore ? 1 : 0);
+   return expr->brscore;
 }
 
 /** branch on a variable in a largely violated constraint */
@@ -5861,6 +5862,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
    SCIP_CONSEXPR_ITERATOR* it;
    int c;
    SCIP_CONSEXPR_EXPR** cands;
+   SCIP_Real* candscores;
    int ncands;
    int candssize;
    int attempt;
@@ -5888,6 +5890,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
    ncands = 0;
    candssize = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &cands, candssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candscores, candssize) );
 
    for( attempt = 0; attempt < 2; ++attempt )
    {
@@ -5957,9 +5960,11 @@ SCIP_RETCODE branchConstraintInfeasibility(
                {
                   candssize = SCIPcalcMemGrowSize(scip, ncands+1);
                   SCIP_CALL( SCIPreallocBufferArray(scip, &cands, candssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &candscores, candssize) );
                }
 
                cands[ncands] = consdata->varexprs[i];
+               candscores[ncands] = getUpdatedBranchscore(scip, conshdlr, consdata->varexprs[i]);
                ++ncands;
 
                /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
@@ -5999,9 +6004,11 @@ SCIP_RETCODE branchConstraintInfeasibility(
                {
                   candssize = SCIPcalcMemGrowSize(scip, ncands+1);
                   SCIP_CALL( SCIPreallocBufferArray(scip, &cands, candssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &candscores, candssize) );
                }
 
                cands[ncands] = expr;
+               candscores[ncands] = getUpdatedBranchscore(scip, conshdlr, expr);
                ++ncands;
             }
          }
@@ -6027,7 +6034,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " registering %d branching candidates as external branching candidates\n", ncands); )
       for( c = 0; c < ncands; ++c )
       {
-         SCIP_CALL( SCIPaddExternBranchCand(scip, SCIPgetConsExprExprAuxVar(cands[c]), cands[c]->brscore, SCIP_INVALID) );
+         SCIP_CALL( SCIPaddExternBranchCand(scip, SCIPgetConsExprExprAuxVar(cands[c]), candscores[c], SCIP_INVALID) );
       }
       *result = SCIP_INFEASIBLE;
       goto TERMINATE;
@@ -6038,11 +6045,11 @@ SCIP_RETCODE branchConstraintInfeasibility(
       /* if more than one candidate, then sort by some measure
        * TODO: for now this sorts by the brscore, but other metrics (nuses, domain width, pseudocosts, etc) should be tried, too
        */
-      SCIPsortPtr((void**)cands, brcandcomp, ncands);
+      SCIPsortDownRealPtr(candscores, (void**)cands, ncands);
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), candscores[ncands-1]); )
 
       /* find how many candidates have a brscore close to the maximum
        * (TODO could do a binary search as array is sorted by score)
@@ -6053,18 +6060,18 @@ SCIP_RETCODE branchConstraintInfeasibility(
          assert(cands[c-1] != cands[c]);  /* we should have no duplicates */
 
          /* stop if brscore is below threshold */
-         if( cands[c]->brscore < conshdlrdata->branchhighviolfactor * cands[0]->brscore )
+         if( candscores[c] < conshdlrdata->branchhighviolfactor * candscores[0] )
          {
             ncands = c;
             break;
          }
       }
       assert(ncands > 0);
-      assert(cands[ncands-1]->brscore >= conshdlrdata->branchhighviolfactor * cands[0]->brscore);
+      assert(candscores[ncands-1] >= conshdlrdata->branchhighviolfactor * candscores[0]);
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), cands[0]->brscore,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), cands[ncands-1]->brscore); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), candscores[ncands-1]); )
 
       if( ncands > 1 )
       {
@@ -6094,6 +6101,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
       *result = SCIP_REDUCEDDOM;
 
  TERMINATE:
+   SCIPfreeBufferArray(scip, &candscores);
    SCIPfreeBufferArray(scip, &cands);
 
    return SCIP_OKAY;
