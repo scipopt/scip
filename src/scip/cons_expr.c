@@ -256,6 +256,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
    char                     branchmethod;    /**< branching method */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.) */
+   SCIP_Real                branchvardualfactor; /**< factor on how much to consider the variable dual value in branching score */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5839,9 +5840,37 @@ SCIP_Real getUpdatedBranchscore(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR* var;
+   SCIP_Real redcost;
+
+   assert(conshdlr != NULL);
    assert(expr != NULL);
 
-   return expr->brscore;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->branchvardualfactor == 0.0 )
+      return expr->brscore;
+
+   /* if LP not solved, then return original branching score */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return expr->brscore;
+
+   var = SCIPgetConsExprExprAuxVar(expr);
+   assert(var != NULL);
+
+   redcost = SCIPgetVarRedcost(scip, var);
+   if( redcost == SCIP_INVALID || SCIPisZero(scip, redcost) )
+      return expr->brscore;
+
+   /* moving the variable by 1 unit could change the current dual bound by redcost
+    * so assuming we would branch in the midpoint of the interval, the dual bound may increase by redcost*(xub-xlb)/2
+    * for now I'm just going to add branchvardualfactor*redcost, but scaling don't seem to make any sense here
+    * unfortunately, redcost is zero if variable is not at bounds, which is likely for a branching candidate
+    */
+   printf("%g + f*%g\n", expr->brscore, redcost);
+   return expr->brscore + conshdlrdata->branchvardualfactor * REALABS(redcost);
 }
 
 /** branch on a variable in a largely violated constraint */
@@ -14004,6 +14033,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchhighviolfactor",
          "consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.)",
          &conshdlrdata->branchhighviolfactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchvardualfactor",
+         "factor on how much to consider the variable dual value in branching score",
+         &conshdlrdata->branchvardualfactor, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
