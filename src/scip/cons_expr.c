@@ -2276,11 +2276,17 @@ SCIP_RETCODE getConsRelViolation(
    {
       scale = MAX(1.0, REALABS(SCIPgetConsExprExprValue(consdata->expr)));  /*lint !e666*/
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) && REALABS(consdata->lhs) > scale )
+      /* consider value of side that is violated for scaling, too */
+      if( consdata->lhsviol > 0.0 && REALABS(consdata->lhs) > scale )
+      {
+         assert(!SCIPisInfinity(scip, -consdata->lhs));
          scale = REALABS(consdata->lhs);
-
-      if( !SCIPisInfinity(scip,  consdata->rhs) && REALABS(consdata->rhs) > scale )
+      }
+      else if( consdata->rhsviol > 0.0 && REALABS(consdata->rhs) > scale )
+      {
+         assert(!SCIPisInfinity(scip,  consdata->rhs));
          scale = REALABS(consdata->rhs);
+      }
 
       *viol /= scale;
       return SCIP_OKAY;
