@@ -216,9 +216,9 @@ SCIP_Bool SCIPisConvexAbspower(
    SCIP_CONS*            cons                /**< absolute power constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -195,9 +195,9 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
    int*                  nchgbds             /**< pointer to count number of bound changes */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

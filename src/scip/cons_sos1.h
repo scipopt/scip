@@ -206,9 +206,9 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
                                               *   solution was good enough */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

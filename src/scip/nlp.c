@@ -3623,6 +3623,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    assert(pos >= 0);
    assert(pos < nlp->nnlrows);
    assert(!nlp->indiving);
+   assert(nlp->nlrows != NULL);
 
    nlrow = nlp->nlrows[pos];
    assert(nlrow != NULL);

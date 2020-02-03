@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Bool*            success             /**< feasible cover found? */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

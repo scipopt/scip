@@ -156,9 +156,9 @@ SCIP_RETCODE SCIPtransformMinUC(
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

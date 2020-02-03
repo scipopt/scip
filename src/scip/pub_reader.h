@@ -80,7 +80,7 @@ SCIP_Bool SCIPreaderCanWrite(
    SCIP_READER*          reader              /**< reader */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

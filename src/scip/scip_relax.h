@@ -165,7 +165,7 @@ SCIP_RETCODE SCIPsetRelaxPriority(
    int                   priority            /**< new priority of the relaxation handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

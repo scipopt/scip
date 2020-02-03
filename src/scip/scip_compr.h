@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPsetComprPriority(
    int                   priority            /**< new priority of the tree compression */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

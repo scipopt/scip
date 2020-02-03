@@ -180,9 +180,9 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
                                               */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

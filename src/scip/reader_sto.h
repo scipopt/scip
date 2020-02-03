@@ -101,7 +101,7 @@ int SCIPstoGetNScenarios(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

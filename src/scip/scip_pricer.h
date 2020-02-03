@@ -279,7 +279,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

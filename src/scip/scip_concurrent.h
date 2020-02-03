@@ -92,7 +92,7 @@ int SCIPgetNConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicParallelMethods
  *
