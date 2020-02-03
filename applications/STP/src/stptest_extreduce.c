@@ -193,7 +193,7 @@ SCIP_RETCODE mldistsTest1(
 
    MLDISTS* mldists;
 
-   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, &mldists) );
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, TRUE, &mldists) );
 
    /* add */
 
@@ -268,7 +268,7 @@ SCIP_RETCODE mldistsTest2(
 
    MLDISTS* mldists;
 
-   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, &mldists) );
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, TRUE, &mldists) );
 
    /* add first */
    mldistsAddLevel(nslots1, ntargets1, bases1, dists1, mldists);
@@ -976,12 +976,12 @@ SCIP_RETCODE extDistTest(
 #ifndef NDEBUG
    {
       const int edge = 2;
-      const SCIP_Real dist1_2 = extreduce_distDataGetSD(scip, graph, 1, 2, &distdata);
-      const SCIP_Real dist1_3 = extreduce_distDataGetSD(scip, graph, 1, 3, &distdata);
-      const SCIP_Real dist1_5 = extreduce_distDataGetSD(scip, graph, 1, 5, &distdata);
-      const SCIP_Real dist2_1 = extreduce_distDataGetSD(scip, graph, 2, 1, &distdata);
-      const SCIP_Real dist2_5 = extreduce_distDataGetSD(scip, graph, 2, 5, &distdata);
-      const SCIP_Real dist2_6 = extreduce_distDataGetSD(scip, graph, 2, 6, &distdata);
+      const SCIP_Real dist1_2 = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
+      const SCIP_Real dist1_3 = extreduce_distDataGetSd(scip, graph, 1, 3, &distdata);
+      const SCIP_Real dist1_5 = extreduce_distDataGetSd(scip, graph, 1, 5, &distdata);
+      const SCIP_Real dist2_1 = extreduce_distDataGetSd(scip, graph, 2, 1, &distdata);
+      const SCIP_Real dist2_5 = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
+      const SCIP_Real dist2_6 = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
 
       assert(dist1_2 == 0.4);
       assert(dist1_3 == -1.0);
@@ -995,9 +995,9 @@ SCIP_RETCODE extDistTest(
       extreduce_distDataDeleteEdge(scip, graph, edge, &distdata);
 
       {
-         const SCIP_Real dist1_2_b = extreduce_distDataGetSD(scip, graph, 1, 2, &distdata);
-         const SCIP_Real dist2_6_b = extreduce_distDataGetSD(scip, graph, 2, 6, &distdata);
-         const SCIP_Real dist2_5_b = extreduce_distDataGetSD(scip, graph, 2, 5, &distdata);
+         const SCIP_Real dist1_2_b = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
+         const SCIP_Real dist2_6_b = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
+         const SCIP_Real dist2_5_b = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
 
          assert(dist1_2_b == -1.0);
          assert(dist2_6_b == -1.0);

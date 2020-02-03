@@ -24,7 +24,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+// #define SCIP_DEBUG
+// #define STP_DEBUG_EXTPC // use if special sds for PC are deactivated
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +35,8 @@
 #include "extreduce.h"
 
 
-/** get SD MST weight */
+/** get SD MST weight
+ *  NOTE: might deviate because only getSd is used...maybe only use double in the code? */
 static
 SCIP_Real sdmstGetWeight(
    SCIP*                 scip,               /**< SCIP */
@@ -76,7 +78,7 @@ SCIP_Real sdmstGetWeight(
          else
          {
             const int endnode = nodes[j];
-            specialDist = extreduce_extGetSD(scip, graph, startnode, endnode, extdata);
+            specialDist = extreduce_extGetSd(scip, graph, startnode, endnode, extdata);
 
             if( specialDist <= 0.0 )
             {
@@ -678,6 +680,7 @@ SCIP_Bool extreduce_sdsverticalInSync(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   compsize,           /**< size of component */
+   int                   nleaves_ancestors,  /**< number of leaves to ancestors */
    int                   topleaf,            /**< component leaf to check for */
    EXTDATA*              extdata             /**< extension data */
    )
@@ -687,19 +690,26 @@ SCIP_Bool extreduce_sdsverticalInSync(
    const int nleaves = extdata->tree_nleaves;
    const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sds_vertical, topleaf);
    const int nleaves_old = nleaves - compsize;
+   SCIP_Bool isInSync = TRUE;
 #ifndef NDEBUG
    const int* const adjids = extreduce_mldistsTopTargetIds(sds_vertical, topleaf);
 #endif
 
    assert(adjedgecosts);
+   assert(nleaves_old == nleaves_ancestors);
    assert(nleaves_old > 0 && nleaves_old < nleaves);
+
+#ifndef STP_DEBUG_EXTPC
+   if( graph_pc_isPc(graph) )
+      return TRUE;
+#endif
 
    /* get the SDs to the ancestor (lower) leafs and compare */
    for( int j = 0; j < nleaves_old; j++ )
    {
       const int leaf = leaves[j];
       const SCIP_Real sd_old = adjedgecosts[j];
-      const SCIP_Real specialDist_new = extreduce_extGetSD(scip, graph, topleaf, leaf, extdata);
+      const SCIP_Real specialDist_new = extreduce_extGetSd(scip, graph, topleaf, leaf, extdata);
       const SCIP_Real sd_new = (specialDist_new >= -0.5) ? specialDist_new : FARAWAY;
 
       assert(!extreduce_nodeIsInStackTop(graph, extdata, leaf));
@@ -711,11 +721,73 @@ SCIP_Bool extreduce_sdsverticalInSync(
        {
           SCIPdebugMessage("vertical SDs are wrong! %f!=%f \n", sd_old, sd_new);
 
-          return FALSE;
+          isInSync = FALSE;
+          break;
        }
    }
 
-   return TRUE;
+
+   return isInSync;
+}
+
+
+/** check whether horizontal SDs are up to date for given leaf of component */
+SCIP_Bool extreduce_sdshorizontalInSync(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   topleaf,            /**< component leaf to check for */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const MLDISTS* const sds_horizontal = extdata->reddata->sds_horizontal;
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int* const ghead = graph->head;
+   const int stackpos = extStackGetPosition(extdata);
+   SCIP_Bool isInSync = TRUE;
+#ifndef NDEBUG
+   SCIP_Bool hitTopLeaf = FALSE;
+#endif
+
+#ifndef STP_DEBUG_EXTPC
+   if( graph_pc_isPc(graph) )
+      return TRUE;
+#endif
+
+   for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
+   {
+      const int edge2sibling = extstack_data[i];
+      const int sibling = ghead[edge2sibling];
+
+      assert(extreduce_nodeIsInStackTop(graph, extdata, sibling));
+      assert(extdata->tree_deg[sibling] == 1);
+
+      if( sibling == topleaf )
+      {
+#ifndef NDEBUG
+         hitTopLeaf = TRUE;
+#endif
+         continue;
+      }
+      else
+      {
+         const SCIP_Real sd_old = extreduce_mldistsTopTargetDist(sds_horizontal, topleaf, sibling);
+         const SCIP_Real specialDist_new = extreduce_extGetSdDouble(scip, graph, topleaf, sibling, extdata);
+         const SCIP_Real sd_new = (specialDist_new >= -0.5) ? specialDist_new : FARAWAY;
+
+         if( !EQ(sd_old, sd_new) )
+         {
+            SCIPdebugMessage("vertical SDs are wrong! %f!=%f \n", sd_old, sd_new);
+
+            isInSync = FALSE;
+            break;
+         }
+      }
+   }
+
+   assert(hitTopLeaf || !isInSync);
+
+   return isInSync;
 }
 
 
@@ -730,6 +802,12 @@ SCIP_Bool extreduce_sdsTopInSync(
 {
    const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
+   SCIP_Bool isInSync = TRUE;
+
+#ifndef STP_DEBUG_EXTPC
+   if( graph_pc_isPc(graph) )
+      return TRUE;
+#endif
 
    for( int j = 0; j < nleaves; j++ )
    {
@@ -737,14 +815,19 @@ SCIP_Bool extreduce_sdsTopInSync(
 
       if( leaf != topleaf )
       {
-         const SCIP_Real specialDist = extreduce_extGetSD(scip, graph, topleaf, leaf, extdata);
+         const SCIP_Real specialDist_double = extreduce_extGetSdDouble(scip, graph, topleaf, leaf, extdata);
+         const SCIP_Real sd_double = (specialDist_double > -0.5)? specialDist_double : FARAWAY;
+
+         const SCIP_Real specialDist = extreduce_extGetSd(scip, graph, topleaf, leaf, extdata);
          const SCIP_Real sd = (specialDist > -0.5)? specialDist : FARAWAY;
 
-         if( !EQ(sds[j], sd) )
+         if( !EQ(sds[j], sd_double) && !EQ(sds[j], sd) )
          {
-            SCIPdebugMessage("SD from %d %d not correct! (%f!=%f) \n", topleaf, leaf, sds[j], sd);
+            SCIPdebugMessage("SD from %d to %d not correct! \n", topleaf, leaf);
+            SCIPdebugMessage("new sds (double, single): %f, %f ... old sd: %f  \n", sd_double, sd, sds[j]);
 
-            return FALSE;
+            isInSync = FALSE;
+            break;
          }
       }
       else
@@ -753,12 +836,13 @@ SCIP_Bool extreduce_sdsTopInSync(
          {
             SCIPdebugMessage("SD to topleaf not FARAWAY! (but %f) \n", sds[j]);
 
-            return FALSE;
+            isInSync = FALSE;
+            break;
          }
       }
    }
 
-   return TRUE;
+   return isInSync;
 }
 
 

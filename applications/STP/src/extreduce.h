@@ -140,7 +140,8 @@ typedef struct extension_data
    int tree_nedges;
    int tree_depth;
    int tree_nleaves;
-   int nPcSdCands;                             /**< needed only for PC */
+   int nPcSdCands;                             /**< needed only for PC, todo: move to extra struct! */
+   int pcSdStart;                              /**< needed only for PC */
    int extstack_ncomponents;
    const int extstack_maxncomponents;
    const int extstack_maxsize;
@@ -188,7 +189,8 @@ extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, 
 /* extreduce_util.c
  */
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
-extern SCIP_Real          extreduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
+extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
+extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
@@ -199,7 +201,7 @@ extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*)
 extern void               extreduce_reddataClean(REDDATA*);
 extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
-extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, MLDISTS**);
+extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, SCIP_Bool, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
 extern SCIP_Bool          extreduce_mldistsIsEmpty(const MLDISTS*);
 extern SCIP_Bool          extreduce_mldistsEmptySlotExists(const MLDISTS*);
@@ -222,6 +224,7 @@ extern const int*         extreduce_mldistsTargetIds(const MLDISTS*, int, int);
 extern const SCIP_Real*   extreduce_mldistsTargetDists(const MLDISTS*, int, int);
 extern const int*         extreduce_mldistsTopTargetIds(const MLDISTS*, int);
 extern const SCIP_Real*   extreduce_mldistsTopTargetDists(const MLDISTS*, int);
+extern SCIP_Real          extreduce_mldistsTopTargetDist(const MLDISTS*, int, int);
 
 
 /* extreduce_extmst.c
@@ -231,11 +234,14 @@ extern void       extreduce_mstAddRoot(SCIP*, int, REDDATA*);
 extern void       extreduce_mstCompAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
 extern void       extreduce_mstCompInit(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
 extern void       extreduce_mstCompRemove(const GRAPH*, EXTDATA*);
-extern void       extreduce_mstLevelInit(REDDATA*, EXTDATA*);
-extern void       extreduce_mstLevelAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
-extern void       extreduce_mstLevelClose(REDDATA*);
+extern void       extreduce_mstLevelVerticalInit(REDDATA*, EXTDATA*);
+extern void       extreduce_mstLevelVerticalAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void       extreduce_mstLevelVerticalClose(REDDATA*);
+extern void       extreduce_mstLevelHorizontalAdd(SCIP*, const GRAPH*, int, const int*, EXTDATA*);
 extern void       extreduce_mstLevelRemove(REDDATA*);
-extern SCIP_Real  extreduce_extGetSD(SCIP*, const GRAPH*, int, int, EXTDATA*);
+extern void       extreduce_mstLevelVerticalRemove(REDDATA*);
+extern SCIP_Real  extreduce_extGetSd(SCIP*, const GRAPH*, int, int, EXTDATA*);
+extern SCIP_Real  extreduce_extGetSdDouble(SCIP*, const GRAPH*, int, int, EXTDATA*);
 
 
 /* extreduce_dbg.c
@@ -249,6 +255,8 @@ extern SCIP_Real       extreduce_treeGetSdMstExtWeight(SCIP*, const GRAPH*, int,
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
 extern void            extreduce_extendInitDebug(int*, int*);
 extern SCIP_Bool       extreduce_sdsTopInSync(SCIP*, const GRAPH*, const SCIP_Real[], int, EXTDATA*);
-extern SCIP_Bool       extreduce_sdsverticalInSync(SCIP*, const GRAPH*, int, int, EXTDATA*);
+extern SCIP_Bool       extreduce_sdsverticalInSync(SCIP*, const GRAPH*, int, int, int, EXTDATA*);
+extern SCIP_Bool       extreduce_sdshorizontalInSync(SCIP*, const GRAPH*, int, EXTDATA*);
+
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

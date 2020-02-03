@@ -45,9 +45,7 @@
  *  Each slot on a level has the same number of targets, namely level_ntargets[level].  */
 struct multi_level_distances_storage
 {
-#ifndef NDEBUG
    int*                  target_ids;        /**< target ids only in DEBUG mode! */
-#endif
    SCIP_Real*            target_dists;      /**< target ids */
    int*                  base_ids;          /**< bases ids */
    int*                  level_basestart;   /**< start of bases for given level */
@@ -60,6 +58,7 @@ struct multi_level_distances_storage
    int                   maxntargets;       /**< total maximum number of targets */
    int                   maxnslots;         /**< total maximum number of bases */
    int                   emptyslot_number;  /**< number (0,...) of current empty slot, or EMPTYSLOT_NONE if none exists */
+   SCIP_Bool             target_withids;    /**< use ids? */
 };
 
 
@@ -205,13 +204,43 @@ int mldistsGetPosTargetsStart(
    offset = mldistsGetPosBase(mldists, level, baseid) - mldists->level_basestart[level];
 
    assert(offset >= 0);
-   assert(ntargets > 0);
+   assert(ntargets >= 0);
 
    targetpos = mldists->level_targetstart[level] + offset * ntargets;
 
    assert(targetpos >= 0 && targetpos < mldists->maxntargets);
 
    return targetpos;
+}
+
+
+/** gets (internal) position of targets for given base id and target id */
+static inline
+int mldistsGetPosTargets(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid,             /**< the base id */
+   int                   targetid            /**< the target id */
+)
+{
+   const int start = mldistsGetPosTargetsStart(mldists, level, baseid);
+   const int end = start + mldists->level_ntargets[level];
+   const int* const target_ids = mldists->target_ids;
+   int i;
+
+   assert(mldists->target_withids);
+
+   for( i = start; i != end; i++ )
+   {
+      if( target_ids[i] == targetid )
+      {
+         break;
+      }
+   }
+
+   assert(i != end);
+
+   return i;
 }
 
 
@@ -228,7 +257,7 @@ int mldistsGetPosEmptyTargetsStart(
    assert(extreduce_mldistsEmptySlotExists(mldists));
    assert(start >= 0 && start < mldists->maxntargets);
    assert(mldists->emptyslot_number >= 0);
-   assert(ntargets > 0 && ntargets <= mldists->level_maxntargets);
+   assert(ntargets >= 0 && ntargets <= mldists->level_maxntargets);
 
    return start;
 }
@@ -262,8 +291,17 @@ void mldistsTopLevelUnset(
 
    for( int i = start_target; i < end_target; ++i )
    {
-      mldists->target_ids[i] = MLDISTS_ID_UNSET;
       mldists->target_dists[i] = MLDISTS_DIST_UNSET;
+   }
+
+   if( mldists->target_withids )
+   {
+      assert(mldists->target_ids);
+
+      for( int i = start_target; i < end_target; ++i )
+      {
+         mldists->target_ids[i] = MLDISTS_ID_UNSET;
+      }
    }
 #endif
 }
@@ -846,6 +884,43 @@ SCIP_RETCODE distDataAllocateNodesArrays(
    return SCIP_OKAY;
 }
 
+
+/** Gets shortest v1->v2 (standard) distance.
+ *  Returns -1.0 if the distance is not known. */
+static inline
+SCIP_Real distDataGetNormalDist(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(distdata);
+   assert(vertex1 >= 0 && vertex2 >= 0);
+
+   /* neighbors list not valid anymore? */
+   if( distdata->pathroot_isdirty[vertex1] )
+   {
+      /* recompute */
+      distdata->pathroot_nrecomps[vertex1]++;
+      SCIP_CALL_ABORT( distDataComputeCloseNodes(scip, g, vertex1, FALSE, NULL, distdata->dijkdata, distdata) );
+
+      graph_dijkLimited_reset(g, distdata->dijkdata);
+
+      SCIPdebugMessage("vertex %d is dirty, recompute \n", vertex1);
+
+      distdata->pathroot_isdirty[vertex1] = FALSE;
+   }
+
+   /* look in neighbors list of vertex1 */
+   dist = getCloseNodeDistance(distdata, vertex1, vertex2);
+
+   return dist;
+}
+
 /*
  * Interface methods
  */
@@ -1011,8 +1086,11 @@ void extreduce_distDataDeleteEdge(
    distdata->pathroot_blocksizesmax[halfedge] = 0;
 }
 
-/** gets bottleneck (or special) distance between v1 and v2; -1.0 if no distance is known */
-SCIP_Real extreduce_distDataGetSD(
+
+/** Gets bottleneck (or special) distance between v1 and v2.
+ *  Will check shortest known v1->v2 path, but NOT shortest known v2->v1 path.
+ *  Returns -1.0 if no distance is known. (might only happen for RPC or PC) */
+SCIP_Real extreduce_distDataGetSd(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    int                   vertex1,            /**< first vertex */
@@ -1023,37 +1101,55 @@ SCIP_Real extreduce_distDataGetSD(
    SCIP_Real dist;
 
    assert(distdata);
-   assert(vertex1 >= 0 && vertex2 >= 0);
 
    /* try to find SD via Duin's approximation todo */
    // if( distdata->nodeSDpaths_dirty[vertex1] && !pcmw
    // if( distdata->nodeSDpaths_dirty[vertex2] )
 
+   dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
 
-   /* neighbors list not valid anymore? */
-   if( distdata->pathroot_isdirty[vertex1] )
-   {
-      /* recompute */
-      distdata->pathroot_nrecomps[vertex1]++;
-      SCIP_CALL_ABORT( distDataComputeCloseNodes(scip, g, vertex1, FALSE, NULL, distdata->dijkdata, distdata) );
-
-      graph_dijkLimited_reset(g, distdata->dijkdata);
-
-      SCIPdebugMessage("vertex %d is dirty, recompute \n", vertex1);
-
-      distdata->pathroot_isdirty[vertex1] = FALSE;
-   }
-
-   /* look in neighbors list of vertex1 */
-   dist = getCloseNodeDistance(distdata, vertex1, vertex2);
-
-   /* if no success, binary search on neighbors of vertex2? todo too expensive? */
-
-   //   if( distdata->pathroot_isdirty[vertex2] )
-
+   assert(EQ(dist, -1.0) || dist >= 0.0);
 
    return dist;
 }
+
+
+/** Gets bottleneck (or special) distance between v1 and v2.
+ *  Will check shortest known v1->v2 path, and also shortest known v2->v1 path if no v1-v2 path is known.
+ *  Returns -1.0 if no distance is known. (might only happen for RPC or PC) */
+SCIP_Real extreduce_distDataGetSdDouble(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(distdata);
+
+   /* try to find SD via Duin's approximation todo */
+   // if( distdata->nodeSDpaths_dirty[vertex1] && !pcmw
+   // if( distdata->nodeSDpaths_dirty[vertex2] )
+
+   dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
+
+   if( dist < -0.5 )
+   {
+      assert(EQ(dist, -1.0));
+      dist = distDataGetNormalDist(scip, g, vertex2, vertex1, distdata);
+   }
+   else
+   {
+      assert(dist >= 0.0);
+   }
+
+   assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   return dist;
+}
+
 
 /** frees members of distance data */
 void extreduce_distDataFreeMembers(
@@ -1090,6 +1186,12 @@ SCIP_RETCODE extreduce_extPermaInit(
    const int msts_datasize = STP_EXT_MAXDFSDEPTH * STP_EXTTREE_MAXNLEAVES_GUARD * 2;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
+#ifndef NDEBUG
+   const SCIP_Bool sds_vertical_useids = TRUE;
+#else
+   const SCIP_Bool sds_vertical_useids = FALSE;
+#endif
+
    assert(scip && extperm);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
@@ -1106,9 +1208,10 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( graph_csrdepo_init(scip, STP_EXT_MAXDFSDEPTH, msts_datasize, &(extperm->msts_reduced)) );
 
    SCIP_CALL( extreduce_mldistsInit(scip, STP_EXT_MAXDFSDEPTH, STP_EXT_MAXGRAD,
-         STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->sds_vertical)) );
+         STP_EXTTREE_MAXNLEAVES_GUARD, sds_vertical_useids, &(extperm->sds_vertical)) );
+
    SCIP_CALL( extreduce_mldistsInit(scip, STP_EXT_MAXDFSDEPTH, STP_EXT_MAXGRAD,
-         STP_EXT_MAXGRAD - 1, &(extperm->sds_horizontal)) );
+         STP_EXT_MAXGRAD, TRUE, &(extperm->sds_horizontal)) );
 
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;
@@ -1354,6 +1457,7 @@ SCIP_RETCODE extreduce_mldistsInit(
    int                   maxnlevels,         /**< maximum number of levels that can be handled */
    int                   maxnslots,          /**< maximum number of of slots (per level) that can be handled */
    int                   maxntargets,        /**< maximum number of of targets (per slot) that can be handled */
+   SCIP_Bool             use_targetids,      /**< use target IDs? */
    MLDISTS**             mldistances         /**< to be initialized */
 )
 {
@@ -1369,13 +1473,20 @@ SCIP_RETCODE extreduce_mldistsInit(
    mldists->maxnlevels = maxnlevels;
    mldists->level_maxntargets = maxntargets;
    mldists->level_maxnslots = maxnslots;
+   mldists->target_withids = use_targetids;
    mldists->maxnslots = maxnlevels * maxnslots;
    mldists->maxntargets = maxnlevels * maxnslots * maxntargets;
    mldists->emptyslot_number = MLDISTS_EMPTYSLOT_NONE;
 
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->target_ids), mldists->maxntargets) );
-#endif
+   if( use_targetids )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->target_ids), mldists->maxntargets) );
+   }
+   else
+   {
+      mldists->target_ids = NULL;
+   }
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->target_dists), mldists->maxntargets) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->base_ids), mldists->maxnslots) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(mldists->level_basestart), maxnlevels + 1) );
@@ -1406,10 +1517,13 @@ void extreduce_mldistsFree(
    SCIPfreeMemoryArray(scip, &(mldists->level_basestart));
    SCIPfreeMemoryArray(scip, &(mldists->base_ids));
    SCIPfreeMemoryArray(scip, &(mldists->target_dists));
-#ifndef NDEBUG
-   SCIPfreeMemoryArray(scip, &(mldists->target_ids));
-#endif
 
+   if( mldists->target_withids )
+   {
+      assert(mldists->target_ids);
+
+      SCIPfreeMemoryArray(scip, &(mldists->target_ids));
+   }
 
    SCIPfreeMemory(scip, mldistances);
 }
@@ -1442,21 +1556,22 @@ int* extreduce_mldistsEmptySlotTargetIds(
    const MLDISTS*        mldists             /**< multi-level distances */
 )
 {
-#ifndef NDEBUG
    const int start = mldistsGetPosEmptyTargetsStart(mldists);
+
+#ifndef NDEBUG
    const int level = mldistsGetTopLevel(mldists);
    const int end = start + mldists->level_ntargets[level];
+
+   assert(mldists->target_withids);
+   assert(mldists->target_ids);
 
    for( int i = start; i < end; ++i )
    {
       assert(mldists->target_ids[i] == MLDISTS_ID_UNSET);
    }
+#endif
 
    return &(mldists->target_ids[start]);
-
-#else
-   return NULL;
-#endif
 }
 
 
@@ -1533,7 +1648,16 @@ void extreduce_mldistsEmtpySlotReset(
       for( int i = target_start; i != target_end; i++ )
       {
          mldists->target_dists[i] = MLDISTS_DIST_UNSET;
-         mldists->target_ids[i] = MLDISTS_ID_UNSET;
+      }
+
+      if( mldists->target_withids )
+      {
+         assert(mldists->target_ids);
+
+         for( int i = target_start; i != target_end; i++ )
+         {
+            mldists->target_ids[i] = MLDISTS_ID_UNSET;
+         }
       }
    }
 #endif
@@ -1581,7 +1705,7 @@ void extreduce_mldistsLevelAddTop(
 
    assert(!extreduce_mldistsEmptySlotExists(mldists));
    assert(nslots > 0 && nslots <= mldists->level_maxnslots);
-   assert(nslottargets > 0 && nslottargets <= mldists->level_maxntargets);
+   assert(nslottargets >= 0 && nslottargets <= mldists->level_maxntargets);
    assert(mldists->nlevels < mldists->maxnlevels);
 
    mldists->emptyslot_number = 0;
@@ -1740,13 +1864,12 @@ const int* extreduce_mldistsTargetIds(
    int                   baseid              /**< the base */
 )
 {
-#ifndef NDEBUG
    const int targetpos = mldistsGetPosTargetsStart(mldists, level, baseid);
 
+   assert(mldists->target_withids);
+   assert(mldists->target_ids);
+
    return &(mldists->target_ids[targetpos]);
-#else
-   return NULL;
-#endif
 }
 
 
@@ -1757,7 +1880,12 @@ const SCIP_Real* extreduce_mldistsTargetDists(
    int                   baseid              /**< the base */
 )
 {
-   const int targetpos = mldistsGetPosTargetsStart(mldists, level, baseid);
+   int targetpos;
+
+   assert(mldists);
+   assert(level >= 0 && baseid >= 0);
+
+   targetpos = mldistsGetPosTargetsStart(mldists, level, baseid);
 
    return &(mldists->target_dists[targetpos]);
 }
@@ -1782,4 +1910,24 @@ const SCIP_Real* extreduce_mldistsTopTargetDists(
    const int targetpos = mldistsGetPosTargetsStart(mldists, mldistsGetTopLevel(mldists), baseid);
 
    return &(mldists->target_dists[targetpos]);
+}
+
+
+/** gets (one!) target distance for given target ID and base ID */
+SCIP_Real extreduce_mldistsTopTargetDist(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   baseid,             /**< the base */
+   int                   targetid            /**< the identifier */
+)
+{
+   int targetpos;
+
+   assert(mldists);
+   assert(baseid >= 0 && targetid >= 0);
+
+   targetpos = mldistsGetPosTargets(mldists, mldistsGetTopLevel(mldists), baseid, targetid);
+
+   assert(GE(mldists->target_dists[targetpos], 0.0));
+
+   return (mldists->target_dists[targetpos]);
 }
