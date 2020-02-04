@@ -46,14 +46,14 @@ SCIP_FILE* SCIPfdopen(int fildes, const char *mode)
 
 size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
 {
-#ifndef NDEBUG
-   int nbytesread = gzread((gzFile)stream, ptr, (unsigned int) (size * nmemb));
-   assert(nbytesread >= 0);
+   int nbytesread;
 
-   return (size_t) nbytesread; /*lint !e571*/
-#else
-   return (size_t) gzread((gzFile)stream, ptr, (unsigned int) (size * nmemb));
-#endif
+   nbytesread = gzread((gzFile)stream, ptr, (unsigned int) (size * nmemb));
+   /* An error occured if nbytesread < 0. To be compatible with fread(), we return 0, which signifies an error there. */
+   if ( nbytesread < 0 )
+      return 0;
+
+   return (size_t) nbytesread;  /*lint !e571*/
 }
 
 size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
