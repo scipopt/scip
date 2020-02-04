@@ -42,9 +42,9 @@
  * */
 static inline
 void sortDescendingIntRealReal(
-   int*                  keyArr,             /**< key array of size 'nentries' */
-   SCIP_Real*            dataArr1,           /**< array of size 'nentries' */
-   SCIP_Real*            dataArr2,           /**< array of size 'nentries' */
+   int* RESTRICT         keyArr,             /**< key array of size 'nentries' */
+   SCIP_Real* RESTRICT   dataArr1,           /**< array of size 'nentries' */
+   SCIP_Real* RESTRICT   dataArr2,           /**< array of size 'nentries' */
    int                   nentries            /**< number of entries */
 )
 {
@@ -1341,8 +1341,7 @@ void extStackAddCompsExpanded(
 
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo we probably want to order so that the smallest components are put last!
-   int todo; // just go in reverse order! counter = powsize - 1;
-   for( uint32_t counter = 1; counter < powsize; counter++ )
+   for( uint32_t counter = powsize - 1; counter >= 1; counter-- )
    {
       for( uint32_t j = 0; j < (uint32_t) nextedges; j++ )
       {
