@@ -1499,6 +1499,157 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP */
+static
+SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConcave)
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_EXPRCURV curvature;
+   VERTEXPOLYFUN_EVALDATA evaldata;
+   SCIP_Real* xstar;
+   SCIP_Real* box;
+   SCIP_Real facetconstant;
+   SCIP_VAR* var;
+   int i;
+   SCIP_Bool allfixed;
+   SCIP_Bool success;
+   SCIP_ROWPREP* rowprep = NULL;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
+
+   curvature = SCIPgetConsExprExprCurvature(nlexpr);
+   assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
+   /* we can only estimating on non-concave side */
+   if( curvature == SCIP_EXPRCURV_CONCAVE )
+      overestimate = FALSE;
+   else if( curvature == SCIP_EXPRCURV_CONVEX )
+      underestimate = FALSE;
+   if( !overestimate && !underestimate )
+      return SCIP_OKAY;
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "%sestimate concave expression in initsepa ", overestimate ? "over" : "under");
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " at point\n");
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      SCIPinfoMessage(scip, NULL, "  <%s> = [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+   }
+#endif
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( nlhdlrdata->vpevalsol == NULL )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->vpevalsol, NULL) );
+   }
+
+   evaldata.nlhdlrexprdata = nlhdlrexprdata;
+   evaldata.vpevalsol = nlhdlrdata->vpevalsol;
+   evaldata.scip = scip;
+   evaldata.conshdlr = conshdlr;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nlhdlrexprdata->nleafs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nlhdlrexprdata->nleafs) );
+
+   allfixed = TRUE;
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      box[2*i] = SCIPvarGetLbLocal(var);
+      if( SCIPisInfinity(scip, -box[2*i]) )
+      {
+         SCIPdebugMsg(scip, "lower bound at -infinity, no estimate possible\n");
+         goto TERMINATE;
+      }
+
+      box[2*i+1] = SCIPvarGetUbLocal(var);
+      if( SCIPisInfinity(scip, box[2*i+1]) )
+      {
+         SCIPdebugMsg(scip, "upper bound at +infinity, no estimate possible\n");
+         goto TERMINATE;
+      }
+
+      if( !SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
+         allfixed = FALSE;
+
+      /* use midpoint as reference point */
+      xstar[i] = (box[2*i] + box[2*i+1])/2.0;
+   }
+
+   if( allfixed )
+   {
+      /* SCIPcomputeFacetVertexPolyhedral prints a warning and does not succeed if all is fixed */
+      SCIPdebugMsg(scip, "all variables fixed, skip estimate\n");
+      goto TERMINATE;
+   }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nleafs+1) );
+
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, nlhdlrExprEvalConcave, (void*)&evaldata,
+      xstar, box, nlhdlrexprdata->nleafs, overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), &success, rowprep->coefs, &facetconstant) );
+
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "failed to compute facet of convex hull\n");
+      goto TERMINATE;
+   }
+
+   /* complete the rowprep
+    * letting c'x + d be the estimator
+    * -  overestimate means we handle f(x) >= z, thus generating c'x + d >= z, i.e., -d <= c'x - z
+    * - !overestimate means we handle f(x) <= z, thus generating c'x + d <= z, i.e., c'x - z <= -d
+    */
+   rowprep->nvars = nlhdlrexprdata->nleafs;
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+      rowprep->vars[i] = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[i]);
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+   SCIPaddRowprepSide(rowprep, -facetconstant);
+
+   /* straighten out numerics */
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "failed to cleanup rowprep numerics\n");
+      goto TERMINATE;
+   }
+
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_initsepa", overestimate ? "over" : "under", (void*)expr);
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "computed row: ");
+   SCIPprintRow(scip, row, NULL);
+#endif
+
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+ TERMINATE:
+   if( rowprep != NULL )
+      SCIPfreeRowprep(scip, &rowprep);
+   SCIPfreeBufferArray(scip, &box);
+   SCIPfreeBufferArray(scip, &xstar);
+
+   return SCIP_OKAY;
+}
+
 /** estimator callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
@@ -1656,8 +1807,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       *addedbranchscores = TRUE;
    }
 
-   SCIPfreeBufferArrayNull(scip, &box);
-   SCIPfreeBufferArrayNull(scip, &xstar);
+   SCIPfreeBufferArray(scip, &box);
+   SCIPfreeBufferArray(scip, &xstar);
 
    return SCIP_OKAY;
 }
@@ -1719,7 +1870,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvexConcave);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConcave);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexConcave);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConcave, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaConcave, NULL, nlhdlrEstimateConcave, NULL);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitConcave);
 
    return SCIP_OKAY;
