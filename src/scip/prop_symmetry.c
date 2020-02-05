@@ -3224,6 +3224,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* graphcompbegins;
       int* compcolorbegins;
       int* chosencomppercolor;
+      int* firstvaridxpercolor;
       int* usedperms;
       int usedpermssize;
       int ngraphcomponents;
@@ -3233,7 +3234,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_VAR* leadingvar = NULL;
       SCIP_Bool useorbitope;
 
       /* if component is blocked, skip it */
@@ -3325,6 +3325,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPdebugMsg(scip, "  number of different colors in the graph: %d\n", ncompcolors);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercolor, ncompcolors) );
 
       for (j = 0; j < ncompcolors; ++j)
       {
@@ -3482,6 +3483,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( isorbitope );
 
+            firstvaridxpercolor[j] = orbitopevaridx[0][ncols-1];
+
             /* prepare orbitope variable matrix */
             SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
             for (k = 0; k < nrows; ++k)
@@ -3495,6 +3498,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                   nusedelems, &infeasible) );
 
             assert( ! infeasible );
+            assert( propdata->permvars[firstvaridxpercolor[j]] == orbitopevarmatrix[0][0] );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", i, j);
 
@@ -3503,7 +3507,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
                   TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
-            leadingvar = orbitopevarmatrix[0][0];
 
             /* do not release constraint here - will be done later */
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
@@ -3621,7 +3624,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             graphcomp = compcolorbegins[j];
 #endif
             graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
-            firstvaridx = graphcomponents[graphcompbegins[graphcomp]];
+            firstvaridx = firstvaridxpercolor[j];
 
             /* if the first variable was already contained in another orbit
              * or if there are no variables left anyway, skip the component */
@@ -3658,9 +3661,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* flip activeorb again to avoid confusion, it is then at the largest orbit */
             activeorb = !activeorb;
 
+            assert( orbit[activeorb][0] == firstvaridxpercolor[chosencolor] );
             vars[0] = propdata->permvars[orbit[activeorb][0]];
-            if ( leadingvar != NULL )
-               vars[0] = leadingvar;
 
             assert(chosencolor > -1);
             SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
@@ -3719,6 +3721,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
 
+      SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
