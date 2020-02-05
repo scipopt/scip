@@ -195,7 +195,7 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 elif [ "${PERFORMANCE}" == "valgrind" ]; then
   RUBBERBAND_UPLOAD=no
   CHECKFAILS=yes
-  # MODE is relwithdebinfo
+  MODE=relwithdebinfo
 fi
 
 # EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
