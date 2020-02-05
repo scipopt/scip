@@ -318,9 +318,9 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    int*                  nfixedvars          /**< pointer to count number of fixed variables */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

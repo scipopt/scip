@@ -71,7 +71,7 @@ int SCIPbanditGetNActions(
    SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
    );
 
-/* @} */
+/** @} */
 
 
 #ifdef __cplusplus

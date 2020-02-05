@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPresetBandit(
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

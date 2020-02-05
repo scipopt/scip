@@ -2968,10 +2968,9 @@ SCIP_RETCODE reformulateConsExprExpr(
                   if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
                   {
                      SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k], expr, &refexpr) );
-                     assert(refexpr != NULL);
 
                      /* stop calling other nonlinear handlers as soon as the reformulation was successful */
-                     if( refexpr != expr )
+                     if( refexpr != NULL && refexpr != expr )
                      {
                         SCIP_INTERVAL activity;
 
@@ -4148,12 +4147,12 @@ SCIP_RETCODE canonicalizeConstraints(
                /* release old expression */
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
-               /* store simplified expression */
+               /* store reformulated expression */
                consdata->expr = refexpr;
             }
             else
             {
-               /* The reformulation captures simplified in any case, also if nothing has changed.
+               /* The reformulation captures refexpr in any case, also if nothing has changed.
                 * Therefore, we have to release it here.
                 */
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &refexpr) );

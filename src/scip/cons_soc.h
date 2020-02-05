@@ -232,9 +232,9 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

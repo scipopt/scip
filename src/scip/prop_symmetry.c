@@ -54,7 +54,7 @@
  *   constraints are considered, we have to reallocate memory.
  *
  *
- * @sectionOF Orbital Fixing
+ * @section OF Orbital Fixing
  *
  * Orbital fixing is implemented as introduced by@n
  * F. Margot: Exploiting orbits in symmetric ILP. Math. Program., 98(1-3):3–21, 2003.
@@ -4055,6 +4055,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedvars = -1;
    propdata->binvaraffected = FALSE;
    propdata->computedsymmetry = FALSE;
+   propdata->islinearproblem = FALSE;
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;

@@ -693,7 +693,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** adds an original conflict constraint to the store

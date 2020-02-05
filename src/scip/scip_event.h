@@ -162,7 +162,7 @@ int SCIPgetNEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicEventMethods
  *

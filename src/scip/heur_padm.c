@@ -685,7 +685,6 @@ SCIP_RETCODE reuseSolution(
  */
 static
 SCIP_RETCODE scalePenalties(
-   SCIP*                 scip,               /**< SCIP data structure */
    PROBLEM*              problem,            /**< block structure */
    SET*                  linkvartoblocks,    /**< linking variable to blocks set */
    SET*                  blocktolinkvars,    /**< block to linking variable set */
@@ -1596,7 +1595,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          increasedslacks = 0;
 
          /* rescale penalty parameters */
-         SCIP_CALL( scalePenalties( scip, problem, linkvartoblocks, blocktolinkvars, htable, maxpenalty) );
+         SCIP_CALL( scalePenalties(problem, linkvartoblocks, blocktolinkvars, htable, maxpenalty) );
       }
 
       /* adapt in some cases the gap parameter */

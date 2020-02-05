@@ -317,7 +317,7 @@ void SCIPgetVarCoefChg(
    SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

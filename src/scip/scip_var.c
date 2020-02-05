@@ -3647,8 +3647,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    scip->set->conf_enable = enabledconflict;
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY;   /*lint !e438*/
+}
 
 /** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch
  *  is (val -1.0) and the up brach ins (val +1.0)
@@ -6771,7 +6771,11 @@ SCIP_RETCODE SCIPaddVarImplication(
    )
 {
    SCIP_VAR* implprobvar;
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
 
    if ( nbdchgs != NULL )
       *nbdchgs = 0;
@@ -6783,7 +6787,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    }
 
    implprobvar = SCIPvarGetProbvar(implvar);
-   /* transform implication containing two binary variables to clique; condition ensures that the active representative
+   /* transform implication containing two binary variables to a clique; the condition ensures that the active representative
     * of implvar is actually binary
     */
    if( SCIPvarIsBinary(implvar) && (SCIPvarIsActive(implvar) || (implprobvar != NULL && SCIPvarIsBinary(implprobvar))) )
@@ -6793,12 +6797,10 @@ SCIP_RETCODE SCIPaddVarImplication(
 
       /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
       if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
-         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
-               )
+          (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5) )
       {
          SCIP_VAR* vars[2];
          SCIP_Bool vals[2];
-
 
          vars[0] = var;
          vars[1] = implvar;

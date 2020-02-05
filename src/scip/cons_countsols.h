@@ -123,9 +123,9 @@ SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -216,7 +216,7 @@ SCIP_RETCODE SCIPdialogWriteHistory(
    const char*           filename            /**< file name for (over)writing history */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

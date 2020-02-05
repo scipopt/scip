@@ -152,9 +152,9 @@ SCIP_Real* SCIPgetWeightsSOS2(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

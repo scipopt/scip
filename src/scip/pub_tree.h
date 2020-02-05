@@ -269,7 +269,7 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
 
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

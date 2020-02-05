@@ -62,7 +62,7 @@ SCIP_Bool SCIPisWorhpAvailableWorhp(
    void
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

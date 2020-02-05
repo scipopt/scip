@@ -447,7 +447,7 @@ void SCIPfreeDisjointset(
    SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup DirectedGraph
  *

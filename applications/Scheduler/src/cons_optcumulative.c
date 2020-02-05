@@ -158,6 +158,7 @@ struct SCIP_ConshdlrData
 
 /**@name Debug Methods
  *
+ * @{
  */
 
 #ifndef NDEBUG
