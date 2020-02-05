@@ -6525,7 +6525,7 @@
 
 /**@page DECOMP How to provide a problem decomposition
  *
- *  Most Mixed Integer Programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
+ * Most Mixed Integer Programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
  * maybe except for a few outlier columns/rows with many nonzeros.
  * A decomposition identifies subproblems (subsets of rows and columns) that are only linked to each other via a set of linking rows and/or linking
  * columns, but are otherwise independent.
@@ -6542,7 +6542,7 @@
  * In the following, we present decompositions of Mixed Integer Programs. However, the generalization to Constraint Integer Programs is straightforward.
  *
  * Concretely, for \f$k \geq 0\f$ we call a partition \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$ of the rows and columns of the constraint matrix \f$A\f$ into \f$k + 1\f$ pieces each,
- * %
+ *
  * \f[
  *   D^{\text{row}} = (D^{\text{row}}_{1},\dots,D^{\text{row}}_{k},L^{\text{row}}), \quad D^{\text{col}} = (D^{\text{col}}_{1},\dots,D^{\text{col}}_{k},L^{\text{col}})
  * \f]
@@ -6607,24 +6607,35 @@
  * from \f$A\f$ except for rows \f$I\f$ and columns \f$J\f$,
  * for nonempty row
  * and column subsets \f$I\subseteq\{1,\dots,m\}\f$ and \f$J\subseteq\{1,\dots,n\}\f$.
- *  *
  *
  * - transformation
  * - key statistics
  * - use within SCIP/benefit for users.
  * - use for Benders @ref BENDDECF
  *
- * @section Creation via SCIP-API
+ * @section DECOMP_CREATION Creation via SCIP-API
  *
- * - creation
- * - labeling the variables
- * - labeling the constraints
- * - computing statistics
- * - adding the decomposition to SCIP
+ * There are two different ways to provide a decomposition in SCIP.
+ * It can be created with the SCIP-API or it can be read from a file.
+ *
+ * To create it with the API, the user must first create a decomposition with SCIPcreateDecomp() specifying
+ * wether the decomposition belongs to the original or transformed problem and the number of blocks.
+ * Then the variables and constraints can be assigned to one block or to the linking rows/columns by calling
+ * SCIPdecompSetVarsLabels() and SCIPdecompSetConsLabels(), respectively.
+ * To complete the decomposition or to ensure that it is internally consistent, SCIPcomputeDecompVarsLabels() or
+ * SCIPcomputeDecompConsLabels() can be called.
+ * Note that this will ignore the existing variable/constraint labels and compute the labels again using the constraint/variable labels.
+ *
+ * Further information about the decomposition can be received with SCIPcomputeDecompStats().
+ * In addition to calculating the statistics, the real number of blocks and the smallest or largest block is also determined.
+ *
+ * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
+ * Access to all decompositions in the DecompStore is possible with SCIPgetDecomps().
  *
  * @section DECOMP_READDEC Reading a decomposition from a file
  *
- * Please refer to the @ref reader_dec.h "DEC file reader".
+ * After a problem has been read, a related decomposition can be read from a dec-file.
+ * Please refer to the @ref reader_dec.h "DEC file reader" for further information about the required file format.
  *
  */
 
