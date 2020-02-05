@@ -517,14 +517,14 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
 }
 
 
-/** Check whether a permutation is a composition of 2-cycles and in this case determine the number
- *  of 2-cycles. @p allvarsbinary can be used to restrict to permutations that swap binary variables.
+/** Check whether a permutation is a composition of 2-cycles (involution) and in this case determine the
+ *  number of 2-cycles. @p allvarsbinary can be used to also require that only binary variables are moved.
  */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on (or NULL, if !allvarsbinary) */
    int                   nvars,              /**< number of variables */
-   int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
+   int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles or 0 if perm is not an involution */
    SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
    )
 {

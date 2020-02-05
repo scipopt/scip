@@ -156,7 +156,7 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-#define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
+#define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
 #define DEFAULT_ADDWEAKSBCS          TRUE    /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 #define DEFAULT_ROWCOLUMNRATIO        3.0    /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
@@ -248,7 +248,7 @@ struct SCIP_PropData
    int                   genlinconsssize;    /**< size of linear constraints array */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-   SCIP_Bool             detectsubgroups;    /**< Should we try to detect symmetric subgroups of the symmetry group? */
+   SCIP_Bool             detectsubgroups;    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
    SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
    int                   norbitopes;         /**< number of orbitope constraints */
    SCIP_Real             rowcolumnratio;     /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
@@ -837,8 +837,6 @@ SCIP_RETCODE delSymConss(
       if ( propdata->genlinconss != NULL )
          SCIPfreeBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize);
       propdata->triedaddconss = FALSE;
-
-      return SCIP_OKAY;
    }
    else
    {
@@ -2585,7 +2583,9 @@ SCIP_RETCODE determineSymmetry(
 
 
 /** Checks whether a given set of 2-cycle permutations forms an orbitope and if so,
- *  builds the variable index matrix.
+ *  builds the variable index matrix. If @p activevars == NULL, then the function
+ *  assumes all permutations of the component are active and therefore all moved
+ *  vars are considered.
  *
  * @pre @p orbitopevaridx has to be an initialized 2D array of size @p ntwocycles x @p nperms
  * @pre @p columnorder has to be an initialized array of size nperms
@@ -2637,11 +2637,12 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    ntestedperms = 0;
    foundperm = FALSE;
 
+   /* look for the first active permutation which moves an active variable */
    while (!foundperm)
    {
       int permidx;
 
-      assert(ntestedperms <= nactiveperms);
+      assert( ntestedperms < nactiveperms );
 
       permidx = activeperms[ntestedperms];
 
@@ -2897,7 +2898,12 @@ SCIP_Bool isAcyclicGraph(
    return TRUE;
 }
 
-/** builds the graph for symmetric subgroup detection from the given permutation of generators */
+/** builds the graph for symmetric subgroup detection from the given permutation of generators
+ *
+ *  After execution, @p graphcomponents contains all permvars sorted by their color and component,
+ *  @p graphcompbegins points to the indices where new components in @p graphcomponents start and
+ *  @p compcolorbegins points to the indices where new colors in @p graphcompbegins start.
+*/
 static
 SCIP_RETCODE buildSubgroupGraph(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3097,6 +3103,12 @@ SCIP_RETCODE buildSubgroupGraph(
    SCIP_CALL( SCIPallocBufferArray(scip, &(graphcompvartype.components), npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(graphcompvartype.colors), npermvars) );
 
+   /*
+    * At this point, we have built the colored graph. Now we transform the information in the
+    * disjoint sets to the arrays graphcomponents, graphcompbegins, and compcolorbegins (see above).
+    */
+
+   /* build the struct graphcompvartype which is used to sort the graphcomponents array */
    for (j = 0; j < npermvars; ++j)
    {
       int comp;
@@ -3109,6 +3121,7 @@ SCIP_RETCODE buildSubgroupGraph(
       (*graphcomponents)[j] = j;
    }
 
+   /* sort graphcomponents first by color, then by component */
    SCIPsort(*graphcomponents, SYMsortGraphCompVars, (void*) &graphcompvartype, npermvars);
 
    *ngraphcomponents = SCIPdisjointsetGetComponentCount(vartocomponent);
@@ -3121,6 +3134,7 @@ SCIP_RETCODE buildSubgroupGraph(
    (*graphcompbegins)[0] = 0;
    (*compcolorbegins)[0] = 0;
 
+   /* find the starting indices of new components and new colors */
    for (j = 1; j < npermvars; ++j)
    {
       int idx1;
@@ -3399,6 +3413,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int** orbitopevaridx;
             int* columnorder;
             int* nusedelems;
+            char name[SCIP_MAXSTRLEN];
             SCIP_CONS* cons;
             int nrows;
             int ncols;
@@ -3481,7 +3496,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( ! infeasible );
 
-            SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", orbitopevarmatrix,
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", i, j);
+
+            SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
                   SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, propdata->conssaddlp,
                   TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -3583,6 +3600,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
 
+         /*
+          * We will store the newest and the largest orbit and activeorb will be used to
+          * mark at which entry of the array orbit the newly computed one will be stored.
+          */
+
          for (j = 0; j < ncompcolors; ++j)
          {
             int graphcomp;
@@ -3624,13 +3646,16 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             if ( orbitsize[activeorb] > orbitsize[!activeorb] )
             {
+               /* if the new orbit is larger then the old largest one, flip activeorb */
                activeorb = !activeorb;
                chosencolor = j;
             }
          }
 
+         /* check if we have found at least one non-empty orbit */
          if ( chosencolor > -1 )
          {
+            /* flip activeorb again to avoid confusion, it is then at the largest orbit */
             activeorb = !activeorb;
 
             vars[0] = propdata->permvars[orbit[activeorb][0]];
@@ -3841,7 +3866,7 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
-         char* name[SCIP_MAXSTRLEN];
+         char name[SCIP_MAXSTRLEN];
 
          SCIPdebugMsg(scip, "found an orbitope of size %d x %d in component %d\n", ntwocyclescomp,
             npermsincomponent + 1, i);
@@ -4692,8 +4717,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
             *result = SCIP_SUCCESS;
 
             *naddconss += propdata->ngenorbconss + propdata->ngenlinconss - noldngenconns;
-            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n",
-               propdata->ngenorbconss + propdata->ngenlinconss - noldngenconns);
+            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", *naddconss);
 
             /* if constraints have been added, loop through generated constraints and presolve each */
             for (i = 0; i < propdata->ngenorbconss; ++i)
@@ -4719,7 +4743,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                /* exit if cutoff or unboundedness has been detected */
                if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
                {
-                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genorbconss[i]));
+                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genlinconss[i]));
                   return SCIP_OKAY;
                }
             }
@@ -5042,7 +5066,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/detectsubgroups",
-         "Should we try to detect symmetric subgroups of the symmetry group?",
+         "Should we try to detect symmetric subgroups of the symmetry group on binary variables?",
          &propdata->detectsubgroups, TRUE, DEFAULT_DETECTSUBGROUPS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
