@@ -3406,7 +3406,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int l;
             SCIP_Bool infeasible = FALSE;
 
-            assert(colorcompsize > 2);
+            assert( colorcompsize > 2 );
 
             chosencomppercolor[j] = 0;
 
