@@ -3324,6 +3324,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_Bool contaffected = FALSE;
 #endif
 
+         /* skip trivial components */
          if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
             chosencomppercolor[j] = -1;
@@ -3356,12 +3357,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
 
+            /* variable orbits (compsize) have not the same size, cannot define orbitope */
             if ( compsize != colorcompsize )
             {
                isorbitope = FALSE;
                break;
             }
 
+            /* count number of binary orbits (comps) */
             if ( SCIPvarIsBinary(firstvar) )
                ++nbinarycomps;
          }
