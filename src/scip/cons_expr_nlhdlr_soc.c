@@ -469,7 +469,6 @@ SCIP_RETCODE generateCutSol(
 
    vars = nlhdlrexprdata->vars;
    disvars = nlhdlrexprdata->disvars;
-   offsets = nlhdlrexprdata->offsets;
    transcoefs = nlhdlrexprdata->transcoefs;
    transcoefsidx = nlhdlrexprdata->transcoefsidx;
    termbegins = nlhdlrexprdata->termbegins;
