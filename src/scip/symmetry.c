@@ -520,7 +520,7 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
 /** Check whether a permutation is a composition of 2-cycles (involution) and in this case determine the
  *  number of 2-cycles. @p allvarsbinary can be used to also require that only binary variables are moved.
  */
-SCIP_RETCODE SCIPgetPropertiesPerm(
+SCIP_RETCODE SCIPisInvolutionPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on (or NULL, if !allvarsbinary) */
    int                   nvars,              /**< number of variables */

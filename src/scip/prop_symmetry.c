@@ -2808,7 +2808,7 @@ SCIP_RETCODE chooseOrderOfGenerators(
 
       perm = perms[components[componentbegins[compidx] + i]];
 
-      SCIP_CALL( SCIPgetPropertiesPerm(perm, NULL, npermvars, &(ntwocycles[i]), FALSE) );
+      SCIP_CALL( SCIPisInvolutionPerm(perm, NULL, npermvars, &(ntwocycles[i]), FALSE) );
 
       /* we skip permutations which do not purely consist of 2-cycles */
       if ( ntwocycles[i] == 0 )
@@ -3808,7 +3808,7 @@ SCIP_RETCODE detectOrbitopes(
       {
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &ntwocyclesperm, TRUE) );
+         SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars, &ntwocyclesperm, TRUE) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )

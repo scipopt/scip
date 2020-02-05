@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
  *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetPropertiesPerm(
+SCIP_RETCODE SCIPisInvolutionPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
