@@ -442,7 +442,6 @@ SCIP_RETCODE generateCutSol(
 {
    SCIP_VAR** vars;
    SCIP_VAR** disvars;
-   SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
    int* termbegins;
