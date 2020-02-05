@@ -3841,10 +3841,14 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
+         char* name[SCIP_MAXSTRLEN];
+
          SCIPdebugMsg(scip, "found an orbitope of size %d x %d in component %d\n", ntwocyclescomp,
             npermsincomponent + 1, i);
 
-         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component%d", i);
+
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
                ntwocyclescomp, npermsincomponent + 1, TRUE, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
