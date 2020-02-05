@@ -162,6 +162,7 @@
 #define DEFAULT_ROWCOLUMNRATIO        3.0    /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
                                               *   greater than this value. */
 #define DEFAULT_MAXNCONSSSUBGROUP  500000    /**< Maximum number of constraints up to which subgroup structures are detected */
+#define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -254,6 +255,7 @@ struct SCIP_PropData
    SCIP_Real             rowcolumnratio;     /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
                                               *   greater than this value. */
    int                   maxnconsssubgroup;  /**< Maximum number of constraints up to which subgroup structures are detected */
+   SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -3877,7 +3879,7 @@ SCIP_RETCODE detectOrbitopes(
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component%d", i);
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
-               ntwocyclescomp, npermsincomponent + 1, TRUE, TRUE, FALSE,
+               ntwocyclescomp, npermsincomponent + 1, propdata->usedynamicprop, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -5122,6 +5124,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/maxnconsssubgroup",
          "maximum number of constraints up to which subgroup structures are detected",
          &propdata->maxnconsssubgroup, TRUE, DEFAULT_MAXNCONSSSUBGROUP, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/usedynamicprop",
+         "maximum number of constraints up to which subgroup structures are detected",
+         &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
