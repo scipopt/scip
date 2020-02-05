@@ -417,7 +417,17 @@ SCIP_Real evalSingleTerm(
    return result;
 }
 
-/** helper method to compute and add a gradient cut for the k-th cone disaggregation */
+/** helper method to compute and add a gradient cut for the k-th cone disaggregation
+ *
+ *  Let x' := v_k^T x + beta_k, z := v_{n+1}^T x + beta_{n+1} and y := disvar_k, then
+ *  the disaggregated cone is      x'^2 <= y*z      (or gamma <= y*z for k = nterms).
+ *
+ *  We first transform it to           SQRT(4*x'^2) + (y - z)^2) <= y + z
+ *  and then compute the gradient cut: {4x' / denom, (y - z) / denom - 1, (z - y) / denom - 1},
+ *  where                              denom = SQRT(4x'^2 + (y - z)^2).
+ *
+ *  Then we can resubstitute and multiply by the derivatives of the substitution terms.
+ */
 static
 SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -430,6 +440,13 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
+   SCIP_VAR** vars;
+   SCIP_VAR** disvars;
+   SCIP_Real* offsets;
+   SCIP_Real* transcoefs;
+   int* transcoefsidx;
+   int* termbegins;
+   int* nnonzeroes;
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* cutvar;
    SCIP_Real cutcoef;
@@ -437,9 +454,9 @@ SCIP_RETCODE generateCutSol(
    SCIP_Real disvarval;
    SCIP_Real rhsval;
    SCIP_Real lhsval;
-   SCIP_Real sideval;
+   SCIP_Real constant;
    SCIP_Real denominator;
-   int termstartidx;
+   SCIP_Real denomsqrtarg;
    int ncutvars;
    int nterms;
    int i;
@@ -447,15 +464,22 @@ SCIP_RETCODE generateCutSol(
    assert(expr != NULL);
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(k < nlhdlrexprdata->nterms + 1);
+   assert(k <= nlhdlrexprdata->nterms);
    assert(mincutviolation >= 0.0);
    assert(cut != NULL);
 
+   vars = nlhdlrexprdata->vars;
+   disvars = nlhdlrexprdata->disvars;
+   offsets = nlhdlrexprdata->offsets;
+   transcoefs = nlhdlrexprdata->transcoefs;
+   transcoefsidx = nlhdlrexprdata->transcoefsidx;
+   termbegins = nlhdlrexprdata->termbegins;
+   nnonzeroes = nlhdlrexprdata->nnonzeroes;
    nterms = nlhdlrexprdata->nterms;
 
    *cut = NULL;
 
-   disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
+   disvarval = SCIPgetSolVal(scip, sol, disvars[k]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
 
    if( k < nterms )
@@ -469,68 +493,73 @@ SCIP_RETCODE generateCutSol(
       value = lhsval;
    }
 
-   value -= rhsval * disvarval;
    SCIPdebugMsg(scip, "evaluate disaggregation: value=%g\n", value);
 
-   /* if the cone is not violated or we would divide by 0, don't compute cut */
-   if( value <= mincutviolation || SCIPisZero(scip, disvarval) || SCIPisZero(scip, rhsval) )
+   denomsqrtarg = 4.0 * SQR(lhsval) + SQR(rhsval - disvarval);
+
+   /* if we would divide by 0, don't add a cut */
+   if( SCIPisZero(scip, denomsqrtarg) )
+      return SCIP_OKAY;
+
+   denominator = SQRT(denomsqrtarg);
+   value = denominator - rhsval - disvarval;
+
+   /* if the cone is not violated don't compute cut */
+   if( value <= mincutviolation )
       return SCIP_OKAY;
 
    /* compute maximum number of variables in cut */
-   ncutvars = (k < nterms ? nlhdlrexprdata->nnonzeroes[k] + nlhdlrexprdata->nnonzeroes[nterms-1] + 1 : 2);
+   ncutvars = (k < nterms ? nnonzeroes[k] + nnonzeroes[nterms-1] + 1 : 2);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
 
-   assert(rhsval * disvarval > 0.0);
-
-   sideval = 0.0;
-   denominator = 2.0 *  SQRT(rhsval * disvarval);
+   constant = 0.0;
 
    /* add terms for lhs */
    if( k < nterms  && !SCIPisZero(scip, lhsval) )
    {
-      termstartidx = nlhdlrexprdata->termbegins[k];
-
-      for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+      for( i = 0; i < nnonzeroes[k]; ++i )
       {
-         cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
-         cutcoef = nlhdlrexprdata->transcoefs[termstartidx + i];
+         int idx;
 
-         if( SCIPisNegative(scip, lhsval) )
-            cutcoef = -cutcoef;
+         idx = termbegins[k] + i;
+         cutvar = vars[transcoefsidx[idx]];
+
+         cutcoef = 4.0 * lhsval * transcoefs[idx] / denominator;
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-         sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+         constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
       }
    }
 
-   termstartidx = nlhdlrexprdata->termbegins[nterms-1];
-
    /* add terms for rhs */
-   for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+   for( i = 0; i < nnonzeroes[nterms-1]; ++i )
    {
-      cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
-      cutcoef = -nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
-      cutcoef /= denominator;
+      int idx;
+
+      idx = termbegins[nterms-1] + i;
+      cutvar = vars[transcoefsidx[idx]];
+
+      cutcoef = (disvarval - rhsval) * transcoefs[idx] / denominator - 1.0;
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-      sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
    }
 
    /* add term for disvar */
-   cutvar = nlhdlrexprdata->disvars[k];
-   cutcoef = -rhsval / denominator;
+   cutvar = disvars[k];
+   cutcoef = (rhsval - disvarval) / denominator - 1.0;
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-   sideval -= cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+   constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
 
    /* add side */
-   SCIPaddRowprepSide(rowprep, sideval - value);
+   SCIPaddRowprepSide(rowprep, constant - value);
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
