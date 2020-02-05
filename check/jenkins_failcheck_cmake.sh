@@ -192,6 +192,10 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   RUBBERBAND_UPLOAD=yes
   CHECKFAILS=no
   # MODE is performance
+elif [ "${PERFORMANCE}" == "valgrind" ]; then
+  RUBBERBAND_UPLOAD=no
+  CHECKFAILS=yes
+  # MODE is relwithdebinfo
 fi
 
 # EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
@@ -209,6 +213,11 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   touch $RBDB
 fi
 
+if [ "$PSMESSAGE" != "" ]; then
+  PSMESSAGE="
+PS: $PSMESSAGE"
+fi
+
 : ${GLBSEEDSHIFT:=0}
 : ${STARTPERM:=0}
 
@@ -216,6 +225,7 @@ SEEDSBND=$(expr ${SEEDS} + ${GLBSEEDSHIFT})
 PERMUTEBND=$(expr ${PERMUTE} + ${STARTPERM})
 
 SEED=${GLBSEEDSHIFT}
+
 while [ "${SEED}" -le "${SEEDSBND}" ]; do
   # get ending given by seed
   if [ "${SEED}" == "0" ]; then
@@ -235,18 +245,18 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
     # we use a name that is unique per test sent to the cluster (a jenkins job
     # can have several tests sent to the cluster, that is why the jenkins job
     # name (i.e, the directory name) is not enough)
-    if [ "${PERFORMANCE}" != "mergerequest" ]; then
-      DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
-    elif [ "${PERFORMANCE}" == "mergerequest" ]; then
+    if [ "${PERFORMANCE}" == "mergerequest" ]; then
       DATABASE="${PWD}/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
-      touch $DATABASE
+    elif [ "${PERFORMANCE}" != "mergerequest" ]; then
+      DATABASE="/nfs/OPTI/adm_timo/databases/${IDENT}${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
     fi
+    touch ${DATABASE}
     TMPDATABASE="${DATABASE}.tmp"
     STILLFAILING="${DATABASE}_SF.tmp"
     OUTPUT="${DATABASE}_output.tmp"
     touch ${STILLFAILING}
 
-    SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
+    SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE] ${IDENT}"
 
     AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
     echo $AWKARGS
@@ -381,7 +391,8 @@ $ERRFILE
 $OUTFILE
 $RESFILE
 
-Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+Please note that they might be deleted soon
+${PSMESSAGE}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
           else
             echo "No new errors, sending no emails."
           fi
