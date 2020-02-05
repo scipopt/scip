@@ -483,17 +483,13 @@ SCIP_RETCODE generateCutSol(
    if( k < nterms )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
-      value = SQR(lhsval);
+      denomsqrtarg = 4.0 * SQR(lhsval) + SQR(rhsval - disvarval);
    }
    else
    {
       lhsval = nlhdlrexprdata->constant;
-      value = lhsval;
+      denomsqrtarg = 4.0 * lhsval + SQR(rhsval - disvarval);
    }
-
-   SCIPdebugMsg(scip, "evaluate disaggregation: value=%g\n", value);
-
-   denomsqrtarg = 4.0 * SQR(lhsval) + SQR(rhsval - disvarval);
 
    /* if we would divide by 0, don't add a cut */
    if( SCIPisZero(scip, denomsqrtarg) )
@@ -1827,7 +1823,12 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    *auxvalue = nlhdlrexprdata->constant;
 
    for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
-      *auxvalue += SQR(evalSingleTerm(scip, nlhdlrexprdata, sol, i));
+   {
+      SCIP_Real termval;
+
+      termval = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+      *auxvalue += SQR(termval);
+   }
 
    assert(*auxvalue >= 0.0);
 
@@ -1917,81 +1918,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    return SCIP_OKAY;
 }
 
-
-/** nonlinear handler under/overestimation callback */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateSoc)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrEstimateSoc NULL
-#endif
-
-
-/** nonlinear handler interval evaluation callback */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalSoc)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrIntevalSoc NULL
-#endif
-
-
-/** nonlinear handler callback for reverse propagation */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropSoc)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrReversepropSoc NULL
-#endif
-
-
-/** nonlinear handler callback for branching scores */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreSoc)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrBranchscoreSoc NULL
-#endif
-
-
-/** nonlinear handler callback for reformulation */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulateSoc)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrReformulateSoc NULL
-#endif
-
 /*
  * nonlinear handler specific interface methods
  */
@@ -2020,7 +1946,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataSoc);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataSoc);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, nlhdlrEstimateSoc, nlhdlrExitSepaSoc);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/alloweigenvaluecomps",
