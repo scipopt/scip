@@ -257,6 +257,7 @@ struct SCIP_ConshdlrData
    char                     branchmethod;    /**< branching method */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.) */
    SCIP_Real                branchvardualfactor; /**< factor on how much to consider the variable dual value in branching score */
+   char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5758,12 +5759,12 @@ SCIP_RETCODE registerBranchingCandidates(
             SCIP_Real ub;
             SCIP_VAR* var;
 
-            brscore = consdata->varexprs[i]->brscore;
+            brscore = SCIPgetConsExprExprBranchScore(conshdlr, consdata->varexprs[i]);
 
             /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint)
-             * or have a branching score of 0.0
+             * which is indicated by a branching score of 0.0
              */
-            if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag || brscore == 0.0 )
+            if( brscore == 0.0 )
                continue;
 
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
@@ -5795,10 +5796,12 @@ SCIP_RETCODE registerBranchingCandidates(
          SCIP_VAR* var;
          SCIP_Real lb;
          SCIP_Real ub;
+         SCIP_Real brscore;
 
          for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
-            if( expr->brscoretag != conshdlrdata->enforound || expr->brscore == 0.0 )
+            brscore = SCIPgetConsExprExprBranchScore(conshdlr, expr);
+            if( brscore == 0.0 )
                continue;
 
             /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
@@ -5813,9 +5816,9 @@ SCIP_RETCODE registerBranchingCandidates(
             /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, expr->brscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
 
-               SCIP_CALL( SCIPaddExternBranchCand(scip, var, expr->brscore, SCIP_INVALID) );
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                *success = TRUE;
             }
             else
@@ -5851,26 +5854,25 @@ SCIP_Real getUpdatedBranchscore(
    assert(conshdlrdata != NULL);
 
    if( conshdlrdata->branchvardualfactor == 0.0 )
-      return expr->brscore;
+      return SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
    /* if LP not solved, then return original branching score */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return expr->brscore;
+      return SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
    var = SCIPgetConsExprExprAuxVar(expr);
    assert(var != NULL);
 
    redcost = SCIPgetVarRedcost(scip, var);
    if( redcost == SCIP_INVALID || SCIPisZero(scip, redcost) )
-      return expr->brscore;
+      return SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
    /* moving the variable by 1 unit could change the current dual bound by redcost
     * so assuming we would branch in the midpoint of the interval, the dual bound may increase by redcost*(xub-xlb)/2
     * for now I'm just going to add branchvardualfactor*redcost, but scaling don't seem to make any sense here
     * unfortunately, redcost is zero if variable is not at bounds, which is likely for a branching candidate
     */
-   printf("%g + f*%g\n", expr->brscore, redcost);
-   return expr->brscore + conshdlrdata->branchvardualfactor * REALABS(redcost);
+   return SCIPgetConsExprExprBranchScore(conshdlr, expr) + conshdlrdata->branchvardualfactor * REALABS(redcost);
 }
 
 /** branch on a variable in a largely violated constraint */
@@ -5966,10 +5968,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
                if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag )
                   continue;
 
-               /* skip variable expression which branching score is 0 */
-               if( consdata->varexprs[i]->brscore == 0.0 )
-                  continue;
-
                var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
                assert(var != NULL);
 
@@ -5983,7 +5981,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
                   continue;
                }
 
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate, brscore=%g\n", SCIPvarGetName(var), lb, ub, consdata->varexprs[i]->brscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate\n", SCIPvarGetName(var), lb, ub); )
 
                if( candssize < ncands+1 )
                {
@@ -6008,7 +6006,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
             for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
             {
-               if( expr->brscoretag != conshdlrdata->enforound || expr->brscore == 0.0 )
+               if( expr->brscoretag != conshdlrdata->enforound )
                   continue;
 
                /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
@@ -6027,7 +6025,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
                   continue;
                }
 
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate, brscore=%g\n", SCIPvarGetName(var), lb, ub, expr->brscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate\n", SCIPvarGetName(var), lb, ub); )
 
                if( candssize < ncands+1 )
                {
@@ -6080,15 +6078,15 @@ SCIP_RETCODE branchConstraintInfeasibility(
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), candscores[ncands-1]); )
 
-      /* find how many candidates have a brscore close to the maximum
+      /* find how many candidates have a score close to the maximum
        * (TODO could do a binary search as array is sorted by score)
-       * TODO should we choose random from all candidates, using the brscore's as probability distribution?
+       * TODO should we choose random from all candidates, using the score's as probability distribution?
        */
       for( c = 1; c < ncands; ++c )
       {
          assert(cands[c-1] != cands[c]);  /* we should have no duplicates */
 
-         /* stop if brscore is below threshold */
+         /* stop if score is below threshold */
          if( candscores[c] < conshdlrdata->branchhighviolfactor * candscores[0] )
          {
             ncands = c;
@@ -6199,7 +6197,23 @@ SCIP_RETCODE branching(
                    * we use the brscoretag to recognize whether this expression has a valid branching score
                    */
                   if( expr->brscoretag == conshdlrdata->enforound )
-                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPexpriteratorGetChildExprDFS(it), expr->brscore);
+                  {
+                     SCIP_CONSEXPR_EXPR* child;
+                     child = SCIPexpriteratorGetChildExprDFS(it);
+
+                     /* reset branching score in child if it has not been set in this enfo round yet */
+                     if( child->brscoretag != conshdlrdata->enforound )
+                     {
+                        child->brscoresum = 0.0;
+                        child->brscoremax = 0.0;
+                        child->nbrscores = 0;
+                        child->brscoretag = conshdlrdata->enforound;
+                     }
+
+                     child->brscoresum += expr->brscoresum;
+                     child->brscoremax = MAX(child->brscoremax, expr->brscoremax);
+                     child->nbrscores += expr->nbrscores;
+                  }
 
                   break;
                }
@@ -6453,7 +6467,11 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_Real brscore;
                int nbradded = 0;
 
+#ifdef BRSCORE_RELVIOL
                brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
+#else
+               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &brscore, NULL, NULL) );
+#endif
                SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
 
                branchscoresuccess = nbradded > 0;
@@ -12860,14 +12878,19 @@ void SCIPaddConsExprExprBranchScore(
    /* reset branching score if we are in a different enfo round */
    if( expr->brscoretag != conshdlrdata->enforound )
    {
-      expr->brscore = 0.0;
+      expr->brscoresum = branchscore;
+      expr->brscoremax = branchscore;
+      expr->nbrscores = 1;
       expr->brscoretag = conshdlrdata->enforound;
    }
 
    /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
    SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
 
-   expr->brscore += branchscore;
+   expr->brscoresum += branchscore;
+   if( branchscore > expr->brscoremax )
+      expr->brscoremax = branchscore;
+   ++(expr->nbrscores);
 }
 
 /** adds branching score to children of expression for given auxiliary variables
@@ -12927,6 +12950,47 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
+}
+
+/** gives branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_Real SCIPgetConsExprExprBranchScore(
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->enforound != expr->brscoretag )
+      return 0.0;
+
+   if( expr->nbrscores == 0 )
+      return 0.0;
+
+   switch( conshdlrdata->branchscoreagg )
+   {
+      case 'a' :
+         /* average */
+         return expr->brscoresum / expr->nbrscores;
+
+      case 'm' :
+         /* maximum */
+         return expr->brscoremax;
+
+      case 's' :
+         /* sum */
+         return expr->brscoresum;
+
+      default:
+         SCIPerrorMessage("Invalid value %c for branchscoreagg parameter\n", conshdlrdata->branchscoreagg);
+         SCIPABORT();
+         return SCIP_INVALID;
+   }
 }
 
 /** returns the hash value of an expression */
@@ -14037,6 +14101,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchvardualfactor",
          "factor on how much to consider the variable dual value in branching score",
          &conshdlrdata->branchvardualfactor, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoreagg",
+         "how to aggregate branching scores several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
+         &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",

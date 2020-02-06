@@ -110,7 +110,9 @@ struct SCIP_ConsExpr_Expr
    int                     auxfilterpos;  /**< filter position of variable event data for auxiliary variable */
 
    /* branching */
-   SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
+   SCIP_Real               brscoresum;    /**< sum of branching scores stored for this expression */
+   SCIP_Real               brscoremax;    /**< max of branching scores stored for this expression */
+   int                     nbrscores;     /**< number of branching scores stored for this expression */
    unsigned int            brscoretag;    /**< tag to decide whether a branching score of an expression needs to be initialized */
 
    /* point-evaluation */

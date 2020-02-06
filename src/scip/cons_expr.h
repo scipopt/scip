@@ -881,6 +881,13 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
    );
 
+/** gives branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprBranchScore(
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
 /** returns the hash value of an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprExprHash(
