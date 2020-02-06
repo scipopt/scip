@@ -2419,13 +2419,13 @@ SCIP_Real getExprAbsOrigViolation(
  * Of course, if there both negative and positive locks, then return the violation of z == f(w).
  * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
  *
- * @note This does not reevaluate the violation, but assumes that the expression has been evaluated by the nlhdlr.
+ * @note This does not reevaluate the violation, but assumes that f(w) is passed in with auxvalue.
  */
 static
 SCIP_Real getExprAbsAuxViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_EXPRENFO* exprenfo,         /**< enforcement data, which holds f(w) */
+   SCIP_Real             auxvalue,           /**< value of f(w) */
    SCIP_SOL*             sol,                /**< solution that has been evaluated */
    SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
    SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
@@ -2435,9 +2435,8 @@ SCIP_Real getExprAbsAuxViolation(
 
    assert(expr != NULL);
    assert(expr->auxvar != NULL);
-   assert(exprenfo != NULL);
 
-   if( exprenfo->auxvalue == SCIP_INVALID )  /*lint !e777*/
+   if( auxvalue == SCIP_INVALID )  /*lint !e777*/
    {
       if( violunder != NULL )
          *violunder = TRUE;
@@ -2448,22 +2447,22 @@ SCIP_Real getExprAbsAuxViolation(
 
    auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
 
-   if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue > exprenfo->auxvalue )
+   if( SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue > auxvalue )
    {
       if( violunder != NULL )
          *violunder = FALSE;
       if( violover != NULL )
          *violover = TRUE;
-      return auxvarvalue - exprenfo->auxvalue;
+      return auxvarvalue - auxvalue;
    }
 
-   if( SCIPgetConsExprExprNLocksPos(expr) > 0 && exprenfo->auxvalue > auxvarvalue )
+   if( SCIPgetConsExprExprNLocksPos(expr) > 0 && auxvalue > auxvarvalue )
    {
       if( violunder != NULL )
          *violunder = TRUE;
       if( violover != NULL )
          *violover = FALSE;
-      return exprenfo->auxvalue - auxvarvalue;
+      return auxvalue - auxvarvalue;
    }
 
    if( violunder != NULL )
@@ -5756,11 +5755,7 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_Real brscore;
                int nbradded = 0;
 
-               if( auxvalue == SCIP_INVALID )  /*lint !e777*/
-                  brscore = SCIPinfinity(scip);
-               else
-                  brscore = REALABS(auxvalue - SCIPgetSolVal(scip, sol, auxvar));
-
+               brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
                SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
 
                branchscoresuccess = nbradded > 0;
@@ -5897,7 +5892,7 @@ SCIP_RETCODE enforceExpr(
        * if changing this here, we must also adapt analyzeViolation
        */
 
-      auxviol = getExprAbsAuxViolation(scip, expr, expr->enfos[e], sol, &auxunderestimate, &auxoverestimate);
+      auxviol = getExprAbsAuxViolation(scip, expr, expr->enfos[e]->auxvalue, sol, &auxunderestimate, &auxoverestimate);
       assert(auxviol >= 0.0);
 
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
@@ -6470,7 +6465,7 @@ SCIP_RETCODE analyzeViolation(
 
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue); )
 
-            auxviol = getExprAbsAuxViolation(scip, expr, expr->enfos[e], sol, &violunder, &violover);
+            auxviol = getExprAbsAuxViolation(scip, expr, expr->enfos[e]->auxvalue, sol, &violunder, &violover);
 
             if( auxviol > 0.0 )  /*lint !e777*/
             {
@@ -12754,6 +12749,73 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    /* @todo sort variable expressions here? */
 
    SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. original variables
+ *
+ * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
+ * Assume that f(x) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ */
+SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(viol != NULL);
+
+   /* make sure expression has been evaluated */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
+
+   /* get violation from internal method */
+   *viol = getExprAbsOrigViolation(scip, expr, sol, violunder, violover);
+
+   return SCIP_OKAY;
+}
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ */
+SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(viol != NULL);
+
+   /* get violation from internal method */
+   *viol = getExprAbsAuxViolation(scip, expr, auxvalue, sol, violunder, violover);
 
    return SCIP_OKAY;
 }
