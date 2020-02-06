@@ -256,7 +256,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
    char                     branchmethod;    /**< branching method */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.) */
-   SCIP_Real                branchvardualfactor; /**< factor on how much to consider the variable dual value in branching score */
+   SCIP_Real                branchdualfactor;/**< factor on how much to consider the dual values of rows that contain a variable in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
 
    /* statistics */
@@ -5845,7 +5845,13 @@ SCIP_Real getUpdatedBranchscore(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR* var;
-   SCIP_Real redcost;
+   SCIP_COL* col;
+   SCIP_ROW** rows;
+   SCIP_Real* coefs;
+   int nrows;
+   int r;
+   SCIP_Real dual;
+   int nduals;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -5853,7 +5859,7 @@ SCIP_Real getUpdatedBranchscore(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->branchvardualfactor == 0.0 )
+   if( conshdlrdata->branchdualfactor == 0.0 )
       return SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
    /* if LP not solved, then return original branching score */
@@ -5863,16 +5869,61 @@ SCIP_Real getUpdatedBranchscore(
    var = SCIPgetConsExprExprAuxVar(expr);
    assert(var != NULL);
 
-   redcost = SCIPgetVarRedcost(scip, var);
-   if( redcost == SCIP_INVALID || SCIPisZero(scip, redcost) )
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
-   /* moving the variable by 1 unit could change the current dual bound by redcost
-    * so assuming we would branch in the midpoint of the interval, the dual bound may increase by redcost*(xub-xlb)/2
-    * for now I'm just going to add branchvardualfactor*redcost, but scaling don't seem to make any sense here
-    * unfortunately, redcost is zero if variable is not at bounds, which is likely for a branching candidate
+   col = SCIPvarGetCol(var);
+   assert(col != NULL);
+
+   if( !SCIPcolIsInLP(col) )
+      return SCIPgetConsExprExprBranchScore(conshdlr, expr);
+
+   nrows = SCIPcolGetNLPNonz(col);  /* TODO there is a big warning on when not to use this method; is the check for SCIPcolIsInLP sufficient? */
+   rows = SCIPcolGetRows(col);
+   coefs = SCIPcolGetVals(col);
+
+   /* aggregate duals from all local rows from consexpr in basis, i.e., non-zero dual
+    * taking only local rows, as these are probably cuts that may be replaced by tighter ones after branching
     */
-   return SCIPgetConsExprExprBranchScore(conshdlr, expr) + conshdlrdata->branchvardualfactor * REALABS(redcost);
+   dual = 0.0;
+   nduals = 0;
+   for( r = 0; r < nrows; ++r )
+   {
+      if( !SCIProwIsLocal(rows[r]) )
+         continue;
+      if( SCIProwGetOriginConshdlr(rows[r]) != conshdlr )
+         continue;
+      if( SCIPisZero(scip, SCIProwGetDualsol(rows[r])) )
+         continue;
+
+      switch( conshdlrdata->branchscoreagg )
+      {
+         case 'a' :
+         {
+            dual += REALABS(coefs[r] * SCIProwGetDualsol(rows[r]));
+            ++nduals;
+            break;
+         }
+
+         case 'm' :
+         {
+            if( REALABS(coefs[r] * SCIProwGetDualsol(rows[r])) > dual )
+               dual = REALABS(coefs[r] * SCIProwGetDualsol(rows[r]));
+            break;
+         }
+
+         case 's' :
+         {
+            dual += REALABS(coefs[r] * SCIProwGetDualsol(rows[r]));
+            break;
+         }
+      }
+   }
+
+   if( conshdlrdata->branchscoreagg == 'a' && nduals > 0 )
+      dual /= nduals;
+
+   return SCIPgetConsExprExprBranchScore(conshdlr, expr) + conshdlrdata->branchdualfactor * dual;
 }
 
 /** branch on a variable in a largely violated constraint */
@@ -14098,9 +14149,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.)",
          &conshdlrdata->branchhighviolfactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchvardualfactor",
-         "factor on how much to consider the variable dual value in branching score",
-         &conshdlrdata->branchvardualfactor, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchdualfactor",
+         "factor on how much to consider the dual values of rows that contain a variable for its branching score",
+         &conshdlrdata->branchdualfactor, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoreagg",
          "how to aggregate branching scores several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
