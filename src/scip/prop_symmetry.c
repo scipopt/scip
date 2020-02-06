@@ -4019,3 +4019,46 @@ SCIP_RETCODE SCIPgetSymmetry(
 
    return SCIP_OKAY;
 }
+
+/** return whether orbital fixing is enabled */
+SCIP_Bool SCIPorbitalfixingIsEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return FALSE;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   return propdata->ofenabled;
+}
+
+/** return number of the symmetry group's generators */
+int SCIPgetSymmetryNGenerators(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return 0;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   if ( propdata->nperms < 0 )
+      return 0;
+   else
+      return propdata->nperms;
+}
