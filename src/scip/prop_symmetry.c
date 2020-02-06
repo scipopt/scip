@@ -2902,6 +2902,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
 
+   /* disable orbital fixing if all components are handled by orbitopes */
+   if ( propdata->ncomponents == propdata->norbitopes )
+      propdata->ofenabled = FALSE;
+
    /* possibly stop */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
