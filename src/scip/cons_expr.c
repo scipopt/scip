@@ -5713,7 +5713,7 @@ SCIP_RETCODE registerBranchingCandidates(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_ITERATOR* it = NULL;
    int c;
 
    assert(conshdlr != NULL);
@@ -5917,6 +5917,11 @@ SCIP_Real getUpdatedBranchscore(
             dual += REALABS(coefs[r] * SCIProwGetDualsol(rows[r]));
             break;
          }
+
+         default:
+            SCIPerrorMessage("Invalid value %c for branchscoreagg parameter\n", conshdlrdata->branchscoreagg);
+            SCIPABORT();
+            return SCIPgetConsExprExprBranchScore(conshdlr, expr);
       }
    }
 
@@ -5941,7 +5946,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_ITERATOR* it = NULL;
    int c;
    SCIP_CONSEXPR_EXPR** cands;
    SCIP_Real* candscores;
@@ -6101,10 +6106,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
       SCIPexpriteratorFree(&it);
 
    if( ncands == 0 )  /* no unfixed branching candidate in all violated constraint - that's bad :-( */
-   {
       goto TERMINATE;
-      return SCIP_OKAY;
-   }
 
    if( conshdlrdata->branchmethod == 'd' )
    {
@@ -6192,7 +6194,6 @@ SCIP_RETCODE branching(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   SCIP_Real             maxabsconsviol,     /**< maximal absolute constraint violation */
    SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
@@ -6873,12 +6874,10 @@ SCIP_RETCODE enforceConstraints(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
-   SCIP_Real             maxabsconsviol,     /**< largest unscaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_Real             maxrelconsviol,     /**< largest scaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_Bool consenforced;  /* whether any expression in constraint could be enforced */
@@ -6915,16 +6914,16 @@ SCIP_RETCODE enforceConstraints(
       if( !inenforcement && !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
 
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
       /* skip non-violated constraints */
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
       ENFOLOG(
       {
+         SCIP_CONSDATA* consdata;
          int i;
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
          SCIPinfoMessage(scip, enfologfile, " constraint ");
          SCIP_CALL( SCIPprintCons(scip, conss[c], enfologfile) );
          SCIPinfoMessage(scip, enfologfile, "\n with viol %g and point\n", getConsAbsViolation(conss[c]));
@@ -6971,7 +6970,7 @@ SCIP_RETCODE enforceConstraints(
       /* having result set to branched here means only that we have branching candidates,
        * we still need to do the actual branching
        */
-      SCIP_CALL( branching(scip, conshdlr, conss, nconss, maxabsconsviol, maxrelconsviol, sol, soltag, result) );
+      SCIP_CALL( branching(scip, conshdlr, conss, nconss, maxrelconsviol, sol, soltag, result) );
 
       /* branching should either have branched: result == SCIP_BRANCHED,
        * or fixed a variable: result == SCIP_REDUCEDDOM,
@@ -7237,7 +7236,7 @@ SCIP_RETCODE consEnfo(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxabsconsviol, maxrelconsviol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxrelconsviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED || *result == SCIP_INFEASIBLE )
       return SCIP_OKAY;
@@ -7367,7 +7366,7 @@ SCIP_RETCODE consSepa(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, SCIP_INVALID, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
 
    return SCIP_OKAY;
 }
