@@ -566,21 +566,33 @@ Test(evalexpr, viol, .description = "Tests expression violation.")
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) + 5.0) );
    SCIP_CALL( SCIPgetConsExprExprAbsOrigViolation(scip, conshdlr, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
    cr_expect_float_eq(viol, 5.0, 1e-12, "got violation %g, but expected 5", viol);
 
    /* because we don't have a positive lock, there should be no violation "on the other side" */
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) - 5.0) );
    SCIP_CALL( SCIPgetConsExprExprAbsOrigViolation(scip, conshdlr, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(!violover);
    cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
-
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) + 5.0) );
    SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
    cr_expect_float_eq(viol, 8.0, 1e-12, "got violation %g, but expected 8", viol);
+
+   SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
+   cr_expect_float_eq(viol, 8.0 / REALABS(SCIPgetConsExprExprValue(mainexpr)-3.0), 1e-12, "got violation %g, but expected %g", viol, viol / REALABS(SCIPgetConsExprExprValue(mainexpr)-3.0));
 
    /* because we don't have a positive lock, there should be no violation "on the other side" */
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) - 5.0) );
    SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(!violover);
    cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
 
 

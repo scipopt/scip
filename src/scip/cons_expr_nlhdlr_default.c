@@ -274,7 +274,11 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    {
       SCIP_Real violation;
 
+#ifdef BRSCORE_RELVIOL
+      SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#else
       SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
       for( c = 0; c < nchildren; ++c )

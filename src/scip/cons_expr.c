@@ -12820,6 +12820,42 @@ SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
    return SCIP_OKAY;
 }
 
+/** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
+ * the absolute violation divided by max(1,|f(w)|).
+ */
+SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(viol != NULL);
+
+   /* get violation from internal method */
+   *viol = getExprAbsAuxViolation(scip, expr, auxvalue, sol, violunder, violover);
+
+   if( !SCIPisInfinity(scip, *viol) )
+   {
+      assert(auxvalue != SCIP_INVALID);  /*lint !e777*/
+      *viol /= MAX(1.0, REALABS(auxvalue));  /*lint !e666*/
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
