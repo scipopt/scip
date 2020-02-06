@@ -93,7 +93,7 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    const char* inputs[2] = {"abs(<x>[C]) + abs(<x>[C])",
       "abs(abs(abs(<x>[C]) + abs(<y>[C])) * abs(<x>[C])^3 * abs(<y>[C]))"};
 
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -119,7 +119,7 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* test a more complicated expression |x + y| |x|^3 |y|*/
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -153,7 +153,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    const char* inputs[2] = {"exp(<x>[C]) + exp(<x>[C])", "exp(exp(<x>[C])) * exp(<y>[C])^2"};
    int i;
 
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -177,7 +177,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* complicated exponential expression e^(2y + e^x) */
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -254,7 +254,7 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
       /* complicated logarithmic expression: log( log( exp(x) * exp(y) ) ) = log( x + y ) */
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
       SCIPinfoMessage(scip, NULL, "testing expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
