@@ -12761,7 +12761,9 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
  * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
  * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
  * Of course, if there both negative and positive locks, then return the violation of z == f(x).
- * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ *
+ * If necessary, f is evaluated in the given solution. If that fails (domain error),
+ * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
  */
 SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12796,7 +12798,9 @@ SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
  * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
  * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
  * Of course, if there both negative and positive locks, then return the violation of z == f(w).
- * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
  */
 SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12827,6 +12831,9 @@ SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
  *
  * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
  * the absolute violation divided by max(1,|f(w)|).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
  */
 SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13412,6 +13419,8 @@ SCIP_Real SCIPgetRhsConsExpr(
 
 /** gets absolute violation of expression constraint
  *
+ * This function evaluates the constraints in the given solution.
+ *
  * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
  */
 SCIP_RETCODE SCIPgetAbsViolationConsExpr(
@@ -13430,7 +13439,13 @@ SCIP_RETCODE SCIPgetAbsViolationConsExpr(
    return SCIP_OKAY;
 }
 
-/** gets scaled violation of expression constraint */
+/** gets scaled violation of expression constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * The scaling that is applied to the absolute violation of the constraint
+ * depends on the setting of parameter constraints/expr/violscale.
+ */
 SCIP_RETCODE SCIPgetRelViolationConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
