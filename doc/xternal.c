@@ -6610,8 +6610,26 @@
  *
  * - transformation
  * - key statistics
+ *
+ *
+ * @section DECOMP_USING Using a decomposition
+ *
  * - use within SCIP/benefit for users.
  * - use for Benders @ref BENDDECF
+ *
+ * After passing one or more decompositions, see below, one can access all available decompositions with SCIPgetDecomps().
+ * The labels can be obtained by calling SCIPdecompGetVarsLabels() and SCIPdecompGetConsLabels().
+ * If some variables/constraints are not labeled, these methods will mark them as linking variables/constraints.
+ * There are several methods to get more information about one decomposition, see @ref DecompMethods.
+ *
+ * A decomposition can be used to split the problem into several subproblems which in general are easier to solve.
+ * For \f$q \in \{1,\dots,k\}\f$ the system
+ * \f[
+ *   A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\; x_{[D^{\text{col}}_{q}]}  = b_{[D^{\text{row}}_{q}]}
+ * \f]
+ * ist part of subproblem \f$q\f$, the handling of the linking variables/constraints depends on the chosen algorithm.
+ * For example, in the heuristic @ref heur_padm.c several smaller subproblems are solved multiple times to get a feasible solution.
+ * Also the @ref BENDDECF "Benders' decomposition framework" was extended with release 7.0 to use user decompositions.
  *
  * @section DECOMP_CREATION Creation via SCIP-API
  *
