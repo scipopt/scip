@@ -14794,9 +14794,27 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       for( c = 0; c < nlpicols; ++c )
       {
          if( SCIPsetIsPositive(set, ray[c]) )
-            rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+         {
+            if( !SCIPsetIsInfinity(set, primsol[c]) )
+               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+            /* if the primsol is infinity, as well as the bound, don't scale the ray to 0 */
+            else
+            {
+               assert(SCIPsetIsInfinity(set, lpicols[c]->ub));
+               rayscale = MIN(rayscale, 1/ray[c]);
+            }
+         }
          else if( SCIPsetIsNegative(set, ray[c]) )
-            rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+         {
+            if( !SCIPsetIsInfinity(set, -primsol[c]) )
+               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+            /* if the primsol is infinity, as well as the bound, don't scal the ray to 0 */
+            else
+            {
+               assert(SCIPsetIsInfinity(set, -lpicols[c]->lb));
+               rayscale = MIN(rayscale, -1/ray[c]);
+            }
+         }
 
          assert(SCIPsetIsFeasPositive(set, rayscale));
       }
