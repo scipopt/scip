@@ -682,6 +682,7 @@ Fixed bugs
 - fix issue related to fixing redundant logic-or constraints after presolving
 - fixed bug when parsing logic-or and and-constraints
 - fixed wrong assert in updateLazyBounds()
+- fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 
 Miscellaneous
 -------------
