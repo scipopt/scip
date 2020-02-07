@@ -463,7 +463,7 @@ SCIP_RETCODE generateCutSol(
    assert(expr != NULL);
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(k <= nlhdlrexprdata->nterms);
+   assert(k < nlhdlrexprdata->nterms);
    assert(mincutviolation >= 0.0);
    assert(cut != NULL);
 
@@ -480,7 +480,8 @@ SCIP_RETCODE generateCutSol(
    disvarval = SCIPgetSolVal(scip, sol, disvars[k]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
 
-   if( k < nterms )
+   /* k = nterms-1 is the disaggregated cone for the constant */
+   if( k < nterms - 1 )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
       denomsqrtarg = 4.0 * SQR(lhsval) + SQR(rhsval - disvarval);
@@ -503,7 +504,7 @@ SCIP_RETCODE generateCutSol(
       return SCIP_OKAY;
 
    /* compute maximum number of variables in cut */
-   ncutvars = (k < nterms ? nnonzeroes[k] + nnonzeroes[nterms-1] + 1 : 2);
+   ncutvars = (k < nterms - 1 ? nnonzeroes[k] + nnonzeroes[nterms-1] + 1 : 2);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -512,7 +513,7 @@ SCIP_RETCODE generateCutSol(
    constant = 0.0;
 
    /* add terms for lhs */
-   if( k < nterms  && !SCIPisZero(scip, lhsval) )
+   if( k < nterms - 1 && !SCIPisZero(scip, lhsval) )
    {
       for( i = 0; i < nnonzeroes[k]; ++i )
       {
