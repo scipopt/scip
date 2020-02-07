@@ -18470,17 +18470,18 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    return SCIP_OKAY;
 }
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
-SCIP_RETCODE SCIPlpGetDegeneracy(
+SCIP_RETCODE SCIPlpGetDualDegeneracy(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable-constraint ratio */
    )
 {
    assert(lp != NULL);
@@ -18491,7 +18492,7 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
    {
       lp->validdegeneracylp = stat->nlps;
 
-      /* if the LP was solved to optimality, we determine the degeneracy */
+      /* if the LP was solved to optimality, we determine the dual degeneracy */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_COL** cols;
