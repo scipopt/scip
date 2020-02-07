@@ -137,7 +137,7 @@ void printNlhdlrExprData(
    {
       int startidx;
 
-      SCIPinfoMessage(scip, NULL, "(", nlhdlrexprdata->coefs[i]);
+      SCIPinfoMessage(scip, NULL, "(");
 
       startidx = nlhdlrexprdata->termbegins[i];
 
