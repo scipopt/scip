@@ -14797,7 +14797,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          {
             if( !SCIPsetIsInfinity(set, primsol[c]) )
                rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
-            /* if the primsol is infinity, as well as the bound, don't scal the ray to 0 */
+            /* if the primsol is infinity, as well as the bound, don't scale the ray to 0 */
             else
             {
                assert(SCIPsetIsInfinity(set, lpicols[c]->ub));
