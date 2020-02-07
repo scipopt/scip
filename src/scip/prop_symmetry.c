@@ -161,7 +161,7 @@
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
-#define DEFAULT_DISABLEOFRESTART     TRUE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
+#define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
 
 /* event handler properties */
