@@ -49,72 +49,6 @@ struct dynamic_complete_minimum_spanning_tree
 };
 
 
-#ifndef NDEBUG
-/** is the CSR a valid MST on a complete graph? */
-static
-SCIP_Bool isValidCMST(
-   SCIP*                 scip,               /**< SCIP */
-   const CSR*            cmst                /**< the MST candidate */
-)
-{
-   SCIP_Bool* visited;
-   const int* const start_csr = cmst->start;
-   const int* const head_csr = cmst->head;
-   const int nnodes = cmst->nnodes;
-   SCIP_Bool isValid = TRUE;
-
-   assert(nnodes >= 1);
-   assert(cmst->nedges % 2 == 0);
-   assert(start_csr[0] == 0);
-
-   if( !graph_csr_isValid(cmst, FALSE) )
-   {
-      SCIPdebugMessage("CSR is broken! \n");
-      return FALSE;
-   }
-
-   if( cmst->nnodes != (cmst->nedges / 2) + 1 )
-   {
-      SCIPdebugMessage("wrong nodes/edges ratio \n");
-      return FALSE;
-   }
-
-   if( nnodes == 1 )
-   {
-      return TRUE;
-   }
-
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &visited, nnodes) );
-
-   for( int i = 0; i < nnodes; i++ )
-      visited[i] = FALSE;
-
-   for( int i = 0; i < cmst->nedges; i++ )
-   {
-      const int head = head_csr[i];
-
-      assert(head >= 0 && head < nnodes);
-
-      visited[head] = TRUE;
-   }
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( !visited[i] )
-      {
-         SCIPdebugMessage("mst does not contain node %d \n", i);
-
-         isValid = FALSE;
-         break;
-      }
-   }
-
-   SCIPfreeMemoryArray(scip, &visited);
-
-   return isValid;
-}
-#endif
-
 /** recursive method for adding node to MST */
 static
 void dcmstInsert(
@@ -309,7 +243,7 @@ void reduce_dcmstAddNode(
 {
    assert(mst_in && adjcosts && dmst && mst_out);
 
-   assert(isValidCMST(scip, mst_in));
+   assert(reduce_dcmstMstIsValid(scip, mst_in));
 
    assert(mst_out->nnodes == mst_in->nnodes + 1);
    assert(mst_out->nedges == mst_in->nedges + 2);
@@ -320,7 +254,7 @@ void reduce_dcmstAddNode(
    dcmstGetCSRfromStore(dmst, mst_out);
 
    assert(mst_out->nnodes == mst_in->nnodes + 1);
-   assert(isValidCMST(scip, mst_out));
+   assert(reduce_dcmstMstIsValid(scip, mst_out));
 }
 
 
@@ -335,7 +269,7 @@ void reduce_dcmstAddNodeInplace(
 {
    assert(mst && adjcosts && dmst);
 
-   assert(isValidCMST(scip, mst));
+   assert(reduce_dcmstMstIsValid(scip, mst));
    assert(mst->nnodes < dmst->maxnnodes);
 
    dcmstAddNode(mst, adjcosts, dmst);
@@ -345,7 +279,24 @@ void reduce_dcmstAddNodeInplace(
 
    dcmstGetCSRfromStore(dmst, mst);
 
-   assert(isValidCMST(scip, mst));
+   assert(reduce_dcmstMstIsValid(scip, mst));
+}
+
+/** computes MST on 0 node */
+void reduce_dcmstGet0NodeMst(
+   SCIP*                 scip,               /**< SCIP */
+   CSR*                  mst                 /**< MST */
+)
+{
+   int* const start = mst->start;
+
+   assert(mst->nnodes == 0);
+   assert(mst->nedges == 0);
+
+   start[0] = 0;
+
+   assert(reduce_dcmstMstIsValid(scip, mst));
+   assert(EQ(0.0, reduce_dcmstGetWeight(scip, mst)));
 }
 
 
@@ -363,7 +314,7 @@ void reduce_dcmstGet1NodeMst(
    start[0] = 0;
    start[1] = 0;
 
-   assert(isValidCMST(scip, mst));
+   assert(reduce_dcmstMstIsValid(scip, mst));
    assert(EQ(0.0, reduce_dcmstGetWeight(scip, mst)));
 }
 
@@ -393,7 +344,7 @@ void reduce_dcmstGet2NodeMst(
    cost[0] = edgecost;
    cost[1] = edgecost;
 
-   assert(isValidCMST(scip, mst));
+   assert(reduce_dcmstMstIsValid(scip, mst));
    assert(EQ(edgecost, reduce_dcmstGetWeight(scip, mst)));
 }
 
@@ -422,7 +373,7 @@ SCIP_Real reduce_dcmstGetWeight(
    const SCIP_Real* cost = mst_in->cost;
 
    assert(scip);
-   assert(isValidCMST(scip, mst_in));
+   assert(reduce_dcmstMstIsValid(scip, mst_in));
 
    for( int i = 0; i < nedges; i++ )
    {
@@ -431,7 +382,14 @@ SCIP_Real reduce_dcmstGetWeight(
       weight += cost[i];
    }
 
-   return weight / 2.0;
+   weight /= 2.0;
+
+   assert(GE(weight, 0.0));
+
+   if( GT(weight, FARAWAY) )
+      weight = FARAWAY;
+
+   return weight;
 }
 
 
@@ -478,4 +436,76 @@ void reduce_dcmstFree(
    SCIPfreeMemoryArray(scip, &((*dcmst)->edgestore));
 
    SCIPfreeMemory(scip, dcmst);
+}
+
+
+/** is the CSR a valid MST on any underlying graph (with number of nodes and edges of the CSR)? */
+SCIP_Bool reduce_dcmstMstIsValid(
+   SCIP*                 scip,               /**< SCIP */
+   const CSR*            cmst                /**< the MST candidate */
+)
+{
+   SCIP_Bool* visited;
+   const int* const start_csr = cmst->start;
+   const int* const head_csr = cmst->head;
+   const int nnodes = cmst->nnodes;
+   SCIP_Bool isValid = TRUE;
+
+   if( nnodes == 0 )
+   {
+      assert(cmst->nedges == 0);
+      assert(start_csr[0] == 0);
+
+      return TRUE;
+   }
+
+   assert(nnodes >= 1);
+   assert(cmst->nedges % 2 == 0);
+   assert(start_csr[0] == 0);
+
+   if( !graph_csr_isValid(cmst, FALSE) )
+   {
+      SCIPdebugMessage("CSR is broken! \n");
+      return FALSE;
+   }
+
+   if( cmst->nnodes != (cmst->nedges / 2) + 1 )
+   {
+      SCIPdebugMessage("wrong nodes/edges ratio \n");
+      return FALSE;
+   }
+
+   if( nnodes == 1 )
+   {
+      return TRUE;
+   }
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &visited, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      visited[i] = FALSE;
+
+   for( int i = 0; i < cmst->nedges; i++ )
+   {
+      const int head = head_csr[i];
+
+      assert(head >= 0 && head < nnodes);
+
+      visited[head] = TRUE;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !visited[i] )
+      {
+         SCIPdebugMessage("mst does not contain node %d \n", i);
+
+         isValid = FALSE;
+         break;
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &visited);
+
+   return isValid;
 }

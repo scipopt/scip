@@ -41,8 +41,9 @@ static
 SCIP_Real sdmstGetWeight(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   const int*            nodes,              /**< nodes (from graph) for MST computation */
-   int                   nnodes,             /**< number of nodes for MST computation*/
+   int                   nnodes,             /**< number of nodes for MST computation */
+   const int             nodes[nnodes],      /**< nodes (from graph) for MST computation */
+   SCIP_Bool             computeLower,       /**< compute lower bound? (otherwise upper) */
    EXTDATA*              extdata             /**< extension data */
    )
 {
@@ -78,7 +79,25 @@ SCIP_Real sdmstGetWeight(
          else
          {
             const int endnode = nodes[j];
-            specialDist = extreduce_extGetSd(scip, graph, startnode, endnode, extdata);
+
+            if( computeLower )
+            {
+               specialDist = extreduce_extGetSdDouble(scip, graph, startnode, endnode, extdata);
+            }
+            else
+            {
+               const SCIP_Real sd1 = extreduce_extGetSd(scip, graph, startnode, endnode, extdata);
+               const SCIP_Real sd2 = extreduce_extGetSd(scip, graph, endnode, startnode, extdata);
+
+               if( EQ(sd1, -1.0) || EQ(sd2, -1.0) )
+               {
+                  specialDist = -1.0;
+               }
+               else
+               {
+                  specialDist = MAX(sd1, sd2);
+               }
+            }
 
             if( specialDist <= 0.0 )
             {
@@ -103,8 +122,90 @@ SCIP_Real sdmstGetWeight(
 
    assert(GE(mstweight, 0.0));
 
+   if( GE(mstweight, BLOCKED) )
+   {
+      mstweight = FARAWAY;
+   }
+
    return mstweight;
 }
+
+
+/** gets nodes of top levelbase MST */
+static
+void mstTopLevelBaseGetNodes(
+   int                   extnode,            /**< extension nodes */
+   int                   nnodes,             /**< number of nodes */
+   int                   nodes[nnodes],      /**< nodes (from graph) to be filled in */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int* const leaves = extdata->tree_leaves;
+   int j = 0;
+   const int nleaves = extdata->tree_nleaves;
+
+   assert(nnodes == nleaves - 1);
+
+   SCIPdebugMessage("mstTopLevel nodes: \n");
+
+   for( int i = 0; i < nleaves; ++i )
+   {
+      const int leaf = leaves[i];
+
+      if( leaf == extnode )
+         continue;
+
+      SCIPdebugMessage("   %d \n", leaf);
+
+      nodes[j] = leaf;
+
+      j++;
+   }
+
+   assert(j == nnodes);
+}
+
+
+/** is the weight of the top levelbase MST valid? */
+static
+SCIP_Bool mstTopLevelBaseValidWeight(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   base_nnodes,         /**< number of nodes */
+   int                   base_nodes[base_nnodes],  /**< MST nodes (from graph) */
+   const CSR*            mst_base,           /**< the stored MST */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Real mstweight_org = reduce_dcmstGetWeight(scip, mst_base);
+   const SCIP_Real mstweight_upper = sdmstGetWeight(scip, graph, base_nnodes, base_nodes, FALSE, extdata);
+   SCIP_Bool isValid = TRUE;
+
+   assert(base_nnodes == mst_base->nnodes);
+
+   if( GT(mstweight_org, mstweight_upper) )
+   {
+      SCIPdebugMessage("top baselevel MST weight violates upper bound: %f > %f \n",
+          mstweight_org, mstweight_upper);
+
+      isValid = FALSE;
+   }
+   else
+   {
+      const SCIP_Real mstweight_lower = sdmstGetWeight(scip, graph, base_nnodes, base_nodes, TRUE, extdata);
+
+      if( LT(mstweight_org, mstweight_lower) )
+      {
+         SCIPdebugMessage("top baselevel MST weight violates lower bound: %f < %f \n",
+             mstweight_org, mstweight_lower);
+
+         isValid = FALSE;
+      }
+   }
+
+   return isValid;
+}
+
 
 
 /** Helper.
@@ -503,7 +604,7 @@ SCIP_Real extreduce_treeGetSdMstWeight(
    const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
 
-   return sdmstGetWeight(scip, graph, leaves, nleaves, extdata);
+   return sdmstGetWeight(scip, graph, nleaves, leaves, FALSE, extdata);
 }
 
 
@@ -538,7 +639,7 @@ SCIP_Real extreduce_treeGetSdMstExtWeight(
 
    extleaves[nleaves] = extvert;
 
-   mstweight = sdmstGetWeight(scip, graph, extleaves, nleaves + 1, extdata);
+   mstweight = sdmstGetWeight(scip, graph, nleaves + 1, extleaves, FALSE, extdata);
 
    SCIPfreeBufferArray(scip, &extleaves);
 
@@ -579,6 +680,27 @@ void extreduce_printStack(
          graph_edge_printInfo(graph, edge);
       }
    }
+}
+
+
+/** Prints top horizontal level */
+void extreduce_printTopLevel(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const REDDATA* const reddata = extdata->reddata;
+   const MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+   const int levelsize = extreduce_mldistsTopLevelNSlots(sds_horizontal);
+   const int* const levelids = extreduce_mldistsTopLevelBases(sds_horizontal);
+
+   printf("current (horizontal) top level: \n");
+
+   for( int i = 0; i < levelsize; i++ )
+   {
+      printf("%d  ", levelids[i]);
+   }
+
+   printf("\n");
 }
 
 
@@ -846,6 +968,88 @@ SCIP_Bool extreduce_sdsTopInSync(
 }
 
 
+/** is the top level base MST sync with the tree? */
+SCIP_Bool extreduce_mstTopLevelBaseInSync(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extnode,            /**< node from which to extend */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   CSR mst_base;
+   const REDDATA* const reddata = extdata->reddata;
+   const CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
+   int* nodes;
+   const int nleaves = extdata->tree_nleaves;
+   const int nnodes = nleaves - 1;
+   SCIP_Bool inSync = TRUE;
+
+   assert(extnode >= 0 && extnode < graph->knots);
+   assert(extdata->tree_deg[extnode] == 1);
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodes, nnodes) );
+
+   graph_csrdepo_getTopCSR(msts_levelbase, &mst_base);
+
+   assert(nnodes == mst_base.nnodes);
+   assert(reduce_dcmstMstIsValid(scip, &mst_base));
+
+   /* get the nodes for the new MST computations */
+   mstTopLevelBaseGetNodes(extnode, nnodes, nodes, extdata);
+
+   if( !mstTopLevelBaseValidWeight(scip, graph, nnodes, nodes, &mst_base, extdata) )
+   {
+      inSync = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &nodes);
+
+   return inSync;
+}
+
+
+/** is the top level component MST sync with the tree? */
+SCIP_Bool extreduce_mstTopLevelCompInSync(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   return TRUE;
+}
+
+
+/** are the internal data MST structures in sync. with each other? */
+SCIP_Bool extreduce_mstInternalsInSync(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const REDDATA* const reddata = extdata->reddata;
+   const CSRDEPO* const msts_comp = reddata->msts_comp;
+   const CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
+   const MLDISTS* const sds_vertical = reddata->sds_vertical;
+   const MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+
+   assert(!extreduce_mldistsEmptySlotExists(sds_horizontal));
+   assert(!extreduce_mldistsEmptySlotExists(sds_vertical));
+
+   if( extreduce_mldistsNlevels(sds_horizontal) != extreduce_mldistsNlevels(sds_vertical) )
+   {
+      return FALSE;
+   }
+
+   if( graph_csrdepo_getNcsrs(msts_comp) != graph_csrdepo_getNcsrs(msts_levelbase) )
+   {
+      return FALSE;
+   }
+
+   if (extreduce_mldistsTopLevelNSlots(sds_horizontal) != extreduce_mldistsTopLevelNSlots(sds_vertical) )
+   {
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
+
 #if 0
 /** does the stack top correspond to MST depository top? */
 SCIP_Bool extreduce_stackTopMstDepoInSync(
@@ -884,7 +1088,17 @@ SCIP_Bool extreduce_stackTopMstDepoInSync(
 #endif
 
 
-// assert that the costs of the tree all coincide with the actual SD etc distances!
-// might be good to have this and reddata extdata stuff in extra method reduce_ext_util.c or just reduce_util.c
-// need some flag (in cgraph?) to see whether a leaf in the cgraph does not actually have valid costs (or any)
-// and should be recomputed!
+/** returns size of component on the stack */
+int extreduce_extStackCompSize(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< position on the stack */
+)
+{
+   const int* const stack_start = extdata->extstack_start;
+   const int size = stack_start[stackpos + 1] - stack_start[stackpos];
+
+   assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
+   assert(size > 0 && size < STP_EXT_MAXGRAD);
+
+   return size;
+}

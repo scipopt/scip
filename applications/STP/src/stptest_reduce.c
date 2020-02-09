@@ -24,6 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <assert.h>
@@ -255,6 +256,71 @@ SCIP_RETCODE dcmstTest2(
    return SCIP_OKAY;
 }
 
+
+
+/** builds up a 4x4 MST */
+static
+SCIP_RETCODE dcmstTest2b(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DCMST* dcmst;
+   CSR* csr_base;
+   CSR* csr_extended;
+   SCIP_Real adjcosts[] = { -1.0, -1.0, -1.0 };
+
+   SCIP_CALL( reduce_dcmstInit(scip, 4, &dcmst) );
+   SCIP_CALL( graph_csr_alloc(scip, 3, 4, &csr_base) );
+   SCIP_CALL( graph_csr_alloc(scip, 4, 6, &csr_extended) );
+
+   csr_base->nnodes = 2;
+   csr_base->nedges = 2;
+
+   reduce_dcmstGet2NodeMst(scip, 395.0, csr_base);
+
+   csr_extended->nnodes = 3;
+   csr_extended->nedges = 4;
+
+   adjcosts[0] = 200.0;
+   adjcosts[1] = 302.0;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 502.0) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+   csr_base->nnodes = 3;
+   csr_base->nedges = 4;
+
+   graph_csr_copy(csr_extended, csr_base);
+
+   csr_extended->nnodes = 4;
+   csr_extended->nedges = 6;
+
+   adjcosts[0] = 197.0;
+   adjcosts[1] = FARAWAY;
+   adjcosts[2] = 197.0;
+
+   reduce_dcmstAddNode(scip, csr_base, adjcosts, dcmst, csr_extended);
+
+   if( !EQ(reduce_dcmstGetWeight(scip, csr_extended), 696.0) )
+   {
+      SCIPdebugMessage("wrong MST weight \n");
+
+      return SCIP_ERROR;
+   }
+
+
+   reduce_dcmstFree(scip, &dcmst);
+   graph_csr_free(scip, &csr_base);
+   graph_csr_free(scip, &csr_extended);
+
+   return SCIP_OKAY;
+}
 
 
 /** builds up 6x6 MST */
@@ -522,6 +588,7 @@ SCIP_RETCODE stptest_dcmst(
 {
    SCIP_CALL( dcmstTest1(scip) );
    SCIP_CALL( dcmstTest2(scip) );
+   SCIP_CALL( dcmstTest2b(scip) );
    SCIP_CALL( dcmstTest3(scip) );
 
    printf("dcmst test: all ok \n");

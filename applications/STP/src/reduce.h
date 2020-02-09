@@ -155,8 +155,10 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
  */
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);
+SCIP_Bool              reduce_dcmstMstIsValid(SCIP*, const CSR*);
 extern void            reduce_dcmstAddNode(SCIP*, const CSR*, const SCIP_Real*, DCMST*, CSR*);
 extern void            reduce_dcmstAddNodeInplace(SCIP*, const SCIP_Real*, DCMST*, CSR*);
+extern void            reduce_dcmstGet0NodeMst(SCIP*, CSR*);
 extern void            reduce_dcmstGet1NodeMst(SCIP*, CSR*);
 extern void            reduce_dcmstGet2NodeMst(SCIP*, SCIP_Real, CSR*);
 extern void            reduce_dcmstGet3NodeMst(SCIP*, SCIP_Real, SCIP_Real, SCIP_Real, CSR*);

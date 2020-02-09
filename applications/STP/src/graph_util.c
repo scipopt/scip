@@ -46,10 +46,145 @@ struct compressed_sparse_storages_depository
    int                   ncsrs_curr;         /**< current number of CSRS */
    int                   ncsrs_max;          /**< maximum number of CSRS */
 #ifndef NDEBUG
+   SCIP_Real*            csr_weight;         /**< sum of edge weights of CSR (size ncsrs_max) */
    int*                  csr_nedges;         /**< per entry: number of (directed!) edges (size ncsrs_max) */
    int*                  csr_nnodes;         /**< per entry: number of nodes (size ncsrs_max) */
 #endif
 };
+
+#ifndef NDEBUG
+/** has the CSR been initialized? */
+static
+SCIP_Bool csrdepoCsrIsSet(
+   const CSR*             csr,                /**< pointer to CSR struct to fill */
+   SCIP_Bool              verbose             /**< be verbose? */
+   )
+{
+   assert(csr);
+
+   for( int i = 0; i <= csr->nnodes; i++ )
+   {
+      if( csr->start[i] < 0 )
+      {
+         if( verbose )
+            printf("CSR not set: unset start pointer for entry %d \n", i);
+
+         return FALSE;
+      }
+   }
+
+
+   for( int i = 0; i < csr->nedges; i++ )
+   {
+      if( LT(csr->cost[i], 0.0) )
+      {
+         if( verbose )
+            printf("CSR not set: negative cost for entry %d \n", i);
+
+         return FALSE;
+      }
+   }
+
+   for( int i = 0; i < csr->nedges; i++ )
+   {
+      if( csr->head[i] < 0 )
+      {
+         if( verbose )
+            printf("CSR not set: unset head for entry %d \n", i);
+
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
+/** de-initialize CSR (in debug mode) */
+static
+void csrdepoCsrUnsetDebug(
+   CSR*                   csr                 /**< pointer to CSR struct to fill */
+)
+{
+   for( int i = 0; i <= csr->nnodes; i++ )
+      csr->start[i] = -1;
+
+   for( int i = 0; i < csr->nedges; i++ )
+      csr->cost[i] = -1.0;
+
+   for( int i = 0; i < csr->nedges; i++ )
+      csr->head[i] = -1;
+}
+
+
+/** cleaning (in debug mode) */
+static
+void csrdepoCleanDebug(
+   CSRDEPO*              depository          /**< the depository */
+)
+{
+   const int ncsrs_max = depository->ncsrs_max;
+   const int datasize_max = depository->datasize_max;
+
+   assert(depository->csr_ptrsStart[0] == 0);
+   assert(depository->csr_ptrsData[0] == 0);
+
+   for( int i = 0; i < ncsrs_max; ++i )
+   {
+      depository->csr_nedges[i] = -1;
+      depository->csr_nnodes[i] = -1;
+      depository->csr_weight[i] = -1.0;
+   }
+
+   for( int i = 0; i <= ncsrs_max; ++i )
+   {
+      depository->csr_ptrsStart[i] = -1;
+      depository->csr_ptrsData[i] = -1;
+   }
+
+   for( int i = 0; i < datasize_max; ++i )
+   {
+      depository->all_starts[i] = -1;
+      depository->all_heads[i] = -1;
+      depository->all_costs[i] = -1.0;
+   }
+
+   depository->csr_ptrsStart[0] = 0;
+   depository->csr_ptrsData[0] = 0;
+}
+
+
+/** gets top CSR edge weight */
+static
+SCIP_Real csrdepoCsrWeight(
+   const CSR*             csr                 /**< pointer to CSR struct to fill */
+)
+{
+   SCIP_Real weight = 0.0;
+
+   assert(csr);
+
+   for( int i = 0; i < csr->nedges; i++ )
+      weight += csr->cost[i];
+
+   return weight;
+}
+
+
+/** gets top CSR edge weight */
+static
+SCIP_Real csrdepoGetTopWeight(
+   const CSRDEPO*        depository          /**< the depository */
+)
+{
+   CSR topcsr;
+   const int topindex = depository->ncsrs_curr - 1;
+
+   graph_csrdepo_getCSR(depository, topindex, &topcsr);
+
+   return csrdepoCsrWeight(&topcsr);
+}
+#endif
 
 
 /** gets top index */
@@ -65,6 +200,7 @@ int csrdepoGetTopIndex(
 }
 
 
+
 /** gets number of nodes of CSR stored at position 'index' */
 static inline
 int csrdepoGetNnodes(
@@ -78,7 +214,7 @@ int csrdepoGetNnodes(
    {
       const int nnodes = depository->csr_ptrsStart[index + 1] - depository->csr_ptrsStart[index] - 1;
       assert(nnodes == depository->csr_nnodes[index]);
-      assert(nnodes >= 1);
+      assert(nnodes >= 0);
    }
 #endif
 
@@ -119,6 +255,9 @@ void csrdepoFillCSR(
    const int nedges = csrdepoGetNedges(depository, index);
    const int ptr_start = depository->csr_ptrsStart[index];
    const int ptr_data = depository->csr_ptrsData[index];
+
+   assert(ptr_start >= 0);
+   assert(ptr_data >= 0);
 
    /* fill the entries of the CSR */
    csr->start = &(depository->all_starts[ptr_start]);
@@ -163,20 +302,16 @@ SCIP_RETCODE graph_csrdepo_init(
    depo->ncsrs_max = ncsrs_max;
    depo->datasize_max = datasize_max;
 
+   depo->csr_ptrsStart[0] = 0;
+   depo->csr_ptrsData[0] = 0;
+
 #ifndef NDEBUG
    SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_nedges), ncsrs_max) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_nnodes), ncsrs_max) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(depo->csr_weight), ncsrs_max) );
 
-   for( int i = 0; i < ncsrs_max; ++i )
-   {
-      depo->csr_nedges[i] = -1;
-      depo->csr_nnodes[i] = -1;
-   }
+   csrdepoCleanDebug(depo);
 #endif
-
-   depo->all_starts[0] = 0;
-   depo->csr_ptrsStart[0] = 0;
-   depo->csr_ptrsData[0] = 0;
 
    assert(graph_csrdepo_isEmpty(*depository));
 
@@ -199,6 +334,7 @@ void graph_csrdepo_free(
 #ifndef NDEBUG
    SCIPfreeMemoryArray(scip, &(depo->csr_nnodes));
    SCIPfreeMemoryArray(scip, &(depo->csr_nedges));
+   SCIPfreeMemoryArray(scip, &(depo->csr_weight));
 #endif
 
    SCIPfreeMemoryArray(scip, &(depo->csr_isEmpty));
@@ -227,6 +363,31 @@ void graph_csrdepo_getCSR(
    csrdepoFillCSR(depository, index, csr);
 
    assert(csr->start[0] == 0);
+}
+
+
+/** gets top (last added) CSR from depository */
+void graph_csrdepo_getTopCSR(
+   const CSRDEPO*        depository,         /**< the depository */
+   CSR*                  csr                 /**< pointer to CSR struct to fill */
+   )
+{
+   assert(depository && csr);
+   assert(depository->ncsrs_curr >= 1);
+   assert(!graph_csrdepo_hasEmptyTop(depository));
+
+   graph_csrdepo_getCSR(depository, csrdepoGetTopIndex(depository), csr);
+
+#ifndef NDEBUG
+   {
+      const SCIP_Real weight_org = depository->csr_weight[csrdepoGetTopIndex(depository)];
+      const SCIP_Real weight_real = csrdepoCsrWeight(csr);
+
+      assert(EQ(weight_org, weight_real));
+   }
+#endif
+   assert(csrdepoCsrIsSet(csr, FALSE));
+
 }
 
 
@@ -284,9 +445,15 @@ void graph_csrdepo_removeTop(
 
 #ifndef NDEBUG
    {
+      CSR csr;
       const int top_index = csrdepoGetTopIndex(depository);
+
+      csrdepoFillCSR(depository, top_index, &csr);
+      csrdepoCsrUnsetDebug(&csr);
+
       depository->csr_nedges[top_index] = -1;
       depository->csr_nnodes[top_index] = -1;
+      depository->csr_weight[top_index] = -1.0;
    }
 #endif
 
@@ -303,12 +470,15 @@ void graph_csrdepo_clean(
 {
    assert(depository);
 
-   for( int i = depository->ncsrs_curr - 1; i >= 0; ++i )
+   for( int i = depository->ncsrs_curr - 1; i >= 0; --i )
    {
       graph_csrdepo_removeTop(depository);
    }
 
+#ifndef NDEBUG
    assert(graph_csrdepo_isEmpty(depository));
+   csrdepoCleanDebug(depository);
+#endif
 }
 
 
@@ -324,7 +494,7 @@ void graph_csrdepo_addEmptyTop(
    assert(depository);
    assert(nnodes >= 1 && nedges >= 0);
    assert(graph_csrdepo_isEmpty(depository) || !graph_csrdepo_hasEmptyTop(depository));
-   assert(MAX(nnodes, nedges) + graph_csrdepo_getDataSize(depository) < depository->datasize_max);
+   assert(MAX(nnodes + 1, nedges) + graph_csrdepo_getDataSize(depository) < depository->datasize_max);
    assert(depository->ncsrs_curr < depository->ncsrs_max);
 
    depository->ncsrs_curr++;
@@ -338,12 +508,28 @@ void graph_csrdepo_addEmptyTop(
 #ifndef NDEBUG
    assert(-1 == depository->csr_nnodes[topindex]);
    assert(-1 == depository->csr_nedges[topindex]);
+   assert(EQ(depository->csr_weight[topindex], -1.0));
 
    depository->csr_nnodes[topindex] = nnodes;
    depository->csr_nedges[topindex] = nedges;
 
    assert(graph_csrdepo_hasEmptyTop(depository));
 #endif
+}
+
+
+/** adds empty top for tree to CSR depository */
+void graph_csrdepo_addEmptyTopTree(
+   CSRDEPO*              depository,         /**< the depository */
+   int                   nnodes             /**< nodes of new top */
+   )
+{
+   const int nedges = 2 * (nnodes - 1);
+
+   assert(nnodes >= 1);
+   assert(nedges >= 0);
+
+   graph_csrdepo_addEmptyTop(depository, nnodes, nedges);
 }
 
 
@@ -370,8 +556,7 @@ SCIP_Bool graph_csrdepo_hasEmptyTop(
 }
 
 
-/** Gets empty top of current depository.
- *  Will be assumed to not be empty anymore! */
+/** Gets empty top of current depository. */
 void graph_csrdepo_getEmptyTop(
    const CSRDEPO*        depository,         /**< the depository */
    CSR*                  csr                 /**< pointer to csr struct to fill */
@@ -384,23 +569,49 @@ void graph_csrdepo_getEmptyTop(
    assert(csr);
 
    csrdepoFillCSR(depository, topindex, csr);
-
-   depository->csr_isEmpty[topindex] = FALSE;
 }
 
-/** Gets non-empty (!) top of current depository. */
-void graph_csrdepo_getTop(
-   const CSRDEPO*        depository,         /**< the depository */
-   CSR*                  csr                 /**< pointer to csr struct to fill */
+
+/** Sets formerly empty top to marked. */
+void graph_csrdepo_emptyTopSetMarked(
+   CSRDEPO*           depository          /**< the depository */
    )
 {
    const int topindex = csrdepoGetTopIndex(depository);
 
-   assert(topindex >= 0 && topindex < depository->ncsrs_max);
-   assert(!depository->csr_isEmpty[topindex]);
-   assert(csr);
+   assert(depository->csr_isEmpty[topindex]);
+   assert(EQ(depository->csr_weight[topindex], -1.0));
 
-   csrdepoFillCSR(depository, topindex, csr);
+   depository->csr_isEmpty[topindex] = FALSE;
+
+#ifndef NDEBUG
+   depository->csr_weight[topindex] = csrdepoGetTopWeight(depository);
+#endif
+}
+
+
+/** Prints depository. */
+void graph_csrdepo_print(
+   const CSRDEPO*        depository          /**< the depository */
+   )
+{
+   CSR csr;
+   const int ncsrs = graph_csrdepo_getNcsrs(depository);
+
+   printf("csrdepo (size=%d) contains: \n", ncsrs);
+
+   for( int i = 0; i < ncsrs; ++i )
+   {
+      graph_csrdepo_getCSR(depository, i, &csr);
+
+#ifndef NDEBUG
+      printf("level %d: n=%d, m=%d w=%f \n", i, csr.nnodes, csr.nedges, depository->csr_weight[i] / 2.0);
+#else
+      printf("level %d: n=%d, m=%d \n", i, csr.nnodes, csr.nedges);
+
+#endif
+   }
+
 }
 
 
@@ -739,15 +950,42 @@ void graph_csr_copy(
    assert(csr_in && csr_out);
    assert(csr_in->nnodes == csr_out->nnodes);
    assert(csr_in->nedges == csr_out->nedges);
-   assert(csr_in->nnodes > 0 && csr_in->nedges > 0);
+   assert(csr_in->nnodes > 0 && csr_in->nedges >= 0);
 
    assert(graph_csr_isValid(csr_in, FALSE));
 
    BMScopyMemoryArray(csr_out->start, csr_in->start, csr_in->nnodes + 1);
-   BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges);
-   BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges);
+
+   if( csr_in->nedges > 0 )
+   {
+      BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges);
+      BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges);
+   }
 
    assert(graph_csr_isValid(csr_out, FALSE));
+}
+
+
+/** prints CSR storage */
+void graph_csr_print(
+   const CSR*            csr                 /**< CSR to print */
+)
+{
+   assert(csr);
+   assert(graph_csr_isValid(csr, FALSE));
+
+   printf("CSR with n=%d, m=%d; edges: \n", csr->nnodes, csr->nedges);
+
+   for( int k = 0; k < csr->nnodes; k++ )
+   {
+      for( int j = csr->start[k]; j != csr->start[k + 1]; ++j )
+      {
+         const int head = csr->head[j];
+         const SCIP_Real cost = csr->cost[j];
+
+         printf("  %d->%d, c=%f \n", k, head, cost);
+      }
+   }
 }
 
 

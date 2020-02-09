@@ -93,7 +93,7 @@ void mldistsAddLevel(
    {
       SCIP_Real* emptydists;
 
-      extreduce_mldistsEmtpySlotSetBase(bases[i], mldists);
+      extreduce_mldistsEmptySlotSetBase(bases[i], mldists);
       emptydists = extreduce_mldistsEmptySlotTargetDists(mldists);
 
       BMScopyMemoryArray(emptydists, dists[i], ntargets);
@@ -204,7 +204,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 2; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(i + 10, mldists);
+      extreduce_mldistsEmptySlotSetBase(i + 10, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 
@@ -212,7 +212,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 12; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(i, mldists);
+      extreduce_mldistsEmptySlotSetBase(i, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 
@@ -220,7 +220,7 @@ SCIP_RETCODE mldistsTest1(
 
    for( int i = 0; i < 2; i++ )
    {
-      extreduce_mldistsEmtpySlotSetBase(i, mldists);
+      extreduce_mldistsEmptySlotSetBase(i, mldists);
       extreduce_mldistsEmptySlotSetFilled(mldists);
    }
 

@@ -132,7 +132,6 @@ SCIP_RETCODE csrdepoTest1(
    /* add first */
    graph_csrdepo_addEmptyTop(depo, nnodes1, nedges1);
    graph_csrdepo_getEmptyTop(depo, &csr);
-   assert(!graph_csrdepo_hasEmptyTop(depo));
 
    if( csr.nedges != nedges1 || csr.nnodes != nnodes1 )
    {
@@ -140,10 +139,12 @@ SCIP_RETCODE csrdepoTest1(
       return SCIP_ERROR;
    }
 
+   csrdepoFillRandom(5522, &csr);
+   graph_csrdepo_emptyTopSetMarked(depo);
+
    /* add second */
    graph_csrdepo_addEmptyTop(depo, nnodes2, nedges2);
    graph_csrdepo_getEmptyTop(depo, &csr);
-   assert(!graph_csrdepo_hasEmptyTop(depo));
 
    if( csr.nedges != nedges2 || csr.nnodes != nnodes2 )
    {
@@ -197,6 +198,8 @@ SCIP_RETCODE csrdepoTest2(
    csrdepoFillRandom(55, &csr_in);
    csrdepoFillRandom(55, csr0);
 
+   graph_csrdepo_emptyTopSetMarked(depo);
+
    /* dummy add */
    graph_csrdepo_addEmptyTop(depo, nnodes1, nedges1);
    graph_csrdepo_getEmptyTop(depo, &csr_in);
@@ -212,6 +215,8 @@ SCIP_RETCODE csrdepoTest2(
    csrdepoFillRandom(551, &csr_in);
    csrdepoFillRandom(551, csr1);
 
+   graph_csrdepo_emptyTopSetMarked(depo);
+
    /* add third */
    graph_csrdepo_addEmptyTop(depo, nnodes2, nedges2);
    graph_csrdepo_getEmptyTop(depo, &csr_in);
@@ -219,6 +224,8 @@ SCIP_RETCODE csrdepoTest2(
    SCIP_CALL( graph_csr_alloc(scip, nnodes2, nedges2, &csr2) );
    csrdepoFillRandom(44, &csr_in);
    csrdepoFillRandom(44, csr2);
+
+   graph_csrdepo_emptyTopSetMarked(depo);
 
    /* now check: */
 

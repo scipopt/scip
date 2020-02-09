@@ -25,7 +25,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-//#define SCIP_DEBUG
+// #define SCIP_DEBUG
 #include "extreduce.h"
 #include "misc_stp.h"
 #include "portab.h"
@@ -40,8 +40,8 @@
 
 /** Structure for storing distances in the extension tree.
  *  Organized in slots that can be filled by the user.
- *  On each level there are number of slots available.
- *  Each slots consists of a base (id) and a number of targets (distances, ids).
+ *  On each level there are a number of slots available (specified by the user).
+ *  Each slots consists of a base (id) and a number of targets. Each target has a distance and an ID.
  *  Each slot on a level has the same number of targets, namely level_ntargets[level].  */
 struct multi_level_distances_storage
 {
@@ -1185,6 +1185,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    const int nnodes = graph_get_nNodes(graph);
    const int msts_datasize = STP_EXT_MAXDFSDEPTH * STP_EXTTREE_MAXNLEAVES_GUARD * 2;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   const int msts_maxn = STP_EXT_MAXDFSDEPTH + 1;
 
 #ifndef NDEBUG
    const SCIP_Bool sds_vertical_useids = TRUE;
@@ -1204,13 +1205,13 @@ SCIP_RETCODE extreduce_extPermaInit(
    }
 
    SCIP_CALL( reduce_dcmstInit(scip, STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->dcmst)) );
-   SCIP_CALL( graph_csrdepo_init(scip, STP_EXT_MAXDFSDEPTH, msts_datasize, &(extperm->msts)) );
-   SCIP_CALL( graph_csrdepo_init(scip, STP_EXT_MAXDFSDEPTH, msts_datasize, &(extperm->msts_reduced)) );
+   SCIP_CALL( graph_csrdepo_init(scip, msts_maxn, msts_datasize, &(extperm->msts_comp)) );
+   SCIP_CALL( graph_csrdepo_init(scip, msts_maxn, msts_datasize, &(extperm->msts_levelbase)) );
 
-   SCIP_CALL( extreduce_mldistsInit(scip, STP_EXT_MAXDFSDEPTH, STP_EXT_MAXGRAD,
+   SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
          STP_EXTTREE_MAXNLEAVES_GUARD, sds_vertical_useids, &(extperm->sds_vertical)) );
 
-   SCIP_CALL( extreduce_mldistsInit(scip, STP_EXT_MAXDFSDEPTH, STP_EXT_MAXGRAD,
+   SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
          STP_EXT_MAXGRAD, TRUE, &(extperm->sds_horizontal)) );
 
    extperm->edgedeleted = edgedeleted;
@@ -1271,13 +1272,13 @@ SCIP_Bool extreduce_extPermaIsClean(
       return FALSE;
    }
 
-   if( !graph_csrdepo_isEmpty(extperm->msts) )
+   if( !graph_csrdepo_isEmpty(extperm->msts_comp) )
    {
       SCIPdebugMessage("msts not empty! \n");
       return FALSE;
    }
 
-   if( !graph_csrdepo_isEmpty(extperm->msts_reduced) )
+   if( !graph_csrdepo_isEmpty(extperm->msts_levelbase) )
    {
       SCIPdebugMessage("msts_reduced not empty! \n");
       return FALSE;
@@ -1321,8 +1322,8 @@ void extreduce_extPermaFreeMembers(
 
    extreduce_mldistsFree(scip, &(extperm->sds_horizontal));
    extreduce_mldistsFree(scip, &(extperm->sds_vertical));
-   graph_csrdepo_free(scip, &(extperm->msts_reduced));
-   graph_csrdepo_free(scip, &(extperm->msts));
+   graph_csrdepo_free(scip, &(extperm->msts_levelbase));
+   graph_csrdepo_free(scip, &(extperm->msts_comp));
    reduce_dcmstFree(scip, &(extperm->dcmst));
 
    SCIPfreeMemoryArrayNull(scip, &(extperm->pcSdToNode));
@@ -1608,7 +1609,7 @@ int extreduce_mldistsEmptySlotLevel(
 
 
 /** sets base of empty slot */
-void extreduce_mldistsEmtpySlotSetBase(
+void extreduce_mldistsEmptySlotSetBase(
    int                   baseid,             /**< base */
    MLDISTS*              mldists             /**< multi-level distances */
 )
@@ -1627,7 +1628,7 @@ void extreduce_mldistsEmtpySlotSetBase(
 
 /** Resets all changes (especially bases) of empty slot.
  *  NOTE: Assumes that at least the basis of the slot has been set */
-void extreduce_mldistsEmtpySlotReset(
+void extreduce_mldistsEmptySlotReset(
    MLDISTS*              mldists             /**< multi-level distances */
 )
 {
@@ -1830,6 +1831,15 @@ int extreduce_mldistsLevelNSlots(
 }
 
 
+/** gets number of slots for top level */
+int extreduce_mldistsTopLevelNSlots(
+   const MLDISTS*        mldists             /**< multi-level distances */
+)
+{
+   return (extreduce_mldistsLevelNSlots(mldists, extreduce_mldistsTopLevel(mldists)));
+}
+
+
 /** gets number of levels */
 int extreduce_mldistsNlevels(
    const MLDISTS*        mldists            /**< multi-level distances */
@@ -1839,6 +1849,30 @@ int extreduce_mldistsNlevels(
    assert(mldists->nlevels >= 0);
 
    return (mldists->nlevels);
+}
+
+
+/** gets top level */
+int extreduce_mldistsTopLevel(
+   const MLDISTS*        mldists            /**< multi-level distances */
+)
+{
+   assert(mldists);
+   assert(mldists->nlevels >= 1);
+
+   return (mldists->nlevels - 1);
+}
+
+
+/** gets top level bases*/
+const int* extreduce_mldistsTopLevelBases(
+   const MLDISTS*        mldists            /**< multi-level distances */
+)
+{
+   const int toplevel = mldistsGetTopLevel(mldists);
+   const int basestart_pos = mldistsGetPosBasesStart(mldists, toplevel);
+
+   return &(mldists->base_ids[basestart_pos]);
 }
 
 
@@ -1926,6 +1960,27 @@ SCIP_Real extreduce_mldistsTopTargetDist(
    assert(baseid >= 0 && targetid >= 0);
 
    targetpos = mldistsGetPosTargets(mldists, mldistsGetTopLevel(mldists), baseid, targetid);
+
+   assert(GE(mldists->target_dists[targetpos], 0.0));
+
+   return (mldists->target_dists[targetpos]);
+}
+
+/** gets (one!) target distance for given level, target ID and base ID */
+SCIP_Real extreduce_mldistsTargetDist(
+   const MLDISTS*        mldists,            /**< multi-level distances */
+   int                   level,              /**< level */
+   int                   baseid,             /**< the base */
+   int                   targetid            /**< the identifier */
+)
+{
+   int targetpos;
+
+   assert(mldists);
+   assert(baseid >= 0 && targetid >= 0);
+   assert(level >= 0 && level <= mldistsGetTopLevel(mldists));
+
+   targetpos = mldistsGetPosTargets(mldists, level, baseid, targetid);
 
    assert(GE(mldists->target_dists[targetpos], 0.0));
 

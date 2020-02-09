@@ -783,7 +783,7 @@ void cmst_computeMst(
 #ifndef NDEBUG
    for( int i = 0; i < nnodes_curr; i++ )
    {
-      assert(LT(dist[i], FARAWAY)); // todo that might actually happen if the costs are too high...
+      assert(LT(dist[i], FARAWAY));
       assert(preds[i] != -1 || i == mstroot);
    }
 
