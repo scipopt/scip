@@ -113,7 +113,6 @@ SummarizeErrors = function(data, ...) {
 # process command line arguments
 #
 args <- commandArgs(trailingOnly = TRUE)
-args <- c("output")
 if( length(args) < 1 ) {
     stop("Missing positional argument for output directory")
 }
@@ -213,6 +212,8 @@ linear.monotone <- lm(searchCompletion[isTrain]~TreeWeight.Value+Ssg.Value,data 
 coeffs <- linear.monotone$coefficients[2:3]
 # SSG needs to be reversed to 1 - SSG
 coeffs[2] <- -coeffs[2]
+coeffs <- pmax(coeffs,0.01)
+coeffs <- pmin(coeffs,0.99)
 normalized.coeffs <- coeffs + ((1 - sum(coeffs)) / 2)
 
 #
