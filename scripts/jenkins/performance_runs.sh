@@ -62,7 +62,7 @@ if [ "${TRS_CONFIG}" == "custom" ]; then
     TRS_QUEUE=M640
     TRS_SEEDS=0
     TRS_PERMUTE=5
-  elif [ "${TRS_TESTSET}" =~ ^mip ]; then
+  elif [[ "${TRS_TESTSET}" =~ ^mip ]]; then
     TRS_TIME=7200
     TRS_SETTINGS=default
     if [ "${TRS_TESTSET}" == "mipdev2-solvable" ]; then
