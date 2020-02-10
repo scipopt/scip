@@ -198,3 +198,17 @@ that it should load the regression forest.
 A loaded regression forest automatically takes precedence over all other methods and is used as search completion approximation in the new
 display column "compl.".
 In contrast to the monotone regression, the regression forest is not guaranteed to be monotone.
+
+Note that most of the other methods in the table are also readily available. If the tree size should be estimated by an SSG forecasting
+method, use the "method" parameter
+
+```
+estimation/method = s
+```
+
+If the training suggests that tree weight search completion should be used instead, combine the two parameters
+
+```
+estimation/completiontype = w
+estimation/method = c
+```
