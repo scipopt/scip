@@ -53,6 +53,10 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+# use associative arrays, this requires bash4
+# declaration
+declare -A JOBS
+
 # process arguments
 if [ "${TRS_CONFIG}" == "custom" ]; then
   TRS_LPS=spx
@@ -203,7 +207,6 @@ fi
 
 # use associative arrays, this requires bash4
 # declaration
-declare -A JOBS
 declare -A TRIGGER
 
 # for descriptions on the testsets see scip/check/testsets/README.md
