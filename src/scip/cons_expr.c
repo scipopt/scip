@@ -255,7 +255,8 @@ struct SCIP_ConshdlrData
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
    char                     branchmethod;    /**< branching method */
-   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.) */
+   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
+   SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if at least this factor times the maximal branching score */
    SCIP_Real                branchdualfactor;/**< factor on how much to consider the dual values of rows that contain a variable in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
 
@@ -6037,8 +6038,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
                   continue;
                }
 
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate\n", SCIPvarGetName(var), lb, ub); )
-
                if( candssize < ncands+1 )
                {
                   candssize = SCIPcalcMemGrowSize(scip, ncands+1);
@@ -6049,6 +6048,8 @@ SCIP_RETCODE branchConstraintInfeasibility(
                cands[ncands] = consdata->varexprs[i];
                candscores[ncands] = getUpdatedBranchscore(scip, conshdlr, consdata->varexprs[i]);
                ++ncands;
+
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] with score %g as branching candidate\n", SCIPvarGetName(var), lb, ub, candscores[ncands-1]); )
 
                /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
                consdata->varexprs[i]->brscoretag = 0;
@@ -6081,8 +6082,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
                   continue;
                }
 
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] as branching candidate\n", SCIPvarGetName(var), lb, ub); )
-
                if( candssize < ncands+1 )
                {
                   candssize = SCIPcalcMemGrowSize(scip, ncands+1);
@@ -6093,6 +6092,8 @@ SCIP_RETCODE branchConstraintInfeasibility(
                cands[ncands] = expr;
                candscores[ncands] = getUpdatedBranchscore(scip, conshdlr, expr);
                ++ncands;
+
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] with score %g as branching candidate\n", SCIPvarGetName(var), lb, ub, candscores[ncands-1]); )
             }
          }
       }
@@ -6122,9 +6123,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
    if( ncands > 1 )
    {
-      /* if more than one candidate, then sort by some measure
-       * TODO: for now this sorts by the brscore, but other metrics (nuses, domain width, pseudocosts, etc) should be tried, too
-       */
+      /* if more than one candidate, then sort by score */
       SCIPsortDownRealPtr(candscores, (void**)cands, ncands);
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
@@ -6140,14 +6139,14 @@ SCIP_RETCODE branchConstraintInfeasibility(
          assert(cands[c-1] != cands[c]);  /* we should have no duplicates */
 
          /* stop if score is below threshold */
-         if( candscores[c] < conshdlrdata->branchhighviolfactor * candscores[0] )
+         if( candscores[c] < conshdlrdata->branchhighscorefactor * candscores[0] )
          {
             ncands = c;
             break;
          }
       }
       assert(ncands > 0);
-      assert(candscores[ncands-1] >= conshdlrdata->branchhighviolfactor * candscores[0]);
+      assert(candscores[ncands-1] >= conshdlrdata->branchhighscorefactor * candscores[0]);
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
@@ -6172,7 +6171,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
    }
    assert(var != NULL);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>\n", SCIPvarGetName(var)); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
    SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPgetBranchingPoint(scip, var, SCIP_INVALID), &downchild, &eqchild, &upchild) );
    if( downchild != NULL || eqchild != NULL || upchild != NULL )
       *result = SCIP_BRANCHED;
@@ -14145,8 +14144,12 @@ SCIP_RETCODE includeConshdlrExprBasic(
          &conshdlrdata->branchmethod, FALSE, 'e', "cde", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchhighviolfactor",
-         "consider a constraint highly violated or a variable branching score high if at least this factor times the maximal violation (branching score, resp.)",
+         "consider a constraint highly violated if at least this factor times the maximal violation",
          &conshdlrdata->branchhighviolfactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchhighscorefactor",
+         "consider a variable branching score high if at least this factor times the maximal branching score",
+         &conshdlrdata->branchhighscorefactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branchdualfactor",
          "factor on how much to consider the dual values of rows that contain a variable for its branching score",
