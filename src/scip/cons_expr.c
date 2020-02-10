@@ -5881,7 +5881,7 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, expr->evalvalue, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar), expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
 
       /* TODO if expr is root of constraint (consdata->expr == expr),
@@ -5898,7 +5898,7 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
       if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
@@ -5906,12 +5906,12 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is small (below feastol) and we look only for strong cuts, then it's unlikely to give a strong cut, so skip it */
       if( !allowweakcuts && auxviol < SCIPfeastol(scip) )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
 
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate, allowweakcuts); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate, allowweakcuts); )
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
       if( overestimate && auxoverestimate )  /*lint !e777*/
