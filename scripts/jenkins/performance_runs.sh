@@ -54,7 +54,7 @@ if [ "${GITBRANCH}" != "master" ]; then
 fi
 
 # process arguments
-if [ "${TESTRUN_SCRIPT_CONFIG}" == "custom" ]; then
+if [ "${TRS_CONFIG}" == "custom" ]; then
   TRS_LPS=spx
   if [ "${TRS_TESTSET}" == "minlpdev-solvable" ]; then
     TRS_TIME=3600
@@ -208,7 +208,7 @@ declare -A TRIGGER
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 
-if [ "${TESTRUN_SCRIPT_CONFIG}" != "custom" ]; then
+if [ "${TRS_CONFIG}" != "custom" ]; then
   if [ "${GITBRANCH}" == "master" ]; then
     # running on saturday
     JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
