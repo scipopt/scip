@@ -5163,6 +5163,37 @@ SCIP_RETCODE SCIPchgVarUbLazy(
    return SCIP_OKAY;
 }
 
+/** returns the absolute value of the aggregation or multiaggregation scalar,
+ *  or 1.0 if there is no (multi)aggregation
+ */
+static
+SCIP_Real getAggregationScalar(
+   SCIP_VAR*          var                    /**< problem variable */
+   )
+{
+   SCIP_Real scalar;
+
+   scalar = 1.0;
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+   {
+      assert(var->data.aggregate.var != NULL);
+      assert(var->data.aggregate.scalar != 0.0);
+
+      scalar = 1 / REALABS(var->data.aggregate.scalar);
+   }
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR && var->data.multaggr.nvars == 1 )
+   {
+      assert( var->data.multaggr.vars != NULL );
+      assert( var->data.multaggr.scalars != NULL );
+      assert( var->data.multaggr.scalars[0] != 0.0 );
+
+      scalar = 1 / REALABS(var->data.multaggr.scalars[0]);
+   }
+
+   return scalar;
+}
+
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
@@ -5221,7 +5252,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, newbound * mult, ub * mult) )
    {
@@ -5343,7 +5374,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1/var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
    {
@@ -5529,7 +5560,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, newbound * mult, ub * mult) )
    {
@@ -5648,7 +5679,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
    {
@@ -5933,7 +5964,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, mult * newbound, mult * ub) )
    {
@@ -6051,7 +6082,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
    {
@@ -6270,7 +6301,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    ub = SCIPvarGetUbGlobal(var);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, mult * newbound, mult * ub) )
    {
@@ -6395,7 +6426,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    ub = SCIPvarGetUbGlobal(var);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = SCIPvarGetStatus(var) != SCIP_VARSTATUS_AGGREGATED ? 1.0 : 1 / var->data.aggregate.scalar;
+   mult = getAggregationScalar(var);
 
    if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
    {
