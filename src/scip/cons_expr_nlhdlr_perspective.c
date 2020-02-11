@@ -71,6 +71,11 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
    SCIP_CONSEXPR_EXPR**  varexprs;           /**< variable expressions */
    int                   nvarexprs;          /**< total number of variable expressions */
+
+   SCIP_VAR**            indicators;         /**< all indicator variables for the expression */
+   int                   nindicators;        /**< number of indicator variables */
+   SCIP_VAR***           indscvars;          /**< sorted arrays of suitable semicontinuous variables for each indicator */
+   int*                  nindscvars;         /**< numbers of suitable semicontinuous variables for each indicator */
 };
 
 /** nonlinear handler data */
@@ -133,10 +138,8 @@ SCIP_RETCODE varIsSemicontinuous(
 
       if( indicator != NULL )
       { /* if the indicator variable matters, look for it */
-         SCIP_Bool found;
-
-         found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
-         if( !found )
+         exists = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+         if( !exists )
             *result = FALSE;
          else if( val0 != NULL )
             *val0 = scvdata->vals0[pos];
@@ -590,29 +593,29 @@ SCIP_RETCODE exprIsSemicontinuous(
    SCIP_CONSEXPR_NLHDLRDATA*     nlhdlrdata,      /**< nonlinear handler data */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,  /**< nlhdlr expression data */
    SCIP_CONSEXPR_EXPR*           expr,            /**< expression term to be added */
+   SCIP_Bool                     isroot,          /**< is expr the root expression? */
    int*                          nbvars,          /**< buffer to store the number of indicator variables */
    SCIP_VAR**                    expr_bvars,      /**< buffer to store indicator variables of the expression */
    SCIP_Bool*                    res              /**< buffer to store whether the expression is semicontinuous */
    )
 {
-   int v, v0, nvars;
+   int v;
+   int v0;
+   int nvars;
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool var_is_sc;
    SCIP_SCVARDATA* scvdata;
    SCIP_VAR* var;
 
-   *res = FALSE;
-
-   /* TODO don't do this for root */
    /* TODO this needs sc prop */
    /* we are happy with linear terms anyway */
-//   var = SCIPgetConsExprExprAuxVar(expr);
-//   if( var != NULL )
-//   {
-//      SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
-//      *res = TRUE;
-//      return SCIP_OKAY;
-//   }
+   var = SCIPgetConsExprExprAuxVar(expr);
+   if( var != NULL && !isroot )
+   {
+      SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+      *res = TRUE;
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nlhdlrexprdata->nvarexprs) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
@@ -620,9 +623,12 @@ SCIP_RETCODE exprIsSemicontinuous(
    /* expression with a constant is fine */
    if( nvars == 0 )
    {
+      assert(!isroot);
       *res = TRUE;
       goto TERMINATE;
    }
+
+   *res = FALSE;
 
    /* all nonlinear variables of a nonlinear on/off term should be semicontinuous */
    /* TODO propagate auxiliary variables */
@@ -631,12 +637,7 @@ SCIP_RETCODE exprIsSemicontinuous(
       var = SCIPgetConsExprExprVarVar(varexprs[v]);
       SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
       if( !var_is_sc )
-      {
-         if( SCIPgetConsExprExprAuxVar(expr) != NULL ) /* TODO will remove this later */
-            *res = TRUE;
-
          goto TERMINATE;
-      }
    }
 
    /* find common binary variables for all variables of children[c] */
@@ -659,9 +660,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
       /* if we have found out that the intersection is empty, expr is not semicontinuous */
       if( *nbvars == 0 )
-      {
          goto TERMINATE;
-      }
    }
 
    *res = TRUE;
@@ -695,7 +694,7 @@ SCIP_RETCODE addTerm(
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nlhdlrexprdata->nvarexprs) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, term, varexprs, &nvars) );
 
-   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, term, &nbvars, expr_bvars, &expr_is_sc) );
+   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, term, FALSE, &nbvars, expr_bvars, &expr_is_sc) );
 
    if( expr_is_sc )
    {
@@ -775,6 +774,17 @@ SCIP_RETCODE freeNlhdlrExprData(
    )
 {
    int c;
+
+   if( nlhdlrexprdata->indicators != NULL )
+   {
+      for( c = 0; c < nlhdlrexprdata->nindicators; ++c )
+      {
+         SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indscvars[c]), nlhdlrexprdata->nvarexprs);
+      }
+      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->nindscvars), nlhdlrexprdata->nindicators);
+      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indscvars), nlhdlrexprdata->nindicators);
+      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indicators), nlhdlrexprdata->nindicators);
+   }
 
    if( nlhdlrexprdata->nonoffterms != 0 )
       SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->termvals0), nlhdlrexprdata->ntermbvars[0]);
@@ -882,6 +892,363 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 }
 #endif
 
+/** considering a sum expression as a graph where variables are nodes and an edge exists if the two variables are
+ *  contained in the same term, find the connected components of this graph
+ */
+SCIP_RETCODE getConnectedComponents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR***           components,         /**< array to store the connected components */
+   int*                  ncomponents,        /**< buffer to store number of connected components */
+   int*                  ncompvars,          /**< array to store number of vars in each component */
+   SCIP_CONSEXPR_EXPR**  varexprs,           /**< variable expressions of expr */
+   int                   nvars               /**< number of variable expressions of expr */
+   )
+{
+   int* varmarks;
+   SCIP_HASHMAP* vartopos;
+   int i;
+   int j;
+   int k;
+   int nchildren;
+   SCIP_CONSEXPR_EXPR** children;
+   int insertpos;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(components != NULL);
+   assert(ncomponents != NULL);
+   assert(ncompvars != NULL);
+   assert(varexprs != NULL);
+
+   SCIP_CALL( SCIPhashmapCreate(&vartopos, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varmarks, nvars) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      int idx;
+
+      idx = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(varexprs[i]));
+      SCIP_CALL( SCIPhashmapInsertInt(vartopos, (void*)(size_t) idx, i) );
+      varmarks[i] = -1;
+   }
+
+   /* prepare the list of terms */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      children = SCIPgetConsExprExprChildren(expr);
+      nchildren = SCIPgetConsExprExprNChildren(expr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, 1) );
+      *children = expr;
+      nchildren = 1;
+   }
+
+   *ncomponents = 0;
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CONSEXPR_EXPR** varexprs_child;
+      int nvars_child;
+      int pos;
+      int pos2;
+      SCIP_VAR* childvar;
+      int compid;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs_child, nvars) );
+      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, children[i], varexprs_child, &nvars_child) );
+
+      /* does any var already belong to a component? */
+      compid = -1;
+      for( j = 0; j < nvars_child; ++j )
+      {
+         childvar = SCIPgetConsExprExprVarVar(varexprs_child[j]);
+
+         pos = SCIPhashmapGetImageInt(vartopos, (void*)(size_t) SCIPvarGetIndex(childvar));
+         SCIPinfoMessage(scip, NULL, "\nvar encountered %s", SCIPvarGetName(childvar));
+         if( varmarks[pos] != -1 && compid == -1 )
+         {
+            /* this variable already belongs to some component */
+            compid = varmarks[pos];
+            SCIPinfoMessage(scip, NULL, "\nset compid to %d", compid);
+         }
+
+         if( compid != -1 && varmarks[pos] != -1 && varmarks[pos] != compid )
+         {
+            SCIPinfoMessage(scip, NULL, "\nvar %s belongs to a different comp already! compid %d with %d vars, var compid %d with %d vars",
+                  SCIPvarGetName(childvar), compid, ncompvars[compid], varmarks[pos], ncompvars[varmarks[pos]]);
+            SCIP_VAR* vartomove;
+            int deletedcomp;
+
+            deletedcomp = varmarks[pos];
+
+            /* two variables belong to different connected components -> merge the components */
+            for( k = 0; k < ncompvars[deletedcomp]; ++k )
+            {
+               vartomove = components[deletedcomp][k];
+               SCIPinfoMessage(scip, NULL, "\nset comps[%d][%d] to %s", compid, ncompvars[compid]+k, SCIPvarGetName(vartomove));
+               components[compid][ncompvars[compid]+k] = vartomove;
+               pos2 = SCIPhashmapGetImageInt(vartopos, (void*)(size_t) SCIPvarGetIndex(vartomove));
+               varmarks[pos2] = compid;
+            }
+
+            SCIPinfoMessage(scip, NULL, "\nncompvars[%d] = %d", compid, ncompvars[compid]);
+            ncompvars[compid]+= ncompvars[deletedcomp];
+            ncompvars[deletedcomp] = 0;
+            SCIPinfoMessage(scip, NULL, "\nncompvars[%d] = %d", compid, ncompvars[compid]);
+         }
+      }
+
+      if( compid == -1 )
+      {
+         /* we have a new connected component */
+         compid = *ncomponents;
+         SCIPinfoMessage(scip, NULL, "\nnew comp, set compid to %d", compid);
+         (*ncomponents)++;
+         SCIP_CALL( SCIPallocBufferArray(scip, &components[compid], nvars) );
+         ncompvars[compid] = 0;
+      }
+
+      /* add vars to the component */
+      for( j = 0; j < nvars_child; ++j )
+      {
+         childvar = SCIPgetConsExprExprVarVar(varexprs_child[j]);
+
+         pos = SCIPhashmapGetImageInt(vartopos, (void*)(size_t) SCIPvarGetIndex(childvar));
+         if( varmarks[pos] == -1 )
+         {
+            /* this variable hasn't yet been added to the component */
+            varmarks[pos] = compid;
+            components[compid][ncompvars[compid]] = childvar;
+            ncompvars[compid]++;
+         }
+         assert(varmarks[pos] == compid);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs_child[j]) );
+      }
+      SCIPfreeBufferArray(scip, &varexprs_child);
+   }
+
+   /* remove empty components */
+   insertpos = -1;
+   for( i = 0; i < *ncomponents; ++i )
+   {
+      if( ncompvars[i] == 0 )
+      {
+         SCIPfreeBufferArray(scip, &components[i]);
+         if( insertpos == -1 )
+            insertpos = i;
+      }
+      else
+      {
+         SCIPsortPtr((void**)components[i], SCIPvarComp, ncompvars[i]);
+         if( insertpos != -1 )
+         {
+            components[insertpos] = components[i];
+            ncompvars[insertpos] = ncompvars[i];
+            components[i] = NULL;
+            ncompvars[i] = 0;
+            insertpos++;
+         }
+      }
+   }
+   *ncomponents = insertpos;
+
+
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      SCIPfreeBufferArray(scip, &children);
+   }
+   SCIPfreeBufferArray(scip, &varmarks);
+   SCIPhashmapFree(&vartopos);
+
+   return SCIP_OKAY;
+}
+
+/** adds an array of semicontinuous variables to the indscvar array for indicator */
+SCIP_RETCODE addIndicatorSCvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nlhdlr expression data */
+   SCIP_VAR*             indicator,          /**< indicator var */
+   SCIP_VAR**            scvars,             /**< SC vars to be added to an indicator */
+   int                   nscvars             /**< number of SC vars to be added to an indicator */
+   )
+{
+   SCIP_Bool foundind;
+   int pos;
+   int i;
+   int j;
+   int k;
+
+   SCIPinfoMessage(scip, NULL, "\nAdding scvars for indicator %s: ", SCIPvarGetName(indicator));
+   for( i = 0; i < nscvars; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(scvars[i]));
+   }
+
+   if( nlexprdata->indicators == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->indicators), SCIPgetNBinVars(scip)) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->nindscvars), SCIPgetNBinVars(scip)) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->indscvars), SCIPgetNBinVars(scip)) );
+      nlexprdata->nindicators = 0;
+      pos = 0;
+      foundind = FALSE;
+   }
+   else
+   {
+      /* look for indicator in nlexprdata */
+      foundind = SCIPsortedvecFindPtr((void**)nlexprdata->indicators, SCIPvarComp, (void*)indicator, nlexprdata->nindicators, &pos);
+   }
+
+   if( !foundind )
+   {
+      /* move all indicators */
+      for( i = nlexprdata->nindicators; i > pos; --i )
+      {
+         nlexprdata->indicators[i] = nlexprdata->indicators[i-1];
+         nlexprdata->indscvars[i] = nlexprdata->indscvars[i-1];
+         nlexprdata->nindscvars[i] = nlexprdata->nindscvars[i-1];
+      }
+
+      /* store indicator */
+      nlexprdata->indicators[pos] = indicator;
+      nlexprdata->nindicators++;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->indscvars[pos]), nlexprdata->nvarexprs) );
+
+      /* just add all vars */
+      BMScopyMemoryArray(nlexprdata->indscvars[pos], scvars, nscvars);
+      nlexprdata->nindscvars[pos] = nscvars;
+   }
+   else
+   {
+      /* add scvars that haven't been added yet */
+      j = 0;
+      for( i = 0; i < nscvars; ++i )
+      {
+         while( SCIPvarComp(scvars[i], nlexprdata->indscvars[pos][j]) < 0 )
+            ++j;
+
+         if( SCIPvarComp(scvars[i], nlexprdata->indscvars[pos][j]) < 0 == 0 )
+            continue; /* scvar i has already been added, go on to next scvar */
+
+         /* move all indscvars */
+         for( k = nlexprdata->nindscvars[pos]; k > j; --k )
+         {
+            nlexprdata->indscvars[pos][k] = nlexprdata->indscvars[pos][k-1];
+         }
+
+         nlexprdata->indscvars[pos][j] = scvars[i];
+         nlexprdata->nindscvars[pos]++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** collects the indicators and creates an array of suitable semicontinuous variables for each indicator.
+ *
+ *  This is done by going over every connected component and for each component, getting the indicator variables that
+ *  are linked to all variables in the component. For each indicator thus chosen, all the variables of the component
+ *  are added to the SC vars array.
+ */
+SCIP_RETCODE fillSCvarArrays(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nonlinear expression data */
+   SCIP_VAR***           comps,              /**< connected components */
+   int                   ncomps,             /**< number of connected components */
+   int*                  ncompvars           /**< number of variabels in each connected component */
+   )
+{
+   int c;
+   SCIP_Bool var_is_sc;
+   int v;
+   int i;
+   SCIP_VAR* var;
+   SCIP_VAR** indicators;
+   SCIP_SCVARDATA* scvdata;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &indicators, SCIPgetNBinVars(scip)) );
+
+   /* get a list of indicators for each component */
+   for( c = 0; c < ncomps; ++c )
+   {
+      SCIP_Bool compissc;
+      int nindicators;
+
+      compissc = TRUE;
+      nindicators = 0;
+
+      /* get an intersection of all indicators */
+      for( v = 0; v < ncompvars[c]; ++v )
+      {
+         var = comps[c][v];
+         SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+         if( !var_is_sc )
+         {
+            compissc = FALSE;
+            break; /* this is not an sc component for any indicator */
+         }
+
+         scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)var);
+
+         if( nindicators == 0 )
+         {
+            BMScopyMemoryArray(indicators, scvdata->bvars, scvdata->nbnds);
+            nindicators = scvdata->nbnds;
+         }
+         else
+         {
+            SCIPcomputeArraysIntersectionPtr((void**)indicators, nindicators, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)indicators, &nindicators);
+
+            /* if the intersection is empty, component[c] is not semicontinuous */
+            if( nindicators == 0 )
+            {
+               compissc = FALSE;
+               break;
+            }
+         }
+      }
+
+      if( !compissc )
+         break;
+
+      /* save indicators and their sc vars */
+      for( i = 0; i < nindicators; ++i )
+      {
+         SCIP_CALL( addIndicatorSCvars(scip, nlexprdata, indicators[i], comps[c], ncompvars[c]) );
+      }
+   }
+
+   SCIPinfoMessage(scip, NULL, "\nIndicator and sc vars arrays: ");
+   for( i = 0; i < nlexprdata->nindicators; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\n%s (nscvars = %d): ", SCIPvarGetName(nlexprdata->indicators[i]), nlexprdata->nindscvars[i]);
+      for( v = 0; v < nlexprdata->nindscvars[i]; ++v )
+      {
+         SCIPinfoMessage(scip, NULL, "%s; ", SCIPvarGetName(nlexprdata->indscvars[i][v]));
+      }
+   }
+
+   if( nlexprdata->nindicators > 0 && nlexprdata->nindicators < SCIPgetNBinVars(scip) )
+   {
+      assert(nlexprdata->indicators != NULL);
+      assert(nlexprdata->indscvars != NULL);
+      assert(nlexprdata->nindscvars != NULL);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(nlexprdata->indicators), SCIPgetNBinVars(scip), nlexprdata->nindicators) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(nlexprdata->indscvars), SCIPgetNBinVars(scip), nlexprdata->nindicators) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(nlexprdata->nindscvars), SCIPgetNBinVars(scip), nlexprdata->nindicators) );
+   }
+
+   SCIPfreeBufferArray(scip, &indicators);
+
+   return SCIP_OKAY;
+}
 
 /** callback to detect structure in expression tree
  *
@@ -895,13 +1262,18 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 { /*lint --e{715}*/
    int nbvars;
-   int nchildren;
    int c;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_VAR** expr_bvars;
-   SCIP_CONSEXPR_EXPR** children;
    SCIP_Real exprval0;
    SCIP_SOL* sol0;
+//   SCIP_Bool isroot;
+   SCIP_VAR*** components;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   int nvars;
+   int v;
+   int ncomps;
+   int* ncompvars;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -947,24 +1319,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
    SCIPdebugMsg(scip, "expr %p is %s\n", expr, (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX ? "convex" : "concave");
 
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &(*nlhdlrexprdata)->nvarexprs) );
+   nvars = (*nlhdlrexprdata)->nvarexprs;
 
    if( nlhdlrdata->scvars == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), (*nlhdlrexprdata)->nvarexprs) );
-   }
-
-   /* prepare the list of terms */
-   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
-   {
-      children = SCIPgetConsExprExprChildren(expr);
-      nchildren = SCIPgetConsExprExprNChildren(expr);
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &children, 1) );
-      *children = expr;
-      nchildren = 1;
+      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), nvars) );
    }
 
    /* allocate memory for indicator variables */
@@ -976,26 +1337,25 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    nbvars = 0;
    *success = TRUE;
 
-   for( c = 0; c < nchildren; ++c )
-   {
-      /* check if expr is semicontinuous */
-      SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, children[c], &nbvars, expr_bvars, success) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ncompvars, nvars) );
 
-      if( !*success )
-         break;
-   }
+   SCIP_CALL( getConnectedComponents(scip, conshdlr, expr, components, &ncomps, ncompvars, varexprs, nvars) );
+   SCIP_CALL( fillSCvarArrays(scip, nlhdlrdata, *nlhdlrexprdata, components, ncomps, ncompvars) );
 
-   /* this needs to be checked since non-semicontinuous linear terms are allowed,
-    * so success could remain TRUE, but there could be no semicontinuous terms */
-   if( nbvars == 0 )
-      *success = FALSE;
+   /* check if expr is semicontinuous */
+//   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, children[c], isroot, &nbvars, expr_bvars, success) );
+   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr, TRUE, &nbvars, expr_bvars, success) );
+
+//   /* this needs to be checked since non-semicontinuous linear terms are allowed,
+//    * so success could remain TRUE, but there could be no semicontinuous terms */
+//   if( nbvars == 0 )
+//      *success = FALSE;
 
    if( *success )
    {
-      int nvars, v;
       SCIP_Real* vals0;
       SCIP_VAR** vars;
-      SCIP_CONSEXPR_EXPR** varexprs;
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip), nbvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*nlhdlrexprdata)->termvals0), nbvars) );
@@ -1004,8 +1364,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
       /* allocate memory for the solution */
       SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
-      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals0, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
@@ -1033,31 +1391,31 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          /* set x to x0 in sol0 */
          SCIP_CALL( SCIPsetSolVals(scip, sol0, nvars, vars, vals0) );
 
-         /* evaluate each semicontinuous term */
-         for( c = 0; c < nchildren; ++c )
-         {
-            SCIP_VAR* auxvar;
-            SCIP_Bool var_is_sc;
-
-            /* constant goes into exprval0 too */
-            if( SCIPgetConsExprExprHdlr(children[c]) == SCIPgetConsExprExprHdlrValue(conshdlr) )
-               exprval0 += SCIPgetConsExprExprValue(children[c]);
-
-            /* TODO this works best with sc prop */
-            auxvar = SCIPgetConsExprExprAuxVar(children[c]);
-
-            /* skip non-semicontinuous (with respect to this indicator) linear terms */
-            if( auxvar != NULL )
-            {
-               SCIP_CALL( varIsSemicontinuous(scip, auxvar, nlhdlrdata->scvars, expr_bvars[v], NULL, &var_is_sc) );
-               if( !var_is_sc )
-                  continue;
-            }
-
-            /* get exprval0 */
-            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, children[c], sol0, 0) );
-            exprval0 += SCIPgetConsExprExprValue(children[c]);
-         }
+//         /* evaluate each semicontinuous term */
+//         for( c = 0; c < nchildren; ++c )
+//         {
+//            SCIP_VAR* auxvar;
+//            SCIP_Bool var_is_sc;
+//
+//            /* constant goes into exprval0 too */
+//            if( SCIPgetConsExprExprHdlr(children[c]) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+//               exprval0 += SCIPgetConsExprExprValue(children[c]);
+//
+//            /* TODO this works best with sc prop */
+//            auxvar = SCIPgetConsExprExprAuxVar(children[c]);
+//
+//            /* skip non-semicontinuous (with respect to this indicator) linear terms */
+//            if( auxvar != NULL )
+//            {
+//               SCIP_CALL( varIsSemicontinuous(scip, auxvar, nlhdlrdata->scvars, expr_bvars[v], NULL, &var_is_sc) );
+//               if( !var_is_sc )
+//                  continue;
+//            }
+//
+//            /* get exprval0 */
+//            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, children[c], sol0, 0) );
+//            exprval0 += SCIPgetConsExprExprValue(children[c]);
+//         }
 
          /* save exprval0 */
          (*nlhdlrexprdata)->termvals0[v] = exprval0;
@@ -1065,11 +1423,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals0);
-      for( v = 0; v < nvars; ++v )
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
-      }
-      SCIPfreeBufferArray(scip, &varexprs);
       SCIP_CALL( SCIPfreeSol(scip, &sol0) );
 
 
@@ -1082,7 +1435,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
 
       /* save varexprs to nlhdlrexprdata */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) ); /* TODO this is repeating */
       SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
       assert(*nlhdlrexprdata != NULL);
    }
@@ -1094,10 +1447,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       *nlhdlrexprdata = NULL;
    }
 
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   for( c = 0; c < ncomps; ++c )
    {
-      SCIPfreeBufferArray(scip, &children);
+      SCIPfreeBufferArray(scip, &components[c]);
    }
+   SCIPfreeBufferArray(scip, &components);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
+   }
+   SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }
