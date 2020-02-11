@@ -6583,11 +6583,12 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_Real brscore;
                int nbradded = 0;
 
-#ifdef BRSCORE_RELVIOL
+#ifdef BRSCORE_ABSVIOL
                brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
 #else
                SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &brscore, NULL, NULL) );
 #endif
+               brscore /= rowprep->nmodifiedvars;
                SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
 
                branchscoresuccess = nbradded > 0;
