@@ -281,12 +281,68 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 #endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
-      for( c = 0; c < nchildren; ++c )
+      if( nchildren == 1 )
       {
-         if( branchcand[c] )
+         if( branchcand[0] )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation);
+            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], violation);
             *addedbranchscores = TRUE;
+         }
+      }
+      else
+      {
+         /* distribute violation onto children that are branching candidates
+          * every candidate gets a violation that is proportional to the share of its domain width to the sum of the domain widths over all candidates
+          * if some candidates are unbounded, then only add branching scores for them
+          */
+         SCIP_Real domainwidthsum = 0.0;  /* sum of width of domain over all candidates with bounded domain */
+         int nunbounded = 0;  /* number of candidates with unbounded domain */
+
+         /* get sum of finite domain widths, and number of infinite ones */
+         for( c = 0; c < nchildren; ++c )
+         {
+            SCIP_VAR* auxvar;
+
+            if( !branchcand[c] )
+               continue;
+
+            auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
+            assert(auxvar != NULL);
+
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+               ++nunbounded;
+            else
+               domainwidthsum += SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+         }
+
+         for( c = 0; c < nchildren; ++c )
+         {
+            SCIP_VAR* auxvar;
+
+            if( !branchcand[c] )
+               continue;
+
+            auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
+            assert(auxvar != NULL);
+
+            if( nunbounded > 0 )
+            {
+               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+               {
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation / nunbounded);
+                  *addedbranchscores = TRUE;
+               }
+            }
+            else
+            {
+               SCIP_Real domainwidth = SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+               if( !SCIPisZero(scip, domainwidth) )
+               {
+                  assert(domainwidthsum > 0.0);
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation * domainwidth / domainwidthsum);
+                  *addedbranchscores = TRUE;
+               }
+            }
          }
       }
 
