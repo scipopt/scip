@@ -2368,7 +2368,7 @@ SCIP_Bool isRestartApplicable(
       return FALSE;
 
    /* check whether orbital fixing is active */
-   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPorbitalfixingIsEnabled(scip) )
+   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPisOrbitalfixingEnabled(scip) )
       return FALSE;
 
    /* check if number of nodes exceeds the minimum number of nodes */
