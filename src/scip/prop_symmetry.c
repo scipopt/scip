@@ -4060,7 +4060,7 @@ SCIP_RETCODE SCIPgetSymmetry(
 }
 
 /** return whether orbital fixing is enabled */
-SCIP_Bool SCIPorbitalfixingIsEnabled(
+SCIP_Bool SCIPisOrbitalfixingEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
