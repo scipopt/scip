@@ -6,8 +6,12 @@
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
-  restart or not. Previously one could just turn off symmetry computation after a restart.
+- Using the parameter "propagating/symmetry/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart. If orbital fixing
+  has found a reduction before the restart occured, symmetries have to be updated to ensure correctness.
+  To this end, the user can decide via "propagating/symmetry/disableofrestart" whether orbital fixing is disabled or
+   whether symmetries are recomputed.
+
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
 - extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
@@ -150,7 +154,7 @@ Features
 
 - A new presolver "dualsparsify" was added. It tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix.
 
-- The presolver "tworowbnd" was implemented with better performance. It now also supports bound tightening on convex combinations of two rows.
+- The presolver "tworowbnd" was implemented with better performance.
 
 - To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
@@ -364,7 +368,7 @@ Interface changes
 
 ### Changed parameters
 
-- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../symmetry/recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: -1, old value: 5) in cons_orbitope.c
@@ -464,6 +468,7 @@ Interface changes
   - new parameter "constraints/symresack/checkmonotonicity"
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
+  - new parameter "propagating/symmetry/disableofrestart"
 
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
@@ -623,6 +628,8 @@ Fixed bugs
 - fix issue in printing solutions for variables that have been added by the dual sparsify presolver
 - fix issue related to fixing redundant logic-or constraints after presolving
 - fixed bug when parsing logic-or and and-constraints
+- fixed wrong assert in updateLazyBounds()
+- fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 - redundancy and feasibility checks before applying a variable bound now take the (multi)aggregation scalar into account
 
 Miscellaneous

@@ -165,8 +165,8 @@ Problem<SCIP_Real> buildProblem(
       SCIP_Real rhs = SCIPmatrixGetRowRhs(matrix, i);
       builder.setRowLhs(i, lhs);
       builder.setRowRhs(i, rhs);
-      builder.setRowLhsInf(i, SCIPisInfinity( scip, -lhs ));
-      builder.setRowRhsInf(i, SCIPisInfinity( scip, rhs ));
+      builder.setRowLhsInf(i, SCIPisInfinity(scip, -lhs));
+      builder.setRowRhsInf(i, SCIPisInfinity(scip, rhs));
    }
 
    return builder.build();
@@ -501,6 +501,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
          SCIP_Bool redundant = FALSE;
+         SCIP_Real constant = 0.0;
          if( rowlen == 2 )
          {
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
@@ -508,28 +509,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_Real scalarx = res.postsolve.values[first + 1];
             SCIP_Real scalary = res.postsolve.values[first + 2];
 
-            while( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(varx);
-               SCIP_Real constant = SCIPvarGetAggrConstant(varx);
-               varx = SCIPvarGetAggrVar(varx);
-
-               side -= scalarx * constant;
-               scalarx *= scalar;
-            }
-
-            while( SCIPvarGetStatus(vary) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(vary);
-               SCIP_Real constant = SCIPvarGetAggrConstant(vary);
-               vary = SCIPvarGetAggrVar(vary);
-
-               side -= scalary * constant;
-               scalary *= scalar;
-            }
-
+            SCIP_CALL( SCIPgetProbvarSum(scip, &varx, &scalarx, &constant) );
             assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
+
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant;
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
          }
@@ -553,17 +539,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             assert(colCoef != 0.0);
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
-            while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
-            {
-               SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
-               SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
-               aggrvar = SCIPvarGetAggrVar(aggrvar);
 
-               side -= colCoef * constant;
-               colCoef *= scalar;
-            }
-
+            SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant;
 
             for( int j = first + 1; j < last; ++j )
             {

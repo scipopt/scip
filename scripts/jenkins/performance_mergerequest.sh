@@ -21,13 +21,19 @@
 # QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="all"}
-: ${GITBRANCH:=${gitlabTargetBranch}}
+: ${TESTMODE:=""}
 : ${QUICKMODE:=""}
+: ${GITBRANCH:=${gitlabTargetBranch}}
 
 if [ "${gitlabTriggerPhrase}" != "" ]; then
+  TESTMODE=$(echo $gitlabTriggerPhrase | cut -f3 -d " ") # get third field (testset)
   QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
+else
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
+
+env
 
 ORIGBRANCH=${GITBRANCH}
 
@@ -52,8 +58,8 @@ elif [ "${TESTMODE}" == "minlp" ]; then
     TESTMODE=continue_minlp
   fi
 else
-  echo "Nothing to do, exiting."
-  exit 0
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
 
 ######################################
