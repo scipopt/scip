@@ -21,7 +21,7 @@
 # DAY_OF_WEEK           | date +%u                                    | 1..7 where mon-1 .. sun-7
 # UPDATE_PERF_BRANCH    | yes on saturdays in automode, no otherwise  | yes, no
 # TRS_CONFIG            | auto                                        | custom
-# TRS_TESTSET           | <none>                                      | mipdev2-solvable, minlpdev-solvable, miplib2017-benchmark
+# TRS_TESTSET           | <none>                                      | mipdev2-solvable, minlpdev-solvable, miplib2017_benchmark
 
 echo "This is performance_runs.sh running."
 
@@ -71,13 +71,13 @@ if [ "${TRS_CONFIG}" == "custom" ]; then
     TRS_SETTINGS=default
     if [ "${TRS_TESTSET}" == "mipdev2-solvable" ]; then
       TRS_QUEUE=M620v3
-    elif [ "${TRS_TESTSET}" == "miplib2017-benchmark" ]; then
+    elif [ "${TRS_TESTSET}" == "miplib2017_benchmark" ]; then
       TRS_QUEUE=M640
     fi
     TRS_SEEDS=5
     TRS_PERMUTE=0
   else
-    echo "Error in configuration, TRS_TESTSET has to be in the following list: miplib2017-benchmark, minlpdev-solvable, mipdev2-solvable."
+    echo "Error in configuration, TRS_TESTSET has to be in the following list: miplib2017_benchmark, minlpdev-solvable, mipdev2-solvable."
     exit 1
   fi
   JOBS[${DAY_OF_WEEK},1]="EXECUTABLE=scipopt${TRS_LPS}_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipopt${TRS_LPS}_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=${TRS_QUEUE} TEST=${TRS_TESTSET} TIME=${TRS_TIME} SETTINGS=${TRS_SETTINGS} PERFORMANCE=performance SEEDS=${TRS_SEEDS} PERMUTE=${TRS_PERMUTE}"
