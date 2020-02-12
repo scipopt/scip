@@ -21,9 +21,9 @@
  *
  * This is a nonlinear handler for second order cone constraints of the form
  *
- * \f$\sqrt{\gamma + \sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
- * where \f$\gamma \geq 0\f$ and \f$\v_{n+1}^T x +\beta_{n+1} \geq 0\f$.
+ * where \f$\gamma \geq 0\f$ and \f$v_{n+1}^T x +\beta_{n+1} \geq 0\f$.
  */
 
 #include <string.h>
@@ -419,23 +419,36 @@ SCIP_Real evalSingleTerm(
 
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation
  *
- *  Let x' := v_k^T x + beta_k, z := v_{n+1}^T x + beta_{n+1} and y := disvar_k, then
- *  the disaggregated cone is      x'^2 <= y*z      (or gamma <= y*z for k = nterms).
+ *  After the soc constraint \f$\sqrt{\gamma + \sum_i^n (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$
+ *  is disggregated into the row \f$\sum_i^{n+1} y_i \leq v_{n+1}^T x + \beta_{n+1}\f$ and the smaller soc constraints
  *
- *  We first transform it to           SQRT(4*x'^2) + (y - z)^2) <= y + z
- *  and then compute the gradient cut: {4x' / denom, (y - z) / denom - 1, (z - y) / denom - 1},
- *  where                              denom = SQRT(4x'^2 + (y - z)^2).
+ *  \f{align*}{
+ *    (v_i^T x + \beta_i)^2 &\leq (v_{n+1}^T x + \beta_{n+1}) y_i & \text{for } i \in [n] \\
+ *    \gamma                &\leq (v_{n+1}^T x + \beta_{n+1}) y_{n+1} &
+ *  \f}
  *
- *  Then we can resubstitute and multiply by the derivatives of the substitution terms.
+ *  Now we want to separate one of the small rotated cones. We first transform it into standard form:
+ *  \f[
+ *    \sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2} - v_{n+1}^T x - \beta_{n+1} - y_i \leq 0.
+ *  \f]
+ *
+ *  Let the left-hand-side be called \f$f(x,y)\f$. We now compute the gradient by
+ *  \f{align*}{
+ *    \frac{\delta f}{\delta x_j} &= \frac{(v_i)_j(4v_i^T x + 4\beta_i) + (v_{n+1})_j(v_{n+1}^T x + \beta_{n+1} - y_i)}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2}} - (v_{n+1})_j \\
+ *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_{n+1}^T x -\beta_{n+1}}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2}} - 1
+ *  \f}
+ *
+ *  and the gradient cut is then \f$f(x^*, y^*) + grad_f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
+ *  For the \f$\gamma\f$-cone the formula is similar.
  */
 static
 SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< the constraint that expr is part of */
    SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
-   int                   k,                  /**< k-th disaggregation */
+   int                   disaggidx,          /**< index of disaggregation to separate */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
@@ -460,9 +473,9 @@ SCIP_RETCODE generateCutSol(
    int i;
 
    assert(expr != NULL);
-   assert(conshdlr != NULL);
+   assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(k < nlhdlrexprdata->nterms);
+   assert(disaggidx < nlhdlrexprdata->nterms);
    assert(mincutviolation >= 0.0);
    assert(cut != NULL);
 
@@ -474,15 +487,18 @@ SCIP_RETCODE generateCutSol(
    nnonzeroes = nlhdlrexprdata->nnonzeroes;
    nterms = nlhdlrexprdata->nterms;
 
+   /* nterms is equal to n+1 in the description and disaggidx is in {0,...,n}
+    * if disaggidx = n, this corresponds to the disaggregation of gamma
+    */
+
    *cut = NULL;
 
-   disvarval = SCIPgetSolVal(scip, sol, disvars[k]);
+   disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
 
-   /* k = nterms-1 is the disaggregated cone for the constant */
-   if( k < nterms - 1 )
+   if( disaggidx < nterms - 1 )
    {
-      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
+      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
       denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
    }
    else
@@ -491,6 +507,7 @@ SCIP_RETCODE generateCutSol(
       denominator = SQRT(4.0 * lhsval + SQR(rhsval - disvarval));
    }
 
+   /* compute value of function to be separated (f(x*,y*)) */
    fvalue = denominator - rhsval - disvarval;
 
    /* if the soc is not violated don't compute cut */
@@ -500,24 +517,28 @@ SCIP_RETCODE generateCutSol(
    assert(!SCIPisZero(scip, denominator));
 
    /* compute maximum number of variables in cut */
-   ncutvars = (k < nterms - 1 ? nnonzeroes[k] + nnonzeroes[nterms-1] + 1 : 2);
+   ncutvars = (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] + nnonzeroes[nterms-1] + 1 : 2);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
 
+   /* constant will be grad_f(x*,y*) * (x*, y*) */
    constant = 0.0;
 
-   /* add terms for lhs */
-   if( k < nterms - 1 && !SCIPisZero(scip, lhsval) )
+   /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
+
+   /* add terms for v_{disaggidx+1} */
+   if( disaggidx < nterms - 1 && !SCIPisZero(scip, lhsval) )
    {
-      for( i = 0; i < nnonzeroes[k]; ++i )
+      for( i = 0; i < nnonzeroes[disaggidx]; ++i )
       {
          int idx;
 
-         idx = termbegins[k] + i;
+         idx = termbegins[disaggidx] + i;
          cutvar = vars[transcoefsidx[idx]];
 
+         /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
          cutcoef = 4.0 * lhsval * transcoefs[idx] / denominator;
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
@@ -526,7 +547,7 @@ SCIP_RETCODE generateCutSol(
       }
    }
 
-   /* add terms for rhs */
+   /* add terms for v_{n+1} */
    for( i = 0; i < nnonzeroes[nterms-1]; ++i )
    {
       int idx;
@@ -534,6 +555,7 @@ SCIP_RETCODE generateCutSol(
       idx = termbegins[nterms-1] + i;
       cutvar = vars[transcoefsidx[idx]];
 
+      /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
       cutcoef = (rhsval - disvarval) * transcoefs[idx] / denominator - transcoefs[idx];
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
@@ -542,8 +564,10 @@ SCIP_RETCODE generateCutSol(
    }
 
    /* add term for disvar */
-   cutvar = disvars[k];
+
+   /* cutcoef is the the partial derivative w.r.t. the disaggregation variable */
    cutcoef = (disvarval - rhsval) / denominator - 1.0;
+   cutvar = disvars[disaggidx];
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
@@ -554,8 +578,8 @@ SCIP_RETCODE generateCutSol(
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, disaggidx);
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
 
    /* free memory */
@@ -1749,20 +1773,18 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_SOL* debugsol;
+         SCIP_Real lhsval;
          SCIP_Real rhsval;
-         int i;
-         int ndisaggvars;
+         SCIP_Real disvarval;
          int nterms;
+         int i;
 
          SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
 
-         nterms = (*nlhdlrexprdata)->nterms;
-         rhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
-
          if( debugsol != NULL )
          {
-            SCIP_Real disvarval;
-            SCIP_Real lhsval;
+            nterms = (*nlhdlrexprdata)->nterms;
+            rhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
 
             for( i = 0; i < nterms - 1; ++i )
             {
@@ -1790,6 +1812,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
                SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[nterms-1], disvarval) );
             }
          }
+         else
+            SCIPwarningMessage(scip, "could not set debug solution values for disaggregation variables, since no debugsolution was found\n");
       }
 #endif
    }
@@ -1802,6 +1826,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 { /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
    int i;
 
    assert(nlhdlrexprdata != NULL);
@@ -1811,10 +1836,13 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    assert(nlhdlrexprdata->nnonzeroes != NULL);
    assert(nlhdlrexprdata->nterms > 1);
 
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
    /* if the original expression is a norm, evaluate w.r.t. the auxiliary variables */
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
    {
-      assert(SCIPgetConsExprExprPowExponent(expr) == 0.5));
+      assert(SCIPgetConsExprExprPowExponent(expr) == 0.5);
 
       /* compute sum_i coef_i expr_i^2 + constant */
       *auxvalue = nlhdlrexprdata->constant;
@@ -1899,7 +1927,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       SCIP_ROW* row;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), &row) );
+      SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), &row) );
 
       if( row != NULL )
       {
