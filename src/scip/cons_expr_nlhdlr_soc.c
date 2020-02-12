@@ -449,13 +449,12 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* cutvar;
    SCIP_Real cutcoef;
-   SCIP_Real value;
+   SCIP_Real fvalue;
    SCIP_Real disvarval;
    SCIP_Real rhsval;
    SCIP_Real lhsval;
    SCIP_Real constant;
    SCIP_Real denominator;
-   SCIP_Real denomsqrtarg;
    int ncutvars;
    int nterms;
    int i;
@@ -484,24 +483,21 @@ SCIP_RETCODE generateCutSol(
    if( k < nterms - 1 )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
-      denomsqrtarg = 4.0 * SQR(lhsval) + SQR(rhsval - disvarval);
+      denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
    }
    else
    {
       lhsval = nlhdlrexprdata->constant;
-      denomsqrtarg = 4.0 * lhsval + SQR(rhsval - disvarval);
+      denominator = SQRT(4.0 * lhsval + SQR(rhsval - disvarval));
    }
 
-   /* if we would divide by 0, don't add a cut */
-   if( SCIPisZero(scip, denomsqrtarg) )
+   fvalue = denominator - rhsval - disvarval;
+
+   /* if the soc is not violated don't compute cut */
+   if( SCIPisFeasLE(scip, fvalue, 0.0) )
       return SCIP_OKAY;
 
-   denominator = SQRT(denomsqrtarg);
-   value = denominator - rhsval - disvarval;
-
-   /* if the cone is not violated don't compute cut */
-   if( value <= mincutviolation )
-      return SCIP_OKAY;
+   assert(!SCIPisZero(scip, denominator));
 
    /* compute maximum number of variables in cut */
    ncutvars = (k < nterms - 1 ? nnonzeroes[k] + nnonzeroes[nterms-1] + 1 : 2);
@@ -554,7 +550,7 @@ SCIP_RETCODE generateCutSol(
    constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
 
    /* add side */
-   SCIPaddRowprepSide(rowprep, constant - value);
+   SCIPaddRowprepSide(rowprep, constant - fvalue);
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
