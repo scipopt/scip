@@ -14,17 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   extreduce_core.c
- * @brief  extended reductions for Steiner tree problems
+ * @brief  extended reduction techniques for Steiner tree problems
  * @author Daniel Rehfeldt
  *
- * This file implements extended reduction techniques for several Steiner problems.
+ * This file implements the core algorithms for the extended reduction techniques, namely for the tree search.
+ * Starting from a given component (e.g. a single edge), a number of possible extensions are checked to be able
+ * to verify that this component is not part of at least one optimal solution.
  *
  * A list of all interface methods can be found in extreduce.h.
  *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- // #define SCIP_DEBUG
+//  #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -144,6 +146,27 @@ SCIP_Real getMinDistCombination(
    }
 
    return min;
+}
+
+
+/** returns position of last marked component before the current one */
+static inline
+int extStackGetPrevMarked(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int* const extstack_state = extdata->extstack_state;
+   int stackpos = extStackGetPosition(extdata) - 1;
+
+   assert(stackpos >= 0);
+
+   while( extstack_state[stackpos] != EXT_STATE_MARKED )
+   {
+      stackpos--;
+      assert(stackpos >= 0);
+   }
+
+   return stackpos;
 }
 
 
@@ -397,20 +420,30 @@ void extLeafRemove(
  *  NOTE: assumes that the tree_deg has already been adapted */
 static inline
 void extLeafRemoveTop(
+   const GRAPH*          graph,             /**< graph data structure */
    int                   topsize,           /**< size of top to remove */
    int                   toproot,           /**< root of the top component */
    EXTDATA*              extdata            /**< extension data */
 )
 {
+   const int* const extstack_start = extdata->extstack_start;
+   const int* const extstack_data = extdata->extstack_data;
+   int* const tree_leaves = extdata->tree_leaves;
+   const int stackpos_prev = extStackGetPrevMarked(extdata);
+   const int stackstart = extstack_start[stackpos_prev];
+   const int stackend = extstack_start[stackpos_prev + 1];
+   const int compsize = stackend - stackstart;
+   int compleaves_start;
+
    assert(extdata);
    assert(topsize >= 1 && topsize < extdata->tree_nleaves);
    assert(toproot >= 0);
    assert(extdata->tree_deg[toproot] == 1);
+   assert(compsize > 0);
 
 #ifndef NDEBUG
    {
       const int* const tree_deg = extdata->tree_deg;
-      const int* const tree_leaves = extdata->tree_leaves;
       const int nleaves = extdata->tree_nleaves;
 
       for( int i = 1; i <= topsize; i++ )
@@ -421,11 +454,34 @@ void extLeafRemoveTop(
    }
 #endif
 
-   extdata->tree_nleaves -= topsize;
-   extdata->tree_leaves[(extdata->tree_nleaves)++] = toproot;
+   extdata->tree_nleaves -= (topsize - 1);
 
+#ifndef NDEBUG
+   tree_leaves[(extdata->tree_nleaves) - 1] = toproot;
+
+   for( int i = stackstart; i < stackend; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int head = graph->head[edge];
+
+      assert(extLeafFindPos(extdata, head) >= extdata->tree_nleaves - compsize);
+   }
+#endif
+
+   compleaves_start = extdata->tree_nleaves - compsize;
+
+   for( int i = stackstart; i < stackend; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int head = graph->head[edge];
+
+      tree_leaves[compleaves_start++] = head;
+   }
+
+   assert(compleaves_start == extdata->tree_nleaves);
    assert(extdata->tree_nleaves >= 1);
 }
+
 
 /** gets reduced cost of current tree rooted at leave 'root', called direct if tree cannot */
 static
@@ -776,7 +832,7 @@ void extTreeStackTopRemove(
    (extdata->tree_depth)--;
 
    /* finally, remove top component from leaves and MST storages and restore the component root */
-   extLeafRemoveTop(compsize, comproot, extdata);
+   extLeafRemoveTop(graph, compsize, comproot, extdata);
    extreduce_mstCompRemove(graph, extdata);
 
    assert(extdata->tree_nedges >= 0 && extdata->tree_depth >= 0);
@@ -1288,6 +1344,7 @@ void extStackTopCollectExtEdges(
 
    assert(*nextedges == 0);
    assert(extstack_start[stackpos + 1] - extstack_start[stackpos] >= 1);
+   assert(extreduce_mstTopCompInSync(scip, graph, extdata));
 
    /* collect edges for components (and try to rule each of them out) */
    for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )

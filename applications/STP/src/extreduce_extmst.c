@@ -18,15 +18,18 @@
  * @author Daniel Rehfeldt
  *
  * This file implements MST algorithms for extended reduction techniques for Steiner problems.
- * Allows to efficiently compute and store special distance MSTs between the leaves of extension tree.
- * Furthermore, can check for tree bottlenecks.
+ * Allows to efficiently compute and store special distance (SD) MSTs between the leaves of extension tree.
+ * Furthermore, one can check for tree bottlenecks.
  *
  * A 'level' of the extension tree consists of all possible extension edges from the leaf used for extension.
  * For each level there are a number of 'components': all the subsets that were not already ruled-out.
  * Once a level is initiated, all SDs to the other leaves of the tree are computed ('vertical'),
  * as well as the SDs among the level ('horizontal').
  * These SDs are kept until the level has been removed again.
- * Furthermore, for each level we store the MST corresponding to the extension tree without the level.
+ * Furthermore, for each level of the tree we store two SD MSTs, namely:
+ *   1. the MST corresponding to the extension tree without the level and without the tree node at which the level
+ *      is rooted: 'msts_levelbase'
+ *   2. the MST corresponding to the component of this level in the current tree: "msts_comp'
  *
  * A list of all interface methods can be found in extreduce.h.
  *
@@ -48,6 +51,17 @@
 
 #define EXT_PC_SDMAXVISITS 10  /**< maximum visits for PC specific SD computation */
 
+typedef struct mst_extension_tree_component
+{
+   const CSR*            mst_parent;         /**< parent MST (for which to use vertical SDs) */
+   CSR*                  mst_new;            /**< new MST (out) */
+   const int*            comp_nodes;         /**< nodes of component */
+   int                   comp_vert;          /**< current vertex */
+   int                   comp_extnode;       /**< component node from which we extended; or -1 */
+   int                   comp_level;         /**< level of component */
+   int                   comp_size;          /**< size of component */
+   SCIP_Bool             isExtended;         /**< mst_new already extended? */
+} MSTXCOMP;
 
 /** returns special distance computed only for PC and for current leaf */
 static inline
@@ -110,7 +124,8 @@ SCIP_Real extGetSdDouble(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   int todo; // always use me?
+   // todo always use me??? test only after SD distances and pseudo-elimination are implemented!
+
    SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, extdata->distdata);
 
    assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
@@ -178,6 +193,81 @@ int extGetNancestorLeaves(
 }
 
 
+/** Repeatedly extends MST 'new', starting from MST 'parent' (in 'mstextcomp').
+ *  In first call 'new' is extended from 'parent', afterwards from itself */
+static inline
+void mstExtend(
+   SCIP*                 scip,               /**< SCIP */
+   const SCIP_Real       adjcosts[],         /**< adjacency costs */
+   DCMST*                dcmst,              /**< DCMST */
+   MSTXCOMP*             mstextcomp          /**< extension component (in/out) */
+)
+{
+   const CSR* mst_parent = mstextcomp->mst_parent;
+   CSR* mst_new = mstextcomp->mst_new;
+
+   /* first time we want to extend the MST? */
+   if( !mstextcomp->isExtended )
+   {
+      mst_new->nnodes = mst_parent->nnodes + 1;
+      mst_new->nedges = mst_parent->nedges + 2;
+      reduce_dcmstAddNode(scip, mst_parent, adjcosts, dcmst, mst_new);
+
+      mstextcomp->isExtended = TRUE;
+   }
+   else
+   {
+      reduce_dcmstAddNodeInplace(scip, adjcosts, dcmst, mst_new);
+   }
+
+   assert(mst_new->nnodes >= mst_parent->nnodes + 1);
+}
+
+
+/** fills MST adjacency costs for new vertex in */
+static inline
+void baseMstGetAdjcosts(
+   const REDDATA*        reddata,            /**< reduction data */
+   MSTXCOMP*             mstextcomp,         /**< extension component (in/out) */
+   SCIP_Real             adjcosts[]          /**< adjacency costs (out) */
+)
+{
+   const MLDISTS* const sds_vertical = reddata->sds_vertical;
+   const MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+   const CSR* const mst_parent = mstextcomp->mst_parent;
+   const int comp_vert = mstextcomp->comp_vert;
+   const int comp_extnode = mstextcomp->comp_extnode;
+   const int comp_level = mstextcomp->comp_level;
+   const int comp_size = mstextcomp->comp_size;
+   const int* const comp_nodes = mstextcomp->comp_nodes;
+   const int nnodes_parent = mst_parent->nnodes;
+   int adjpos = nnodes_parent;
+
+   const SCIP_Real* const adjcosts_ancestors = extreduce_mldistsTargetDists(sds_vertical, comp_level, comp_vert);
+
+   memcpy(adjcosts, adjcosts_ancestors, nnodes_parent * sizeof(adjcosts[0]));
+
+   /* compute adjacent costs to left siblings of 'compvert' */
+   for( int j = 0; j < comp_size; j++ )
+   {
+      const int sibling = comp_nodes[j];
+
+      if( sibling == comp_vert )
+      {
+         adjcosts[adjpos] = FARAWAY;
+         break;
+      }
+
+      if( sibling == comp_extnode )
+      {
+         continue;
+      }
+
+      adjcosts[adjpos++] = extreduce_mldistsTargetDist(sds_horizontal, comp_level, comp_vert, sibling);
+   }
+}
+
+
 /** Gets nodes of parent component ordered according to their position in the
  *  tree leaves array. */
 static inline
@@ -220,9 +310,9 @@ void baseMstGetOrderedParentNodes(
 }
 
 
-/** initializes base MST data */
+/** initializes base MST data for old and new MSTs */
 static inline
-void baseMstInit(
+void baseMstInitMsts(
    const EXTDATA*        extdata,            /**< extension data */
    REDDATA*              reddata,            /**< reduction data (in/out) */
    CSR*                  mst_parent,         /**< parent MST (out) */
@@ -254,87 +344,78 @@ void baseMstInit(
 }
 
 
-/** extends parent base MST */
+/** (partially) initializes base MST data */
 static inline
-void baseMstExtendParent(
+void baseMstInitExtComp(
+   const REDDATA*        reddata,            /**< reduction data */
+   int                   extnode,            /**< node from which we extended */
+   const CSR*            mst_parent,         /**< parent MST */
+   CSR*                  mst_new,            /**< new MST (in) */
+   MSTXCOMP*             mstextcomp          /**< extension component (out) */
+)
+{
+   const MLDISTS* const sds_vertical = reddata->sds_vertical;
+   const int parentcomp_level = extreduce_mldistsTopLevel(sds_vertical) - 1;
+
+   mstextcomp->mst_parent = mst_parent;
+   mstextcomp->mst_new = mst_new;
+   mstextcomp->comp_nodes = NULL;
+   mstextcomp->comp_vert = -1;
+   mstextcomp->comp_extnode = extnode;
+   mstextcomp->comp_level = parentcomp_level;
+   mstextcomp->comp_size = -1;
+   mstextcomp->isExtended = FALSE;
+}
+
+
+/** extends parent base MST to obtain current one */
+static inline
+void baseMstBuildNew(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph */
-   int                   extnode,            /**< node from which to extend */
-   const CSR*            mst_parent,         /**< parent MST */
-   CSR*                  mst_new,            /**< new MST (out) */
    REDDATA*              reddata,            /**< reduction data */
-   EXTDATA*              extdata             /**< extension data */
+   EXTDATA*              extdata,            /**< extension data */
+   MSTXCOMP*             mstextcomp          /**< extension component (in/out) */
 )
 {
    int parentcomp_nodes[STP_EXT_MAXGRAD];
    DCMST* const dcmst = reddata->dcmst;
-   const MLDISTS* const sds_vertical = reddata->sds_vertical;
-   const MLDISTS* const sds_horizontal = reddata->sds_horizontal;
-   SCIP_Real* const adjcosts_buffer = reduce_dcmstGetAdjcostBuffer(dcmst);
-   const int level_parent = extreduce_mldistsTopLevel(sds_vertical) - 1;
-   const int nnodes_parent = mst_parent->nnodes;
-   int compsize = -1;
-   SCIP_Bool mstIsExtended = FALSE;
+   SCIP_Real* const adjcosts = reduce_dcmstGetAdjcostBuffer(dcmst);
+   const int extnode = mstextcomp->comp_extnode;
+   int parentcomp_size = -1;
 
 #ifndef NDEBUG
-   const int nleaves = extdata->tree_nleaves;
-   const int nnodes_new = nleaves - 1;
+   const int nnodes_new = extdata->tree_nleaves - 1;
    int nextnode_hits = 0;
 #endif
 
-   /* It is important to have the parent nodes ordered, because the internal leaves ordering might
+   assert(!mstextcomp->isExtended);
+   assert(mstextcomp->comp_vert == -1);
+   assert(mstextcomp->comp_size == -1);
+   assert(mstextcomp->comp_nodes == NULL);
+
+   /* It is necessary to have the parent nodes ordered, because the internal leaves ordering might
     * have changed since the creation of the parent component. The internal order will not change
     * anymore, though, for the extension trees build from here */
-   baseMstGetOrderedParentNodes(graph, extdata, &compsize, parentcomp_nodes);
+   baseMstGetOrderedParentNodes(graph, extdata, &parentcomp_size, parentcomp_nodes);
 
-   assert(compsize >= 0 && compsize < STP_EXT_MAXGRAD);
+   assert(parentcomp_size >= 0 && parentcomp_size < STP_EXT_MAXGRAD);
+
+   mstextcomp->comp_size = parentcomp_size;
+   mstextcomp->comp_nodes = parentcomp_nodes;
 
    /* build 'mst_new' from 'mst_parent' by adding all siblings of 'extnode' */
-   for( int i = 0; i < compsize; i++ )
+   for( int i = 0; i < parentcomp_size; i++ )
    {
-      const int compvert = parentcomp_nodes[i];
+      const int parentcomp_vert = parentcomp_nodes[i];
 
-      if( compvert != extnode )
+      if( parentcomp_vert != extnode )
       {
-         int adjpos = nnodes_parent;
+         mstextcomp->comp_vert = parentcomp_vert;
 
-         const SCIP_Real* const adjcosts_ancestors = extreduce_mldistsTargetDists(sds_vertical, level_parent, compvert);
-         memcpy(adjcosts_buffer, adjcosts_ancestors, nnodes_parent * sizeof(adjcosts_buffer[0]));
+         baseMstGetAdjcosts(reddata, mstextcomp, adjcosts);
 
-         /* compute adjacent costs to left siblings of 'compvert' */
-         for( int j = 0; j < compsize; j++ )
-         {
-            const int sibling = parentcomp_nodes[j];
-
-            if( sibling == compvert )
-            {
-               adjcosts_buffer[adjpos] = FARAWAY;
-               break;
-            }
-
-            if( sibling == extnode )
-            {
-               continue;
-            }
-
-            adjcosts_buffer[adjpos++] = extreduce_mldistsTargetDist(sds_horizontal, level_parent, compvert, sibling);
-         }
-
-         /* first time we want to extend the MST? */
-         if( !mstIsExtended )
-         {
-            mstIsExtended = TRUE;
-
-            mst_new->nnodes = mst_parent->nnodes + 1;
-            mst_new->nedges = mst_parent->nedges + 2;
-            reduce_dcmstAddNode(scip, mst_parent, adjcosts_buffer, dcmst, mst_new);
-         }
-         else
-         {
-            reduce_dcmstAddNodeInplace(scip, adjcosts_buffer, dcmst, mst_new);
-         }
-
-         assert(mst_new->nnodes >= mst_parent->nnodes + 1);
+         mstExtend(scip, adjcosts, dcmst, mstextcomp);
       }
 #ifndef NDEBUG
       else
@@ -342,24 +423,26 @@ void baseMstExtendParent(
 #endif
    }
 
-   if( !mstIsExtended )
+   if( !mstextcomp->isExtended )
    {
-      assert(nnodes_new == mst_parent->nnodes);
+      CSR* mst_new = mstextcomp->mst_new;
+      const CSR* mst_parent = mstextcomp->mst_parent;
+
+      assert(nnodes_new == mstextcomp->mst_parent->nnodes);
       graph_csr_copy(mst_parent, mst_new);
    }
 
-   assert(nnodes_new == mst_new->nnodes && nextnode_hits == 1);
+   assert(nnodes_new == mstextcomp->mst_new->nnodes);
+   assert(nextnode_hits == 1);
 }
 
 
 /** finalizes base MST built */
 static inline
-void baseMstFinalize(
+void baseMstFinalizeNew(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph */
-   const CSR*            mst_parent,         /**< parent MST (out) */
-   const CSR*            mst_new,            /**< new MST (out) */
-   int                   extnode,            /**< node from which to extend */
+   const MSTXCOMP*       mstextcomp,         /**< extension component */
    REDDATA*              reddata,            /**< reduction data */
    EXTDATA*              extdata             /**< extension data */
 )
@@ -368,20 +451,119 @@ void baseMstFinalize(
 
    graph_csrdepo_emptyTopSetMarked(msts_levelbase);
 
+
 #if defined(STP_DEBUG_EXT) && defined(SCIP_DEBUG)
    graph_csrdepo_print(msts_levelbase);
 
    printf("---parent: \n");
-   graph_csr_print(mst_parent);
+   graph_csr_print(mstextcomp->mst_parent);
    printf("---new: \n");
-   graph_csr_print(&mst_new);
+   graph_csr_print(mstextcomp->mst_new);
 #endif
 
-   assert(extreduce_mstTopLevelBaseInSync(scip, graph, extnode, extdata));
+   assert(extreduce_mstTopLevelBaseObjValid(scip, graph, mstextcomp->comp_extnode, extdata));
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("add MST level with n=%d, m=%d \n", mst_new->nnodes, mst_new->nedges);
-   SCIPdebugMessage("weight of levelbase new MST: %f \n", reduce_dcmstGetWeight(scip, mst_new));
+   SCIPdebugMessage("add MST level with n=%d, m=%d \n", mstextcomp->mst_new->nnodes, mstextcomp->mst_new->nedges);
+   SCIPdebugMessage("weight of levelbase new MST: %f \n", reduce_dcmstGetWeight(scip, mstextcomp->mst_new));
+#endif
+}
+
+
+/** (partially) initializes component extension MST data */
+static inline
+void compMstInitExtComp(
+   const GRAPH*          graph,              /**< the graph */
+   const EXTDATA*        extdata,            /**< extension data */
+   const CSR*            mst_base,           /**< levelbase MST */
+   CSR*                  mst_new,            /**< new MST (in) */
+   MSTXCOMP*             mstextcomp          /**< extension component (out) */
+)
+{
+   const int topcompsize = extStackGetTopSize(extdata);
+
+   assert(extreduce_mldistsTopLevel(extdata->reddata->sds_vertical) == extdata->tree_depth);
+
+   mstextcomp->mst_parent = mst_base;
+   mstextcomp->mst_new = mst_new;
+   mstextcomp->comp_nodes = NULL;
+   mstextcomp->comp_vert = -1;
+   mstextcomp->comp_extnode = -1;
+   mstextcomp->comp_level = extdata->tree_depth;
+   mstextcomp->comp_size = topcompsize;
+   mstextcomp->isExtended = FALSE;
+}
+
+
+/** initializes component MSTs (current component MST and previous levelbase) */
+static inline
+void compMstInitMsts(
+   EXTDATA*              extdata,            /**< extension data */
+   CSR*                  mst_base,           /**< the base (out) */
+   CSR*                  mst_new             /**< new MST (out) */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+   CSRDEPO* const msts_comp = reddata->msts_comp;
+   const CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
+   const int nleaves = extdata->tree_nleaves;
+   const int nnodes_new = nleaves;
+
+   assert(graph_csrdepo_getNcsrs(msts_comp) == (graph_csrdepo_getNcsrs(msts_levelbase) - 1));
+
+   graph_csrdepo_getTopCSR(msts_levelbase, mst_base);
+
+#ifndef NDEBUG
+   {
+      const MLDISTS* const sds_vertical = reddata->sds_vertical;
+      const int nnodes_base = mst_base->nnodes;
+
+      assert(nnodes_base == nleaves - extStackGetTopSize(extdata));
+      assert(nnodes_base == extreduce_mldistsLevelNTopTargets(sds_vertical));
+   }
+#endif
+
+   /* get space for the new MST */
+   graph_csrdepo_addEmptyTopTree(msts_comp, nnodes_new);
+   graph_csrdepo_getEmptyTop(msts_comp, mst_new);
+}
+
+
+/** finalizes component MST */
+static inline
+void compMstFinalizeNew(
+   const MSTXCOMP*       mstextcomp,         /**< extension component */
+   SCIP_Bool             deletemst,          /**< delete the MST? */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+   CSRDEPO* const msts_comp = reddata->msts_comp;
+
+#ifdef SCIP_DEBUG
+   CSR* mst_new = mstextcomp->mst_new;
+#endif
+
+   if( deletemst )
+   {
+      graph_csrdepo_removeTop(msts_comp);
+
+      return;
+   }
+
+   graph_csrdepo_emptyTopSetMarked(msts_comp);
+
+#if defined(STP_DEBUG_EXT) && defined(SCIP_DEBUG)
+   graph_csrdepo_print(reddata->msts_comp);
+
+   printf("---parent: \n");
+   graph_csr_print(mstextcomp->mst_parent);
+   printf("---new: \n");
+   graph_csr_print(mstextcomp->mst_new);
+#endif
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("added MST component with n=%d, m=%d \n", mst_new->nnodes, mst_new->nedges);
 #endif
 }
 
@@ -1012,7 +1194,6 @@ void mstCompLeafGetSDsToSiblings(
       assert(EQ(sds[j], -1.0));
 #endif
 
-
    for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
    {
       const int edge2sibling = extstack_data[i];
@@ -1032,7 +1213,6 @@ void mstCompLeafGetSDsToSiblings(
          continue;
       }
 
-      // todo, do we really need the stuff to the right?
       sds[j] = extreduce_mldistsTopTargetDist(sds_horizontal, topleaf, sibling);
 
       /* only make bottleneck test for 'right' siblings to avoid double checks */
@@ -1171,7 +1351,6 @@ void mstCompLeafGetSDs(
 }
 
 
-
 /** Adds leaf from top component of current tree to MST. I.e., adds SD adjacency costs updates MST.
  * 'edge2leaf' must be in top component of the stack.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
@@ -1181,48 +1360,112 @@ void mstCompAddLeaf(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2leaf,          /**< edge to the top component leaf */
+   MSTXCOMP*             mstextcomp,         /**< MST extension component */
    EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
 )
 {
-   DCMST* const dcmst = extdata->reddata->dcmst;
+   REDDATA* const reddata = extdata->reddata;
+   DCMST* const dcmst = reddata->dcmst;
    SCIP_Real* const adjcosts = reduce_dcmstGetAdjcostBuffer(dcmst);
 
-   assert(leafRuledOut && !(*leafRuledOut));
-
-   mstCompLeafGetSDs(scip, graph, edge2leaf, extdata, adjcosts, leafRuledOut);
-
-   // todo update mst from mst (in-place)
-   // reduce_dcmstAddNodeInplace
-
-
-}
-
-
-/** adds current component (subset of the top level) */
-static inline
-void mstCompInit(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   edge2leaf,          /**< edge to the top component leaf */
-   EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
-)
-{
-   DCMST* const dcmst = extdata->reddata->dcmst;
-   SCIP_Real* const adjcosts = reduce_dcmstGetAdjcostBuffer(dcmst);
-
-   assert(leafRuledOut && !(*leafRuledOut));
+   assert(leafRuledOut);
+   assert(FALSE == *leafRuledOut);
    assert(reduce_dcmstGetMaxnnodes(dcmst) >= extdata->tree_nleaves);
 
    mstCompLeafGetSDs(scip, graph, edge2leaf, extdata, adjcosts, leafRuledOut);
 
-   int todo;
-   // todo update mst from mst_reduce of previous!:
-   // reduce_dcmstAddNode
+   if( (*leafRuledOut) )
+   {
+      return;
+   }
+   else
+   {
+      assert(mstextcomp->comp_vert == -1);
+      assert(mstextcomp->comp_extnode == -1);
 
-
+      mstExtend(scip, adjcosts, dcmst, mstextcomp);
+   }
 }
+
+
+/** is a rule-out by using the top component possible? */
+static inline
+SCIP_Bool mstCompRuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   CSR topmst;
+   REDDATA* const reddata = extdata->reddata;
+   const CSRDEPO* const msts_comp = reddata->msts_comp;
+   SCIP_Real mstweight;
+
+   graph_csrdepo_getTopCSR(msts_comp, &topmst);
+
+   mstweight = reduce_dcmstGetWeight(scip, &topmst);
+
+   assert(extreduce_mstTopCompObjValid(scip, graph, mstweight, extdata));
+
+   // todo compare with
+   if( LT(mstweight, 0.0) )
+   {
+      int todo;
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** builds (top) component MST */
+static inline
+void mstCompBuildMst(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            ruledOut            /**< already ruled out? */
+)
+{
+   CSR mst_base;
+   CSR mst_new;
+   MSTXCOMP mstextcomp;
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extStackGetPosition(extdata);
+   const int stackstart = extstack_start[stackpos];
+   const int stackend = extstack_start[stackpos + 1];
+
+   assert(*ruledOut == FALSE);
+   assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
+   assert(0 <= stackstart && stackstart < stackend);
+
+   compMstInitMsts(extdata, &mst_base, &mst_new);
+
+   compMstInitExtComp(graph, extdata, &mst_base, &mst_new, &mstextcomp);
+
+   /* add nodes (with special distances) to MST,
+    * and compare with tree bottleneck distances for early rule-out */
+   for( int i = stackstart; i != stackend; i++ )
+   {
+      const int edge2leaf = extstack_data[i];
+
+      /* add vertex to MST graph and check for bottleneck shortcut */
+      mstCompAddLeaf(scip, graph, edge2leaf, &mstextcomp, extdata, ruledOut);
+
+      /* early rule-out? */
+      if( *ruledOut )
+      {
+         break;
+      }
+   }
+
+   compMstFinalizeNew(&mstextcomp, *ruledOut, extdata);
+
+   assert(*ruledOut || extreduce_mstTopCompInSync(scip, graph, extdata));
+}
+
 
 /** computes SDs from head of extension edge to all leaves of the tree */
 static inline
@@ -1240,41 +1483,29 @@ void mstLevelLeafSetVerticalSDs(
    const int nleaves = extdata->tree_nleaves;
    const int neighbor = graph->head[edge2neighbor];
    const int neighbor_base = graph->tail[edge2neighbor];
-   const int neighbor_base_proper = (neighbor_base == extdata->tree_root)? -1 : neighbor_base;
 
 #ifndef NDEBUG
    int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_vertical);
-   SCIP_Bool basehit = FALSE;
 #endif
 
    assert(adjedgecosts && leaves && ruledOut);
    assert(*ruledOut == FALSE);
+   assert(neighbor_base == extdata->tree_root || extLeafFindPos(extdata, neighbor_base) > 0);
 
-   for( int j = 0, k = 0; j < nleaves; j++ )
+   for( int j = 0; j < nleaves; j++ )
    {
       SCIP_Real specialDist;
       const int leaf = leaves[j];
 
+      assert(leaf >= 0 && leaf < graph->knots);
       assert(extdata->tree_deg[leaf] == 1 && leaf != neighbor);
 
       specialDist = extGetSd(scip, graph, neighbor, leaf, extdata);
 
-      /* save the SD? */
-      if( leaf != neighbor_base_proper )
-      {
-         adjedgecosts[k] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+      adjedgecosts[j] = (specialDist >= -0.5) ? specialDist : FARAWAY;
 #ifndef NDEBUG
-         adjids[k] = leaf;
+      adjids[j] = leaf;
 #endif
-         k++;
-      }
-      else
-      {
-#ifndef NDEBUG
-         assert(!basehit);
-         basehit = TRUE;
-#endif
-      }
 
       if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
       {
@@ -1286,14 +1517,56 @@ void mstLevelLeafSetVerticalSDs(
          break;
       }
    }
+}
+
+
+/** adjusts vertical SDs by removing the neighbor base entry */
+static inline
+void mstLevelLeafAdjustVerticalSDs(
+   int                   neighbor_base,      /**< the edge from the tree to the neighbor */
+   REDDATA*              reddata,            /**< reduction data */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int nleaves = extdata->tree_nleaves;
+
+  /* if the base is the root and the only leaf, we want to keep the SD */
+  if( nleaves == 1 )
+  {
+     assert(neighbor_base == extdata->tree_root);
+     assert(extStackGetPosition(extdata) == 0);
+  }
+  else
+  {
+     /* shift the adjacent cost to remove the neighbor base */
+
+     MLDISTS* const sds_vertical = reddata->sds_vertical;
+     SCIP_Real* const dists = extreduce_mldistsEmptySlotTargetDistsDirty(sds_vertical);
+     const int leaves_pos = extLeafFindPos(extdata, neighbor_base);
 
 #ifndef NDEBUG
-   if( !(*ruledOut) )
-   {
-      assert(basehit || neighbor_base_proper != neighbor_base);
-   }
+     int* const ids = extreduce_mldistsEmptySlotTargetIdsDirty(sds_vertical);
 #endif
 
+     assert(nleaves >= 2);
+     assert(leaves_pos > 0 && leaves_pos < nleaves);
+     assert(ids[leaves_pos] == neighbor_base);
+
+     for( int i = leaves_pos + 1; i < nleaves; i++ )
+     {
+        dists[i - 1] = dists[i];
+     }
+
+#ifndef NDEBUG
+     for( int i = leaves_pos + 1; i < nleaves; i++ )
+     {
+        ids[i - 1] = ids[i];
+     }
+
+     dists[nleaves - 1] = STP_MLDISTS_DIST_UNSET;
+     ids[nleaves - 1] = STP_MLDISTS_ID_UNSET;
+#endif
+  }
 }
 
 
@@ -1323,28 +1596,82 @@ void mstLevelLeafInit(
 }
 
 
-/** finalization for adding a leaf to a level */
+/** finalization for adding a neighbor leaf to a level */
 static inline
 void mstLevelLeafExit(
    const GRAPH*          graph,              /**< graph data structure */
    int                   neighbor_base,      /**< neighbor base */
    int                   neighbor,           /**< neighbor */
-   SCIP_Bool             ruledOut,           /**< early rule out? */
+   SCIP_Bool             ruledOut,           /**< extension along neighbor already ruled out? */
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
 
    if( ruledOut )
+   {
       extreduce_mldistsEmptySlotReset(sds_vertical);
+   }
    else
+   {
+      /* remove the neighbor base SD entry (which we don't need for further extensions from the neighbor base) */
+      mstLevelLeafAdjustVerticalSDs(neighbor_base, reddata, extdata);
+
       extreduce_mldistsEmptySlotSetFilled(sds_vertical);
+   }
 
    bottleneckUnmarkRootPath(graph, neighbor_base, extdata);
 
    if( isPc )
       pcSdToNodeUnmark(graph, neighbor, extdata);
+}
+
+
+/** checks whether the MST extended at the given neighbor allows to rule-out any extension along this neighbor */
+static inline
+void mstLevelLeafTryExtMst(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extneighbor,        /**< neighbor leaf to extend to */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            leafRuledOut        /**< rule out possible? */
+)
+{
+   CSR topmst;
+   SCIP_Real extweight;
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+   CSRDEPO* const msts_comp = reddata->msts_comp;
+   DCMST* const dcmst = reddata->dcmst;
+   const SCIP_Real* const adjcosts = extreduce_mldistsEmptySlotTargetDistsDirty(sds_vertical);
+
+   assert(FALSE == *leafRuledOut);
+
+   graph_csrdepo_getTopCSR(msts_comp, &topmst);
+
+   assert(topmst.nnodes == extdata->tree_nleaves);
+
+   extweight = reduce_dcmstGetExtWeight(scip, &topmst, adjcosts, dcmst);
+
+/*
+   SCIP_Real mstweight = reduce_dcmstGetWeight(scip, &topmst);
+   assert(extreduce_mstTopCompObjValid(scip, graph, mstweight, extdata));
+*/
+
+   /* make sure that the objective of the MST is ok! */
+   assert(extreduce_mstTopCompExtObjValid(scip, graph, extneighbor, extweight, extdata));
+
+   // todo also do equality? (how?)
+   if( LT(extweight, 0.0) )
+   {
+      int todo; // get the actual value here!
+      SCIPdebugMessage("extension along vertex %d ruled out by extension MST! (%f < %f) \n",
+         extneighbor, extweight, 0.0);
+
+      *leafRuledOut = TRUE;
+   }
 }
 
 
@@ -1360,16 +1687,20 @@ void mstLevelBuildBaseMst(
 {
    CSR mst_new;
    CSR mst_parent;
+   MSTXCOMP mstextcomp;
 
    assert(extnode >= 0 && extnode < graph->knots);
    assert(extnode != extdata->tree_root);
 
-   /* get old MST and get space for new MST */
-   baseMstInit(extdata, reddata, &mst_parent, &mst_new);
+   baseMstInitMsts(extdata, reddata, &mst_parent, &mst_new);
 
-   baseMstExtendParent(scip, graph, extnode, &mst_parent, &mst_new, reddata, extdata);
+   /* partially initialize 'mstextcomp' */
+   baseMstInitExtComp(reddata, extnode, &mst_parent, &mst_new, &mstextcomp);
 
-   baseMstFinalize(scip, graph, &mst_parent, &mst_new, extnode, reddata, extdata);
+   /* now build the new MST */
+   baseMstBuildNew(scip, graph, reddata, extdata, &mstextcomp);
+
+   baseMstFinalizeNew(scip, graph, &mstextcomp, reddata, extdata);
 }
 
 
@@ -1397,62 +1728,29 @@ SCIP_Bool extreduce_mstRuleOutPeriph(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extStackGetPosition(extdata);
-   const int stackstart = extstack_start[stackpos];
-   const int stackend = extstack_start[stackpos + 1];
    SCIP_Bool ruledOut = FALSE;
 
-   assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
+   /* build the SD MST and check for early rule-out via bottleneck distances */
+   mstCompBuildMst(scip, graph, extdata, &ruledOut);
 
-   /* add nodes (with special distances) to MST
-    * and compare with tree bottleneck distances for early rule-out */
-   for( int i = stackstart; i != stackend; i++ )
+   if( ruledOut)
    {
-      const int edge2leaf = extstack_data[i];
+      SCIPdebugMessage("Rule-out periph (via bottleneck) \n");
 
-      /* add vertex to MST graph and check for bottleneck shortcut */
-
-      if( i == stackstart )
-         mstCompInit(scip, graph, edge2leaf, extdata, &ruledOut);
-      else
-         mstCompAddLeaf(scip, graph, edge2leaf, extdata, &ruledOut);
-
-      /* early rule-out? */
-      if( ruledOut )
-      {
-         SCIPdebugMessage("Rule-out periph (via bottleneck) \n");
-         return TRUE;
-      }
+      ruledOut = TRUE;
    }
-
-   /* todo now we have the MST! compute its cost */
-
-#ifdef STP_DEBUG_EXT
-   {
-      // todo assert that the weights are the same! weight!
-      const SCIP_Real mstweight = extreduce_treeGetSdMstWeight(scip, graph, extdata);
-   //   printf("mstobj=%f \n", mstweight);
-   }
-#endif
-
-
-#ifndef NDEBUG
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-   {
-      assert( graph_edge_nPseudoAncestors(graph, extstack_data[i]) == 0
-            || graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, extstack_data[i], extdata->reddata->pseudoancestor_mark));
-   }
-#endif
-
-   if( ruledOut )
+   else if( mstCompRuleOut(scip, graph, extdata) )
    {
       SCIPdebugMessage("Rule-out periph (via MST) \n");
-      return TRUE;
+
+      ruledOut = TRUE;
    }
 
-   return FALSE;
+   // todo do we need to close the MST or something?
+
+   assert(extreduce_stackTopIsHashed(graph, extdata));
+
+   return ruledOut;
 }
 
 
@@ -1478,12 +1776,15 @@ void extreduce_mstCompRemove(
    )
 {
    REDDATA* const reddata = extdata->reddata;
-   CSRDEPO* const msts = reddata->msts_comp;
+   CSRDEPO* const msts_comp = reddata->msts_comp;
+   const int msts_comp_level = graph_csrdepo_getNcsrs(msts_comp) - 1;
 
-//   assert(extreduce_stackTopMstDepoInSync(graph, extdata));
-//   assert(graph_csrdepo_getNcsrs(msts) == extdata->tree_depth);
+   if( msts_comp_level > extdata->tree_depth )
+   {
+      graph_csrdepo_removeTop(msts_comp);
+   }
 
-//   graph_csrdepo_removeTop(msts); todo
+   assert(graph_csrdepo_getNcsrs(msts_comp) - 1 == extdata->tree_depth);
 }
 
 
@@ -1535,26 +1836,14 @@ void extreduce_mstLevelVerticalAddLeaf(
 
    mstLevelLeafInit(graph, neighbor_base, neighbor, extdata);
 
-   /* compute and store SDs to all leaves */
+   /* compute and store SDs to all leaves;
+    * also check for bottleneck rule-out! */
    mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
-   /* if not yet ruled out, build the MST */
+   /* if not yet ruled out, check whether extending the SD MST helps */
    if( !(*leafRuledOut) )
    {
-       // todo compute MST (call add node method)
-
-       // check for rule out
-
-#ifdef STP_DEBUG_EXT
-      {
-         // todo compute weight!
-         const SCIP_Real mstweight = extreduce_treeGetSdMstExtWeight(scip, graph, extvert, extdata);
-
-         assert(GE(mstweight, 0.0));
-
-        // printf("ext. mstobj=%f \n", mstweight);
-      }
-#endif
+      mstLevelLeafTryExtMst(scip, graph, neighbor, extdata, leafRuledOut);
    }
 
    /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
@@ -1676,8 +1965,6 @@ void extreduce_mstLevelVerticalRemove(
    SCIPdebugMessage("remove vertical MST level %d \n", extreduce_mldistsNlevels(sds_vertical));
 
    extreduce_mldistsLevelRemoveTop(sds_vertical);
-
-   // todo also remove msts_reduced here?
 }
 
 
@@ -1692,8 +1979,7 @@ void extreduce_mstLevelClose(
 {
    REDDATA* const reddata = extdata->reddata;
 
-   // todo activate as soon as extdata comp tree is used
- //  assert(extreduce_mstInternalsInSync(extdata));
+   assert(extreduce_mstInternalsInSync(extdata));
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("close MST level %d, horizontal nslots=%d\n", extreduce_mldistsTopLevel(reddata->sds_horizontal),
@@ -1772,4 +2058,32 @@ SCIP_Real extreduce_extGetSdDouble(
 )
 {
    return extGetSdDouble(scip, g, vertex1, vertex2, extdata);
+}
+
+
+/** Proper SD version of above method. I.e. SD is non-negative, but possibly FARAWAY
+ *  FOR DEBUG CHECKS ONLY! */
+SCIP_Real extreduce_extGetSdProper(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   return extSdGetProper(extGetSd(scip, g, vertex1, vertex2, extdata));
+}
+
+
+/** Proper SD version of above method. I.e. SD is non-negative, but possibly FARAWAY
+ *  FOR DEBUG CHECKS ONLY! */
+SCIP_Real extreduce_extGetSdProperDouble(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   return extSdGetProper(extGetSdDouble(scip, g, vertex1, vertex2, extdata));
 }

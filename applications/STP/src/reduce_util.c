@@ -206,6 +206,40 @@ void dcmstGetCSRfromStore(
 }
 
 
+/** gets weight of MST from DCMST store */
+static inline
+SCIP_Real dcmstGetWeightFromStore(
+   SCIP*                 scip,               /**< SCIP */
+   int                   mst_nedges,         /**< number of edges */
+   const DCMST*          dmst                /**< underlying structure */
+)
+{
+   const CEDGE* const edgestore = dmst->edgestore;
+   SCIP_Real weight = 0.0;
+
+   assert(mst_nedges < dmst->maxnnodes);
+
+   for( int i = 0; i < mst_nedges; ++i )
+   {
+#ifndef NDEBUG
+      const int v1 = edgestore[i].tail;
+      const int v2 = edgestore[i].head;
+
+      assert(v1 >= 0 && v1 < dmst->maxnnodes);
+      assert(v2 >= 0 && v2 < dmst->maxnnodes);
+      assert(GE(dmst->edgestore[i].cost, 0.0));
+      assert(LE(dmst->edgestore[i].cost, FARAWAY));
+#endif
+
+  //    printf("v1->v2: %d->%d: %f \n", v1, v2, edgestore[i].cost);
+
+      weight += edgestore[i].cost;
+   }
+
+   return weight;
+}
+
+
 /** initializes dynamic MST structure */
 SCIP_RETCODE reduce_dcmstInit(
    SCIP*                 scip,               /**< SCIP */
@@ -362,6 +396,38 @@ void reduce_dcmstGet3NodeMst(
 }
 
 
+/** gets weight of MST extended along given vertex */
+SCIP_Real reduce_dcmstGetExtWeight(
+   SCIP*                 scip,               /**< SCIP */
+   const CSR*            mst,                /**< MST for which to compute extended weight */
+   const SCIP_Real*      adjcosts,           /**< (undirected) adjacency costs for new node */
+   DCMST*                dmst                /**< underlying structure */
+)
+{
+   SCIP_Real weight;
+#ifndef NDEBUG
+   /* since we have a tree, |E_{ext}| = |E| + 1 = |V| */
+   const int nedges_ext = mst->nnodes;
+#endif
+
+   assert(scip && adjcosts && dmst);
+   assert(reduce_dcmstMstIsValid(scip, mst));
+   assert(mst->nedges % 2 == 0);
+   assert((mst->nedges / 2) + 1 == nedges_ext);
+
+   dcmstAddNode(mst, adjcosts, dmst);
+
+   weight = dcmstGetWeightFromStore(scip, mst->nnodes, dmst);
+
+   if( GT(weight, FARAWAY) )
+      weight = FARAWAY;
+
+   assert(GE(weight, 0.0));
+
+   return weight;
+}
+
+
 /** gets weight of MST */
 SCIP_Real reduce_dcmstGetWeight(
    SCIP*                 scip,               /**< SCIP */
@@ -384,10 +450,10 @@ SCIP_Real reduce_dcmstGetWeight(
 
    weight /= 2.0;
 
-   assert(GE(weight, 0.0));
-
    if( GT(weight, FARAWAY) )
       weight = FARAWAY;
+
+   assert(GE(weight, 0.0));
 
    return weight;
 }
@@ -446,10 +512,13 @@ SCIP_Bool reduce_dcmstMstIsValid(
 )
 {
    SCIP_Bool* visited;
-   const int* const start_csr = cmst->start;
    const int* const head_csr = cmst->head;
    const int nnodes = cmst->nnodes;
    SCIP_Bool isValid = TRUE;
+
+#ifndef NDEBUG
+   const int* const start_csr = cmst->start;
+#endif
 
    if( nnodes == 0 )
    {

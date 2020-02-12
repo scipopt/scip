@@ -60,6 +60,8 @@ SCIP_Real sdmstGetWeight(
    assert(adjcosts);
    assert(nnodes > 0 && nnodes <= STP_EXTTREE_MAXNLEAVES_GUARD);
 
+   //printf(" \n");
+
    /* build the MST graph */
    for( int i = 0; i < nnodes; i++ )
       cgraph_node_append(cgraph, i);
@@ -104,6 +106,8 @@ SCIP_Real sdmstGetWeight(
                assert(EQ(specialDist, -1.0));
                specialDist = BLOCKED;
             }
+
+          //  printf("sd %d->%d:  %f \n", startnode, endnode, specialDist);
          }
 
          adjcosts[j] = specialDist;
@@ -126,6 +130,47 @@ SCIP_Real sdmstGetWeight(
    {
       mstweight = FARAWAY;
    }
+
+   return mstweight;
+}
+
+
+/** gets MST weight for SD MST spanning all leaves and extension vertex
+ *  NOTE: only for debugging! very slow!
+ * */
+static
+SCIP_Real sdmstGetExtWeight(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extvert,            /**< extended vertex */
+   SCIP_Bool             computeLower,       /**< compute lower bound? (otherwise upper) */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Real mstweight;
+   int* extleaves;
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+
+   assert(extvert >= 0 && extvert < graph->knots);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &extleaves, STP_EXTTREE_MAXNLEAVES_GUARD + 1) );
+
+   assert(nleaves <= STP_EXTTREE_MAXNLEAVES_GUARD);
+
+   for( int i = 0; i < nleaves; ++i )
+   {
+      const int leaf = leaves[i];
+      assert(extvert != leaf);
+
+      extleaves[i] = leaf;
+   }
+
+   extleaves[nleaves] = extvert;
+
+   mstweight = sdmstGetWeight(scip, graph, nleaves + 1, extleaves, computeLower, extdata);
+
+   SCIPfreeBufferArray(scip, &extleaves);
 
    return mstweight;
 }
@@ -592,58 +637,21 @@ SCIP_Bool extreduce_treeIsHashed(
 }
 
 
-/** gets MST weight for SD MST spanning all leaves
- *  NOTE: only for debugging! very slow!
- * */
-SCIP_Real extreduce_treeGetSdMstWeight(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   EXTDATA*              extdata             /**< extension data */
+/** prints the leaves of the tree */
+void extreduce_printLeaves(
+   const EXTDATA*        extdata             /**< extension data */
 )
 {
-   const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
-
-   return sdmstGetWeight(scip, graph, nleaves, leaves, FALSE, extdata);
-}
-
-
-/** gets MST weight for SD MST spanning all leaves and extension vertex
- *  NOTE: only for debugging! very slow!
- * */
-SCIP_Real extreduce_treeGetSdMstExtWeight(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   extvert,            /**< extended vertex */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-   SCIP_Real mstweight;
-   int* extleaves;
    const int* const leaves = extdata->tree_leaves;
-   const int nleaves = extdata->tree_nleaves;
 
-   assert(extvert >= 0 && extvert < graph->knots);
-
-   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &extleaves, STP_EXTTREE_MAXNLEAVES_GUARD + 1) );
-
-   assert(nleaves <= STP_EXTTREE_MAXNLEAVES_GUARD);
+   printf("tree leaves: \n");
 
    for( int i = 0; i < nleaves; ++i )
    {
       const int leaf = leaves[i];
-      assert(extvert != leaf);
-
-      extleaves[i] = leaf;
+      printf("%d: leaf=%d \n", i, leaf);
    }
-
-   extleaves[nleaves] = extvert;
-
-   mstweight = sdmstGetWeight(scip, graph, nleaves + 1, extleaves, FALSE, extdata);
-
-   SCIPfreeBufferArray(scip, &extleaves);
-
-   return mstweight;
 }
 
 
@@ -894,8 +902,7 @@ SCIP_Bool extreduce_sdshorizontalInSync(
       else
       {
          const SCIP_Real sd_old = extreduce_mldistsTopTargetDist(sds_horizontal, topleaf, sibling);
-         const SCIP_Real specialDist_new = extreduce_extGetSdDouble(scip, graph, topleaf, sibling, extdata);
-         const SCIP_Real sd_new = (specialDist_new >= -0.5) ? specialDist_new : FARAWAY;
+         const SCIP_Real sd_new = extreduce_extGetSdProperDouble(scip, graph, topleaf, sibling, extdata);
 
          if( !EQ(sd_old, sd_new) )
          {
@@ -937,11 +944,8 @@ SCIP_Bool extreduce_sdsTopInSync(
 
       if( leaf != topleaf )
       {
-         const SCIP_Real specialDist_double = extreduce_extGetSdDouble(scip, graph, topleaf, leaf, extdata);
-         const SCIP_Real sd_double = (specialDist_double > -0.5)? specialDist_double : FARAWAY;
-
-         const SCIP_Real specialDist = extreduce_extGetSd(scip, graph, topleaf, leaf, extdata);
-         const SCIP_Real sd = (specialDist > -0.5)? specialDist : FARAWAY;
+         const SCIP_Real sd_double = extreduce_extGetSdProperDouble(scip, graph, topleaf, leaf, extdata);
+         const SCIP_Real sd = extreduce_extGetSdProper(scip, graph, topleaf, leaf, extdata);
 
          if( !EQ(sds[j], sd_double) && !EQ(sds[j], sd) )
          {
@@ -968,11 +972,11 @@ SCIP_Bool extreduce_sdsTopInSync(
 }
 
 
-/** is the top level base MST sync with the tree? */
-SCIP_Bool extreduce_mstTopLevelBaseInSync(
+/** is the top level base MST objective in sync with the current tree? */
+SCIP_Bool extreduce_mstTopLevelBaseObjValid(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   extnode,            /**< node from which to extend */
+   int                   extnode,            /**< node from which the level was extended */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -982,8 +986,9 @@ SCIP_Bool extreduce_mstTopLevelBaseInSync(
    int* nodes;
    const int nleaves = extdata->tree_nleaves;
    const int nnodes = nleaves - 1;
-   SCIP_Bool inSync = TRUE;
+   SCIP_Bool isValid = TRUE;
 
+   assert(nnodes >= 1);
    assert(extnode >= 0 && extnode < graph->knots);
    assert(extdata->tree_deg[extnode] == 1);
 
@@ -999,20 +1004,144 @@ SCIP_Bool extreduce_mstTopLevelBaseInSync(
 
    if( !mstTopLevelBaseValidWeight(scip, graph, nnodes, nodes, &mst_base, extdata) )
    {
-      inSync = FALSE;
+      isValid = FALSE;
    }
 
-   SCIPfreeBufferArray(scip, &nodes);
+   SCIPfreeMemoryArray(scip, &nodes);
 
-   return inSync;
+   return isValid;
 }
 
 
-/** is the top level component MST sync with the tree? */
-SCIP_Bool extreduce_mstTopLevelCompInSync(
-   const EXTDATA*        extdata             /**< extension data */
+/** is the objective of the top MST extension valid for the tree? */
+SCIP_Bool extreduce_mstTopCompExtObjValid(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extvert,            /**< extended vertex */
+   SCIP_Real             extobj,             /**< objective of extension */
+   EXTDATA*              extdata             /**< extension data */
 )
 {
+   const SCIP_Real mstweight_upper = sdmstGetExtWeight(scip, graph, extvert, FALSE, extdata);
+   SCIP_Bool isValid = TRUE;
+
+   if( GT(extobj, mstweight_upper) )
+   {
+      SCIPdebugMessage("top extension MST weight violates upper bound: %f > %f \n",
+            extobj, mstweight_upper);
+
+      isValid = FALSE;
+   }
+   else
+   {
+      const SCIP_Real mstweight_lower = sdmstGetExtWeight(scip, graph, extvert, TRUE, extdata);
+
+      if( LT(extobj, mstweight_lower) )
+      {
+         SCIPdebugMessage("top extension MST weight violates lower bound: %f < %f \n",
+               extobj, mstweight_lower);
+
+         isValid = FALSE;
+      }
+   }
+
+   return isValid;
+}
+
+
+/** is the objective of the top MST sync with the tree? */
+SCIP_Bool extreduce_mstTopCompObjValid(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             compobj,            /**< alleged objective of component */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int nleaves = extdata->tree_nleaves;
+   const int* const leaves = extdata->tree_leaves;
+   const SCIP_Real mstweight_upper = sdmstGetWeight(scip, graph, nleaves, leaves, FALSE, extdata);
+   const SCIP_Real mstweight_lower = sdmstGetWeight(scip, graph, nleaves, leaves, TRUE, extdata);
+
+   SCIP_Bool isValid = TRUE;
+
+   if( GT(compobj, mstweight_upper) )
+   {
+      SCIPdebugMessage("top MST weight violates upper bound: %f > %f \n",
+            compobj, mstweight_upper);
+
+      isValid = FALSE;
+   }
+   else if( LT(compobj, mstweight_lower) )
+   {
+      SCIPdebugMessage("top MST weight violates lower bound: %f < %f \n",
+            compobj, mstweight_lower);
+
+      isValid = FALSE;
+   }
+
+   return isValid;
+}
+
+
+/** is the top MST sync with the tree? (does not check objective) */
+SCIP_Bool extreduce_mstTopCompInSync(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   CSR topmst;
+   const REDDATA* const reddata = extdata->reddata;
+   const CSRDEPO* const msts_comp = reddata->msts_comp;
+   const int* const leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+
+   graph_csrdepo_getTopCSR(msts_comp, &topmst);
+
+   if( topmst.nnodes != nleaves )
+   {
+      SCIPdebugMessage("wrong top mst size nodes=%d leaves=%d \n", topmst.nnodes, nleaves);
+
+      return FALSE;
+   }
+
+   /* make sure that the edge costs of the MST correspond to the SDs in the tree */
+   for( int i = 0; i < nleaves; i++ )
+   {
+      const int startleaf = leaves[i];
+
+      for( int j = topmst.start[i]; j != topmst.start[i + 1]; j++ )
+      {
+         const int head = topmst.head[j];
+         const SCIP_Real edgecost = topmst.cost[j];
+         int endleaf;
+         SCIP_Real sd_lower;
+         SCIP_Real sd_upper;
+
+         assert(head >= 0 && head < nleaves);
+
+         endleaf = leaves[head];
+         sd_lower = extreduce_extGetSdProperDouble(scip, graph, startleaf, endleaf, extdata);
+         sd_upper = MAX(extreduce_extGetSdProper(scip, graph, startleaf, endleaf, extdata),
+                        extreduce_extGetSdProper(scip, graph, endleaf, startleaf, extdata));
+
+         if( LT(edgecost, sd_lower) )
+         {
+            SCIPdebugMessage("MST edge %d->%d violates lower bound: %f < %f \n",
+                  startleaf, endleaf , edgecost, sd_lower);
+
+            return FALSE;
+         }
+         else if( GT(edgecost, sd_upper) )
+         {
+            SCIPdebugMessage("MST edge %d->%d violates upper bound: %f > %f \n",
+                  startleaf, endleaf , edgecost, sd_upper);
+
+            return FALSE;
+         }
+      }
+   }
+
    return TRUE;
 }
 
@@ -1033,16 +1162,25 @@ SCIP_Bool extreduce_mstInternalsInSync(
 
    if( extreduce_mldistsNlevels(sds_horizontal) != extreduce_mldistsNlevels(sds_vertical) )
    {
+      SCIPdebugMessage("MLDISTS out of sync %d!=%d \n", extreduce_mldistsNlevels(sds_horizontal),
+         extreduce_mldistsNlevels(sds_vertical));
+
       return FALSE;
    }
 
    if( graph_csrdepo_getNcsrs(msts_comp) != graph_csrdepo_getNcsrs(msts_levelbase) )
    {
+      SCIPdebugMessage("CSR depos out of sync %d!=%d \n", graph_csrdepo_getNcsrs(msts_comp),
+         graph_csrdepo_getNcsrs(msts_levelbase));
+
       return FALSE;
    }
 
    if (extreduce_mldistsTopLevelNSlots(sds_horizontal) != extreduce_mldistsTopLevelNSlots(sds_vertical) )
    {
+      SCIPdebugMessage("sds out of sync %d!=%d \n", extreduce_mldistsTopLevelNSlots(sds_horizontal),
+         extreduce_mldistsTopLevelNSlots(sds_vertical));
+
       return FALSE;
    }
 
@@ -1086,6 +1224,36 @@ SCIP_Bool extreduce_stackTopMstDepoInSync(
    return TRUE;
 }
 #endif
+
+
+/** is that complete current stack hashed? */
+SCIP_Bool extreduce_stackTopIsHashed(
+   const GRAPH*          graph,             /**< graph data structure */
+   const EXTDATA*        extdata            /**< extension data */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int* const hasharr = extdata->reddata->pseudoancestor_mark;
+   const int stackpos = extStackGetPosition(extdata);
+
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+
+      if( graph_edge_nPseudoAncestors(graph, edge) == 0 )
+         continue;
+
+      if( !graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, edge, hasharr) )
+      {
+         SCIPdebugMessage("stacktop edge %d is not hashed! \n", edge);
+
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
 
 
 /** returns size of component on the stack */

@@ -42,10 +42,14 @@
 #define EXT_STATE_EXPANDED 1
 #define EXT_STATE_MARKED   2
 
+#define STP_MLDISTS_ID_UNSET      -1
+#define STP_MLDISTS_DIST_UNSET    -1.0
+
 #include "scip/scip.h"
 #include "graph.h"
 #include "reduce.h"
 #include "completegraph.h"
+#include "portab.h"
 
 /** structure for storing distances in the extension tree */
 typedef struct multi_level_distances_storage MLDISTS;
@@ -54,8 +58,8 @@ typedef struct multi_level_distances_storage MLDISTS;
 typedef struct extension_data_permanent
 {
    DCMST*                dcmst;              /**< dynamic MST */
-   CSRDEPO*              msts_comp;               /**< storage for MSTs with extending node */
-   CSRDEPO*              msts_levelbase;       /**< storage for MSTs without extending node */
+   CSRDEPO*              msts_comp;          /**< storage for MSTs with extending node of the given level */
+   CSRDEPO*              msts_levelbase;     /**< storage for MSTs without extending node of the level below */
    MLDISTS*              sds_horizontal;     /**< SDs from deepest leaves to remaining ones */
    MLDISTS*              sds_vertical;       /**< SDs between leaves of same depth */
    STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
@@ -211,6 +215,19 @@ int extLeafFindPos(
 }
 
 
+/** Gets proper SD value. I.e., non-negative, but possible FARAWAY */
+static inline
+SCIP_Real extSdGetProper(
+   SCIP_Real             sd_in               /**< the special distance */
+)
+{
+   assert(LT(sd_in, FARAWAY));
+   assert(EQ(sd_in, -1.0) || GE(sd_in, 0.0));
+
+   return (sd_in >= -0.5) ? sd_in : FARAWAY;
+}
+
+
 /* extreduce_base.c
  */
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
@@ -244,12 +261,14 @@ extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*)
 extern void               extreduce_reddataClean(REDDATA*);
 extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
-extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, SCIP_Bool, MLDISTS**);
+extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
 extern SCIP_Bool          extreduce_mldistsIsEmpty(const MLDISTS*);
 extern SCIP_Bool          extreduce_mldistsEmptySlotExists(const MLDISTS*);
 extern int*               extreduce_mldistsEmptySlotTargetIds(const MLDISTS*);
+extern int*               extreduce_mldistsEmptySlotTargetIdsDirty(const MLDISTS*);
 extern SCIP_Real*         extreduce_mldistsEmptySlotTargetDists(const MLDISTS*);
+extern SCIP_Real*         extreduce_mldistsEmptySlotTargetDistsDirty(const MLDISTS*);
 extern int                extreduce_mldistsEmptySlotLevel(const MLDISTS*);
 extern void               extreduce_mldistsEmptySlotSetBase(int, MLDISTS*);
 extern void               extreduce_mldistsEmptySlotReset(MLDISTS*);
@@ -276,7 +295,6 @@ extern SCIP_Real          extreduce_mldistsTopTargetDist(const MLDISTS*, int, in
 
 /* extreduce_extmst.c
  */
-
 extern void       extreduce_mstAddRootLevel(SCIP*, int, EXTDATA*);
 extern void       extreduce_mstCompRemove(const GRAPH*, EXTDATA*);
 extern void       extreduce_mstLevelRemove(REDDATA*);
@@ -288,25 +306,32 @@ extern void       extreduce_mstLevelVerticalRemove(REDDATA*);
 extern void       extreduce_mstLevelHorizontalAdd(SCIP*, const GRAPH*, int, const int*, EXTDATA*);
 extern SCIP_Real  extreduce_extGetSd(SCIP*, const GRAPH*, int, int, EXTDATA*);
 extern SCIP_Real  extreduce_extGetSdDouble(SCIP*, const GRAPH*, int, int, EXTDATA*);
+extern SCIP_Real  extreduce_extGetSdProper(SCIP*, const GRAPH*, int, int, EXTDATA*);
+extern SCIP_Real  extreduce_extGetSdProperDouble(SCIP*, const GRAPH*, int, int, EXTDATA*);
 extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
+
 
 /* extreduce_dbg.c
  */
+
+extern int             extreduce_extStackCompSize(const EXTDATA*, int);
+extern SCIP_Bool       extreduce_stackTopIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_nodeIsInStackTop(const GRAPH*, const EXTDATA*, int);
 extern SCIP_Bool       extreduce_distCloseNodesAreValid(SCIP*, const GRAPH*, const DISTDATA*);
-extern SCIP_Real       extreduce_treeGetSdMstWeight(SCIP*, const GRAPH*, EXTDATA*);
-extern SCIP_Real       extreduce_treeGetSdMstExtWeight(SCIP*, const GRAPH*, int, EXTDATA*);
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
+extern void            extreduce_printLeaves(const EXTDATA*);
 extern void            extreduce_printTopLevel(const EXTDATA*);
 extern void            extreduce_extendInitDebug(int*, int*);
-extern SCIP_Bool       extreduce_sdsTopInSync(SCIP*, const GRAPH*, const SCIP_Real[], int, EXTDATA*);
-extern SCIP_Bool       extreduce_mstInternalsInSync(const EXTDATA*);
-extern SCIP_Bool       extreduce_mstTopLevelBaseInSync(SCIP*, const GRAPH*, int, EXTDATA*);
 extern SCIP_Bool       extreduce_sdsverticalInSync(SCIP*, const GRAPH*, int, int, int, EXTDATA*);
 extern SCIP_Bool       extreduce_sdshorizontalInSync(SCIP*, const GRAPH*, int, EXTDATA*);
-extern int             extreduce_extStackCompSize(const EXTDATA*, int);
+extern SCIP_Bool       extreduce_sdsTopInSync(SCIP*, const GRAPH*, const SCIP_Real[], int, EXTDATA*);
+extern SCIP_Bool       extreduce_mstTopCompInSync(SCIP*, const GRAPH*, EXTDATA*);
+extern SCIP_Bool       extreduce_mstTopCompExtObjValid(SCIP*, const GRAPH*, int, SCIP_Real, EXTDATA*);
+extern SCIP_Bool       extreduce_mstTopCompObjValid(SCIP*, const GRAPH*, SCIP_Real, EXTDATA*);
+extern SCIP_Bool       extreduce_mstInternalsInSync(const EXTDATA*);
+extern SCIP_Bool       extreduce_mstTopLevelBaseObjValid(SCIP*, const GRAPH*, int, EXTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

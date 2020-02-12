@@ -189,18 +189,22 @@ SCIP_RETCODE mldistsTest1(
    const int maxnlevels = 3;
    const int maxnslots = 12;
    const int maxntargets = 7;
+#ifndef NDEBUG
    const SCIP_Real* dists;
+#endif
 
    MLDISTS* mldists;
 
-   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, TRUE, &mldists) );
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, 0, TRUE, &mldists) );
 
    /* add */
 
    extreduce_mldistsLevelAddTop(2, 7, mldists);
 
+#ifndef NDEBUG
    dists = extreduce_mldistsEmptySlotTargetDists(mldists);
    assert(dists);
+#endif
 
    for( int i = 0; i < 2; i++ )
    {
@@ -268,7 +272,7 @@ SCIP_RETCODE mldistsTest2(
 
    MLDISTS* mldists;
 
-   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, TRUE, &mldists) );
+   SCIP_CALL( extreduce_mldistsInit(scip, maxnlevels, maxnslots, maxntargets, 0, TRUE, &mldists) );
 
    /* add first */
    mldistsAddLevel(nslots1, ntargets1, bases1, dists1, mldists);
