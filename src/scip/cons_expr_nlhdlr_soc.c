@@ -538,7 +538,7 @@ SCIP_RETCODE generateCutSol(
       idx = termbegins[nterms-1] + i;
       cutvar = vars[transcoefsidx[idx]];
 
-      cutcoef = (disvarval - rhsval) * transcoefs[idx] / denominator - transcoefs[idx];
+      cutcoef = (rhsval - disvarval) * transcoefs[idx] / denominator - transcoefs[idx];
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
@@ -547,7 +547,7 @@ SCIP_RETCODE generateCutSol(
 
    /* add term for disvar */
    cutvar = disvars[k];
-   cutcoef = (rhsval - disvarval) / denominator - 1.0;
+   cutcoef = (disvarval - rhsval) / denominator - 1.0;
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
