@@ -555,7 +555,7 @@ SCIP_RETCODE generateCutSol(
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
-      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, cut, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
    }
 
    /* free memory */
@@ -1811,26 +1811,34 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    assert(nlhdlrexprdata->nnonzeroes != NULL);
    assert(nlhdlrexprdata->nterms > 1);
 
-   /*
-    * TODO the following code is valid if the detected expression is of the form || * || <= auxvar; however, it is not
-    *      clear to me what needs to be evaluated if the original expression was quadratic
-    */
-
-   /* compute sum_i coef_i expr_i^2 + constant */
-   *auxvalue = nlhdlrexprdata->constant;
-
-   for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
+   /* if the original expression is a norm, evaluate w.r.t. the auxiliary variables */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
    {
-      SCIP_Real termval;
+      assert(SCIPgetConsExprExprPowExponent(expr) == 0.5));
 
-      termval = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
-      *auxvalue += SQR(termval);
+      /* compute sum_i coef_i expr_i^2 + constant */
+      *auxvalue = nlhdlrexprdata->constant;
+
+      for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
+      {
+         SCIP_Real termval;
+
+         termval = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+         *auxvalue += SQR(termval);
+      }
+
+      assert(*auxvalue >= 0.0);
+
+      /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
+      *auxvalue = SQRT(*auxvalue);
    }
+   /* otherwise, just evaluate the original quadratic expression */
+   else
+   {
+      assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
 
-   assert(*auxvalue >= 0.0);
-
-   /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
-   *auxvalue = SQRT(*auxvalue);
+      *auxvalue = SCIPgetConsExprExprValue(expr);
+   }
 
    return SCIP_OKAY;
 }
