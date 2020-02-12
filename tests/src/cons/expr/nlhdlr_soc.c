@@ -881,7 +881,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, auxvar, 2.0);
 
    /* check cut w.r.t. x */
-   SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, 0, 0.0, &cut) );
+   SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, &cut) );
 
    cutvars[0] = nlhdlrexprdata->disvars[0];
    cutvars[1] = auxvar;
