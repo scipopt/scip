@@ -7249,13 +7249,26 @@ SCIP_DECL_HASHGETKEY(bilinearHashTableGetHashkey)
 static
 SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
 {  /*lint --e{715}*/
-   return FALSE;
+   BILINEARHASHENTRY* entry1;
+   BILINEARHASHENTRY* entry2;
+
+   entry1 = (BILINEARHASHENTRY*)key1;
+   entry2 = (BILINEARHASHENTRY*)key2;
+   assert(entry1->x != NULL && entry1->y != NULL);
+   assert(entry2->x != NULL && entry2->y != NULL);
+
+   return entry1->x == entry2->x && entry1->y == entry2->y;
 }
 
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
 {  /*lint --e{715}*/
+   BILINEARHASHENTRY* entry;
+
+   entry = (BILINEARHASHENTRY*)key;
+   assert(entry->x != NULL && entry->y != NULL);
+
    return FALSE;
 }
 
