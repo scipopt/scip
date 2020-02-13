@@ -881,7 +881,10 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
    );
 
-/** gives branching score stored in expression, or 0.0 if no valid score has been stored */
+/** gives branching score stored in expression, or 0.0 if no valid score has been stored
+ *
+ * TODO rename this and all that relates to it from branchscore to violscore
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprBranchScore(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
