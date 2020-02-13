@@ -5890,7 +5890,6 @@ SCIP_RETCODE SCIPinferVarLbProp(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
