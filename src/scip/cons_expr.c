@@ -5839,6 +5839,31 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
+/** computes a branching score for a variable that reflects how important branching on this variable would be for improving the dual bound from the LP relaxation
+ *
+ * Assume the Lagrangian for the current LP is something of the form
+ *   L(x,z,lambda) = c'x + sum_i lambda_i (a_i'x - z_i + b_i) + ...
+ * where x are the original variables, z the auxiliary variables,
+ * and a_i'x - z_i + b_i <= 0 are the rows of the LP.
+ *
+ * Assume that a_i'x + b_i <= z_i was derived from some nonlinear f(x) <= z and drop index i.
+ * If we could have used not only an estimator, but the actual function f(x), then this would
+ * have contributed lambda*(f(x) - z) to the Lagrangian function (though the value of z would be different).
+ * Using a lot of handwaving, we claim that
+ *   lambda_i * (f(x) - a_i'x + b_i)
+ * is a value that can be used to quantity how much improving the estimator a'x + b <= z could change the dual bound.
+ * If an estimator depended on local bounds, then it could be improved by branching.
+ * We use row-is-local as proxy for estimator-depending-on-lower-bounds.
+ *
+ * To score a variable, we then sum the values lambda_i * (f(x) - a_i'x + b_i) for all rows in which the variable appears.
+ * To scale, we divide by the LP objective value (if >1).
+ *
+ * TODO if we branch only on original variables, we neglect here estimators that are build on auxiliary variables
+ *     these are affected by the bounds on original variables indirectly (through forward-propagation)
+ * TODO if we branch also on auxiliary variables, then separating z from the x-variables in the row a'x+b <= z should happen
+ *     in effect, we should go from the row to the expression for which it was generated and consider only variables that
+ *     would also be branching candidates
+ */
 static
 SCIP_Real getDualBranchscore(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5851,8 +5876,7 @@ SCIP_Real getDualBranchscore(
    SCIP_ROW** rows;
    int nrows;
    int r;
-   SCIP_Real dual;
-   int nduals;
+   SCIP_Real dualscore;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5877,13 +5901,17 @@ SCIP_Real getDualBranchscore(
    nrows = SCIPcolGetNLPNonz(col);  /* TODO there is a big warning on when not to use this method; is the check for SCIPcolIsInLP sufficient? */
    rows = SCIPcolGetRows(col);
 
+   /* SCIPinfoMessage(scip, enfologfile, " dualscoring <%s>\n", SCIPvarGetName(var)); */
+
    /* aggregate duals from all local rows from consexpr in basis, i.e., non-zero dual
     * taking only local rows, as these are probably cuts that may be replaced by tighter ones after branching
     */
-   dual = 0.0;
-   nduals = 0;
+   dualscore = 0.0;
    for( r = 0; r < nrows; ++r )
    {
+      SCIP_Real estimategap;
+      char* estimategapstr;
+
       if( !SCIProwIsLocal(rows[r]) )
          continue;
       if( SCIProwGetOriginConshdlr(rows[r]) != conshdlr )
@@ -5891,39 +5919,24 @@ SCIP_Real getDualBranchscore(
       if( SCIPisZero(scip, SCIProwGetDualsol(rows[r])) )
          continue;
 
-      switch( conshdlrdata->branchscoreagg )
-      {
-         case 'a' :
-         {
-            dual += REALABS(SCIProwGetDualsol(rows[r]));
-            ++nduals;
-            break;
-         }
+      estimategapstr = strstr(SCIProwGetName(rows[r]), "_estimategap=");
+      if( estimategapstr == NULL ) /* gap not stored, maybe because it was 0 */
+         continue;
+      estimategap = atof(estimategapstr + 13);
+      assert(estimategap >= 0.0);
+      if( !SCIPisFinite(estimategap) || SCIPisHugeValue(scip, estimategap) )
+         estimategap = SCIPgetHugeValue(scip);
 
-         case 'm' :
-         {
-            if( REALABS(SCIProwGetDualsol(rows[r])) > dual )
-               dual = REALABS(SCIProwGetDualsol(rows[r]));
-            break;
-         }
+      /* SCIPinfoMessage(scip, enfologfile, "  row <%s> contributes %g*|%g|: ", SCIProwGetName(rows[r]), estimategap, SCIProwGetDualsol(rows[r]));
+      SCIP_CALL( SCIPprintRow(scip, rows[r], enfologfile) ); */
 
-         case 's' :
-         {
-            dual += REALABS(SCIProwGetDualsol(rows[r]));
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("Invalid value %c for branchscoreagg parameter\n", conshdlrdata->branchscoreagg);
-            SCIPABORT();
-            return 0.0;
-      }
+      dualscore += estimategap * REALABS(SCIProwGetDualsol(rows[r]));
    }
 
-   if( conshdlrdata->branchscoreagg == 'a' && nduals > 0 )
-      dual /= nduals;
+   /* divide by optimal value of LP for scaling */
+   dualscore /= MAX(1.0, REALABS(SCIPgetLPObjval(scip)));
 
-   return dual;
+   return dualscore;
 }
 
 /** gives branchscore for variable associated to expressions
@@ -6506,6 +6519,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       SCIP_VAR* auxvar;
       SCIP_Real auxvarvalue;
       SCIP_Real cutviol;
+      SCIP_Real estimateval = SCIP_INVALID;
       SCIP_Bool sepasuccess = FALSE;
       SCIP_Bool branchscoresuccess = FALSE;
 
@@ -6529,10 +6543,6 @@ SCIP_RETCODE enforceExprNlhdlr(
             /* check whether cut is weak (if f(x) not defined, then it's never weak) */
             if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
             {
-               /* SCIP_Real estimateval; */
-               /* cutviol is estimator value - auxvar value, so can restore estimator value */
-               /* estimateval = cutviol + auxvarval; */
-
                /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
                 * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
                 * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
@@ -6555,6 +6565,9 @@ SCIP_RETCODE enforceExprNlhdlr(
                   sepasuccess = FALSE;
                }
             }
+
+            /* save estimator value for later, see long comment above why this gives the value for c'x-b */
+            estimateval = auxvarvalue + (!overestimate ? cutviol : -cutviol);
          }
          else
          {
@@ -6665,6 +6678,21 @@ SCIP_RETCODE enforceExprNlhdlr(
       if( sepasuccess )
       {
          SCIP_ROW* row;
+
+         if( conshdlrdata->branchdualweight != 0.0 )
+         {
+            /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
+             * skip if gap is zero
+             */
+            if( auxvalue == SCIP_INVALID )
+               strcat(rowprep->name, "_estimategap=inf");
+            else if( !SCIPisEQ(scip, auxvalue, estimateval) )
+            {
+               char gap[40];
+               sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+               strcat(rowprep->name, gap);
+            }
+         }
 
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
