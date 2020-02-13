@@ -7348,7 +7348,7 @@ SCIP_RETCODE bilinearHashInsert(
    assert(SCIPvarCompare(x, y) < 1);
 
    /* ensure size of bilinentries array */
-   SCIP_CALL( bilinearHashTableResize(scip, conshdlrdata, conshdlrdata->nbilinentries) );
+   SCIP_CALL( bilinearHashTableResize(scip, conshdlrdata, conshdlrdata->nbilinentries + 1) );
 
    /* allocate memory for a new bilinear term entry */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata->bilinentries[conshdlrdata->nbilinentries]) ); /*lint !e866*/
