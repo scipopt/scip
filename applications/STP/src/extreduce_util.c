@@ -1347,6 +1347,7 @@ void extreduce_extdataClean(
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
    extdata->tree_redcost = 0.0;
+   extdata->tree_cost = 0.0;
 }
 
 
@@ -1383,6 +1384,12 @@ SCIP_Bool extreduce_extdataIsClean(
    if( !EQ(extdata->tree_redcost, 0.0) )
    {
       printf("extdata->tree_redcost %f \n", extdata->tree_redcost);
+      return FALSE;
+   }
+
+   if( !EQ(extdata->tree_cost, 0.0) )
+   {
+      printf("extdata->tree_cost %f \n", extdata->tree_cost);
       return FALSE;
    }
 

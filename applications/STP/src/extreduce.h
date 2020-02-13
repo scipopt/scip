@@ -139,6 +139,7 @@ typedef struct extension_data
    REDDATA* const reddata;
    DISTDATA* const distdata;
    SCIP_Real tree_redcost;
+   SCIP_Real tree_cost;
    int tree_nDelUpArcs;
    int tree_root;
    int tree_nedges;

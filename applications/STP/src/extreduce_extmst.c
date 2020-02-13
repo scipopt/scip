@@ -1408,10 +1408,10 @@ SCIP_Bool mstCompRuleOut(
 
    assert(extreduce_mstTopCompObjValid(scip, graph, mstweight, extdata));
 
-   // todo compare with
-   if( LT(mstweight, 0.0) )
+   if( LT(mstweight, extdata->tree_cost) )
    {
-      int todo;
+      SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, extdata->tree_cost);
+
       return TRUE;
    }
 
@@ -1663,12 +1663,10 @@ void mstLevelLeafTryExtMst(
    /* make sure that the objective of the MST is ok! */
    assert(extreduce_mstTopCompExtObjValid(scip, graph, extneighbor, extweight, extdata));
 
-   // todo also do equality? (how?)
-   if( LT(extweight, 0.0) )
+   if( LT(extweight, extdata->tree_cost) )
    {
-      int todo; // get the actual value here!
       SCIPdebugMessage("extension along vertex %d ruled out by extension MST! (%f < %f) \n",
-         extneighbor, extweight, 0.0);
+         extneighbor, extweight, extdata->tree_cost);
 
       *leafRuledOut = TRUE;
    }
@@ -1745,8 +1743,6 @@ SCIP_Bool extreduce_mstRuleOutPeriph(
 
       ruledOut = TRUE;
    }
-
-   // todo do we need to close the MST or something?
 
    assert(extreduce_stackTopIsHashed(graph, extdata));
 

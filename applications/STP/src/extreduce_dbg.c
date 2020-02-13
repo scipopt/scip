@@ -980,34 +980,39 @@ SCIP_Bool extreduce_mstTopLevelBaseObjValid(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   CSR mst_base;
-   const REDDATA* const reddata = extdata->reddata;
-   const CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
-   int* nodes;
-   const int nleaves = extdata->tree_nleaves;
-   const int nnodes = nleaves - 1;
    SCIP_Bool isValid = TRUE;
 
-   assert(nnodes >= 1);
    assert(extnode >= 0 && extnode < graph->knots);
    assert(extdata->tree_deg[extnode] == 1);
 
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodes, nnodes) );
-
-   graph_csrdepo_getTopCSR(msts_levelbase, &mst_base);
-
-   assert(nnodes == mst_base.nnodes);
-   assert(reduce_dcmstMstIsValid(scip, &mst_base));
-
-   /* get the nodes for the new MST computations */
-   mstTopLevelBaseGetNodes(extnode, nnodes, nodes, extdata);
-
-   if( !mstTopLevelBaseValidWeight(scip, graph, nnodes, nodes, &mst_base, extdata) )
+   if( !graph_pc_isPcMw(graph) )
    {
-      isValid = FALSE;
-   }
+      CSR mst_base;
+      const REDDATA* const reddata = extdata->reddata;
+      const CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
+      int* nodes;
+      const int nleaves = extdata->tree_nleaves;
+      const int nnodes = nleaves - 1;
 
-   SCIPfreeMemoryArray(scip, &nodes);
+      assert(nnodes >= 1);
+
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodes, nnodes) );
+
+      graph_csrdepo_getTopCSR(msts_levelbase, &mst_base);
+
+      assert(nnodes == mst_base.nnodes);
+      assert(reduce_dcmstMstIsValid(scip, &mst_base));
+
+      /* get the nodes for the new MST computations */
+      mstTopLevelBaseGetNodes(extnode, nnodes, nodes, extdata);
+
+      if( !mstTopLevelBaseValidWeight(scip, graph, nnodes, nodes, &mst_base, extdata) )
+      {
+         isValid = FALSE;
+      }
+
+      SCIPfreeMemoryArray(scip, &nodes);
+   }
 
    return isValid;
 }

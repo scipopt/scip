@@ -122,6 +122,53 @@ void extTearDown(
    assert(graph == NULL);
 }
 
+/** sets up graph and redcost data */
+static
+SCIP_RETCODE extSetUpGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   graph_mark(graph);
+
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes to default */
+static
+void extInitRedCostArrays(
+   const GRAPH*          graph,              /**< the graph */
+   REDCOST*              redcostdata         /**< reduced costs data */
+)
+{
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   SCIP_Real* const rootdist = redcostdata->rootToNodeDist;
+   SCIP_Real* const redcost = redcostdata->redEdgeCost;
+   PATH* const termpaths3 = redcostdata->nodeTo3TermsPaths;
+   int* const vbase3 = redcostdata->nodeTo3TermsBases;
+
+   assert(redcostdata->nnodes >= nnodes);
+   assert(redcostdata->nedges >= nedges);
+
+   for( int i = 0; i < nnodes; i++ )
+      rootdist[i] = 0.0;
+
+   for( int i = 0; i < 3 * nnodes; i++ )
+   {
+      vbase3[i] = graph->source;
+      termpaths3[i].dist = 0.0;
+      termpaths3[i].edge = -1;
+   }
+
+   for( int i = 0; i < nedges; i++ )
+      redcost[i] = 0.0;
+}
+
 
 /** helper */
 static
@@ -201,41 +248,9 @@ SCIP_Bool mldistsContainsBases(
 }
 
 
-/** initializes to default */
-static
-void initRedCostArrays(
-   const GRAPH*          graph,              /**< the graph */
-   REDCOST*              redcostdata         /**< reduced costs data */
-)
-{
-   const int nnodes = graph->knots;
-   const int nedges = graph->edges;
-   SCIP_Real* const rootdist = redcostdata->rootToNodeDist;
-   SCIP_Real* const redcost = redcostdata->redEdgeCost;
-   PATH* const termpaths3 = redcostdata->nodeTo3TermsPaths;
-   int* const vbase3 = redcostdata->nodeTo3TermsBases;
-
-   assert(redcostdata->nnodes >= nnodes);
-   assert(redcostdata->nedges >= nedges);
-
-   for( int i = 0; i < nnodes; i++ )
-      rootdist[i] = 0.0;
-
-   for( int i = 0; i < 3 * nnodes; i++ )
-   {
-      vbase3[i] = graph->source;
-      termpaths3[i].dist = 0.0;
-      termpaths3[i].edge = -1;
-   }
-
-   for( int i = 0; i < nedges; i++ )
-      redcost[i] = 0.0;
-}
-
-
 /** tests building and un-building */
 static
-SCIP_RETCODE mldistsTest1(
+SCIP_RETCODE testMldistsBuilding(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -287,6 +302,8 @@ SCIP_RETCODE mldistsTest1(
    extreduce_mldistsLevelRemoveTop(mldists);
    extreduce_mldistsLevelRemoveTop(mldists);
 
+   STPTEST_ASSERT_MSG(extreduce_mldistsIsEmpty(mldists), "MLDISTS not empty \n");
+
    extreduce_mldistsFree(scip, &mldists);
 
    return SCIP_OKAY;
@@ -296,7 +313,7 @@ SCIP_RETCODE mldistsTest1(
 
 /** tests correct storing */
 static
-SCIP_RETCODE mldistsTest2(
+SCIP_RETCODE testMldistsStoring(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -386,7 +403,7 @@ SCIP_RETCODE mldistsTest2(
 
 
 static
-SCIP_RETCODE extTest5_variants(
+SCIP_RETCODE testEdgeDeletion5_deprecated(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   variant             /**< 1,2 */
 )
@@ -397,7 +414,7 @@ SCIP_RETCODE extTest5_variants(
    const int root = 0;
    STP_Bool* edgedeleted = NULL;
    SCIP_Real cutoff = 100.0;
-   int edge;
+   int testedge;
    SCIP_Bool deletable;
    REDCOST redcostdata;
 
@@ -407,11 +424,16 @@ SCIP_RETCODE extTest5_variants(
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
-   graph_knot_add(graph, 0);
+   graph_knot_add(graph, STP_TERM);
 
    /* also add dummy nodes to avoid full stack */
    for( int i = 1; i < nnodes; i++ )
       graph_knot_add(graph, -1);
+
+   graph_knot_chg(graph, 6, STP_TERM);
+   graph_knot_chg(graph, 7, STP_TERM);
+   graph_knot_chg(graph, 8, STP_TERM);
+   graph_knot_chg(graph, 9, STP_TERM);
 
    graph->source = 0;
 
@@ -433,26 +455,18 @@ SCIP_RETCODE extTest5_variants(
 
    graph_edge_addBi(scip, graph, 0, 10, 0.9);
 
-   graph_mark(graph);
-
-   initRedCostArrays(graph, &redcostdata);
+   extInitRedCostArrays(graph, &redcostdata);
 
    for( int i = 0; i < nedges; i++ )
       redcostdata.redEdgeCost[i] = 1.0;
 
-   edge = 0;
+   testedge = 0;
 
-   graph_knot_chg(graph, 6, 0);
-   graph_knot_chg(graph, 7, 0);
-   graph_knot_chg(graph, 8, 0);
-   graph_knot_chg(graph, 9, 0);
-
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
+   SCIP_CALL( extSetUpGraph(scip, graph) );
 
    if( variant == 1 )
    {
-      SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, edge, -1, nnodes, &deletable, TRUE));
+      SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, testedge, -1, nnodes, &deletable, TRUE));
       assert(deletable);
    }
    else
@@ -469,7 +483,7 @@ SCIP_RETCODE extTest5_variants(
 
       assert(edgedelete >= 0);
 
-      SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, edge, edgedelete, nnodes, &deletable, TRUE));
+      SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, testedge, edgedelete, nnodes, &deletable, TRUE));
       assert(!deletable);
    }
 
@@ -480,7 +494,7 @@ SCIP_RETCODE extTest5_variants(
 
 
 static
-SCIP_RETCODE extTest4_variants(
+SCIP_RETCODE testEdgeDeletion4_deprecated(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   variant             /**< 1,2,3 */
 )
@@ -526,7 +540,7 @@ SCIP_RETCODE extTest4_variants(
 
    graph_mark(graph);
 
-   initRedCostArrays(graph, &redcostdata);
+   extInitRedCostArrays(graph, &redcostdata);
 
    for( int i = 0; i < nedges; i++ )
       redcostdata.redEdgeCost[i] = 1.0;
@@ -581,7 +595,7 @@ SCIP_RETCODE extTest4_variants(
 
 
 static
-SCIP_RETCODE extTest3_variants(
+SCIP_RETCODE testEdgeDeletion3_deprecated(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   variant             /**< 1,2,3,4,5 */
 )
@@ -627,7 +641,7 @@ SCIP_RETCODE extTest3_variants(
    graph_knot_chg(graph, nnodes - 1, 0); /* dummy node */
    graph_mark(graph);
 
-   initRedCostArrays(graph, &redcostdata);
+   extInitRedCostArrays(graph, &redcostdata);
 
    redcostdata.nodeTo3TermsBases[5] = nnodes - 1;
    redcostdata.nodeTo3TermsBases[6] = nnodes - 1;
@@ -706,7 +720,7 @@ SCIP_RETCODE extTest3_variants(
 
 
 static
-SCIP_RETCODE extTest2_variants(
+SCIP_RETCODE testEdgeDeletion2_deprecated(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   variant             /**< 1,2,3,4,5 */
 )
@@ -753,7 +767,7 @@ SCIP_RETCODE extTest2_variants(
 
    graph_mark(graph);
 
-   initRedCostArrays(graph, &redcostdata);
+   extInitRedCostArrays(graph, &redcostdata);
 
    edge = 0;
 
@@ -786,7 +800,7 @@ SCIP_RETCODE extTest2_variants(
 
 
 static
-SCIP_RETCODE extTest1(
+SCIP_RETCODE testEdgeDeletion1_deprecated(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -830,7 +844,7 @@ SCIP_RETCODE extTest1(
 
    graph_mark(graph);
 
-   initRedCostArrays(graph, &redcostdata);
+   extInitRedCostArrays(graph, &redcostdata);
 
    edge = 0;
 
@@ -843,18 +857,19 @@ SCIP_RETCODE extTest1(
    return SCIP_OKAY;
 }
 
+
+/** tests that edge can be deleted by using SD MST argument */
 static
 SCIP_RETCODE testEdgeDeletedByMst1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   REDCOST redcostdata;
    GRAPH* graph;
    const int nnodes = 5;
    const int nedges = 16;
    const int root = 0;
    SCIP_Real cutoff = 100.0;
-   REDCOST redcostdata;
-
    STP_Bool* edgedeleted = NULL;
    int testedge = 0;
    SCIP_Bool deletable;
@@ -865,7 +880,7 @@ SCIP_RETCODE testEdgeDeletedByMst1(
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
-   /* build tree*/
+   /* build tree */
    graph_knot_add(graph, STP_TERM);       /* node 0 */
    graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
    graph_knot_add(graph, STP_TERM);       /* node 2 */
@@ -885,17 +900,132 @@ SCIP_RETCODE testEdgeDeletedByMst1(
    graph_edge_addBi(scip, graph, 0, 4, 1.4);
    graph_edge_addBi(scip, graph, 2, 3, 1.1);
 
-   graph_mark(graph);
-
-   initRedCostArrays(graph, &redcostdata);
-
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
+   SCIP_CALL( extSetUpGraph(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
 
- //  STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
 
+   extTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** tests that edge can be deleted by using SD MST argument */
+static
+SCIP_RETCODE testEdgeDeletedByMst2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 8;
+   const int nedges = 22;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+   graph_knot_add(graph, STP_TERM);       /* node 7 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.2);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 6, 1.0);
+   graph_edge_addBi(scip, graph, 3, 7, 1.0);
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 3, 1.5);
+   graph_edge_addBi(scip, graph, 0, 4, 2.5);
+   graph_edge_addBi(scip, graph, 0, 5, 2.5);
+   graph_edge_addBi(scip, graph, 4, 5, 1.1);
+
+   SCIP_CALL( extSetUpGraph(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   SCIP_CALL( extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE) );
+
+   STPTEST_ASSERT_MSG(deletable, "edge was deleted \n");
+
+   extTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** tests that edge cannot be deleted */
+static
+SCIP_RETCODE testEdgeNotDeleted1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 8;
+   const int nedges = 22;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+   graph_knot_add(graph, STP_TERM);       /* node 7 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 6, 1.0);
+   graph_edge_addBi(scip, graph, 3, 7, 1.0);
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 3, 1.5);
+   graph_edge_addBi(scip, graph, 0, 4, 2.5);
+   graph_edge_addBi(scip, graph, 0, 5, 2.5);
+   graph_edge_addBi(scip, graph, 4, 5, 1.1);
+
+   SCIP_CALL( extSetUpGraph(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   SCIP_CALL( extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE) );
+
+   STPTEST_ASSERT_MSG(!deletable, "edge was deleted \n");
 
    extTearDown(scip, graph, &redcostdata);
 
@@ -1050,8 +1180,8 @@ SCIP_RETCODE stptest_extmldists(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_CALL( mldistsTest1(scip) );
-   SCIP_CALL( mldistsTest2(scip) );
+   SCIP_CALL( testMldistsBuilding(scip) );
+   SCIP_CALL( testMldistsStoring(scip) );
 
 
    printf("mldists test: all ok \n");
@@ -1067,24 +1197,23 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-   SCIP_CALL( extTest5_variants(scip, 1) );
-   SCIP_CALL( extTest5_variants(scip, 2) );
-
-   SCIP_CALL( extTest4_variants(scip, 1) );
-   SCIP_CALL( extTest4_variants(scip, 2) );
-   SCIP_CALL( extTest4_variants(scip, 3) );
-
-   SCIP_CALL( extTest3_variants(scip, 1) );
-   SCIP_CALL( extTest3_variants(scip, 2) );
-   SCIP_CALL( extTest3_variants(scip, 3) );
-   SCIP_CALL( extTest3_variants(scip, 4) );
-   SCIP_CALL( extTest3_variants(scip, 5) );
-
+   SCIP_CALL( testEdgeDeletedByMst2(scip) );
    SCIP_CALL( testEdgeDeletedByMst1(scip) );
 
-   SCIP_CALL( extTest2_variants(scip, 1) );
+   SCIP_CALL( testEdgeNotDeleted1(scip) );
 
-   SCIP_CALL( extTest1(scip) );
+   SCIP_CALL( testEdgeDeletion5_deprecated(scip, 1) );
+   SCIP_CALL( testEdgeDeletion5_deprecated(scip, 2) );
+   SCIP_CALL( testEdgeDeletion4_deprecated(scip, 1) );
+   SCIP_CALL( testEdgeDeletion4_deprecated(scip, 2) );
+   SCIP_CALL( testEdgeDeletion4_deprecated(scip, 3) );
+   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 1) );
+   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 2) );
+   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 3) );
+   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 4) );
+   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 5) );
+   SCIP_CALL( testEdgeDeletion2_deprecated(scip, 1) );
+   SCIP_CALL( testEdgeDeletion1_deprecated(scip) );
 
    SCIP_CALL( extDistTest(scip) );
 
