@@ -5163,37 +5163,6 @@ SCIP_RETCODE SCIPchgVarUbLazy(
    return SCIP_OKAY;
 }
 
-/** returns the absolute value of the aggregation or multiaggregation scalar,
- *  or 1.0 if there is no (multi)aggregation
- */
-static
-SCIP_Real getAggregationScalar(
-   SCIP_VAR*          var                    /**< problem variable */
-   )
-{
-   SCIP_Real scalar;
-
-   scalar = 1.0;
-
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-   {
-      assert(var->data.aggregate.var != NULL);
-      assert(var->data.aggregate.scalar != 0.0);
-
-      scalar = 1 / REALABS(var->data.aggregate.scalar);
-   }
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR && var->data.multaggr.nvars == 1 )
-   {
-      assert( var->data.multaggr.vars != NULL );
-      assert( var->data.multaggr.scalars != NULL );
-      assert( var->data.multaggr.scalars[0] != 0.0 );
-
-      scalar = 1 / REALABS(var->data.multaggr.scalars[0]);
-   }
-
-   return scalar;
-}
-
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
@@ -5223,7 +5192,6 @@ SCIP_RETCODE SCIPtightenVarLb(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -5252,9 +5220,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, newbound * mult, ub * mult) )
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -5262,8 +5228,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    newbound = MIN(newbound, ub);
 
    /* is the new bound redundant for the variable to which it will be applied? */
-   if( (force && SCIPsetIsLE(scip->set, mult * newbound, mult * lb)) ||
-         (!force && !SCIPsetIsLbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -5345,7 +5310,6 @@ SCIP_RETCODE SCIPtightenVarUb(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -5374,9 +5338,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    ub = SCIPcomputeVarUbLocal(scip, var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -5384,8 +5346,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    newbound = MAX(newbound, lb);
 
    /* is the new bound redundant for the variable to which it will be applied? */
-   if( (force && SCIPsetIsGE(scip->set, mult * newbound, mult * ub)) ||
-         (!force && !SCIPsetIsUbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -5533,7 +5494,6 @@ SCIP_RETCODE SCIPinferVarLbCons(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -5560,18 +5520,15 @@ SCIP_RETCODE SCIPinferVarLbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, newbound * mult, ub * mult) )
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
    newbound = MIN(newbound, ub);
 
-   /* is the new bound redundant for the variable to which it will be applied? */
-   if( (force && SCIPsetIsLE(scip->set, mult * newbound, mult * lb)) ||
-         (!force && !SCIPsetIsLbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   /* is the new bound redundant? */
+   if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -5652,7 +5609,6 @@ SCIP_RETCODE SCIPinferVarUbCons(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -5679,9 +5635,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -5689,8 +5643,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    newbound = MAX(newbound, lb);
 
    /* is the new bound redundant for the variable to which it will be applied? */
-   if( (force && SCIPsetIsGE(scip->set, mult * newbound, mult * ub)) ||
-         (!force && !SCIPsetIsUbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -5964,17 +5917,15 @@ SCIP_RETCODE SCIPinferVarLbProp(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, mult * newbound, mult * ub) )
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
    newbound = MIN(newbound, ub);
 
-   if( (!force && !SCIPsetIsLbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) ||
-         SCIPsetIsLE(scip->set, mult * newbound, mult * lb) )
+   if( (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsLE(scip->set, newbound, lb) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6055,7 +6006,6 @@ SCIP_RETCODE SCIPinferVarUbProp(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -6082,17 +6032,15 @@ SCIP_RETCODE SCIPinferVarUbProp(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
    newbound = MAX(newbound, lb);
 
-   if( (!force && !SCIPsetIsUbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) ||
-         SCIPsetIsGE(scip->set, mult * newbound, mult * ub) )
+   if( (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsGE(scip->set, newbound, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6274,7 +6222,6 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -6301,9 +6248,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    ub = SCIPvarGetUbGlobal(var);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || SCIPsetIsFeasGT(scip->set, mult * newbound, mult * ub) )
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -6314,8 +6259,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
     * so don't apply them even if force is set
     * redundancy is checked for the variable to which the bound change will be applied
     */
-   if( SCIPsetIsEQ(scip->set, mult * lb, mult * newbound) ||
-         (!force && !SCIPsetIsLbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6399,7 +6343,6 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real mult;
 
    assert(infeasible != NULL);
 
@@ -6426,9 +6369,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    ub = SCIPvarGetUbGlobal(var);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
 
-   mult = getAggregationScalar(var);
-
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || SCIPsetIsFeasLT(scip->set, mult * newbound, mult * lb) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -6439,8 +6380,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
     * so don't apply them even if force is set
     * redundancy is checked for the variable to which the bound change will be applied
     */
-   if( SCIPsetIsEQ(scip->set, mult * ub, mult * newbound) ||
-         (!force && !SCIPsetIsUbBetter(scip->set, mult * newbound, mult * lb, mult * ub)) )
+   if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
