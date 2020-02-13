@@ -25,7 +25,43 @@
 #ifndef APPLICATIONS_STP_SRC_STPTEST_H_
 #define APPLICATIONS_STP_SRC_STPTEST_H_
 
+#include <stdlib.h>
 #include "scip/scip.h"
+
+#define STPTEST_ASSERT_MSG_ARGS(cond, msg, ...)  \
+   do                                            \
+   {                                             \
+      if (!(cond))                               \
+      {                                          \
+         printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
+         printf((msg), __VA_ARGS__);             \
+         abort();                                \
+      }                                          \
+   } while(0)
+
+
+#define STPTEST_ASSERT_MSG(cond, msg)  \
+   do                                  \
+   {                                   \
+      if (!(cond))                     \
+      {                                \
+         printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
+         printf((msg));                \
+         abort();                      \
+      }                                \
+   } while(0)
+
+
+#define STPTEST_ASSERT(cond)           \
+   do                                  \
+   {                                   \
+      if (!(cond))                     \
+      {                                \
+         printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
+         abort();                      \
+      }                                \
+   } while(0)
+
 
 /* stptest_base.c
  */

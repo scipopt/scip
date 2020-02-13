@@ -239,6 +239,30 @@ SCIP_Real dcmstGetWeightFromStore(
    return weight;
 }
 
+/** build and returns data */
+static inline
+REDCOST redcostdataBuild(
+   SCIP_Real*            redEdgeCost,        /**< reduced costs */
+   SCIP_Real*            rootToNodeDist,     /**< shortest path distances from root  */
+   PATH*                 nodeTo3TermsPaths,  /**< paths to three nearest terminals */
+   int*                  nodeTo3TermsBases,  /**< three nearest terminals */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   int                   redCostRoot,        /**< graph root for reduced cost calculation */
+   int                   nnodes,
+   int                   nedges
+)
+{
+   REDCOST data = { .redEdgeCost = redEdgeCost, .rootToNodeDist = rootToNodeDist,
+                    .nodeTo3TermsPaths = nodeTo3TermsPaths, .nodeTo3TermsBases = nodeTo3TermsBases,
+                    .cutoff = cutoff, .redCostRoot = redCostRoot
+#ifndef NDEBUG
+                    , .nnodes = nnodes, .nedges = nedges
+#endif
+                  };
+
+   return data;
+}
+
 
 /** initializes dynamic MST structure */
 SCIP_RETCODE reduce_dcmstInit(
@@ -577,4 +601,51 @@ SCIP_Bool reduce_dcmstMstIsValid(
    SCIPfreeMemoryArray(scip, &visited);
 
    return isValid;
+}
+
+
+/** builds reduced costs data structure and returns it.
+ * NOTE: memory needs to be freed again! */
+REDCOST reduce_redcostdataBuild(
+   SCIP*                 scip,               /**< SCIP */
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   int                   redCostRoot         /**< graph root for reduced cost calculation */
+)
+{
+   SCIP_Real* redEdgeCost;
+   SCIP_Real* rootToNodeDist;
+   PATH* nodeTo3TermsPaths;
+   int* nodeTo3TermsBases;
+
+   assert(scip);
+   assert(nnodes >= 0);
+   assert(nedges >= 0);
+   assert(nedges % 2 == 0);
+   assert(redCostRoot >= 0);
+   assert(GE(cutoff, 0.0) || EQ(cutoff, 0.0));
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &redEdgeCost, nedges) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &rootToNodeDist, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodeTo3TermsPaths, 3 * nnodes) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodeTo3TermsBases, 3 * nnodes) );
+
+   return (redcostdataBuild(redEdgeCost, rootToNodeDist, nodeTo3TermsPaths, nodeTo3TermsBases, cutoff, redCostRoot,
+              nnodes, nedges));
+}
+
+
+/** frees member arrays */
+void reduce_redcostdataTearDown(
+   SCIP*                 scip,               /**< SCIP */
+   REDCOST*              redcostdata         /**< data */
+)
+{
+   assert(scip && redcostdata);
+
+   SCIPfreeMemoryArray(scip, &(redcostdata->nodeTo3TermsBases));
+   SCIPfreeMemoryArray(scip, &(redcostdata->nodeTo3TermsPaths));
+   SCIPfreeMemoryArray(scip, &(redcostdata->rootToNodeDist));
+   SCIPfreeMemoryArray(scip, &(redcostdata->redEdgeCost));
 }

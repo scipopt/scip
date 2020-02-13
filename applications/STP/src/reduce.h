@@ -40,12 +40,16 @@ typedef struct dynamic_complete_minimum_spanning_tree DCMST;
 /** reduced cost result data */
 typedef struct reduce_costs_data
 {
-   const SCIP_Real* const redEdgeCost;           /**< reduced costs */
-   const SCIP_Real* const rootToNodeDist;        /**< shortest path distances from root  */
-   const PATH* const nodeTo3TermsPaths;          /**< paths to three nearest terminals */
-   const int* const nodeTo3TermsBases;           /**< three nearest terminals */
-   const SCIP_Real cutoff;                       /**< reduced cost cutoff value or -1.0 if not used */
-   const int redCostRoot;                        /**< graph root for reduced cost calculation */
+   SCIP_Real* const redEdgeCost;           /**< reduced costs */
+   SCIP_Real* const rootToNodeDist;        /**< shortest path distances from root  */
+   PATH* const nodeTo3TermsPaths;          /**< paths to three nearest terminals */
+   int* const nodeTo3TermsBases;           /**< three nearest terminals */
+   SCIP_Real cutoff;                       /**< reduced cost cutoff value or -1.0 if not used */
+   int redCostRoot;                        /**< graph root for reduced cost calculation */
+#ifndef NDEBUG
+   const int nnodes;                       /**< number of nodes */
+   const int nedges;                       /**< number of edges */
+#endif
 } REDCOST;
 
 
@@ -166,8 +170,7 @@ extern SCIP_Real       reduce_dcmstGetExtWeight(SCIP*, const CSR*, const SCIP_Re
 extern SCIP_Real       reduce_dcmstGetWeight(SCIP*, const CSR*);
 extern int             reduce_dcmstGetMaxnnodes(const DCMST*);
 extern SCIP_Real*      reduce_dcmstGetAdjcostBuffer(const DCMST*);
-
-
-
+extern REDCOST         reduce_redcostdataBuild(SCIP*, int, int, SCIP_Real, int);
+extern void            reduce_redcostdataTearDown(SCIP*, REDCOST*);
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

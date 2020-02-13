@@ -406,6 +406,7 @@ extern void   graph_knot_chg(GRAPH*, int, int);
 extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
+extern void   graph_edge_addBi(SCIP*, GRAPH*, int, int, double);
 extern void   graph_edge_addSubgraph(SCIP*, const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_delFull(SCIP*, GRAPH*, int, SCIP_Bool);
