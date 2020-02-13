@@ -542,6 +542,7 @@ SCIP_RETCODE extTest4_variants(
    if( variant == 1 )
    {
       SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, edge, -1, nnodes, &deletable, TRUE));
+
       assert(deletable);
    }
    else if( variant == 2 )
@@ -799,6 +800,8 @@ SCIP_RETCODE extTest1(
    SCIP_Bool deletable;
    REDCOST redcostdata;
 
+   assert(scip);
+
    SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
@@ -851,6 +854,7 @@ SCIP_RETCODE testEdgeDeletedByMst1(
    const int root = 0;
    SCIP_Real cutoff = 100.0;
    REDCOST redcostdata;
+
    STP_Bool* edgedeleted = NULL;
    int testedge = 0;
    SCIP_Bool deletable;
