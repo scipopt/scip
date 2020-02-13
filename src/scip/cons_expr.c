@@ -7290,7 +7290,8 @@ SCIP_RETCODE bilinearHashTableCreate(
 
    /* create hash table */
    SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), 10,
-      NULL, NULL, NULL, conshdlrdata) );
+      bilinearHashTableGetHashkey, bilinearHashTableIsHashkeyEq, bilinearHashTableGetHashkeyVal,
+      conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -7360,6 +7361,14 @@ SCIP_RETCODE bilinearHashInsert(
    entry->y = y;
    entry->auxvar = auxvar;
 
+   /* capture variable */
+   SCIP_CALL( SCIPcaptureVar(scip, x) );
+   SCIP_CALL( SCIPcaptureVar(scip, y) );
+   if( auxvar != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, x) );
+   }
+
    /* increase the total number of entries */
    ++(conshdlrdata->nbilinentries);
 
@@ -7395,6 +7404,9 @@ SCIP_RETCODE bilinearHashInsertAll(
    /* check whether the hash table has been already created */
    if( conshdlrdata->bilinhashtable != NULL )
       return SCIP_OKAY;
+
+   /* create hash table */
+   SCIP_CALL( bilinearHashTableCreate(scip, conshdlrdata) );
 
    /* create and initialize iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -7474,7 +7486,11 @@ SCIP_RETCODE bilinearHashTableFree(
    /* release variables */
    for( i = 0; i < conshdlrdata->nbilinentries; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->auxvar) );
+      /* it might be that there is a bilinera term without a corresponding auxiliary variable */
+      if( conshdlrdata->bilinentries[i]->auxvar != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->auxvar) );
+      }
       SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->y) );
       SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->x) );
    }
@@ -8109,6 +8125,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
+   /* free hash table for bilinear terms */
+   SCIP_CALL( bilinearHashTableFree(scip, conshdlrdata) );
+
    return SCIP_OKAY;
 }
 
@@ -8186,6 +8205,9 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
    /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
+
+   /* collect all bilinear terms */
+   SCIP_CALL( bilinearHashInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
