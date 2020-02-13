@@ -7373,19 +7373,79 @@ SCIP_RETCODE bilinearHashInsert(
 static
 SCIP_RETCODE bilinearHashInsertAll(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< expression constraints */
    int                   nconss              /**< total number of expression constraints */
    )
 {
-   assert(conshdlrdata != NULL);
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPRHDLR* producthdlr;
+   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   int c;
+
    assert(conss != NULL || nconss == 0);
 
-   /* check whether the hash table has been already created or no expression constraints are available */
-   if( nconss == 0 || conshdlrdata->bilinhashtable != NULL )
+   if( nconss == 0 )
       return SCIP_OKAY;
 
-   /* TODO iterate through all expressions */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether the hash table has been already created */
+   if( conshdlrdata->bilinhashtable != NULL )
+      return SCIP_OKAY;
+
+   /* create and initialize iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
+   /* get product and pow expression handler */
+   producthdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
+   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
+   /* iterate through all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_EXPR* expr;
+
+      assert(conss != NULL && conss[c] != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* iterate through all expressions */
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_CONSEXPR_EXPR** children = SCIPgetConsExprExprChildren(expr);
+         SCIP_VAR* x = NULL;
+         SCIP_VAR* y = NULL;
+
+         /* check whether the expression is of the form f(x)^2 */
+         if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+         {
+            x = SCIPgetConsExprExprAuxVar(children[0]);
+            y = x;
+         }
+
+         /* check whether the expression is of the form f(x) * g(y) */
+         if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
+         {
+            x = SCIPgetConsExprExprAuxVar(children[0]);
+            y = SCIPgetConsExprExprAuxVar(children[1]);
+         }
+
+         /* add (x,y) to the hash table */
+         if( x != NULL && y != NULL )
+         {
+            SCIP_CALL( bilinearHashInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr)) );
+         }
+      }
+   }
+
+   /* release iterator */
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
