@@ -87,7 +87,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
-		PRESOLLIB=$(PRESOLLIB)\\n\
+		PAPILO=$(PAPILO)\\n\
 		READLINE=$(READLINE)\\n\
 		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
@@ -1623,9 +1623,9 @@ ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif
 endif
-ifneq ($(PRESOLLIB),true)
-ifneq ($(PRESOLLIB),false)
-		$(error invalid PRESOLLIB flag selected: PRESOLLIB=$(PRESOLLIB). Possible options are: true false)
+ifneq ($(PAPILO),true)
+ifneq ($(PAPILO),false)
+		$(error invalid PAPILO flag selected: PAPILO=$(PAPILO). Possible options are: true false)
 endif
 endif
 
