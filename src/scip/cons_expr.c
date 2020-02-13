@@ -260,6 +260,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchviolweight;/**< weight by how much to consider the violation assigned to a variable for its branching score */
    SCIP_Real                branchdualweight;/**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
+   SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
 
    /* statistics */
@@ -5937,9 +5938,8 @@ SCIP_Real getWeightedBranchscore(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real violscore = 0.0;
-   SCIP_Real domainscore = 0.0;
-   SCIP_Real dualscore = 0.0;
+   SCIP_VAR* var;
+   SCIP_Real score;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -5947,15 +5947,14 @@ SCIP_Real getWeightedBranchscore(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   violscore = SCIPgetConsExprExprBranchScore(conshdlr, expr);
+   var = SCIPgetConsExprExprAuxVar(expr);
+   assert(var != NULL);
+
+   score = conshdlrdata->branchviolweight * SCIPgetConsExprExprBranchScore(conshdlr, expr);
 
    if( conshdlrdata->branchdomainweight != 0.0 )
    {
-      SCIP_VAR* var;
       SCIP_Real domainwidth;
-
-      var = SCIPgetConsExprExprAuxVar(expr);
-      assert(var != NULL);
 
       /* get domain width, taking infinity at 1e20 on purpose */
       domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
@@ -5963,20 +5962,35 @@ SCIP_Real getWeightedBranchscore(
       /* make domain score large (up to 40=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
        * and small (minimum 0=log(1)) for a domain width around 1
        */
-      domainscore = log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));
+      score += conshdlrdata->branchdomainweight * log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));
    }
 
    if( conshdlrdata->branchdualweight > 0.0 )
    {
-      SCIP_VAR* var;
-
-      var = SCIPgetConsExprExprAuxVar(expr);
-      assert(var != NULL);
-
-      dualscore = getDualBranchscore(scip, conshdlr, var);
+      score += conshdlrdata->branchdualweight * getDualBranchscore(scip, conshdlr, var);
    }
 
-   return conshdlrdata->branchviolweight * violscore + conshdlrdata->branchdomainweight * domainscore + conshdlrdata->branchdualweight * dualscore;
+   if( conshdlrdata->branchvartypeweight > 0.0 )
+   {
+      SCIP_Real vartypescore = 0.0;
+      switch( SCIPvarGetType(var) )
+      {
+         case SCIP_VARTYPE_BINARY :
+            vartypescore = 1.0;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS :
+            break;
+         case SCIP_VARTYPE_INTEGER :
+            vartypescore = 0.1;
+            break;
+         case SCIP_VARTYPE_IMPLINT :
+            vartypescore = 0.01;
+            break;
+      }
+      score += conshdlrdata->branchvartypeweight * vartypescore;
+   }
+
+   return score;
 }
 
 /** branch on a variable in a largely violated constraint */
@@ -14275,6 +14289,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/domainweight",
          "weight by how much to consider the domain width in branching score",
          &conshdlrdata->branchdomainweight, TRUE, 0.0, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/vartypeweight",
+         "weight by how much to consider variable type (continue: 0, binary: 1, integer: 0.1, impl-integer: 0.01) in branching score",
+         &conshdlrdata->branchvartypeweight, TRUE, 0.0, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
