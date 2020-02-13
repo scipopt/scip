@@ -248,7 +248,7 @@ struct SCIP_ConshdlrData
 
    /* hashing of bilinear terms */
    SCIP_HASHTABLE*          bilinhashtable;  /**< hash table for bilinear terms */
-   BILINEARHASHENTRY*       bilinentries;    /**< bilinear hash entries */
+   BILINEARHASHENTRY**      bilinentries;    /**< bilinear hash entries */
    int                      nbilinentries;   /**< total number of bilinear hash entries */
    int                      bilinentriessize;/**< size of bilinentries array */
 };
@@ -7256,6 +7256,8 @@ SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
    entry2 = (BILINEARHASHENTRY*)key2;
    assert(entry1->x != NULL && entry1->y != NULL);
    assert(entry2->x != NULL && entry2->y != NULL);
+   assert(SCIPvarCompare(entry1->x, entry2->y) < 1);
+   assert(SCIPvarCompare(entry1->x, entry2->y) < 1);
 
    return entry1->x == entry2->x && entry1->y == entry2->y;
 }
@@ -7268,8 +7270,9 @@ SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
 
    entry = (BILINEARHASHENTRY*)key;
    assert(entry->x != NULL && entry->y != NULL);
+   assert(SCIPvarCompare(entry->x, entry->y) < 1);
 
-   return FALSE;
+   return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
 }
 
 /** creates hash table for bilinear terms */
@@ -7320,6 +7323,73 @@ SCIP_RETCODE bilinearHashTableResize(
    return SCIP_OKAY;
 }
 
+/** inserts the variables of a bilinear term into the hash table */
+static
+SCIP_RETCODE bilinearHashInsert(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar              /**< auxiliary variable (might be NULL) */
+   )
+{
+   BILINEARHASHENTRY* entry;
+
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->bilinhashtable != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* ensure size of bilinentries array */
+   SCIP_CALL( bilinearHashTableResize(scip, conshdlrdata, conshdlrdata->nbilinentries) );
+
+   /* allocate memory for a new bilinear term entry */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata->bilinentries[conshdlrdata->nbilinentries]) ); /*lint !e866*/
+
+   /* set values in the created entry */
+   entry = conshdlrdata->bilinentries[conshdlrdata->nbilinentries];
+   assert(entry != NULL);
+   entry->x = x;
+   entry->y = y;
+   entry->auxvar = auxvar;
+
+   /* increase the total number of entries */
+   ++(conshdlrdata->nbilinentries);
+
+   /* insert new entry into the hash table */
+   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)entry) );
+
+   return SCIP_OKAY;
+}
+
+/** iteratres through all expressions of all expression constraints and add the corresponding bilinear terms to the hash table */
+static
+SCIP_RETCODE bilinearHashInsertAll(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONS**           conss,              /**< expression constraints */
+   int                   nconss              /**< total number of expression constraints */
+   )
+{
+   assert(conshdlrdata != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   /* check whether the hash table has been already created or no expression constraints are available */
+   if( nconss == 0 || conshdlrdata->bilinhashtable != NULL )
+      return SCIP_OKAY;
+
+   /* TODO iterate through all expressions */
+
+   return SCIP_OKAY;
+}
+
 /** frees hash table for bilinear terms */
 static
 SCIP_RETCODE bilinearHashTableFree(
@@ -7344,9 +7414,15 @@ SCIP_RETCODE bilinearHashTableFree(
    /* release variables */
    for( i = 0; i < conshdlrdata->nbilinentries; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].auxvar) );
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].y) );
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].x) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->auxvar) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->y) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->x) );
+   }
+
+   /* free memory for the bilinear hash entries */
+   for( i = 0; i < conshdlrdata->nbilinentries; ++i )
+   {
+      SCIPfreeBlockMemory(scip, &conshdlrdata->bilinentries[i]); /*lint !e866*/
    }
 
    /* free hash table */
