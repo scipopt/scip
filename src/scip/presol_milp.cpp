@@ -31,7 +31,7 @@
 
 #include "scip/presol_milp.h"
 
-#ifndef SCIP_WITH_PRESOLVELIB
+#ifndef SCIP_WITH_PAPILO
 
 /** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
