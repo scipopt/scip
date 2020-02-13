@@ -578,3 +578,63 @@ SCIP_Bool reduce_dcmstMstIsValid(
 
    return isValid;
 }
+
+
+/** builds reduced costs data structure and returns it.
+ * NOTE: memory needs to be freed again! */
+SCIP_RETCODE reduce_redcostdataInit(
+   SCIP*                 scip,               /**< SCIP */
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   int                   redCostRoot,        /**< graph root for reduced cost calculation */
+   REDCOST*              redcostdata         /**< data to initialize */
+)
+{
+   SCIP_Real* redEdgeCost;
+   SCIP_Real* rootToNodeDist;
+   PATH* nodeTo3TermsPaths;
+   int* nodeTo3TermsBases;
+
+   assert(scip);
+   assert(nnodes >= 0);
+   assert(nedges >= 0);
+   assert(nedges % 2 == 0);
+   assert(redCostRoot >= 0);
+   assert(GE(cutoff, 0.0) || EQ(cutoff, 0.0));
+   assert(redcostdata);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &redEdgeCost, nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &rootToNodeDist, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsPaths, 3 * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsBases, 3 * nnodes) );
+
+   redcostdata->redEdgeCost = redEdgeCost;
+   redcostdata->rootToNodeDist = rootToNodeDist;
+   redcostdata->nodeTo3TermsPaths = nodeTo3TermsPaths;
+   redcostdata->nodeTo3TermsBases = nodeTo3TermsBases;
+   redcostdata->cutoff = cutoff;
+   redcostdata->redCostRoot = redCostRoot;
+
+#ifndef NDEBUG
+   redcostdata->nnodes = nnodes;
+   redcostdata->nedges = nedges;
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** frees member arrays */
+void reduce_redcostdataFreeMembers(
+   SCIP*                 scip,               /**< SCIP */
+   REDCOST*              redcostdata         /**< data */
+)
+{
+   assert(scip && redcostdata);
+
+   SCIPfreeMemoryArray(scip, &(redcostdata->nodeTo3TermsBases));
+   SCIPfreeMemoryArray(scip, &(redcostdata->nodeTo3TermsPaths));
+   SCIPfreeMemoryArray(scip, &(redcostdata->rootToNodeDist));
+   SCIPfreeMemoryArray(scip, &(redcostdata->redEdgeCost));
+}

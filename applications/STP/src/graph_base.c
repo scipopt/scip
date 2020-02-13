@@ -1848,6 +1848,18 @@ void graph_edge_add(
    g->edges += 2;
 }
 
+/** add a bi-edge to the graph */
+void graph_edge_addBi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   tail,               /**< tail of the new edge */
+   int                   head,               /**< head of the new edge */
+   SCIP_Real             cost                /**< head to tail cost */
+   )
+{
+   graph_edge_add(scip, g, tail, head, cost, cost);
+}
+
 
 /** add a new edge to a subgraph */
 void graph_edge_addSubgraph(
