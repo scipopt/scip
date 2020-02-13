@@ -121,25 +121,25 @@ ln -fs ~/sap-600-pure-diff.set settings/.
 
 BRANCHNAME=${GITBRANCH}
 SOPLEXBRANCHNAME=${GITBRANCH}
-PRESOLVEBRANCHNAME=${GITBRANCH}
+PAPILOBRANCHNAME=${GITBRANCH}
 
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-  PRESOLVEBRANCHNAME="master"
+  PAPILOBRANCHNAME="master"
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
-  PRESOLVEBRANCHNAME="master"
+  PAPILOBRANCHNAME="master"
 fi
 
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
 if [ "${GITBRANCH}" == "consexpr" ]; then
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_master/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
 else
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_${GITBRANCH}/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
 fi
 
 if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
@@ -166,26 +166,26 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
   make install -j4
   cd ..
 
-  # cmake scip for presolvelib
+  # cmake scip for presolvelib papilo
   cd ..
   mkdir -p scip-build
   cd scip-build
   cmake .. -DCMAKE_BUILD_TYPE=Release -DSOPLEX_DIR=${SOPLEX_DIR}
   cd ..
 
-  rm -rf presolve
-  git clone git@git.zib.de:bzfgottw/presolve
-  cd presolve
-  git checkout ${PRESOLVEBRANCHNAME}
+  rm -rf papilo
+  git clone git@git.zib.de:bzfgottw/presolve papilo
+  cd papilo
+  git checkout ${PAPILOBRANCHNAME}
   git pull
   git checkout -f performance-${GITBRANCH}
-  git merge ${PRESOLVEBRANCHNAME} --ff-only
+  git merge ${PAPILOBRANCHNAME} --ff-only
   git push
 
   mkdir build
   cd build
-  cmake -DQUADMATH=off -DCMAKE_INSTALL_PREFIX=${PRESOLVELIB_DIR} -DCMAKE_BUILD_TYPE=Release -DSCIP_DIR=../../build -DSOPLEX_DIR=../../soplex/build ..
-  rm -rf ${PRESOLVELIB_DIR}
+  cmake -DQUADMATH=off -DCMAKE_INSTALL_PREFIX=${PAPILO_DIR} -DCMAKE_BUILD_TYPE=Release -DSCIP_DIR=../../build -DSOPLEX_DIR=../../soplex/build ..
+  rm -rf ${PAPILO_DIR}
   make install -j4
   cd ../..
 
@@ -293,7 +293,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPRESOLVELIB_DIR=${PRESOLVELIB_DIR}
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
   make -j4
   cd ..
 
