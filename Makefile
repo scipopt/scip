@@ -347,13 +347,13 @@ LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<
 endif
 
 #-----------------------------------------------------------------------------
-# Presolving Library
+# PaPILO Library
 #-----------------------------------------------------------------------------
 
-ifeq ($(PRESOLLIB),true)
-FLAGS		+=	-DSCIP_WITH_PRESOLVELIB -I$(LIBDIR)/include/presollib/external/tbb/include -I$(LIBDIR)/include/presollib/external -I$(LIBDIR)/include/presollib/src
-SOFTLINKS	+=	$(LIBDIR)/include/presollib
-LPIINSTMSG	+=	"\n  -> \"presollib\" is the path to the presolving library directory\n"
+ifeq ($(PAPILO),true)
+FLAGS		+=	-DSCIP_WITH_PAPILO -I$(LIBDIR)/include/papilo/external/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+SOFTLINKS	+=	$(LIBDIR)/include/papilo
+LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO library directory\n"
 endif
 
 #-----------------------------------------------------------------------------

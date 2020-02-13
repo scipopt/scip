@@ -89,7 +89,7 @@ COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
 SYM		=	none
-PRESOLLIB	=	false
+PAPILO	=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -511,10 +511,10 @@ LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.
 endif
 
 #-----------------------------------------------------------------------------
-# Presolving Library
+# PaPILO Library
 #-----------------------------------------------------------------------------
 
-ifeq ($(PRESOLLIB),true)
+ifeq ($(PAPILO),true)
 LDFLAGS		+=	-l:libtbb.so.2
 CXXFLAGS	+=	-std=c++14 -Wno-shadow -Wno-implicit-fallthrough -Wno-unused-variable -Wno-ctor-dtor-privacy
 endif
