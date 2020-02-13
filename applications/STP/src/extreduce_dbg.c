@@ -1022,26 +1022,31 @@ SCIP_Bool extreduce_mstTopCompExtObjValid(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const SCIP_Real mstweight_upper = sdmstGetExtWeight(scip, graph, extvert, FALSE, extdata);
    SCIP_Bool isValid = TRUE;
 
-   if( GT(extobj, mstweight_upper) )
+   /** does currently not work because of weird SD computation */
+   if( !graph_pc_isPcMw(graph) )
    {
-      SCIPdebugMessage("top extension MST weight violates upper bound: %f > %f \n",
-            extobj, mstweight_upper);
+      const SCIP_Real mstweight_upper = sdmstGetExtWeight(scip, graph, extvert, FALSE, extdata);
 
-      isValid = FALSE;
-   }
-   else
-   {
-      const SCIP_Real mstweight_lower = sdmstGetExtWeight(scip, graph, extvert, TRUE, extdata);
-
-      if( LT(extobj, mstweight_lower) )
+      if( GT(extobj, mstweight_upper) )
       {
-         SCIPdebugMessage("top extension MST weight violates lower bound: %f < %f \n",
-               extobj, mstweight_lower);
+         SCIPdebugMessage("top extension MST weight violates upper bound: %f > %f \n",
+               extobj, mstweight_upper);
 
          isValid = FALSE;
+      }
+      else
+      {
+         const SCIP_Real mstweight_lower = sdmstGetExtWeight(scip, graph, extvert, TRUE, extdata);
+
+         if( LT(extobj, mstweight_lower) )
+         {
+            SCIPdebugMessage("top extension MST weight violates lower bound: %f < %f \n",
+                  extobj, mstweight_lower);
+
+            isValid = FALSE;
+         }
       }
    }
 
@@ -1057,26 +1062,29 @@ SCIP_Bool extreduce_mstTopCompObjValid(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const int nleaves = extdata->tree_nleaves;
-   const int* const leaves = extdata->tree_leaves;
-   const SCIP_Real mstweight_upper = sdmstGetWeight(scip, graph, nleaves, leaves, FALSE, extdata);
-   const SCIP_Real mstweight_lower = sdmstGetWeight(scip, graph, nleaves, leaves, TRUE, extdata);
-
    SCIP_Bool isValid = TRUE;
 
-   if( GT(compobj, mstweight_upper) )
+   if( !graph_pc_isPcMw(graph) )
    {
-      SCIPdebugMessage("top MST weight violates upper bound: %f > %f \n",
-            compobj, mstweight_upper);
+      const int nleaves = extdata->tree_nleaves;
+      const int* const leaves = extdata->tree_leaves;
+      const SCIP_Real mstweight_upper = sdmstGetWeight(scip, graph, nleaves, leaves, FALSE, extdata);
+      const SCIP_Real mstweight_lower = sdmstGetWeight(scip, graph, nleaves, leaves, TRUE, extdata);
 
-      isValid = FALSE;
-   }
-   else if( LT(compobj, mstweight_lower) )
-   {
-      SCIPdebugMessage("top MST weight violates lower bound: %f < %f \n",
-            compobj, mstweight_lower);
+      if( GT(compobj, mstweight_upper) )
+      {
+         SCIPdebugMessage("top MST weight violates upper bound: %f > %f \n",
+               compobj, mstweight_upper);
 
-      isValid = FALSE;
+         isValid = FALSE;
+      }
+      else if( LT(compobj, mstweight_lower) )
+      {
+         SCIPdebugMessage("top MST weight violates lower bound: %f < %f \n",
+               compobj, mstweight_lower);
+
+         isValid = FALSE;
+      }
    }
 
    return isValid;
@@ -1103,6 +1111,11 @@ SCIP_Bool extreduce_mstTopCompInSync(
       SCIPdebugMessage("wrong top mst size nodes=%d leaves=%d \n", topmst.nnodes, nleaves);
 
       return FALSE;
+   }
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      return TRUE;
    }
 
    /* make sure that the edge costs of the MST correspond to the SDs in the tree */
