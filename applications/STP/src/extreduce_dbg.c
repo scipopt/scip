@@ -570,9 +570,9 @@ SCIP_Bool extreduce_treeIsFlawed(
 
    for( int i = 0; i < nnodes; i++ )
    {
-      if( isPc && extdata->pcSdToNode[i] >= -0.5 )
+      if( isPc && extdata->pcdata->pcSdToNode[i] >= -0.5 )
       {
-         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcSdToNode[i]);
+         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcdata->pcSdToNode[i]);
          flawed = TRUE;
       }
       if( extdata->tree_bottleneckDistNode[i] >= -0.5 )

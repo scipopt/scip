@@ -35,7 +35,7 @@
 #include "graph.h"
 #include "portab.h"
 #include "extreduce.h"
-#define EXT_REDCOST_NRECOMP 10
+#define EXT_COSTS_RECOMPBOUND 10
 
 
 /** insertion sort; todo
@@ -1108,13 +1108,12 @@ void extTreeSyncWithStack(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata,            /**< extension data */
-   int*                  ncostupdatestalls,  /**< update stalls counter */
    SCIP_Bool*            conflict            /**< conflict found? */
 )
 {
    const int stackposition = extStackGetPosition(extdata);
 
-   assert(scip && graph && extdata && ncostupdatestalls && conflict);
+   assert(scip && graph && extdata && conflict);
    assert(!(*conflict));
 
 #ifdef SCIP_DEBUG
@@ -1129,10 +1128,10 @@ void extTreeSyncWithStack(
    }
 
    /* recompute edge costs and reduced costs? */
-   if( ++(*ncostupdatestalls) > EXT_REDCOST_NRECOMP )
+   if( ++(extdata->ncostupdatestalls) > EXT_COSTS_RECOMPBOUND )
    {
       extTreeRecompCosts(scip, graph, extdata);
-      *ncostupdatestalls = 0;
+      extdata->ncostupdatestalls = 0;
    }
 
 #ifndef NDEBUG
@@ -1727,7 +1726,6 @@ void extCheckArcFromHead(
 {
    const int tail = graph->tail[edge];
    int* const extstack_state = extdata->extstack_state;
-   int nupdatestalls = 0;
    SCIP_Bool success = TRUE;
    SCIP_Bool conflict = FALSE;
 
@@ -1754,7 +1752,7 @@ void extCheckArcFromHead(
       const int stackposition = extStackGetPosition(extdata);
       conflict = FALSE;
 
-      extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
+      extTreeSyncWithStack(scip, graph, extdata, &conflict);
 
       /* has current component already been extended? */
       if( extstack_state[stackposition] == EXT_STATE_MARKED )
@@ -1885,6 +1883,7 @@ SCIP_RETCODE extreduce_checkArc(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
+         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1};
          REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
             .msts_levelbase = extpermanent->msts_levelbase,
             .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
@@ -1896,10 +1895,10 @@ SCIP_RETCODE extreduce_checkArc(
             .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap,
-            .tree_cost = 0.0, .tree_redcost = 0.0,
+            .tree_cost = 0.0, .tree_redcost = 0.0, .ncostupdatestalls = 0,
             .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
 			   .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
-            .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
+			   .pcdata = &pcdata,
 			   .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
             .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
@@ -1992,6 +1991,7 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
+         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1};
          REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
             .msts_levelbase = extpermanent->msts_levelbase,
             .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
@@ -2003,10 +2003,10 @@ SCIP_RETCODE extreduce_checkEdge(
             .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap,
-            .tree_cost = 0.0, .tree_redcost = 0.0,
+            .tree_cost = 0.0, .tree_redcost = 0.0, .ncostupdatestalls = 0,
             .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
 			   .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
-            .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
+            .pcdata = &pcdata,
 			   .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
 			    .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };

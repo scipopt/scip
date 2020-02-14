@@ -119,6 +119,16 @@ typedef struct reduction_data
 } REDDATA;
 
 
+/** PC/MW data; just used internally. */
+typedef struct pcmw_specific_data
+{
+  SCIP_Real* const pcSdToNode;                 /**< all entries need to be set to -1.0 */
+  int* const pcSdCands;
+  int nPcSdCands;
+  int pcSdStart;
+} PCDATA;
+
+
 /** extension data; just used internally */
 typedef struct extension_data
 {
@@ -133,11 +143,10 @@ typedef struct extension_data
    int* const tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost;        /**< of size nnodes */
    SCIP_Real* const tree_redcostSwap;           /**< of size nnodes */
-   SCIP_Real* const pcSdToNode;                 /**< needs to be set to -1.0, only needed of PC */
-   int* const pcSdCands;                        /**< needed only for PC */
    const SCIP_Bool* const node_isterm;          /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
+   PCDATA* const pcdata;
    SCIP_Real tree_redcost;
    SCIP_Real tree_cost;
    int tree_nDelUpArcs;
@@ -145,9 +154,8 @@ typedef struct extension_data
    int tree_nedges;
    int tree_depth;
    int tree_nleaves;
-   int nPcSdCands;                             /**< needed only for PC, todo: move to extra struct! */
-   int pcSdStart;                              /**< needed only for PC */
    int extstack_ncomponents;
+   int ncostupdatestalls;           /**< cost update stalls counter */
    const int extstack_maxncomponents;
    const int extstack_maxsize;
    const int tree_maxnleaves;

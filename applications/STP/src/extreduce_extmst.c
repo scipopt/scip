@@ -67,16 +67,16 @@ typedef struct mst_extension_tree_component
 static inline
 void extGetSdPcUpdate(
    const GRAPH*          g,                  /**< graph data structure */
+   const PCDATA*         pcdata,             /**< PC data */
    int                   vertex1,            /**< second vertex */
    int                   vertex2,            /**< second vertex */
-   SCIP_Real*            sd,                 /**< special distance */
-   EXTDATA*              extdata             /**< extension data */
+   SCIP_Real*            sd                  /**< special distance */
 )
 {
-   const SCIP_Real sdpc = extdata->pcSdToNode[vertex2];
+   const SCIP_Real sdpc = pcdata->pcSdToNode[vertex2];
 
    assert(graph_pc_isPcMw(g));
-   assert(extdata->pcSdStart == vertex1);
+   assert(pcdata->pcSdStart == vertex1);
    assert(EQ(sdpc, -1.0) || GE(sdpc, 0.0));
 
    if( sdpc > -0.5 && (sdpc < *sd || *sd < -0.5) )
@@ -99,12 +99,13 @@ SCIP_Real extGetSd(
 )
 {
    SCIP_Real sd = extreduce_distDataGetSd(scip, g, vertex1, vertex2, extdata->distdata);
+   const PCDATA* const pcdata = extdata->pcdata;
 
-   assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
+   assert((pcdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
 
-   if( extdata->pcSdToNode )
+   if( pcdata->pcSdToNode )
    {
-      extGetSdPcUpdate(g, vertex1, vertex2, &sd, extdata);
+      extGetSdPcUpdate(g, pcdata, vertex1, vertex2, &sd);
    }
 
    assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
@@ -127,12 +128,13 @@ SCIP_Real extGetSdDouble(
    // todo always use me??? test only after SD distances and pseudo-elimination are implemented!
 
    SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, extdata->distdata);
+   const PCDATA* const pcdata = extdata->pcdata;
 
-   assert((extdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
+   assert((pcdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
 
-   if( extdata->pcSdToNode )
+   if( pcdata->pcSdToNode )
    {
-      extGetSdPcUpdate(g, vertex1, vertex2, &sd, extdata);
+      extGetSdPcUpdate(g, pcdata, vertex1, vertex2, &sd);
    }
 
    assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
@@ -618,8 +620,9 @@ void pcSdToNodeMark(
    EXTDATA*              extdata             /**< extension data */
    )
 {
-   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
-   int* const pcSdCands = extdata->pcSdCands;
+   PCDATA* const pcdata = extdata->pcdata;
+   SCIP_Real* const pcSdToNode = pcdata->pcSdToNode;
+   int* const pcSdCands = pcdata->pcSdCands;
    const DCSR* const dcsr = graph->dcsr_storage;
    const RANGE* const range_csr = dcsr->range;
    const int* const head_csr = dcsr->head;
@@ -634,14 +637,14 @@ void pcSdToNodeMark(
    assert(graph_pc_isPcMw(graph));
    assert(pcSdCands && pcSdToNode && prize);
    assert(startvertex >= 0 && startvertex < graph->knots);
-   assert(extdata->nPcSdCands == -1);
-   assert(extdata->pcSdStart == -1);
+   assert(pcdata->nPcSdCands == -1);
+   assert(pcdata->pcSdStart == -1);
 
 #ifndef NDEBUG
-   extdata->pcSdStart = startvertex;
+   pcdata->pcSdStart = startvertex;
 #endif
 
-   extdata->nPcSdCands = 0;
+   pcdata->nPcSdCands = 0;
 
    for( int i = start; i != end; i++ )
    {
@@ -668,7 +671,7 @@ void pcSdToNodeMark(
 
                assert(0.0 == prize[head] || Is_term(graph->term[head]));
 
-               pcSdMarkSingle(graph, head2, dist2, pcSdToNode, pcSdCands, &(extdata->nPcSdCands));
+               pcSdMarkSingle(graph, head2, dist2, pcSdToNode, pcSdCands, &(pcdata->nPcSdCands));
             }
 
             if( count2++ > EXT_PC_SDMAXVISITS )
@@ -678,7 +681,7 @@ void pcSdToNodeMark(
       else
       {
          assert(head != startvertex);
-         pcSdMarkSingle(graph, head, edgecost, pcSdToNode, pcSdCands, &(extdata->nPcSdCands));
+         pcSdMarkSingle(graph, head, edgecost, pcSdToNode, pcSdCands, &(pcdata->nPcSdCands));
       }
 
       if( count1++ > EXT_PC_SDMAXVISITS )
@@ -695,15 +698,16 @@ void pcSdToNodeUnmark(
    EXTDATA*              extdata             /**< extension data */
    )
 {
-   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
-   const int* const pcSdCands = extdata->pcSdCands;
-   const int nPcSdCands = extdata->nPcSdCands;
+   PCDATA* const pcdata = extdata->pcdata;
+   SCIP_Real* const pcSdToNode = pcdata->pcSdToNode;
+   const int* const pcSdCands = pcdata->pcSdCands;
+   const int nPcSdCands = pcdata->nPcSdCands;
 
    assert(graph_pc_isPcMw(graph));
    assert(pcSdCands && pcSdToNode);
    assert(nPcSdCands >= 0);
-   assert(extdata->pcSdStart >= 0 && extdata->pcSdStart < graph->knots);
-   assert(startvertex == extdata->pcSdStart);
+   assert(pcdata->pcSdStart >= 0 && pcdata->pcSdStart < graph->knots);
+   assert(startvertex == pcdata->pcSdStart);
 
    for( int i = 0; i < nPcSdCands; i++ )
    {
@@ -715,8 +719,8 @@ void pcSdToNodeUnmark(
    }
 
 #ifndef NDEBUG
-   extdata->pcSdStart = -1;
-   extdata->nPcSdCands = -1;
+   pcdata->pcSdStart = -1;
+   pcdata->nPcSdCands = -1;
 #endif
 }
 
@@ -1011,9 +1015,10 @@ void bottleneckCheckNonLeaves(
    SCIP_Bool*            ruledOut            /**< could the extension be ruled out */
 )
 {
-   const int* const pcSdCands = extdata->pcSdCands;
+   const PCDATA* const pcdata = extdata->pcdata;
+   const int* const pcSdCands = pcdata->pcSdCands;
    const int* const tree_deg = extdata->tree_deg;
-   const int nPcSdCands = extdata->nPcSdCands;
+   const int nPcSdCands = pcdata->nPcSdCands;
    const int neighbor = graph->head[edge2neighbor];
    const int neighbor_base = graph->tail[edge2neighbor];
 
@@ -1580,7 +1585,7 @@ void mstLevelLeafInit(
 )
 {
    MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
-   const SCIP_Bool isPc = (extdata->pcSdToNode != NULL);
+   const SCIP_Bool isPc = (extdata->pcdata->pcSdToNode != NULL);
 
    assert(graph_pc_isPc(graph) == isPc);
 
@@ -1887,7 +1892,7 @@ void extreduce_mstLevelHorizontalAdd(
 {
    MLDISTS* const sds_horizontal = extdata->reddata->sds_horizontal;
    const int* const ghead = graph->head;
-   const SCIP_Bool isPc = (extdata->pcSdToNode != NULL);
+   const SCIP_Bool isPc = (extdata->pcdata->pcSdToNode != NULL);
 
    assert(nextedges > 0);
    assert(isPc == graph_pc_isPc(graph));
