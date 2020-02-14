@@ -12677,7 +12677,6 @@ SCIP_RETCODE SCIPgetConsExprBilinTerms(
       assert(entry != NULL);
       assert(entry->x != NULL);
       assert(entry->y != NULL);
-      assert(entry->auxvar != NULL);
       assert(SCIPvarCompare(entry->x, entry->y) < 1);
 
       xs[i] = entry->x;
@@ -12716,7 +12715,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
    {
-      SCIPswapPointers((void**)x, (void**)y);
+      SCIPswapPointers((void**)&x, (void**)&y);
    }
    assert(SCIPvarCompare(x, y) < 1);
 
@@ -12732,6 +12731,10 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
 
       *found = TRUE;
       *auxvar = image->auxvar;
+   }
+   else
+   {
+      *found = FALSE;
    }
 
    return SCIP_OKAY;
