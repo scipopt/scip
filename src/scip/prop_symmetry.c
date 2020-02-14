@@ -3889,6 +3889,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
          nweaksbcs += naddedconss;
 #endif
       }
+      else
+         SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used or the settings forbid it\n");
+
+      SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
+      SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
+      SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
+      SCIPfreeBufferArrayNull(scip, &usedperms);
    }
 
 #ifdef SCIP_DEBUG
