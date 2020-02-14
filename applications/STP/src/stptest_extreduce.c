@@ -858,6 +858,83 @@ SCIP_RETCODE testEdgeDeletion1_deprecated(
 }
 
 
+
+/** tests that edge can be deleted by exploiting that two vertices have the
+ *  same reduced costs closest terminal */
+static
+SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 15;
+   const int nedges = 64; /* just some upper bound */
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+   const int firstdummynode = 6;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+
+   /* add dummy nodes 6-14 */
+   for( int i = firstdummynode; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 5, 1.0);
+   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 1.9);
+   graph_edge_addBi(scip, graph, 0, 4, 1.9);
+
+   /* also add dummy edges to avoid extension */
+   for( int i = firstdummynode; i < nnodes; i++ )
+   {
+      graph_edge_addBi(scip, graph, 3, i, 1.0);
+      graph_edge_addBi(scip, graph, 4, i, 1.0);
+   }
+
+   SCIP_CALL( extSetUpGraph(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   /* put 5 as first target for both nodes 3 and 4 and set the distance to the second target too high */
+   redcostdata.nodeTo3TermsBases[3] = 5;
+   redcostdata.nodeTo3TermsBases[4] = 5;
+   redcostdata.nodeTo3TermsPaths[3 + nnodes].dist = cutoff + 0.1;
+   redcostdata.nodeTo3TermsPaths[4 + nnodes].dist = cutoff + 0.1;
+
+   SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
+
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+
+   extTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that edge can be deleted by using SD MST argument */
 static
 SCIP_RETCODE testEdgeDeletedByMst1(
@@ -1197,6 +1274,7 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
+   SCIP_CALL( testEdgeDeletedByCommonRedCostsTargets(scip) );
    SCIP_CALL( testEdgeDeletedByMst2(scip) );
    SCIP_CALL( testEdgeDeletedByMst1(scip) );
 
