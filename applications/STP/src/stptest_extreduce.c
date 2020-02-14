@@ -122,7 +122,7 @@ void extTearDown(
    assert(graph == NULL);
 }
 
-/** sets up graph and redcost data */
+/** sets up graph */
 static
 SCIP_RETCODE extSetUpGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -136,6 +136,26 @@ SCIP_RETCODE extSetUpGraph(
 
    return SCIP_OKAY;
 }
+
+
+/** sets up graph for (undirected) PC */
+static
+SCIP_RETCODE extSetUpGraphPc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   graph->stp_type = STP_PCSPG;
+
+   SCIP_CALL( graph_pc_2pc(scip, graph) );
+
+   extSetUpGraph(scip, graph);
+
+   graph_pc_2org(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** initializes to default */
@@ -167,6 +187,27 @@ void extInitRedCostArrays(
 
    for( int i = 0; i < nedges; i++ )
       redcost[i] = 0.0;
+}
+
+
+/** initializes to default for PC */
+static
+void extInitRedCostArraysPc(
+   const GRAPH*          graph,              /**< the graph */
+   REDCOST*              redcostdata         /**< reduced costs data */
+)
+{
+   const int nnodes = graph->knots;
+   int* const vbase3 = redcostdata->nodeTo3TermsBases;
+
+   assert(graph_pc_isPc(graph));
+
+   extInitRedCostArrays(graph, redcostdata);
+
+   for( int i = 0; i < 3 * nnodes; i++ )
+   {
+      vbase3[i] = 0;
+   }
 }
 
 
@@ -397,6 +438,263 @@ SCIP_RETCODE testMldistsStoring(
    extreduce_mldistsLevelRemoveTop(mldists);
 
    extreduce_mldistsFree(scip, &mldists);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** test close nodes are computed correctly */
+static
+SCIP_RETCODE testDistCloseNodesAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 55;
+   const int nedges = 28;
+   const int root = 0;
+   const int nclosenodes = 2;         /**< max. number of close nodes to each node */
+
+   DISTDATA distdata;
+
+   assert(scip);
+
+   /* 1. build a test graph */
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, 0);
+
+   /* also add dummy nodes to avoid full stack */
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = root;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.4);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 0.5);
+   graph_edge_addBi(scip, graph, 3, 6, 1.6);
+   graph_edge_addBi(scip, graph, 3, 7, 1.6);
+   graph_edge_addBi(scip, graph, 4, 8, 1.5);
+   graph_edge_addBi(scip, graph, 4, 9, 1.5);
+   graph_edge_addBi(scip, graph, 5, 10, 1.0);
+   graph_edge_addBi(scip, graph, 10, 11, 1.0);
+   graph_edge_addBi(scip, graph, 11, 12, 1.0);
+
+   graph_mark(graph);
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   /* test close nodes */
+   {
+      const RANGE* node_range = distdata.closenodes_range;
+      const int* node_idx = distdata.closenodes_indices;
+#if 0
+      const SCIP_Real* node_dist = distdata.closenodes_distances;
+
+      for( int node = 0; node < 6; node++ )
+      {
+         printf("node %d: \n", node);
+
+         for( int i = node_range[node].start; i < node_range[node].end; i++ )
+         {
+            printf("...closenode=%d  dist=%f\n", node_idx[i], node_dist[i]);
+         }
+      }
+#endif
+
+      STPTEST_ASSERT(node_idx[node_range[1].start] == 2);
+      STPTEST_ASSERT(node_idx[node_range[1].start + 1] == 5);
+      STPTEST_ASSERT(node_idx[node_range[5].start] == 1);
+      STPTEST_ASSERT(node_idx[node_range[5].start + 1] == 2);
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** test root paths are computed correctly */
+static
+SCIP_RETCODE testDistRootPathsAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 55;
+   const int nedges = 28;
+   const int root = 0;
+   const int nclosenodes = 2;         /**< max. number of close nodes to each node */
+
+   DISTDATA distdata;
+
+   assert(scip);
+
+   /* 1. build a test graph */
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, 0);
+
+   /* also add dummy nodes to avoid full stack */
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = root;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.4);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 0.5);
+   graph_edge_addBi(scip, graph, 3, 6, 1.6);
+   graph_edge_addBi(scip, graph, 3, 7, 1.6);
+   graph_edge_addBi(scip, graph, 4, 8, 1.5);
+   graph_edge_addBi(scip, graph, 4, 9, 1.5);
+   graph_edge_addBi(scip, graph, 5, 10, 1.0);
+   graph_edge_addBi(scip, graph, 10, 11, 1.0);
+   graph_edge_addBi(scip, graph, 11, 12, 1.0);
+
+   graph_mark(graph);
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   /* test edge root paths */
+   {
+      const int edge = 2;
+      PRSTATE** pathroot_blocks = distdata.pathroot_blocks;
+      int* pathroot_blocksizes = distdata.pathroot_blocksizes;
+
+
+#ifdef SCIP_DEBUG
+      printf("edge ");
+      graph_edge_printInfo(graph, edge);
+#endif
+
+      STPTEST_ASSERT(graph->head[edge] == 2 && graph->tail[edge] == 1);
+      STPTEST_ASSERT(pathroot_blocksizes[edge / 2] == 6);
+
+      for( int i = 0; i < pathroot_blocksizes[edge / 2]; i++ )
+         SCIPdebugMessage("...root=%d  \n", pathroot_blocks[edge / 2][i].pathroot_id);
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** test that distances are computed correctly */
+static
+SCIP_RETCODE testDistDistancesAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 55;
+   const int nedges = 28;
+   const int root = 0;
+   const int nclosenodes = 2;         /**< max. number of close nodes to each node */
+
+   DISTDATA distdata;
+
+   assert(scip);
+
+   /* 1. build a test graph */
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, STP_TERM);
+
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = root;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.4);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 0.5);
+   graph_edge_addBi(scip, graph, 3, 6, 1.6);
+   graph_edge_addBi(scip, graph, 3, 7, 1.6);
+   graph_edge_addBi(scip, graph, 4, 8, 1.5);
+   graph_edge_addBi(scip, graph, 4, 9, 1.5);
+   graph_edge_addBi(scip, graph, 5, 10, 1.0);
+   graph_edge_addBi(scip, graph, 10, 11, 1.0);
+   graph_edge_addBi(scip, graph, 11, 12, 1.0);
+
+   graph_mark(graph);
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* test distances */
+   {
+      const int edge = 2;
+      const SCIP_Real dist1_2 = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
+      const SCIP_Real dist1_3 = extreduce_distDataGetSd(scip, graph, 1, 3, &distdata);
+      const SCIP_Real dist1_5 = extreduce_distDataGetSd(scip, graph, 1, 5, &distdata);
+      const SCIP_Real dist2_1 = extreduce_distDataGetSd(scip, graph, 2, 1, &distdata);
+      const SCIP_Real dist2_5 = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
+      const SCIP_Real dist2_6 = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
+
+      STPTEST_ASSERT(dist1_2 == 0.4);
+      STPTEST_ASSERT(dist1_3 == -1.0);
+      STPTEST_ASSERT(dist1_5 == 0.9);
+      STPTEST_ASSERT(dist2_1 == 0.4);
+      STPTEST_ASSERT(dist2_5 == 0.5);
+      STPTEST_ASSERT(dist2_6 == -1.0);
+
+      assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
+      graph_edge_delFull(scip, graph, edge, TRUE);
+      extreduce_distDataDeleteEdge(scip, graph, edge, &distdata);
+
+      {
+         const SCIP_Real dist1_2_b = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
+         const SCIP_Real dist2_6_b = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
+         const SCIP_Real dist2_5_b = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
+
+         STPTEST_ASSERT(dist1_2_b == -1.0);
+         STPTEST_ASSERT(dist2_6_b == -1.0);
+         STPTEST_ASSERT(dist2_5_b == 0.5);
+      }
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
 
    return SCIP_OKAY;
 }
@@ -1110,147 +1408,73 @@ SCIP_RETCODE testEdgeNotDeleted1(
 }
 
 
+
+/** tests that edge can be deleted by using SD MST argument */
 static
-SCIP_RETCODE extDistTest(
+SCIP_RETCODE testPcEdgeDeletedByMst1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   REDCOST redcostdata;
    GRAPH* graph;
-   const int nnodes = 55;
-   const int nedges = 28;
+   const int nnodes = 5;
+   const int nedges = 16;
    const int root = 0;
-   const int nclosenodes = 2;         /**< max. number of close nodes to each node */
-
-   DISTDATA distdata;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
 
    assert(scip);
 
-   /* 1. build a test graph */
+   /* we need to leave some spare space */
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes * 3, nedges * 3, cutoff, root, &redcostdata) );
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
-   graph_knot_add(graph, 0);
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
 
-   /* also add dummy nodes to avoid full stack */
-   for( int i = 1; i < nnodes; i++ )
-      graph_knot_add(graph, -1);
-
-   graph->source = root;
+   graph->source = 0;
 
    graph_edge_addBi(scip, graph, 0, 1, 1.0);
-   graph_edge_addBi(scip, graph, 1, 2, 0.4);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
    graph_edge_addBi(scip, graph, 1, 3, 1.0);
    graph_edge_addBi(scip, graph, 1, 4, 1.0);
 
-   graph_edge_addBi(scip, graph, 2, 5, 0.5);
-   graph_edge_addBi(scip, graph, 3, 6, 1.6);
-   graph_edge_addBi(scip, graph, 3, 7, 1.6);
-   graph_edge_addBi(scip, graph, 4, 8, 1.5);
-   graph_edge_addBi(scip, graph, 4, 9, 1.5);
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 2, 1.4);
+   graph_edge_addBi(scip, graph, 0, 3, 1.4);
+   graph_edge_addBi(scip, graph, 0, 4, 1.4);
+   graph_edge_addBi(scip, graph, 2, 3, 1.1);
 
-   graph_edge_addBi(scip, graph, 5, 10, 1.0);
-   graph_edge_addBi(scip, graph, 10, 11, 1.0);
-   graph_edge_addBi(scip, graph, 11, 12, 1.0);
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
-   graph_mark(graph);
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 100.0;
 
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
+   graph->prize[1] = 0.11;
 
-   SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extSetUpGraphPc(scip, graph) );
 
-   /* 2. do the actual test */
+   extInitRedCostArraysPc(graph, &redcostdata);
 
-#ifndef NDEBUG
-   /* test close nodes */
-   {
-      const RANGE* node_range = distdata.closenodes_range;
-      const int* node_idx = distdata.closenodes_indices;
-#ifdef SCIP_DEBUG
-      const SCIP_Real* node_dist = distdata.closenodes_distances;
+   SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
 
-      for( int node = 0; node < 6; node++ )
-      {
-         printf("node %d: \n", node);
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
 
-         for( int i = node_range[node].start; i < node_range[node].end; i++ )
-         {
-            printf("...closenode=%d  dist=%f\n", node_idx[i], node_dist[i]);
-         }
-      }
-#endif
+   extTearDown(scip, graph, &redcostdata);
 
-      assert(node_idx[node_range[1].start] == 2);
-      assert(node_idx[node_range[1].start + 1] == 5);
-      assert(node_idx[node_range[5].start] == 1);
-      assert(node_idx[node_range[5].start + 1] == 2);
-   }
+   assert(0);
 
-   /* test edge root paths */
-   {
-      const int edge = 2;
-      PRSTATE** pathroot_blocks = distdata.pathroot_blocks;
-      int* pathroot_blocksizes = distdata.pathroot_blocksizes;
-
-
-#ifdef SCIP_DEBUG
-      printf("edge ");
-      graph_edge_printInfo(graph, edge);
-#endif
-
-      assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
-      assert(pathroot_blocksizes[edge / 2] == 6);
-
-      for( int i = 0; i < pathroot_blocksizes[edge / 2]; i++ )
-         SCIPdebugMessage("...root=%d  \n", pathroot_blocks[edge / 2][i].pathroot_id);
-   }
-#endif
-
-
-   /* test distances */
-#ifndef NDEBUG
-   {
-      const int edge = 2;
-      const SCIP_Real dist1_2 = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
-      const SCIP_Real dist1_3 = extreduce_distDataGetSd(scip, graph, 1, 3, &distdata);
-      const SCIP_Real dist1_5 = extreduce_distDataGetSd(scip, graph, 1, 5, &distdata);
-      const SCIP_Real dist2_1 = extreduce_distDataGetSd(scip, graph, 2, 1, &distdata);
-      const SCIP_Real dist2_5 = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
-      const SCIP_Real dist2_6 = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
-
-      assert(dist1_2 == 0.4);
-      assert(dist1_3 == -1.0);
-      assert(dist1_5 == 0.9);
-      assert(dist2_1 == 0.4);
-      assert(dist2_5 == 0.5);
-      assert(dist2_6 == -1.0);
-
-      assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
-      graph_edge_delFull(scip, graph, edge, TRUE);
-      extreduce_distDataDeleteEdge(scip, graph, edge, &distdata);
-
-      {
-         const SCIP_Real dist1_2_b = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
-         const SCIP_Real dist2_6_b = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
-         const SCIP_Real dist2_5_b = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
-
-         assert(dist1_2_b == -1.0);
-         assert(dist2_6_b == -1.0);
-         assert(dist2_5_b == 0.5);
-      }
-   }
-#endif
-
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
-   graph_free_dcsr(scip, graph);
-
-   graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-   assert(graph == NULL);
 
    return SCIP_OKAY;
 }
+
 
 /** tests for mldists */
 SCIP_RETCODE stptest_extmldists(
@@ -1274,6 +1498,11 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
+
+
+   SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
+
+
    SCIP_CALL( testEdgeDeletedByCommonRedCostsTargets(scip) );
    SCIP_CALL( testEdgeDeletedByMst2(scip) );
    SCIP_CALL( testEdgeDeletedByMst1(scip) );
@@ -1293,7 +1522,9 @@ SCIP_RETCODE stptest_extreduce(
    SCIP_CALL( testEdgeDeletion2_deprecated(scip, 1) );
    SCIP_CALL( testEdgeDeletion1_deprecated(scip) );
 
-   SCIP_CALL( extDistTest(scip) );
+   SCIP_CALL( testDistCloseNodesAreValid(scip) );
+   SCIP_CALL( testDistRootPathsAreValid(scip) );
+   SCIP_CALL( testDistDistancesAreValid(scip) );
 
    printf("extreduce test: all ok \n");
 
