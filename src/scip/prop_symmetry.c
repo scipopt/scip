@@ -2619,16 +2619,16 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int j;
    SCIP_Bool foundperm;
 
-   assert(scip != NULL);
-   assert(perms != NULL);
-   assert(activeperms != NULL);
-   assert(orbitopevaridx != NULL);
-   assert(columnorder != NULL);
-   assert(nusedelems != NULL);
-   assert(isorbitope != NULL);
-   assert(nactiveperms > 0);
-   assert(ntwocycles > 0);
-   assert(npermvars > 0);
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( activeperms != NULL );
+   assert( orbitopevaridx != NULL );
+   assert( columnorder != NULL );
+   assert( nusedelems != NULL );
+   assert( isorbitope != NULL );
+   assert( nactiveperms > 0 );
+   assert( ntwocycles > 0 );
+   assert( npermvars > 0 );
 
    *isorbitope = TRUE;
 
@@ -3089,7 +3089,7 @@ SCIP_RETCODE buildSubgroupGraph(
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
 
-         if( color1 != color2 )
+         if ( color1 != color2 )
          {
             SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
             SCIPdisjointsetUnion(comptocolor, firstcolor, color2, TRUE);
@@ -3368,7 +3368,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* the first component that we are looking at for this color */
             if ( largestcompsize < 1 )
             {
-               if( compsize < 3 )
+               if ( compsize < 3 )
                {
                   isorbitope = FALSE;
 
@@ -3551,7 +3551,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPfreeBufferArray(scip, &orbitopevaridx);
             SCIPhashsetFree(&activevars, SCIPblkmem(scip));
          }
-         else if( ! propdata->onlybinsubgroups )
+         else if ( ! propdata->onlybinsubgroups )
          {
             assert( largestcolorcomp >= 0 );
             assert( largestcolorcomp < ngraphcomponents );
@@ -3696,7 +3696,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             assert( orbit[activeorb][0] == firstvaridxpercolor[chosencolor] );
             vars[0] = propdata->permvars[orbit[activeorb][0]];
 
-            assert(chosencolor > -1);
+            assert( chosencolor > -1 );
             SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
                orbitsize[activeorb]-1, chosencolor);
 
