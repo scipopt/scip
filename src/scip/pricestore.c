@@ -449,11 +449,8 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                   SCIPsetDebugMsg(set, "  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
 
-               /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
-                * we must add variables with negative feasibility, but in order to not get a too large lower bound
-                * due to missing columns, we better also add variables, that have a very small feasibility
-                */
-               if( !SCIPsetIsPositive(set, feasibility) )
+               /* add variable if feasibility is negative, i.e., the reduced costs are negative */
+               if( ! SCIPsetIsDualfeasNegative(set, feasibility) )
                {
                   SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;
