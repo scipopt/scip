@@ -281,6 +281,8 @@ SCIP_RETCODE varIsSemicontinuous(
    return SCIP_OKAY;
 }
 
+/* TODO keeping the unused functions for now, will decide if they are needed later */
+#ifdef SCIP_DISABLED_CODE
 /** adds an expression to the array of on/off expressions */
 static
 SCIP_RETCODE addOnoffTerm(
@@ -579,6 +581,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
 
    return SCIP_OKAY;
 }
+#endif
 
 /* checks if an expression is semicontinuous
  *
@@ -586,10 +589,10 @@ SCIP_RETCODE addPerspectiveLinearisation(
  * and share at least one common indicator variable */
 static
 SCIP_RETCODE exprIsSemicontinuous(
-   SCIP*                         scip,            /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLRDATA*     nlhdlrdata,      /**< nonlinear handler data */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,  /**< nlhdlr expression data */
-   SCIP_Bool*                    res              /**< buffer to store whether the expression is semicontinuous */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_Bool*            res                 /**< buffer to store whether the expression is semicontinuous */
    )
 {
    int v;
@@ -666,13 +669,13 @@ SCIP_RETCODE exprIsSemicontinuous(
 /** add the cut given by rowprep to sepastore */
 static
 SCIP_RETCODE addCut(
-   SCIP*         scip,
-   SCIP_CONS*    cons,
-   SCIP_ROWPREP* rowprep,
-   SCIP_SOL*     sol,
-   double        mincutviolation,
-   int*          ncuts,
-   SCIP_RESULT*  result
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   double                mincutviolation,    /**< minimal acceptable cut violation */
+   int*                  ncuts,              /**< pointer to store the number of added cuts */
+   SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
    SCIP_Bool success;
@@ -714,8 +717,8 @@ SCIP_RETCODE addCut(
 /** frees nlhdlrexprdata structure */
 static
 SCIP_RETCODE freeNlhdlrExprData(
-   SCIP*                         scip,            /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata   /**< nlhdlr expression data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
    )
 {
    int c;
@@ -799,7 +802,6 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
 }
 
 
-
 /** callback to be called in initialization */
 #if 0
 static
@@ -822,11 +824,11 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 /** find the 'off' value of the expression for each indicator var */
 static
 SCIP_RETCODE computeOffValues(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata,
-   SCIP_CONSEXPR_EXPR*   expr
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
 )
 {
    SCIP_SOL* sol0;
@@ -1023,7 +1025,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 { /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
-   int i, j;
+   int i;
+   int j;
    SCIP_CONSEXPR_EXPR* pexpr;
    SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
@@ -1252,7 +1255,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    /* create nonlinear handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
-
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
       NLHDLR_ENFOPRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
