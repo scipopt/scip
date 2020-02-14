@@ -7336,7 +7336,7 @@ SCIP_RETCODE bilinearHashTableResize(
 
 /** inserts the variables of a bilinear term into the hash table */
 static
-SCIP_RETCODE bilinearHashInsert(
+SCIP_RETCODE bilinearHashTableInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             x,                  /**< first variable */
@@ -7391,7 +7391,7 @@ SCIP_RETCODE bilinearHashInsert(
  *  hash table
  */
 static
-SCIP_RETCODE bilinearHashInsertAll(
+SCIP_RETCODE bilinearHashTableInsertAll(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< expression constraints */
@@ -8212,7 +8212,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
 
    /* collect all bilinear terms */
-   SCIP_CALL( bilinearHashInsertAll(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( bilinearHashTableInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
