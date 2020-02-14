@@ -66,8 +66,10 @@ CMAINOBJ	=	cmain.o \
 			dualascent.o \
 			extreduce_base.o \
 			extreduce_core.o \
+			extreduce_data.o \
 			extreduce_dbg.o \
 			extreduce_extmst.o \
+			extreduce_redcosts.o \
 			extreduce_util.o \
 			graph_history.o \
 			graph_base.o \

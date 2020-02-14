@@ -262,13 +262,6 @@ extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int,
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
-extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
-extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
-extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
-extern void               extreduce_extdataClean(EXTDATA*);
-extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
-extern void               extreduce_reddataClean(REDDATA*);
-extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
 extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
@@ -320,9 +313,27 @@ extern SCIP_Real  extreduce_extGetSdProperDouble(SCIP*, const GRAPH*, int, int, 
 extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
 
 
+/* extreduce_recosts.c
+ */
+extern void            extreduce_redcostAddEdge(const GRAPH*, int, SCIP_Bool, const REDDATA*, EXTDATA*);
+extern void            extreduce_redcostRemoveEdge(int, const REDDATA*, EXTDATA*);
+extern SCIP_Bool       extreduce_redcostReverseTreeRuledOut(const GRAPH*, const EXTDATA*);
+extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
+
+
+/* extreduce_data.c
+ */
+extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
+extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
+extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
+extern void               extreduce_extdataClean(EXTDATA*);
+extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
+extern void               extreduce_reddataClean(REDDATA*);
+extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
+
+
 /* extreduce_dbg.c
  */
-
 extern int             extreduce_extStackCompSize(const EXTDATA*, int);
 extern SCIP_Bool       extreduce_stackTopIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);

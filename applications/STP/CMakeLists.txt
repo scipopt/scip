@@ -16,8 +16,10 @@ add_executable(scipstp
     src/event_bestsol.c
     src/extreduce_base.c
     src/extreduce_core.c
+    src/extreduce_data.c
     src/extreduce_dbg.c
     src/extreduce_extmst.c
+    src/extreduce_redcosts.c
     src/extreduce_util.c
     src/graph_history.c
     src/graph_base.c
