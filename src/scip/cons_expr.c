@@ -140,6 +140,7 @@ struct BilinearHashEntry
    SCIP_VAR*             x;                  /**< first variable */
    SCIP_VAR*             y;                  /**< second variable */
    SCIP_VAR*             auxvar;             /**< auxiliary variable for the product of x and y */
+   int                   index;              /**< index in the bilinentries array in the data of the constraint handler */
 };
 typedef struct BilinearHashEntry BILINEARHASHENTRY;
 
@@ -248,7 +249,7 @@ struct SCIP_ConshdlrData
 
    /* hashing of bilinear terms */
    SCIP_HASHTABLE*          bilinhashtable;  /**< hash table for bilinear terms */
-   BILINEARHASHENTRY**      bilinentries;    /**< bilinear hash entries */
+   BILINEARHASHENTRY*       bilinentries;    /**< bilinear hash entries */
    int                      nbilinentries;   /**< total number of bilinear hash entries */
    int                      bilinentriessize;/**< size of bilinentries array */
 };
@@ -7242,7 +7243,16 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
 static
 SCIP_DECL_HASHGETKEY(bilinearHashTableGetHashkey)
 {  /*lint --e{715}*/
-   return elem;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int index;
+
+   conshdlrdata = (SCIP_CONSHDLRDATA*)userptr;
+   assert(conshdlrdata != NULL);
+
+   index = ((int)(size_t)elem) - 1;
+   assert(index >= 0 && index < conshdlrdata->nbilinentries);
+
+   return (void*)&conshdlrdata->bilinentries[index];
 }
 
 /** returns TRUE iff the bilinear term entries are equal */
@@ -7252,6 +7262,7 @@ SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
    BILINEARHASHENTRY* entry1;
    BILINEARHASHENTRY* entry2;
 
+   /* get corresponding entries */
    entry1 = (BILINEARHASHENTRY*)key1;
    entry2 = (BILINEARHASHENTRY*)key2;
    assert(entry1->x != NULL && entry1->y != NULL);
@@ -7267,6 +7278,7 @@ static
 SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
 {  /*lint --e{715}*/
    BILINEARHASHENTRY* entry;
+   int index;
 
    entry = (BILINEARHASHENTRY*)key;
    assert(entry->x != NULL && entry->y != NULL);
@@ -7291,7 +7303,7 @@ SCIP_RETCODE bilinearHashTableCreate(
    /* create hash table */
    SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), 10,
       bilinearHashTableGetHashkey, bilinearHashTableIsHashkeyEq, bilinearHashTableGetHashkeyVal,
-      conshdlrdata) );
+      (void*)conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -7351,15 +7363,13 @@ SCIP_RETCODE bilinearHashInsert(
    /* ensure size of bilinentries array */
    SCIP_CALL( bilinearHashTableResize(scip, conshdlrdata, conshdlrdata->nbilinentries + 1) );
 
-   /* allocate memory for a new bilinear term entry */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata->bilinentries[conshdlrdata->nbilinentries]) ); /*lint !e866*/
-
    /* set values in the created entry */
-   entry = conshdlrdata->bilinentries[conshdlrdata->nbilinentries];
+   entry = &conshdlrdata->bilinentries[conshdlrdata->nbilinentries];
    assert(entry != NULL);
    entry->x = x;
    entry->y = y;
    entry->auxvar = auxvar;
+   entry->index = conshdlrdata->nbilinentries;
 
    /* capture variable */
    SCIP_CALL( SCIPcaptureVar(scip, x) );
@@ -7372,8 +7382,10 @@ SCIP_RETCODE bilinearHashInsert(
    /* increase the total number of entries */
    ++(conshdlrdata->nbilinentries);
 
-   /* insert new entry into the hash table */
-   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)entry) );
+   /* insert the index of the new entry into the hash table; note that the index of the i-th element is (i+1) because
+    * zero can not be inserted into hash table
+    */
+   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)conshdlrdata->nbilinentries) );
 
    return SCIP_OKAY;
 }
@@ -7489,24 +7501,18 @@ SCIP_RETCODE bilinearHashTableFree(
    for( i = 0; i < conshdlrdata->nbilinentries; ++i )
    {
       /* it might be that there is a bilinear term without a corresponding auxiliary variable */
-      if( conshdlrdata->bilinentries[i]->auxvar != NULL )
+      if( conshdlrdata->bilinentries[i].auxvar != NULL )
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->auxvar) );
+         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].auxvar) );
       }
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->y) );
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->x) );
-   }
-
-   /* free memory for the bilinear hash entries */
-   for( i = 0; i < conshdlrdata->nbilinentries; ++i )
-   {
-      SCIPfreeBlockMemory(scip, &conshdlrdata->bilinentries[i]); /*lint !e866*/
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].y) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i].x) );
    }
 
    /* free hash table */
    SCIPhashtableFree(&conshdlrdata->bilinhashtable);
 
-   /* free structures in constraint handler data */
+   /* free bilinentries array; reset counters */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bilinentries, conshdlrdata->bilinentriessize);
    conshdlrdata->nbilinentries = 0;
    conshdlrdata->bilinentriessize = 0;
@@ -12675,7 +12681,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTerms(
    /* iterate through all stored bilinear terms */
    for( i = 0; i < conshdlrdata->nbilinentries; ++i )
    {
-      BILINEARHASHENTRY* entry = conshdlrdata->bilinentries[i];
+      BILINEARHASHENTRY* entry = &conshdlrdata->bilinentries[i];
       assert(entry != NULL);
       assert(entry->x != NULL);
       assert(entry->y != NULL);
@@ -12702,8 +12708,8 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   BILINEARHASHENTRY* image;
    BILINEARHASHENTRY entry;
+   int index;
 
    assert(consexprhdlr != NULL);
    assert(x != NULL);
@@ -12724,10 +12730,13 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    /* use a new entry to find the image in the bilinear hash table */
    entry.x = x;
    entry.y = y;
-   image = SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry);
+   index = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
+   assert(index >= -1 && index < conshdlrdata->nbilinentries);
 
-   if( image != NULL )
+   /* the index is -1 if the entry does not exist */
+   if( index >= 0 )
    {
+      BILINEARHASHENTRY* image = &conshdlrdata->bilinentries[index];
       assert(image->x == x);
       assert(image->y == y);
 
