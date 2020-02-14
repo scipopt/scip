@@ -1064,6 +1064,41 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
+/** returns the total number of bilinear terms that are contained in all expression constraints
+ *
+ *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprNBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns all bilinear terms that are contained in all expression constraints
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The value of auxvars[i] might be NULL, which indicates that xs[i] * ys[i] does not have an auxiliary variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR**                 xs,             /**< array to store first variables */
+   SCIP_VAR**                 ys,             /**< array to store second variables */
+   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables */
+   );
+
+/** returns the auxiliary variable of a bilinear term, if it exists
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y,              /**< second variable */
+   SCIP_VAR**                 auxvar,         /**< pointer to store auxiliary variable (might be NULL) */
+   SCIP_Bool*                 found           /**< pointer to store whether the bilinear term xy exists */
+);
+
 /** upgrading method for expression constraints into more specific constraints
  *
  * the method might upgrade an expression constraint into a set of upgrade constraints

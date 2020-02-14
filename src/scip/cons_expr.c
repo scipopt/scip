@@ -12629,6 +12629,115 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    return conshdlrdata->lastboundrelax;
 }
 
+/** returns the total number of bilinear terms that are contained in all expression constraints
+ *
+ *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+int SCIPgetConsExprNBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nbilinentries;
+}
+
+/** returns all bilinear terms that are contained in all expression constraints
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The value of auxvars[i] might be NULL, which indicates that xs[i] * ys[i] does not have an auxiliary variable.
+ */
+SCIP_RETCODE SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR**                 xs,             /**< array to store first variables */
+   SCIP_VAR**                 ys,             /**< array to store second variables */
+   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(consexprhdlr != NULL);
+   assert(xs != NULL);
+   assert(ys != NULL);
+   assert(auxvars != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* iterate through all stored bilinear terms */
+   for( i = 0; i < conshdlrdata->nbilinentries; ++i )
+   {
+      BILINEARHASHENTRY* entry = conshdlrdata->bilinentries[i];
+      assert(entry != NULL);
+      assert(entry->x != NULL);
+      assert(entry->y != NULL);
+      assert(entry->auxvar != NULL);
+      assert(SCIPvarCompare(entry->x, entry->y) < 1);
+
+      xs[i] = entry->x;
+      ys[i] = entry->y;
+      auxvars[i] = entry->auxvar;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns the auxiliary variable of a bilinear term, if it exists
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y,              /**< second variable */
+   SCIP_VAR**                 auxvar,         /**< pointer to store auxiliary variable */
+   SCIP_Bool*                 found           /**< pointer to store whether the bilinear term xy exists */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   BILINEARHASHENTRY* image;
+   BILINEARHASHENTRY entry;
+
+   assert(consexprhdlr != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(auxvar != NULL);
+   assert(found != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)x, (void**)y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* use a new entry to find image in the hash table */
+   entry.x = x;
+   entry.y = y;
+   image = SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry);
+
+   if( image != NULL )
+   {
+      assert(image->x == x);
+      assert(image->y == y);
+
+      *found = TRUE;
+      *auxvar = image->auxvar;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(
