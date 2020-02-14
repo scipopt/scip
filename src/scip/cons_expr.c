@@ -7240,7 +7240,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
 
 /** hash key retrieval function for bilinear term entries */
 static
-SCIP_DECL_HASHGETKEY(bilinearHashTableGetHashkey)
+SCIP_DECL_HASHGETKEY(bilinearTermsGetHashkey)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int idx;
@@ -7256,7 +7256,7 @@ SCIP_DECL_HASHGETKEY(bilinearHashTableGetHashkey)
 
 /** returns TRUE iff the bilinear term entries are equal */
 static
-SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
+SCIP_DECL_HASHKEYEQ(bilinearTermsIsHashkeyEq)
 {  /*lint --e{715}*/
    BILINEARHASHENTRY* entry1;
    BILINEARHASHENTRY* entry2;
@@ -7274,7 +7274,7 @@ SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
 
 /** returns the hash value of the key */
 static
-SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
+SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
 {  /*lint --e{715}*/
    BILINEARHASHENTRY* entry;
 
@@ -7287,7 +7287,7 @@ SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
 
 /** creates hash table for bilinear terms */
 static
-SCIP_RETCODE bilinearHashTableCreate(
+SCIP_RETCODE bilinearTermsCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
@@ -7300,7 +7300,7 @@ SCIP_RETCODE bilinearHashTableCreate(
 
    /* create hash table */
    SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), 10,
-      bilinearHashTableGetHashkey, bilinearHashTableIsHashkeyEq, bilinearHashTableGetHashkeyVal,
+      bilinearTermsGetHashkey, bilinearTermsIsHashkeyEq, bilinearTermsGetHashkeyVal,
       (void*)conshdlrdata) );
 
    return SCIP_OKAY;
@@ -7308,7 +7308,7 @@ SCIP_RETCODE bilinearHashTableCreate(
 
 /** resizes hash table for bilinear terms */
 static
-SCIP_RETCODE bilinearHashTableResize(
+SCIP_RETCODE bilinearTermsResize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    int                   reqsize             /**< required size */
@@ -7334,9 +7334,9 @@ SCIP_RETCODE bilinearHashTableResize(
    return SCIP_OKAY;
 }
 
-/** inserts the variables of a bilinear term into the hash table */
+/** stores the variables of a bilinear term in the data of the constraint handler */
 static
-SCIP_RETCODE bilinearHashTableInsert(
+SCIP_RETCODE bilinearTermsInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             x,                  /**< first variable */
@@ -7359,7 +7359,7 @@ SCIP_RETCODE bilinearHashTableInsert(
    assert(SCIPvarCompare(x, y) < 1);
 
    /* ensure size of bilinentries array */
-   SCIP_CALL( bilinearHashTableResize(scip, conshdlrdata, conshdlrdata->nbilinentries + 1) );
+   SCIP_CALL( bilinearTermsResize(scip, conshdlrdata, conshdlrdata->nbilinentries + 1) );
 
    /* set values in the created entry */
    entry = &conshdlrdata->bilinentries[conshdlrdata->nbilinentries];
@@ -7391,7 +7391,7 @@ SCIP_RETCODE bilinearHashTableInsert(
  *  hash table
  */
 static
-SCIP_RETCODE bilinearHashTableInsertAll(
+SCIP_RETCODE bilinearTermsInsertAll(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< expression constraints */
@@ -7417,7 +7417,7 @@ SCIP_RETCODE bilinearHashTableInsertAll(
       return SCIP_OKAY;
 
    /* create hash table */
-   SCIP_CALL( bilinearHashTableCreate(scip, conshdlrdata) );
+   SCIP_CALL( bilinearTermsCreate(scip, conshdlrdata) );
 
    /* create and initialize iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -7462,7 +7462,7 @@ SCIP_RETCODE bilinearHashTableInsertAll(
          /* add variables to the hash table */
          if( x != NULL && y != NULL )
          {
-            SCIP_CALL( bilinearHashInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr)) );
+            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr)) );
          }
       }
    }
@@ -7475,7 +7475,7 @@ SCIP_RETCODE bilinearHashTableInsertAll(
 
 /** frees hash table for bilinear terms */
 static
-SCIP_RETCODE bilinearHashTableFree(
+SCIP_RETCODE bilinearTermsFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
@@ -8131,7 +8131,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    }
 
    /* free hash table for bilinear terms */
-   SCIP_CALL( bilinearHashTableFree(scip, conshdlrdata) );
+   SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -8212,7 +8212,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
 
    /* collect all bilinear terms */
-   SCIP_CALL( bilinearHashTableInsertAll(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }

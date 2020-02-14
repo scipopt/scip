@@ -82,11 +82,11 @@ Test(bilinhash, createInsertFree)
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
 
    /* create hash table */
-   SCIP_CALL( bilinearHashTableCreate(scip, conshdlrdata, 1) );
+   SCIP_CALL( bilinearTermsCreate(scip, conshdlrdata) );
 
    /* inserts two bilinear terms into the hash table */
-   SCIP_CALL( bilinearHashTableInsert(scip, conshdlrdata, x, y, NULL) );
-   SCIP_CALL( bilinearHashTableInsert(scip, conshdlrdata, y, z, NULL) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL) );
    cr_expect(conshdlrdata->nbilinentries == 2);
    cr_expect(conshdlrdata->bilinentries[0].x == x);
    cr_expect(conshdlrdata->bilinentries[0].y == y);
@@ -94,7 +94,7 @@ Test(bilinhash, createInsertFree)
    cr_expect(conshdlrdata->bilinentries[1].y == z);
 
    /* free hash table */
-   SCIP_CALL( bilinearHashTableFree(scip, conshdlrdata) );
+   SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
 
    /* free constraint handler data */
    SCIPfreeBlockMemory(scip, &conshdlrdata);
@@ -137,7 +137,7 @@ Test(bilinhash, api_methods)
    tz = SCIPvarGetTransVar(z);
 
    /* collect all bilinear terms manually because CONSINITLP has not been called yet */
-   SCIP_CALL( bilinearHashInsertAll(scip, conshdlr, SCIPgetConss(scip), SCIPgetNConss(scip)) );
+   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, SCIPgetConss(scip), SCIPgetNConss(scip)) );
 
    /*
     * because no auxiliary variables are present, there are only three bilinear terms: xx, xy, yz
