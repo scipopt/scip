@@ -31,7 +31,7 @@
 
 #include "scip/presol_milp.h"
 
-#ifndef SCIP_WITH_PRESOLVELIB
+#ifndef SCIP_WITH_PAPILO
 
 /** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
@@ -62,9 +62,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
 #include "scip/scip_randnumgen.h"
-#include "presol/core/Presolve.hpp"
-#include "presol/core/ProblemBuilder.hpp"
-#include "presol/Config.hpp"
+#include "papilo/core/Presolve.hpp"
+#include "papilo/core/ProblemBuilder.hpp"
+#include "papilo/Config.hpp"
 
 #define PRESOL_NAME            "milp"
 #define PRESOL_DESC            "MILP specific presolving methods"
@@ -115,7 +115,7 @@ struct SCIP_PresolData
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 };
 
-using namespace presol;
+using namespace papilo;
 
 /*
  * Local methods
@@ -170,44 +170,6 @@ Problem<SCIP_Real> buildProblem(
    }
 
    return builder.build();
-}
-
-/** convert a variable that is possibly aggregated or negated to its active representative and
- *  update the coefficient and side of an equation
- */
-static
-void convertToActiveVar(
-   SCIP_VAR*&            var,               /**< reference to variable */
-   SCIP_Real&            coef,              /**< reference to coefficient */
-   SCIP_Real&            side               /**< reference to side */
-   )
-{
-   while( TRUE )
-   {
-      SCIP_Real scalar;
-      SCIP_Real constant;
-
-      assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
-
-      switch( SCIPvarGetStatus(var) )
-      {
-         case SCIP_VARSTATUS_AGGREGATED:
-            scalar = SCIPvarGetAggrScalar(var);
-            constant = SCIPvarGetAggrConstant(var);
-            var = SCIPvarGetAggrVar(var);
-            side -= coef * constant;
-            coef *= scalar;
-            break;
-         case SCIP_VARSTATUS_NEGATED:
-            constant = SCIPvarGetNegationConstant(var);
-            var = SCIPvarGetNegationVar(var);
-            side -= coef * constant;
-            coef = -coef;
-            break;
-         default:
-            return;
-      }
-   }
 }
 
 /*
@@ -539,6 +501,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
          SCIP_Bool redundant = FALSE;
+         SCIP_Real constant = 0.0;
          if( rowlen == 2 )
          {
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
@@ -546,8 +509,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_Real scalarx = res.postsolve.values[first + 1];
             SCIP_Real scalary = res.postsolve.values[first + 2];
 
-            convertToActiveVar(varx, scalarx, side);
-            convertToActiveVar(vary, scalary, side);
+            SCIP_CALL( SCIPgetProbvarSum(scip, &varx, &scalarx, &constant) );
+            assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
+
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
+            assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant;
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
          }
@@ -572,7 +540,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             assert(colCoef != 0.0);
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
 
-            convertToActiveVar(aggrvar, colCoef, side);
+            SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
+            assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant;
 
             for( int j = first + 1; j < last; ++j )
             {
@@ -690,11 +661,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   String name = fmt::format("presolvelib {}.{}.{}", PRESOLVE_VERSION_MAJOR, PRESOLVE_VERSION_MINOR, PRESOLVE_VERSION_PATCH);
-#ifdef PRESOLVE_GITHASH_AVAILABLE
-   String desc = fmt::format("external library for presolving MILPs (link coming soon) [GitHash: {}]", PRESOLVE_GITHASH);
+   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
+#ifdef PAPILO_GITHASH_AVAILABLE
+   String desc = fmt::format("parallel presolve for integer and linear optimization (link coming soon) [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("external library for presolving MILPs (link coming soon)");
+   String desc("parallel presolve for integer and linear optimization (link coming soon)");
 #endif
 
    /* add external code info for the presolve library */
