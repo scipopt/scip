@@ -7366,7 +7366,7 @@ SCIP_RETCODE bilinearHashInsert(
    SCIP_CALL( SCIPcaptureVar(scip, y) );
    if( auxvar != NULL )
    {
-      SCIP_CALL( SCIPcaptureVar(scip, x) );
+      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
    /* increase the total number of entries */
