@@ -1873,6 +1873,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
+   /* the variable may have changed, make sure we have the correct bounds */
    if( useglobal )
    {
       oldlb = SCIPvarGetLbGlobal(var);
