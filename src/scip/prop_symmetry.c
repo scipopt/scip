@@ -163,6 +163,7 @@
                                               *   greater than this value. */
 #define DEFAULT_MAXNCONSSSUBGROUP  500000    /**< Maximum number of constraints up to which subgroup structures are detected */
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
+#define DEFAULT_ONLYBINSUBGROUPS     TRUE    /**< Should only subgroups on binary variables be handled */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -256,6 +257,7 @@ struct SCIP_PropData
                                               *   greater than this value. */
    int                   maxnconsssubgroup;  /**< Maximum number of constraints up to which subgroup structures are detected */
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
+   SCIP_Bool             onlybinsubgroups;   /**< whether only subgroups on binary variables should be handled */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -2270,7 +2272,7 @@ SCIP_RETCODE determineSymmetry(
    if ( SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
-      if ( ! propdata->detectsubgroups )
+      if ( ! propdata->detectsubgroups || propdata->onlybinsubgroups )
          propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
@@ -2431,7 +2433,7 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
       /* if no subgroups shall be detected, free symmetry data*/
-      if ( ! propdata->detectsubgroups )
+      if ( ! propdata->detectsubgroups || ! propdata->onlybinsubgroups )
       {
          /* free data and exit */
          SCIP_CALL( freeSymmetryData(scip, propdata) );
@@ -3186,6 +3188,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int* genorder;
    int i;
 #ifdef SCIP_DEBUG
+   int norbitopes = 0;
    int nstrongsbcs = 0;
    int nweaksbcs = 0;
 #endif
@@ -3331,8 +3334,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       for (j = 0; j < ncompcolors; ++j)
       {
-         int colorcompsize = 0;
          int nbinarycomps = 0;
+         int largestcolorcomp = -1;
+         int largestcompsize = 0;
          int k;
          SCIP_Bool isorbitope = TRUE;
 #ifdef SCIP_DEBUG
@@ -3361,25 +3365,36 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             compsize = graphcompbegins[k+1] - graphcompbegins[k];
 
-            if ( colorcompsize < 1 )
+            /* the first component that we are looking at for this color */
+            if ( largestcompsize < 1 )
             {
                if( compsize < 3 )
                {
                   isorbitope = FALSE;
-                  break;
+
+                  if ( propdata->onlybinsubgroups )
+                     break;
                }
 
-               colorcompsize = compsize;
+               largestcompsize = compsize;
+            }
+
+
+            /* variable orbits (compsize) have not the same size, cannot define orbitope */
+            if ( compsize != largestcompsize )
+            {
+               isorbitope = FALSE;
+
+               if ( propdata->onlybinsubgroups )
+                  break;
+               else if ( compsize > largestcompsize )
+               {
+                  largestcolorcomp = k;
+                  largestcompsize = compsize;
+               }
             }
 
             firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
-
-            /* variable orbits (compsize) have not the same size, cannot define orbitope */
-            if ( compsize != colorcompsize )
-            {
-               isorbitope = FALSE;
-               break;
-            }
 
             /* count number of binary orbits (comps) */
             if ( SCIPvarIsBinary(firstvar) )
@@ -3407,7 +3422,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          /* build data structures and add constraints for orbitopes containing binary variables */
          useorbitope = TRUE;
-         if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) colorcompsize) )
+         if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize) )
             useorbitope = FALSE;
          if ( isorbitope && nbinarycomps > 0 && useorbitope )
          {
@@ -3420,16 +3435,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CONS* cons;
             int nrows;
             int ncols;
-            int colorstart;
-            int l;
             SCIP_Bool infeasible = FALSE;
 
-            assert( colorcompsize > 2 );
+            assert( largestcompsize > 2 );
 
             chosencomppercolor[j] = 0;
 
             nrows = nbinarycomps;
-            ncols = colorcompsize;
+            ncols = largestcompsize;
 
             SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
                ncols, nrows);
@@ -3452,15 +3465,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* count how often an element was used in the potential orbitope */
             SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, propdata->npermvars) );
 
-            colorstart = compcolorbegins[j];
-
             /* mark variables in this subgroup orbitope */
-            for (k = 0; k < nrows; ++k)
+            for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
             {
                SCIP_VAR* firstvar;
                int compstart;
+               int l;
 
-               compstart = graphcompbegins[colorstart + k];
+               compstart = graphcompbegins[k];
                firstvar = propdata->permvars[graphcomponents[compstart]];
 
                if ( ! SCIPvarIsBinary(firstvar) )
@@ -3477,6 +3489,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                         (void*) (size_t) (varidx + 1)) );
                }
             }
+            assert( SCIPhashsetGetNElements(activevars) == nrows * ncols );
 
             /* build the variable index matrix for the orbitope */
             SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
@@ -3485,7 +3498,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( isorbitope );
 
-            firstvaridxpercolor[j] = orbitopevaridx[0][ncols-1];
+            /* store index of variable that will be in upper left corner of orbitope */
+            if ( columnorder[ncols-1] > -1 )
+               firstvaridxpercolor[j] = orbitopevaridx[0][ncols-1];
+            else
+               firstvaridxpercolor[j] = orbitopevaridx[0][1];
 
             /* prepare orbitope variable matrix */
             SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
@@ -3510,12 +3527,19 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
+#ifdef SCIP_DEBUG
+            ++norbitopes;
+#endif
+
             /* do not release constraint here - will be done later */
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->norbitopes;
 
-            propdata->componentblocked[i] = TRUE;
-            ++propdata->ncompblocked;
+            if ( ! propdata->componentblocked[i] )
+            {
+               propdata->componentblocked[i] = TRUE;
+               ++propdata->ncompblocked;
+            }
 
             for (k = nrows - 1; k >= 0; --k)
                SCIPfreeBufferArray(scip, &orbitopevarmatrix[k]);
@@ -3527,64 +3551,72 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPfreeBufferArray(scip, &orbitopevaridx);
             SCIPhashsetFree(&activevars, SCIPblkmem(scip));
          }
+         else if( ! propdata->onlybinsubgroups )
+         {
+            assert( largestcolorcomp >= 0 );
+            assert( largestcolorcomp < ngraphcomponents );
+            assert( largestcompsize > 0 );
+
+            chosencomppercolor[j] = largestcolorcomp;
+            firstvaridxpercolor[j] = graphcomponents[graphcompbegins[largestcolorcomp]];
+
+            SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
+               largestcolorcomp, graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp]);
+
+#ifdef SCIP_DEBUG
+            nstrongsbcs += graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp] - 1;
+#endif
+
+            /* add strong SBCs (lex-max order) for chosen graph component */
+            for (k = graphcompbegins[largestcolorcomp]+1; k < graphcompbegins[largestcolorcomp+1]; ++k)
+            {
+               SCIP_CONS* cons;
+               char name[SCIP_MAXSTRLEN];
+               SCIP_VAR* vars[2];
+               SCIP_Real vals[2] = {1, -1};
+
+               vars[0] = propdata->permvars[graphcomponents[k-1]];
+               vars[1] = propdata->permvars[graphcomponents[k]];
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
+                  i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+
+               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+#ifdef SCIP_MORE_DEBUG
+               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               /* check whether we need to resize */
+               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+               {
+                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+                  assert( newsize > propdata->ngenlinconss );
+
+                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                        propdata->genlinconsssize, newsize) );
+
+                  propdata->genlinconsssize = newsize;
+               }
+
+               propdata->genlinconss[propdata->ngenlinconss] = cons;
+               ++propdata->ngenlinconss;
+            }
+
+            if ( ! propdata->componentblocked[i] )
+            {
+               propdata->componentblocked[i] = TRUE;
+               ++propdata->ncompblocked;
+            }
+         }
          else
             chosencomppercolor[j] = -1;
       }
-
-#if 0
-      assert( chosencomp >= 0 );
-      assert( chosencomp < ngraphcomponents );
-      assert( chosencompsize > 0 );
-
-      chosencomppercolor[j] = chosencomp;
-
-      SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
-         chosencomp, graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
-
-#ifdef SCIP_DEBUG
-      nstrongsbcs += graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp] - 1;
-#endif
-
-      /* add strong SBCs (lex-max order) for chosen graph component */
-      for (k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k)
-      {
-         SCIP_CONS* cons;
-         char name[SCIP_MAXSTRLEN];
-         SCIP_VAR* vars[2];
-
-         vars[0] = propdata->permvars[graphcomponents[k-1]];
-         vars[1] = propdata->permvars[graphcomponents[k]];
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
-            i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
-
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-               SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-               FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-
-#ifdef SCIP_MORE_DEBUG
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-         /* check whether we need to resize */
-         if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-         {
-            int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-            assert( newsize > propdata->ngenlinconss );
-
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                  propdata->genlinconsssize, newsize) );
-
-            propdata->genlinconsssize = newsize;
-         }
-
-         propdata->genlinconss[propdata->ngenlinconss] = cons;
-         ++propdata->ngenlinconss;
-      }
-#endif
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
@@ -3617,14 +3649,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int firstvaridx;
             int k;
 
+            /* skip color for which we did not add anything */
             if ( chosencomppercolor[j] < 0 )
                continue;
 
-#if 0
             graphcomp = chosencomppercolor[j];
-#else
-            graphcomp = compcolorbegins[j];
-#endif
+
             graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
             firstvaridx = firstvaridxpercolor[j];
 
@@ -3732,6 +3762,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    }
 
 #ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "total number of added (sub-)orbitopes: %d\n", norbitopes);
    SCIPdebugMsg(scip, "total number of added strong sbcs: %d\n", nstrongsbcs);
    SCIPdebugMsg(scip, "total number of added weak sbcs: %d\n", nweaksbcs);
 #endif
@@ -4038,7 +4069,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   assert( propdata->binvaraffected || ! propdata->symconsenabled || propdata->detectsubgroups );
+   assert( propdata->binvaraffected || ! propdata->symconsenabled
+      || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -4055,7 +4087,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected || propdata->detectsubgroups );
+   assert( propdata->binvaraffected || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
    propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
@@ -5129,6 +5161,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/usedynamicprop",
          "maximum number of constraints up to which subgroup structures are detected",
          &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/onlybinsubgroups",
+         "Should only subgroups on binary variables be handled",
+         &propdata->onlybinsubgroups, TRUE, DEFAULT_ONLYBINSUBGROUPS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
