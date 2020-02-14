@@ -7256,8 +7256,8 @@ SCIP_DECL_HASHKEYEQ(bilinearHashTableIsHashkeyEq)
    entry2 = (BILINEARHASHENTRY*)key2;
    assert(entry1->x != NULL && entry1->y != NULL);
    assert(entry2->x != NULL && entry2->y != NULL);
-   assert(SCIPvarCompare(entry1->x, entry2->y) < 1);
-   assert(SCIPvarCompare(entry1->x, entry2->y) < 1);
+   assert(SCIPvarCompare(entry1->x, entry1->y) < 1);
+   assert(SCIPvarCompare(entry2->x, entry2->y) < 1);
 
    return entry1->x == entry2->x && entry1->y == entry2->y;
 }
