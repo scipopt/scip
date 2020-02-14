@@ -105,7 +105,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
       ub = SCIPvarGetUbGlobal(vars[v]);
 
       /* check if bounds are exactly one apart; if the lower bound is too large, aggregations will be rejected */
-      if( SCIPisEQ(scip, lb, ub - 1.0) && !SCIPisHugeValue(scip, lb / SCIPfeastol(scip)) )
+      if( SCIPisEQ(scip, lb, ub - 1.0) && !SCIPisHugeValue(scip, REALABS(lb / SCIPfeastol(scip))) )
       {
          SCIP_VAR* binvar;
          char binvarname[SCIP_MAXSTRLEN];
