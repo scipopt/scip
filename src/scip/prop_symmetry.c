@@ -664,11 +664,21 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /*  release variables */
-   if ( propdata->binvaraffected || propdata->detectsubgroups )
+   if ( propdata->npermvars > 0 )
    {
+      assert( propdata->binvaraffected || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
+
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      }
+
+      if ( propdata->detectsubgroups && ! propdata->onlybinsubgroups )
+      {
+         for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         }
       }
    }
 
@@ -2542,9 +2552,9 @@ SCIP_RETCODE determineSymmetry(
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-   /* capture binary variables and forbid multi-aggregation of symmetric variables
+   /* capture (binary) variables and forbid multi-aggregation of symmetric variables
     *
-    * note: binary variables are in the beginning of pervars
+    * note: binary variables are in the beginning of permvars
     */
    for (j = 0; j < propdata->nbinpermvars; ++j)
    {
@@ -2562,6 +2572,31 @@ SCIP_RETCODE determineSymmetry(
             {
                SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
                break;
+            }
+         }
+      }
+   }
+
+   /* if nonbinary subgroups are detected and handled, do the same for the other variables */
+   if ( propdata->detectsubgroups && ! propdata->onlybinsubgroups )
+   {
+      for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
+         if ( propdata->compressed )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         }
+         else
+         {
+            for (p = 0; p < propdata->nperms; ++p)
+            {
+               if ( propdata->perms[p][j] != j )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+                  break;
+               }
             }
          }
       }

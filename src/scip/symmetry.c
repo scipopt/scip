@@ -560,7 +560,7 @@ SCIP_RETCODE SCIPisInvolutionPerm(
       }
    }
 
-   /* at this point the permutation is a composition of 2-cycles on binary variables */
+   /* at this point the permutation is a composition of 2-cycles */
    *ntwocyclesperm = ntwocycles;
 
    return SCIP_OKAY;
