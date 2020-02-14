@@ -81,9 +81,6 @@ Test(bilinhash, createInsertFree)
    /* create constraint handler data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
 
-   /* create hash table */
-   SCIP_CALL( bilinearTermsCreate(scip, conshdlrdata) );
-
    /* inserts two bilinear terms into the hash table */
    SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL) );
    SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL) );

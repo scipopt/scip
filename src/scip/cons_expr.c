@@ -7285,27 +7285,6 @@ SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
    return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
 }
 
-/** creates hash table for bilinear terms */
-static
-SCIP_RETCODE bilinearTermsCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
-   )
-{
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->bilinhashtable == NULL);
-   assert(conshdlrdata->bilinentries == NULL);
-   assert(conshdlrdata->nbilinentries == 0);
-   assert(conshdlrdata->bilinentriessize == 0);
-
-   /* create hash table */
-   SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), 10,
-      bilinearTermsGetHashkey, bilinearTermsIsHashkeyEq, bilinearTermsGetHashkeyVal,
-      (void*)conshdlrdata) );
-
-   return SCIP_OKAY;
-}
-
 /** resizes hash table for bilinear terms */
 static
 SCIP_RETCODE bilinearTermsResize(
@@ -7347,7 +7326,6 @@ SCIP_RETCODE bilinearTermsInsert(
    BILINEARHASHENTRY* entry;
 
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->bilinhashtable != NULL);
    assert(x != NULL);
    assert(y != NULL);
 
@@ -7376,13 +7354,8 @@ SCIP_RETCODE bilinearTermsInsert(
       SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
-   /* increase the total number of entries */
+   /* increase the total number of bilinear terms */
    ++(conshdlrdata->nbilinentries);
-
-   /* insert the index of the new entry into the hash table; note that the index of the i-th element is (i+1) because
-    * zero can not be inserted into hash table
-    */
-   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)conshdlrdata->nbilinentries) );/*lint !e571*/
 
    return SCIP_OKAY;
 }
@@ -7412,12 +7385,9 @@ SCIP_RETCODE bilinearTermsInsertAll(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* check whether the hash table has been already created */
-   if( conshdlrdata->bilinhashtable != NULL )
+   /* check whether the bilinear terms have been stored already */
+   if( conshdlrdata->bilinentries != NULL )
       return SCIP_OKAY;
-
-   /* create hash table */
-   SCIP_CALL( bilinearTermsCreate(scip, conshdlrdata) );
 
    /* create and initialize iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -7470,6 +7440,26 @@ SCIP_RETCODE bilinearTermsInsertAll(
    /* release iterator */
    SCIPexpriteratorFree(&it);
 
+   /* create hash table and insert stored bilinear terms */
+   if( conshdlrdata->nbilinentries > 0 )
+   {
+      int i;
+
+      assert(conshdlrdata->bilinhashtable == NULL);
+
+      SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), conshdlrdata->nbilinentries,
+         bilinearTermsGetHashkey, bilinearTermsIsHashkeyEq, bilinearTermsGetHashkeyVal,
+         (void*)conshdlrdata) );
+
+      for( i = 0; i < conshdlrdata->nbilinentries; ++i )
+      {
+         /* insert the index of the bilinear term into the hash table; note that the index of the i-th element is (i+1)
+          * because zero can not be inserted into hash table
+          */
+         SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)(i+1)) );/*lint !e571 !e776*/
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -7484,8 +7474,8 @@ SCIP_RETCODE bilinearTermsFree(
 
    assert(conshdlrdata != NULL);
 
-   /* check whether the hash table has been created */
-   if( conshdlrdata->bilinhashtable == NULL )
+   /* check whether bilinear terms have been stored */
+   if( conshdlrdata->bilinentries == NULL )
    {
       assert(conshdlrdata->bilinentries == NULL);
       assert(conshdlrdata->nbilinentries == 0);
@@ -7507,7 +7497,10 @@ SCIP_RETCODE bilinearTermsFree(
    }
 
    /* free hash table */
-   SCIPhashtableFree(&conshdlrdata->bilinhashtable);
+   if( conshdlrdata->bilinhashtable != NULL )
+   {
+      SCIPhashtableFree(&conshdlrdata->bilinhashtable);
+   }
 
    /* free bilinentries array; reset counters */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bilinentries, conshdlrdata->bilinentriessize);
