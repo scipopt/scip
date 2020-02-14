@@ -7444,7 +7444,7 @@ SCIP_RETCODE bilinearHashInsertAll(
          }
 
          /* check whether the expression is of the form f(..) * g(..) */
-         if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
+         else if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
          {
             x = SCIPgetConsExprExprAuxVar(children[0]);
             y = SCIPgetConsExprExprAuxVar(children[1]);
@@ -12656,9 +12656,9 @@ int SCIPgetConsExprNBilinTerms(
  */
 SCIP_RETCODE SCIPgetConsExprBilinTerms(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_VAR**                 xs,             /**< array to store first variables */
-   SCIP_VAR**                 ys,             /**< array to store second variables */
-   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables */
+   SCIP_VAR**                 xs,             /**< array to store first variables (of size >= SCIPgetConsExprNBilinTerms()) */
+   SCIP_VAR**                 ys,             /**< array to store second variables (of size >= SCIPgetConsExprNBilinTerms()) */
+   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables (of size >= SCIPgetConsExprNBilinTerms()) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;

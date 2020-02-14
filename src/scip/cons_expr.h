@@ -1081,9 +1081,9 @@ int SCIPgetConsExprNBilinTerms(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprBilinTerms(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_VAR**                 xs,             /**< array to store first variables */
-   SCIP_VAR**                 ys,             /**< array to store second variables */
-   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables */
+   SCIP_VAR**                 xs,             /**< array to store first variables (of size >= SCIPgetConsExprNBilinTerms()) */
+   SCIP_VAR**                 ys,             /**< array to store second variables (of size >= SCIPgetConsExprNBilinTerms()) */
+   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables (of size >= SCIPgetConsExprNBilinTerms()) */
    );
 
 /** returns the auxiliary variable of a bilinear term, if it exists
