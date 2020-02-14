@@ -456,6 +456,7 @@ extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Real graph_sol_getObj(const GRAPH*, const int*, SCIP_Real, int);
+extern int       graph_sol_getNedges(const GRAPH*, const int*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 
 

@@ -2462,6 +2462,26 @@ SCIP_Real graph_sol_getObj(
    return obj;
 }
 
+
+/** computes number of edges in solution value */
+int graph_sol_getNedges(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge             /**< solution */
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+   int edgecount = 0;
+
+   assert(soledge);
+
+   for( int e = 0; e < nedges; e++ )
+      if( soledge[e] == CONNECT )
+         edgecount++;
+
+   return edgecount;
+}
+
+
 /** marks vertices for given edge-solution array (CONNECT/UNKNOWN) */
 void graph_sol_setVertexFromEdge(
    const GRAPH*          g,                  /**< the graph */
