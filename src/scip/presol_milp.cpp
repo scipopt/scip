@@ -31,7 +31,7 @@
 
 #include "scip/presol_milp.h"
 
-#ifndef SCIP_WITH_PRESOLVELIB
+#ifndef SCIP_WITH_PAPILO
 
 /** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
@@ -62,9 +62,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
 #include "scip/scip_randnumgen.h"
-#include "presol/core/Presolve.hpp"
-#include "presol/core/ProblemBuilder.hpp"
-#include "presol/Config.hpp"
+#include "papilo/core/Presolve.hpp"
+#include "papilo/core/ProblemBuilder.hpp"
+#include "papilo/Config.hpp"
 
 #define PRESOL_NAME            "milp"
 #define PRESOL_DESC            "MILP specific presolving methods"
@@ -115,7 +115,7 @@ struct SCIP_PresolData
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 };
 
-using namespace presol;
+using namespace papilo;
 
 /*
  * Local methods
@@ -661,11 +661,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   String name = fmt::format("presolvelib {}.{}.{}", PRESOLVE_VERSION_MAJOR, PRESOLVE_VERSION_MINOR, PRESOLVE_VERSION_PATCH);
-#ifdef PRESOLVE_GITHASH_AVAILABLE
-   String desc = fmt::format("external library for presolving MILPs (link coming soon) [GitHash: {}]", PRESOLVE_GITHASH);
+   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
+#ifdef PAPILO_GITHASH_AVAILABLE
+   String desc = fmt::format("parallel presolve for integer and linear optimization (link coming soon) [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("external library for presolving MILPs (link coming soon)");
+   String desc("parallel presolve for integer and linear optimization (link coming soon)");
 #endif
 
    /* add external code info for the presolve library */

@@ -21,13 +21,19 @@
 # QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="all"}
-: ${GITBRANCH:=${gitlabTargetBranch}}
+: ${TESTMODE:=""}
 : ${QUICKMODE:=""}
+: ${GITBRANCH:=${gitlabTargetBranch}}
 
 if [ "${gitlabTriggerPhrase}" != "" ]; then
+  TESTMODE=$(echo $gitlabTriggerPhrase | cut -f3 -d " ") # get third field (testset)
   QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
+else
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
+
+env
 
 ORIGBRANCH=${GITBRANCH}
 
@@ -52,8 +58,8 @@ elif [ "${TESTMODE}" == "minlp" ]; then
     TESTMODE=continue_minlp
   fi
 else
-  echo "Nothing to do, exiting."
-  exit 0
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
 
 ######################################
@@ -176,10 +182,10 @@ export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 # Scripts will also use nonexported variables correctly.
 if [ "${GITBRANCH}" == "consexpr" ]; then
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_master/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
 else
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_${GITBRANCH}/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
 fi
 
 ###################
@@ -193,7 +199,7 @@ BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPRESOLVELIB_DIR=${PRESOLVELIB_DIR}
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
 make -j4
 cd ..
 

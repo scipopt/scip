@@ -7523,13 +7523,14 @@ SCIP_RETCODE propagateCons(
                         SCIP_CALL( SCIPresetConsAge(scip, cons) );
                      }
                   }
-                  if( *cutoff )
-                     break;
 
                   /* reset local minweightsum for clique because all fixed to one variables are now counted in consdata->onesweightsum */
                   localminweightsum = 0;
                   /* we can jump to the end of this clique */
                   i = cliqueendposs[c - 1];
+
+                  if( *cutoff )
+                     break;
                }
             }
             ++i;

@@ -161,6 +161,7 @@
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
+#define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
 
 /* event handler properties */
@@ -259,6 +260,8 @@ struct SCIP_PropData
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
+   SCIP_Bool             offoundreduction;   /**< whether orbital fixing has found a reduction since the last time computing symmetries */
+   SCIP_Bool             disableofrestart;   /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 };
 
 
@@ -2203,8 +2206,12 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* free symmetries after a restart to recompute them later */
-   if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   /* if a restart occured, either disable orbital fixing... */
+   if ( propdata->offoundreduction && propdata->disableofrestart  && SCIPgetNRuns(scip) > propdata->lastrestart )
+      propdata->ofenabled = FALSE;
+   /* ... or free symmetries after a restart to recompute them later */
+   else if ( (propdata->offoundreduction || propdata->recomputerestart)
+      && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       assert( propdata->npermvars > 0 );
       assert( propdata->permvars != NULL );
@@ -2895,6 +2902,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
 
+   /* disable orbital fixing if all components are handled by orbitopes */
+   if ( propdata->ncomponents == propdata->norbitopes )
+      propdata->ofenabled = FALSE;
+
    /* possibly stop */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
@@ -3576,11 +3587,15 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
 
       if ( infeasible )
+      {
          *result = SCIP_CUTOFF;
+         propdata->offoundreduction = TRUE;
+      }
       else if ( nprop > 0 )
       {
          *result = SCIP_SUCCESS;
          *nfixedvars += nprop;
+         propdata->offoundreduction = TRUE;
       }
    }
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == 1 )
@@ -3661,9 +3676,15 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
 
    if ( infeasible )
+   {
       *result = SCIP_CUTOFF;
+      propdata->offoundreduction = TRUE;
+   }
    else if ( nprop > 0 )
+   {
       *result = SCIP_REDUCEDDOM;
+      propdata->offoundreduction = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -3697,6 +3718,7 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
    propdata->nodenumber = -1;
+   propdata->offoundreduction = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3803,6 +3825,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
    propdata->nodenumber = -1;
+   propdata->offoundreduction = FALSE;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
@@ -3902,6 +3925,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/disableofrestart",
+         "Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?",
+         &propdata->disableofrestart, TRUE, DEFAULT_DISABLEOFRESTART, NULL, NULL) );
+
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
    {
@@ -3990,4 +4018,47 @@ SCIP_RETCODE SCIPgetSymmetry(
       *ncomponents = propdata->ncomponents;
 
    return SCIP_OKAY;
+}
+
+/** return whether orbital fixing is enabled */
+SCIP_Bool SCIPisOrbitalfixingEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return FALSE;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   return propdata->ofenabled;
+}
+
+/** return number of the symmetry group's generators */
+int SCIPgetSymmetryNGenerators(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return 0;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   if ( propdata->nperms < 0 )
+      return 0;
+   else
+      return propdata->nperms;
 }
