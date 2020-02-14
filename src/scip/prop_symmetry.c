@@ -3178,6 +3178,407 @@ SCIP_RETCODE buildSubgroupGraph(
    return SCIP_OKAY;
 }
 
+/** adds an orbitope constraint for a suitable color of the subgroup graph */
+static
+SCIP_RETCODE addOrbitopeSubgroup(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   int*                  usedperms,          /**< array of the permutations that build the orbitope */
+   int                   nusedperms,         /**< number of permutations in usedperms */
+   int*                  compcolorbegins,    /**< array indicating where a new graphcolor begins */
+   int*                  graphcompbegins,    /**< array indicating where a new graphcomponent begins */
+   int*                  graphcomponents,    /**< array of all variable indices sorted by color and comp */
+   int                   symgrpcompidx,      /**< index of the component of the symmetry group */
+   int                   graphcoloridx,      /**< index of the graph color */
+   int                   nrows,              /**< number of rows in the orbitope  */
+   int                   ncols,              /**< number of columns in the orbitope  */
+   int*                  firstvaridx,        /**< buffer to store the index of the largest variable */
+   int*                  compidxfirstrow     /**< buffer to store the comp index for the first row */
+   )
+{
+   SCIP_VAR*** orbitopevarmatrix;
+   SCIP_HASHSET* activevars;
+   int** orbitopevaridx;
+   int* columnorder;
+   int* nusedelems;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONS* cons;
+   int k;
+   SCIP_Bool isorbitope;
+   SCIP_Bool infeasible = FALSE;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( usedperms != NULL );
+   assert( compcolorbegins != NULL );
+   assert( graphcompbegins != NULL );
+   assert( graphcomponents != NULL );
+   assert( firstvaridx != NULL );
+   assert( compidxfirstrow != NULL );
+   assert( nusedperms > 0 );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( symgrpcompidx >= 0 );
+   assert( symgrpcompidx < propdata->ncomponents );
+
+   /* create hashset to mark variables */
+   SCIP_CALL( SCIPhashsetCreate(&activevars, SCIPblkmem(scip), nrows * ncols) );
+
+   /* orbitope matrix for indices of variables in permvars array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, nrows) );
+   for (k = 0; k < nrows; ++k)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[k], ncols) ); /*lint !e866*/
+   }
+
+   /* order of columns of orbitopevaridx */
+   SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, ncols) );
+   for (k = 0; k < ncols; ++k)
+      columnorder[k] = ncols + 1;
+
+   /* count how often an element was used in the potential orbitope */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, propdata->npermvars) );
+
+   /* mark variables in this subgroup orbitope */
+   for (k = compcolorbegins[graphcoloridx]; k < compcolorbegins[graphcoloridx+1]; ++k)
+   {
+      SCIP_VAR* firstvar;
+      int compstart;
+      int l;
+
+      compstart = graphcompbegins[k];
+      firstvar = propdata->permvars[graphcomponents[compstart]];
+
+      if ( ! SCIPvarIsBinary(firstvar) )
+         continue;
+
+      for (l = 0; l < ncols; ++l)
+      {
+         int varidx;
+
+         varidx = graphcomponents[compstart + l];
+         assert( !SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) );
+
+         SCIP_CALL( SCIPhashsetInsert(activevars, SCIPblkmem(scip),
+               (void*) (size_t) (varidx + 1)) );
+      }
+   }
+   assert( SCIPhashsetGetNElements(activevars) == nrows * ncols );
+
+   /* build the variable index matrix for the orbitope */
+   SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
+         propdata->npermvars, nrows, nusedperms, orbitopevaridx, columnorder,
+         nusedelems, &isorbitope, activevars) );
+
+   assert( isorbitope );
+
+   /* store index of variable that will be in upper left corner of orbitope */
+   if ( columnorder[ncols-1] > -1 )
+      *firstvaridx = orbitopevaridx[0][ncols-1];
+   else
+      *firstvaridx = orbitopevaridx[0][1];
+
+   /* find corresponding graphcomponent of first variable (needed for weak sbcs) */
+   *compidxfirstrow = -1;
+   for (k = compcolorbegins[graphcoloridx];
+      k < compcolorbegins[graphcoloridx+1] && (*compidxfirstrow) < 0; ++k)
+   {
+      SCIP_VAR* firstvar;
+      int compstart;
+      int l;
+
+      compstart = graphcompbegins[k];
+      firstvar = propdata->permvars[graphcomponents[compstart]];
+
+      if ( ! SCIPvarIsBinary(firstvar) )
+         continue;
+
+      for (l = 0; l < ncols; ++l)
+      {
+         int varidx;
+
+         if ( graphcomponents[compstart + l] == *firstvaridx )
+         {
+            *compidxfirstrow = k;
+            break;
+         }
+      }
+   }
+   assert( *compidxfirstrow > -1);
+
+
+   /* prepare orbitope variable matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
+   for (k = 0; k < nrows; ++k)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix[k], ncols) );
+   }
+
+   /* build the matrix containing the actual variables of the orbitope */
+   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&orbitopevarmatrix, nrows, ncols,
+         propdata->permvars, propdata->npermvars, orbitopevaridx, columnorder,
+         nusedelems, &infeasible) );
+
+   assert( ! infeasible );
+   assert( propdata->permvars[*firstvaridx] == orbitopevarmatrix[0][0] );
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", symgrpcompidx, graphcoloridx);
+
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
+         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, propdata->conssaddlp,
+         TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* do not release constraint here - will be done later */
+   propdata->genorbconss[propdata->ngenorbconss++] = cons;
+   ++propdata->norbitopes;
+
+   if ( ! propdata->componentblocked[symgrpcompidx] )
+   {
+      propdata->componentblocked[symgrpcompidx] = TRUE;
+      ++propdata->ncompblocked;
+   }
+
+   for (k = nrows - 1; k >= 0; --k)
+      SCIPfreeBufferArray(scip, &orbitopevarmatrix[k]);
+   SCIPfreeBufferArray(scip, &orbitopevarmatrix);
+   SCIPfreeBufferArray(scip, &nusedelems);
+   SCIPfreeBufferArray(scip, &columnorder);
+   for (k = nrows - 1; k >= 0; --k)
+      SCIPfreeBufferArray(scip, &orbitopevaridx[k]);
+   SCIPfreeBufferArray(scip, &orbitopevaridx);
+   SCIPhashsetFree(&activevars, SCIPblkmem(scip));
+
+   return SCIP_OKAY;
+}
+
+/** adds strong SBCs for a suitable color of the subgroup graph */
+static
+SCIP_RETCODE addStrongSBCsSubgroup(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   int*                  graphcompbegins,    /**< array indicating where a new graphcomponent begins */
+   int*                  graphcomponents,    /**< array of all variable indices sorted by color and comp */
+   int                   symgrpcompidx,      /**< index of the component of the symmetry group */
+   int                   graphcompidx        /**< index of the graph component */
+   )
+{
+   int k;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( graphcompbegins != NULL );
+   assert( graphcomponents != NULL );
+   assert( graphcompidx >= 0 );
+   assert( symgrpcompidx >= 0 );
+   assert( symgrpcompidx < propdata->ncomponents );
+
+   /* add strong SBCs (lex-max order) for chosen graph component */
+   for (k = graphcompbegins[graphcompidx]+1; k < graphcompbegins[graphcompidx+1]; ++k)
+   {
+      SCIP_CONS* cons;
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR* vars[2];
+      SCIP_Real vals[2] = {1, -1};
+
+      vars[0] = propdata->permvars[graphcomponents[k-1]];
+      vars[1] = propdata->permvars[graphcomponents[k]];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
+         symgrpcompidx, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+            SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+            FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+#ifdef SCIP_MORE_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+      /* check whether we need to resize */
+      if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+      {
+         int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+         assert( newsize > propdata->ngenlinconss );
+
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+               propdata->genlinconsssize, newsize) );
+
+         propdata->genlinconsssize = newsize;
+      }
+
+      propdata->genlinconss[propdata->ngenlinconss] = cons;
+      ++propdata->ngenlinconss;
+   }
+
+   if ( ! propdata->componentblocked[symgrpcompidx] )
+   {
+      propdata->componentblocked[symgrpcompidx] = TRUE;
+      ++propdata->ncompblocked;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds weak SBCs for a suitable color of the subgroup graph */
+static
+SCIP_RETCODE addWeakSBCsSubgroup(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   int*                  compcolorbegins,    /**< array indicating where a new graphcolor begins */
+   int*                  graphcompbegins,    /**< array indicating where a new graphcomponent begins */
+   int*                  graphcomponents,    /**< array of all variable indices sorted by color and comp */
+   int                   ncompcolors,        /**< number of colors in the graph  */
+   int*                  chosencomppercolor, /**< array indicating which comp was handled per color */
+   int*                  firstvaridxpercolor,/**< array indicating the largest variable per color */
+   int                   symgrpcompidx,      /**< index of the component of the symmetry group */
+   int*                  naddedconss         /**< buffer to store the number of added constraints */
+   )
+{
+   SCIP_HASHSET* usedvars;
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2] = {1, -1};
+   SCIP_Shortbool* varfound;
+   int* orbit[2];
+   int orbitsize[2] = {1, 1};
+   int activeorb = 0;
+   int chosencolor = -1;
+   int npermsincomp;
+   int j;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( compcolorbegins != NULL );
+   assert( graphcompbegins != NULL );
+   assert( graphcomponents != NULL );
+   assert( firstvaridxpercolor != NULL );
+   assert( chosencomppercolor != NULL );
+   assert( naddedconss != NULL );
+   assert( symgrpcompidx >= 0 );
+   assert( symgrpcompidx < propdata->ncomponents );
+
+   npermsincomp = propdata->componentbegins[symgrpcompidx + 1] - propdata->componentbegins[symgrpcompidx];
+
+   SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
+
+   /*
+    * We will store the newest and the largest orbit and activeorb will be used to
+    * mark at which entry of the array orbit the newly computed one will be stored.
+    */
+
+   for (j = 0; j < ncompcolors; ++j)
+   {
+      int graphcomp;
+      int graphcompsize;
+      int k;
+
+      /* skip color for which we did not add anything */
+      if ( chosencomppercolor[j] < 0 )
+         continue;
+
+      graphcomp = chosencomppercolor[j];
+      graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
+
+      /* if the first variable was already contained in another orbit
+         * or if there are no variables left anyway, skip the component */
+      if ( varfound[ firstvaridxpercolor[j]] || graphcompsize == propdata->npermvars )
+         continue;
+
+      SCIPhashsetRemoveAll(usedvars);
+
+      /* mark all variables that have been used in strong SBCs */
+      for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
+      {
+         SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
+               (void*) (size_t) (graphcomponents[k]+1)) );
+      }
+
+      SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
+            propdata->permstrans, propdata->nperms, propdata->components,
+            propdata->componentbegins, usedvars, varfound, firstvaridxpercolor[j],
+            symgrpcompidx, orbit[activeorb], &orbitsize[activeorb]) );
+
+      assert( orbit[activeorb][0] ==  firstvaridxpercolor[j] );
+
+      if ( orbitsize[activeorb] > orbitsize[!activeorb] )
+      {
+         /* if the new orbit is larger then the old largest one, flip activeorb */
+         activeorb = !activeorb;
+         chosencolor = j;
+      }
+   }
+
+   /* check if we have found at least one non-empty orbit */
+   if ( chosencolor > -1 )
+   {
+      /* flip activeorb again to avoid confusion, it is then at the largest orbit */
+      activeorb = !activeorb;
+
+      assert( orbit[activeorb][0] == firstvaridxpercolor[chosencolor] );
+      vars[0] = propdata->permvars[orbit[activeorb][0]];
+
+      assert( chosencolor > -1 );
+      SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
+         orbitsize[activeorb]-1, chosencolor);
+
+      *naddedconss = orbitsize[activeorb] - 1;
+
+      /* add weak SBCs for rest of enclosing orbit */
+      for (j = 1; j < orbitsize[activeorb]; ++j)
+      {
+         SCIP_CONS* cons;
+         char name[SCIP_MAXSTRLEN];
+
+         vars[1] = propdata->permvars[orbit[activeorb][j]];
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%s_%s",
+            symgrpcompidx, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
+
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+               SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+               FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+#ifdef SCIP_MORE_DEBUG
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+         /* check whether we need to resize */
+         if ( propdata->ngenlinconss >= propdata->genlinconsssize )
+         {
+            int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+            assert( newsize > propdata->ngenlinconss );
+
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                  propdata->genlinconsssize, newsize) );
+
+            propdata->genlinconsssize = newsize;
+         }
+
+         propdata->genlinconss[propdata->ngenlinconss] = cons;
+         ++propdata->ngenlinconss;
+      }
+   }
+   else
+      SCIPdebugMsg(scip, "  no further weak sbcs are valid\n");
+
+   SCIPfreeBufferArray(scip, &orbit[1]);
+   SCIPfreeBufferArray(scip, &orbit[0]);
+   SCIPfreeBufferArray(scip, &varfound);
+   SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
+
+   return SCIP_OKAY;
+}
+
 /** checks whether subgroups of the components are symmetric groups and adds SBCs for them */
 static
 SCIP_RETCODE detectAndHandleSubgroups(
@@ -3420,137 +3821,30 @@ SCIP_RETCODE detectAndHandleSubgroups(
             binaffected, intaffected, contaffected);
 #endif
 
-         /* build data structures and add constraints for orbitopes containing binary variables */
          useorbitope = TRUE;
          if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize) )
             useorbitope = FALSE;
          if ( isorbitope && nbinarycomps > 0 && useorbitope )
          {
-            SCIP_VAR*** orbitopevarmatrix;
-            SCIP_HASHSET* activevars;
-            int** orbitopevaridx;
-            int* columnorder;
-            int* nusedelems;
-            char name[SCIP_MAXSTRLEN];
-            SCIP_CONS* cons;
-            int nrows;
-            int ncols;
-            SCIP_Bool infeasible = FALSE;
+            SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
+              nbinarycomps, largestcompsize);
 
             assert( largestcompsize > 2 );
 
-            chosencomppercolor[j] = 0;
-
-            nrows = nbinarycomps;
-            ncols = largestcompsize;
-
-            SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
-               ncols, nrows);
-
-            /* create hashset to mark variables */
-            SCIP_CALL( SCIPhashsetCreate(&activevars, SCIPblkmem(scip), nrows * ncols) );
-
-            /* orbitope matrix for indices of variables in permvars array */
-            SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, nrows) );
-            for (k = 0; k < nrows; ++k)
-            {
-               SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[k], ncols) ); /*lint !e866*/
-            }
-
-            /* order of columns of orbitopevaridx */
-            SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, ncols) );
-            for (k = 0; k < ncols; ++k)
-               columnorder[k] = ncols + 1;
-
-            /* count how often an element was used in the potential orbitope */
-            SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, propdata->npermvars) );
-
-            /* mark variables in this subgroup orbitope */
-            for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
-            {
-               SCIP_VAR* firstvar;
-               int compstart;
-               int l;
-
-               compstart = graphcompbegins[k];
-               firstvar = propdata->permvars[graphcomponents[compstart]];
-
-               if ( ! SCIPvarIsBinary(firstvar) )
-                  continue;
-
-               for (l = 0; l < ncols; ++l)
-               {
-                  int varidx;
-
-                  varidx = graphcomponents[compstart + l];
-                  assert( !SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) );
-
-                  SCIP_CALL( SCIPhashsetInsert(activevars, SCIPblkmem(scip),
-                        (void*) (size_t) (varidx + 1)) );
-               }
-            }
-            assert( SCIPhashsetGetNElements(activevars) == nrows * ncols );
-
-            /* build the variable index matrix for the orbitope */
-            SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->perms, usedperms,
-                  propdata->npermvars, nrows, nusedperms, orbitopevaridx, columnorder,
-                  nusedelems, &isorbitope, activevars) );
-
-            assert( isorbitope );
-
-            /* store index of variable that will be in upper left corner of orbitope */
-            if ( columnorder[ncols-1] > -1 )
-               firstvaridxpercolor[j] = orbitopevaridx[0][ncols-1];
-            else
-               firstvaridxpercolor[j] = orbitopevaridx[0][1];
-
-            /* prepare orbitope variable matrix */
-            SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
-            for (k = 0; k < nrows; ++k)
-            {
-               SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix[k], ncols) );
-            }
-
-            /* build the matrix containing the actual variables of the orbitope */
-            SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&orbitopevarmatrix, nrows, ncols,
-                  propdata->permvars, propdata->npermvars, orbitopevaridx, columnorder,
-                  nusedelems, &infeasible) );
-
-            assert( ! infeasible );
-            assert( propdata->permvars[firstvaridxpercolor[j]] == orbitopevarmatrix[0][0] );
-
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", i, j);
-
-            SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-                  SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, propdata->conssaddlp,
-                  TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-            SCIP_CALL( SCIPaddCons(scip, cons) );
+            /* add the orbitope constraint for this color */
+            SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
+                  graphcompbegins, graphcomponents, i, j, nbinarycomps, largestcompsize,
+                  &(firstvaridxpercolor[j]), &(chosencomppercolor[j])) );
 
 #ifdef SCIP_DEBUG
             ++norbitopes;
 #endif
 
-            /* do not release constraint here - will be done later */
-            propdata->genorbconss[propdata->ngenorbconss++] = cons;
-            ++propdata->norbitopes;
-
-            if ( ! propdata->componentblocked[i] )
-            {
-               propdata->componentblocked[i] = TRUE;
-               ++propdata->ncompblocked;
-            }
-
-            for (k = nrows - 1; k >= 0; --k)
-               SCIPfreeBufferArray(scip, &orbitopevarmatrix[k]);
-            SCIPfreeBufferArray(scip, &orbitopevarmatrix);
-            SCIPfreeBufferArray(scip, &nusedelems);
-            SCIPfreeBufferArray(scip, &columnorder);
-            for (k = nrows - 1; k >= 0; --k)
-               SCIPfreeBufferArray(scip, &orbitopevaridx[k]);
-            SCIPfreeBufferArray(scip, &orbitopevaridx);
-            SCIPhashsetFree(&activevars, SCIPblkmem(scip));
+            assert( firstvaridxpercolor[j] >= 0 );
+            assert( firstvaridxpercolor[j] < propdata->npermvars );
+            assert( chosencomppercolor[j] >= 0 );
          }
+         /* if no (useable) orbitope was found, possibly add strong SBCs */
          else if ( ! propdata->onlybinsubgroups )
          {
             assert( largestcolorcomp >= 0 );
@@ -3563,59 +3857,19 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPdebugMsg(scip, "      choosing component %d with %d variables and adding strong SBCs\n",
                largestcolorcomp, graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp]);
 
+            /* add the strong SBCs for the corresponding component */
+            SCIP_CALL( addStrongSBCsSubgroup(scip, propdata, graphcompbegins, graphcomponents,
+                  i, largestcolorcomp) );
+
 #ifdef SCIP_DEBUG
             nstrongsbcs += graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp] - 1;
 #endif
-
-            /* add strong SBCs (lex-max order) for chosen graph component */
-            for (k = graphcompbegins[largestcolorcomp]+1; k < graphcompbegins[largestcolorcomp+1]; ++k)
-            {
-               SCIP_CONS* cons;
-               char name[SCIP_MAXSTRLEN];
-               SCIP_VAR* vars[2];
-               SCIP_Real vals[2] = {1, -1};
-
-               vars[0] = propdata->permvars[graphcomponents[k-1]];
-               vars[1] = propdata->permvars[graphcomponents[k]];
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%d_%s_%s",
-                  i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
-
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-               SCIP_CALL( SCIPaddCons(scip, cons) );
-
-#ifdef SCIP_MORE_DEBUG
-               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-               /* check whether we need to resize */
-               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-               {
-                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-                  assert( newsize > propdata->ngenlinconss );
-
-                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                        propdata->genlinconsssize, newsize) );
-
-                  propdata->genlinconsssize = newsize;
-               }
-
-               propdata->genlinconss[propdata->ngenlinconss] = cons;
-               ++propdata->ngenlinconss;
-            }
-
-            if ( ! propdata->componentblocked[i] )
-            {
-               propdata->componentblocked[i] = TRUE;
-               ++propdata->ncompblocked;
-            }
          }
+         /* otherwise, just mark the color as not handled */
          else
+         {
             chosencomppercolor[j] = -1;
+         }
       }
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
@@ -3623,142 +3877,18 @@ SCIP_RETCODE detectAndHandleSubgroups(
       /* possibly add weak SBCs for enclosing orbit of first component */
       if ( propdata->addweaksbcs && propdata->componentblocked[i] && nusedperms < npermsincomp )
       {
-         SCIP_HASHSET* usedvars;
-         SCIP_VAR* vars[2];
-         SCIP_Real vals[2] = {1, -1};
-         SCIP_Shortbool* varfound;
-         int* orbit[2];
-         int orbitsize[2] = {1, 1};
-         int activeorb = 0;
-         int chosencolor = -1;
+         int naddedconss;
 
-         SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
-         SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
+         SCIP_CALL( addWeakSBCsSubgroup(scip, propdata, compcolorbegins, graphcompbegins,
+               graphcomponents, ncompcolors, chosencomppercolor, firstvaridxpercolor,
+               i, &naddedconss) );
 
-         /*
-          * We will store the newest and the largest orbit and activeorb will be used to
-          * mark at which entry of the array orbit the newly computed one will be stored.
-          */
-
-         for (j = 0; j < ncompcolors; ++j)
-         {
-            int graphcomp;
-            int graphcompsize;
-            int firstvaridx;
-            int k;
-
-            /* skip color for which we did not add anything */
-            if ( chosencomppercolor[j] < 0 )
-               continue;
-
-            graphcomp = chosencomppercolor[j];
-
-            graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
-            firstvaridx = firstvaridxpercolor[j];
-
-            /* if the first variable was already contained in another orbit
-             * or if there are no variables left anyway, skip the component */
-            if ( varfound[firstvaridx] || graphcompsize == propdata->npermvars )
-               continue;
-
-            SCIPhashsetRemoveAll(usedvars);
-
-            /* mark all variables that have been used in strong SBCs */
-            for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
-            {
-               SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
-                     (void*) (size_t) (graphcomponents[k]+1)) );
-            }
-
-            SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
-                  propdata->permstrans, propdata->nperms, propdata->components,
-                  propdata->componentbegins, usedvars, varfound, firstvaridx,
-                  i, orbit[activeorb], &orbitsize[activeorb]) );
-
-            assert( orbit[activeorb][0] == firstvaridx );
-
-            if ( orbitsize[activeorb] > orbitsize[!activeorb] )
-            {
-               /* if the new orbit is larger then the old largest one, flip activeorb */
-               activeorb = !activeorb;
-               chosencolor = j;
-            }
-         }
-
-         /* check if we have found at least one non-empty orbit */
-         if ( chosencolor > -1 )
-         {
-            /* flip activeorb again to avoid confusion, it is then at the largest orbit */
-            activeorb = !activeorb;
-
-            assert( orbit[activeorb][0] == firstvaridxpercolor[chosencolor] );
-            vars[0] = propdata->permvars[orbit[activeorb][0]];
-
-            assert( chosencolor > -1 );
-            SCIPdebugMsg(scip, "    adding %d weak sbcs for enclosing orbit of color %d.\n",
-               orbitsize[activeorb]-1, chosencolor);
+         assert( naddedconss < propdata->npermvars );
 
 #ifdef SCIP_DEBUG
-            nweaksbcs += orbitsize[activeorb] - 1;
+         nweaksbcs += naddedconss;
 #endif
-
-            /* add weak SBCs for rest of enclosing orbit */
-            for (j = 1; j < orbitsize[activeorb]; ++j)
-            {
-               SCIP_CONS* cons;
-               char name[SCIP_MAXSTRLEN];
-
-               vars[1] = propdata->permvars[orbit[activeorb][j]];
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%s_%s",
-                  i, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
-
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-               SCIP_CALL( SCIPaddCons(scip, cons) );
-
-#ifdef SCIP_MORE_DEBUG
-               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-               /* check whether we need to resize */
-               if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-               {
-                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-                  assert( newsize > propdata->ngenlinconss );
-
-                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                        propdata->genlinconsssize, newsize) );
-
-                  propdata->genlinconsssize = newsize;
-               }
-
-               propdata->genlinconss[propdata->ngenlinconss] = cons;
-               ++propdata->ngenlinconss;
-            }
-         }
-         else
-            SCIPdebugMsg(scip, "  no further weak sbcs are valid\n");
-
-         SCIPfreeBufferArray(scip, &orbit[0]);
-         SCIPfreeBufferArray(scip, &orbit[1]);
-         SCIPfreeBufferArray(scip, &varfound);
-         SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
       }
-      else
-         SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used\n");
-
-      SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
-      SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
-      SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
-      SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
-      SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
-      SCIPfreeBufferArrayNull(scip, &usedperms);
    }
 
 #ifdef SCIP_DEBUG
