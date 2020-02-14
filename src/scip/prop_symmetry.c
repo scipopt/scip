@@ -3778,12 +3778,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
                }
 
                largestcompsize = compsize;
+               largestcolorcomp = k;
             }
-
-
-            /* variable orbits (compsize) have not the same size, cannot define orbitope */
-            if ( compsize != largestcompsize )
+            else if ( compsize != largestcompsize )
             {
+               /* variable orbits (compsize) have not the same size, cannot define orbitope */
                isorbitope = FALSE;
 
                if ( propdata->onlybinsubgroups )
@@ -3868,6 +3867,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          /* otherwise, just mark the color as not handled */
          else
          {
+            SCIPdebugMsg(scip, "      no useable orbitope found and no SBCs added\n");
             chosencomppercolor[j] = -1;
          }
       }
