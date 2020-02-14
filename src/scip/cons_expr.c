@@ -7378,7 +7378,9 @@ SCIP_RETCODE bilinearHashInsert(
    return SCIP_OKAY;
 }
 
-/** iteratres through all expressions of all expression constraints and add the corresponding bilinear terms to the hash table */
+/** iterates through all expressions of all expression constraints and adds the corresponding bilinear terms to the
+ *  hash table
+ */
 static
 SCIP_RETCODE bilinearHashInsertAll(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7413,7 +7415,7 @@ SCIP_RETCODE bilinearHashInsertAll(
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
-   /* get product and pow expression handler */
+   /* get product and pow expression handlers */
    producthdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
    powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
 
@@ -7434,21 +7436,21 @@ SCIP_RETCODE bilinearHashInsertAll(
          SCIP_VAR* x = NULL;
          SCIP_VAR* y = NULL;
 
-         /* check whether the expression is of the form f(x)^2 */
+         /* check whether the expression is of the form f(..)^2 */
          if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
          {
             x = SCIPgetConsExprExprAuxVar(children[0]);
             y = x;
          }
 
-         /* check whether the expression is of the form f(x) * g(y) */
+         /* check whether the expression is of the form f(..) * g(..) */
          if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
          {
             x = SCIPgetConsExprExprAuxVar(children[0]);
             y = SCIPgetConsExprExprAuxVar(children[1]);
          }
 
-         /* add (x,y) to the hash table */
+         /* add variables to the hash table */
          if( x != NULL && y != NULL )
          {
             SCIP_CALL( bilinearHashInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr)) );
@@ -7473,7 +7475,7 @@ SCIP_RETCODE bilinearHashTableFree(
 
    assert(conshdlrdata != NULL);
 
-   /* check whether hash table has been created */
+   /* check whether the hash table has been created */
    if( conshdlrdata->bilinhashtable == NULL )
    {
       assert(conshdlrdata->bilinentries == NULL);
@@ -7486,7 +7488,7 @@ SCIP_RETCODE bilinearHashTableFree(
    /* release variables */
    for( i = 0; i < conshdlrdata->nbilinentries; ++i )
    {
-      /* it might be that there is a bilinera term without a corresponding auxiliary variable */
+      /* it might be that there is a bilinear term without a corresponding auxiliary variable */
       if( conshdlrdata->bilinentries[i]->auxvar != NULL )
       {
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinentries[i]->auxvar) );
