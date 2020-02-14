@@ -140,7 +140,6 @@ struct BilinearHashEntry
    SCIP_VAR*             x;                  /**< first variable */
    SCIP_VAR*             y;                  /**< second variable */
    SCIP_VAR*             auxvar;             /**< auxiliary variable for the product of x and y */
-   int                   index;              /**< index in the bilinentries array in the data of the constraint handler */
 };
 typedef struct BilinearHashEntry BILINEARHASHENTRY;
 
@@ -7244,15 +7243,15 @@ static
 SCIP_DECL_HASHGETKEY(bilinearHashTableGetHashkey)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int index;
+   int idx;
 
    conshdlrdata = (SCIP_CONSHDLRDATA*)userptr;
    assert(conshdlrdata != NULL);
 
-   index = ((int)(size_t)elem) - 1;
-   assert(index >= 0 && index < conshdlrdata->nbilinentries);
+   idx = ((int)(size_t)elem) - 1;
+   assert(idx >= 0 && idx < conshdlrdata->nbilinentries);
 
-   return (void*)&conshdlrdata->bilinentries[index];
+   return (void*)&conshdlrdata->bilinentries[idx];
 }
 
 /** returns TRUE iff the bilinear term entries are equal */
@@ -7278,7 +7277,6 @@ static
 SCIP_DECL_HASHKEYVAL(bilinearHashTableGetHashkeyVal)
 {  /*lint --e{715}*/
    BILINEARHASHENTRY* entry;
-   int index;
 
    entry = (BILINEARHASHENTRY*)key;
    assert(entry->x != NULL && entry->y != NULL);
@@ -7369,7 +7367,6 @@ SCIP_RETCODE bilinearHashInsert(
    entry->x = x;
    entry->y = y;
    entry->auxvar = auxvar;
-   entry->index = conshdlrdata->nbilinentries;
 
    /* capture variable */
    SCIP_CALL( SCIPcaptureVar(scip, x) );
@@ -7385,7 +7382,7 @@ SCIP_RETCODE bilinearHashInsert(
    /* insert the index of the new entry into the hash table; note that the index of the i-th element is (i+1) because
     * zero can not be inserted into hash table
     */
-   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)conshdlrdata->nbilinentries) );
+   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)conshdlrdata->nbilinentries) );/*lint !e571*/
 
    return SCIP_OKAY;
 }
@@ -12709,7 +12706,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    BILINEARHASHENTRY entry;
-   int index;
+   int idx;
 
    assert(consexprhdlr != NULL);
    assert(x != NULL);
@@ -12730,13 +12727,13 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    /* use a new entry to find the image in the bilinear hash table */
    entry.x = x;
    entry.y = y;
-   index = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
-   assert(index >= -1 && index < conshdlrdata->nbilinentries);
+   idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
+   assert(idx >= -1 && idx < conshdlrdata->nbilinentries);
 
    /* the index is -1 if the entry does not exist */
-   if( index >= 0 )
+   if( idx >= 0 )
    {
-      BILINEARHASHENTRY* image = &conshdlrdata->bilinentries[index];
+      BILINEARHASHENTRY* image = &conshdlrdata->bilinentries[idx];
       assert(image->x == x);
       assert(image->y == y);
 
