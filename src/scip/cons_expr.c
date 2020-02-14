@@ -12720,7 +12720,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    }
    assert(SCIPvarCompare(x, y) < 1);
 
-   /* use a new entry to find image in the hash table */
+   /* use a new entry to find the image in the bilinear hash table */
    entry.x = x;
    entry.y = y;
    image = SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry);
