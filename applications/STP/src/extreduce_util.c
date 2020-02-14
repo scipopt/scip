@@ -923,35 +923,6 @@ SCIP_Real distDataGetNormalDist(
  * Interface methods
  */
 
-/** is the edge valid? */
-SCIP_Bool extreduce_edgeIsValid(
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   e                   /**< edge to be checked */
-)
-{
-   if( EAT_FREE == graph->oeat[e] )
-   {
-      return FALSE;
-   }
-   else if( graph_pc_isPcMw(graph) )
-   {
-      const int tail = graph->tail[e];
-      const int head = graph->head[e];
-
-      if( (!graph->mark[tail] || !graph->mark[head]) )
-      {
-         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
-
-         return FALSE;
-      }
-
-      assert(!graph_pc_knotIsDummyTerm(graph, tail));
-      assert(!graph_pc_knotIsDummyTerm(graph, head));
-   }
-
-   return TRUE;
-}
-
 
 /** initializes distance data */
 SCIP_RETCODE extreduce_distDataInit(

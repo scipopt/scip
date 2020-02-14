@@ -127,8 +127,6 @@ SCIP_Bool extreduce_extPermaIsClean(
 
    assert(extperm);
 
-   // todo maybe need to add to extreduce_reddataClean
-
    bottleneckDistNode = extperm->bottleneckDistNode;
    pcSdToNode = extperm->pcSdToNode;
    tree_deg = extperm->tree_deg;

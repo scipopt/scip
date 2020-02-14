@@ -173,6 +173,7 @@ SCIP_Bool extLeafIsExtendable(
    assert(leaf >= 0 && leaf < graph->knots);
 
    // todo if not a terminal, check whether number of neigbhors not contained in current tree < STP_EXT_MAXGRAD
+   // maybe have a STP_EXT_MAXGRAD_TOTAL and if below this bound, make the check
 
    return (!isterm[leaf] && graph->grad[leaf] <= STP_EXT_MAXGRAD);
 }
@@ -635,63 +636,8 @@ void extTreeFindExtensions(
       extedgesstart[++(*nextendableleaves)] = *nextensions;
    }
 
-   /* todo find sds to neighbors and save them  */
-
    assert(*nextensions >= *nextendableleaves);
    assert(*nextendableleaves <= STP_EXT_MAXGRAD);
-}
-
-// todo: move into extreduce_util
-/** recompute reduced costs */
-static
-void extTreeRecompCosts(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-#ifndef NDEBUG
-   const int tree_nDelUpArcs = extdata->tree_nDelUpArcs;
-#endif
-   REDDATA* const reddata = extdata->reddata;
-   const STP_Bool* const edgedeleted = reddata->edgedeleted;
-   SCIP_Real tree_cost = 0.0;
-   SCIP_Real tree_redcost = 0.0;
-   const SCIP_Real* const cost = graph->cost;
-   const SCIP_Real* const redcost = reddata->redCosts;
-   const int* const tree_edges = extdata->tree_edges;
-   const int tree_nedges = extdata->tree_nedges;
-
-   extdata->tree_nDelUpArcs = 0;
-
-   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
-
-   for( int i = 0; i < tree_nedges; i++ )
-   {
-      const int edge = tree_edges[i];
-      const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
-
-      assert(edge >= 0 && edge < graph->edges);
-
-      tree_cost += cost[edge];
-
-      if( !edgeIsDeleted )
-      {
-         tree_redcost += redcost[edge];
-         assert(LT(tree_redcost, FARAWAY));
-      }
-      else
-      {
-         extdata->tree_nDelUpArcs++;
-      }
-   }
-
-   assert(SCIPisEQ(scip, tree_cost, extdata->tree_cost));
-   assert(SCIPisEQ(scip, tree_redcost, extdata->tree_redcost));
-   assert(tree_nDelUpArcs == extdata->tree_nDelUpArcs);
-
-   extdata->tree_cost = tree_cost;
-   extdata->tree_redcost = tree_redcost;
 }
 
 
@@ -723,7 +669,7 @@ void extTreeSyncWithStack(
    /* recompute edge costs and reduced costs? */
    if( ++(extdata->ncostupdatestalls) > EXT_COSTS_RECOMPBOUND )
    {
-      extTreeRecompCosts(scip, graph, extdata);
+      extreduce_treeRecompCosts(scip, graph, extdata);
       extdata->ncostupdatestalls = 0;
    }
 

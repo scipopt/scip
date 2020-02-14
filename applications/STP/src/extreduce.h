@@ -246,7 +246,9 @@ extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
 extern int             extreduce_getMaxStackNedges(const GRAPH*);
-extern void            extreduce_removeEdge(SCIP*, int, GRAPH*, DISTDATA*);
+extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*);
+extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
+extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_core.c
  */
@@ -262,7 +264,6 @@ extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int,
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
-extern SCIP_Bool          extreduce_edgeIsValid(const GRAPH*, int);
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
 extern SCIP_Bool          extreduce_mldistsIsEmpty(const MLDISTS*);

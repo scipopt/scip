@@ -329,7 +329,7 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
 
 
 /** deletes an edge and makes corresponding adaptations */
-void extreduce_removeEdge(
+void extreduce_edgeRemove(
    SCIP*                 scip,               /**< SCIP */
    int                   edge,               /**< edge to delete */
    GRAPH*                graph,              /**< graph data structure (in/out) */
@@ -337,6 +337,88 @@ void extreduce_removeEdge(
 )
 {
    removeEdge(scip, edge, graph, distdata);
+}
+
+
+/** is the edge valid? */
+SCIP_Bool extreduce_edgeIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   e                   /**< edge to be checked */
+)
+{
+   if( EAT_FREE == graph->oeat[e] )
+   {
+      return FALSE;
+   }
+   else if( graph_pc_isPcMw(graph) )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      if( (!graph->mark[tail] || !graph->mark[head]) )
+      {
+         assert(graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head));
+
+         return FALSE;
+      }
+
+      assert(!graph_pc_knotIsDummyTerm(graph, tail));
+      assert(!graph_pc_knotIsDummyTerm(graph, head));
+   }
+
+   return TRUE;
+}
+
+
+/** recompute costs and reduced costs for current tree */
+void extreduce_treeRecompCosts(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+#ifndef NDEBUG
+   const int tree_nDelUpArcs = extdata->tree_nDelUpArcs;
+#endif
+   REDDATA* const reddata = extdata->reddata;
+   const STP_Bool* const edgedeleted = reddata->edgedeleted;
+   SCIP_Real tree_cost = 0.0;
+   SCIP_Real tree_redcost = 0.0;
+   const SCIP_Real* const cost = graph->cost;
+   const SCIP_Real* const redcost = reddata->redCosts;
+   const int* const tree_edges = extdata->tree_edges;
+   const int tree_nedges = extdata->tree_nedges;
+
+   extdata->tree_nDelUpArcs = 0;
+
+   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
+
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int edge = tree_edges[i];
+      const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
+
+      assert(edge >= 0 && edge < graph->edges);
+
+      tree_cost += cost[edge];
+
+      if( !edgeIsDeleted )
+      {
+         tree_redcost += redcost[edge];
+         assert(LT(tree_redcost, FARAWAY));
+      }
+      else
+      {
+         extdata->tree_nDelUpArcs++;
+      }
+   }
+
+   assert(SCIPisEQ(scip, tree_cost, extdata->tree_cost));
+   assert(SCIPisEQ(scip, tree_redcost, extdata->tree_redcost));
+   assert(tree_nDelUpArcs == extdata->tree_nDelUpArcs);
+
+   extdata->tree_cost = tree_cost;
+   extdata->tree_redcost = tree_redcost;
 }
 
 /** get maximum allowed stack size */

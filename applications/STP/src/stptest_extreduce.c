@@ -60,7 +60,7 @@ SCIP_RETCODE extCheckArc(
 
    if( edgedelete >= 0 )
    {
-      extreduce_removeEdge(scip, edgedelete, graph, &distdata);
+      extreduce_edgeRemove(scip, edgedelete, graph, &distdata);
       assert(graph_isMarked(graph));
    }
 
