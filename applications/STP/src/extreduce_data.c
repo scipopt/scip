@@ -210,6 +210,7 @@ void extreduce_extdataClean(
    extdata->extstack_ncomponents = 0;
    extdata->tree_nDelUpArcs = 0;
    extdata->tree_nleaves = 0;
+   extdata->tree_ninnerNodes = 0;
    extdata->tree_nedges = 0;
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
@@ -225,6 +226,16 @@ void extreduce_reddataClean(
 )
 {
    assert(reddata);
+}
+
+
+/** cleans PC data */
+void extreduce_pcdataClean(
+   PCDATA*               pcdata             /**< PC data */
+)
+{
+   assert(pcdata);
+   assert(EQ(pcdata->tree_innerPrize, 0.0)); // todo might not actually hold...
 }
 
 
@@ -267,6 +278,12 @@ SCIP_Bool extreduce_extdataIsClean(
    if( extdata->tree_nleaves != 0 )
    {
       printf("extdata->tree_nleaves %d \n", extdata->tree_nleaves);
+      return FALSE;
+   }
+
+   if( extdata->tree_ninnerNodes != 0 )
+   {
+      printf("extdata->tree_ninnerNodes %d \n", extdata->tree_ninnerNodes);
       return FALSE;
    }
 
@@ -313,9 +330,11 @@ SCIP_Bool extreduce_reddataIsClean(
    const REDDATA*        reddata             /**< reduction data */
 )
 {
-   assert(graph && reddata);
+   const int nnodes = graph_get_nNodes(graph);
 
-   for( int i = 0; i < graph->knots; i++ )
+   assert(reddata);
+
+   for( int i = 0; i < nnodes; i++ )
    {
       if( reddata->pseudoancestor_mark[i] != 0 )
       {
@@ -323,6 +342,49 @@ SCIP_Bool extreduce_reddataIsClean(
          return FALSE;
       }
    }
+
+   return TRUE;
+}
+
+/** is the reduction data clean? */
+SCIP_Bool extreduce_pcdataIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const PCDATA*         pcdata              /**< PC data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(pcdata);
+
+   if( !graph_pc_isPc(graph) )
+   {
+      return TRUE;
+   }
+
+   if( pcdata->nPcSdCands != -1 )
+   {
+      return FALSE;
+   }
+
+   if( pcdata->pcSdStart != -1 )
+   {
+      return FALSE;
+   }
+
+   if( !EQ(pcdata->tree_innerPrize, 0.0) )
+   {
+      return FALSE;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !EQ(pcdata->pcSdToNode[i], -1.0) )
+      {
+         printf("pcSdToNode[%d]=%f \n", i, pcdata->pcSdToNode[i]);
+         return FALSE;
+      }
+   }
+
 
    return TRUE;
 }

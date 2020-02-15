@@ -1457,7 +1457,7 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
    for( int i = 0; i < nnodes; i++ )
       graph->prize[i] = 100.0;
 
-   graph->prize[1] = 0.11;
+   graph->prize[1] = 0.09;
 
    SCIP_CALL( extSetUpGraphPc(scip, graph) );
 
@@ -1469,12 +1469,73 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
 
    extTearDown(scip, graph, &redcostdata);
 
-   assert(0);
-
-
    return SCIP_OKAY;
 }
 
+
+
+/** tests that edge cannot be deleted (by using SD MST argument) */
+static
+SCIP_RETCODE testPcEdgeNotDeleted(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 16;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   /* we need to leave some spare space */
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes * 3, nedges * 3, cutoff, root, &redcostdata) );
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 2, 1.4);
+   graph_edge_addBi(scip, graph, 0, 3, 1.4);
+   graph_edge_addBi(scip, graph, 0, 4, 1.4);
+   graph_edge_addBi(scip, graph, 2, 3, 1.1);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 100.0;
+
+   graph->prize[1] = 0.11;
+
+   SCIP_CALL( extSetUpGraphPc(scip, graph) );
+
+   extInitRedCostArraysPc(graph, &redcostdata);
+
+   SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
+
+   STPTEST_ASSERT_MSG(!deletable, "edge was deleted \n");
+
+   extTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
 
 /** tests for mldists */
 SCIP_RETCODE stptest_extmldists(
@@ -1498,10 +1559,8 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-
-
    SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
-
+   SCIP_CALL( testPcEdgeNotDeleted(scip) );
 
    SCIP_CALL( testEdgeDeletedByCommonRedCostsTargets(scip) );
    SCIP_CALL( testEdgeDeletedByMst2(scip) );

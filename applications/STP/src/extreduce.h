@@ -124,6 +124,7 @@ typedef struct pcmw_specific_data
 {
   SCIP_Real* const pcSdToNode;                 /**< all entries need to be set to -1.0 */
   int* const pcSdCands;
+  SCIP_Real tree_innerPrize;
   int nPcSdCands;
   int pcSdStart;
 } PCDATA;
@@ -136,6 +137,7 @@ typedef struct extension_data
    int* const extstack_start;
    int* const extstack_state;
    int* const tree_leaves;
+   int* const tree_innerNodes;
    int* const tree_edges;
    int* const tree_deg;                         /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for current tail,
                                                       0 otherwise; in method: position ( > 0) for nodes in tree */
@@ -154,6 +156,7 @@ typedef struct extension_data
    int tree_nedges;
    int tree_depth;
    int tree_nleaves;
+   int tree_ninnerNodes;
    int extstack_ncomponents;
    int ncostupdatestalls;           /**< cost update stalls counter */
    const int extstack_maxncomponents;
@@ -331,6 +334,8 @@ extern void               extreduce_extdataClean(EXTDATA*);
 extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
 extern void               extreduce_reddataClean(REDDATA*);
 extern SCIP_Bool          extreduce_reddataIsClean(const GRAPH*, const REDDATA*);
+extern void               extreduce_pcdataClean(PCDATA*);
+extern SCIP_Bool          extreduce_pcdataIsClean(const GRAPH*, const PCDATA*);
 
 
 /* extreduce_dbg.c

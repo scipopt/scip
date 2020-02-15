@@ -473,31 +473,19 @@ SCIP_Bool distCloseNodesIncluded(
 }
 
 
-/** is current tree flawed? */
-SCIP_Bool extreduce_treeIsFlawed(
-   SCIP*                 scip,               /**< SCIP */
+/** computes counters for degrees and edges */
+static
+void treeGetCounters(
    const GRAPH*          graph,              /**< graph data structure */
-   const EXTDATA*        extdata             /**< extension data */
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   edgecount[],        /**< edge count */
+   int                   degreecount[],      /**< degree count */
+   SCIP_Bool*            treeIsFlawed        /**< is tree flawed?) */
 )
 {
-   int* edgecount;
-   int* degreecount;
    const int* const tree_edges = extdata->tree_edges;
    const int* const tree_deg = extdata->tree_deg;
-   const int* const tree_leaves = extdata->tree_leaves;
-   const int nleaves = extdata->tree_nleaves;
    const int tree_nedges = extdata->tree_nedges;
-   const int nedges = graph->edges;
-   const int nnodes = graph->knots;
-   int leavescount;
-   const SCIP_Bool isPc = graph_pc_isPcMw(graph);
-
-   SCIP_Bool flawed = FALSE;
-
-   assert(nleaves >= 1);
-
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &edgecount, nedges) );
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &degreecount, nnodes) );
 
    for( int i = 0; i < tree_nedges; i++ )
    {
@@ -505,26 +493,26 @@ SCIP_Bool extreduce_treeIsFlawed(
       const int head = graph->head[e];
       const int tail = graph->tail[e];
 
-      assert(e >= 0 && e < nedges);
+      assert(e >= 0 && e < graph->edges);
 
       if( edgecount[e] > 0 || edgecount[flipedge(e)] > 0  )
       {
          printf("tree_nedges %d \n", tree_nedges);
          printf("FLAW: double edge \n");
          graph_edge_printInfo(graph, e);
-         flawed = TRUE;
+         *treeIsFlawed = TRUE;
       }
 
       if( tree_deg[tail] <= 0 )
       {
          printf("FLAW: non-positive degree for %d (%d) \n", tail, tree_deg[tail]);
-         flawed = TRUE;
+         *treeIsFlawed = TRUE;
       }
 
       if( tree_deg[head] <= 0 )
       {
          printf("FLAW: non-positive degree for %d (%d) \n", head, tree_deg[head]);
-         flawed = TRUE;
+         *treeIsFlawed = TRUE;
       }
 
       degreecount[tail]++;
@@ -532,57 +520,23 @@ SCIP_Bool extreduce_treeIsFlawed(
 
       edgecount[e]++;
    }
+}
 
-   leavescount = 1; /* for tail of initial edge */
 
-   /* degree check */
-   for( int i = 0; i < tree_nedges && !flawed; i++ )
-   {
-      const int e = tree_edges[i];
-      const int head = graph->head[e];
+/** reset counters */
+static
+void treeResetCounters(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   edgecount[],        /**< edge count */
+   int                   degreecount[]       /**< degree count */
+)
+{
+   const int* const tree_edges = extdata->tree_edges;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   const int tree_nedges = extdata->tree_nedges;
 
-      if( degreecount[head] == 1 )
-         leavescount++;
-
-      if( degreecount[head] != tree_deg[head] )
-      {
-         printf("FLAW: wrong degree  \n");
-         flawed = TRUE;
-      }
-   }
-
-   /* leaves check */
-   if( !flawed && leavescount != nleaves )
-   {
-      printf("FLAW wrong leaves count %d != %d \n", leavescount, nleaves);
-      flawed = TRUE;
-   }
-
-   for( int i = 0; i < nleaves && !flawed; i++ )
-   {
-      const int leaf = tree_leaves[i];
-      if( degreecount[leaf] != 1 )
-      {
-         printf("FLAW wrong leaf %d degree %d != %d \n", leaf, degreecount[leaf], 1);
-         flawed = TRUE;
-      }
-   }
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( isPc && extdata->pcdata->pcSdToNode[i] >= -0.5 )
-      {
-         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcdata->pcSdToNode[i]);
-         flawed = TRUE;
-      }
-      if( extdata->tree_bottleneckDistNode[i] >= -0.5 )
-      {
-         printf("FLAW wrong tree_bottleneckDistNode entry[%d]=%f \n", i, extdata->tree_bottleneckDistNode[i]);
-         flawed = TRUE;
-      }
-   }
-
-   /* clean-up */
    for( int i = 0; i < tree_nedges; i++ )
    {
       const int e = tree_edges[i];
@@ -603,6 +557,196 @@ SCIP_Bool extreduce_treeIsFlawed(
    {
       assert(edgecount[i] == 0);
    }
+}
+
+
+/** are the degrees flawed? */
+static
+SCIP_Bool treeDegreesAreFlawed(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   const int             degreecount[]       /**< degree count */
+)
+{
+   const int* const tree_edges = extdata->tree_edges;
+   const int* const tree_deg = extdata->tree_deg;
+   const int tree_nedges = extdata->tree_nedges;
+
+   /* degree check */
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int e = tree_edges[i];
+      const int head = graph->head[e];
+
+      if( degreecount[head] != tree_deg[head] )
+      {
+         printf("FLAW: wrong degree  \n");
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** flaw with the tree leaves? */
+static
+SCIP_Bool treeLeavesAreFlawed(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   const int             degreecount[]       /**< degree count */
+)
+{
+   const int* const tree_edges = extdata->tree_edges;
+   const int* const tree_leaves = extdata->tree_leaves;
+   const int tree_nedges = extdata->tree_nedges;
+   const int nleaves = extdata->tree_nleaves;
+   int leavescount = 1; /* for tail of initial edge */
+
+   assert(nleaves >= 1);
+
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int e = tree_edges[i];
+      const int head = graph->head[e];
+
+      if( degreecount[head] == 1 )
+         leavescount++;
+   }
+
+   if( leavescount != nleaves )
+   {
+      printf("FLAW wrong leaves count %d != %d \n", leavescount, nleaves);
+      return TRUE;
+   }
+
+   for( int i = 0; i < nleaves; i++ )
+   {
+      const int leaf = tree_leaves[i];
+
+      if( degreecount[leaf] != 1 )
+      {
+         printf("FLAW wrong leaf %d degree %d != %d \n", leaf, degreecount[leaf], 1);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** flaw with the inner nodes? */
+static
+SCIP_Bool treeInnerNodesAreFlawed(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   const int             degreecount[]       /**< degree count */
+)
+{
+   const int* const tree_edges = extdata->tree_edges;
+   const int* const tree_innerNodes = extdata->tree_innerNodes;
+   const int tree_nedges = extdata->tree_nedges;
+   const int ninnerNodes = extdata->tree_ninnerNodes;
+   int innercount = 0;
+
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int e = tree_edges[i];
+      const int head = graph->head[e];
+
+      if( degreecount[head] > 1 )
+         innercount++;
+   }
+
+   if( innercount != ninnerNodes )
+   {
+      printf("FLAW wrong inner count %d != %d \n", innercount, ninnerNodes);
+      return TRUE;
+   }
+
+   for( int i = 0; i < ninnerNodes; i++ )
+   {
+      const int node = tree_innerNodes[i];
+
+      if( degreecount[node] <= 1 )
+      {
+         printf("FLAW wrong inner node %d degree %d <= %d \n", node, degreecount[node], 1);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** are distance values of tree flawed? */
+static
+SCIP_Bool treeDistsAreFlawed(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const SCIP_Bool isPc = graph_pc_isPcMw(graph);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( isPc && extdata->pcdata->pcSdToNode[i] >= -0.5 )
+      {
+         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcdata->pcSdToNode[i]);
+         return TRUE;
+      }
+      if( extdata->tree_bottleneckDistNode[i] >= -0.5 )
+      {
+         printf("FLAW wrong tree_bottleneckDistNode entry[%d]=%f \n", i, extdata->tree_bottleneckDistNode[i]);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** is current tree flawed? */
+SCIP_Bool extreduce_treeIsFlawed(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   int* edgecount;
+   int* degreecount;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   SCIP_Bool flawed = FALSE;
+
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &edgecount, nedges) );
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &degreecount, nnodes) );
+
+   treeGetCounters(graph, extdata, edgecount, degreecount, &flawed);
+
+   if( flawed )
+   {
+      flawed = TRUE;
+   }
+   else if( treeDegreesAreFlawed(graph, extdata, degreecount) )
+   {
+      flawed = TRUE;
+   }
+   else if( treeLeavesAreFlawed(graph, extdata, degreecount) )
+   {
+      flawed = TRUE;
+   }
+   else if( treeInnerNodesAreFlawed(graph, extdata, degreecount) )
+   {
+      flawed = TRUE;
+   }
+   else if( treeDistsAreFlawed(graph, extdata) )
+   {
+      flawed = TRUE;
+   }
+
+   treeResetCounters(graph, extdata, edgecount, degreecount);
 
    SCIPfreeCleanBufferArray(scip, &degreecount);
    SCIPfreeCleanBufferArray(scip, &edgecount);

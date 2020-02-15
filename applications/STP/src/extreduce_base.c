@@ -388,10 +388,12 @@ void extreduce_treeRecompCosts(
    const SCIP_Real* const redcost = reddata->redCosts;
    const int* const tree_edges = extdata->tree_edges;
    const int tree_nedges = extdata->tree_nedges;
+   const SCIP_Bool isPc = (graph->prize != NULL);
 
    extdata->tree_nDelUpArcs = 0;
 
    assert(!extreduce_treeIsFlawed(scip, graph, extdata));
+   assert(isPc == graph_pc_isPc(graph));
 
    for( int i = 0; i < tree_nedges; i++ )
    {
@@ -419,6 +421,24 @@ void extreduce_treeRecompCosts(
 
    extdata->tree_cost = tree_cost;
    extdata->tree_redcost = tree_redcost;
+
+   if( isPc )
+   {
+      const int* const innerNodes = extdata->tree_innerNodes;
+      const SCIP_Real* const prizes = graph->prize;
+      SCIP_Real tree_innerPrize = 0.0;
+      const int ninnnerNodes = extdata->tree_ninnerNodes;
+
+      for( int i = 0; i < ninnnerNodes; ++i )
+      {
+         const int node = innerNodes[i];
+         tree_innerPrize += prizes[node];
+      }
+
+      assert(EQ(tree_innerPrize, extdata->pcdata->tree_innerPrize));
+
+      extdata->pcdata->tree_innerPrize = tree_innerPrize;
+   }
 }
 
 /** get maximum allowed stack size */

@@ -290,6 +290,66 @@ void extLeafRemoveTop(
 }
 
 
+/** adds a new inner node */
+static inline
+void extInnerNodeAdd(
+   const GRAPH*          graph,             /**< graph data structure */
+   int                   innernode,         /**< node to add */
+   EXTDATA*              extdata            /**< extension data */
+)
+{
+   const SCIP_Bool isPc = (graph->prize != NULL);
+
+   assert(extdata->tree_innerNodes);
+   assert(0 <= innernode && innernode < graph->knots);
+   assert(extdata->tree_deg[innernode] > 0);
+   assert(isPc == graph_pc_isPc(graph));
+
+   if( isPc )
+   {
+      extdata->pcdata->tree_innerPrize += graph->prize[innernode];
+   }
+
+   extdata->tree_innerNodes[(extdata->tree_ninnerNodes)++] = innernode;
+}
+
+
+/** removes a new inner node */
+static inline
+void extInnerNodeRemoveTop(
+   const GRAPH*          graph,             /**< graph data structure */
+   int                   comproot,          /**< root of component that is removed */
+   EXTDATA*              extdata            /**< extension data */
+)
+{
+   assert(extdata && extdata->tree_innerNodes);
+   assert(comproot >= 0);
+
+   /* update tree leaves array todo might need to be changed for pseudo-elimination */
+   if( comproot != extdata->tree_root )
+   {
+      const SCIP_Bool isPc = (graph->prize != NULL);
+
+      assert(extdata->tree_ninnerNodes >= 1);
+      assert(comproot == extdata->tree_innerNodes[extdata->tree_ninnerNodes - 1]);
+      assert(isPc == graph_pc_isPc(graph));
+
+      extdata->tree_ninnerNodes--;
+
+      if( isPc )
+      {
+         extdata->pcdata->tree_innerPrize -= graph->prize[comproot];
+
+         assert(GE(extdata->pcdata->tree_innerPrize, 0.0));
+      }
+   }
+   else
+   {
+      assert(extdata->tree_ninnerNodes == 0);
+   }
+}
+
+
 /** adds edge to tree */
 static inline
 void extTreeAddEdge(
@@ -334,6 +394,7 @@ void extTreeStackTopRootRemove(
    if( comproot != extdata->tree_root )
    {
       extLeafRemove(comproot, extdata);
+      extInnerNodeAdd(graph, comproot, extdata);
    }
    else
    {
@@ -467,6 +528,7 @@ void extTreeStackTopRemove(
 
    /* finally, remove top component from leaves and MST storages and restore the component root */
    extLeafRemoveTop(graph, compsize, comproot, extdata);
+   extInnerNodeRemoveTop(graph, comproot, extdata);
    extreduce_mstCompRemove(graph, extdata);
 
    assert(extdata->tree_nedges >= 0 && extdata->tree_depth >= 0);
@@ -1247,8 +1309,11 @@ void extCheckArcPostClean(
    graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
    extreduce_extdataClean(extdata);
    extreduce_reddataClean(extdata->reddata);
+   extreduce_pcdataClean(extdata->pcdata);
 
-   assert(extreduce_reddataIsClean(graph, extdata->reddata) && extreduce_extdataIsClean(graph, extdata));
+   assert(extreduce_extdataIsClean(graph, extdata));
+   assert(extreduce_reddataIsClean(graph, extdata->reddata));
+   assert(extreduce_pcdataIsClean(graph, extdata->pcdata));
 }
 
 
@@ -1270,6 +1335,8 @@ void extCheckArcFromHead(
 
    assert(extreduce_extdataIsClean(graph, extdata));
    assert(extreduce_reddataIsClean(graph, extdata->reddata));
+   assert(extreduce_pcdataIsClean(graph, extdata->pcdata));
+
    assert(!(*deletable));
 
    /* put 'edge' on the stack */
@@ -1399,6 +1466,7 @@ SCIP_RETCODE extreduce_checkArc(
       int* extstack_state;
       int* tree_edges;
       int* tree_leaves;
+      int* tree_innerNodes;
       int* tree_parentNode;
       int* pcSdCands = NULL;
       SCIP_Real* tree_parentEdgeCost;
@@ -1413,6 +1481,7 @@ SCIP_RETCODE extreduce_checkArc(
       SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, maxncomponents + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_edges, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tree_innerNodes, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_redcostSwap, nnodes) );
@@ -1422,7 +1491,8 @@ SCIP_RETCODE extreduce_checkArc(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
-         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1};
+         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
+             .tree_innerPrize = 0.0 };
          REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
             .msts_levelbase = extpermanent->msts_levelbase,
             .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
@@ -1438,6 +1508,7 @@ SCIP_RETCODE extreduce_checkArc(
             .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
 			   .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
 			   .pcdata = &pcdata,
+			   .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
 			   .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
             .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
@@ -1452,6 +1523,7 @@ SCIP_RETCODE extreduce_checkArc(
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
       SCIPfreeBufferArray(scip, &tree_parentEdgeCost);
       SCIPfreeBufferArray(scip, &tree_parentNode);
+      SCIPfreeBufferArray(scip, &tree_innerNodes);
       SCIPfreeBufferArray(scip, &tree_leaves);
       SCIPfreeBufferArray(scip, &tree_edges);
       SCIPfreeBufferArray(scip, &extstack_state);
@@ -1507,6 +1579,7 @@ SCIP_RETCODE extreduce_checkEdge(
       int* extstack_state;
       int* tree_edges;
       int* tree_leaves;
+      int* tree_innerNodes;
       int* tree_parentNode;
       int* pcSdCands = NULL;
       SCIP_Real* tree_parentEdgeCost;
@@ -1521,6 +1594,7 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, maxncomponents + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_edges, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tree_innerNodes, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_redcostSwap, nnodes) );
@@ -1530,7 +1604,8 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
       {
-         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1};
+         PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
+            .tree_innerPrize = 0.0 };
          REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
             .msts_levelbase = extpermanent->msts_levelbase,
             .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
@@ -1546,8 +1621,9 @@ SCIP_RETCODE extreduce_checkEdge(
             .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
 			   .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
             .pcdata = &pcdata,
+            .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
 			   .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
-			    .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
+			   .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          /* can we extend from head? */
@@ -1566,6 +1642,7 @@ SCIP_RETCODE extreduce_checkEdge(
       SCIPfreeBufferArray(scip, &tree_redcostSwap);
       SCIPfreeBufferArray(scip, &tree_parentEdgeCost);
       SCIPfreeBufferArray(scip, &tree_parentNode);
+      SCIPfreeBufferArray(scip, &tree_innerNodes);
       SCIPfreeBufferArray(scip, &tree_leaves);
       SCIPfreeBufferArray(scip, &tree_edges);
       SCIPfreeBufferArray(scip, &extstack_state);

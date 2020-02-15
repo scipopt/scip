@@ -37,7 +37,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 // #define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
@@ -1406,6 +1405,16 @@ SCIP_Bool mstCompRuleOut(
    REDDATA* const reddata = extdata->reddata;
    const CSRDEPO* const msts_comp = reddata->msts_comp;
    SCIP_Real mstweight;
+   SCIP_Real tree_cost = extdata->tree_cost;
+   const SCIP_Bool isPc = (graph->prize != NULL);
+
+   assert(isPc == graph_pc_isPc(graph));
+
+   if( isPc )
+   {
+      tree_cost -= extdata->pcdata->tree_innerPrize;
+      assert(GE(tree_cost, 0.0));
+   }
 
    graph_csrdepo_getTopCSR(msts_comp, &topmst);
 
@@ -1413,9 +1422,10 @@ SCIP_Bool mstCompRuleOut(
 
    assert(extreduce_mstTopCompObjValid(scip, graph, mstweight, extdata));
 
-   if( LT(mstweight, extdata->tree_cost) )
+
+   if( LT(mstweight, tree_cost) )
    {
-      SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, extdata->tree_cost);
+      SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
 
       return TRUE;
    }
@@ -1651,8 +1661,18 @@ void mstLevelLeafTryExtMst(
    CSRDEPO* const msts_comp = reddata->msts_comp;
    DCMST* const dcmst = reddata->dcmst;
    const SCIP_Real* const adjcosts = extreduce_mldistsEmptySlotTargetDistsDirty(sds_vertical);
+   const SCIP_Bool isPc = (graph->prize != NULL);
+   SCIP_Real tree_cost = extdata->tree_cost;
 
+   assert(isPc == graph_pc_isPc(graph));
    assert(FALSE == *leafRuledOut);
+
+   if( isPc )
+   {
+      tree_cost -= extdata->pcdata->tree_innerPrize;
+      assert(GE(tree_cost, 0.0));
+   }
+
 
    graph_csrdepo_getTopCSR(msts_comp, &topmst);
 
@@ -1668,7 +1688,7 @@ void mstLevelLeafTryExtMst(
    /* make sure that the objective of the MST is ok! */
    assert(extreduce_mstTopCompExtObjValid(scip, graph, extneighbor, extweight, extdata));
 
-   if( LT(extweight, extdata->tree_cost) )
+   if( LT(extweight, tree_cost) )
    {
       SCIPdebugMessage("extension along vertex %d ruled out by extension MST! (%f < %f) \n",
          extneighbor, extweight, extdata->tree_cost);
