@@ -7391,7 +7391,7 @@ SCIP_RETCODE bilinearTermsInsertAll(
 
    /* create and initialize iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
    /* get product and pow expression handlers */
@@ -12736,6 +12736,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    else
    {
       *found = FALSE;
+      *auxvar = NULL;
    }
 
    return SCIP_OKAY;
