@@ -6608,26 +6608,20 @@
  * for nonempty row
  * and column subsets \f$I\subseteq\{1,\dots,m\}\f$ and \f$J\subseteq\{1,\dots,n\}\f$.
  *
- * - transformation
- * - key statistics
- *
  *
  * @section DECOMP_USING Using a decomposition
- *
- * - use within SCIP/benefit for users.
- * - use for Benders @ref BENDDECF
  *
  * After passing one or more decompositions, see below, one can access all available decompositions with SCIPgetDecomps().
  * The labels can be obtained by calling SCIPdecompGetVarsLabels() and SCIPdecompGetConsLabels().
  * If some variables/constraints are not labeled, these methods will mark them as linking variables/constraints.
  * There are several methods to get more information about one decomposition, see @ref DecompMethods.
  *
- * A decomposition can be used to split the problem into several subproblems which in general are easier to solve.
+ * A decomposition can be used to split the problem into several subproblems which, in general, are easier to solve.
  * For \f$q \in \{1,\dots,k\}\f$ the system
  * \f[
  *   A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\; x_{[D^{\text{col}}_{q}]}  = b_{[D^{\text{row}}_{q}]}
  * \f]
- * ist part of subproblem \f$q\f$, the handling of the linking variables/constraints depends on the chosen algorithm.
+ * is part of subproblem \f$q\f$, the handling of the linking variables/constraints depends on the chosen application context.
  * For example, in the heuristic @ref heur_padm.c several smaller subproblems are solved multiple times to get a feasible solution.
  * Also the @ref BENDDECF "Benders' decomposition framework" was extended with release 7.0 to use user decompositions.
  *
@@ -6637,23 +6631,48 @@
  * It can be created with the SCIP-API or it can be read from a file.
  *
  * To create it with the API, the user must first create a decomposition with SCIPcreateDecomp() specifying
- * wether the decomposition belongs to the original or transformed problem and the number of blocks.
+ * whether the decomposition belongs to the original or transformed problem and the number of blocks.
  * Then the variables and constraints can be assigned to one block or to the linking rows/columns by calling
  * SCIPdecompSetVarsLabels() and SCIPdecompSetConsLabels(), respectively.
  * To complete the decomposition or to ensure that it is internally consistent, SCIPcomputeDecompVarsLabels() or
  * SCIPcomputeDecompConsLabels() can be called.
  * Note that this will ignore the existing variable/constraint labels and compute the labels again using the constraint/variable labels.
  *
- * Further information about the decomposition can be received with SCIPcomputeDecompStats().
- * In addition to calculating the statistics, the real number of blocks and the smallest or largest block is also determined.
+ * @section DECOMP_READDEC Reading a decomposition from a file
+ *
+ * Alternatively, after a problem has been read, a related decomposition can be read from a dec-file.
+ * Please refer to the @ref reader_dec.h "DEC file reader" for further information about the required file format.
+ * Upon reading a valid dec-file, a decomposition structure is created, where the corresponding variable labels are inferred from the constraint labels, giving precedence to block over linking constraints.
+ *
+ * @section DECOMP_BENDERS Use for Benders
+ *
+ * If the variables should be labeled for the application of @ref BENDDECF "Benders' decomposition", the decomposition must be explicitly flagged by setting the parameter decomposition/benderslabels to TRUE.
+ * With this setting, the variable's labeling takes place giving precedence to its presence in linking constraints over its presence in named blocks.
+ *
+ * @section DECOMP_TRANS Decomposition after problem transformation
+ *
+ * As the problem's constraints are constantly changing, or possibly deleted, during presolving, the constraints' labeling must be triggered again.
+ * Therefore, SCIP automatically transforms all user decompositions at the beginning of the root node based on the variables' labels.
+ *
+ * @section DECOMP_STATS Decomposition statistics
+ *
+ * Further useful measures and statistics about the decomposition are computed within SCIPcomputeDecompStats().
+ * When the labeling process is concluded, the following measures are computed and printed:
+ * - the number of blocks;
+ * - the number of linking variables and linking constraints;
+ * - the size of the largest as well as the smallest block;
+ * - the area score using computeAreaScore();
+ * - the modularity using computeModularity();
+ * - the block graph statistics using buildBlockGraph(). A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
+ * Note that the linking constraints are intentionally skipped in this computation.
+ * \f$ G = (V,E) \f$ denotes a block graph, with vertex set \f$V\f$ and edge set \f$E\f$.
+ * Each vertex in the graph represents a block in the decomposition; \f$V = \{v_{1},\dots,v_{k}\}\f$. An edge \f$e = \{ v_{s},v_{t} \}\f$ is added to \f$G\f$, if and only if there exists a column \f$\ell \in L^{col}\f$, a row \f$i \in D^{row}_{s}\f$
+ * and a row \f$j \in D^{row}_{t}\f$, such that \f$a_{i,\ell} \neq 0\f$ and \f$a_{j,\ell} \neq 0\f$. From the constructed graph, the number of edges, articulation points and connected components are computed, together with the maximum and minimum degree.
+ * Note that building the block graph can become computationally expensive with large and dense decompositions. Thus, it is possible through a user parameter decomposition/maxgraphedge to define a maximum edge limit.
+ * The construction process will be interrupted once this limit is reached, in which case only approximate estimations of the block graph statistics will be displayed and accompanied with a warning message.
  *
  * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
  * Access to all decompositions in the DecompStore is possible with SCIPgetDecomps().
- *
- * @section DECOMP_READDEC Reading a decomposition from a file
- *
- * After a problem has been read, a related decomposition can be read from a dec-file.
- * Please refer to the @ref reader_dec.h "DEC file reader" for further information about the required file format.
  *
  */
 
