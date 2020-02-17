@@ -13142,6 +13142,7 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_ITERATOR* it2;
    SCIP_VAR* auxvar;
    int pos;
 
@@ -13154,10 +13155,14 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    /* sort variables to make lookup below faster */
    SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
 
-   /* TODO if not branching on auxiliary variables, then add branching scores directly to original variables */
-
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
+
+   if( !SCIPgetConsExprBranchAux(conshdlr) )
+   {
+      SCIP_CALL( SCIPexpriteratorCreate(&it2, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it2, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   }
 
    for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
    {
@@ -13165,17 +13170,41 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
       if( auxvar == NULL )
          continue;
 
-      /* if auxvar of expr is contained in of auxvars array, add branching score to expr */
+      /* if auxvar of expr is contained in auxvars array, add branching score to expr */
       if( SCIPsortedvecFindPtr((void**)auxvars, SCIPvarComp, auxvar, nauxvars, &pos) )
       {
          assert(auxvars[pos] == auxvar);
-         SCIPaddConsExprExprBranchScore(scip, conshdlr, expr, branchscore);
+         if( SCIPgetConsExprBranchAux(conshdlr) )
+         {
+            SCIPaddConsExprExprBranchScore(scip, conshdlr, expr, branchscore);
 
-         SCIPdebugMsg(scip, "added branchingscore %g for expr %p with auxvar <%s> (coef %g)\n", branchscore, expr, SCIPvarGetName(auxvar));
+            SCIPdebugMsg(scip, "added branchingscore %g for expr %p with auxvar <%s>\n", branchscore, expr, SCIPvarGetName(auxvar));
+         }
+         else
+         {
+            /* add branching scores directly to original variables */
+            SCIP_CONSEXPR_EXPR* e;
+            for( e = SCIPexpriteratorRestartDFS(it2, expr); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            {
+               assert(e != NULL);
+
+               if( SCIPisConsExprExprVar(e) )
+               {
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, e, branchscore);
+
+                  SCIPdebugMsg(scip, "added branchingscore %g for var <%s> in expr for auxvar <%s>\n", branchscore, SCIPvarGetName(SCIPgetConsExprExprVarVar(e)), SCIPvarGetName(auxvar));
+               }
+            }
+         }
 
          if( ++*nbrscoreadded == nauxvars )
             break;
       }
+   }
+
+   if( !SCIPgetConsExprBranchAux(conshdlr) )
+   {
+      SCIPexpriteratorFree(&it2);
    }
 
    SCIPexpriteratorFree(&it);
