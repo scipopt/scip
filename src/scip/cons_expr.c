@@ -6052,7 +6052,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->branchaux )
+   if( SCIPgetConsExprBranchAux(conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
@@ -6092,7 +6092,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
          else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxrelconsviol )
             continue;
 
-         if( !conshdlrdata->branchaux )
+         if( !SCIPgetConsExprBranchAux(conshdlr) )
          {
             int i;
 
@@ -6184,7 +6184,7 @@ SCIP_RETCODE branchConstraintInfeasibility(
          break;
    }
 
-   if( conshdlrdata->branchaux )
+   if( SCIPgetConsExprBranchAux(conshdlr) )
       SCIPexpriteratorFree(&it);
 
    if( ncands == 0 )  /* no unfixed branching candidate in all violated constraint - that's bad :-( */
@@ -6280,12 +6280,7 @@ SCIP_RETCODE branching(
    SCIP_RESULT*          result              /**< pointer to store the result of branching */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* child;
-   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6296,13 +6291,18 @@ SCIP_RETCODE branching(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( !conshdlrdata->branchaux )
+#ifndef NDEBUG
+   if( !SCIPgetConsExprBranchAux(conshdlr) )
    {
-      /* propagate branching scores from expressions with children to variable expressions
-       * TODO maybe integrate this into previous loop, i.e., after enforceExpr on all exprs of one constraint,
-       * propagate its branching scores to the variables for this one constraint
-       */
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_ITERATOR* it;
+      SCIP_CONSEXPR_EXPR* expr;
+      int c;
+
+      /* check that no auxiliary variable has branching scores */
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
       for( c = 0; c < nconss; ++c )
       {
          assert(conss != NULL);
@@ -6315,127 +6315,19 @@ SCIP_RETCODE branching(
          if( !isConsViolated(scip, conss[c]) )
             continue;
 
-         /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-         SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-         for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
-            switch( SCIPexpriteratorGetStageDFS(it) )
-            {
-               case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
-               {
-                  /* skip if current expression does not have a valid branching score */
-                  if( expr->brscoretag != conshdlrdata->enforound )
-                     break;
+            /* skip if current expression does not have a valid branching score */
+            if( expr->brscoretag != conshdlrdata->enforound )
+               break;
 
-                  /* if at first child and there are several, then compute sum of width of activities over children */
-                  if( expr->nchildren > 1 && SCIPexpriteratorGetChildIdxDFS(it) == 0 )
-                  {
-                     SCIP_CONSEXPRITERATOR_USERDATA ud;
-                     SCIP_Real activitywidthsum = 0.0;
-                     int nactivityinf = 0;
-                     int i;
-
-                     /* get sum of width of bounded activities over all children; and count number of unbounded ones */
-                     for( i = 0; i < expr->nchildren; ++i )
-                     {
-                        SCIP_INTERVAL activity;
-
-                        SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
-                        if( activity.inf <= -SCIP_INTERVAL_INFINITY || activity.sup >= SCIP_INTERVAL_INFINITY )
-                           ++nactivityinf;
-                        else
-                           activitywidthsum += activity.sup - activity.inf;
-                     }
-
-                     /* store number of unbounded activities, if any, or sum of width of activities in iterator-specific expr data
-                      * (need to fit into one real, so use negative value to store number of unbounded, if any
-                      */
-                     if( nactivityinf > 0 )
-                        ud.realval = -(SCIP_Real)nactivityinf;
-                     else
-                        ud.realval = activitywidthsum;
-                     SCIPexpriteratorSetCurrentUserData(it, ud);
-                  }
-
-                  /* propagate branching score, if any, from this expression to current child
-                   * if there are several children, we split the score according to the width of their activity
-                   */
-                  child = SCIPexpriteratorGetChildExprDFS(it);
-
-                  /* reset branching score in child if it has not been set in this enfo round yet */
-                  if( child->brscoretag != conshdlrdata->enforound )
-                  {
-                     child->brscoresum = 0.0;
-                     child->brscoremax = 0.0;
-                     child->nbrscores = 0;
-                     child->brscoretag = conshdlrdata->enforound;
-                  }
-
-                  if( expr->nchildren > 1 )
-                  {
-                     SCIP_CONSEXPRITERATOR_USERDATA ud;
-
-                     ud = SCIPexpriteratorGetCurrentUserData(it);
-                     if( ud.realval < 0.0 )
-                     {
-                        /* infinite activities: divide branching scores evenly among all children with infinite activity */
-                        if( child->activity.inf <= -SCIP_INTERVAL_INFINITY || child->activity.sup >= SCIP_INTERVAL_INFINITY )
-                        {
-                           child->brscoresum += expr->brscoresum / (-ud.realval);
-                           child->brscoremax = MAX(child->brscoremax, expr->brscoremax / (-ud.realval));
-                           child->nbrscores += expr->nbrscores;
-                        }
-                     }
-                     else if( child->activity.inf != child->activity.sup )  /*lint !e777*/
-                     {
-                        /* all activities finite: weigh by activity width */
-                        SCIP_Real weight;
-
-                        assert(ud.realval > 0.0);
-                        assert(child->activitytag >= conshdlrdata->lastboundrelax);  /* should have been ensured by SCIPevalConsExprExprActivity above */
-                        assert(child->activity.inf > -SCIP_INTERVAL_INFINITY);
-                        assert(child->activity.sup <  SCIP_INTERVAL_INFINITY);
-
-                        weight = (child->activity.sup - child->activity.inf) / ud.realval;
-
-                        child->brscoresum += expr->brscoresum * weight;
-                        child->brscoremax = MAX(child->brscoremax, expr->brscoremax * weight);
-                        child->nbrscores += expr->nbrscores;
-                     }
-                  }
-                  else
-                  {
-                     child->brscoresum += expr->brscoresum;
-                     child->brscoremax = MAX(child->brscoremax, expr->brscoremax);
-                     child->nbrscores += expr->nbrscores;
-                  }
-
-                  break;
-               }
-
-               case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
-               {
-                  /* invalidate the branching scores in this expression, so they are not passed on in case this expression
-                   * is visited again
-                   * do this only for expressions with children, since for variables we need the brscoretag to be intact
-                   */
-                  if( expr->nchildren > 0 )
-                     expr->brscoretag = 0;
-
-                  break;
-               }
-
-               default:
-                  SCIPABORT();
-                  break;
-            }
+            assert(SCIPisConsExprExprVar(expr));
          }
       }
 
       SCIPexpriteratorFree(&it);
    }
+#endif
 
    switch( conshdlrdata->branchmethod )
    {
