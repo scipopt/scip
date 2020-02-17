@@ -66,11 +66,7 @@ struct SCIP_SepaData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< expression constraint handler */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
-   SCIP_VAR**            bilinauxvars;       /**< linearization variable for each bilinear term */
-   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the linearization variables of each bilinear term */
    int*                  varpriorities;      /**< priorities of the variables in varssorted */
-   int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
-   int                   nbilinterms;        /**< total number of bilinear terms */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    int                   currentnunknown;    /**< number of unknown terms in current row (not printed) */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
@@ -84,7 +80,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             onlyeqrows;         /**< indicates wether only equality rows should be used for rlt cuts */
    SCIP_Bool             onlycontrows;       /**< indicates wether only continuous rows should be used for rlt cuts */
-   SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be uswed for rlt cuts */
+   SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be used for rlt cuts */
    SCIP_Bool             useinsubscip;       /**< indicates whether the seperator should also be used in sub-scips */
 };
 
@@ -102,14 +98,8 @@ SCIP_RETCODE freeSepaData(
    int i;
 
    assert(sepadata->iscreated);
-   assert(sepadata->bilinvarsmap != NULL);
+   assert(sepadata->nbilinvars > 0);
 
-   /* release auxiliary variables that were captured for rlt */
-   for( i = 0; i < sepadata->nbilinterms; ++i )
-   {
-      assert(sepadata->bilinauxvars[i] != NULL);
-      SCIP_CALL( SCIPreleaseVar(scip, &(sepadata->bilinauxvars[i])) );
-   }
 
    /* release bilinvars that were captured for rlt */
    for( i = 0; i < sepadata->nbilinvars; ++i )
@@ -119,190 +109,91 @@ SCIP_RETCODE freeSepaData(
    }
 
    /* free arrays */
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bilinauxvars, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->nbilinvars);
    SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->nbilinvars);
-
-   /* free the hashmap */
-   SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
 
    return SCIP_OKAY;
 }
 
-/** helper method to create separation data */
 static
 SCIP_RETCODE createSepaData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata            /**< separation data */
    )
 {
-   SCIP_CONS** conss;
-   SCIP_VAR** vars;
-   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_HASHMAP* varmap;
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-   int xidx;
-   int yidx;
-   int i;
-   int nconss;
+   SCIP_VAR** xs;
+   SCIP_VAR** ys;
+   SCIP_VAR** auxvars;
+   int nbilinterms;
    int nvars;
-   int maxidx = 0;
+   int i;
 
-   assert(sepadata != NULL);
+   /* get total number of bilinear terms */
+   nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
-   sepadata->nbilinvars = 0;
-   sepadata->nbilinterms = 0;
+   /* skip if there are no bilinear terms */
+   if( nbilinterms == 0 )
+      return SCIP_OKAY;
 
-   conss = SCIPconshdlrGetConss(sepadata->conshdlr);
-   nconss = SCIPconshdlrGetNConss(sepadata->conshdlr);
-
-   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   /* create variable map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-
-   /* create iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, sepadata->conshdlr, SCIPblkmem(scip)) );
-
-   /* create the empty map for bilinear terms */
-   SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), nvars) );
-
-   /* allocate memory for arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinauxvars, nvars) );
+   /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varssorted, nvars) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->varpriorities, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varpriorities, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nbilinterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nbilinterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, nbilinterms) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
 
-   /* find maximum variable index */
-   for( i = 0; i < SCIPgetNVars(scip); ++i )
-      maxidx = MAX(maxidx, SCIPvarGetIndex(vars[i]));  /*lint !e666*/
-   sepadata->maxvarindex = maxidx;
+   /* get all bilinear terms from the expression constraint handler */
+   SCIP_CALL( SCIPgetConsExprBilinTerms(sepadata->conshdlr, xs, ys, auxvars) );
 
-   for( i = 0; i < nconss; ++i )
+   /* store the priorities for all variables that appear bilinearly */
+   sepadata->nbilinvars = 0;
+   for( i = 0; i < nbilinterms; ++i )
    {
-      SCIP_CONSEXPR_EXPR* expr;
+      int j;
 
-      SCIP_CALL(SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, conss[i]), SCIP_CONSEXPRITERATOR_DFS, TRUE));
-      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
-      expr = SCIPexpriteratorGetCurrent(it);
+      assert(xs[i] != NULL);
+      assert(ys[i] != NULL);
 
-      /* collect bilinear terms */
-      while( !SCIPexpriteratorIsEnd(it) ) /*lint !e441*/
+      /* skip bilinear term because it does not have an auxiliary variable */
+      if( auxvars[i] == NULL )
+         continue;
+
+      for( j = 0; j < 2; ++j )
       {
-         switch( SCIPexpriteratorGetStageDFS(it) )
+         SCIP_VAR* var = (j == 0) ? xs[i] : ys[i];
+
+         /* check whether variable has been considered already */
+         if( SCIPhashmapExists(varmap, (void*)var) )
          {
-            case SCIP_CONSEXPRITERATOR_ENTEREXPR:
-            {
-               SCIP_VAR* auxvar;
-               int mapidx;
-               int poslocks;
-               int neglocks;
+            int idx = SCIPhashmapGetImageInt(varmap, (void*)var);
+            assert(idx >= 0 && idx < sepadata->nbilinvars);
+            assert(sepadata->varssorted[idx] == var);
 
-               assert(expr != NULL);
-
-               auxvar = SCIPgetConsExprExprAuxVar(expr);
-
-               /* no linearization variable available */
-               if( auxvar == NULL )
-                  break;
-
-               x = NULL;
-               y = NULL;
-
-               /* test if expression is quadratic */
-               if( SCIPgetConsExprExprHdlr(expr) == SCIPfindConsExprExprHdlr(sepadata->conshdlr, "pow")
-                  && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
-               {
-                  /* if only initial rows are requested, skip products of non-variable expressions */
-                  if( sepadata->onlyinitial && !SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0]) )
-                     break;
-
-                  x = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
-                  y = x;
-               }
-                  /* test if expression is bilinear */
-               else if( SCIPgetConsExprExprHdlr(expr) == SCIPfindConsExprExprHdlr(sepadata->conshdlr, "prod")
-                  && SCIPgetConsExprExprNChildren(expr) == 2 )
-               {
-                  /* if only initial rows are requested, skip products of non-variable expressions */
-                  if( sepadata->onlyinitial && (!SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0])
-                                                || !SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[1])) )
-                     break;
-
-                  x = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
-                  y = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
-               }
-
-               /* if children don't have linearization variables, there's nothing to do */
-               if( x != NULL && y != NULL )
-               {
-                  /* switch variables if necessary */
-                  if( SCIPvarComp(x, y) > 0 )
-                     SCIPswapPointers((void**)&x, (void**)&y);
-
-                  assert(auxvar != NULL);
-
-                  xidx = SCIPvarGetIndex(x);
-                  yidx = SCIPvarGetIndex(y);
-
-                  /* compute unique index of the bilinear term */
-                  mapidx = xidx * sepadata->maxvarindex + yidx;
-
-                  if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
-                  {
-                     /* store variables if its the first time they are found in a bilinear term */
-                     if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
-                     {
-                        SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
-                        sepadata->varssorted[sepadata->nbilinvars] = x;
-                        SCIP_CALL( SCIPcaptureVar(scip, x) );
-                        ++sepadata->nbilinvars;
-                     }
-
-                     if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
-                     {
-                        SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
-                        sepadata->varssorted[sepadata->nbilinvars] = y;
-                        SCIP_CALL( SCIPcaptureVar(scip, y) );
-                        ++sepadata->nbilinvars;
-                     }
-
-                     /* insert linearization variable into auxvar hashmap */
-                     SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
-                        sepadata->nbilinterms) ); /*lint !e571*/
-
-                     /* add variables to bilin-arrays and capture them */
-                     sepadata->bilinauxvars[sepadata->nbilinterms] = auxvar;
-                     SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
-                     ++sepadata->nbilinterms;
-
-                     /* add locks to priorities of both variables */
-                     poslocks = SCIPgetConsExprExprNLocksPos(expr);
-                     neglocks = SCIPgetConsExprExprNLocksNeg(expr);
-                     sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)] += poslocks + neglocks; /*lint !e571*/
-                     sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)] += poslocks + neglocks; /*lint !e571*/
-                  }
-                  else
-                  {
-                     expr = SCIPexpriteratorSkipDFS(it);
-                     continue;
-                  }
-               }
-
-               break;
-            }
-
-            default:
-               SCIPABORT();
-               break;
+            /* increase priorities */
+            ++(sepadata->varpriorities[idx]);
          }
-
-         expr = SCIPexpriteratorGetNext(it);
+         else
+         {
+            /* add variable to the map and store it in the separation data */
+            SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)var, sepadata->nbilinvars) );
+            sepadata->varssorted[sepadata->nbilinvars] = var;
+            sepadata->varpriorities[sepadata->nbilinvars] = 1;
+            ++(sepadata->nbilinvars);
+         }
       }
    }
+
+   /* free memory */
+   SCIPhashmapFree(&varmap);
+   SCIPfreeBufferArray(scip, &auxvars);
+   SCIPfreeBufferArray(scip, &ys);
+   SCIPfreeBufferArray(scip, &xs);
 
    /* reallocate arrays to fit actually sizes */
    if( sepadata->nbilinvars < nvars )
@@ -311,63 +202,21 @@ SCIP_RETCODE createSepaData(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, nvars, sepadata->nbilinvars) );
    }
 
-   if( sepadata->nbilinterms < nvars )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinauxvars, nvars, sepadata->nbilinterms) );
-   }
-
    /* sort maxnumber of variables according to their occurrences */
    SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars, sepadata->nbilinvars);
 
-   SCIPexpriteratorFree(&it);
-   SCIPhashmapFree(&varmap);
+   /* capture all variables */
+   for( i = 0; i < sepadata->nbilinvars; ++i )
+   {
+      assert(sepadata->varssorted[i] != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, sepadata->varssorted[i]) );
+   }
 
+   /* mark that separation data hash been created */
    sepadata->iscreated = TRUE;
    sepadata->isinitialround = TRUE;
 
    return SCIP_OKAY;
-}
-
-/** helper method to get the linearization variable of a bilinear term xy
- *
- *  @return NULL if no linearization variable exists
- */
-static
-SCIP_VAR* getBilinVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separation data */
-   SCIP_VAR*             x,                  /**< first variable */
-   SCIP_VAR*             y                   /**< second variable */
-   )
-{
-   int idx;
-   int img;
-
-   assert(scip != NULL);
-   assert(sepadata != NULL);
-   assert(x != NULL);
-   assert(y != NULL);
-
-   /* it seems that x or y have been added after initsol -> no linearization variable available */
-   if( SCIPvarGetIndex(x) > sepadata->maxvarindex || SCIPvarGetIndex(y) > sepadata->maxvarindex )
-   {
-      return NULL;
-   }
-
-   /* switch variables if necessary */
-   if( x != y && SCIPvarComp(x, y) > 0 )
-      SCIPswapPointers((void**) &x, (void**) &y);
-
-   /* compute unique index of the bilinear term */
-   idx = SCIPvarGetIndex(x) * sepadata->maxvarindex + SCIPvarGetIndex(y);
-
-   if( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) idx) )
-   {
-      img = (int) SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx); /*lint !e571*/
-      return sepadata->bilinauxvars[img];
-   }
-
-   return NULL;
 }
 
 /** tests if a row contains too many unknown bilinear terms w.r.t. the parameters */
@@ -381,6 +230,7 @@ SCIP_RETCODE isAcceptableRow(
    )
 {
    SCIP_VAR* linvar;
+   SCIP_Bool found;
    int i;
    int nterms = 0;
 
@@ -389,7 +239,7 @@ SCIP_RETCODE isAcceptableRow(
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || nterms <= sepadata->maxunknownterms); ++i )
    {
-      linvar = getBilinVar(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]) );
+      SCIP_CALL( SCIPgetConsExprBilinTermAuxar(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]), &linvar, &found) );
 
       if( linvar == NULL )
          ++nterms;
@@ -562,12 +412,13 @@ SCIP_RETCODE computeRltCuts(
       SCIP_VAR* colvar;
       SCIP_Real coefauxvar;
       SCIP_Real coefcolvar;
+      SCIP_Bool found;
 
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
       coefauxvar = SCIProwGetVals(row)[i] * signfactor;
       coefcolvar = SCIProwGetVals(row)[i] * boundfactor;
 
-      auxvar = getBilinVar(scip, sepadata, var, colvar);
+      SCIP_CALL( SCIPgetConsExprBilinTermAuxar(sepadata->conshdlr, var, colvar, &auxvar, &found) );
 
       /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
       if( auxvar != NULL )
