@@ -5953,6 +5953,7 @@ SCIP_Real getWeightedBranchscore(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR* var;
    SCIP_Real score;
+   SCIP_Real onescore;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -5963,7 +5964,15 @@ SCIP_Real getWeightedBranchscore(
    var = SCIPgetConsExprExprAuxVar(expr);
    assert(var != NULL);
 
-   score = conshdlrdata->branchviolweight * SCIPgetConsExprExprBranchScore(conshdlr, expr);
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
+
+   if( conshdlrdata->branchviolweight != 0.0 )
+   {
+      onescore = SCIPgetConsExprExprBranchScore(conshdlr, expr);
+      score = conshdlrdata->branchviolweight * onescore;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, onescore); )
+   }
 
    if( conshdlrdata->branchdomainweight != 0.0 )
    {
@@ -5972,36 +5981,45 @@ SCIP_Real getWeightedBranchscore(
       /* get domain width, taking infinity at 1e20 on purpose */
       domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
 
-      /* make domain score large (up to 40=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
+      /* make domain score large (up to 20=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
        * and small (minimum 0=log(1)) for a domain width around 1
        */
-      score += conshdlrdata->branchdomainweight * log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));
+      onescore = log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));
+      score += conshdlrdata->branchdomainweight * onescore;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(domain)", conshdlrdata->branchdomainweight, onescore); )
    }
 
    if( conshdlrdata->branchdualweight > 0.0 )
    {
-      score += conshdlrdata->branchdualweight * getDualBranchscore(scip, conshdlr, var);
+      onescore = getDualBranchscore(scip, conshdlr, var);
+      score += conshdlrdata->branchdualweight * onescore;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(dual)", conshdlrdata->branchdualweight, onescore); )
    }
 
    if( conshdlrdata->branchvartypeweight > 0.0 )
    {
-      SCIP_Real vartypescore = 0.0;
       switch( SCIPvarGetType(var) )
       {
          case SCIP_VARTYPE_BINARY :
-            vartypescore = 1.0;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS :
+            onescore = 1.0;
             break;
          case SCIP_VARTYPE_INTEGER :
-            vartypescore = 0.1;
+            onescore = 0.1;
             break;
          case SCIP_VARTYPE_IMPLINT :
-            vartypescore = 0.01;
+            onescore = 0.01;
             break;
+         default:
+            onescore = 0.0;
       }
-      score += conshdlrdata->branchvartypeweight * vartypescore;
+      score += conshdlrdata->branchvartypeweight * onescore;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(vartype)", conshdlrdata->branchvartypeweight, onescore, score); )
    }
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " = %g\n", score); )
 
    return score;
 }
@@ -6123,8 +6141,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
                candscores[ncands] = getWeightedBranchscore(scip, conshdlr, consdata->varexprs[i]);
                ++ncands;
 
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] with score %g as branching candidate\n", SCIPvarGetName(var), lb, ub, candscores[ncands-1]); )
-
                /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
                consdata->varexprs[i]->brscoretag = 0;
             }
@@ -6166,8 +6182,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
                cands[ncands] = expr;
                candscores[ncands] = getWeightedBranchscore(scip, conshdlr, expr);
                ++ncands;
-
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " consider variable <%s>[%g,%g] with score %g as branching candidate\n", SCIPvarGetName(var), lb, ub, candscores[ncands-1]); )
             }
          }
       }
@@ -6845,7 +6859,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_CUTOFF )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
             expr->lastenforced = conshdlrdata->enforound;
             break;
@@ -6853,7 +6867,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
@@ -6861,7 +6875,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_REDUCEDDOM )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
             *result = SCIP_REDUCEDDOM;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
@@ -6869,7 +6883,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_BRANCHED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
             assert(inenforcement);
 
             /* separation and domain reduction takes precedence over branching */
@@ -6890,7 +6904,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_CUTOFF )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
             expr->lastenforced = conshdlrdata->enforound;
             break;
@@ -6898,7 +6912,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
@@ -6906,7 +6920,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_REDUCEDDOM )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by boundchange\n", nlhdlr->name); )
             *result = SCIP_REDUCEDDOM;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
@@ -6914,7 +6928,7 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_BRANCHED )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
             assert(inenforcement);
 
             /* separation takes precedence over branching */

@@ -286,6 +286,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          if( branchcand[0] )
          {
             SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], violation);
+            SCIPdebugMsg(scip, "add score %g to <%s>\n", violation,
+               SCIPvarGetName(SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0])));
             *addedbranchscores = TRUE;
          }
       }
@@ -340,6 +342,9 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
                {
                   assert(domainwidthsum > 0.0);
                   SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation * domainwidth / domainwidthsum);
+                  SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,
+                     100*domainwidth / domainwidthsum, violation,
+                     SCIPvarGetName(auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
                   *addedbranchscores = TRUE;
                }
             }
