@@ -98,8 +98,7 @@ SCIP_RETCODE freeSepaData(
    int i;
 
    assert(sepadata->iscreated);
-   assert(sepadata->nbilinvars > 0);
-
+   assert(sepadata->varssorted != NULL);
 
    /* release bilinvars that were captured for rlt */
    for( i = 0; i < sepadata->nbilinvars; ++i )
