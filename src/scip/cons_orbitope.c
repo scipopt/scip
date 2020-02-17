@@ -1952,7 +1952,6 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
    int** lexminfixes;
@@ -1982,7 +1981,6 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    assert( consdata->vars != NULL );
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
    dynamic = consdata->usedynamicprop && !consdata->ismodelcons;
    m = consdata->nspcons;
    n = consdata->nblocks;

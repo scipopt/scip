@@ -3330,8 +3330,6 @@ SCIP_RETCODE addOrbitopeSubgroup(
 
       for (l = 0; l < ncols; ++l)
       {
-         int varidx;
-
          if ( graphcomponents[compstart + l] == *firstvaridx )
          {
             *compidxfirstrow = k;
