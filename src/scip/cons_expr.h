@@ -1097,7 +1097,7 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    SCIP_VAR*                  y,              /**< second variable */
    SCIP_VAR**                 auxvar,         /**< pointer to store auxiliary variable (might be NULL) */
    SCIP_Bool*                 found           /**< pointer to store whether the bilinear term xy exists */
-);
+   );
 
 /** upgrading method for expression constraints into more specific constraints
  *
