@@ -11342,6 +11342,24 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
    ++exprhdlr->nbranchscores;
 }
 
+/** returns whether we are ok to branch on auxiliary variables
+ *
+ * Currently returns value of constraints/expr/branching/aux parameter.
+ */
+SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->branchaux;
+}
+
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13143,6 +13161,8 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    /* sort variables to make lookup below faster */
    SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
 
+   /* TODO if not branching on auxiliary variables, then add branching scores directly to original variables */
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
 
@@ -13839,7 +13859,7 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
 }
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * to be at least of size the number of unique variables in the expression which is given by SCIPgetConsExprExprNVars()
  * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions

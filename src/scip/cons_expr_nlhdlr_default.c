@@ -23,6 +23,7 @@
 
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "default"
@@ -281,74 +282,160 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 #endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
-      if( nchildren == 1 )
+      if( SCIPgetConsExprBranchAux(conshdlr) )
       {
-         if( branchcand[0] )
+         /* distribute violation as branching score to children that are marked as branchcand */
+         if( nchildren == 1 )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], violation);
-            SCIPdebugMsg(scip, "add score %g to <%s>\n", violation,
-               SCIPvarGetName(SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0])));
-            *addedbranchscores = TRUE;
+            if( branchcand[0] )
+            {
+               SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], violation);
+               SCIPdebugMsg(scip, "add score %g to <%s>\n", violation,
+                  SCIPvarGetName(SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0])));
+               *addedbranchscores = TRUE;
+            }
+         }
+         else
+         {
+            /* distribute violation onto children that are branching candidates
+             * every candidate gets a violation that is proportional to the share of its domain width to the sum of the domain widths over all candidates
+             * if some candidates are unbounded, then only add branching scores for them
+             */
+            SCIP_Real domainwidthsum = 0.0;  /* sum of width of domain over all candidates with bounded domain */
+            int nunbounded = 0;  /* number of candidates with unbounded domain */
+
+            /* get sum of finite domain widths, and number of infinite ones */
+            for( c = 0; c < nchildren; ++c )
+            {
+               SCIP_VAR* auxvar;
+
+               if( !branchcand[c] )
+                  continue;
+
+               auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
+               assert(auxvar != NULL);
+
+               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+                  ++nunbounded;
+               else
+                  domainwidthsum += SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+            }
+
+            for( c = 0; c < nchildren; ++c )
+            {
+               SCIP_VAR* auxvar;
+
+               if( !branchcand[c] )
+                  continue;
+
+               auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
+               assert(auxvar != NULL);
+
+               if( nunbounded > 0 )
+               {
+                  if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+                  {
+                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation / nunbounded);
+                     *addedbranchscores = TRUE;
+                  }
+               }
+               else
+               {
+                  SCIP_Real domainwidth = SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+                  if( !SCIPisZero(scip, domainwidth) )
+                  {
+                     assert(domainwidthsum > 0.0);
+                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation * domainwidth / domainwidthsum);
+                     SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,
+                        100*domainwidth / domainwidthsum, violation,
+                        SCIPvarGetName(auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
+                     *addedbranchscores = TRUE;
+                  }
+               }
+            }
          }
       }
       else
       {
-         /* distribute violation onto children that are branching candidates
-          * every candidate gets a violation that is proportional to the share of its domain width to the sum of the domain widths over all candidates
-          * if some candidates are unbounded, then only add branching scores for them
-          */
+         /* distribute violation as branching score to original variables in children of expr that are marked in branchcand */
+         SCIP_CONSEXPR_ITERATOR* it;
+         SCIP_CONSEXPR_EXPR* e;
+         SCIP_CONSEXPR_EXPR** varexprs;
+         int nvars;
+         int varssize;
+         SCIP_VAR* var;
          SCIP_Real domainwidthsum = 0.0;  /* sum of width of domain over all candidates with bounded domain */
          int nunbounded = 0;  /* number of candidates with unbounded domain */
 
-         /* get sum of finite domain widths, and number of infinite ones */
+         assert(expr != NULL);
+
+         nvars = 0;
+         varssize = 5;
+         SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
+
+         SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+         SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
          for( c = 0; c < nchildren; ++c )
          {
-            SCIP_VAR* auxvar;
-
             if( !branchcand[c] )
                continue;
 
-            auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-            assert(auxvar != NULL);
+            for( e = SCIPexpriteratorRestartDFS(it, SCIPgetConsExprExprChildren(expr)[c]); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            {
+               assert(e != NULL);
 
-            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
-               ++nunbounded;
-            else
-               domainwidthsum += SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+               if( SCIPisConsExprExprVar(e) )
+               {
+                  /* add variable expression to vars array */
+                  if( varssize == nvars )
+                  {
+                     varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+                     SCIP_CALL( SCIPreallocBufferArray(scip, &varexprs, varssize) );
+                  }
+                  assert(varssize > nvars);
+
+                  varexprs[nvars++] = e;
+
+                  var = SCIPgetConsExprExprAuxVar(varexprs[nvars-1]);
+                  if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+                     ++nunbounded;
+                  else
+                     domainwidthsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+
+               }
+            }
          }
 
-         for( c = 0; c < nchildren; ++c )
+         SCIPexpriteratorFree(&it);
+
+         for( c = 0; c < nvars; ++c )
          {
-            SCIP_VAR* auxvar;
-
-            if( !branchcand[c] )
-               continue;
-
-            auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-            assert(auxvar != NULL);
-
+            var = SCIPgetConsExprExprAuxVar(varexprs[c]);
             if( nunbounded > 0 )
             {
-               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation / nunbounded);
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation / nunbounded);
                   *addedbranchscores = TRUE;
                }
             }
             else
             {
-               SCIP_Real domainwidth = SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
+               SCIP_Real domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
                if( !SCIPisZero(scip, domainwidth) )
                {
                   assert(domainwidthsum > 0.0);
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation * domainwidth / domainwidthsum);
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation * domainwidth / domainwidthsum);
                   SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,
                      100*domainwidth / domainwidthsum, violation,
-                     SCIPvarGetName(auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
+                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
                   *addedbranchscores = TRUE;
                }
             }
          }
+
+         SCIPfreeBufferArray(scip, &varexprs);
       }
 
       if( *addedbranchscores )

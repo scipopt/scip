@@ -402,6 +402,15 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
    );
 
+/** returns whether we are ok to branch on auxiliary variables
+ *
+ * Currently returns value of constraints/expr/branching/aux parameter.
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
+
 /** @} */
 
 /**@name Expression Methods */
@@ -1026,7 +1035,7 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
    );
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * to be at least of size the number of unique variables in the expression which is given by SCIPgetConsExprExprNVars()
  * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
