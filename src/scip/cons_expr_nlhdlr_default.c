@@ -400,12 +400,21 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
                   var = SCIPgetConsExprExprAuxVar(varexprs[nvars-1]);
                   if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                      ++nunbounded;
+#if 0
+                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
+                     domainwidthsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
+                     domainwidthsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
                   else
                      domainwidthsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-
+#else
+                  else
+                     domainwidthsum += 1.0;
+#endif
                }
             }
          }
+         assert(domainwidthsum >= 0.0);
 
          SCIPexpriteratorFree(&it);
 
@@ -422,9 +431,20 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
             }
             else
             {
-               SCIP_Real domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-               if( !SCIPisZero(scip, domainwidth) )
+               if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                {
+                  SCIP_Real domainwidth;
+#if 0
+                  if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
+                     domainwidth = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
+                     domainwidth = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
+                  else
+                     domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+#else
+                  domainwidth = 1.0;
+#endif
+
                   assert(domainwidthsum > 0.0);
                   SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation * domainwidth / domainwidthsum);
                   SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,

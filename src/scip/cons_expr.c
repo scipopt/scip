@@ -5715,7 +5715,6 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_Bool*            success             /**< buffer to store whether at least one branching candidate was added */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_ITERATOR* it = NULL;
    int c;
@@ -5725,10 +5724,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
    *success = FALSE;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->branchaux )
+   if( SCIPgetConsExprBranchAux(conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
@@ -5749,7 +5745,7 @@ SCIP_RETCODE registerBranchingCandidates(
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
-      if( !conshdlrdata->branchaux )
+      if( !SCIPgetConsExprBranchAux(conshdlr) )
       {
          int i;
 
@@ -5833,7 +5829,7 @@ SCIP_RETCODE registerBranchingCandidates(
       }
    }
 
-   if( conshdlrdata->branchaux )
+   if( SCIPgetConsExprBranchAux(conshdlr) )
       SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -5871,7 +5867,6 @@ SCIP_Real getDualBranchscore(
    SCIP_VAR*             var                 /**< variable */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_COL* col;
    SCIP_ROW** rows;
    int nrows;
@@ -5881,9 +5876,6 @@ SCIP_Real getDualBranchscore(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(var != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* if LP not solved, then return original branching score */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -5910,7 +5902,7 @@ SCIP_Real getDualBranchscore(
    for( r = 0; r < nrows; ++r )
    {
       SCIP_Real estimategap;
-      char* estimategapstr;
+      const char* estimategapstr;
 
       if( !SCIProwIsLocal(rows[r]) )
          continue;
@@ -5934,7 +5926,7 @@ SCIP_Real getDualBranchscore(
    }
 
    /* divide by optimal value of LP for scaling */
-   dualscore /= MAX(1.0, REALABS(SCIPgetLPObjval(scip)));
+   dualscore /= MAX(1.0, REALABS(SCIPgetLPObjval(scip)));  /*lint !e666*/
 
    return dualscore;
 }
@@ -5952,7 +5944,7 @@ SCIP_Real getWeightedBranchscore(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR* var;
-   SCIP_Real score;
+   SCIP_Real score = 0.0;
    SCIP_Real onescore;
 
    assert(conshdlr != NULL);
@@ -5969,7 +5961,7 @@ SCIP_Real getWeightedBranchscore(
    if( conshdlrdata->branchviolweight != 0.0 )
    {
       onescore = SCIPgetConsExprExprBranchScore(conshdlr, expr);
-      score = conshdlrdata->branchviolweight * onescore;
+      score += conshdlrdata->branchviolweight * onescore;
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, onescore); )
    }
@@ -5984,7 +5976,7 @@ SCIP_Real getWeightedBranchscore(
       /* make domain score large (up to 20=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
        * and small (minimum 0=log(1)) for a domain width around 1
        */
-      onescore = log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));
+      onescore = log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));  /*lint !e666*/
       score += conshdlrdata->branchdomainweight * onescore;
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(domain)", conshdlrdata->branchdomainweight, onescore); )
@@ -6011,6 +6003,7 @@ SCIP_Real getWeightedBranchscore(
          case SCIP_VARTYPE_IMPLINT :
             onescore = 0.01;
             break;
+         case SCIP_VARTYPE_CONTINUOUS :
          default:
             onescore = 0.0;
       }
@@ -6395,7 +6388,7 @@ SCIP_RETCODE branching(
                            child->nbrscores += expr->nbrscores;
                         }
                      }
-                     else if( child->activity.inf != child->activity.sup )
+                     else if( child->activity.inf != child->activity.sup )  /*lint !e777*/
                      {
                         /* all activities finite: weigh by activity width */
                         SCIP_Real weight;
@@ -6698,7 +6691,7 @@ SCIP_RETCODE enforceExprNlhdlr(
             /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
              * skip if gap is zero
              */
-            if( auxvalue == SCIP_INVALID )
+            if( auxvalue == SCIP_INVALID )  /*lint !e777*/
                strcat(rowprep->name, "_estimategap=inf");
             else if( !SCIPisEQ(scip, auxvalue, estimateval) )
             {
