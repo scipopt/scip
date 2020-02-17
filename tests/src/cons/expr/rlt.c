@@ -99,6 +99,9 @@ void setup(void)
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), &infeasible) );
    assert(!infeasible);
 
+   /* store all bilinear terms in the data of the expression constraint handler */
+   SCIP_CALL( SCIPcollectConsExprBilinTerms(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr)) );
+
    /* create sepadata */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
@@ -184,6 +187,23 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
       if( !found )
          cr_expect(FALSE, "found an unknown variable");
    }
+}
+
+/* helper method to check whether a bilinear term appears in the problem */
+static
+SCIP_VAR* getBilinVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separation data */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y                   /**< second variable */
+   )
+{
+   SCIP_VAR* auxvar;
+   SCIP_Bool found;
+
+   cr_assert(SCIPgetConsExprBilinTermAuxar(conshdlr, x, y, &auxvar, &found) == SCIP_OKAY);
+
+   return auxvar;
 }
 
 Test(rlt, collect)
