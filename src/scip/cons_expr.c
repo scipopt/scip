@@ -13279,41 +13279,20 @@ int SCIPgetConsExprNBilinTerms(
 /** returns all bilinear terms that are contained in all expression constraints
  *
  * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
- * @note The value of auxvars[i] might be NULL, which indicates that xs[i] * ys[i] does not have an auxiliary variable.
+ * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
  */
-SCIP_RETCODE SCIPgetConsExprBilinTerms(
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_VAR**                 xs,             /**< array to store first variables (of size >= SCIPgetConsExprNBilinTerms()) */
-   SCIP_VAR**                 ys,             /**< array to store second variables (of size >= SCIPgetConsExprNBilinTerms()) */
-   SCIP_VAR**                 auxvars         /**< array to store auxiliary variables (of size >= SCIPgetConsExprNBilinTerms()) */
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
 
    assert(consexprhdlr != NULL);
-   assert(xs != NULL);
-   assert(ys != NULL);
-   assert(auxvars != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   /* iterate through all stored bilinear terms */
-   for( i = 0; i < conshdlrdata->nbilinterms; ++i )
-   {
-      SCIP_CONSEXPR_BILINTERM* term = &conshdlrdata->bilinterms[i];
-      assert(term != NULL);
-      assert(term->x != NULL);
-      assert(term->y != NULL);
-      assert(SCIPvarCompare(term->x, term->y) < 1);
-
-      xs[i] = term->x;
-      ys[i] = term->y;
-      auxvars[i] = term->auxvar;
-   }
-
-   return SCIP_OKAY;
+   return conshdlrdata->bilinterms;
 }
 
 /** returns the auxiliary variable of a bilinear term, if it exists

@@ -217,14 +217,6 @@ struct SCIP_ConsExpr_Iterator
    unsigned int                stopstages;   /**< stages in which to interrupt iterator */
 };
 
-/** bilinear term data */
-struct SCIP_ConsExpr_BilinTerm
-{
-   SCIP_VAR*             x;                  /**< first variable */
-   SCIP_VAR*             y;                  /**< second variable */
-   SCIP_VAR*             auxvar;             /**< auxiliary variable for the product of x and y */
-};
-
 #ifdef __cplusplus
 }
 #endif

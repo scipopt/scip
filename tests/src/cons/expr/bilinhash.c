@@ -102,6 +102,7 @@ Test(bilinhash, api_methods)
 {
    const char* inputs[2] = {"[expr] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
       "[expr] <c2>: abs(<y>[C] * <z>[C]) * (log(<x>[C] + <z>[C]))^2 <= 1;"};
+   SCIP_CONSEXPR_BILINTERM* bilinterms;
    SCIP_VAR* xs[3];
    SCIP_VAR* ys[3];
    SCIP_VAR* auxvars[3];
@@ -141,10 +142,11 @@ Test(bilinhash, api_methods)
     */
    cr_expect(SCIPgetConsExprNBilinTerms(conshdlr) == 3);
 
-   SCIP_CALL( SCIPgetConsExprBilinTerms(conshdlr, xs, ys, auxvars) );
-   cr_expect(xs[0] == tx && ys[0] == tx && auxvars[0] == NULL);
-   cr_expect(xs[1] == tx && ys[1] == ty && auxvars[1] == NULL);
-   cr_expect(xs[2] == ty && ys[2] == tz && auxvars[2] == NULL);
+   bilinterms = SCIPgetConsExprBilinTerms(conshdlr);
+   cr_assert(bilinterms != NULL);
+   cr_expect(bilinterms[0].x == tx && bilinterms[0].y == tx && bilinterms[0].auxvar == NULL);
+   cr_expect(bilinterms[1].x == tx && bilinterms[1].y == ty && bilinterms[1].auxvar == NULL);
+   cr_expect(bilinterms[2].x == ty && bilinterms[2].y == tz && bilinterms[2].auxvar == NULL);
 
    /* xx exists */
    SCIP_CALL( SCIPgetConsExprBilinTermAuxar(conshdlr, tx, tx, &auxvar, &found) );

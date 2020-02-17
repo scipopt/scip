@@ -41,7 +41,6 @@ extern "C" {
 
 typedef struct SCIP_ConsExpr_ExprData  SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_Expr      SCIP_CONSEXPR_EXPR;         /**< expression */
-typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
 
 /** monotonicity of an expression */
 typedef enum
@@ -52,6 +51,15 @@ typedef enum
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
 
 } SCIP_MONOTONE;
+
+/** bilinear term data */
+struct SCIP_ConsExpr_BilinTerm
+{
+   SCIP_VAR*             x;                  /**< first variable */
+   SCIP_VAR*             y;                  /**< second variable */
+   SCIP_VAR*             auxvar;             /**< auxiliary variable for the product of x and y */
+};
+typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *

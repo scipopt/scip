@@ -122,10 +122,8 @@ SCIP_RETCODE createSepaData(
    SCIP_SEPADATA*        sepadata            /**< separation data */
    )
 {
+   SCIP_CONSEXPR_BILINTERM* bilinterms;
    SCIP_HASHMAP* varmap;
-   SCIP_VAR** xs;
-   SCIP_VAR** ys;
-   SCIP_VAR** auxvars;
    int nbilinterms;
    int nvars;
    int i;
@@ -142,13 +140,10 @@ SCIP_RETCODE createSepaData(
    /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varssorted, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varpriorities, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nbilinterms) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nbilinterms) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, nbilinterms) );
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
 
    /* get all bilinear terms from the expression constraint handler */
-   SCIP_CALL( SCIPgetConsExprBilinTerms(sepadata->conshdlr, xs, ys, auxvars) );
+   bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
    /* store the priorities for all variables that appear bilinearly */
    sepadata->nbilinvars = 0;
@@ -156,16 +151,16 @@ SCIP_RETCODE createSepaData(
    {
       int j;
 
-      assert(xs[i] != NULL);
-      assert(ys[i] != NULL);
+      assert(bilinterms[i].x != NULL);
+      assert(bilinterms[i].y != NULL);
 
       /* skip bilinear term because it does not have an auxiliary variable */
-      if( auxvars[i] == NULL )
+      if( bilinterms[i].auxvar == NULL )
          continue;
 
       for( j = 0; j < 2; ++j )
       {
-         SCIP_VAR* var = (j == 0) ? xs[i] : ys[i];
+         SCIP_VAR* var = (j == 0) ? bilinterms[i].x : bilinterms[i].y;
 
          /* check whether variable has been considered already */
          if( SCIPhashmapExists(varmap, (void*)var) )
@@ -190,9 +185,6 @@ SCIP_RETCODE createSepaData(
 
    /* free memory */
    SCIPhashmapFree(&varmap);
-   SCIPfreeBufferArray(scip, &auxvars);
-   SCIPfreeBufferArray(scip, &ys);
-   SCIPfreeBufferArray(scip, &xs);
 
    /* reallocate arrays to fit actually sizes */
    if( sepadata->nbilinvars < nvars )
