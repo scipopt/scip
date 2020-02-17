@@ -192,14 +192,14 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 /* helper method to check whether a bilinear term appears in the problem */
 static
 SCIP_VAR* getBilinVar(
-   SCIP_VAR*             x,                  /**< first variable */
-   SCIP_VAR*             y                   /**< second variable */
+   SCIP_VAR*             x_,                 /**< first variable */
+   SCIP_VAR*             y_                  /**< second variable */
    )
 {
    SCIP_VAR* auxvar;
    SCIP_Bool found;
 
-   cr_assert(SCIPgetConsExprBilinTermAuxar(conshdlr, x, y, &auxvar, &found) == SCIP_OKAY);
+   cr_assert(SCIPgetConsExprBilinTermAuxar(conshdlr, x_, y_, &auxvar, &found) == SCIP_OKAY);
 
    return auxvar;
 }
