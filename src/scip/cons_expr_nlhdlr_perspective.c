@@ -42,32 +42,35 @@
  */
 
 /** data structure to store information of a semicontinuous variable */
-struct SCIP_SCVarData
+struct SCVarData
 {
    SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
    SCIP_VAR**            bvars;              /**< the binary variables on which the variable domain depends */
    int                   nbnds;              /**< number of suitable on/off bounds the var has */
    int                   bndssize;           /**< size of the arrays */
 };
-typedef struct SCIP_SCVarData SCIP_SCVARDATA;
+typedef struct SCVarData SCVARDATA;
 
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_EXPRCURV         curvature;          /**< curvature of the expression */
 
+#ifdef SCIP_DISABLED_CODE
    SCIP_CONSEXPR_EXPR**  onoffterms;         /**< on/off terms for which we apply perspective cuts */
    SCIP_Real*            onoffcoefs;         /**< coefficients of onoffterms */
-   SCIP_Real*            termvals0;          /**< 'off' values of the term for each indicator variable */
-   SCIP_VAR***           termbvars;          /**< binary vars associated with onoffterms */
-   int*                  ntermbvars;         /**< number of binary variables for each term */
    int                   nonoffterms;        /**< number of on/off expressions */
    int                   onofftermssize;     /**< size of arrays describing on/off terms */
+   SCIP_VAR***           termbvars;          /**< binary vars associated with onoffterms */
+   int*                  ntermbvars;         /**< number of binary variables for each term */
 
    SCIP_CONSEXPR_EXPR**  convterms;          /**< convex terms for which we apply gradient cuts */
    SCIP_Real*            convcoefs;          /**< coefficients of convterms */
    int                   nconvterms;         /**< number of convterms */
    int                   convtermssize;      /**< size of the convterms array */
+#endif
+
+   SCIP_Real*            exprvals0;          /**< 'off' values of the term for each indicator variable */
 
    SCIP_CONSEXPR_EXPR**  varexprs;           /**< variable expressions */
    int                   nvarexprs;          /**< total number of variable expressions */
@@ -80,7 +83,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
-   SCIP_Bool             multcuts;           /**< whether to add cuts for all suitable indicator variables */
+   SCIP_Bool             multcuts;           /**< whether to add cuts for all suitable indicator variables */ /* TODO do we need this? */
    SCIP_HASHMAP*         scvars;             /**< maps semicontinuous variables to their on/off bounds */
 };
 
@@ -121,7 +124,7 @@ SCIP_RETCODE varIsSemicontinuous(
    SCIP_Real* vubconstants;
    int nvlbs;
    int nvubs;
-   SCIP_SCVARDATA* scvdata;
+   SCVARDATA* scvdata;
    SCIP_VAR* bvar;
 
    assert(scip != NULL);
@@ -129,7 +132,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(scvars != NULL);
    assert(result != NULL);
 
-   scvdata = (SCIP_SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)var);
+   scvdata = (SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)var);
    if( scvdata != NULL )
    {
       *result = TRUE;
@@ -496,9 +499,9 @@ SCIP_RETCODE addPerspectiveLinearisation(
    /* get x0 */
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_SCVARDATA* vardata;
+      SCVARDATA* vardata;
       vars[v] = SCIPgetConsExprExprVarVar(varexprs[v]);
-      vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)vars[v]);
+      vardata = (SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)vars[v]);
 
       /* find bvar in vardata->bvars */
       (void) SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
@@ -586,7 +589,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
 /* checks if an expression is semicontinuous
  *
  * An expression is semicontinuous if all of its variables are semicontinuous
- * and share at least one common indicator variable */
+ * and share at least one common indicator variable
+ */
 static
 SCIP_RETCODE exprIsSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -599,7 +603,7 @@ SCIP_RETCODE exprIsSemicontinuous(
    int nvarexprs;
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool var_is_sc;
-   SCIP_SCVARDATA* scvdata;
+   SCVARDATA* scvdata;
    SCIP_VAR* var;
    int nindicators;
    int nbnds0;
@@ -627,7 +631,7 @@ SCIP_RETCODE exprIsSemicontinuous(
    }
 
    /* find common binary variables for all variables of children[c] */
-   scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
+   scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
    nbnds0 = scvdata->nbnds;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &indicators, nbnds0) );
@@ -640,7 +644,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[v])));
 #endif
-      scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[v]));
+      scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[v]));
 
       SCIPcomputeArraysIntersectionPtr((void**)indicators, nindicators, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)indicators, &nindicators);
 
@@ -727,7 +731,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    {
       assert(nlhdlrexprdata->indicators != NULL);
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indicators), nlhdlrexprdata->nindicators);
-      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->termvals0), nlhdlrexprdata->nindicators);
+      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators);
    }
 
    if( nlhdlrexprdata->varexprs != NULL )
@@ -766,7 +770,7 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
 { /*lint --e{715}*/
    SCIP_HASHMAPENTRY* entry;
-   SCIP_SCVARDATA* data;
+   SCVARDATA* data;
    int c;
 
    if( (*nlhdlrdata)->scvars != NULL )
@@ -776,7 +780,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
          entry = SCIPhashmapGetEntry((*nlhdlrdata)->scvars, c);
          if( entry != NULL )
          {
-            data = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
             SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
             SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
             SCIPfreeBlockMemory(scip, &data);
@@ -838,7 +842,7 @@ SCIP_RETCODE computeOffValues(
    SCIP_VAR** vars;
    SCIP_Bool var_is_sc;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->termvals0), nlexprdata->nindicators) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->exprvals0), nlexprdata->nindicators) );
 
    /* allocate memory for the solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
@@ -875,7 +879,7 @@ SCIP_RETCODE computeOffValues(
       exprval0 = SCIPgetConsExprExprValue(expr);
 
       /* save exprval0 */
-      nlexprdata->termvals0[i] = exprval0;
+      nlexprdata->exprvals0[i] = exprval0;
    }
 
    SCIPfreeBufferArray(scip, &vars);
@@ -887,11 +891,8 @@ SCIP_RETCODE computeOffValues(
 
 /** callback to detect structure in expression tree
  *
- * We are looking for expressions of the form: \sum\limits_{i=1}^p g_i(x_i) + g_0(x_0), where:
- *  each vector x_i has a single fixed value x^{off}_i when a binary var b_i is 0;
- *  g_i, i=1,..,p are nonlinear and either all convex or all concave;
- *  g_0 is either linear or has the same curvature as g_i, i=1,..,p;
- *  p != 0.
+ *  We are looking for expressions g(x), where x is a vector of semicontinuous variables that all share at least one
+ *  indicator variable.
  */
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
@@ -1018,7 +1019,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 
 /** nonlinear handler separation callback
  *
- * Applies perspective linearization to on/off terms and gradient linearization to everything else.
+ * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
+ * If g(x) = g0 if indicator z = 0, and a cut is given by sum aixi + c <= aux, where xi = xi0 if z = 0 for all i,
+ * then the "perspectivied" cut is sum aixi + c + (1 - z)*(g0 - c - sum aix0i) <= aux. This ensures that at z = 1,
+ * the new cut is equivalent to the given cut, and at z = 0 it reduces to g0 <= aux.
  */
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
@@ -1027,13 +1031,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    SCIP_VAR* auxvar;
    int i;
    int j;
-   SCIP_CONSEXPR_EXPR* pexpr;
    SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_Real pcoef;
-   SCIP_VAR** bvars;
    SCIP_CONSEXPR_NLHDLR* nlhdlr2;
    SCIP_Real cst0;
+   SCIP_VAR* indicator;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1061,8 +1063,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    /* build cuts for every indicator variable */
    for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
    {
-      SCIP_VAR* indicator;
-
       indicator = nlhdlrexprdata->indicators[i];
 
       /* use cuts from every suitable nlhdlr */
@@ -1095,10 +1095,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
             SCIPinfoMessage(scip, NULL, "\nrowprep before perspectivy is: ");
             SCIPprintRowprep(scip, rowprep, NULL);
 
-            /* perspectivy the estimator by adding (1-z)(f0 - sum aix0i)
-             * (i are the indices of all variables) */
+            /* perspectivy the estimator by adding (1-z)(g0 - c - sum aix0i),
+             * where sum aixi + c = rowprep */
 
-            cst0 = nlhdlrexprdata->termvals0[i] + rowprep->side;
+            /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
+            cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
 
             SCIPinfoMessage(scip, NULL, "\nexpr = %g at %s = 0 ", cst0, SCIPvarGetName(indicator));
             SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
