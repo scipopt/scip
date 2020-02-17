@@ -5338,7 +5338,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/onlybinsubgroups",
-         "Should only subgroups on binary variables be handled",
+         "Should only subgroups on binary variables be handled?",
          &propdata->onlybinsubgroups, TRUE, DEFAULT_ONLYBINSUBGROUPS, NULL, NULL) );
 
    /* possibly add description */
