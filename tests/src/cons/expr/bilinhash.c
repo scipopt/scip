@@ -84,11 +84,11 @@ Test(bilinhash, createInsertFree)
    /* inserts two bilinear terms into the hash table */
    SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL) );
    SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL) );
-   cr_expect(conshdlrdata->nbilinentries == 2);
-   cr_expect(conshdlrdata->bilinentries[0].x == x);
-   cr_expect(conshdlrdata->bilinentries[0].y == y);
-   cr_expect(conshdlrdata->bilinentries[1].x == y);
-   cr_expect(conshdlrdata->bilinentries[1].y == z);
+   cr_expect(conshdlrdata->nbilinterms == 2);
+   cr_expect(conshdlrdata->bilinterms[0].x == x);
+   cr_expect(conshdlrdata->bilinterms[0].y == y);
+   cr_expect(conshdlrdata->bilinterms[1].x == y);
+   cr_expect(conshdlrdata->bilinterms[1].y == z);
 
    /* free hash table */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );

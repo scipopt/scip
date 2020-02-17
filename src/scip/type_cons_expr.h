@@ -41,6 +41,7 @@ extern "C" {
 
 typedef struct SCIP_ConsExpr_ExprData  SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_Expr      SCIP_CONSEXPR_EXPR;         /**< expression */
+typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
 
 /** monotonicity of an expression */
 typedef enum
