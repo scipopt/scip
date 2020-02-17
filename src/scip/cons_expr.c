@@ -14334,11 +14334,11 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highviolfactor",
          "consider a constraint highly violated if at least this factor times the maximal violation",
-         &conshdlrdata->branchhighviolfactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->branchhighviolfactor, TRUE, 0.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highscorefactor",
          "consider a variable branching score high if at least this factor times the maximal branching score",
-         &conshdlrdata->branchhighscorefactor, TRUE, 0.8, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->branchhighscorefactor, TRUE, 0.9, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/violweight",
          "weight by how much to consider the violation assigned to a variable for its branching score",
