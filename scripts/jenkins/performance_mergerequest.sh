@@ -182,10 +182,10 @@ export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 # Scripts will also use nonexported variables correctly.
 if [ "${GITBRANCH}" == "consexpr" ]; then
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_master/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
 else
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
-  export PRESOLVELIB_DIR=/nfs/OPTI/adm_timo/performance_presolvelib_${GITBRANCH}/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
 fi
 
 ###################
@@ -199,7 +199,7 @@ BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPRESOLVELIB_DIR=${PRESOLVELIB_DIR}
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
 make -j4
 cd ..
 

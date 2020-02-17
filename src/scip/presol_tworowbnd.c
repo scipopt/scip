@@ -64,7 +64,7 @@
 #define PRESOL_NAME                    "tworowbnd"
 #define PRESOL_DESC                    "do bound tigthening by using two rows"
 #define PRESOL_PRIORITY                -2000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS               -1       /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               0        /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING                  SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY             TRUE     /**< should tworowbnd presolver be copied to sub-SCIPs? */
@@ -73,7 +73,6 @@
 #define DEFAULT_MAXCOMBINEFAILS        1000     /**< maximal number of consecutive useless row combines */
 #define DEFAULT_MAXHASHFAC             10       /**< maximal number of hashlist entries as multiple of number of rows in the problem (-1: no limit) */
 #define DEFAULT_MAXPAIRFAC             1        /**< maximal number of processed row pairs as multiple of the number of rows in the problem (-1: no limit) */
-#define DEFAULT_LPBOUND                FALSE    /**< should the bounds be tightened via LP-bound? */
 
 /*
  * Data structures
@@ -89,7 +88,6 @@ struct SCIP_PresolData
    int maxconsiderednonzeros; /**< maximal number of considered non-zeros within one row (-1: no limit) */
    int nchgbnds;              /**< number of variable bounds changed by this presolver */
    int nuselessruns;          /**< number of runs where this presolver did not apply any changes */
-   SCIP_Bool lpbound;         /**< should the bounds be tightened via LP-bound? */
    SCIP_Bool enablecopy;      /**< should tworowbnd presolver be copied to sub-SCIPs? */
 };
 
@@ -1242,14 +1240,11 @@ SCIP_RETCODE processHashlists(
                      success = FALSE;
 
                      /* apply lp-based bound tightening */
-                     if( presoldata->lpbound )
-                     {
-                        swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
-                        swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
+                     swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
+                     swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                        SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                                          swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
-                     }
+                     SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                           swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
 
                      if( success )
                         combinefails = 0;
@@ -1848,10 +1843,6 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
          "presolving/tworowbnd/maxpairfac",
          "Maximum number of processed row pairs as multiple of the number of rows in the problem (-1: no limit)",
          &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/tworowbnd/lpbound",
-         "Should the bounds be tightened via LP-bound?",
-         &presoldata->lpbound, FALSE, DEFAULT_LPBOUND, NULL, NULL) );
 
    return SCIP_OKAY;
 }

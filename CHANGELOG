@@ -357,6 +357,8 @@ Interface changes
   treemodel way of comparing branching candidates. These functions are only currently used for reliability pscost branching, but they can be used
   in other parts of the code.
 - New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
+- new API functions SCIPisOrbitalfixingEnabled() and SCIPgetSymmetryNGenerators() to check whether orbital fixing is
+  enabled and to get the number of generators of the current symmetry group, respectively
 
 ### Event system
 
@@ -630,6 +632,7 @@ Fixed bugs
 - fixed bug when parsing logic-or and and-constraints
 - fixed wrong assert in updateLazyBounds()
 - fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
+- fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
 - redundancy and feasibility checks before applying a variable bound now take the (multi)aggregation scalar into account
 
 Miscellaneous
