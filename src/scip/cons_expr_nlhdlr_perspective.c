@@ -692,7 +692,7 @@ SCIP_RETCODE addCut(
       SCIP_Bool infeasible;
 
       SCIPdebugMsg(scip, "Separating sol point by perspective cut\n");
-      SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
+      SCIPprintRowprepSol(scip, rowprep, sol, NULL);
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
@@ -1059,11 +1059,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    assert(auxvar != NULL);
 
    /* build cuts for every indicator variable */
-   for( i = 0; i < nlhdlrexprdata->ntermbvars[0]; ++i )
+   for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
    {
       SCIP_VAR* indicator;
 
-      indicator = nlhdlrexprdata->termbvars[0][i];
+      indicator = nlhdlrexprdata->indicators[i];
 
       /* use cuts from every suitable nlhdlr */
       for( j = 0; j < expr->nenfos; ++j )
@@ -1075,9 +1075,16 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
          SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
 
+         SCIPinfoMessage(scip, NULL, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
+
          /* ask the handler for an estimator */
          SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
-            overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
+               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
+
+         if( !success )
+         {
+            SCIPinfoMessage(scip, NULL, "\nhandler couldn't estimate");
+         }
 
          if( success )
          {
@@ -1089,7 +1096,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
             SCIPprintRowprep(scip, rowprep, NULL);
 
             /* perspectivy the estimator by adding (1-z)(f0 - sum aix0i)
-             * (i are the indices of semicontinuous variables) */
+             * (i are the indices of all variables) */
 
             cst0 = nlhdlrexprdata->termvals0[i] + rowprep->side;
 
@@ -1105,8 +1112,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
                /* is var sc with respect to this indicator? */
                SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc) );
 
-               if( !var_is_sc )
-                  continue;
+               assert(var_is_sc);
 
                cst0 -= rowprep->coefs[v]*val0;
                SCIPinfoMessage(scip, NULL, "\nvar %s = %g at 0 ", SCIPvarGetName(var), val0);
