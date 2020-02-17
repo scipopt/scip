@@ -361,7 +361,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
 
-   assert(graph_sol_valid(scip, graph, soledges));
+   assert(graph_solIsValid(scip, graph, soledges));
 
    /* restore the graph */
    for( int k = 0; k < nnodes; k++ )
@@ -379,7 +379,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
          BMScopyMemoryArray(graph->cost_org_pc, costorg_pc, nedges);
    }
 
-   assert(graph_sol_valid(scip, graph, soledges));
+   assert(graph_solIsValid(scip, graph, soledges));
 
    if( addsol )
    {

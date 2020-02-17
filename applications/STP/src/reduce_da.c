@@ -66,7 +66,7 @@ SCIP_Real getSolObj(
    if( graph_pc_isPc(g) )
       obj = graph_pc_solGetObj(scip, g, soledge, 0.0);
    else
-      obj = graph_sol_getObj(g, soledge, 0.0, g->edges);
+      obj = graph_solGetObj(g, soledge, 0.0, g->edges);
 
    return obj;
 }
@@ -108,7 +108,7 @@ SCIP_RETCODE computeDualSolutionGuided(
 )
 {
    /* solution might not be valid anymore */
-   if( !graph_sol_valid(scip, graph, result) )
+   if( !graph_solIsValid(scip, graph, result) )
    {
       SCIPdebugMessage("solution not valid; run normal dual-ascent \n");
       SCIP_CALL(SCIPStpDualAscent(scip, graph, cost, dualobjval, FALSE, FALSE, NULL, NULL, edgearrint, state, daroot, FALSE, damaxdeviation));
@@ -116,7 +116,7 @@ SCIP_RETCODE computeDualSolutionGuided(
    else
    {
       SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
-      SCIP_CALL(graph_sol_reroot(scip, graph, result, daroot));
+      SCIP_CALL(graph_solReroot(scip, graph, result, daroot));
 
       SCIP_CALL(SCIPStpDualAscent(scip, graph, cost, dualobjval, FALSE, FALSE, NULL, result, edgearrint, state, daroot, FALSE, damaxdeviation));
    }
@@ -235,13 +235,13 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, nodearrint, daroot, nodearrchar, &success, FALSE));
-   assert(success && graph_sol_valid(scip, graph, result));
+   assert(success && graph_solIsValid(scip, graph, result));
 
    SCIPfreeBufferArray(scip, &nodearrint);
    SCIPfreeBufferArray(scip, &nodearrchar);
 
    SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
-   assert(graph_sol_valid(scip, graph, result));
+   assert(graph_solIsValid(scip, graph, result));
 
    objval = getSolObj(scip, graph, result);
 
@@ -331,7 +331,7 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
 
-   assert(graph_sol_valid(scip, graph, result2));
+   assert(graph_solIsValid(scip, graph, result2));
 
    ub2 = getSolObj(scip, graph, result2);
    SCIPdebugMessage("DA: first new sol value in computeSteinerTreeRedCostsPcMw: %f ... old value: %f \n", ub2, *upperbound);
@@ -1708,7 +1708,7 @@ SCIP_RETCODE computePertubedSol(
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
 
-         assert(graph_sol_valid(scip, graph, result2));
+         assert(graph_solIsValid(scip, graph, result2));
 
          bound = getSolObj(scip, graph, result2);
 
@@ -1773,7 +1773,7 @@ SCIP_RETCODE computePertubedSol(
       }
    }
 
-   assert(!(*apsol) || graph_sol_valid(scip, graph, result));
+   assert(!(*apsol) || graph_solIsValid(scip, graph, result));
    assert(graph_valid(scip, transgraph));
    assert(root == transgraph->source);
 
@@ -1784,7 +1784,7 @@ SCIP_RETCODE computePertubedSol(
 
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
 
-   assert(!(*apsol) || graph_sol_valid(scip, graph, result));
+   assert(!(*apsol) || graph_solIsValid(scip, graph, result));
 
    if( SCIPisGE(scip, lb, *bestlpobjval) )
    {
@@ -1877,7 +1877,7 @@ SCIP_RETCODE reduceRootedProb(
 
    if( solgiven )
    {
-      graph_sol_setVertexFromEdge(graph, result, nodearrchar);
+      graph_solSetVertexFromEdge(graph, result, nodearrchar);
    }
 
    /* main loop: try to reduce */
@@ -1979,9 +1979,9 @@ int reducePcMw(
 
    if( solgiven )
    {
-      assert(graph_sol_valid(scip, graph, result));
+      assert(graph_solIsValid(scip, graph, result));
 
-      graph_sol_setVertexFromEdge(graph, result, nodearrchar);
+      graph_solSetVertexFromEdge(graph, result, nodearrchar);
 
       if( SCIPisZero(scip, minpathcost) )
          keepsol = TRUE;
@@ -2109,9 +2109,9 @@ int reducePcMwTryBest(
    /* has upperbound and changed, and is best reduced cost valid and different from cost? */
    if( SCIPisGT(scip, *bestlpobjval, *lpobjval) && SCIPisLT(scip, *upperbound, oldupperbound) )
    {
-      *solgiven = *solgiven && graph_sol_unreduced(scip, graph, result);
+      *solgiven = *solgiven && graph_solIsUnreduced(scip, graph, result);
 
-      assert(!(*solgiven) || graph_sol_valid(scip, graph, result));
+      assert(!(*solgiven) || graph_solIsValid(scip, graph, result));
 
       *minpathcost = *upperbound - *bestlpobjval;
       assert(SCIPisGE(scip, *minpathcost, 0.0));
@@ -2270,7 +2270,7 @@ SCIP_RETCODE reduce_da(
          if( !SCIPisZero(scip, minpathcost) )
          {
             ndeletions += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+            havenewsol = havenewsol && graph_solIsUnreduced(scip, graph, result);
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
@@ -2993,7 +2993,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
 
    assert(havenewsol && upperbound < FARAWAY);
-   assert(graph_sol_valid(scip, graph, result));
+   assert(graph_solIsValid(scip, graph, result));
 
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
@@ -3025,8 +3025,8 @@ SCIP_RETCODE reduce_daPcMw(
    assert(!graph->extended);
 
    /* edges from result might have been deleted! */
-   havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
-   assert(!havenewsol || graph_sol_valid(scip, graph, result));
+   havenewsol = havenewsol && graph_solIsUnreduced(scip, graph, result);
+   assert(!havenewsol || graph_solIsValid(scip, graph, result));
 
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
@@ -3056,7 +3056,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, bestcost, pathdist, state, vbase, pathedge, result, result2,
             transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, 0) );
 
-      assert(graph_sol_valid(scip, graph, result));
+      assert(graph_solIsValid(scip, graph, result));
       assert(!havenewsol || SCIPisEQ(scip, getSolObj(scip, graph, result), upperbound));
 
       graph_pc_2orgcheck(scip, graph);
@@ -3084,7 +3084,7 @@ SCIP_RETCODE reduce_daPcMw(
                   .nodeTo3TermsPaths = vnoi, .nodeTo3TermsBases = vbase,
                   .cutoff = minpathcost, .redCostRoot = graph->source };
 
-         havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
+         havenewsol = havenewsol && graph_solIsUnreduced(scip, graph, result);
 
          SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
          nfixed += extfixed;
@@ -3106,8 +3106,8 @@ SCIP_RETCODE reduce_daPcMw(
 
          graph_pc_2trans(scip, graph);
 
-         havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
-         assert(!havenewsol || graph_sol_valid(scip, graph, result));
+         havenewsol = havenewsol && graph_solIsUnreduced(scip, graph, result);
+         assert(!havenewsol || graph_solIsValid(scip, graph, result));
 
          assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
@@ -3197,7 +3197,7 @@ SCIP_RETCODE reduce_daPcMw(
       if( havenewsol && run > 1 )
       {
          BMScopyMemoryArray(transresult, result, graph->edges);
-         SCIP_CALL(graph_sol_reroot(scip, transgraph, transresult, tmproot));
+         SCIP_CALL(graph_solReroot(scip, transgraph, transresult, tmproot));
          SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, &lpobjval, FALSE, FALSE,
                gnodearr, transresult, result2, state, tmproot, FALSE, -1.0));
       }
@@ -3297,8 +3297,8 @@ SCIP_RETCODE reduce_daPcMw(
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
-      havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
-      assert(!havenewsol || graph_sol_valid(scip, graph, result));
+      havenewsol = havenewsol && graph_solIsUnreduced(scip, graph, result);
+      assert(!havenewsol || graph_solIsValid(scip, graph, result));
       SCIPdebugMessage("FIXED with changed root %d \n\n", nfixed);
 
       graph->mark[tmproot] = TRUE;

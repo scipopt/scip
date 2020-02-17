@@ -2844,100 +2844,6 @@ SCIP_RETCODE graph_pc_contractEdgeUnordered(
    return SCIP_OKAY;
 }
 
-/** mark original solution */
-SCIP_RETCODE graph_sol_markPcancestors(
-   SCIP*           scip,               /**< SCIP data structure */
-   IDX**           pcancestors,        /**< the ancestors */
-   const int*      tails,              /**< tails array */
-   const int*      heads,              /**< heads array */
-   int             orgnnodes,          /**< original number of nodes */
-   STP_Bool*       solnodemark,        /**< solution nodes mark array */
-   STP_Bool*       soledgemark,        /**< solution edges mark array or NULL */
-   int*            solnodequeue,       /**< solution nodes queue or NULL  */
-   int*            nsolnodes,          /**< number of solution nodes or NULL */
-   int*            nsoledges           /**< number of solution edges or NULL */
-)
-{
-   int* queue;
-   int nnodes;
-   int nedges = (nsoledges != NULL)? *nsoledges : 0;
-   int qstart;
-   int qend;
-
-   assert(scip != NULL && tails != NULL && heads != NULL && pcancestors != NULL && solnodemark != NULL);
-
-   if( solnodequeue != NULL )
-      queue = solnodequeue;
-   else
-      SCIP_CALL( SCIPallocBufferArray(scip, &queue, orgnnodes) );
-
-   if( nsolnodes == NULL )
-   {
-      assert(solnodequeue == NULL);
-      nnodes = 0;
-      for( int k = 0; k < orgnnodes; k++ )
-         if( solnodemark[k] )
-            queue[nnodes++] = k;
-   }
-   else
-   {
-      nnodes = *nsolnodes;
-      assert(solnodequeue != NULL);
-   }
-
-   qstart = 0;
-   qend = nnodes;
-
-   while( qend != qstart )
-   {
-      int k = qstart;
-
-      assert(qstart < qend);
-      qstart = qend;
-
-      for( ; k < qend; k++ )
-      {
-         const int ancestornode = queue[k];
-
-         assert(solnodemark[ancestornode]);
-
-         for( IDX* curr = pcancestors[ancestornode]; curr != NULL; curr = curr->parent )
-         {
-            const int ancestoredge = curr->index;
-            assert(tails[ancestoredge] < orgnnodes && heads[ancestoredge] < orgnnodes);
-
-            if( soledgemark != NULL && !soledgemark[ancestoredge] )
-            {
-               soledgemark[ancestoredge] = TRUE;
-               nedges++;
-            }
-            if( !solnodemark[tails[ancestoredge]] )
-            {
-               solnodemark[tails[ancestoredge]] = TRUE;
-               queue[nnodes++] = tails[ancestoredge];
-            }
-            if( !solnodemark[heads[ancestoredge]] )
-            {
-               solnodemark[heads[ancestoredge]] = TRUE;
-               queue[nnodes++] = heads[ancestoredge];
-            }
-         }
-      }
-      qend = nnodes;
-   }
-
-   if( nsolnodes != NULL )
-      *nsolnodes = nnodes;
-
-   if( nsoledges != NULL )
-      *nsoledges = nedges;
-
-   if( solnodequeue == NULL )
-      SCIPfreeBufferArray(scip, &queue);
-
-   return SCIP_OKAY;
-}
-
 
 /** is this graph a prize-collecting variant? */
 SCIP_Bool graph_pc_isPc(
@@ -3112,7 +3018,7 @@ SCIP_Real graph_pc_solGetObj(
 
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solnode, nnodes) );
 
-      graph_sol_setVertexFromEdge(g, soledge, solnode);
+      graph_solSetVertexFromEdge(g, soledge, solnode);
 
       for( int i = 0; i < nnodes; ++i )
       {

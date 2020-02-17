@@ -121,7 +121,7 @@ SCIP_RETCODE computeSteinerTree(
    }
    else
    {
-      obj = graph_sol_getObj(graph, result, 0.0, nedges);
+      obj = graph_solGetObj(graph, result, 0.0, nedges);
    }
 
    if( !(*success) )

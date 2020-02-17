@@ -36,6 +36,7 @@
 #include "portab.h"
 #include "scip/misc.h"
 #include <math.h>
+
 #define HEUR_NAME             "TM"
 #define HEUR_DESC             "shortest path based primal heuristics for Steiner trees"
 #define HEUR_DISPCHAR         '+'
@@ -350,381 +351,6 @@ SCIP_RETCODE computeStarts(
 }
 
 
-/** prune a Steiner tree in such a way that all leaves are terminals */
-static
-SCIP_RETCODE pruneSteinerTreeStp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   PATH* mst;
-   int count;
-   const int nnodes = graph_get_nNodes(g);
-#ifndef NEDBUG
-   int nconnected = 0;
-#endif
-
-   assert(scip != NULL);
-   assert(cost != NULL);
-   assert(result != NULL);
-   assert(connected != NULL);
-
-#ifndef NEDBUG
-   for( int i = 0; i < g->edges; i++ )
-      assert(UNKNOWN == result[i]);
-
-   for( int i = nnodes - 1; i >= 0; --i )
-      if( connected[i] )
-         nconnected++;
-
-   assert(nconnected >= g->terms);
-   assert(g->source >= 0);
-   assert(g->source < nnodes);
-#endif
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
-
-   /* compute the MST */
-   for( int i = nnodes - 1; i >= 0; --i )
-      g->mark[i] = connected[i];
-
-   graph_path_exec(scip, g, MST_MODE, g->source, cost, mst);
-
-   for( int i = nnodes - 1; i >= 0; --i )
-   {
-      if( connected[i] && (mst[i].edge != -1) )
-      {
-         assert(g->head[mst[i].edge] == i);
-         assert(result[mst[i].edge] == UNKNOWN);
-
-         result[mst[i].edge] = 0;
-      }
-   }
-
-   /* prune */
-   do
-   {
-      SCIPdebug(fputc('C', stdout));
-      SCIPdebug(fflush(stdout));
-
-      count = 0;
-
-      for( int i = nnodes - 1; i >= 0; --i )
-      {
-         int j;
-
-         if( !g->mark[i] )
-            continue;
-
-         if( g->term[i] == 0 )
-            continue;
-
-         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-            if( result[j] == 0 )
-               break;
-
-         if( j == EAT_LAST )
-         {
-            /* there has to be exactly one incoming edge
-             */
-            for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
-            {
-               if( result[j] == 0 )
-               {
-                  result[j]    = -1;
-                  g->mark[i]   = FALSE;
-                  connected[i] = FALSE;
-                  count++;
-                  break;
-               }
-            }
-         }
-      }
-   }
-   while( count > 0 );
-
-   SCIPfreeBufferArray(scip, &mst);
-
-   return SCIP_OKAY;
-}
-
-
-/* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
-static
-SCIP_RETCODE pruneSteinerTreePc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   int*                  result,             /**< ST edges (need to be set to UNKNOWN) */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   PATH* mst;
-   int count;
-   int root = g->source;
-   const int nnodes = g->knots;
-   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
-
-   assert(g != NULL && cost != NULL && result != NULL && connected != NULL);
-   assert(g->extended);
-
-#ifndef NEDBUG
-   for( int i = 0; i < g->edges; i++ )
-      assert(UNKNOWN == result[i]);
-#endif
-
-   if( rpcmw )
-   {
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( connected[i] && !graph_pc_knotIsDummyTerm(g, i) )
-            g->mark[i] = TRUE;
-         else
-            g->mark[i] = FALSE;
-
-         assert(g->mark[i] || !graph_pc_knotIsFixedTerm(g, i));
-      }
-
-      if( !g->mark[root] )
-      {
-         printf("FAIL in SCIPStpHeurTMPrunePc, root not connected \n");
-         return SCIP_ERROR;
-      }
-   }
-   else
-   {
-      int proot;
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( connected[i] && !Is_term(g->term[i]) )
-            g->mark[i] = TRUE;
-         else
-            g->mark[i] = FALSE;
-      }
-
-      proot = -1;
-      if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
-      {
-         int min = nnodes;
-         const int* termsorder = SCIPprobdataGetPctermsorder(scip);
-
-         for( int k = 0; k < nnodes; k++ )
-         {
-            if( termsorder[k] < min && connected[k] )
-            {
-               assert(Is_pseudoTerm(g->term[k]));
-
-               min = termsorder[k];
-               proot = k;
-            }
-         }
-
-         assert(min >= 0);
-         assert(proot == -1 || min < nnodes);
-      }
-      else
-      {
-         for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            const int head = g->head[a];
-            if( !Is_term(g->term[head]) && connected[head] )
-            {
-               proot = head;
-               break;
-            }
-         }
-      }
-
-      /* trivial solution? */
-      if( proot == -1 )
-      {
-         printf("trivial solution in pruning \n");
-         for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            const int head = g->head[a];
-            if( Is_term(g->term[head]) )
-            {
-               assert(connected[head]);
-               result[a] = CONNECT;
-            }
-         }
-         return SCIP_OKAY;
-      }
-
-      assert(g->mark[proot]);
-      root = proot;
-   }
-   assert(root >= 0);
-   assert(root < nnodes);
-
-   SCIPdebugMessage("(non-artificial) root=%d \n", root);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
-   graph_path_exec(scip, g, MST_MODE, root, cost, mst);
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( g->mark[i] && (mst[i].edge != UNKNOWN) )
-      {
-         assert(g->path_state[i] == CONNECT);  assert(g->head[mst[i].edge] == i);  assert(result[mst[i].edge] == -1);
-         result[mst[i].edge] = CONNECT;
-      }
-   }
-
-   /* connect all terminals */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) && i != g->source )
-      {
-         int e1;
-         int e2;
-
-         if( rpcmw && g->mark[i] )
-         {
-            assert(g->prize[i] == FARAWAY && connected[i]);
-            continue;
-         }
-
-         assert(!graph_pc_knotIsFixedTerm(g, i));
-         connected[i] = TRUE;
-
-         e1 = g->inpbeg[i];
-         assert(e1 >= 0);
-         e2 = g->ieat[e1];
-
-         if( e2 == EAT_LAST )
-         {
-            result[e1] = CONNECT;
-         }
-         else
-         {
-            const int k1 = g->tail[e1];
-            const int k2 = g->tail[e2];
-
-            assert(e2 >= 0);
-            assert(g->ieat[e2] == EAT_LAST);
-            assert(k1 == g->source || k2 == g->source);
-
-            if( k1 != g->source && g->path_state[k1] == CONNECT )
-               result[e1] = CONNECT;
-            else if( k2 != g->source && g->path_state[k2] == CONNECT )
-               result[e2] = CONNECT;
-            else if( k1 == g->source )
-               result[e1] = CONNECT;
-            else if( k2 == g->source )
-               result[e2] = CONNECT;
-         }
-      }
-      else if( i == root && !rpcmw )
-      {
-         int e1;
-         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
-            if( g->tail[e1] == g->source )
-               break;
-         assert(e1 != EAT_LAST);
-         result[e1] = CONNECT;
-      }
-   }
-
-   /* prune */
-   do
-   {
-      count = 0;
-
-      for( int i = nnodes - 1; i >= 0; --i )
-      {
-         int j;
-         if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
-            continue;
-
-         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-            if( result[j] == CONNECT )
-               break;
-
-         if( j == EAT_LAST )
-         {
-            /* there has to be exactly one incoming edge
-             */
-            assert(!Is_term(g->term[i]) && !Is_pseudoTerm(g->term[i]));
-
-            for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
-            {
-               if( result[j] == CONNECT )
-               {
-                  result[j]    = -1;
-                  g->mark[i]   = FALSE;
-                  connected[i] = FALSE;
-                  count++;
-                  break;
-               }
-            }
-            assert(j != EAT_LAST);
-         }
-      }
-   }
-   while( count > 0 );
-
-#ifndef NDEBUG
-   /* make sure there is no unconnected vertex */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( connected[i] && i != g->source )
-      {
-         int j;
-         for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
-            if( result[j] == CONNECT )
-               break;
-
-         assert(j != EAT_LAST);
-      }
-   }
-#endif
-
-   assert(graph_sol_valid(scip, g, result));
-   SCIPfreeBufferArray(scip, &mst);
-
-   return SCIP_OKAY;
-}
-
-
-/**  method to be called from this method */
-static
-SCIP_RETCODE pruneSteinerTree_intern(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs for DHCSTP and PC */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   const int nedges = g->edges;
-
-   if( g->stp_type != STP_DHCSTP )
-      for( int e = 0; e < nedges; e++ )
-         result[e] = UNKNOWN;
-
-   if( graph_pc_isPcMw(g) )
-   {
-      if( graph_pc_isPc(g) )
-      {
-         assert(cost);
-         SCIP_CALL( pruneSteinerTreePc(scip, g, cost, result, connected) );
-      }
-      else
-      {
-         assert(!cost);
-         SCIP_CALL( pruneSteinerTreePc(scip, g, g->cost, result, connected) );
-      }
-   }
-   else
-      SCIP_CALL( pruneSteinerTreeStp(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, result, connected) );
-
-   return SCIP_OKAY;
-}
-
 /** Dijkstra based shortest paths heuristic */
 static
 SCIP_RETCODE computeSteinerTreeDijk(
@@ -749,7 +375,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
 
    /* cost will actually only be used for hop-constrained problem */
-   SCIP_CALL( pruneSteinerTree_intern(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -779,7 +405,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    else
       graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, costsAreBiased, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL( pruneSteinerTree_intern(scip, g, cost_org, result, connected));
+   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost_org, result, connected));
 
    return SCIP_OKAY;
 }
@@ -805,7 +431,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 
    graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL(pruneSteinerTree_intern(scip, g, cost, result, connected));
+   SCIP_CALL(graph_solPruneOnGivenCosts(scip, g, cost, result, connected));
 
    return SCIP_OKAY;
 }
@@ -945,7 +571,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    /* prune the tree */
-   SCIP_CALL( pruneSteinerTree_intern(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1522,7 +1148,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    }
 
    /* prune the ST, so that all leaves are terminals */
-   SCIP_CALL( pruneSteinerTree_intern(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -2330,7 +1956,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          if( success )
          {
             SCIPdebugMessage("TM solution added, value %f \n",
-                  graph_sol_getObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
+                  graph_solGetObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
 
             *result = SCIP_FOUNDSOL;
          }
@@ -2402,101 +2028,6 @@ void SCIPStpHeurTMCompStarts(
    *runs = r;
 }
 
-
-/** prune solution given by included nodes */
-SCIP_RETCODE SCIPStpHeurTMPrune(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   const int nedges = graph_get_nEdges(g);
-
-   assert(scip && result && connected);
-   assert(g->stp_type != STP_DHCSTP);
-
-   for( int e = 0; e < nedges; e++ )
-      result[e] = UNKNOWN;
-
-   if( graph_pc_isPcMw(g) )
-   {
-      SCIP_Real* edgecosts = NULL;
-      assert(g->extended);
-
-      /* do we have biased edge costs? */
-      if( graph_pc_isPc(g) )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &edgecosts, nedges) );
-
-         graph_pc_getOrgCosts(scip, g, edgecosts);
-      }
-      else
-      {
-         edgecosts = g->cost;
-      }
-
-      SCIP_CALL( pruneSteinerTreePc(scip, g, edgecosts, result, connected) );
-
-      if( graph_pc_isPc(g) )
-         SCIPfreeBufferArray(scip, &edgecosts);
-   }
-   else
-   {
-      SCIP_CALL( pruneSteinerTreeStp(scip, g, g->cost, result, connected) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** prune solution given by included nodes */
-SCIP_RETCODE SCIPStpHeurTMpruneNodeSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   assert(scip && g && result && connected);
-   assert(g->stp_type != STP_DHCSTP);
-
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, result, connected) );
-
-   return SCIP_OKAY;
-}
-
-/** prune solution given by included edges */
-SCIP_RETCODE SCIPStpHeurTMpruneEdgeSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result              /**< ST edges */
-   )
-{
-   STP_Bool* connected;
-   const int nedges = g->edges;
-   const int nnodes = g->knots;
-
-   assert(scip && g && result);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-      connected[k] = FALSE;
-
-   for( int e = 0; e < nedges; e++ )
-     if( result[e] == CONNECT )
-     {
-        connected[g->tail[e]] = TRUE;
-        connected[g->head[e]] = TRUE;
-     }
-
-   SCIP_CALL( SCIPStpHeurTMpruneNodeSol(scip, g, result, connected) );
-
-   SCIPfreeBufferArray(scip, &connected);
-
-   return SCIP_OKAY;
-}
 
 /** build Steiner tree in such a way that all leaves are terminals */
 SCIP_RETCODE SCIPStpHeurTMBuildTree(
@@ -3091,7 +2622,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
          }
 
          /* here another measure than in the do_(...) heuristics is being used */
-         obj = graph_sol_getObj(graph, result, 0.0, nedges);
+         obj = graph_solGetObj(graph, result, 0.0, nedges);
 
          SCIPdebugMessage(" Obj=%.12e\n", obj);
 
@@ -3101,7 +2632,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          if( SCIPisLT(scip, obj, minobj) && (graph->stp_type != STP_DCSTP || solfound) )
          {
-            if( graph->stp_type != STP_DHCSTP || graph_sol_getNedges(graph, result) <= graph->hoplimit )
+            if( graph->stp_type != STP_DHCSTP || graph_solGetNedges(graph, result) <= graph->hoplimit )
             {
                minobj = obj;
 

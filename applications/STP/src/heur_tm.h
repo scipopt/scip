@@ -85,31 +85,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    );
 
-/** prune a Steiner tree in such a way that all leaves are terminals */
-SCIP_EXPORT
-SCIP_RETCODE SCIPStpHeurTMPrune(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   );
-
-/** prune solution given by included nodes */
-EXTERN
-SCIP_RETCODE SCIPStpHeurTMpruneNodeSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   );
-
-/** prune solution given by included edges */
-EXTERN
-SCIP_RETCODE SCIPStpHeurTMpruneEdgeSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   int*                  result              /**< ST edges */
-   );
 
 /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
 SCIP_EXPORT

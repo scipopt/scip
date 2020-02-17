@@ -545,7 +545,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       assert( !(Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source) );
    }
 
-   assert(graph_sol_valid(scip, newgraph, newedges));
+   assert(graph_solIsValid(scip, newgraph, newedges));
 #endif
 
    if( !success )
@@ -554,15 +554,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       goto TERMINATE;
    }
 
-   assert(success && graph_sol_valid(scip, newgraph, newedges));
+   assert(success && graph_solIsValid(scip, newgraph, newedges));
 
-   SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after prune %f \n", graph_solGetObj(newgraph, newedges, 0.0, newgraph->edges));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
-   SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after local %f \n", graph_solGetObj(newgraph, newedges, 0.0, newgraph->edges));
 
-   assert(graph_sol_valid(scip, newgraph, newedges));
+   assert(graph_solIsValid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);
 
 
@@ -583,9 +583,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( newgraph->knots == 1 )
       nodearrchar[g->source] = TRUE;
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, newedges, nodearrchar) );
+   SCIP_CALL( graph_solPrune(scip, g, newedges, nodearrchar) );
 
-   assert(graph_sol_valid(scip, g, newedges));
+   assert(graph_solIsValid(scip, g, newedges));
 
    if( addsol )
    {
@@ -599,7 +599,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
    }
 
-   success = graph_sol_valid(scip, g, newedges);
+   success = graph_solIsValid(scip, g, newedges);
 
    assert(success);
 

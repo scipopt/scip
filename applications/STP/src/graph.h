@@ -417,8 +417,6 @@ extern void   graph_edge_printInfo(const GRAPH*, int);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
 extern SCIP_Bool graph_edge_isBlocked(SCIP*, const GRAPH*, int);
 extern void   graph_knot_printInfo(const GRAPH*, int);
-extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
-extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
 extern int    graph_get_nNodes(const GRAPH*);
 extern int    graph_get_nEdges(const GRAPH*);
 extern int    graph_get_nTerms(const GRAPH*);
@@ -437,8 +435,6 @@ extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_knot_contractFixed(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
-extern SCIP_RETCODE   graph_sol_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, int, SINGLETONANS*, SINGLETONANS*, int*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_knot_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*);
@@ -453,10 +449,6 @@ extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
-extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
-extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
-extern SCIP_Real graph_sol_getObj(const GRAPH*, const int*, SCIP_Real, int);
-extern int       graph_sol_getNedges(const GRAPH*, const int*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 
 
@@ -501,7 +493,6 @@ extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, 
 extern SCIP_RETCODE   graph_pc_contractNodeAncestors(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdgeUnordered(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_sol_markPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int, SCIP_Real*);
 extern int    graph_pc_realDegree(const GRAPH*, int, SCIP_Bool);
 extern int    graph_pc_getRoot2PtermEdge(const GRAPH*, int);
@@ -584,6 +575,23 @@ extern void   graph_mincut_exit(SCIP*, GRAPH*);
 extern void   graph_mincut_exec(const GRAPH*, const int, const int, const int, const int, const int, const int*, const int*, int* RESTRICT, const int*, const int*, const int*, const SCIP_Bool);
 extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
 #endif
+
+/* graph_sol.c
+ */
+extern void   graph_solSetNodeList(const GRAPH*, STP_Bool*, IDX*);
+extern void   graph_solSetVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
+extern SCIP_RETCODE   graph_solMarkPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
+extern SCIP_Bool graph_solIsUnreduced(SCIP*, const GRAPH*, const int*);
+extern SCIP_Bool graph_solIsValid(SCIP*, const GRAPH*, const int*);
+extern SCIP_Real graph_solGetObj(const GRAPH*, const int*, SCIP_Real, int);
+extern int       graph_solGetNedges(const GRAPH*, const int*);
+extern SCIP_RETCODE   graph_solGetOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
+extern SCIP_RETCODE   graph_solReroot(SCIP*, GRAPH*, int*, int);
+SCIP_RETCODE       graph_solPrune(SCIP*, const GRAPH*, int*, STP_Bool*);
+SCIP_RETCODE       graph_solPruneOnGivenCosts(SCIP*, const GRAPH*, const SCIP_Real*, int*, STP_Bool*);
+SCIP_RETCODE       graph_solPruneFromNodes(SCIP*, const GRAPH*, int*, STP_Bool*);
+SCIP_RETCODE       graph_solPruneFromEdges(SCIP*, const GRAPH*, int*);
+
 
 /* graph_load.c
  */

@@ -3246,7 +3246,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          }
       }
 
-      SCIP_CALL( graph_sol_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
+      SCIP_CALL( graph_solMarkPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
             orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);

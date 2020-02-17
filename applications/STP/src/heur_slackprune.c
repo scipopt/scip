@@ -449,7 +449,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
          SCIPdebugMessage("better solution added by SLACKPRUNE %f \n", pobj + SCIPprobdataGetOffset(scip));
          *result = SCIP_FOUNDSOL;
 
-         assert(graph_sol_valid(scip, graph, soledge));
+         assert(graph_solIsValid(scip, graph, soledge));
 
          /* is the solution the new incumbent? */
          if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
@@ -539,7 +539,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
-   assert(graph_sol_valid(scip, g, soledge));
+   assert(graph_solIsValid(scip, g, soledge));
 
    nterms = g->terms;
    nedges = g->edges;
@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
    }
 
-   ubbest = graph_sol_getObj(g, soledge, 0.0, nedges);
+   ubbest = graph_solGetObj(g, soledge, 0.0, nedges);
 
    globalobj = ubbest;
 
@@ -687,13 +687,13 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       {
          SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 
-         assert(graph_sol_valid(scip, prunegraph, soledge));
+         assert(graph_solIsValid(scip, prunegraph, soledge));
 
          SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint2, solnode, soledge,
                globalsoledge, nodearrchar, &globalobj, TRUE, success) );
 
          /* calculate objective value of solution */
-         obj = graph_sol_getObj(prunegraph, soledge, offsetnew, nedges);
+         obj = graph_solGetObj(prunegraph, soledge, offsetnew, nedges);
 
          /* obj <= incumbent objective value? */
          if( SCIPisLE(scip, obj, ubbest) )
@@ -724,7 +724,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
    graph_path_exit(scip, prunegraph);
 
-   *success = graph_sol_valid(scip, g, globalsoledge);
+   *success = graph_solIsValid(scip, g, globalsoledge);
    BMScopyMemoryArray(soledge, globalsoledge, nedges);
 
 #if BREAKONERROR
