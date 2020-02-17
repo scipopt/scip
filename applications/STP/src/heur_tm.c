@@ -433,6 +433,8 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 
    SCIP_CALL(graph_solPruneOnGivenCosts(scip, g, cost, result, connected));
 
+   // todo prune from edges! and do strong pruning first there
+
    return SCIP_OKAY;
 }
 

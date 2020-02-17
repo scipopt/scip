@@ -35,6 +35,285 @@
 #include "portab.h"
 
 
+/** computes MST on marked graph and sets result edges */
+static inline
+SCIP_RETCODE pcsolGetMstEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int                   root,               /**< root of solution */
+   int*                  result              /**< MST solution, which does not include artificial terminals */
+)
+{
+   PATH* mst;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const gmark = g->mark;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
+   graph_path_exec(scip, g, MST_MODE, root, cost, mst);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( gmark[i] && (mst[i].edge != UNKNOWN) )
+      {
+         assert(g->path_state[i] == CONNECT);
+         assert(g->head[mst[i].edge] == i);
+         assert(result[mst[i].edge] == -1);
+
+         result[mst[i].edge] = CONNECT;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
+/** Gets root of solution for unrooted PC/MW.
+ *  Returns -1 if the solution is empty. */
+static inline
+int pcsolGetRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const STP_Bool*       connected           /**< ST nodes */
+   )
+{
+   int proot = -1;
+   const int nnodes = graph_get_nNodes(g);
+   const int groot = g->source;
+
+   assert(graph_pc_isPcMw(g));
+   assert(!graph_pc_isRootedPcMw(g));
+
+   /* todo remove this hack, better ask for the SCIP stage */
+   if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
+   {
+      int min = nnodes;
+      const int* termsorder = SCIPprobdataGetPctermsorder(scip);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( termsorder[k] < min && connected[k] )
+         {
+            assert(Is_pseudoTerm(g->term[k]));
+
+            min = termsorder[k];
+            proot = k;
+         }
+      }
+
+      assert(min >= 0);
+      assert(proot == -1 || min < nnodes);
+   }
+   else
+   {
+      for( int a = g->outbeg[groot]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+         if( !Is_term(g->term[head]) && connected[head] )
+         {
+            proot = head;
+            break;
+         }
+      }
+   }
+
+   return proot;
+}
+
+
+/** mark nodes of the solution in the graph */
+static inline
+void pcsolMarkGraphNodes(
+   const STP_Bool*       connected,          /**< ST nodes */
+   const GRAPH*          g                   /**< graph structure */
+   )
+{
+   int* const gmark = g->mark;
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+
+   if( rpcmw )
+   {
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( connected[i] && !graph_pc_knotIsDummyTerm(g, i) )
+            gmark[i] = TRUE;
+         else
+            gmark[i] = FALSE;
+
+         assert(gmark[i] || !graph_pc_knotIsFixedTerm(g, i));
+      }
+
+      assert(gmark[g->source]);
+   }
+   else
+   {
+      const int* const gterm = g->term;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( connected[i] && !Is_term(gterm[i]) )
+            gmark[i] = TRUE;
+         else
+            gmark[i] = FALSE;
+      }
+   }
+}
+
+
+/** prune a Steiner tree in such a way that all leaves are terminals */
+static inline
+void pcsolPrune(
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result,             /**< MST solution, which does not include artificial terminals */
+   STP_Bool*             connected           /**< ST nodes */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int count;
+
+   do
+   {
+      count = 0;
+
+      for( int i = nnodes - 1; i >= 0; --i )
+      {
+         int j;
+         if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
+            continue;
+
+         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
+            if( result[j] == CONNECT )
+               break;
+
+         if( j == EAT_LAST )
+         {
+            /* there has to be exactly one incoming edge
+             */
+            assert(!Is_term(g->term[i]) && !Is_pseudoTerm(g->term[i]));
+
+            for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+            {
+               if( result[j] == CONNECT )
+               {
+                  result[j] = -1;
+                  g->mark[i] = FALSE;
+                  connected[i] = FALSE;
+                  count++;
+                  break;
+               }
+            }
+            assert(j != EAT_LAST);
+         }
+      }
+   }
+   while( count > 0 );
+
+#ifndef NDEBUG
+   /* make sure there is no unconnected vertex */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] && i != g->source )
+      {
+         int j;
+         for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+            if( result[j] == CONNECT )
+               break;
+
+         assert(j != EAT_LAST);
+      }
+   }
+#endif
+}
+
+/** connects dummy terminals to given (pre-) PC solution */
+static
+void pcsolConnectDummies(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   root,               /**< root of solution */
+   int*                  result,             /**< MST solution, which does not include artificial terminals */
+   STP_Bool*             connected           /**< ST nodes */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+
+   /* connect all terminals */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) && i != g->source )
+      {
+         int e1;
+         int e2;
+
+         if( rpcmw && g->mark[i] )
+         {
+            assert(g->prize[i] == FARAWAY && connected[i]);
+            continue;
+         }
+
+         assert(!graph_pc_knotIsFixedTerm(g, i));
+         connected[i] = TRUE;
+
+         e1 = g->inpbeg[i];
+         assert(e1 >= 0);
+         e2 = g->ieat[e1];
+
+         if( e2 == EAT_LAST )
+         {
+            result[e1] = CONNECT;
+         }
+         else
+         {
+            const int k1 = g->tail[e1];
+            const int k2 = g->tail[e2];
+
+            assert(e2 >= 0);
+            assert(g->ieat[e2] == EAT_LAST);
+            assert(k1 == g->source || k2 == g->source);
+
+            if( k1 != g->source && g->path_state[k1] == CONNECT )
+               result[e1] = CONNECT;
+            else if( k2 != g->source && g->path_state[k2] == CONNECT )
+               result[e2] = CONNECT;
+            else if( k1 == g->source )
+               result[e1] = CONNECT;
+            else if( k2 == g->source )
+               result[e2] = CONNECT;
+         }
+      }
+      else if( i == root && !rpcmw )
+      {
+         int e1;
+         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
+            if( g->tail[e1] == g->source )
+               break;
+         assert(e1 != EAT_LAST);
+         result[e1] = CONNECT;
+      }
+   }
+}
+
+/** Finds optimal prize-collecting Steiner tree on given tree. */
+static
+SCIP_RETCODE strongPruneSteinerTreePc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
+   STP_Bool*             connected           /**< ST nodes */
+)
+{
+
+   /* find best root */
+
+   /* compute the subtree */
+
+   return SCIP_OKAY;
+}
+
 /** prune a Steiner tree in such a way that all leaves are terminals */
 static
 SCIP_RETCODE pruneSteinerTreeStp(
@@ -137,7 +416,8 @@ SCIP_RETCODE pruneSteinerTreeStp(
 }
 
 
-/* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
+/* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals
+ * NOTE: graph is not really const, mark is changed! todo */
 static
 SCIP_RETCODE pruneSteinerTreePc(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -147,10 +427,7 @@ SCIP_RETCODE pruneSteinerTreePc(
    STP_Bool*             connected           /**< ST nodes */
    )
 {
-   PATH* mst;
-   int count;
    int root = g->source;
-   const int nnodes = g->knots;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
    assert(g != NULL && cost != NULL && result != NULL && connected != NULL);
@@ -161,70 +438,14 @@ SCIP_RETCODE pruneSteinerTreePc(
       assert(UNKNOWN == result[i]);
 #endif
 
-   if( rpcmw )
+   pcsolMarkGraphNodes(connected, g);
+
+   if( !rpcmw )
    {
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( connected[i] && !graph_pc_knotIsDummyTerm(g, i) )
-            g->mark[i] = TRUE;
-         else
-            g->mark[i] = FALSE;
-
-         assert(g->mark[i] || !graph_pc_knotIsFixedTerm(g, i));
-      }
-
-      if( !g->mark[root] )
-      {
-         printf("FAIL in SCIPStpHeurTMPrunePc, root not connected \n");
-         return SCIP_ERROR;
-      }
-   }
-   else
-   {
-      int proot;
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( connected[i] && !Is_term(g->term[i]) )
-            g->mark[i] = TRUE;
-         else
-            g->mark[i] = FALSE;
-      }
-
-      proot = -1;
-      if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
-      {
-         int min = nnodes;
-         const int* termsorder = SCIPprobdataGetPctermsorder(scip);
-
-         for( int k = 0; k < nnodes; k++ )
-         {
-            if( termsorder[k] < min && connected[k] )
-            {
-               assert(Is_pseudoTerm(g->term[k]));
-
-               min = termsorder[k];
-               proot = k;
-            }
-         }
-
-         assert(min >= 0);
-         assert(proot == -1 || min < nnodes);
-      }
-      else
-      {
-         for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            const int head = g->head[a];
-            if( !Is_term(g->term[head]) && connected[head] )
-            {
-               proot = head;
-               break;
-            }
-         }
-      }
+      root = pcsolGetRoot(scip, g, connected);
 
       /* trivial solution? */
-      if( proot == -1 )
+      if( root == -1 )
       {
          printf("trivial solution in pruning \n");
          for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
@@ -239,137 +460,21 @@ SCIP_RETCODE pruneSteinerTreePc(
          return SCIP_OKAY;
       }
 
-      assert(g->mark[proot]);
-      root = proot;
+      assert(g->mark[root]);
    }
-   assert(root >= 0);
-   assert(root < nnodes);
 
+   assert(root >= 0);
+   assert(root < g->knots);
    SCIPdebugMessage("(non-artificial) root=%d \n", root);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
-   graph_path_exec(scip, g, MST_MODE, root, cost, mst);
+   SCIP_CALL( pcsolGetMstEdges(scip, g, cost, root, result) );
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( g->mark[i] && (mst[i].edge != UNKNOWN) )
-      {
-         assert(g->path_state[i] == CONNECT);  assert(g->head[mst[i].edge] == i);  assert(result[mst[i].edge] == -1);
-         result[mst[i].edge] = CONNECT;
-      }
-   }
+   pcsolConnectDummies(g, root, result, connected);
 
-   /* connect all terminals */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) && i != g->source )
-      {
-         int e1;
-         int e2;
-
-         if( rpcmw && g->mark[i] )
-         {
-            assert(g->prize[i] == FARAWAY && connected[i]);
-            continue;
-         }
-
-         assert(!graph_pc_knotIsFixedTerm(g, i));
-         connected[i] = TRUE;
-
-         e1 = g->inpbeg[i];
-         assert(e1 >= 0);
-         e2 = g->ieat[e1];
-
-         if( e2 == EAT_LAST )
-         {
-            result[e1] = CONNECT;
-         }
-         else
-         {
-            const int k1 = g->tail[e1];
-            const int k2 = g->tail[e2];
-
-            assert(e2 >= 0);
-            assert(g->ieat[e2] == EAT_LAST);
-            assert(k1 == g->source || k2 == g->source);
-
-            if( k1 != g->source && g->path_state[k1] == CONNECT )
-               result[e1] = CONNECT;
-            else if( k2 != g->source && g->path_state[k2] == CONNECT )
-               result[e2] = CONNECT;
-            else if( k1 == g->source )
-               result[e1] = CONNECT;
-            else if( k2 == g->source )
-               result[e2] = CONNECT;
-         }
-      }
-      else if( i == root && !rpcmw )
-      {
-         int e1;
-         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
-            if( g->tail[e1] == g->source )
-               break;
-         assert(e1 != EAT_LAST);
-         result[e1] = CONNECT;
-      }
-   }
-
-   /* prune */
-   do
-   {
-      count = 0;
-
-      for( int i = nnodes - 1; i >= 0; --i )
-      {
-         int j;
-         if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
-            continue;
-
-         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-            if( result[j] == CONNECT )
-               break;
-
-         if( j == EAT_LAST )
-         {
-            /* there has to be exactly one incoming edge
-             */
-            assert(!Is_term(g->term[i]) && !Is_pseudoTerm(g->term[i]));
-
-            for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
-            {
-               if( result[j] == CONNECT )
-               {
-                  result[j]    = -1;
-                  g->mark[i]   = FALSE;
-                  connected[i] = FALSE;
-                  count++;
-                  break;
-               }
-            }
-            assert(j != EAT_LAST);
-         }
-      }
-   }
-   while( count > 0 );
-
-#ifndef NDEBUG
-   /* make sure there is no unconnected vertex */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( connected[i] && i != g->source )
-      {
-         int j;
-         for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
-            if( result[j] == CONNECT )
-               break;
-
-         assert(j != EAT_LAST);
-      }
-   }
-#endif
+   /* simple pruning */
+   pcsolPrune(g, result, connected);
 
    assert(graph_solIsValid(scip, g, result));
-   SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
 }
@@ -480,7 +585,7 @@ SCIP_RETCODE graph_solPruneFromEdges(
 SCIP_RETCODE graph_solPruneOnGivenCosts(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs for DHCSTP and PC */
+   const SCIP_Real*      cost,               /**< edge costs */
    int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
    )
