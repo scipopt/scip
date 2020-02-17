@@ -192,8 +192,6 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 /* helper method to check whether a bilinear term appears in the problem */
 static
 SCIP_VAR* getBilinVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y                   /**< second variable */
    )
@@ -209,27 +207,27 @@ SCIP_VAR* getBilinVar(
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(getBilinVar(scip, sepadata, x, x), xx);
-   cr_expect_eq(getBilinVar(scip, sepadata, x, y), xy);
-   cr_expect_eq(getBilinVar(scip, sepadata, x, z), xz);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, x), xy);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, x), xz);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, z), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, y), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, y), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, z), NULL);
+   cr_expect_eq(getBilinVar(x, x), xx);
+   cr_expect_eq(getBilinVar(x, y), xy);
+   cr_expect_eq(getBilinVar(x, z), xz);
+   cr_expect_eq(getBilinVar(y, x), xy);
+   cr_expect_eq(getBilinVar(z, x), xz);
+   cr_expect_eq(getBilinVar(y, z), NULL);
+   cr_expect_eq(getBilinVar(z, y), NULL);
+   cr_expect_eq(getBilinVar(y, y), NULL);
+   cr_expect_eq(getBilinVar(z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(getBilinVar(scip, sepadata, logvar, logvar), powvar);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, powvar), prodvar);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, prodvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, powvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, powvar, logvar), NULL);
+   cr_expect_eq(getBilinVar(logvar, logvar), powvar);
+   cr_expect_eq(getBilinVar(absvar, powvar), prodvar);
+   cr_expect_eq(getBilinVar(prodvar, prodvar), NULL);
+   cr_expect_eq(getBilinVar(prodvar, absvar), NULL);
+   cr_expect_eq(getBilinVar(prodvar, powvar), NULL);
+   cr_expect_eq(getBilinVar(prodvar, logvar), NULL);
+   cr_expect_eq(getBilinVar(absvar, absvar), NULL);
+   cr_expect_eq(getBilinVar(absvar, logvar), NULL);
+   cr_expect_eq(getBilinVar(powvar, powvar), NULL);
+   cr_expect_eq(getBilinVar(powvar, logvar), NULL);
 }
 
 Test(rlt, separation)
