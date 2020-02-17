@@ -15,20 +15,23 @@
 # Usage: from scip root execute
 #        GITBRANCH=master ./performance_runs.sh
 
-# Arguments | defaultvalue                             | possibilities
-# ----------|------------------------------------------|--------------
-# GITBRANCH | master                                   | master, bugfix
+# Arguments             | defaultvalue                                | possibilities
+# ----------------------|---------------------------------------------|--------------
+# GITBRANCH             | master                                      | master, bugfix
+# DAY_OF_WEEK           | date +%u                                    | 1..7 where mon-1 .. sun-7
+# UPDATE_PERF_BRANCH    | yes on saturdays in automode, no otherwise  | yes, no
+# TRS_CONFIG            | auto                                        | custom
+# TRS_TESTSET           | <none>                                      | mipdev2-solvable, minlpdev-solvable, miplib2017_benchmark
 
 echo "This is performance_runs.sh running."
 
 # arguments and defaults
 # Find out what day of week it is: mon-1 .. sun-7
 : ${DAY_OF_WEEK:=$(date +%u)}
+: ${TRS_CONFIG:=auto}
 
-######################################
-### evaluate commandline arguments ###
-######################################
-
+# generate a randomseed
+RANDOMSEED=$(date +%Y%m%d)
 # set default arguments
 # If no branch is given, try to guess the branch based on the current directory
 if [ "${GITBRANCH}" == "" ]; then
@@ -50,30 +53,67 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+# use associative arrays, this requires bash4
+# declaration
+declare -A JOBS
+
+# process arguments
+if [ "${TRS_CONFIG}" == "custom" ]; then
+  TRS_LPS=spx
+  if [ "${TRS_TESTSET}" == "minlpdev-solvable" ]; then
+    TRS_TIME=3600
+    TRS_SETTINGS=minlp_default
+    TRS_QUEUE=M640
+    TRS_SEEDS=0
+    TRS_PERMUTE=5
+  elif [[ "${TRS_TESTSET}" =~ ^mip ]]; then
+    TRS_TIME=7200
+    TRS_SETTINGS=default
+    if [ "${TRS_TESTSET}" == "mipdev2-solvable" ]; then
+      TRS_QUEUE=M620v3
+    elif [ "${TRS_TESTSET}" == "miplib2017_benchmark" ]; then
+      TRS_QUEUE=M640
+    fi
+    TRS_SEEDS=5
+    TRS_PERMUTE=0
+  else
+    echo "Error in configuration, TRS_TESTSET has to be in the following list: miplib2017_benchmark, minlpdev-solvable, mipdev2-solvable."
+    exit 1
+  fi
+  JOBS[${DAY_OF_WEEK},1]="EXECUTABLE=scipopt${TRS_LPS}_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipopt${TRS_LPS}_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=${TRS_QUEUE} TEST=${TRS_TESTSET} TIME=${TRS_TIME} SETTINGS=${TRS_SETTINGS} PERFORMANCE=performance SEEDS=${TRS_SEEDS} PERMUTE=${TRS_PERMUTE}"
+
+elif [ "${DAY_OF_WEEK}" == "6" ]; then
+  UPDATE_PERF_BRANCH=yes
+fi
+
+
+######################################
+### evaluate commandline arguments ###
+######################################
+
 export FULLGITHASH=$(git show -s --pretty=%H)
 export GITBRANCH
 export MODE=performance
-
-# This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
-# We have to export these variables to make them available to cmake.
-# Scripts will also use nonexported variables correctly.
-if [ "${GITBRANCH}" == "consexpr" ]; then
-  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_master_Release/
-else
-  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
-fi
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
+
 # create required directory
 mkdir -p settings
 
-# generate a randomseed
-RANDOMSEED=$(date +%Y%m%d)
-export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
+# SAPSETTINGS
+SAPSETTINGS=sap-next-release-pure-diff
+if [ "${GITBRANCH}" != "master" ]; then
+  SAPSETTINGS=sap-600-pure-diff
+fi
+
+# symlink to SAP settings for the next release settings
+ln -fs ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-600-pure-diff.set settings/.
 
 #######################
 ### Update Branches ###
@@ -81,14 +121,28 @@ export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 BRANCHNAME=${GITBRANCH}
 SOPLEXBRANCHNAME=${GITBRANCH}
+PAPILOBRANCHNAME=${GITBRANCH}
+
 if [ "${GITBRANCH}" == "bugfix" ]; then
-  BRANCHNAME="v60-bugfix"
-  SOPLEXBRANCHNAME="bugfix-40"
-fi
-if [ "${GITBRANCH}" == "consexpr" ]; then
+  BRANCHNAME="v70-bugfix"
+  SOPLEXBRANCHNAME="bugfix-50"
+  PAPILOBRANCHNAME="master"
+elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
+  PAPILOBRANCHNAME="master"
 fi
-if [ "${DAY_OF_WEEK}" == "6" ]; then
+
+# We have to export these variables to make them available to cmake.
+# Scripts will also use nonexported variables correctly.
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
+fi
+
+if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
   git checkout -f ${BRANCHNAME}
   git pull
   git checkout -f performance-${GITBRANCH}
@@ -104,8 +158,37 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   git checkout -f performance-${GITBRANCH}
   git merge ${SOPLEXBRANCHNAME} --ff-only
   git push
+
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${SOPLEX_DIR}
+  rm -rf ${SOPLEX_DIR}
+  make install -j4
   cd ..
-  rm -rf soplex
+
+  # cmake scip for presolvelib papilo
+  cd ..
+  mkdir -p scip-build
+  cd scip-build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DSOPLEX_DIR=${SOPLEX_DIR}
+  cd ..
+
+  rm -rf papilo
+  git clone git@git.zib.de:bzfgottw/presolve papilo
+  cd papilo
+  git checkout ${PAPILOBRANCHNAME}
+  git pull
+  git checkout -f performance-${GITBRANCH}
+  git merge ${PAPILOBRANCHNAME} --ff-only
+  git push
+
+  mkdir build
+  cd build
+  cmake -DQUADMATH=off -DCMAKE_INSTALL_PREFIX=${PAPILO_DIR} -DCMAKE_BUILD_TYPE=Release -DSCIP_DIR=../../build -DSOPLEX_DIR=../../soplex/build ..
+  rm -rf ${PAPILO_DIR}
+  make install -j4
+  cd ../..
+
 fi
 
 ####################################
@@ -124,46 +207,37 @@ fi
 
 # use associative arrays, this requires bash4
 # declaration
-declare -A JOBS
 declare -A TRIGGER
-
-# SAPSETTINGS
-SAPSETTINGS=sap-next-release-pure-diff
-if [ "${GITBRANCH}" != "master" ]; then
-  SAPSETTINGS=sap-600-pure-diff
-fi
-
-# symlink to SAP settings for the next release settings
-ln -fs ~/sap-next-release-pure-diff.set settings/.
-ln -fs ~/sap-600-pure-diff.set settings/.
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 
-if [ "${GITBRANCH}" == "master" ]; then
-  # running on saturday
-  JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
-  JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+if [ "${TRS_CONFIG}" != "custom" ]; then
+  if [ "${GITBRANCH}" == "master" ]; then
+    # running on saturday
+    JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+    JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 
-  TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
-  TRIGGER[6,2]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_shootout_weekly/build?token=weeklysaptoken"
-  TRIGGER[6,3]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_presolve_master_weekly/build?token=weeklysaptoken"
+    TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
+    TRIGGER[6,2]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_shootout_weekly/build?token=weeklysaptoken"
+    TRIGGER[6,3]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_presolve_master_weekly/build?token=weeklysaptoken"
 
-  # jobs running on sunday
-  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+    # jobs running on sunday
+    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
-elif [ "${GITBRANCH}" == "consexpr" ]; then
-  # running on saturday
-  JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+  elif [ "${GITBRANCH}" == "consexpr" ]; then
+    # running on saturday
+    JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 
-else # on bugfix
-  # running on saturday
-  JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
-  JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
-  TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
+  else # on bugfix
+    # running on saturday
+    JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+    JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+    TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
-  # jobs running on sunday
-  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+    # jobs running on sunday
+    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
+  fi
 fi
 
 #########################
@@ -219,12 +293,9 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
   make -j4
   cd ..
-
-  # TODO tag this
-
 
   ######################
   ### Setup testruns ###

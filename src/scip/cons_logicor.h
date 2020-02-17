@@ -172,9 +172,9 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPheurPassSolAddSol(
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

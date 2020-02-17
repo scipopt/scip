@@ -291,5 +291,4 @@ SCIP_PARALLELMODE SCIPsyncstoreGetMode(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/**@} */
 #endif

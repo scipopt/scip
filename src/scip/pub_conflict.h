@@ -96,7 +96,7 @@ SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

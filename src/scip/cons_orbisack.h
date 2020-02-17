@@ -141,9 +141,9 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

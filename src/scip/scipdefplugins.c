@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
-#ifdef SCIP_WITH_PRESOLVELIB
+#ifdef SCIP_WITH_PAPILO
    SCIP_CALL( SCIPincludePresolMILP(scip) );
 #endif
    SCIP_CALL( SCIPincludePresolQPKKTref(scip) );

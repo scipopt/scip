@@ -171,9 +171,9 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

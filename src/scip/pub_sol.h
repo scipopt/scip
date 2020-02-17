@@ -217,7 +217,7 @@ SCIP_Real SCIPsolGetRelConsViolation(
 #define SCIPsolSetPseudo(sol)           ((sol)->type = SCIP_SOLTYPE_PSEUDO)
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

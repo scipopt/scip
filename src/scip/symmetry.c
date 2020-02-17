@@ -517,26 +517,28 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
 }
 
 
-/** Check whether a permutation is a composition of 2-cycles (involution) and in this case determine the
- *  number of 2-cycles. @p allvarsbinary can be used to also require that only binary variables are moved.
+/** Checks whether a permutation is a composition of 2-cycles and this case determine the number of overall
+ *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
  */
 SCIP_RETCODE SCIPisInvolutionPerm(
    int*                  perm,               /**< permutation */
-   SCIP_VAR**            vars,               /**< array of variables perm is acting on (or NULL, if !allvarsbinary) */
+   SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles or 0 if perm is not an involution */
-   SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
+   int*                  nbincyclesperm,     /**< pointer to store number of binary cycles */
+   SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    )
 {
    int ntwocycles = 0;
    int i;
 
    assert( perm != NULL );
-   assert( vars != NULL || !allvarsbinary );
+   assert( vars != NULL );
    assert( ntwocyclesperm != NULL );
+   assert( nbincyclesperm != NULL );
 
    *ntwocyclesperm = 0;
-
+   *nbincyclesperm = 0;
    for (i = 0; i < nvars; ++i)
    {
       /* skip fixed points and avoid treating the same 2-cycle twice */
@@ -545,17 +547,16 @@ SCIP_RETCODE SCIPisInvolutionPerm(
 
       if ( perm[perm[i]] == i )
       {
-         if ( !allvarsbinary || (SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]])) )
-            ++ntwocycles;
-         else
-         {
-            /* at least one variable is not binary */
-            return SCIP_OKAY;
-         }
+         if ( SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]]) )
+            *nbincyclesperm += 1;
+         else if ( earlytermination )
+               return SCIP_OKAY;
+
+         ++ntwocycles ;
       }
       else
       {
-         /* we do not have a 2-cycle */
+         /* we do not have only 2-cycles */
          return SCIP_OKAY;
       }
    }
@@ -628,6 +629,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int*                  perm,               /**< permutation */
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
+   SCIP_VAR**            permvars,           /**< permutation vars array */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether variables in an orbitope row are binary (or NULL) */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    )
@@ -643,6 +646,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    assert( coltoextend >= 0 );
    assert( perm != NULL );
    assert( nusedelems != NULL );
+   assert( permvars != NULL );
    assert( success != NULL );
    assert( infeasible != NULL );
 
@@ -668,6 +672,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
                suborbitope[row][0] = idx2;
                suborbitope[row][1] = idx1;
             }
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][2] = perm[idx1];
             ++nintersections;
 
@@ -689,6 +695,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
                suborbitope[row][0] = idx2;
                suborbitope[row][1] = idx1;
             }
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][2] = perm[idx2];
             ++nintersections;
 
@@ -714,6 +722,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
          /* if idx1 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
          {
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][nfilledcols] = perm[idx1];
             ++nintersections;
 
@@ -951,12 +961,14 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables (or NULL) */
    SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
    )
 {
    int nfilledcols = 0;
    int curcolumn;
    int i;
+   int cnt;
 
    assert( vars != NULL );
    assert( nrows > 0 );
@@ -973,8 +985,13 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    /* start filling vars matrix with the right-most column w.r.t. columnorder */
    while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 )
    {
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows containing non-binary variables*/
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
          assert( orbitopevaridx[i][curcolumn] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
@@ -985,7 +1002,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
             break;
          }
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
       }
       --curcolumn;
       ++nfilledcols;
@@ -1002,22 +1019,32 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    if ( curcolumn > 1 )
    {
       /* add column with columnorder 1 to vars */
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows containing non-binary variables*/
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
          assert( orbitopevaridx[i][1] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][1]]) );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][1]];
       }
       ++nfilledcols;
 
       /* add column with columnorder 0 to vars */
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows containing non-binary variables*/
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
          assert( orbitopevaridx[i][0] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][0]]) );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][0]];
       }
       ++nfilledcols;
 
@@ -1031,8 +1058,13 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          {
             assert( columnorder[curcolumn] < 0 );
 
+            cnt = 0;
             for (i = 0; i < nrows; ++i)
             {
+               /* skip rows containing non-binary variables*/
+               if ( rowisbinary != NULL && ! rowisbinary[i] )
+                  continue;
+
                assert( orbitopevaridx[i][curcolumn] < npermvars );
                assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
@@ -1043,7 +1075,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
                   break;
                }
 
-               (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+               (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
             }
             ++curcolumn;
             ++nfilledcols;

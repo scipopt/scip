@@ -148,8 +148,8 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    );
 
-/** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
- *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
+/** Checks whether a permutation is a composition of 2-cycles and this case determine the number of overall
+ *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPisInvolutionPerm(
@@ -157,7 +157,8 @@ SCIP_RETCODE SCIPisInvolutionPerm(
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
+   int*                  nbincyclesperm,     /**< pointer to store number of binary cycles */
+   SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    );
 
 /** determine number of variables affected by symmetry group */
@@ -207,6 +208,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int*                  perm,               /**< permutation */
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
+   SCIP_VAR**            permvars,           /**< permutation vars array */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether variables in an orbitope row are binary */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    );
@@ -223,11 +226,12 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
    );
 
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

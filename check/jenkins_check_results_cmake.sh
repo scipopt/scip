@@ -14,6 +14,9 @@
 
 echo "This is jenkins_check_results_cmake.sh running."
 
+export PSMESSAGE=${PSMESSAGE}
+export IDENT=${IDENT}
+
 # set up environment for jenkins_failcheck_cmake.sh
 TESTSET=${TEST}
 if [ "${TESTSET}" == "" ]; then
@@ -44,6 +47,7 @@ export SETTINGS
 export EXECUTABLE
 export GITBRANCH
 export MODE
+export OPT
 
 # if SEEDS is not a number, set it to 0
 re='^[0-9]+$'

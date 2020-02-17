@@ -232,6 +232,33 @@ SCIP_RETCODE SCIPprimalClear(
    return SCIP_OKAY;
 }
 
+/** sorts primal solutions by objective value */
+static
+void sortPrimalSols(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem */
+   )
+{
+   int i;
+
+   for( i = 1; i < primal->nsols; ++i )
+   {
+      SCIP_SOL* sol;
+      SCIP_Real objval;
+      int j;
+
+      sol = primal->sols[i];
+      objval = SCIPsolGetObj(sol, set, transprob, origprob);
+      for( j = i; j > 0 && objval < SCIPsolGetObj(primal->sols[j-1], set, transprob, origprob); --j )
+         primal->sols[j] = primal->sols[j-1];
+      primal->sols[j] = sol;
+   }
+
+   return;
+}
+
 /** sets the cutoff bound in primal data and in LP solver */
 static
 SCIP_RETCODE primalSetCutoffbound(
@@ -462,12 +489,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
-   SCIP_SOL* sol;
    SCIP_Real upperbound;
-   SCIP_Real objval;
    SCIP_Real inf;
-   int i;
-   int j;
 
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
@@ -478,14 +501,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    upperbound = MIN(upperbound, inf);
 
    /* resort current primal solutions */
-   for( i = 1; i < primal->nsols; ++i )
-   {
-      sol = primal->sols[i];
-      objval = SCIPsolGetObj(sol, set, transprob, origprob);
-      for( j = i; j > 0 && objval < SCIPsolGetObj(primal->sols[j-1], set, transprob, origprob); --j )
-         primal->sols[j] = primal->sols[j-1];
-      primal->sols[j] = sol;
-   }
+   sortPrimalSols(primal, set, origprob, transprob);
 
    /* compare objective limit to currently best solution */
    if( primal->nsols > 0 )
@@ -1721,6 +1737,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
          SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob, &hasinfval) );
       }
    }
+
+   sortPrimalSols(primal, set, origprob, transprob);
 
    /* check if the global upper bound has to be updated
     * @todo we do not inform anybody about this change; if this leads to some

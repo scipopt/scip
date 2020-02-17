@@ -136,6 +136,7 @@
 
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 
 /*
  * Data structures
@@ -146,6 +147,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
+   SCIP_Bool             forceconscopy;      /**< whether orbitope constraints should be forced to be copied to sub SCIPs */
 };
 
 /** constraint data for orbitope constraints */
@@ -398,7 +400,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
 
       /* get set packing/partitioning variables */
       nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-      assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
       /* constraint does not contain enough variables */
       if ( nsetppcvars < ncols )
@@ -3518,6 +3519,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
 static
 SCIP_DECL_CONSCOPY(consCopyOrbitope)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
@@ -3546,8 +3548,11 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcedata->nblocks > 0 );
    assert( sourcedata->vars != NULL );
 
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
    /* do not copy non-model constraints */
-   if ( !sourcedata->ismodelcons )
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
    {
       *valid = FALSE;
 
@@ -3820,6 +3825,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Whether we separate inequalities for full orbitopes?",
          &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
 
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether orbitope constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
    return SCIP_OKAY;
 }
 

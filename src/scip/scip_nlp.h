@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    int                   priority            /**< new priority of the NLPI */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicNLPMethods
  *

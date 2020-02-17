@@ -21,6 +21,11 @@ Interface changes
 ### Interfaces to external software
 ### Changed parameters
 ### New parameters
+
+- It is now possible to add orbitope constraints to handle symmetries even if not all variables
+  in a component of the symmetry group are binary. This feature can be enabled using the
+  parameter "propagating/symmetry/onlybinorbitope".
+
 ### Data structures
 
 Deleted files
@@ -54,8 +59,12 @@ Known bugs
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
-  restart or not. Previously one could just turn off symmetry computation after a restart.
+- Using the parameter "propagating/symmetry/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart. If orbital fixing
+  has found a reduction before the restart occured, symmetries have to be updated to ensure correctness.
+  To this end, the user can decide via "propagating/symmetry/disableofrestart" whether orbital fixing is disabled or
+   whether symmetries are recomputed.
+
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
 - extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
@@ -198,7 +207,7 @@ Features
 
 - A new presolver "dualsparsify" was added. It tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix.
 
-- The presolver "tworowbnd" was implemented with better performance. It now also supports bound tightening on convex combinations of two rows.
+- The presolver "tworowbnd" was implemented with better performance.
 
 - To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
@@ -258,8 +267,8 @@ Interface changes
 
 ### New and changed callbacks
 
-  - new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
-    which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
+- new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
+  which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
 - new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
 
@@ -357,7 +366,7 @@ Interface changes
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams(), SCIPtranslateSubSol(), and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
-- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API function SCIPgetLPDualDegeneracy() to get two measures for the dual degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
 - new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
@@ -401,6 +410,8 @@ Interface changes
   treemodel way of comparing branching candidates. These functions are only currently used for reliability pscost branching, but they can be used
   in other parts of the code.
 - New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
+- new API functions SCIPisOrbitalfixingEnabled() and SCIPgetSymmetryNGenerators() to check whether orbital fixing is
+  enabled and to get the number of generators of the current symmetry group, respectively
 
 ### Event system
 
@@ -412,7 +423,7 @@ Interface changes
 
 ### Changed parameters
 
-- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../symmetry/recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: -1, old value: 5) in cons_orbitope.c
@@ -512,6 +523,7 @@ Interface changes
   - new parameter "constraints/symresack/checkmonotonicity"
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
+  - new parameter "propagating/symmetry/disableofrestart"
 
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
@@ -572,14 +584,20 @@ Interface changes
     low in the tree.
   - new parameter branching/treemodel/maxfpiter to specify the maximum number of fixed-point iterations to use when
     computing the ratio of a variable using the fixed-point method.
-  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly 
+  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly
     before approximating it using the ratio.
   - new parameter branching/treemodel/fallbackinf defines the fallback strategy to use when the tree size estimates
     obtained by SVTS are infinite.
   - new parameter branching/treemodel/fallbacknoprim defines the fallback strategy to use when no primal bound is known
     and thus SVTS would not be able to compute a tree size (it would be infinite).
-  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be 
+  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be
     the deciding factor for branching, in which case it may be better not to use the treemodel.
+
+- new parameters for symmetry handling constraint handlers to enforce that also non-model constraint are copied:
+  - new parameter "constraints/orbisack/forceconscopy"
+  - new parameter "constraints/orbitope/forceconscopy"
+  - new parameter "constraints/symresack/forceconscopy"
+
 
 ### Data structures
 
@@ -655,6 +673,19 @@ Fixed bugs
 - fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
 - fixed treatment of multi-aggregated variables in logicor constraint handler
 - handle special case of redundant implications
+- fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
+- fixed numerical issue related to very large greatest common dividers in linear constraint handler
+- avoid using implications on multiaggregated variables when propagating implications
+- fixed creation of (Lagrangian) variable bounds in the OBBT propagator
+- fixed sorting of primal solutions
+- fixed cleaning of clean buffer in conflict analysis
+- avoid probing on variables with huge bounds in shift and propagate heuristic
+- fix issue in printing solutions for variables that have been added by the dual sparsify presolver
+- fix issue related to fixing redundant logic-or constraints after presolving
+- fixed bug when parsing logic-or and and-constraints
+- fixed wrong assert in updateLazyBounds()
+- fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
+- fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
 
 Miscellaneous
 -------------

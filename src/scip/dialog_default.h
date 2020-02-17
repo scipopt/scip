@@ -361,7 +361,7 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup DialogIncludes
  *
@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
