@@ -167,10 +167,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
     * since the NLP should always be feasible. In debug mode, an ABORT will be thrown.
     */
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
-   {
       (*success) = FALSE;
-      SCIPABORT();
-   }
 
    return SCIP_OKAY;
 }

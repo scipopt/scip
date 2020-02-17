@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPreadTim(
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Interface methods for the cor and sto files

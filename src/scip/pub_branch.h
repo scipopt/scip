@@ -157,7 +157,7 @@ SCIP_Bool SCIPbranchruleIsInitialized(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -730,8 +730,11 @@ SCIP_RETCODE freeGenVBoundsRelaxOnly(
             propdata->genvboundstore[i]->var) );
 
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
-         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds-1];
-         propdata->genvboundstore[i]->index = i;
+         if( i != propdata->ngenvbounds-1 )
+         {
+            propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds-1];
+            propdata->genvboundstore[i]->index = i;
+         }
          --propdata->ngenvbounds;
 
          propdata->issorted = FALSE;

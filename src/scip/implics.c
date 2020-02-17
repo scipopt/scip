@@ -915,7 +915,7 @@ SCIP_Bool SCIPimplicsContainsImpl(
    int posupper;
    int posadd;
 
-   return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
+   return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd); /*lint !e438*/
 }  /*lint !e638*/
 
 
@@ -1874,7 +1874,6 @@ SCIP_RETCODE sortAndMergeClique(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
-   SCIP_VAR* var;
    int noldbdchgs;
    int startidx;
 
@@ -1900,13 +1899,13 @@ SCIP_RETCODE sortAndMergeClique(
    /* sort variables and corresponding clique values regarding variables indices before merging multiples */
    SCIPsortPtrBool((void**) clqvars, clqvalues, SCIPvarComp, *nclqvars);
 
-   var = NULL;
    noldbdchgs = *nbdchgs;
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
     * new clique */
    startidx = *nclqvars - 1;
    while( startidx >= 0 )
    {
+      SCIP_VAR* var;
       int nones;
       int nzeros;
       int curr;
@@ -2093,6 +2092,8 @@ SCIP_RETCODE sortAndMergeClique(
       w = 0;
       while( startidx < *nclqvars )
       {
+         SCIP_VAR* var;
+
          var = clqvars[startidx];
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
@@ -2170,7 +2171,7 @@ SCIP_RETCODE sortAndMergeClique(
                      *infeasible = TRUE;
                      return SCIP_OKAY;
                   }
-                  --startidx;
+                  --startidx; /*lint !e850*/
                }
 
                SCIPsetDebugMsg(set, "fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), (clique != NULL) ? (int) clique->id : -1,

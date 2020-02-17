@@ -182,7 +182,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 /** nonlinear handler enforcement callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrEnfoXyz)
+SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/

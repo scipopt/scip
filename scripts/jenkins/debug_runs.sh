@@ -60,8 +60,10 @@ export MODE=debug
 # Scripts will also use nonexported variables correctly.
 if [ "${GITBRANCH}" == "consexpr" ]; then
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_master_Debug/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
 else
   export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
 fi
 
 export CRITERION_DIR=/nfs/optimi/usr/sw/criterion

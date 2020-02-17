@@ -681,7 +681,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - nlhdlr : nonlinear handler
  *  - expr : expression to be reformulated
  * output:
- *  - simplifiedexpr : the simplified expression (NULL if expr can not be reformulated)
+ *  - refexpr : the reformulated expression (NULL if expr can not be reformulated)
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
    SCIP* scip, \

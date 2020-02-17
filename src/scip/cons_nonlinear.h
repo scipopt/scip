@@ -469,9 +469,9 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    SCIP_Real*            delta               /**< constant right-hand side */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

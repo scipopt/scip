@@ -89,7 +89,7 @@ COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
 SYM		=	none
-PRESOLLIB	=	false
+PAPILO	=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -211,7 +211,7 @@ DFLAGS		=	-MMD
 GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes \
+			-Wsign-compare -Wstrict-prototypes -Wno-unknown-warning-option \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 # GCCWARN is not only used for GCC!
 ifeq ($(COMP),gnu)
@@ -406,7 +406,7 @@ LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH
 
 # if using the LP-check, also add Cplex flags
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 endif
@@ -419,7 +419,7 @@ LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH
 
 # if using the LP-check, also add Cplex flags
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 endif
@@ -511,10 +511,10 @@ LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.
 endif
 
 #-----------------------------------------------------------------------------
-# Presolving Library
+# PaPILO Library
 #-----------------------------------------------------------------------------
 
-ifeq ($(PRESOLLIB),true)
+ifeq ($(PAPILO),true)
 LDFLAGS		+=	-l:libtbb.so.2
 CXXFLAGS	+=	-std=c++14 -Wno-shadow -Wno-implicit-fallthrough -Wno-unused-variable -Wno-ctor-dtor-privacy
 endif

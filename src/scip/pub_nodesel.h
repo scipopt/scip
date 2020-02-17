@@ -92,7 +92,7 @@ SCIP_Real SCIPnodeselGetTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

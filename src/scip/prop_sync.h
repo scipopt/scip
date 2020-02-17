@@ -72,7 +72,7 @@ SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

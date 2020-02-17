@@ -213,7 +213,7 @@ struct SCIP_Row
    SCIP_Longint          activeinlpcounter;  /**< counter for the number of times this row was active in an optimal LP solution */
    SCIP_Longint          nlpsaftercreation;  /**< counter for the number of LPs after the row has been created */
    SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
-   void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unknown) */
    char*                 name;               /**< name of the row */
    SCIP_COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
@@ -252,7 +252,7 @@ struct SCIP_Row
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
    unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
-   unsigned int          origintype:3;       /**< origin of row (0: unkown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
+   unsigned int          origintype:3;       /**< origin of row (0: unknown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
 };
 
 /** current LP data */
@@ -278,7 +278,7 @@ struct SCIP_Lp
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
    SCIP_Real             lpiconditionlimit;  /**< current condition number limit in LPI */
-   SCIP_Real             lpimarkowitz;       /**< current markowitz threshhold */
+   SCIP_Real             lpimarkowitz;       /**< current markowitz threshold */
    SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    SCIP_Real             degeneracy;         /**< share of degenerate non-basic variables in the current LP */
@@ -370,7 +370,7 @@ struct SCIP_Lp
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
    SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
-   SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             resolvelperror;     /**< an error occurred during resolving the LP after diving or probing */
    SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */

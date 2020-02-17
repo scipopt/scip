@@ -11789,7 +11789,8 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* early termination if the activities deceed the gcd */
-         if( (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) || (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd) )
+         if( (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
+               (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd) )
          {
             redundant = TRUE;
             break;
@@ -11820,8 +11821,8 @@ SCIP_RETCODE simplifyInequalities(
 
       /* check if we can remove redundant variables */
       if( v < nvars && (redundant ||
-            (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-            (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
+                        (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
+                        (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
       {
          SCIP_Real oldcoef;
 
@@ -11868,8 +11869,9 @@ SCIP_RETCODE simplifyInequalities(
                siderest = gcd;
          }
 
-         /* does the redundancy really is fulfilled */
-         assert((hasrhs && SCIPisLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) || (haslhs && tmpmaxactsub < siderest && SCIPisGE(scip, tmpminactsub, siderest - gcd)));
+         /* is the redundancy really fulfilled */
+         assert((hasrhs && SCIPisFeasLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) ||
+               (haslhs && tmpmaxactsub < siderest && SCIPisFeasGE(scip, tmpminactsub, siderest - gcd)));
 #endif
 
          SCIPdebugMsg(scip, "removing %d last variables from constraint <%s>, because they never change anything on the feasibility of this constraint\n",

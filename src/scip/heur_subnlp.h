@@ -138,7 +138,7 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

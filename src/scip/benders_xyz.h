@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludeBendersXyz(
 
 /** TODO: add public methods to this group for documentation purposes */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

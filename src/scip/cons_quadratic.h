@@ -694,7 +694,7 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
    );
 
-/* @} */
+/** @} */
 
 
 #ifdef SCIP_PRIVATE_ROWPREP
@@ -948,7 +948,7 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
 
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

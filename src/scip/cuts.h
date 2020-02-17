@@ -450,7 +450,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

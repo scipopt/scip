@@ -180,7 +180,7 @@ int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

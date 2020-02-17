@@ -197,7 +197,7 @@ SCIP_RETCODE createSepaData(
             case SCIP_CONSEXPRITERATOR_ENTEREXPR:
             {
                SCIP_VAR* auxvar;
-               int mapidx;
+               size_t mapidx;
                int poslocks;
                int neglocks;
 
@@ -249,9 +249,9 @@ SCIP_RETCODE createSepaData(
                   yidx = SCIPvarGetIndex(y);
 
                   /* compute unique index of the bilinear term */
-                  mapidx = xidx * sepadata->maxvarindex + yidx;
+                  mapidx = (size_t)xidx * (size_t)sepadata->maxvarindex + (size_t)yidx;  /*lint !e571*/
 
-                  if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
+                  if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*) mapidx) )
                   {
                      /* store variables if its the first time they are found in a bilinear term */
                      if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
@@ -271,7 +271,7 @@ SCIP_RETCODE createSepaData(
                      }
 
                      /* insert linearization variable into auxvar hashmap */
-                     SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
+                     SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*) mapidx,
                         sepadata->nbilinterms) ); /*lint !e571*/
 
                      /* add variables to bilin-arrays and capture them */
@@ -340,7 +340,7 @@ SCIP_VAR* getBilinVar(
    SCIP_VAR*             y                   /**< second variable */
    )
 {
-   int idx;
+   size_t idx;
    int img;
 
    assert(scip != NULL);
@@ -359,11 +359,11 @@ SCIP_VAR* getBilinVar(
       SCIPswapPointers((void**) &x, (void**) &y);
 
    /* compute unique index of the bilinear term */
-   idx = SCIPvarGetIndex(x) * sepadata->maxvarindex + SCIPvarGetIndex(y);
+   idx = (size_t)SCIPvarGetIndex(x) * (size_t)sepadata->maxvarindex + (size_t)SCIPvarGetIndex(y);  /*lint !e571*/
 
-   if( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) idx) )
+   if( SCIPhashmapExists(sepadata->bilinvarsmap, (void*) idx) )
    {
-      img = (int) SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx); /*lint !e571*/
+      img = (int) SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*) idx); /*lint !e571*/
       return sepadata->bilinauxvars[img];
    }
 

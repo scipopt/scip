@@ -40,6 +40,7 @@
 #include <string.h>
 #include "blockmemshell/memory.h"
 #include "scip/event_estim.h"
+#include "scip/prop_symmetry.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"
@@ -2364,6 +2365,10 @@ SCIP_Bool isRestartApplicable(
 
    /* check if max number of restarts has been reached */
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
+      return FALSE;
+
+   /* check whether orbital fixing is active */
+   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPisOrbitalfixingEnabled(scip) )
       return FALSE;
 
    /* check if number of nodes exceeds the minimum number of nodes */
