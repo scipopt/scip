@@ -5227,7 +5227,6 @@ SCIP_RETCODE SCIPtightenVarLb(
    }
    newbound = MIN(newbound, ub);
 
-   /* is the new bound redundant for the variable to which it will be applied? */
    if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
@@ -5345,7 +5344,6 @@ SCIP_RETCODE SCIPtightenVarUb(
    }
    newbound = MAX(newbound, lb);
 
-   /* is the new bound redundant for the variable to which it will be applied? */
    if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
@@ -5527,7 +5525,6 @@ SCIP_RETCODE SCIPinferVarLbCons(
    }
    newbound = MIN(newbound, ub);
 
-   /* is the new bound redundant? */
    if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
@@ -5642,7 +5639,6 @@ SCIP_RETCODE SCIPinferVarUbCons(
    }
    newbound = MAX(newbound, lb);
 
-   /* is the new bound redundant for the variable to which it will be applied? */
    if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
@@ -6256,7 +6252,6 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 
    /* bound changes of less than epsilon are ignored by SCIPvarChgLb or raise an assert in SCIPnodeAddBoundinfer,
     * so don't apply them even if force is set
-    * redundancy is checked for the variable to which the bound change will be applied
     */
    if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
@@ -6377,7 +6372,6 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 
    /* bound changes of less than epsilon are ignored by SCIPvarChgUb or raise an assert in SCIPnodeAddBoundinfer,
     * so don't apply them even if force is set
-    * redundancy is checked for the variable to which the bound change will be applied
     */
    if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
