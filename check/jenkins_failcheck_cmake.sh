@@ -309,7 +309,7 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
       if [ "${MODE}" == "debug" ]; then
         ./evalcheck_cluster.sh -E ${EVALFILE} > ${OUTPUT}
       else
-        ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
+        ./evalcheck_cluster.sh -U ${EVALFILE} > ${OUTPUT}
       fi
       NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
       if [ "${SOPLEX_HASH}" != "" ]; then
