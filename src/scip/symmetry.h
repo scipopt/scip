@@ -136,7 +136,6 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int                   npermvars,          /**< number of variables in permvars */
    int**                 perms,              /**< the generators of the permutation group (or NULL) */
    int**                 permstrans,         /**< the transposed matrix of generators (or NULL) */
-   int                   nperms,             /**< number of permutations */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
    SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)

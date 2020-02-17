@@ -302,7 +302,6 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int                   npermvars,          /**< number of variables in permvars */
    int**                 perms,              /**< the generators of the permutation group (or NULL) */
    int**                 permstrans,         /**< the transposed matrix of generators (or NULL) */
-   int                   nperms,             /**< number of permutations */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
    SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
@@ -359,8 +358,8 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
 
          comp = components[p];
 
-         if (permstrans == NULL)
-            image = perms[comp][currvar];
+         if ( permstrans == NULL )
+            image = perms[comp][currvar]; /*lint !e613*/
          else
             image = permstrans[currvar][comp];
 
@@ -370,7 +369,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) )
+            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e571*/
             {
                orbit[(*orbitsize)++] = image;
 

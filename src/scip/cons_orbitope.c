@@ -3028,13 +3028,8 @@ SCIP_DECL_CONSFREE(consFreeOrbitope)
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -3045,7 +3040,6 @@ SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 static
 SCIP_DECL_CONSTRANS(consTransOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
@@ -3054,9 +3048,6 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -3263,7 +3254,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 static
 SCIP_DECL_CONSPROP(consPropOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int nfixedvars = 0;
    int c;
@@ -3274,9 +3264,6 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    /* propagate all useful constraints */
    for (c = 0; c < nusefulconss && !infeasible; ++c)
@@ -3313,7 +3300,6 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 static
 SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int noldfixedvars;
    int c;
@@ -3326,9 +3312,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
    *result = SCIP_DIDNOTRUN;
    noldfixedvars = *nfixedvars;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    /* propagate all useful constraints
     *

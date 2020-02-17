@@ -2651,11 +2651,11 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int**                 orbitopevaridx,     /**< pointer to store variable index matrix */
    int*                  columnorder,        /**< pointer to store column order */
    int*                  nusedelems,         /**< pointer to store how often each element was used */
-   int*                  rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
+   SCIP_Bool*            rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
    SCIP_HASHSET*         activevars          /**< hashset of relevant variable indices (+1) (or NULL) */
    )
-{
+{  /*lint --e{571}*/
    SCIP_Bool* usedperm;
    int nusedperms;
    int nfilledcols;
@@ -2860,12 +2860,12 @@ SCIP_RETCODE chooseOrderOfGenerators(
    for (i = 0; i < npermsincomp; ++i)
    {
       int* perm;
-      SCIP_Bool* nbincycles;
+      int nbincycles;
 
       perm = perms[components[componentbegins[compidx] + i]];
 
       SCIP_CALL( SCIPisInvolutionPerm(perm, propdata->permvars, npermvars, &(ntwocycles[i]),
-            nbincycles, FALSE) );
+            &nbincycles, FALSE) );
 
       /* we skip permutations which do not purely consist of 2-cycles */
       if ( ntwocycles[i] == 0 )
@@ -2890,7 +2890,8 @@ SCIP_RETCODE chooseOrderOfGenerators(
 static
 SCIP_Bool isAcyclicGraph(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_DIGRAPH*         graph               /**< the graph to be checked */
+   SCIP_DIGRAPH*         graph,              /**< the graph to be checked */
+   SCIP_Bool*            result              /**< buffer to store whether the graph is acyclic */
    )
 {
    SCIP_QUEUE* queue;
@@ -2900,6 +2901,7 @@ SCIP_Bool isAcyclicGraph(
    int i;
 
    assert( graph != NULL );
+   assert( result != NULL );
 
    nnodes = SCIPdigraphGetNNodes(graph);
 
@@ -2937,7 +2939,8 @@ SCIP_Bool isAcyclicGraph(
                SCIPfreeBufferArray(scip, &pred);
                SCIPfreeBufferArray(scip, &visited);
 
-               return FALSE;
+               *result = FALSE;
+               return SCIP_OKAY;
             }
 
             /* add successor of the current node to queue */
@@ -2952,7 +2955,8 @@ SCIP_Bool isAcyclicGraph(
    SCIPfreeBufferArray(scip, &pred);
    SCIPfreeBufferArray(scip, &visited);
 
-   return TRUE;
+   *result =  TRUE;
+   return SCIP_OKAY;
 }
 
 /** builds the graph for symmetric subgroup detection from the given permutation of generators
@@ -3019,7 +3023,6 @@ SCIP_RETCODE buildSubgroupGraph(
    npermvars = propdata->npermvars;
    components = propdata->components;
    componentbegins = propdata->componentbegins;
-   nextcolor = 0;
    *nusedperms = 0;
 
    assert( ntwocycleperms <= componentbegins[compidx + 1] - componentbegins[compidx] );
@@ -3036,6 +3039,7 @@ SCIP_RETCODE buildSubgroupGraph(
    {
       int* perm;
       int firstcolor = -1;
+      SCIP_Bool isacyclic;
 
       /* use given order of generators */
       perm = perms[components[componentbegins[compidx] + genorder[j]]];
@@ -3082,8 +3086,10 @@ SCIP_RETCODE buildSubgroupGraph(
          SCIP_CALL( SCIPdigraphAddArc(graph, img, k, NULL) );
       }
 
+      SCIP_CALL( isAcyclicGraph(scip, graph, &isacyclic) );
+
       /* if the generator is invalid or the new graph is not acyclic, delete the newly added edges */
-      if ( k < npermvars || !isAcyclicGraph(scip, graph) )
+      if ( k < npermvars || ! isacyclic )
       {
          int img;
          int l;
@@ -3247,7 +3253,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int*                  firstvaridx,        /**< buffer to store the index of the largest variable (or NULL) */
    int*                  compidxfirstrow     /**< buffer to store the comp index for the first row (or NULL) */
    )
-{
+{  /*lint --e{571}*/
    SCIP_VAR*** orbitopevarmatrix;
    SCIP_HASHSET* activevars;
    int** orbitopevaridx;
@@ -3339,7 +3345,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    }
 
    /* find corresponding graphcomponent of first variable (needed for weak sbcs) */
-   if ( compidxfirstrow != NULL )
+   if ( compidxfirstrow != NULL && firstvaridx != NULL )
    {
       *compidxfirstrow = -1;
       for (k = compcolorbegins[graphcoloridx];
@@ -3546,13 +3552,13 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       }
 
       SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
-            propdata->permstrans, propdata->nperms, propdata->components,
-            propdata->componentbegins, usedvars, varfound, firstvaridxpercolor[j],
-            symgrpcompidx, orbit[activeorb], &orbitsize[activeorb]) );
+            propdata->permstrans, propdata->components, propdata->componentbegins,
+            usedvars, varfound, firstvaridxpercolor[j],symgrpcompidx,
+            orbit[activeorb], &orbitsize[activeorb]) );
 
       assert( orbit[activeorb][0] ==  firstvaridxpercolor[j] );
 
-      if ( orbitsize[activeorb] > orbitsize[!activeorb] )
+      if ( orbitsize[activeorb] > orbitsize[!activeorb] ) /*lint !e514*/
       {
          /* if the new orbit is larger then the old largest one, flip activeorb */
          activeorb = !activeorb;
@@ -3797,9 +3803,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
          /* skip trivial components */
          if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
          {
-            chosencomppercolor[j] = -1;
-            ++ntrivialcolors;
+            if( chosencomppercolor != NULL )
+               chosencomppercolor[j] = -1;
 
+            ++ntrivialcolors;
             continue;
          }
 
@@ -3881,8 +3888,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( largestcompsize > 2 );
 
-            firstvaridx = propdata->addweaksbcs ? &(firstvaridxpercolor[j]) : NULL;
-            chosencomp = propdata->addweaksbcs ? &(chosencomppercolor[j]) : NULL;
+            firstvaridx = propdata->addweaksbcs ? &(firstvaridxpercolor[j]) : NULL; /*lint !e613*/
+            chosencomp = propdata->addweaksbcs ? &(chosencomppercolor[j]) : NULL; /*lint !e613*/
 
             /* add the orbitope constraint for this color */
             SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
@@ -3912,6 +3919,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             if( propdata->addweaksbcs )
             {
+               assert( chosencomppercolor != NULL );
+               assert( firstvaridxpercolor != NULL );
+
                chosencomppercolor[j] = largestcolorcomp;
                firstvaridxpercolor[j] = graphcomponents[graphcompbegins[largestcolorcomp]];
             }
@@ -3938,7 +3948,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          {
             SCIPdebugMsg(scip, "      no useable orbitope found and no SBCs added\n");
             if ( propdata->addweaksbcs )
-               chosencomppercolor[j] = -1;
+               chosencomppercolor[j] = -1; /*lint !e613*/
          }
       }
 
@@ -4054,7 +4064,6 @@ SCIP_RETCODE detectOrbitopes(
       assert( npermsincomponent > 0 );
       for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
-         SCIP_Bool allvarsbinary;
          int ntwocyclesperm = 0;
          int nbincyclesperm = 0;
          SCIP_Bool onlybinorbitopes;

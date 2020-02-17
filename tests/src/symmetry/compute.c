@@ -844,9 +844,11 @@ Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simpl
 }
 
 /* TEST 7 (subgroups) */
-Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroups for artificial propdata")
+Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgroups for artificial propdata")
 {
    SCIP_PROPDATA propdata;
+   SCIP_VAR* dummyvar;
+   SCIP_VAR* permvars[10];
    int* perms[6];
    int permorder1[6] = {0,1,2,3,4,5};
    int permorder2[6] = {2,3,4,5,0,1};
@@ -863,13 +865,21 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    int* graphcomponents;
    int* graphcompbegins;
    int* compcolorbegins;
+   int* usedperms;
    int ngraphcomponents;
    int ncompcolors;
    int nusedperms;
+   int i;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup1"));
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   for( i = 0; i < 10; ++i )
+      permvars[i] = dummyvar;
 
    perms[0] = perm1;
    perms[1] = perm2;
@@ -885,11 +895,15 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    propdata.components = components;
    propdata.componentbegins = componentbegins;
    propdata.componentblocked = &componentblocked;
+   propdata.computedsymmetry = TRUE;
+   propdata.permvars = permvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
 
    /* check canonical order */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
@@ -914,7 +928,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    /* check different order */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
@@ -939,7 +953,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    /* check order that leads to trivial subgroup */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
@@ -960,12 +974,16 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+   SCIPfreeBufferArray(scip, &usedperms);
+   SCIPreleaseVar(scip, &dummyvar);
 }
 
 /* TEST 8 (subgroups) */
-Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroups for artificial propdata")
+Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgroups for artificial propdata and different order")
 {
    SCIP_PROPDATA propdata;
+   SCIP_VAR* dummyvar;
+   SCIP_VAR* permvars[10];
    int* perms[6];
    int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
    int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
@@ -980,11 +998,14 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    int* graphcomponents;
    int* graphcompbegins;
    int* compcolorbegins;
+   int* usedperms;
    int ngraphcomponents;
    int ncompcolors;
    int ntwocycleperms;
    int nusedperms;
    int i;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup2"));
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -997,6 +1018,10 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    perms[4] = perm5;
    perms[5] = perm6;
 
+   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   for( i = 0; i < 10; ++i )
+      permvars[i] = dummyvar;
+
    propdata.npermvars = 10;
    propdata.nperms = 6;
    propdata.perms = perms;
@@ -1004,6 +1029,10 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    propdata.components = components;
    propdata.componentbegins = componentbegins;
    propdata.componentblocked = &componentblocked;
+   propdata.computedsymmetry = TRUE;
+   propdata.permvars = permvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
 
    /* check sorted order */
 
@@ -1019,7 +1048,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    checkArraysEqual(expectedpermorder, permorder, 6, "permorder");
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
-         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
+         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
@@ -1041,4 +1070,6 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
    SCIPfreeBufferArray(scip, &permorder);
+   SCIPfreeBufferArray(scip, &usedperms);
+   SCIPreleaseVar(scip, &dummyvar);
 }
