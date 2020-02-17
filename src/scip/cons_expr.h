@@ -1064,6 +1064,19 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
+/** collects all bilinear terms for a given set of constraints
+ *
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
+ *       or SCIPgetConsExprBilinTermAuxar().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConsExprBilinTerms(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONS**                conss,          /**< expression constraints */
+   int                        nconss          /**< total number of expression constraints */
+   );
+
 /** returns the total number of bilinear terms that are contained in all expression constraints
  *
  *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
