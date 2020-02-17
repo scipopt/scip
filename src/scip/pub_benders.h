@@ -465,7 +465,7 @@ SCIP_Bool SCIPbendersSubproblemIsEnabled(
    int                   probnumber          /**< the subproblem number */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

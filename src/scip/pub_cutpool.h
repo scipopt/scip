@@ -95,7 +95,7 @@ SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

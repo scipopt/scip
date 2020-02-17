@@ -79,7 +79,7 @@ void SCIPsetEpsilonEpsgreedy(
    SCIP_Real             eps                 /**< parameter to increase probability for exploration between all actions */
    );
 
-/* @} */
+/** @} */
 
 
 

@@ -1743,7 +1743,7 @@ int SCIPdisjointsetGetSize(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Numerical methods

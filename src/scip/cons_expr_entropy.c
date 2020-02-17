@@ -408,6 +408,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    *success = FALSE;
@@ -462,6 +465,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
       *constant = refpoint;
 
       *islocal = FALSE;
+      *branchcand = FALSE;
    }
 
    /* give up if the constant or coefficient is too large */
@@ -611,7 +615,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );

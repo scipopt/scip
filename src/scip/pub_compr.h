@@ -113,7 +113,7 @@ SCIP_Real SCIPcomprGetTime(
    SCIP_COMPR*           compr               /**< tree compression */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

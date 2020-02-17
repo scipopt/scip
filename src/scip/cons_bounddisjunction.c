@@ -164,6 +164,7 @@ struct SCIP_ConsData
 
 /**@name  Local methods
  *
+ * @{
  */
 
 /** adds rounding locks for the given variable in the given bound disjunction constraint */
@@ -1768,6 +1769,7 @@ SCIP_RETCODE enforceConstraint(
 
 /**@name Upgrading methods for special quadratic constraint
  *
+ * @{
  */
 
 /** upgrades quadratic complementarity constraints into a bounddisjunction constraint
@@ -3040,6 +3042,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsBounddisjunction)
 
 /**@name Callback methods of event handler
  *
+ * @{
  */
 
 static

@@ -93,9 +93,9 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP_Bool             checkint            /**< should integrality be considered when checking the subproblems */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

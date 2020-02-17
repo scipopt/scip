@@ -65,9 +65,9 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
  * @{
  */
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

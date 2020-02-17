@@ -263,7 +263,7 @@ void SCIPpropSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

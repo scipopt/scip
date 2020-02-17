@@ -62,7 +62,7 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

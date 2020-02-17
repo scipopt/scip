@@ -92,16 +92,10 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
-   (*stat)->userinterrupt = FALSE;
-   (*stat)->userrestart = FALSE;
-   (*stat)->inrestart = FALSE;
-   (*stat)->collectvarhistory = TRUE;
-   (*stat)->performpresol = FALSE;
-   (*stat)->branchedunbdvar = FALSE;
-   (*stat)->disableenforelaxmsg = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
+
 
    SCIPstatReset(*stat, set, transprob, origprob);
 
@@ -330,6 +324,13 @@ void SCIPstatReset(
    stat->ndivesetcalls = 0;
    stat->ndivesetlps = 0;
    stat->totaldivesetdepth = 0;
+
+   stat->userinterrupt = FALSE;
+   stat->userrestart = FALSE;
+   stat->inrestart = FALSE;
+   stat->collectvarhistory = TRUE;
+   stat->performpresol = FALSE;
+   stat->disableenforelaxmsg = FALSE;
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat, set, transprob, origprob);

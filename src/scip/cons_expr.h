@@ -177,17 +177,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa)), /**< separation deinitialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa)),     /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
-);
-
-/** set the branching score callback of an expression handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< branching score callback (can be NULL) */
 );
 
 /** gives expression handlers */
@@ -329,12 +319,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
-/** returns whether expression handler implements the separation callback */
-SCIP_EXPORT
-SCIP_Bool SCIPhasConsExprExprHdlrSepa(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   );
-
 /** returns whether expression handler implements the branching score callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
@@ -411,14 +395,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr);
 /** calls the separation deinitialization method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr);
-
-/** calls separator method of expression handler to separate a given solution */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr);
-
-/** calls the expression branching score callback */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
 
 /** increments the branching score count of an expression handler */
 SCIP_EXPORT
@@ -864,16 +840,35 @@ void SCIPincrementConsExprCurBoundsTag(
 /** adds branching score to an expression
  *
  * Adds a score to the expression-specific branching score.
- * The branchscoretag argument is used to identify whether the score in the expression needs to be reset before adding a new score.
  * In an expression with children, the scores are distributed to its children.
  * In an expression that is a variable, the score may be used to identify a variable for branching.
  */
 SCIP_EXPORT
 void SCIPaddConsExprExprBranchScore(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
-   unsigned int            branchscoretag,   /**< tag to identify current branching scores */
    SCIP_Real               branchscore       /**< branching score to add to expression */
+   );
+
+/** adds branching score to children of expression for given auxiliary variables
+ *
+ * Iterates over the successors of expr for expressions that are associated with one of the given auxiliary variables
+ * and adds a given branching score.
+ * The branchscoretag argument is used to identify whether the score in the found expression needs to be reset
+ * before adding a new score.
+ *
+ * @note This method may modify the given auxvars array by means of sorting.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
+   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
+   int                     nauxvars,         /**< number of auxiliary variables */
+   int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
    );
 
 /** returns the hash value of an expression */
@@ -1023,6 +1018,77 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   );
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. original variables
+ *
+ * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
+ * Assume that f(x) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ *
+ * If necessary, f is evaluated in the given solution. If that fails (domain error),
+ * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */
+   );
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   );
+
+/** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
+ * the absolute violation divided by max(1,|f(w)|).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
    );
 
 /** @} */
@@ -1228,6 +1294,35 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gets absolute violation of expression constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetAbsViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
+/** gets scaled violation of expression constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * The scaling that is applied to the absolute violation of the constraint
+ * depends on the setting of parameter constraints/expr/violscale.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetRelViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
 /** gives the unique index of an expression constraint
  *
  * Each expression constraint gets an index assigned when it is created.
@@ -1344,6 +1439,7 @@ void SCIPsetConsExprNlhdlrInitExit(
 );
 
 /** set the reformulate callback of a nonlinear handler */
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1359,23 +1455,15 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the separation callbacks of a nonlinear handler */
+/** set the enforcement callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRENFO((*enfo)),         /**< enforcement callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-);
-
-/** set the branching score callback of a nonlinear handler */
-SCIP_EXPORT
-void SCIPsetConsExprNlhdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
 );
 
 /** gives name of nonlinear handler */
@@ -1449,9 +1537,9 @@ SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
-/** returns whether nonlinear handler implements the separation callback */
+/** returns whether nonlinear handler implements the enforcement callback */
 SCIP_EXPORT
-SCIP_Bool SCIPhasConsExprNlhdlrSepa(
+SCIP_Bool SCIPhasConsExprNlhdlrEnfo(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
@@ -1489,17 +1577,13 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr);
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(SCIPexitsepaConsExprNlhdlr);
 
-/** calls the separation callback of a nonlinear handler */
+/** calls the enforcement callback of a nonlinear handler */
 SCIP_EXPORT
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
+SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr);
 
 /** calls the estimator callback of a nonlinear handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
-
-/** calls the nonlinear handler branching score callback */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 /** @} */
 

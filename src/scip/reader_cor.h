@@ -110,7 +110,7 @@ const char* SCIPcorGetConsName(
    int                   i                   /**< the index of the constraint that is requested */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
