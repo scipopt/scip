@@ -116,6 +116,7 @@ SCIP_RETCODE freeSepaData(
    return SCIP_OKAY;
 }
 
+/* helper method to create separation data */
 static
 SCIP_RETCODE createSepaData(
    SCIP*                 scip,               /**< SCIP data structure */
