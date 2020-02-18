@@ -6619,7 +6619,7 @@
  * A decomposition can be used to split the problem into several subproblems which, in general, are easier to solve.
  * For \f$q \in \{1,\dots,k\}\f$ the system
  * \f[
- *   A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\; x_{[D^{\text{col}}_{q}]}  = b_{[D^{\text{row}}_{q}]}
+ *   A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\; x_{[D^{\text{col}}_{q}]} \geq b_{[D^{\text{row}}_{q}]}
  * \f]
  * is part of subproblem \f$q\f$, the handling of the linking variables/constraints depends on the chosen application context.
  * For example, in the heuristic @ref heur_padm.c several smaller subproblems are solved multiple times to get a feasible solution.
