@@ -12317,7 +12317,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+         {
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         }
       }
 
       /* setup sepaquadvars and sepabilinvar2pos */
@@ -12427,8 +12430,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* free nonlinear row representation */
-      if( consdata->nlrow != NULL )
+      /* free nonlinear row representation, if not called from consDisableQuadratic */
+      if( consdata->nlrow != NULL && SCIPgetStage(scip) == SCIP_STAGE_EXITSOLVE )
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }

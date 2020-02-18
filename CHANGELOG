@@ -687,6 +687,7 @@ Fixed bugs
 - fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 - fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
 - redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
+- fixed adding already added quadratic rows to NLP relaxation during solve
 
 Miscellaneous
 -------------
