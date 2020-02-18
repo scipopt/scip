@@ -6636,7 +6636,8 @@
  * SCIPdecompSetVarsLabels() and SCIPdecompSetConsLabels(), respectively.
  * To complete the decomposition or to ensure that it is internally consistent, SCIPcomputeDecompVarsLabels() or
  * SCIPcomputeDecompConsLabels() can be called.
- * Note that this will ignore the existing variable/constraint labels and compute the labels again using the constraint/variable labels.
+ * Note that SCIPcomputeDecompVarsLabels() will ignore the existing variable labels and computes again the labels based on the constraint labels only;
+ * SCIPcomputeDecompConsLabels() works in the same way and ignores the existing constraint labels.
  *
  * @section DECOMP_READDEC Reading a decomposition from a file
  *
