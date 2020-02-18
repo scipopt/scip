@@ -6666,9 +6666,12 @@
  * - the block graph statistics using buildBlockGraph(). A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
  * Note that the linking constraints are intentionally skipped in this computation.
  * \f$ G = (V,E) \f$ denotes a block graph, with vertex set \f$V\f$ and edge set \f$E\f$.
- * Each vertex in the graph represents a block in the decomposition; \f$V = \{v_{1},\dots,v_{k}\}\f$. An edge \f$e = \{ v_{s},v_{t} \}\f$ is added to \f$G\f$, if and only if there exists a column \f$\ell \in L^{col}\f$, a row \f$i \in D^{row}_{s}\f$
- * and a row \f$j \in D^{row}_{t}\f$, such that \f$a_{i,\ell} \neq 0\f$ and \f$a_{j,\ell} \neq 0\f$. From the constructed graph, the number of edges, articulation points and connected components are computed, together with the maximum and minimum degree.
- * Note that building the block graph can become computationally expensive with large and dense decompositions. Thus, it is possible through a user parameter decomposition/maxgraphedge to define a maximum edge limit.
+ * Each vertex in the graph represents a block in the decomposition; \f$V = \{v_{1},\dots,v_{k}\}\f$.
+ * An edge \f$e = \{ v_{s},v_{t} \}\f$ is added to \f$G\f$, if and only if there exists a column \f$\ell \in L^{\text{col}}\f$, a row \f$i \in D^{\text{row}}_{s}\f$
+ * and a row \f$j \in D^{\text{row}}_{t}\f$, such that \f$a_{i,\ell} \neq 0\f$ and \f$a_{j,\ell} \neq 0\f$.
+ * From the constructed graph, the number of edges, articulation points and connected components are computed, together with the maximum and minimum degree.
+ * Note that building the block graph can become computationally expensive with large and dense decompositions.
+ * Thus, it is possible through a user parameter <code>decomposition/maxgraphedge</code> to define a maximum edge limit.
  * The construction process will be interrupted once this limit is reached, in which case only approximate estimations of the block graph statistics will be displayed and accompanied with a warning message.
  *
  * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
