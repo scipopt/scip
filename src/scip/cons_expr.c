@@ -7873,7 +7873,9 @@ SCIP_RETCODE bilinearTermsInsert(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   SCIP_VAR*             auxvar              /**< auxiliary variable (might be NULL) */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   int                   nlockspos,          /**< number of positive expression locks */
+   int                   nlocksneg           /**< number of negative expression locks */
    )
 {
    SCIP_CONSEXPR_BILINTERM* term;
@@ -7881,6 +7883,8 @@ SCIP_RETCODE bilinearTermsInsert(
    assert(conshdlrdata != NULL);
    assert(x != NULL);
    assert(y != NULL);
+   assert(nlockspos >= 0);
+   assert(nlocksneg >= 0);
 
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
@@ -7898,6 +7902,8 @@ SCIP_RETCODE bilinearTermsInsert(
    term->x = x;
    term->y = y;
    term->auxvar = auxvar;
+   term->nlockspos = nlockspos;
+   term->nlocksneg = nlocksneg;
 
    /* capture variable */
    SCIP_CALL( SCIPcaptureVar(scip, x) );
@@ -7985,7 +7991,8 @@ SCIP_RETCODE bilinearTermsInsertAll(
          /* add variables to the hash table */
          if( x != NULL && y != NULL )
          {
-            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr)) );
+            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr),
+               SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr)) );
          }
       }
    }

@@ -170,14 +170,14 @@ SCIP_RETCODE createSepaData(
             assert(sepadata->varssorted[idx] == var);
 
             /* increase priorities */
-            ++(sepadata->varpriorities[idx]);
+            sepadata->varpriorities[idx] += bilinterms[i].nlockspos + bilinterms[i].nlocksneg;
          }
          else
          {
             /* add variable to the map and store it in the separation data */
             SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)var, sepadata->nbilinvars) );
             sepadata->varssorted[sepadata->nbilinvars] = var;
-            sepadata->varpriorities[sepadata->nbilinvars] = 1;
+            sepadata->varpriorities[sepadata->nbilinvars] = bilinterms[i].nlockspos + bilinterms[i].nlocksneg;
             ++(sepadata->nbilinvars);
          }
       }

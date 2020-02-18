@@ -82,8 +82,8 @@ Test(bilinhash, createInsertFree)
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
 
    /* inserts two bilinear terms into the hash table */
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL) );
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL, 0, 0) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL, 0, 0) );
    cr_expect(conshdlrdata->nbilinterms == 2);
    cr_expect(conshdlrdata->bilinterms[0].x == x);
    cr_expect(conshdlrdata->bilinterms[0].y == y);
