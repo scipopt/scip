@@ -6420,7 +6420,7 @@
  *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \mathbb{Z}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
- * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
+ * function changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
  * <code>TRUE</code> before the solving process of the first problem of the sequence starts, i.e., in stage
  * <code>SCIP_STAGE_INIT</code> or <code>SCIP_STAGE_PROBLEM</code>. This can be done via the interactive shell or by
  * calling SCIPenableReoptimization(). In both cases SCIP changes some parameters and fixes them:
@@ -7691,9 +7691,9 @@
  * @brief methods to create a problem that \SCIP should solve
  *
  * This module summarizes the main methods needed to create a problem for \SCIP, and access its most important members:
- * - Declaring, adding, acessing, and changing variables of the problem
- * - Declaring, adding, acessing, and changing constraints of the problem
- * - Creating, adding, acessing, changing, and checking of solutions to the problem
+ * - Declaring, adding, accessing, and changing variables of the problem
+ * - Declaring, adding, accessing, and changing constraints of the problem
+ * - Creating, adding, accessing, changing, and checking of solutions to the problem
  *
  * @note These core methods are not sufficient to create constraints of a certain type that is provided by the default plugins of \SCIP.
  *  An example would be the creation of a linear constraint for which the methods provided by the
