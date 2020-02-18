@@ -196,12 +196,13 @@ SCIP_VAR* getBilinVar(
    SCIP_VAR*             y_                  /**< second variable */
    )
 {
+   SCIP_CONSEXPR_BILINTERM* bilinterm;
    SCIP_VAR* auxvar;
    SCIP_Bool found;
 
-   cr_assert(SCIPgetConsExprBilinTermAuxar(conshdlr, x_, y_, &auxvar, &found) == SCIP_OKAY);
+   bilinterm = SCIPgetConsExprBilinTerm(conshdlr, x_, y_);
 
-   return auxvar;
+   return bilinterm == NULL ? NULL : bilinterm->auxvar;
 }
 
 Test(rlt, collect)

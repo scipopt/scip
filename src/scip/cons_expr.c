@@ -13241,7 +13241,7 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
- *       or SCIPgetConsExprBilinTermAuxar().
+ *       or SCIPgetConsExprBilinTerm().
  */
 SCIP_RETCODE SCIPcollectConsExprBilinTerms(
    SCIP*                      scip,           /**< SCIP data structure */
@@ -13295,16 +13295,15 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    return conshdlrdata->bilinterms;
 }
 
-/** returns the auxiliary variable of a bilinear term, if it exists
+/** returns the bilinear term that representing the product of two given variables
  *
- * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
  */
-SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
-   SCIP_VAR*                  y,              /**< second variable */
-   SCIP_VAR**                 auxvar,         /**< pointer to store auxiliary variable */
-   SCIP_Bool*                 found           /**< pointer to store whether the bilinear term xy exists */
+   SCIP_VAR*                  y               /**< second variable */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -13314,8 +13313,6 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    assert(consexprhdlr != NULL);
    assert(x != NULL);
    assert(y != NULL);
-   assert(auxvar != NULL);
-   assert(found != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
@@ -13334,24 +13331,8 @@ SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
    assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
 
    /* the index is -1 if the entry does not exist */
-   if( idx >= 0 )
-   {
-      SCIP_CONSEXPR_BILINTERM* image = &conshdlrdata->bilinterms[idx];
-      assert(image->x == x);
-      assert(image->y == y);
-
-      *found = TRUE;
-      *auxvar = image->auxvar;
-   }
-   else
-   {
-      *found = FALSE;
-      *auxvar = NULL;
-   }
-
-   return SCIP_OKAY;
+   return idx >= 0 ? &conshdlrdata->bilinterms[idx] : NULL;
 }
-
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static

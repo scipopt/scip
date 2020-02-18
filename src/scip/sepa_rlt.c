@@ -220,17 +220,19 @@ SCIP_RETCODE isAcceptableRow(
    SCIP_Bool*            acceptable          /**< buffer to store the result */
    )
 {
-   SCIP_VAR* linvar;
-   SCIP_Bool found;
-   int i;
    int nterms = 0;
+   int i;
 
    assert(row != NULL);
    assert(var != NULL);
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || nterms <= sepadata->maxunknownterms); ++i )
    {
-      SCIP_CALL( SCIPgetConsExprBilinTermAuxar(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]), &linvar, &found) );
+      SCIP_CONSEXPR_BILINTERM* bilinterm;
+      SCIP_VAR* linvar;
+
+      bilinterm = SCIPgetConsExprBilinTerm(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
+      linvar = (bilinterm == NULL) ? NULL : bilinterm->auxvar;
 
       if( linvar == NULL )
          ++nterms;
@@ -399,17 +401,19 @@ SCIP_RETCODE computeRltCuts(
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < SCIProwGetNNonz(row); ++i )
    {
+      SCIP_CONSEXPR_BILINTERM* bilinterm;
       SCIP_VAR* auxvar;
       SCIP_VAR* colvar;
       SCIP_Real coefauxvar;
       SCIP_Real coefcolvar;
-      SCIP_Bool found;
 
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
       coefauxvar = SCIProwGetVals(row)[i] * signfactor;
       coefcolvar = SCIProwGetVals(row)[i] * boundfactor;
 
-      SCIP_CALL( SCIPgetConsExprBilinTermAuxar(sepadata->conshdlr, var, colvar, &auxvar, &found) );
+      /* get auxiliary variable */
+      bilinterm = SCIPgetConsExprBilinTerm(sepadata->conshdlr, var, colvar);
+      auxvar = (bilinterm == NULL) ? NULL : bilinterm->auxvar;
 
       /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
       if( auxvar != NULL )

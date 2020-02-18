@@ -1133,7 +1133,7 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
- *       or SCIPgetConsExprBilinTermAuxar().
+ *       or SCIPgetConsExprBilinTerm().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcollectConsExprBilinTerms(
@@ -1162,17 +1162,16 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
-/** returns the auxiliary variable of a bilinear term, if it exists
+/** returns the bilinear term that representing the product of two given variables
  *
- * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprBilinTermAuxar(
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
-   SCIP_VAR*                  y,              /**< second variable */
-   SCIP_VAR**                 auxvar,         /**< pointer to store auxiliary variable (might be NULL) */
-   SCIP_Bool*                 found           /**< pointer to store whether the bilinear term xy exists */
+   SCIP_VAR*                  y               /**< second variable */
    );
 
 /** upgrading method for expression constraints into more specific constraints
