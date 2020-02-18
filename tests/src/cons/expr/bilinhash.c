@@ -103,9 +103,6 @@ Test(bilinhash, api_methods)
    const char* inputs[2] = {"[expr] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
       "[expr] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) * (log(<x>[C] + <z>[C]))^2 <= 1;"};
    SCIP_CONSEXPR_BILINTERM* bilinterms;
-   SCIP_VAR* xs[3];
-   SCIP_VAR* ys[3];
-   SCIP_VAR* auxvars[3];
    SCIP_VAR* auxvar;
    SCIP_VAR* tx;
    SCIP_VAR* ty;
