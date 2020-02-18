@@ -197,8 +197,6 @@ SCIP_VAR* getBilinVar(
    )
 {
    SCIP_CONSEXPR_BILINTERM* bilinterm;
-   SCIP_VAR* auxvar;
-   SCIP_Bool found;
 
    bilinterm = SCIPgetConsExprBilinTerm(conshdlr, x_, y_);
 
