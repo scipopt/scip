@@ -154,6 +154,7 @@ SCIP_RETCODE createSepaData(
 
       assert(bilinterms[i].x != NULL);
       assert(bilinterms[i].y != NULL);
+      assert(bilinterms[i].nlockspos + bilinterms[i].nlocksneg > 0);
 
       /* skip bilinear term because it does not have an auxiliary variable */
       if( bilinterms[i].auxvar == NULL )
