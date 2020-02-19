@@ -1786,21 +1786,20 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
           */
 
          nterms = (*nlhdlrexprdata)->nterms;
-         rhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
 
          /* set value of rhs */
-         termstart = nlhdlrexprdata->termbegins[nterms-1];
-         rhsval = nlhdlrexprdata->offsets[nterms-1];
+         termstart = (*nlhdlrexprdata)->termbegins[nterms-1];
+         rhsval = (*nlhdlrexprdata)->offsets[nterms-1];
 
-         for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+         for( i = 0; i < (*nlhdlrexprdata)->nnonzeroes[nterms-1]; ++i )
          {
             SCIP_VAR* var;
             SCIP_Real varval;
 
-            var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i];
+            var = (*nlhdlrexprdata)->vars[(*nlhdlrexprdata)->transcoefsidx[termstart + i]];
 
-            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval]) );
-            rhsval += nlhdlrexprdata->transcoefs[termstart + i] * varval;
+            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
+            rhsval += (*nlhdlrexprdata)->transcoefs[termstart + i] * varval;
          }
 
          if( SCIPisZero(scip, rhsval) )
@@ -1813,27 +1812,25 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
          else
          {
             /* set value for each disaggregation variable corresponding to quadratic term */
-            for( k = 0; k < nterms - 1; ++k )
+            for( k = 0; k < nterms-1; ++k )
             {
-               lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
+               termstart = (*nlhdlrexprdata)->termbegins[k];
+               lhsval = (*nlhdlrexprdata)->offsets[k];
 
-               termstart = nlhdlrexprdata->termbegins[k];
-               lhsval = nlhdlrexprdata->offsets[k];
-
-               for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+               for( i = 0; i < (*nlhdlrexprdata)->nnonzeroes[k]; ++i )
                {
                   SCIP_VAR* var;
                   SCIP_Real varval;
 
-                  var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i];
+                  var = (*nlhdlrexprdata)->vars[(*nlhdlrexprdata)->transcoefsidx[termstart + i]];
 
-                  SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval]) );
-                  rhsval += nlhdlrexprdata->transcoefs[termstart + i] * varval;
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
+                  rhsval += (*nlhdlrexprdata)->transcoefs[termstart + i] * varval;
                }
 
                disvarval = SQR(lhsval) / rhsval;
 
-               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[k], disvarval) );
             }
 
             /* set value for disaggregation variable corresponding to constant */
