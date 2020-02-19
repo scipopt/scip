@@ -50,13 +50,14 @@ struct SCIP_Rational{
 
 struct SCIP_RationalArray
 {
-   sparsevec vals;
+   std::vector<SCIP_Rational> vals;
+   int firstidx;
 };
 
-struct SCIP_RationalVector
-{
-   densevec vals;
-};
+//struct SCIP_RationalVector
+//{
+//   densevec vals;
+//};
 
 /** basis status for columns and rows */
 enum SCIP_fpexact
@@ -418,10 +419,12 @@ void RatSetInt(
    int                   denom               /**< the denominator */
    )
 {
+   char buf[SCIP_MAXSTRLEN];
    assert(res != NULL);
    assert(denom != 0);
 
-   res->val = (nom/denom);
+   SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%d/%d", nom, denom);
+   res->val = Rational(buf);
    res->isinf = FALSE;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 
@@ -1405,6 +1408,7 @@ SCIP_RETCODE SCIPrationalarrayCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, rationalarray) );
    new (&(*rationalarray)->vals) sparsevec();
+   (*rationalarray)->firstidx = -1;
 
    return SCIP_OKAY;
 }
@@ -1434,6 +1438,7 @@ SCIP_RETCODE SCIPrationalarrayCopy(
 
    SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
    (*rationalarray)->vals = sourcerationalarray->vals;
+   (*rationalarray)->firstidx = sourcerationalarray->firstidx;
 
    return SCIP_OKAY;
 }
@@ -1462,11 +1467,11 @@ void SCIPrationalarrayGetVal(
 {
    assert(rationalarray != NULL);
    assert(idx >= 0);
-   auto search = rationalarray->vals.find(idx);
-   if( search != rationalarray->vals.end() )
-      result->val = *search;
+   if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
+      || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+      RatSetInt(result, 0, 1);
    else
-      result->val = 0;
+      RatSet(result, &rationalarray->vals[idx - rationalarray->firstidx]);
 }
 
 /** sets value of entry in dynamic array */
@@ -1479,7 +1484,30 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    assert(rationalarray != NULL);
    assert(idx >= 0);
 
-   rationalarray->vals[idx] = val->val;
+   if( rationalarray-> firstidx == -1 )
+   {
+      rationalarray->vals.push_back(*val);
+      rationalarray->firstidx = idx;
+   }
+   if( idx < rationalarray->firstidx )
+   {
+      int ninserts = rationalarray->firstidx - idx;
+      SCIP_Rational r;
+      rationalarray->vals.insert(rationalarray->vals.begin(), ninserts, r);
+      rationalarray->firstidx = idx;
+      rationalarray->vals[0] = *val;
+   }
+   else if( idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   {
+      int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
+      SCIP_Rational r;
+      rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
+      rationalarray->vals[rationalarray->vals.size() - 1] = *val;
+   }
+   else
+   {
+      rationalarray->vals[idx - rationalarray->firstidx] = *val;
+   }
 
    return SCIP_OKAY;
 }
@@ -1488,7 +1516,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
 SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to increase value for */
-    SCIP_Rational*       incval              /**< value to increase array index */
+   SCIP_Rational*        incval              /**< value to increase array index */
    )
 {
    assert(incval != NULL);
@@ -1496,49 +1524,74 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
+   else if( idx < rationalarray->firstidx || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+      SCIP_CALL( SCIPrationalarraySetVal(rationalarray, idx, incval) );
    else
-      rationalarray->vals[idx] += incval->val;
+   {
+      rationalarray->vals[idx - rationalarray->firstidx].val += incval->val;
+      rationalarray->vals[idx - rationalarray->firstidx].fpexact = FALSE;
+   }
 
    return SCIP_OKAY;
 }
 
-SCIP_RETCODE SCIPrationalarryScalarProd(
-   SCIP_Rational*        result,             /**< the resulting rational */
-   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
-   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+/** print a rationalarray to std out */
+SCIP_RETCODE SCIPrationalArrayPrint(
+   SCIP_RATIONALARRAY*   rationalarray      /**< dynamic rational array */
    )
 {
-   const auto& v1 = rationalarray1->vals;
-   const auto& v2 = rationalarray2->vals;
-   result->val = boost::numeric::ublas::inner_prod(v1, v2);
-   result->isinf = FALSE;
-   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+   printf("Array with firstidx %d, length %d \n", rationalarray->firstidx, (int) rationalarray->vals.size());
+   for( auto val : rationalarray->vals )
+   {
+      RatPrint(&val);
+   }
+   printf("\n");
+
+   return SCIP_OKAY;
 }
 
-SCIP_RETCODE SCIPrationalarryAdd(
-   SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
-   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
-   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+/** returns the minimal index of all stored non-zero elements */
+int SCIPrationalarrayGetMinIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    )
 {
-   const auto& v1 = rationalarray1->vals;
-   const auto& v2 = rationalarray2->vals;
-   result->val = v1 + v2;
-   result->isinf = FALSE;
-   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+   assert(rationalarray != NULL);
+
+   return rationalarray->firstidx;
 }
 
-SCIP_RETCODE SCIPrationalarryDiff(
-   SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
-   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
-   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+/** returns the maximal index of all stored non-zero elements */
+int SCIPrationalarrayGetMaxIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    )
 {
-   const auto& v1 = rationalarray1->vals;
-   const auto& v2 = rationalarray2->vals;
-   result->val = v1 - v2;
-   result->isinf = FALSE;
-   result->fpexact = SCIP_FPEXACT_UNKNOWN;
+   assert(rationalarray != NULL);
+
+   return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
+
+
+// SCIP_RETCODE SCIPrationalarryAdd(
+//    SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
+//    SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
+//    SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+//    )
+// {
+//    const auto& v1 = rationalarray1->vals;
+//    const auto& v2 = rationalarray2->vals;
+//    result->vals = v1 + v2;
+// }
+
+// SCIP_RETCODE SCIPrationalarryDiff(
+//    SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
+//    SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
+//    SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
+//    )
+// {
+//    const auto& v1 = rationalarray1->vals;
+//    const auto& v2 = rationalarray2->vals;
+//    result->vals = v1 - v2;
+//    boost::multiprecision::sqrt()
+// }
 
 }

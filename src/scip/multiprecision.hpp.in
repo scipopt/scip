@@ -30,7 +30,7 @@ using Float500 = number<boost::multiprecision::cpp_bin_float<500>>;
 using Float1000 = number<boost::multiprecision::cpp_bin_float<1000>>;
 #endif
 
-using sparsevec = boost::numeric::ublas::mapped_vector<Rational>; 
-using densevec = boost::numeric::ublas::vector<Rational>;
+using sparsevec = std::vector<SCIP_Rational>; 
+//using densevec = boost::numeric::ublas::vector<Rational>;
 
 #endif

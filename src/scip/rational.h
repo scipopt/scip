@@ -606,6 +606,24 @@ SCIP_RETCODE SCIPrationalarryScalarProd(
    SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic real array */
    );
 
+/** print a rationalarray to std out */
+SCIP_EXPORT
+SCIP_RETCODE SCIPrationalArrayPrint(
+   SCIP_RATIONALARRAY*   rationalarray      /**< dynamic rational array */
+   );
+
+/** returns the minimal index of all stored non-zero elements */
+SCIP_EXPORT
+int SCIPrationalarrayGetMinIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+SCIP_EXPORT
+int SCIPrationalarrayGetMaxIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
+   );
+
 void testRuntimesRational(
    );
 
