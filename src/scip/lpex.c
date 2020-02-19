@@ -345,7 +345,7 @@ SCIP_Bool rowexInSync(
    synced = synced && (RatIsApproxEqualReal(rowex->rhs, fprow->rhs) || (RatIsInfinity(rowex->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
    synced = RatIsApproxEqualReal(rowex->flushedlhs, fprow->flushedlhs) || (RatIsNegInfinity(rowex->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
    synced = synced && (RatIsApproxEqualReal(rowex->flushedrhs, fprow->flushedrhs) || (RatIsInfinity(rowex->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
-   synced = synced && (RatIsApproxEqualReal(rowex->constant, fprow->constant) && rowex->origin == fprow->origin);
+   synced = synced && (RatIsApproxEqualReal(rowex->constant, fprow->constant) );
 
    if( !synced )
    {
@@ -935,8 +935,6 @@ void coefChangedExact(
       lp->flushed = FALSE;
    }
 
-   RatSetString(row->maxactivity, "inf");
-   RatSetString(row->minactivity, "inf");
    RatSetString(row->pseudoactivity, "inf");
 }
 
@@ -1347,7 +1345,7 @@ SCIP_RETCODE colexDelCoefPos(
    assert((row->lppos >= 0) == (pos < col->nlprows));
 
    /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from column <%s>\n",
-     col->vals[pos], row->name, pos, SCIPvarGetName(col->var));*/
+     col->vals[pos], row->fprow->name, pos, SCIPvarGetName(col->var));*/
 
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
@@ -1426,9 +1424,9 @@ SCIP_RETCODE rowexAddCoef(
    assert(col->var != NULL);
    assert(!RatIsZero(val));
 
-   if( row->nlocks > 0 )
+   if( row->fprow->nlocks > 0 )
    {
-      SCIPerrorMessage("cannot add a coefficient to the locked unmodifiable row <%s>\n", row->name);
+      SCIPerrorMessage("cannot add a coefficient to the locked unmodifiable row <%s>\n", row->fprow->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -1537,7 +1535,7 @@ SCIP_RETCODE rowexAddCoef(
    coefChangedExact(row, col, lp);
 
    SCIPsetDebugMsg(set, "added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
-      RatApproxReal(val), SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name, row->nunlinked);
+      RatApproxReal(val), SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->fprow->name, row->nunlinked);
 
    /* issue row coefficient changed event */
    //SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, 0.0, val) );
@@ -1569,11 +1567,11 @@ SCIP_RETCODE rowexDelCoefPos(
    assert((pos < row->nlpcols) == (col->lppos >= 0 && row->linkpos[pos] >= 0));
 
    /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from row <%s>\n",
-     val, SCIPvarGetName(col->var), pos, row->name);*/
+     val, SCIPvarGetName(col->var), pos, row->fprow->name);*/
 
    if( row->nlocks > 0 )
    {
-      SCIPerrorMessage("cannot delete a coefficient from the locked unmodifiable row <%s>\n", row->name);
+      SCIPerrorMessage("cannot delete a coefficient from the locked unmodifiable row <%s>\n", row->fprow->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -1621,11 +1619,11 @@ SCIP_RETCODE rowexChgCoefPos(
    assert(0 <= pos && pos < row->len);
 
    /*SCIPsetDebugMsg(set, "changing coefficient %g * <%s> at position %d of row <%s> to %g\n",
-     row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
+     row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->fprow->name, val);*/
 
    if( row->nlocks > 0 )
    {
-      SCIPerrorMessage("cannot change a coefficient of the locked unmodifiable row <%s>\n", row->name);
+      SCIPerrorMessage("cannot change a coefficient of the locked unmodifiable row <%s>\n", row->fprow->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -1759,7 +1757,7 @@ SCIP_RETCODE rowexLink(
 
    if( row->nunlinked > 0 )
    {
-      SCIPsetDebugMsg(set, "linking row <%s>\n", row->name);
+      SCIPsetDebugMsg(set, "linking row <%s>\n", row->fprow->name);
 
       /* unlinked columns can only be in the non-LP/unlinked columns part of the cols array */
       for( i = row->nlpcols; i < row->len; ++i )
@@ -1799,7 +1797,7 @@ SCIP_RETCODE rowexUnlink(
 
    if( row->nunlinked < row->len )
    {
-      SCIPsetDebugMsg(set, "unlinking row <%s>\n", row->name);
+      SCIPsetDebugMsg(set, "unlinking row <%s>\n", row->fprow->name);
       for( i = 0; i < row->len; ++i )
       {
          if( row->linkpos[i] >= 0 )
@@ -1977,8 +1975,6 @@ void markColexDeleted(
    assert(col != NULL);
 
    col->lpipos = -1;
-   col->sbdownvalid = FALSE;
-   col->sbupvalid = FALSE;
    col->validredcostlp = -1;
    col->validfarkaslp = -1;
    col->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
@@ -2108,8 +2104,6 @@ SCIP_RETCODE lpexFlushAddCols(
 
       lp->lpicols[c] = col;
       col->lpipos = c;
-      col->sbdownvalid = FALSE;
-      col->sbupvalid = FALSE;
       col->validredcostlp = -1;
       col->validfarkaslp = -1;
       col->objchanged = FALSE;
@@ -2676,11 +2670,6 @@ SCIP_RETCODE SCIPcolexCreate(
    SCIP_CALL( RatCreateBlock(blkmem, &(*col)->primsol) );
    SCIP_CALL( RatCreateString(blkmem, &(*col)->redcost, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*col)->farkascoef, "inf") );
-   SCIP_CALL( RatCopy(blkmem, &(*col)->minprimsol, (*col)->ub) );
-   SCIP_CALL( RatCopy(blkmem, &(*col)->maxprimsol, (*col)->lb) );
-   (*col)->removable = FALSE;
-   (*col)->integral = SCIPvarIsIntegral(var);
-
 
    (*col)->size = len;
    (*col)->len = len;
@@ -2691,6 +2680,8 @@ SCIP_RETCODE SCIPcolexCreate(
    (*col)->lpipos = -1;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
+
+   assert((*col)->fpcol->removable == removable);
 
    return SCIP_OKAY;
 }
@@ -2721,15 +2712,12 @@ SCIP_RETCODE SCIPcolexFree(
    RatFreeBlock(blkmem, &(*col)->obj);
    RatFreeBlock(blkmem, &(*col)->lb);
    RatFreeBlock(blkmem, &(*col)->ub);
-   //Rdelete(blkmem, &(*col)->unchangedobj);
    RatFreeBlock(blkmem, &(*col)->flushedobj);
    RatFreeBlock(blkmem, &(*col)->flushedlb);
    RatFreeBlock(blkmem, &(*col)->flushedub);
    RatFreeBlock(blkmem, &(*col)->primsol);
    RatFreeBlock(blkmem, &(*col)->redcost);
    RatFreeBlock(blkmem, &(*col)->farkascoef);
-   RatFreeBlock(blkmem, &(*col)->minprimsol);
-   RatFreeBlock(blkmem, &(*col)->maxprimsol);
 
    BMSfreeBlockMemory(blkmem, col);
 
@@ -3168,18 +3156,12 @@ SCIP_RETCODE SCIProwCreateExact(
    SCIP_CALL( RatCreateString(blkmem, &(*row)->flushedlhs, "-inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->flushedrhs, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->objprod, "0") );
-   SCIP_CALL( RatCreateString(blkmem, &(*row)->maxval, "0") );
-   SCIP_CALL( RatCreateString(blkmem, &(*row)->minval, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->dualsol, "0") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->activity, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->dualfarkas, "0") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->pseudoactivity, "inf") );
-   SCIP_CALL( RatCreateString(blkmem, &(*row)->minactivity, "inf") );
-   SCIP_CALL( RatCreateString(blkmem, &(*row)->maxactivity, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->constant, "0") );
 
-   (*row)->origin = origin;
-   (*row)->eventfilter = NULL;
    (*row)->index = stat->nrowidx;
    SCIPstatIncrement(stat, set, nrowidx);
    (*row)->size = len;
@@ -3190,20 +3172,12 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->lppos = -1;
    (*row)->lpipos = -1;
    (*row)->lpdepth = -1;
-   (*row)->minidx = INT_MAX;
-   (*row)->maxidx = INT_MIN;
-   (*row)->nummaxval = 0;
-   (*row)->numminval = 0;
-   (*row)->numintcols = -1;
    (*row)->validactivitylp = -1;
-   (*row)->age = 0;
-   (*row)->rank = 0;
    (*row)->delaysort = FALSE;
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
    (*row)->nlocks = 0;
-   (*row)->removable = FALSE;
 
    /* capture the row */
    SCIProwexCapture(*row);
@@ -3433,11 +3407,8 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->chgcols = NULL;
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
-   (*lp)->soldirection = NULL;
-   (*lp)->lazycols = NULL;
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   (*lp)->validsoldirsol = NULL;
    (*lp)->flushdeletedcols = FALSE;
    (*lp)->flushaddedcols = FALSE;
    (*lp)->flushdeletedrows = FALSE;
@@ -3450,11 +3421,7 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->dualfeasible = TRUE;
    (*lp)->dualchecked = TRUE;
    (*lp)->solisbasic = FALSE;
-   (*lp)->rootlpisrelax = TRUE;
-   (*lp)->isrelax = TRUE;
-   (*lp)->installing = FALSE;
    (*lp)->resolvelperror = FALSE;
-   (*lp)->adjustlpval = FALSE;
    (*lp)->projshiftpossible = FALSE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
@@ -3465,7 +3432,6 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->lpirandomseed = set->random_randomseed;
-   (*lp)->storedsolvals = NULL;
 
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
@@ -3474,11 +3440,8 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->lpifirstchgcol = 0;
    (*lp)->lpifirstchgrow = 0;
    (*lp)->colssize = 0;
-   (*lp)->soldirectionsize = 0;
    (*lp)->ncols = 0;
    (*lp)->nloosevars = 0;
-   //(*lp)->lazycolssize = 0;
-   //(*lp)->nlazycols = 0;
    (*lp)->rowssize = 0;
    (*lp)->nrows = 0;
    (*lp)->chgcolssize = 0;
@@ -3487,8 +3450,6 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->nchgrows = 0;
    (*lp)->firstnewcol = 0;
    (*lp)->firstnewrow = 0;
-   (*lp)->nremovablecols = 0;
-   (*lp)->nremovablerows = 0;
    (*lp)->looseobjvalinf = 0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
@@ -3498,11 +3459,6 @@ SCIP_RETCODE SCIPlpexCreate(
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->pseudoobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->glbpseudoobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->looseobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->relglbpseudoobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->rellooseobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->relpseudoobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->rootlpobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->rootlooseobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->cutoffbound) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpiobjlim) );
 
@@ -3543,23 +3499,15 @@ SCIP_RETCODE SCIPlpexFree(
    RatFreeBlock(blkmem, &(*lp)->pseudoobjval);
    RatFreeBlock(blkmem, &(*lp)->glbpseudoobjval);
    RatFreeBlock(blkmem, &(*lp)->looseobjval);
-   RatFreeBlock(blkmem, &(*lp)->rellooseobjval);
-   RatFreeBlock(blkmem, &(*lp)->relglbpseudoobjval);
-   RatFreeBlock(blkmem, &(*lp)->relpseudoobjval);
-   RatFreeBlock(blkmem, &(*lp)->rootlpobjval);
-   RatFreeBlock(blkmem, &(*lp)->rootlooseobjval);
    RatFreeBlock(blkmem, &(*lp)->cutoffbound);
    RatFreeBlock(blkmem, &(*lp)->lpiobjlim);
 
-   BMSfreeMemoryNull(&(*lp)->storedsolvals);
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
    BMSfreeMemoryArrayNull(&(*lp)->chgcols);
    BMSfreeMemoryArrayNull(&(*lp)->chgrows);
-   BMSfreeMemoryArrayNull(&(*lp)->lazycols);
    BMSfreeMemoryArrayNull(&(*lp)->cols);
    BMSfreeMemoryArrayNull(&(*lp)->rows);
-   BMSfreeMemoryArrayNull(&(*lp)->soldirection);
    BMSfreeMemory(lp);
 
    return SCIP_OKAY;
@@ -3581,7 +3529,7 @@ SCIP_RETCODE SCIPlpexAddCol(
    assert(col->var != NULL);
    assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col->fpcol);
-   assert(SCIPvarIsIntegral(col->var) == col->integral);
+   assert(SCIPvarIsIntegral(col->var) == col->fpcol->integral);
 
    SCIPsetDebugMsg(set, "adding column <%s> to exact LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
@@ -3598,8 +3546,6 @@ SCIP_RETCODE SCIPlpexAddCol(
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
    lp->ncols++;
-   if( col->removable )
-      lp->nremovablecols++;
 
    /** todo: exip: do we need this? if( !RisNegInfinity(col->lazylb) || !RisInfinity(col->lazyub) )
    {
@@ -3698,7 +3644,7 @@ void SCIProwexCapture(
    assert(row->nuses >= 0);
    assert(row->nlocks <= (unsigned int)(row->nuses)); /*lint !e574*/
 
-   SCIPdebugMessage("capture row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
+   SCIPdebugMessage("capture row <%s> with nuses=%d and nlocks=%u\n", row->fprow->name, row->nuses, row->nlocks);
    row->nuses++;
 }
 
@@ -3955,7 +3901,7 @@ SCIP_RETCODE SCIProwexDelCoef(
    pos = rowexSearchCoef(row, col);
    if( pos == -1 )
    {
-      SCIPerrorMessage("coefficient for column <%s> doesn't exist in row <%s>\n", SCIPvarGetName(col->var), row->name);
+      SCIPerrorMessage("coefficient for column <%s> doesn't exist in row <%s>\n", SCIPvarGetName(col->var), row->fprow->name);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < row->len);
@@ -4113,15 +4059,6 @@ SCIP_RETCODE SCIProwexChgConstant(
          assert(!RatIsInfinity(row->pseudoactivity));
          RatAdd(row->pseudoactivity, row->pseudoactivity, constant);
          RatDiff(row->pseudoactivity, row->pseudoactivity, row->constant);
-      }
-      if( row->fprow->validactivitybdsdomchg == stat->domchgcount )
-      {
-         assert(!RatIsInfinity(row->minactivity));
-         assert(!RatIsInfinity(row->maxactivity));
-         RatAdd(row->minactivity, row->minactivity, constant);
-         RatAdd(row->maxactivity, row->maxactivity, constant);
-         RatDiff(row->minactivity, row->minactivity, row->constant);
-         RatDiff(row->maxactivity, row->maxactivity, row->constant);
       }
    }
 
@@ -4293,14 +4230,10 @@ SCIP_RETCODE SCIProwexFree(
    RatFreeBlock(blkmem, &(*row)->flushedlhs);
    RatFreeBlock(blkmem, &(*row)->flushedrhs);
    RatFreeBlock(blkmem, &(*row)->objprod);
-   RatFreeBlock(blkmem, &(*row)->maxval);
-   RatFreeBlock(blkmem, &(*row)->minval);
    RatFreeBlock(blkmem, &(*row)->dualsol);
    RatFreeBlock(blkmem, &(*row)->activity);
    RatFreeBlock(blkmem, &(*row)->dualfarkas);
    RatFreeBlock(blkmem, &(*row)->pseudoactivity);
-   RatFreeBlock(blkmem, &(*row)->minactivity);
-   RatFreeBlock(blkmem, &(*row)->maxactivity);
 
    RatFreeBlockArray(blkmem, &(*row)->vals, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->valsinterval, (*row)->size);
@@ -4577,26 +4510,6 @@ SCIP_Rational* SCIPcolexGetPrimsol(
       return col->primsol;
    else
       return NULL;
-}
-
-/** gets the minimal LP solution value, this column ever assumed */
-SCIP_Rational* SCIPcolexGetMinPrimsol(
-   SCIP_COLEX*           col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->minprimsol;
-}
-
-/** gets the maximal LP solution value, this column ever assumed */
-SCIP_Rational* SCIPcolexGetMaxPrimsol(
-   SCIP_COLEX*           col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->maxprimsol;
 }
 
 /** ensures, that column array of row can store at least num entries */
@@ -5407,8 +5320,6 @@ SCIP_RETCODE SCIPlpexGetSol(
    {
       assert( 0 <= cstat[c] && cstat[c] < 4 );
       RatSet(lpicols[c]->primsol, primsol[c]);
-      RatMIN(lpicols[c]->minprimsol, lpicols[c]->minprimsol, primsol[c]);
-      RatMAX(lpicols[c]->maxprimsol, lpicols[c]->maxprimsol, primsol[c]);
       RatSet(lpicols[c]->redcost, redcost[c]);
       lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
@@ -5491,7 +5402,7 @@ SCIP_RETCODE SCIPlpexGetSol(
          stilldualfeasible = !RatIsNegative(lpirows[r]->dualsol);
 
       SCIPsetDebugMsg(set, " row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
-         lpirows[r]->name, RatApproxReal(lpirows[r]->lhs), RatApproxReal(lpirows[r]->rhs), 
+         lpirows[r]->fprow->name, RatApproxReal(lpirows[r]->lhs), RatApproxReal(lpirows[r]->rhs), 
          RatApproxReal(lpirows[r]->constant), RatApproxReal(lpirows[r]->activity), RatApproxReal(lpirows[r]->dualsol),
          RatIsGE(lpirows[r]->activity, lpirows[r]->lhs),
          RatIsLE(lpirows[r]->activity, lpirows[r]->rhs),
@@ -5946,7 +5857,7 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
    SCIPsetDebugMsg(set, "LP is infeasible:\n");
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
+      SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->fprow->name, dualfarkas[r]);
       RatSet(lpirows[r]->dualfarkas, dualfarkas[r]);
       RatSetString(lpirows[r]->dualsol, "inf");
       RatSetReal(lpirows[r]->activity, 0.0);
@@ -6147,10 +6058,6 @@ SCIP_RETCODE SCIPlpexShrinkCols(
          col->lppos = -1;
          lp->ncols--;
 
-         /* count removable columns */
-         if( col->removable )
-            lp->nremovablecols--;
-
          /* update column arrays of all linked rows */
          colexUpdateDelLP(col, set);
 
@@ -6164,7 +6071,6 @@ SCIP_RETCODE SCIPlpexShrinkCols(
       lp->flushed = FALSE;
       checkLinks(lp);
    }
-   assert(lp->nremovablecols <= lp->ncols);
 
    return SCIP_OKAY;
 }
@@ -6200,10 +6106,6 @@ SCIP_RETCODE SCIPlpexShrinkRows(
          row->lpdepth = -1;
          lp->nrows--;
 
-         /* count removable rows */
-         if( row->removable )
-            lp->nremovablerows--;
-
          rowexUpdateDelLP(row, set);
 
          //SCIProwexUnlocK(row);
@@ -6217,7 +6119,6 @@ SCIP_RETCODE SCIPlpexShrinkRows(
 
       checkLinks(lp);
    }
-   assert(lp->nremovablerows <= lp->nrows);
 
    return SCIP_OKAY;
 }
@@ -6245,10 +6146,6 @@ SCIP_RETCODE SCIPlpexReset(
    /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    RatSetReal(lp->lpobjval, 0.0);
-   //lp->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
-   //lp->validfarkaslp = -1;
-   //lp->validsoldirlp = -1;
-   lp->validsoldirsol = NULL;
    lp->solved = TRUE;
    lp->primalfeasible = TRUE;
    lp->primalchecked = TRUE;

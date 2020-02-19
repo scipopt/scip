@@ -157,7 +157,7 @@ void SCIProwexForceSort(
    assert(row->nunlinked == row->len);
    assert(row->nlpcols == 0);
 
-   SCIPsetDebugMsg(set, "merging row <%s>\n", row->name);
+   SCIPsetDebugMsg(set, "merging row <%s>\n", row->fprow->name);
 
    /* do nothing on empty rows; if row is sorted, nothing has to be done */
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )

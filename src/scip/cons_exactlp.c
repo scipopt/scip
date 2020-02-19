@@ -7057,8 +7057,7 @@ SCIP_RETCODE tightenBounds(
 
 /** checks linear constraint for feasibility of given solution or current solution */
 static
-SCIP_RETCODE
-checkCons(
+SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
