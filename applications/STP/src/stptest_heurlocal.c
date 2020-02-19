@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   stptest_heur.c
+/**@file   stptest_heurlocal.c
  * @brief  tests for Steiner tree heuristics
  * @author Daniel Rehfeldt
  *
- * This file implements tests for Steiner problem heuristics.
+ * This file implements tests for Steiner problem local search heuristics.
  *
  * A list of all interface methods can be found in stptest.h.
  *
@@ -72,7 +72,7 @@ SCIP_RETCODE localKeyPathExchange(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -93,7 +93,7 @@ SCIP_RETCODE localKeyPathExchange(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -157,8 +157,8 @@ SCIP_RETCODE localKeyPathExchangePc(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -189,8 +189,8 @@ SCIP_RETCODE localKeyPathExchangePc(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -260,8 +260,8 @@ SCIP_RETCODE localKeyPathExchangePc2(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -296,8 +296,8 @@ SCIP_RETCODE localKeyPathExchangePc2(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -360,8 +360,8 @@ SCIP_RETCODE localKeyPathExchangeMw(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -396,8 +396,8 @@ SCIP_RETCODE localKeyPathExchangeMw(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -447,8 +447,8 @@ SCIP_RETCODE localKeyVertex(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -487,8 +487,8 @@ SCIP_RETCODE localKeyVertex(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -559,8 +559,8 @@ SCIP_RETCODE localKeyVertexPc(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -597,8 +597,8 @@ SCIP_RETCODE localKeyVertexPc(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -677,8 +677,8 @@ SCIP_RETCODE localKeyVertexPc2(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -716,8 +716,8 @@ SCIP_RETCODE localKeyVertexPc2(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -798,8 +798,8 @@ SCIP_RETCODE localExtendPc(
 
    graph_mark(graph);
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -828,8 +828,8 @@ SCIP_RETCODE localExtendPc(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -879,7 +879,7 @@ SCIP_RETCODE localInsertion(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -905,7 +905,7 @@ SCIP_RETCODE localInsertion(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -956,7 +956,7 @@ SCIP_RETCODE localInsertion2(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -987,7 +987,7 @@ SCIP_RETCODE localInsertion2(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree);
 
    return SCIP_OKAY;
 }
@@ -1061,8 +1061,8 @@ SCIP_RETCODE localInsertion2pc(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree, nedges));
 
    for( int i = 0; i < nedges; i++ )
       steinertree[i] = UNKNOWN;
@@ -1096,27 +1096,15 @@ SCIP_RETCODE localInsertion2pc(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
 
-   SCIPfreeBufferArray(scip, &steinertree);
-   SCIPfreeBufferArray(scip, &steinertree_nodes);
-
-
-   return SCIP_OKAY;
-}
-
-SCIP_RETCODE stptest_heur_extendPcMw(
-   SCIP*                 scip                /**< SCIP data structure */
-)
-{
-   SCIP_CALL( localExtendPc(scip) );
-
-   printf("stptest_heur_extendPcMw: all ok \n");
+   SCIPfreeMemoryArray(scip, &steinertree);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
 
    return SCIP_OKAY;
 }
 
 
 /** test local search heuristics */
-SCIP_RETCODE stptest_heur_local(
+SCIP_RETCODE stptest_testHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1130,6 +1118,8 @@ SCIP_RETCODE stptest_heur_local(
    SCIP_CALL( localKeyPathExchangePc2(scip) );
    SCIP_CALL( localKeyPathExchangePc(scip) );
    SCIP_CALL( localKeyPathExchange(scip) );
+
+   SCIP_CALL( localExtendPc(scip) );
 
    printf("stptest_heur_local: all ok \n");
 

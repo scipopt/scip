@@ -2865,7 +2865,7 @@ SCIP_Bool graph_pc_isMw(
    const int type = g->stp_type;
    assert(g != NULL);
 
-   return (type == STP_MWCSP || type == STP_RMWCSP ||type == STP_BRMWCSP);
+   return (type == STP_MWCSP || type == STP_RMWCSP || type == STP_BRMWCSP);
 }
 
 

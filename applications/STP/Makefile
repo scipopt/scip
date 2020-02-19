@@ -104,7 +104,8 @@ CMAINOBJ	=	cmain.o \
 			stptest_base.o \
 			stptest_extreduce.o \
 			stptest_graph.o \
-			stptest_heur.o \
+			stptest_heurlocal.o \
+			stptest_heurtm.o \
 			stptest_misc.o \
 			stptest_reduce.o \
 			prop_stp.o \

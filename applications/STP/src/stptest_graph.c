@@ -270,6 +270,71 @@ SCIP_RETCODE csrdepoTest2(
    return SCIP_OKAY;
 }
 
+/** frees, etc. */
+void stptest_graphTearDown(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+)
+{
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+}
+
+
+/** sets up graph */
+SCIP_RETCODE stptest_graphSetUp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   graph_mark(graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** sets up graph for (undirected) PC */
+SCIP_RETCODE stptest_graphSetUpPcOrg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   SCIP_CALL( stptest_graphSetUpPcExtended(scip, graph, nnodes_new, nedges_new) );
+
+   graph_pc_2org(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+/** sets up graph for (undirected) PC */
+SCIP_RETCODE stptest_graphSetUpPcExtended(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   graph->stp_type = STP_PCSPG;
+
+   SCIP_CALL( graph_pc_2pc(scip, graph) );
+
+   stptest_graphSetUp(scip, graph);
+
+   if( nnodes_new )
+      *nnodes_new = graph->knots;
+
+   if( nedges_new )
+      *nedges_new = graph->edges;
+
+   return SCIP_OKAY;
+}
+
 
 /** tests CSR depository */
 SCIP_RETCODE stptest_csrdepo(

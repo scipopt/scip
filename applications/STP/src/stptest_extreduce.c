@@ -117,45 +117,8 @@ void extTearDown(
 {
    reduce_redcostdataFreeMembers(scip, redcostdata);
 
-   graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-   assert(graph == NULL);
+   stptest_graphTearDown(scip, graph);
 }
-
-/** sets up graph */
-static
-SCIP_RETCODE extSetUpGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< the graph */
-   )
-{
-   graph_mark(graph);
-
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
-
-   return SCIP_OKAY;
-}
-
-
-/** sets up graph for (undirected) PC */
-static
-SCIP_RETCODE extSetUpGraphPc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< the graph */
-   )
-{
-   graph->stp_type = STP_PCSPG;
-
-   SCIP_CALL( graph_pc_2pc(scip, graph) );
-
-   extSetUpGraph(scip, graph);
-
-   graph_pc_2org(scip, graph);
-
-   return SCIP_OKAY;
-}
-
 
 
 /** initializes to default */
@@ -760,7 +723,7 @@ SCIP_RETCODE testEdgeDeletion5_deprecated(
 
    testedge = 0;
 
-   SCIP_CALL( extSetUpGraph(scip, graph) );
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
    if( variant == 1 )
    {
@@ -1214,7 +1177,7 @@ SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
       graph_edge_addBi(scip, graph, 4, i, 1.0);
    }
 
-   SCIP_CALL( extSetUpGraph(scip, graph) );
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, &redcostdata);
 
    /* put 5 as first target for both nodes 3 and 4 and set the distance to the second target too high */
@@ -1275,7 +1238,7 @@ SCIP_RETCODE testEdgeDeletedByMst1(
    graph_edge_addBi(scip, graph, 0, 4, 1.4);
    graph_edge_addBi(scip, graph, 2, 3, 1.1);
 
-   SCIP_CALL( extSetUpGraph(scip, graph) );
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, &redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
@@ -1335,7 +1298,7 @@ SCIP_RETCODE testEdgeDeletedByMst2(
    graph_edge_addBi(scip, graph, 0, 5, 2.5);
    graph_edge_addBi(scip, graph, 4, 5, 1.1);
 
-   SCIP_CALL( extSetUpGraph(scip, graph) );
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, &redcostdata);
 
    SCIP_CALL( extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE) );
@@ -1395,7 +1358,7 @@ SCIP_RETCODE testEdgeNotDeleted1(
    graph_edge_addBi(scip, graph, 0, 5, 2.5);
    graph_edge_addBi(scip, graph, 4, 5, 1.1);
 
-   SCIP_CALL( extSetUpGraph(scip, graph) );
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, &redcostdata);
 
    SCIP_CALL( extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE) );
@@ -1459,7 +1422,7 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
 
    graph->prize[1] = 0.09;
 
-   SCIP_CALL( extSetUpGraphPc(scip, graph) );
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 
@@ -1524,7 +1487,7 @@ SCIP_RETCODE testPcEdgeNotDeleted(
 
    graph->prize[1] = 0.11;
 
-   SCIP_CALL( extSetUpGraphPc(scip, graph) );
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 

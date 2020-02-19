@@ -352,7 +352,7 @@ SCIP_RETCODE presolveStp(
    probdata->norgedges = graph->edges;
 
 #ifdef UNIT_TEST_STP
-   SCIP_CALL( stptest_all(scip) );
+   SCIP_CALL( stptest_testAll(scip) );
 #endif
 
    /* the actual presolving */

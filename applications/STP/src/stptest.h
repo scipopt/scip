@@ -26,6 +26,7 @@
 #define APPLICATIONS_STP_SRC_STPTEST_H_
 
 #include <stdlib.h>
+#include "graph.h"
 #include "scip/scip.h"
 
 #define STPTEST_ASSERT_MSG_ARGS(cond, msg, ...)  \
@@ -65,11 +66,15 @@
 
 /* stptest_base.c
  */
-extern SCIP_RETCODE    stptest_all(SCIP*);
+extern SCIP_RETCODE    stptest_testAll(SCIP*);
 
 /* stptest_graph.c
  */
 extern SCIP_RETCODE    stptest_csrdepo(SCIP*);
+extern void            stptest_graphTearDown(SCIP*, GRAPH*);
+extern SCIP_RETCODE    stptest_graphSetUp(SCIP*, GRAPH*);
+extern SCIP_RETCODE    stptest_graphSetUpPcOrg(SCIP*, GRAPH*, int*, int*);
+extern SCIP_RETCODE    stptest_graphSetUpPcExtended(SCIP*, GRAPH*, int*, int*);
 
 /* stptest_extreduce.c
  */
@@ -88,10 +93,14 @@ extern SCIP_RETCODE    stptest_pseudoDel(SCIP*);
 extern SCIP_RETCODE    stptest_dheap(SCIP*);
 extern SCIP_RETCODE    stptest_completegraph(SCIP*);
 
-/* stptest_heur.c
+/* stptest_heurlocal.c
  */
-extern SCIP_RETCODE    stptest_heur_extendPcMw(SCIP*);
-extern SCIP_RETCODE    stptest_heur_local(SCIP*);
+extern SCIP_RETCODE    stptest_testHeurLocal(SCIP*);
+
+
+/* stptest_heurtm.c
+ */
+extern SCIP_RETCODE    stptest_testSolPrune(SCIP*);
 
 
 #endif /* APPLICATIONS_STP_SRC_STPTEST_H_ */

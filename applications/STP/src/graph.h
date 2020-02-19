@@ -580,6 +580,7 @@ extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
  */
 extern void   graph_solSetNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   graph_solSetVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
+extern void   graph_solPrint(const GRAPH*, const int*);
 extern SCIP_RETCODE   graph_solMarkPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
 extern SCIP_Bool graph_solIsUnreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_solIsValid(SCIP*, const GRAPH*, const int*);
@@ -588,7 +589,7 @@ extern int       graph_solGetNedges(const GRAPH*, const int*);
 extern SCIP_RETCODE   graph_solGetOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   graph_solReroot(SCIP*, GRAPH*, int*, int);
 SCIP_RETCODE       graph_solPrune(SCIP*, const GRAPH*, int*, STP_Bool*);
-SCIP_RETCODE       graph_solPruneOnGivenCosts(SCIP*, const GRAPH*, const SCIP_Real*, int*, STP_Bool*);
+SCIP_RETCODE       graph_solPruneFromTmHeur(SCIP*, const GRAPH*, const SCIP_Real*, int*, STP_Bool*);
 SCIP_RETCODE       graph_solPruneFromNodes(SCIP*, const GRAPH*, int*, STP_Bool*);
 SCIP_RETCODE       graph_solPruneFromEdges(SCIP*, const GRAPH*, int*);
 

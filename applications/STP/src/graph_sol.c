@@ -28,12 +28,151 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h) */
-
+//#define SCIP_DEBUG
 
 #include "graph.h"
 #include "probdata_stp.h"
 #include "portab.h"
 
+
+/** Deletes subtree from given node, marked by dfspos.
+ *  NOTE: recursive method. */
+static
+void pcsubtreeDelete(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   subtree_root,       /**< root of the subtree */
+   int                   dfspos[],           /**< array to mark DFS positions of nodes */
+   int                   result[],           /**< ST edges */
+   STP_Bool              connected[]         /**< ST nodes */
+)
+{
+   const int dfspos_root = dfspos[subtree_root];
+
+   assert(dfspos_root > 0);
+   assert(connected[subtree_root]);
+   assert(g->mark[subtree_root]);
+
+   connected[subtree_root] = FALSE;
+   g->mark[subtree_root] = FALSE;
+
+   SCIPdebugMessage("strong prune deletes tree vertex %d \n", subtree_root);
+
+   for( int e = g->outbeg[subtree_root]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      if( result[e] == CONNECT )
+      {
+         const int neighbor = g->head[e];
+
+         assert(dfspos[neighbor] >= 0);
+         assert(!graph_pc_knotIsDummyTerm(g, neighbor));
+         assert(dfspos[neighbor] != dfspos_root);
+
+         /* is neighbor a DFS child of the root?  */
+         if( dfspos[neighbor] > dfspos_root)
+         {
+            result[e] = UNKNOWN;
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("strong prune deletes tree edge ");
+            graph_edge_printInfo(g, e);
+#endif
+            pcsubtreeDelete(g, neighbor, dfspos, result, connected);
+         }
+      }
+   }
+}
+
+
+/** Prunes subtree from given node such that it becomes most profitable and returns the profit.
+ *  NOTE: recursive method. */
+static
+SCIP_Real pcsubtreePruneForProfit(
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int                   subtree_root,       /**< root of the subtree */
+   int                   dfspos[],           /**< array to mark DFS positions of nodes */
+   int                   result[],           /**< ST edges */
+   STP_Bool              connected[],        /**< ST nodes */
+   int*                  dfscount            /**< counter */
+)
+{
+   SCIP_Real profit = g->prize[subtree_root];
+
+   if( !graph_pc_isPc(g) )
+   {
+      assert(graph_pc_isMw(g));
+
+      if( LT(profit, 0.0) )
+         profit = 0.0;
+   }
+
+   assert(0 <= *dfscount && *dfscount < g->knots);
+
+   dfspos[subtree_root] = ++(*dfscount);
+
+   SCIPdebugMessage("strong-prune from root %d \n", subtree_root);
+
+   for( int e = g->outbeg[subtree_root]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      if( result[e] == CONNECT )
+      {
+         const int neighbor = g->head[e];
+
+         assert(dfspos[neighbor] >= 0);
+         assert(!graph_pc_knotIsDummyTerm(g, neighbor));
+
+         /* not visited yet? */
+         if( dfspos[neighbor] == 0 )
+         {
+            const SCIP_Real neighbor_profit = pcsubtreePruneForProfit(g, cost, neighbor, dfspos, result, connected, dfscount);
+            const SCIP_Real extension_profit = neighbor_profit - cost[e];
+
+            if( LT(extension_profit, 0.0) )
+            {
+               result[e] = UNKNOWN;
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("strong prune deletes tree edge ");
+               graph_edge_printInfo(g, e);
+#endif
+               pcsubtreeDelete(g, neighbor, dfspos, result, connected);
+            }
+            else
+            {
+               profit += extension_profit;
+            }
+         }
+      }
+   }
+
+   return profit;
+}
+
+
+/** computes trivial solution and sets result edges */
+static inline
+void pcsolGetTrivialEdges(
+   const GRAPH*          g,                  /**< graph structure */
+   const STP_Bool*       connected,          /**< ST nodes */
+   int*                  result              /**< MST solution, which does not include artificial terminals */
+)
+{
+   const int root = g->source;
+   assert(!graph_pc_isRootedPcMw(g));
+
+#ifndef NEDBUG
+   for( int i = 0; i < g->edges; i++ )
+      assert(UNKNOWN == result[i]);
+#endif
+
+   for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+   {
+      const int head = g->head[a];
+      if( Is_term(g->term[head]) )
+      {
+         assert(connected[head]);
+         result[a] = CONNECT;
+      }
+   }
+}
 
 /** computes MST on marked graph and sets result edges */
 static inline
@@ -134,6 +273,8 @@ void pcsolMarkGraphNodes(
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
+   assert(g->extended);
+
    if( rpcmw )
    {
       for( int i = 0; i < nnodes; i++ )
@@ -174,6 +315,8 @@ void pcsolPrune(
    const int nnodes = graph_get_nNodes(g);
    int count;
 
+   SCIPdebugMessage("starting (simple) pruning \n");
+
    do
    {
       count = 0;
@@ -198,7 +341,13 @@ void pcsolPrune(
             {
                if( result[j] == CONNECT )
                {
-                  result[j] = -1;
+                  SCIPdebugMessage("prune delete vertex %d \n", i);
+#ifdef SCIP_DEBUG
+                  SCIPdebugMessage("prune delete edge ");
+                  graph_edge_printInfo(g, j);
+#endif
+
+                  result[j] = UNKNOWN;
                   g->mark[i] = FALSE;
                   connected[i] = FALSE;
                   count++;
@@ -219,8 +368,10 @@ void pcsolPrune(
       {
          int j;
          for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+         {
             if( result[j] == CONNECT )
                break;
+         }
 
          assert(j != EAT_LAST);
       }
@@ -232,7 +383,7 @@ void pcsolPrune(
 static
 void pcsolConnectDummies(
    const GRAPH*          g,                  /**< graph structure */
-   int                   root,               /**< root of solution */
+   int                   solroot,            /**< root of solution */
    int*                  result,             /**< MST solution, which does not include artificial terminals */
    STP_Bool*             connected           /**< ST nodes */
    )
@@ -245,46 +396,45 @@ void pcsolConnectDummies(
    {
       if( Is_term(g->term[i]) && i != g->source )
       {
-         int e1;
-         int e2;
+         const SCIP_Bool isFixedTerm = (rpcmw && g->mark[i]);
 
-         if( rpcmw && g->mark[i] )
+         assert(isFixedTerm == graph_pc_knotIsFixedTerm(g, i));
+         assert(isFixedTerm || g->grad[i] == 2);
+         assert(isFixedTerm || g->inpbeg[i] >= 0);
+
+         if( isFixedTerm )
          {
-            assert(g->prize[i] == FARAWAY && connected[i]);
+            assert(connected[i]);
+
             continue;
-         }
-
-         assert(!graph_pc_knotIsFixedTerm(g, i));
-         connected[i] = TRUE;
-
-         e1 = g->inpbeg[i];
-         assert(e1 >= 0);
-         e2 = g->ieat[e1];
-
-         if( e2 == EAT_LAST )
-         {
-            result[e1] = CONNECT;
          }
          else
          {
+            const int e1 = g->inpbeg[i];
+            const int e2 = g->ieat[e1];
             const int k1 = g->tail[e1];
             const int k2 = g->tail[e2];
 
-            assert(e2 >= 0);
+            connected[i] = TRUE;
+
+            assert(graph_pc_knotIsDummyTerm(g, i));
             assert(g->ieat[e2] == EAT_LAST);
             assert(k1 == g->source || k2 == g->source);
 
-            if( k1 != g->source && g->path_state[k1] == CONNECT )
+            if( k1 != g->source && g->mark[k1] )
                result[e1] = CONNECT;
-            else if( k2 != g->source && g->path_state[k2] == CONNECT )
+            else if( k2 != g->source && g->mark[k2] )
                result[e2] = CONNECT;
             else if( k1 == g->source )
                result[e1] = CONNECT;
             else if( k2 == g->source )
                result[e2] = CONNECT;
+
+            /* xor: exactly one of e1 and e2 is used */
+            assert((result[e1] != CONNECT) != (result[e2] != CONNECT));
          }
       }
-      else if( i == root && !rpcmw )
+      else if( i == solroot && !rpcmw )
       {
          int e1;
          for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
@@ -294,7 +444,13 @@ void pcsolConnectDummies(
          result[e1] = CONNECT;
       }
    }
+
+   if( !rpcmw )
+      connected[g->source] = TRUE;
+
+   assert(connected[g->source]);
 }
+
 
 /** Finds optimal prize-collecting Steiner tree on given tree. */
 static
@@ -302,17 +458,54 @@ SCIP_RETCODE strongPruneSteinerTreePc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
-   int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
+   int                   solroot,            /**< root of the solution */
+   int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
 )
 {
+   int* dfspos;
+   const int nnodes = graph_get_nNodes(g);
+   int dfscount = 0;
+   SCIP_Real profit;
+#ifndef NDEBUG
+   const int nsoledges = graph_solGetNedges(g, result);
+#endif
 
-   /* find best root */
+   assert(solroot >= 0);
+   assert(connected[solroot]);
+   assert(graph_pc_isPcMw(g));
+   assert(!graph_pc_knotIsDummyTerm(g, solroot));
+   assert(g->extended);
+
+   /* todo find best root? */
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dfspos, nnodes) );
+
+   BMSclearMemoryArray(dfspos, nnodes);
 
    /* compute the subtree */
+   profit = pcsubtreePruneForProfit(g, cost, solroot, dfspos, result, connected, &dfscount);
+
+   assert(nsoledges + 1 == dfscount);
+
+   if( LT(profit, 0.0) )
+   {
+      assert(!graph_pc_isRootedPcMw(g));
+      assert(!Is_anyTerm(g->term[solroot]));
+      assert(EQ(g->prize[solroot], 0.0));
+
+      // todo can this ever happen?
+      // if so, better have a flag here, because we dont wannt set edges to dummies here...
+      return SCIP_ERROR;
+//      SCIPdebugMessage("Best subtree is negative! Take empty solution \n");
+//      pcsolGetTrivialEdges(g, connected, result);
+   }
+
+   SCIPfreeBufferArray(scip, &dfspos);
 
    return SCIP_OKAY;
 }
+
 
 /** prune a Steiner tree in such a way that all leaves are terminals */
 static
@@ -427,52 +620,74 @@ SCIP_RETCODE pruneSteinerTreePc(
    STP_Bool*             connected           /**< ST nodes */
    )
 {
-   int root = g->source;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
-
-   assert(g != NULL && cost != NULL && result != NULL && connected != NULL);
-   assert(g->extended);
+   int solroot = g->source;
 
 #ifndef NEDBUG
-   for( int i = 0; i < g->edges; i++ )
+   int* result_dbg;
+   STP_Bool* connected_dbg;
+   const int nedges = graph_get_nEdges(g);
+   for( int i = 0; i < nedges; i++ )
       assert(UNKNOWN == result[i]);
 #endif
+
+   assert(scip && cost && result && connected);
+   assert(g->extended);
 
    pcsolMarkGraphNodes(connected, g);
 
    if( !rpcmw )
    {
-      root = pcsolGetRoot(scip, g, connected);
+      solroot = pcsolGetRoot(scip, g, connected);
 
       /* trivial solution? */
-      if( root == -1 )
+      if( solroot == -1 )
       {
          printf("trivial solution in pruning \n");
-         for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            const int head = g->head[a];
-            if( Is_term(g->term[head]) )
-            {
-               assert(connected[head]);
-               result[a] = CONNECT;
-            }
-         }
+
+         pcsolGetTrivialEdges(g, connected, result);
+
          return SCIP_OKAY;
       }
-
-      assert(g->mark[root]);
    }
 
-   assert(root >= 0);
-   assert(root < g->knots);
-   SCIPdebugMessage("(non-artificial) root=%d \n", root);
+   assert(0 <= solroot && solroot < g->knots);
+   assert(g->mark[solroot]);
+   SCIPdebugMessage("(non-artificial) solution root=%d \n", solroot);
 
-   SCIP_CALL( pcsolGetMstEdges(scip, g, cost, root, result) );
+   SCIP_CALL( pcsolGetMstEdges(scip, g, cost, solroot, result) );
 
-   pcsolConnectDummies(g, root, result, connected);
+#ifndef NDEBUG
+   for( int i = 0; i < g->knots; ++i )
+      assert((g->path_state[i] == CONNECT) == g->mark[i]);
 
-   /* simple pruning */
+   SCIP_CALL( SCIPallocBufferArray(scip, &result_dbg, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected_dbg, g->knots) );
+
+   BMScopyMemoryArray(result_dbg, result, nedges);
+   BMScopyMemoryArray(connected_dbg, connected, g->knots);
+#endif
+
+   // todo for MW write some unit checks and tests first!
+   if( graph_pc_isPc(g) )
+   {
+      SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
+   }
+
+   pcsolConnectDummies(g, solroot, result, connected);
+
+   /* simple pruning todo omit */
    pcsolPrune(g, result, connected);
+
+#ifndef NDEBUG
+   pcsolConnectDummies(g, solroot, result_dbg, connected_dbg);
+   pcsolPrune(g, result_dbg, connected_dbg);
+
+   assert(LE(graph_solGetObj(g, result, 0.0, nedges), graph_solGetObj(g, result_dbg, 0.0, nedges)));
+
+   SCIPfreeBufferArray(scip, &connected_dbg);
+   SCIPfreeBufferArray(scip, &result_dbg);
+#endif
 
    assert(graph_solIsValid(scip, g, result));
 
@@ -488,8 +703,8 @@ SCIP_RETCODE pruneSteinerTreePc(
 SCIP_RETCODE graph_solPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
+   int*                  result,             /**< ST edges (out) */
+   STP_Bool*             connected           /**< ST nodes (in/out) */
    )
 {
    const int nedges = graph_get_nEdges(g);
@@ -527,6 +742,8 @@ SCIP_RETCODE graph_solPrune(
       SCIP_CALL( pruneSteinerTreeStp(scip, g, g->cost, result, connected) );
    }
 
+   assert(graph_solIsValid(scip, g, result));
+
    return SCIP_OKAY;
 }
 
@@ -556,10 +773,11 @@ SCIP_RETCODE graph_solPruneFromEdges(
    )
 {
    STP_Bool* connected;
-   const int nedges = g->edges;
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
 
-   assert(scip && g && result);
+   assert(scip && result);
+   assert(graph_solIsValid(scip, g, result));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
@@ -567,11 +785,23 @@ SCIP_RETCODE graph_solPruneFromEdges(
       connected[k] = FALSE;
 
    for( int e = 0; e < nedges; e++ )
-     if( result[e] == CONNECT )
-     {
-        connected[g->tail[e]] = TRUE;
-        connected[g->head[e]] = TRUE;
-     }
+   {
+      if( CONNECT == result[e] )
+      {
+         connected[g->head[e]] = TRUE;
+         connected[g->tail[e]] = TRUE;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("prune from edges: \n");
+   graph_solPrint(g, result);
+#endif
+
+   if( graph_pc_isPcMw(g) )
+   {
+      int todo; // strong prune here and call from tm full!
+   }
 
    SCIP_CALL( graph_solPruneFromNodes(scip, g, result, connected) );
 
@@ -581,11 +811,12 @@ SCIP_RETCODE graph_solPruneFromEdges(
 }
 
 
-/** Prunes solution with respect to the provided edges costs. */
-SCIP_RETCODE graph_solPruneOnGivenCosts(
+/** Prunes solution with respect to the provided edges costs.
+ *  NOTE: method exists purely for optimization, so that unbiased costs for PC do not have to computed again! */
+SCIP_RETCODE graph_solPruneFromTmHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< (possibly biased) edge costs */
    int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
    )
@@ -775,6 +1006,11 @@ SCIP_Bool graph_solIsValid(
    assert(scip && result);
    assert(root >= 0);
 
+#ifndef NDEBUG
+   for( int e = 0; e < graph->edges; ++e )
+      assert(result[e] == CONNECT || result[e] == UNKNOWN);
+#endif
+
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &queue, nnodes) );
 
@@ -865,6 +1101,8 @@ SCIP_Bool graph_solIsValid(
             }
          }
       }
+
+      graph_solPrint(graph, result);
    }
 #endif
 
@@ -873,6 +1111,32 @@ SCIP_Bool graph_solIsValid(
 
    return (termcount == nterms);
 }
+
+
+/** prints given solution */
+void graph_solPrint(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            result              /**< solution array, indicating whether an edge is in the solution */
+   )
+{
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(result);
+
+   printf("solution tree edges: \n");
+
+   for( int e = 0; e < nedges; ++e )
+   {
+      assert(result[e] == CONNECT || result[e] == UNKNOWN);
+
+      if( CONNECT == result[e] )
+      {
+         printf("   ");
+         graph_edge_printInfo(graph, e);
+      }
+   }
+}
+
 
 /** mark endpoints of edges in given list */
 void graph_solSetNodeList(

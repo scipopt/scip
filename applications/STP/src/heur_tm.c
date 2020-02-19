@@ -375,7 +375,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
 
    /* cost will actually only be used for hop-constrained problem */
-   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -405,7 +405,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    else
       graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, costsAreBiased, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost_org, result, connected));
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, result, connected));
 
    return SCIP_OKAY;
 }
@@ -431,7 +431,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 
    graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL(graph_solPruneOnGivenCosts(scip, g, cost, result, connected));
+   SCIP_CALL(graph_solPruneFromTmHeur(scip, g, cost, result, connected));
 
    // todo prune from edges! and do strong pruning first there
 
@@ -573,7 +573,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    /* prune the tree */
-   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1150,7 +1150,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    }
 
    /* prune the ST, so that all leaves are terminals */
-   SCIP_CALL( graph_solPruneOnGivenCosts(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
