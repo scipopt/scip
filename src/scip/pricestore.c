@@ -450,7 +450,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                }
 
                /* add variable if feasibility is negative, i.e., the reduced costs are negative */
-               if( SCIPsetIsDualfeasNegative(set, feasibility) )
+               if( SCIPsetIsNegative(set, feasibility) )
                {
                   SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;
