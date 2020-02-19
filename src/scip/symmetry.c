@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  orbit,              /**< array in which the orbit should be stored */
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    )
-{
+{  /*lint --e{571}*/
    SCIP_Shortbool* varadded;
    int* varstotest;
    int nvarstotest;
@@ -369,7 +369,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e571*/
+            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e776*/
             {
                orbit[(*orbitsize)++] = image;
 

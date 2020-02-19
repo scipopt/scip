@@ -29,7 +29,7 @@
 static SCIP* scip;
 
 static
-void checkArraysEqual(int* expected, int* candidate, int length, char* name)
+void checkArraysEqual(int* expected, int* candidate, int length, const char* name)
 {
    int i;
 

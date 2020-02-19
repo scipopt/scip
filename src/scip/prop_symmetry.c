@@ -2699,10 +2699,10 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
       for (j = 0; j < npermvars; ++j)
       {
-         if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) )
+         if ( activevars != NULL && !SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) ) /*lint !e776*/
             continue;
 
-         assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) );
+         assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) ); /*lint !e776*/
 
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
@@ -2888,7 +2888,7 @@ SCIP_RETCODE chooseOrderOfGenerators(
  *  Note: The graph has to be undirected, i.e., each edge has to exist in both directions.
  */
 static
-SCIP_Bool isAcyclicGraph(
+SCIP_RETCODE isAcyclicGraph(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         graph,              /**< the graph to be checked */
    SCIP_Bool*            result              /**< buffer to store whether the graph is acyclic */
@@ -3311,10 +3311,10 @@ SCIP_RETCODE addOrbitopeSubgroup(
          int varidx;
 
          varidx = graphcomponents[compstart + l];
-         assert( !SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) );
+         assert( !SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) ); /*lint !e776*/
 
          SCIP_CALL( SCIPhashsetInsert(activevars, SCIPblkmem(scip),
-               (void*) (size_t) (varidx + 1)) );
+               (void*) (size_t) (varidx + 1)) ); /*lint !e776*/
       }
    }
    assert( SCIPhashsetGetNElements(activevars) == nrows * ncols );
@@ -3489,7 +3489,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int                   symgrpcompidx,      /**< index of the component of the symmetry group */
    int*                  naddedconss         /**< buffer to store the number of added constraints */
    )
-{
+{  /*lint --e{571}*/
    SCIP_HASHSET* usedvars;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2] = {1, -1};
@@ -3548,7 +3548,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
       {
          SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
-               (void*) (size_t) (graphcomponents[k]+1)) );
+               (void*) (size_t) (graphcomponents[k]+1)) ); /*lint !e776*/
       }
 
       SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
@@ -3947,8 +3947,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
          else
          {
             SCIPdebugMsg(scip, "      no useable orbitope found and no SBCs added\n");
+
             if ( propdata->addweaksbcs )
+            {
+               assert( chosencomppercolor != NULL );
                chosencomppercolor[j] = -1; /*lint !e613*/
+            }
          }
       }
 
