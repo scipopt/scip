@@ -426,14 +426,9 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
-   /* cost_org would also need to be added */
-   assert(0 && "currently not supported");
+   graph_path_st_pcmw_full(g, cost, dijkdist, dijkedge, start, connected);
 
-   graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
-
-   SCIP_CALL(graph_solPruneFromTmHeur(scip, g, cost, result, connected));
-
-   // todo prune from edges! and do strong pruning first there
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1167,8 +1162,7 @@ void initCostsAndPrioLP(
    const SCIP_Real*      xval,               /**< xval */
    SCIP_Real*            nodepriority,       /**< node priority (uninitialized) */
    SCIP_Real*            prize,              /**< prize (uninitialized) or NULL */
-   SCIP_Real*            cost,               /**< arc costs (uninitialized) */
-   SCIP_Real*            maxcost_p           /**< maximum cost for DHPCSTP */
+   SCIP_Real*            cost                /**< arc costs (uninitialized) */
 )
 {
    SCIP_Bool partrand = FALSE;
@@ -1226,8 +1220,7 @@ void initCostsAndPrioLP(
             const SCIP_Real randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
             cost[e] = cost[e] * randval;
          }
-         if( cost[e] < BLOCKED && cost[e] > *maxcost_p )
-            *maxcost_p = cost[e];
+
          assert(SCIPisGE(scip, cost[e], 0.0));
       }
    }
@@ -1474,7 +1467,6 @@ static
 SCIP_RETCODE dhcstpWarmUp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int*                  result,             /**< result */
    SCIP_Real*            hopfactor,          /**< (int/out) */
@@ -1492,11 +1484,20 @@ SCIP_RETCODE dhcstpWarmUp(
    SCIP_Real besthopfactor = -1.0;
    const int nedges = graph_get_nEdges(graph);
    const int root = graph->source;
+   SCIP_Real maxcost = FARAWAY;
 
    assert(hopfactor && success);
    assert(SCIPisGT(scip, (*hopfactor), 0.0));
    assert(*success == FALSE);
    assert(graph->stp_type == STP_DHCSTP);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( GT(cost[e], maxcost) && LT(cost[e], BLOCKED) )
+         maxcost = cost[e];
+   }
+
+   assert(LT(maxcost, FARAWAY));
 
    lhopfactor = *hopfactor;
 
@@ -2423,7 +2424,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Real*            costrev,            /**< reversed arc costs */
    SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
    SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
    SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
    )
@@ -2574,14 +2574,11 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
-      if( SCIPisLE(scip, maxcost, 0.0) )
-         maxcost = 1.0;
-
       if( graph->stp_type == STP_DHCSTP )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &orgcost, nedges) );
 
-         SCIP_CALL( dhcstpWarmUp(scip, graph, maxcost, best_result, result, hopfactor, &minobj, dijkdist, dijkedge,
+         SCIP_CALL( dhcstpWarmUp(scip, graph, best_result, result, hopfactor, &minobj, dijkdist, dijkedge,
                connected, cost, costrev, orgcost, success) );
       }
 
@@ -2722,7 +2719,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP_Real* prize = NULL;
    SCIP_Real* cost = NULL;
    SCIP_Real* costrev = NULL;
-   SCIP_Real maxcost = 0.0;
    SCIP_Real randupper;
    SCIP_Real randlower;
    const int nnodes = graph_get_nNodes(graph);
@@ -2779,8 +2775,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
          {
             if( SCIPvarGetUbGlobal(vars[e]) < 0.5 && SCIPvarGetUbGlobal(vars[flipedge_Uint(e)]) < 0.5 )
                cost[e] = BLOCKED;
-            else if( SCIPisGT(scip, cost[e], maxcost) && SCIPisLT(scip, cost[e], FARAWAY) )
-               maxcost = cost[e];
          }
       }
       else
@@ -2806,7 +2800,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    else
    {
       SCIP_CALL(SCIPallocBufferArray(scip, &nodepriority, nnodes));
-      initCostsAndPrioLP(scip, heurdata, vars, graph, randupper, randlower, xval, nodepriority, prize, cost, &maxcost);
+      initCostsAndPrioLP(scip, heurdata, vars, graph, randupper, randlower, xval, nodepriority, prize, cost);
    } /* xval != NULL */
 
 
@@ -2830,7 +2824,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    heurdata->pcmwbias = 1;
 
    /* build a Steiner tree */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, success, FALSE));
+   SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success, FALSE));
 
    heurdata->pcmwbias = save;
 

@@ -59,7 +59,6 @@ SCIP_RETCODE computeSteinerTree(
    )
 {
    int* starts = NULL;
-   SCIP_Real maxcost = 0.0;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    int runs;
    SCIP_Real obj;
@@ -86,15 +85,7 @@ SCIP_RETCODE computeSteinerTree(
 
    runs = MIN(runs, BND_TMHEUR_NRUNS);
 
-   if( graph->stp_type == STP_DHCSTP )
-   {
-      for( int e = 0; e < nedges; ++e )
-      {
-         if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
-            maxcost = graph->cost[e];
-      }
-   }
-   else if( !pcmw )
+   if( !pcmw )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &starts, nnodes) );
       SCIPStpHeurTMCompStarts(graph, starts, &runs);
@@ -107,7 +98,7 @@ SCIP_RETCODE computeSteinerTree(
       graph_get_edgeCosts(graph, cost, costrev);
    }
 
-   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, maxcost, success, FALSE));
+   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, success, FALSE));
 
    if( pcmw )
    {
@@ -750,7 +741,6 @@ SCIP_RETCODE reduce_boundPrune(
    SCIP_Real bound;
    SCIP_Real tmpcost;
    SCIP_Real mstobj;
-   SCIP_Real maxcost;
    SCIP_Real radiim2;
    SCIP_Real radiim3;
    const int root = graph->source;
@@ -786,16 +776,12 @@ SCIP_RETCODE reduce_boundPrune(
       return SCIP_OKAY;
 
    /* initialize cost and costrev array */
-   maxcost = 0.0;
    for( int e = 0; e < nedges; e++ )
    {
       cost[e] = graph->cost[e];
       costrev[e] = graph->cost[flipedge(e)];
 
       assert(SCIPisGE(scip, cost[e], 0.0));
-
-      if( graph->stp_type == STP_DHCSTP && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
-         maxcost = graph->cost[e];
    }
 
    if( !pcmw )
@@ -1561,7 +1547,6 @@ SCIP_RETCODE reduce_boundHopRc(
    SCIP_Real min;
    SCIP_Real bound;
    SCIP_Real maxmin;
-   SCIP_Real maxcost;
    SCIP_Real tmpcost;
    SCIP_Real hopfactor;
    int* result;
@@ -1594,7 +1579,7 @@ SCIP_RETCODE reduce_boundHopRc(
    nnodes = graph->knots;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-   maxcost = 0.0;
+
    if( fix )
    {
       vars = SCIPprobdataGetVars(scip);
@@ -1611,9 +1596,6 @@ SCIP_RETCODE reduce_boundHopRc(
          else
          {
             costrev[e] = graph->cost[e + 1];
-
-            if( SCIPisGT(scip, costrev[e], maxcost) && SCIPisLT(scip, costrev[e], BLOCKED) )
-               maxcost = costrev[e];
          }
          cost[e + 1] = costrev[e];
          if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
@@ -1623,9 +1605,6 @@ SCIP_RETCODE reduce_boundHopRc(
          else
          {
             costrev[e + 1] = graph->cost[e];
-
-            if( SCIPisGT(scip, graph->cost[e], maxcost) && SCIPisLT(scip, costrev[e + 1], BLOCKED) )
-               maxcost = graph->cost[e];
          }
          cost[e] = costrev[e + 1];
       }
@@ -1637,8 +1616,6 @@ SCIP_RETCODE reduce_boundHopRc(
          result[e] = UNKNOWN;
          cost[e] = graph->cost[e];
          costrev[e] = graph->cost[flipedge(e)];
-         if( SCIPisGT(scip, graph->cost[e], maxcost) )
-            maxcost = graph->cost[e];
       }
    }
 
@@ -1681,7 +1658,7 @@ SCIP_RETCODE reduce_boundHopRc(
       tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
       /* compute UB */
-      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, NULL, result, 50, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, NULL, result, 50, root, cost, costrev, &hopfactor, NULL, &success, FALSE) );
 
       objval = 0.0;
       for( e = 0; e < nedges; e++ )

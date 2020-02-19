@@ -507,7 +507,6 @@ inline static void correct(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 inline static void correctX(
-   SCIP* scip,
    int* heap,
    int* state,
    int* count,    /* pointer to store the number of elements on the heap */
@@ -666,7 +665,6 @@ void heap_add(
 
 
 inline static void resetX(
-   SCIP* scip,
    SCIP_Real* pathdist,
    int* heap,
    int* state,
@@ -858,7 +856,7 @@ void stPcmwConnectNode(
    for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
    {
       connected[node] = TRUE;
-      resetX(scip, pathdist, g->path_heap, g->path_state, count, node, 0.0);
+      resetX(pathdist, g->path_heap, g->path_state, count, node, 0.0);
 
       if( Is_pseudoTerm(g->term[node]) )
       {
@@ -2329,7 +2327,7 @@ void graph_path_execX(
             m = g->head[i];
 
             if( state[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[i])) )
-               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, i, cost[i]);
+               correctX(heap, state, &count, pathdist, pathedge, m, k, i, cost[i]);
          }
       }
    }
@@ -2406,7 +2404,7 @@ void graph_path_invroot(
             m = g->tail[i];
 
             if( state[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[i])) )
-               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, i, cost[i]);
+               correctX(heap, state, &count, pathdist, pathedge, m, k, i, cost[i]);
          }
       }
    }
@@ -2636,7 +2634,7 @@ void graph_path_st(
                assert(!Is_term(g->term[node]));
 
                connected[node] = TRUE;
-               resetX(scip, pathdist, heap, state, &count, node, 0.0);
+               resetX(pathdist, heap, state, &count, node, 0.0);
             }
 
             /* have all terminals been reached? */
@@ -2653,7 +2651,7 @@ void graph_path_st(
 
             /* is m not connected, allowed and closer (as close)? */
             if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
-               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+               correctX(heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }
@@ -2782,7 +2780,7 @@ void graph_path_st_pcmw(
 
             /* is m not connected, allowed and closer? */
             if( g->mark[m] && !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) )
-               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+               correctX(heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       } /* while( count > 0 ) */
    } /* nnodes > 1*/
@@ -2844,7 +2842,6 @@ void graph_path_st_pcmw_reduce(
  *  Note that this function overwrites g->mark.
  *  */
 void graph_path_st_pcmw_full(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
@@ -2856,15 +2853,12 @@ void graph_path_st_pcmw_full(
    int* const heap = g->path_heap;
    int* const state = g->path_state;
    const int nnodes = g->knots;
+   const int nterms = graph_pc_isRootedPcMw(g) ? g->terms : g->terms - 1;
 
-   assert(pathdist   != NULL);
-   assert(pathedge   != NULL);
-   assert(g      != NULL);
    assert(start  >= 0);
    assert(start  <  g->knots);
-   assert(cost   != NULL);
-   assert(connected != NULL);
-   assert(graph_pc_isPcMw(g) && !graph_pc_isRootedPcMw(g));
+   assert(graph_pc_isPcMw(g));
+   assert(g->extended);
 
    /* initialize */
    for( int k = nnodes - 1; k >= 0; --k )
@@ -2881,25 +2875,25 @@ void graph_path_st_pcmw_full(
 
    if( nnodes > 1 )
    {
-      int count = 1;
-      int nterms = 0;
+      int heapsize = 1;
+      int termscount = 0;
 
       /* add start vertex to heap */
-      heap[count] = start;
-      state[start] = count;
+      heap[heapsize] = start;
+      state[start] = heapsize;
 
-      if( Is_pseudoTerm(g->term[start]) )
-         nterms++;
+      if( Is_term(g->term[start]) || Is_pseudoTerm(g->term[start]) )
+         termscount++;
 
       /* repeat until heap is empty */
-      while( count > 0 )
+      while( heapsize > 0 )
       {
          /* get closest node */
-         const int k = nearestX(heap, state, &count, pathdist);
+         const int k = nearestX(heap, state, &heapsize, pathdist);
          state[k] = UNKNOWN;
 
-         /* if k is unconnected positive vertex, connect its path to current subtree */
-         if( !connected[k] && Is_pseudoTerm(g->term[k]) )
+         /* if k is unconnected proper terminal, connect its path to current subtree */
+         if( !connected[k] && (Is_term(g->term[k]) || Is_pseudoTerm(g->term[k])) )
          {
             connected[k] = TRUE;
             pathdist[k] = 0.0;
@@ -2909,29 +2903,27 @@ void graph_path_st_pcmw_full(
 
             for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
             {
-               assert(!Is_anyTerm(g->term[node]));
-
                connected[node] = TRUE;
-               resetX(scip, pathdist, heap, state, &count, node, 0.0);
+               resetX(pathdist, heap, state, &heapsize, node, 0.0);
 
                assert(pathedge[node] != -1);
             }
 
             /* have all terminals been reached? */
-            if( ++nterms == g->terms - 1 )
+            if( ++termscount == nterms )
                break;
          }
 
          /* update adjacent vertices */
-         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
          {
-            int m = g->head[e];
+            const int m = g->head[e];
 
             assert(state[m]);
 
             /* is m not connected, allowed and closer (as close)? */
-            if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
-               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+            if( !connected[m] && g->mark[m] && GT(pathdist[m], (pathdist[k] + cost[e])) )
+               correctX(heap, state, &heapsize, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }
@@ -3321,7 +3313,7 @@ void graph_path_st_rpcmw(
                assert(g->mark[node]);
 
                connected[node] = TRUE;
-               resetX(scip, pathdist, heap, state, &count, node, 0.0);
+               resetX(pathdist, heap, state, &count, node, 0.0);
 
                if( Is_pseudoTerm(g->term[node]) )
                {
@@ -3356,7 +3348,7 @@ void graph_path_st_rpcmw(
 
             /* is m not connected, allowed and closer (as close)? */
             if( !connected[head] && g->mark[head] && pathdist[head] > (pathdist[k] + cost[e]) )
-               correctX(scip, heap, state, &count, pathdist, pathedge, head, k, e, cost[e]);
+               correctX(heap, state, &count, pathdist, pathedge, head, k, e, cost[e]);
          }
       }
    }

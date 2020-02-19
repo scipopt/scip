@@ -364,7 +364,6 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_Real* costrev;
    SCIP_Real* orgprize = NULL;
    SCIP_Real* nodepriority;
-   SCIP_Real maxcost;
    const int nsolnodes = solgraph->knots;
    const int nsoledges = solgraph->edges;
    const int probtype = graph->stp_type;
@@ -392,7 +391,6 @@ SCIP_RETCODE computeReducedProbSolution(
    /* copy edge costs */
    BMScopyMemoryArray(cost, solgraph->cost, nsoledges);
 
-   maxcost = 0.0;
    for( int e = 0; e < nsoledges; e++ )
    {
       IDX* curr;
@@ -431,9 +429,6 @@ SCIP_RETCODE computeReducedProbSolution(
       nodepriority[solgraph->tail[e]] += avg - 1.0;
 
       cost[e] *= edgecostmultiplier(scip, heurdata, avg);
-
-      if( probtype == STP_DHCSTP && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
-         maxcost = cost[e];
    }
 
    /* adapted prizes */
@@ -484,7 +479,7 @@ SCIP_RETCODE computeReducedProbSolution(
 
       /* run TM heuristic */
       SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, solgraph, NULL, NULL, soledges, heurdata->ntmruns,
-         solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
+         solgraph->source, cost, costrev, &hopfactor, nodepriority, &success, FALSE) );
 
       assert(SCIPisStopped(scip) || success);
       assert(SCIPisStopped(scip) || graph_solIsValid(scip, solgraph, soledges));
@@ -1761,7 +1756,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* compute Steiner tree to obtain upper bound */
    SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost,
-         newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
+         newgraph->cost, &dummy, NULL, success, FALSE) );
 
    graph_path_exit(scip, newgraph);
 

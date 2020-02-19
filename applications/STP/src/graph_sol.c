@@ -798,11 +798,6 @@ SCIP_RETCODE graph_solPruneFromEdges(
    graph_solPrint(g, result);
 #endif
 
-   if( graph_pc_isPcMw(g) )
-   {
-      int todo; // strong prune here and call from tm full!
-   }
-
    SCIP_CALL( graph_solPruneFromNodes(scip, g, result, connected) );
 
    SCIPfreeBufferArray(scip, &connected);
