@@ -1772,48 +1772,78 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
-         SCIP_SOL* debugsol;
          SCIP_Real lhsval;
          SCIP_Real rhsval;
          SCIP_Real disvarval;
+         int termstart;
          int nterms;
          int i;
+         int k;
 
-         SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+         /*  the debugsolution value of the disaggregation variables is set to
+          *      (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1})
+          *  or                 gamma / (v_{n+1}^T x + beta_{n+1}).
+          */
 
-         if( debugsol != NULL )
+         nterms = (*nlhdlrexprdata)->nterms;
+         rhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
+
+         /* set value of rhs */
+         termstart = nlhdlrexprdata->termbegins[nterms-1];
+         rhsval = nlhdlrexprdata->offsets[nterms-1];
+
+         for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
          {
-            nterms = (*nlhdlrexprdata)->nterms;
-            rhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, nterms-1);
+            SCIP_VAR* var;
+            SCIP_Real varval;
 
-            for( i = 0; i < nterms - 1; ++i )
+            var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i];
+
+            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval]) );
+            rhsval += nlhdlrexprdata->transcoefs[termstart + i] * varval;
+         }
+
+         if( SCIPisZero(scip, rhsval) )
+         {
+            for( i = 0; i < nterms; ++i )
             {
-               if( SCIPisZero(scip, rhsval) )
-                  disvarval = 0.0;
-               else
-               {
-                  lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
+               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], 0.0) );
+            }
+         }
+         else
+         {
+            /* set value for each disaggregation variable corresponding to quadratic term */
+            for( k = 0; k < nterms - 1; ++k )
+            {
+               lhsval = evalSingleTerm(scip, *nlhdlrexprdata, debugsol, i);
 
-                  disvarval = SQR(lhsval) / rhsval;
+               termstart = nlhdlrexprdata->termbegins[k];
+               lhsval = nlhdlrexprdata->offsets[k];
+
+               for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+               {
+                  SCIP_VAR* var;
+                  SCIP_Real varval;
+
+                  var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i];
+
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval]) );
+                  rhsval += nlhdlrexprdata->transcoefs[termstart + i] * varval;
                }
-               /* store debug solution value of disaggregation variable
-                * assumes that expression has been evaluated in debug solution before
-                */
+
+               disvarval = SQR(lhsval) / rhsval;
+
                SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[i], disvarval) );
             }
 
+            /* set value for disaggregation variable corresponding to constant */
             if( !SCIPisZero(scip, (*nlhdlrexprdata)->constant) )
             {
-               if( SCIPisZero(scip, rhsval) )
-                  disvarval = 0.0;
-               else
-                  disvarval = (*nlhdlrexprdata)->constant / rhsval;
+               disvarval = (*nlhdlrexprdata)->constant / rhsval;
 
                SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[nterms-1], disvarval) );
             }
          }
-         else
-            SCIPwarningMessage(scip, "could not set debug solution values for disaggregation variables, since no debugsolution was found\n");
       }
 #endif
    }
