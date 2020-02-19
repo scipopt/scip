@@ -351,7 +351,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS		+=	-DSCIP_WITH_PAPILO -I$(LIBDIR)/include/papilo/external/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS		+=	-DSCIP_WITH_PAPILO -isystem $(LIBDIR)/include/papilo/external/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
 SOFTLINKS	+=	$(LIBDIR)/include/papilo
 LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO library directory\n"
 endif
