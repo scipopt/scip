@@ -309,7 +309,7 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
       if [ "${MODE}" == "debug" ]; then
         ./evalcheck_cluster.sh -E ${EVALFILE} > ${OUTPUT}
       else
-        ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
+        ./evalcheck_cluster.sh -U ${EVALFILE} > ${OUTPUT}
       fi
       NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
       if [ "${SOPLEX_HASH}" != "" ]; then
@@ -496,9 +496,16 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   while [ "${COUNT_S}" -le "${SEEDSBND}" ]; do
     COUNT_P=0
     while [ "${COUNT_P}" -le "${PERMUTEBND}" ]; do
-      RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
+      if [ "${MODE}" = "debug" ]; then
+        RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
+      else
+        RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
+      fi
       if [ "${RBDB_STRS}" != "" ]; then
-        if [ "${MODE}" = "debug" ] || [ 2 -le $(echo "${RBDB_STRS}" |wc -l) ]; then
+        if [ "${MODE}" = "debug" ]; then
+          COMPAREIDS="${COMPAREIDS}
+${RBDB_STRS}"
+        elif [ 2 -le $(echo "${RBDB_STRS}" |wc -l) ]; then
           COMPAREIDS="${COMPAREIDS}
 ${RBDB_STRS}"
         fi

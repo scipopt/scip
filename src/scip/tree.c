@@ -1824,6 +1824,19 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_Real oldlb;
    SCIP_Real oldub;
    SCIP_Real oldbound;
+   SCIP_Bool useglobal;
+
+   useglobal = (int) node->depth <= tree->effectiverootdepth;
+   if( useglobal )
+   {
+      oldlb = SCIPvarGetLbGlobal(var);
+      oldub = SCIPvarGetUbGlobal(var);
+   }
+   else
+   {
+      oldlb = SCIPvarGetLbLocal(var);
+      oldub = SCIPvarGetUbLocal(var);
+   }
 
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
@@ -1838,6 +1851,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
+   assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub)));
 
    SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -1858,7 +1873,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   if( (int) node->depth <= tree->effectiverootdepth )
+   /* the variable may have changed, make sure we have the correct bounds */
+   if( useglobal )
    {
       oldlb = SCIPvarGetLbGlobal(var);
       oldub = SCIPvarGetUbGlobal(var);
@@ -1874,7 +1890,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       /* adjust lower bound w.r.t. to integrality */
       SCIPvarAdjustLb(var, set, &newbound);
-      assert(SCIPsetIsGT(set, newbound, oldlb));
       assert(SCIPsetIsFeasLE(set, newbound, oldub));
       oldbound = oldlb;
       newbound = MIN(newbound, oldub);
@@ -1892,7 +1907,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* adjust the new upper bound */
       SCIPvarAdjustUb(var, set, &newbound);
-      assert(SCIPsetIsLT(set, newbound, oldub));
       assert(SCIPsetIsFeasGE(set, newbound, oldlb));
       oldbound = oldub;
       newbound = MAX(newbound, oldlb);
@@ -1904,6 +1918,13 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
+
+   /* after switching to the active variable, the bounds might become redundant
+    * if this happens, ignore the bound change
+    */
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && !SCIPsetIsGT(set, newbound, oldlb))
+       || (boundtype == SCIP_BOUNDTYPE_UPPER && !SCIPsetIsLT(set, newbound, oldub)) )
+      return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, " -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
       SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
