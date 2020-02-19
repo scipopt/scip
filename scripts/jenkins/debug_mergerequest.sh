@@ -20,8 +20,15 @@
 # TESTMODE  | ""                                       | minlp, short
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="minlp"}
+: ${TESTMODE:=""}
 : ${GITBRANCH:=${gitlabTargetBranch}}
+
+if [ "${gitlabTriggerPhrase}" != "" ]; then
+  TESTMODE=$(echo $gitlabTriggerPhrase | cut -f3 -d " ") # get third field (testset)
+else
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
+fi
 
 ORIGBRANCH=${GITBRANCH}
 

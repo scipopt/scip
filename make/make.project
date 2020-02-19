@@ -516,7 +516,7 @@ endif
 
 ifeq ($(PAPILO),true)
 LDFLAGS		+=	-l:libtbb.so.2
-CXXFLAGS	+=	-std=c++14 -Wno-shadow -Wno-implicit-fallthrough -Wno-unused-variable -Wno-ctor-dtor-privacy
+CXXFLAGS	+=	-std=c++14
 endif
 
 #-----------------------------------------------------------------------------
