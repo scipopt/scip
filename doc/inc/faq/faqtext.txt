@@ -599,7 +599,7 @@ SECTION: Using SCIP as a standalone solver
         the search.
         In particular open nodes that are pruned from the search tree when a new and better incumbent solution becomes available,
         are unaccounted for.
-        Several of the estimation methods rely on counting also these pruned nodes, such that the estimation tree is infact
+        Several of the estimation methods rely on counting also these pruned nodes, such that the estimation tree is in fact
         a binary tree at all steps. Every pruned node is counted as a solved node by the estimation tree.
         Because of this discrepancy how nodes are counted, the estimation tree may contain more nodes than the actual search tree.
         Note that the estimation tree is not stored explicitly in memory, but only represented by a constant number of
