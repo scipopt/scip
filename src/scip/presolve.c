@@ -1154,6 +1154,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       if( issetvar[varidx] < 0 )
       {
          SCIP_VAR** probvars;
+         int probidx;
 
          SCIPdebugMsg(scip, "marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
 
@@ -1173,17 +1174,10 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             if( implidx[w] == countnonzeros[ncountnonzeros-1] && counts[implidx[w]] == 0 )
                --ncountnonzeros;
 
+            probidx = implidx[w] < nprobvars ? implidx[w] : implidx[w] - nprobvars;
             /* only for non-binary variables we need to correct the bounds */
-            if( implidx[w] < nprobvars )
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w]]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w]] = lastbounds[w];
-            }
-            else
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w] - nprobvars]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w] - nprobvars] = lastbounds[w];
-            }
+            if( !SCIPvarIsBinary(probvars[probidx]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
+               newbounds[implidx[w]] = lastbounds[w];
          }
 
          reducedset = TRUE;

@@ -74,11 +74,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
-#define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
-#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+#define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
@@ -661,11 +661,16 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
-#ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (link coming soon) [GitHash: {}]", PAPILO_GITHASH);
+#if defined(PAPILO_VERSION_TWEAK) && PAPILO_VERSION_TWEAK != 0
+   String name = fmt::format("PaPILO {}.{}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH, PAPILO_VERSION_TWEAK);
 #else
-   String desc("parallel presolve for integer and linear optimization (link coming soon)");
+   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
+#endif
+
+#ifdef PAPILO_GITHASH_AVAILABLE
+   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO) [GitHash: {}]", PAPILO_GITHASH);
+#else
+   String desc("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO)");
 #endif
 
    /* add external code info for the presolve library */
