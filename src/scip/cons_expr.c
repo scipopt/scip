@@ -254,7 +254,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
-   char                     branchmethod;    /**< branching method */
+   SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
    SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if at least this factor times the maximal branching score */
    SCIP_Real                branchviolweight;/**< weight by how much to consider the violation assigned to a variable for its branching score */
@@ -6217,17 +6217,17 @@ SCIP_Real getWeightedBranchscore(
    return score;
 }
 
-/** branch on a variable in a largely violated constraint */
+/** do branching or register branching candidates */
 static
-SCIP_RETCODE branchConstraintInfeasibility(
+SCIP_RETCODE branching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
-   SCIP_CONS**           conss,              /**< constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   SCIP_Real             maxrelconsviol,     /**< maximal scaled violation among all expr-constraints */
-   SCIP_SOL*             sol,                /**< solution */
-   unsigned int          soltag,             /**< solution tag */
-   SCIP_RESULT*          result              /**< buffer to store result: didnotfind, branched, or reduceddom */
+   SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_RESULT*          result              /**< pointer to store the result of branching */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6251,6 +6251,18 @@ SCIP_RETCODE branchConstraintInfeasibility(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->branchexternal )
+   {
+      /* just register branching candidates as external */
+      SCIP_Bool success;
+
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &success) );
+      if( success )
+         *result = SCIP_INFEASIBLE;
+
+      return SCIP_OKAY;
+   }
 
    if( SCIPgetConsExprBranchAux(conshdlr) )
    {
@@ -6390,18 +6402,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
    if( ncands == 0 )  /* no unfixed branching candidate in all violated constraint - that's bad :-( */
       goto TERMINATE;
 
-   if( conshdlrdata->branchmethod == 'd' )
-   {
-      /* register all candidates (after we filtered for higher violated constraints) as external branching candidates */
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " registering %d branching candidates as external branching candidates\n", ncands); )
-      for( c = 0; c < ncands; ++c )
-      {
-         SCIP_CALL( SCIPaddExternBranchCand(scip, SCIPgetConsExprExprAuxVar(cands[c]), candscores[c], SCIP_INVALID) );
-      }
-      *result = SCIP_INFEASIBLE;
-      goto TERMINATE;
-   }
-
    if( ncands > 1 )
    {
       /* if more than one candidate, then sort by score */
@@ -6463,61 +6463,6 @@ SCIP_RETCODE branchConstraintInfeasibility(
  TERMINATE:
    SCIPfreeBufferArray(scip, &candscores);
    SCIPfreeBufferArray(scip, &cands);
-
-   return SCIP_OKAY;
-}
-
-/** helper function to do or prepare branching */
-static
-SCIP_RETCODE branching(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to process */
-   int                   nconss,             /**< number of constraints */
-   SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
-   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
-   SCIP_RESULT*          result              /**< pointer to store the result of branching */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   switch( conshdlrdata->branchmethod )
-   {
-      case 'e' :
-      {
-         SCIP_Bool success;
-
-         SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &success) );
-         if( success )
-            *result = SCIP_INFEASIBLE;
-
-         break;
-      }
-
-      case 'd' :
-      case 'c' :
-      {
-         SCIP_CALL( branchConstraintInfeasibility(scip, conshdlr, conss, nconss, maxrelconsviol, sol, soltag, result) );
-
-         break;
-      }
-
-      default :
-      {
-         SCIPerrorMessage("Unknown branching method '%c'\n", conshdlrdata->branchmethod);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -14396,9 +14341,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "whether to allow branching on auxiliary variables (variables added for extended formulation)",
          &conshdlrdata->branchaux, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/method",
-         "method on how to branch: register 'e'xtern branching candidates, choose variable in largely violated 'c'onstraint, register only variables in largely violated constraints as external can'd'idates",
-         &conshdlrdata->branchmethod, FALSE, 'e', "cde", NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branching/external",
+         "whether to use external branching candidates and branching rules for branching",
+         &conshdlrdata->branchexternal, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highviolfactor",
          "consider a constraint highly violated if at least this factor times the maximal violation",
