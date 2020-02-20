@@ -5973,10 +5973,16 @@ SCIP_Real getWeightedBranchscore(
       /* get domain width, taking infinity at 1e20 on purpose */
       domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
 
-      /* make domain score large (up to 20=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
+      /* first make domain score large (up to 20=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
        * and small (minimum 0=log(1)) for a domain width around 1
        */
-      onescore = log10(domainwidth) + log10(1.0/MAX(SCIPepsilon(scip), domainwidth));  /*lint !e666*/
+      if( domainwidth >= 1.0 )
+         onescore = log10(domainwidth);
+      else
+         onescore = log10(1.0/MAX(SCIPepsilon(scip), domainwidth));  /*lint !e666*/
+      /* now invert to have scores around 1 for widths round 0 and a score closer to 0 for large widths */
+      onescore = 1.0/onescore;
+      /* score /= onescore ??? */
       score += conshdlrdata->branchdomainweight * onescore;
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(domain)", conshdlrdata->branchdomainweight, onescore); )
