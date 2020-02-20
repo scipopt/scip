@@ -671,11 +671,14 @@ SCIP_RETCODE freeSymmetryData(
    /*  release variables */
    if ( propdata->npermvars > 0 )
    {
-      assert( propdata->binvaraffected || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
+      assert( propdata->binvaraffected || ! propdata->detectsubgroups || ! propdata->onlybinsubgroups );
 
-      for (i = 0; i < propdata->nbinpermvars; ++i)
+      if ( propdata->binvaraffected )
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         for (i = 0; i < propdata->nbinpermvars; ++i)
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         }
       }
 
       if ( propdata->detectsubgroups && ! propdata->onlybinsubgroups )
