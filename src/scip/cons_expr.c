@@ -6491,44 +6491,6 @@ SCIP_RETCODE branching(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-#ifndef NDEBUG
-   if( !SCIPgetConsExprBranchAux(conshdlr) )
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_CONSEXPR_ITERATOR* it;
-      SCIP_CONSEXPR_EXPR* expr;
-      int c;
-
-      /* check that no auxiliary variable has branching scores */
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-      for( c = 0; c < nconss; ++c )
-      {
-         assert(conss != NULL);
-         assert(conss[c] != NULL);
-
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
-         /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
-         if( !isConsViolated(scip, conss[c]) )
-            continue;
-
-         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-         {
-            /* skip if current expression does not have a valid branching score */
-            if( expr->brscoretag != conshdlrdata->enforound )
-               break;
-
-            assert(SCIPisConsExprExprVar(expr));
-         }
-      }
-
-      SCIPexpriteratorFree(&it);
-   }
-#endif
-
    switch( conshdlrdata->branchmethod )
    {
       case 'e' :
@@ -13194,6 +13156,12 @@ void SCIPaddConsExprExprBranchScore(
    assert(branchscore >= 0.0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if not allowing to branch on auxvars, then expr must be a var-expr */
+   assert(SCIPgetConsExprBranchAux(conshdlr) || expr->exprhdlr == conshdlrdata->exprvarhdlr);
+   /* if allowing to branch on auxvars, then expr must be a var-expr or have an auxvar */
+   assert(!SCIPgetConsExprBranchAux(conshdlr) || (expr->exprhdlr == conshdlrdata->exprvarhdlr || expr->auxvar != NULL));
 
    /* reset branching score if we are in a different enfo round */
    if( expr->brscoretag != conshdlrdata->enforound )
