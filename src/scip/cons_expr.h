@@ -858,9 +858,10 @@ void SCIPincrementConsExprCurBoundsTag(
 
 /** adds branching score to an expression
  *
- * Adds a score to the expression-specific branching score.
- * In an expression with children, the scores are distributed to its children.
- * In an expression that is a variable, the score may be used to identify a variable for branching.
+ * Adds a score to the expression-specific branching score, thereby marking it as branching candidate.
+ * The expression must either be a variable expression or have an aux-variable.
+ * In the latter case, branching on auxiliary variables must have been enabled.
+ * In case of doubt, use SCIPaddConsExprExprsBranchScore().
  */
 SCIP_EXPORT
 void SCIPaddConsExprExprBranchScore(
@@ -868,6 +869,22 @@ void SCIPaddConsExprExprBranchScore(
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
    SCIP_Real               branchscore       /**< branching score to add to expression */
+   );
+
+/** adds branching score to a set of expressions, thereby distributing the score
+ *
+ * Each expression must either be a variable expression or have an aux-variable.
+ * If branching on aux-variables is disabled, then finds original variables first.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
+   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
    );
 
 /** adds branching score to children of expression for given auxiliary variables

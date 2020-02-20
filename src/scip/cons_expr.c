@@ -5655,6 +5655,178 @@ SCIP_RETCODE initSepa(
    return SCIP_OKAY;
 }
 
+/** adds branching score to a set of expressions, thereby distributing the score
+ *
+ * Each expression must either be a variable expression or have an aux-variable.
+ */
+static
+void addConsExprExprsBranchScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
+   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real weight;
+   SCIP_Real weightsum = 0.0; /* sum of weights over all candidates with bounded domain */
+   int nunbounded = 0;  /* number of candidates with unbounded domain */
+   int i;
+
+   assert(exprs != NULL);
+   assert(nexprs > 0);
+   assert(success != NULL);
+
+   if( nexprs == 1 )
+   {
+      SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[0], branchscore);
+      *success = TRUE;
+      return;
+   }
+
+   for( i = 0; i < nexprs; ++i )
+   {
+      var = SCIPgetConsExprExprAuxVar(exprs[i]);
+      assert(var != NULL);
+
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+         ++nunbounded;
+#if 0
+      else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
+         weightsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+      else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
+         weightsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
+      else
+         weightsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+#elif 0
+      else
+         weightsum += 1.0;
+#else
+      else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+         if( weight < 0.05 )
+            weight = 0.05;
+         weightsum += weight;
+      }
+#endif
+   }
+
+   *success = FALSE;
+   for( i = 0; i < nexprs; ++i )
+   {
+      var = SCIPgetConsExprExprAuxVar(exprs[i]);
+      assert(var != NULL);
+
+      if( nunbounded > 0 )
+      {
+         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+         {
+            SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[i], branchscore / nunbounded);
+            *success = TRUE;
+         }
+      }
+      else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+#if 0
+         if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
+            weight = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+         else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
+            weight = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
+         else
+            weight = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+#elif 0
+         weight = 1.0;
+#else
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+         if( weight < 0.05 )
+            weight = 0.05;
+#endif
+
+         assert(weightsum > 0.0);
+         SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[i], branchscore * weight / weightsum);
+         SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", branchscore * weight / weightsum,
+            100*weight / weightsum, branchscore,
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         *success = TRUE;
+      }
+   }
+}
+
+/** adds branching score to children of expression for given auxiliary variables
+ *
+ * Iterates over the successors of expr to find expressions that are associated with one of the given auxiliary variables.
+ * Adds branching scores to all found exprs by means of addConsExprExprsBranchScore().
+ *
+ * @note This method may modify the given auxvars array by means of sorting.
+ */
+static
+SCIP_RETCODE addConsExprExprBranchScoresAuxVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
+   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
+   int                     nauxvars,         /**< number of auxiliary variables */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_VAR* auxvar;
+   SCIP_CONSEXPR_EXPR** exprs;
+   int nexprs;
+   int pos;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(auxvars != NULL);
+   assert(success != NULL);
+
+   /* sort variables to make lookup below faster */
+   SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nauxvars) );
+   nexprs = 0;
+
+   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   {
+      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      if( auxvar == NULL )
+         continue;
+
+      /* if auxvar of expr is contained in auxvars array, add branching score to expr */
+      if( SCIPsortedvecFindPtr((void**)auxvars, SCIPvarComp, auxvar, nauxvars, &pos) )
+      {
+         assert(auxvars[pos] == auxvar);
+
+         SCIPdebugMsg(scip, "adding branchingscore for expr %p with auxvar <%s>\n", expr, SCIPvarGetName(auxvar));
+         exprs[nexprs++] = expr;
+
+         if( nexprs == nauxvars )
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   if( nexprs > 0 )
+      addConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success);
+   else
+      *success = FALSE;
+
+   SCIPfreeBufferArray(scip, &exprs);
+
+   return SCIP_OKAY;
+}
+
 /** registers all unfixed variables in violated constraints as branching candidates */
 static
 SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
@@ -6560,19 +6732,17 @@ SCIP_RETCODE enforceExprNlhdlr(
             if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
             {
                SCIP_Real brscore;
-               int nbradded = 0;
 
 #ifdef BRSCORE_ABSVIOL
                brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
 #else
                SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &brscore, NULL, NULL) );
 #endif
-               brscore /= rowprep->nmodifiedvars;
-               SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
+               SCIP_CALL( addConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, sol, &branchscoresuccess) );
 
-               branchscoresuccess = nbradded > 0;
-               /* SCIPaddConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
+               /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
                 * I don't think it makes sense to branch on that one (would it?)
+                * it can also fail if everything is fixed
                 */
                assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
             }
@@ -12982,9 +13152,10 @@ void SCIPincrementConsExprCurBoundsTag(
 
 /** adds branching score to an expression
  *
- * Adds a score to the expression-specific branching score.
- * In an expression with children, the scores are distributed to its children.
- * In an expression that is a variable, the score may be used to identify a variable for branching.
+ * Adds a score to the expression-specific branching score, thereby marking it as branching candidate.
+ * The expression must either be a variable expression or have an aux-variable.
+ * In the latter case, branching on auxiliary variables must have been enabled.
+ * In case of doubt, use SCIPaddConsExprExprsBranchScore().
  */
 void SCIPaddConsExprExprBranchScore(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13020,92 +13191,79 @@ void SCIPaddConsExprExprBranchScore(
    ++(expr->nbrscores);
 }
 
-/** adds branching score to children of expression for given auxiliary variables
+/** adds branching score to a set of expressions, thereby distributing the score
  *
- * Iterates over the successors of expr for expressions that are associated with one of the given auxiliary variables
- * and adds a given branching score.
- * The branchscoretag argument is used to identify whether the score in the found expression needs to be reset
- * before adding a new score.
- *
- * @note This method may modify the given auxvars array by means of sorting.
+ * Each expression must either be a variable expression or have an aux-variable.
+ * If branching on aux-variables is disabled, then finds original variables first.
  */
-SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
+SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
+   SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
    SCIP_Real               branchscore,      /**< branching score to add to expression */
-   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
-   int                     nauxvars,         /**< number of auxiliary variables */
-   int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
    )
 {
+   /* distribute violation as branching score to original variables in children of expr that are marked in branchcand */
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_ITERATOR* it2;
-   SCIP_VAR* auxvar;
-   int pos;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   SCIP_CONSEXPR_EXPR* e;
+   int nvars;
+   int varssize;
+   int i;
 
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(expr != NULL);
-   assert(nbrscoreadded != NULL);
-   assert(auxvars != NULL);
+   assert(exprs != NULL || nexprs == 0);
+   assert(success != NULL);
 
-   /* sort variables to make lookup below faster */
-   SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
-
-   if( !SCIPgetConsExprBranchAux(conshdlr) )
+   if( nexprs == 0 )
    {
-      SCIP_CALL( SCIPexpriteratorCreate(&it2, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it2, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      *success = FALSE;
+      return SCIP_OKAY;
    }
 
-   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   /* if allowing to branch on auxiliary variables, then can call internal addConsExprExprsBranchScore immediately */
+   if( SCIPgetConsExprBranchAux(conshdlr) )
    {
-      auxvar = SCIPgetConsExprExprAuxVar(expr);
-      if( auxvar == NULL )
-         continue;
+      addConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success);
+      return SCIP_OKAY;
+   }
 
-      /* if auxvar of expr is contained in auxvars array, add branching score to expr */
-      if( SCIPsortedvecFindPtr((void**)auxvars, SCIPvarComp, auxvar, nauxvars, &pos) )
+   /* if not allowing to branch on auxiliary variables, then create new array that contains all variable expressions that exprs depend on */
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( i = 0; i < nexprs; ++i )
+   {
+      for( e = SCIPexpriteratorRestartDFS(it, exprs[i]); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         assert(auxvars[pos] == auxvar);
-         if( SCIPgetConsExprBranchAux(conshdlr) )
-         {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, expr, branchscore);
+         assert(e != NULL);
 
-            SCIPdebugMsg(scip, "added branchingscore %g for expr %p with auxvar <%s>\n", branchscore, expr, SCIPvarGetName(auxvar));
-         }
-         else
+         if( SCIPisConsExprExprVar(e) )
          {
-            /* add branching scores directly to original variables */
-            SCIP_CONSEXPR_EXPR* e;
-            for( e = SCIPexpriteratorRestartDFS(it2, expr); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            /* add variable expression to vars array */
+            if( varssize == nvars )
             {
-               assert(e != NULL);
-
-               if( SCIPisConsExprExprVar(e) )
-               {
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, e, branchscore);
-
-                  SCIPdebugMsg(scip, "added branchingscore %g for var <%s> in expr for auxvar <%s>\n", branchscore, SCIPvarGetName(SCIPgetConsExprExprVarVar(e)), SCIPvarGetName(auxvar));
-               }
+               varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &varexprs, varssize) );
             }
-         }
+            assert(varssize > nvars);
 
-         if( ++*nbrscoreadded == nauxvars )
-            break;
+            varexprs[nvars++] = e;
+         }
       }
    }
 
-   if( !SCIPgetConsExprBranchAux(conshdlr) )
-   {
-      SCIPexpriteratorFree(&it2);
-   }
-
    SCIPexpriteratorFree(&it);
+
+   addConsExprExprsBranchScore(scip, conshdlr, varexprs, nvars, branchscore, sol, success);
+
+   SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }

@@ -282,191 +282,28 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 #endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
-      if( SCIPgetConsExprBranchAux(conshdlr) )
+      if( nchildren == 1 )
       {
-         /* distribute violation as branching score to children that are marked as branchcand */
-         if( nchildren == 1 )
+         if( branchcand[0] )
          {
-            if( branchcand[0] )
-            {
-               SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], violation);
-               SCIPdebugMsg(scip, "add score %g to <%s>\n", violation,
-                  SCIPvarGetName(SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0])));
-               *addedbranchscores = TRUE;
-            }
-         }
-         else
-         {
-            /* distribute violation onto children that are branching candidates
-             * every candidate gets a violation that is proportional to the share of its domain width to the sum of the domain widths over all candidates
-             * if some candidates are unbounded, then only add branching scores for them
-             */
-            SCIP_Real domainwidthsum = 0.0;  /* sum of width of domain over all candidates with bounded domain */
-            int nunbounded = 0;  /* number of candidates with unbounded domain */
-
-            /* get sum of finite domain widths, and number of infinite ones */
-            for( c = 0; c < nchildren; ++c )
-            {
-               SCIP_VAR* auxvar;
-
-               if( !branchcand[c] )
-                  continue;
-
-               auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-               assert(auxvar != NULL);
-
-               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
-                  ++nunbounded;
-               else
-                  domainwidthsum += SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
-            }
-
-            for( c = 0; c < nchildren; ++c )
-            {
-               SCIP_VAR* auxvar;
-
-               if( !branchcand[c] )
-                  continue;
-
-               auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-               assert(auxvar != NULL);
-
-               if( nunbounded > 0 )
-               {
-                  if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(auxvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
-                  {
-                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation / nunbounded);
-                     *addedbranchscores = TRUE;
-                  }
-               }
-               else
-               {
-                  SCIP_Real domainwidth = SCIPvarGetUbLocal(auxvar) - SCIPvarGetLbLocal(auxvar);
-                  if( !SCIPisZero(scip, domainwidth) )
-                  {
-                     assert(domainwidthsum > 0.0);
-                     SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation * domainwidth / domainwidthsum);
-                     SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,
-                        100*domainwidth / domainwidthsum, violation,
-                        SCIPvarGetName(auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
-                     *addedbranchscores = TRUE;
-                  }
-               }
-            }
+            SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr), 1, violation, sol, addedbranchscores) );
          }
       }
       else
       {
-         /* distribute violation as branching score to original variables in children of expr that are marked in branchcand */
-         SCIP_CONSEXPR_ITERATOR* it;
-         SCIP_CONSEXPR_EXPR* e;
-         SCIP_CONSEXPR_EXPR** varexprs;
-         int nvars;
-         int varssize;
-         SCIP_VAR* var;
-         SCIP_Real weight;
-         SCIP_Real weightsum = 0.0; /* sum of weights over all candidates with bounded domain */
-         int nunbounded = 0;  /* number of candidates with unbounded domain */
+         SCIP_CONSEXPR_EXPR** exprs;
+         int nexprs = 0;
 
-         assert(expr != NULL);
-
-         nvars = 0;
-         varssize = 5;
-         SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
-
-         SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-         SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+         /* get list of those children that have the branchcand-flag set */
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
 
          for( c = 0; c < nchildren; ++c )
-         {
-            if( !branchcand[c] )
-               continue;
+            if( branchcand[c] )
+               exprs[nexprs++] = SCIPgetConsExprExprChildren(expr)[c];
 
-            for( e = SCIPexpriteratorRestartDFS(it, SCIPgetConsExprExprChildren(expr)[c]); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-            {
-               assert(e != NULL);
+         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
 
-               if( SCIPisConsExprExprVar(e) )
-               {
-                  /* add variable expression to vars array */
-                  if( varssize == nvars )
-                  {
-                     varssize = SCIPcalcMemGrowSize(scip, nvars+1);
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &varexprs, varssize) );
-                  }
-                  assert(varssize > nvars);
-
-                  varexprs[nvars++] = e;
-
-                  var = SCIPgetConsExprExprAuxVar(varexprs[nvars-1]);
-                  if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-                     ++nunbounded;
-#if 0
-                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-                     weightsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-                     weightsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
-                  else
-                     weightsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-#elif 0
-                  else
-                     weightsum += 1.0;
-#else
-                  else
-                  {
-                     weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-                     if( weight < 0.05 )
-                        weight = 0.05;
-                     weightsum += weight;
-                  }
-#endif
-               }
-            }
-         }
-
-         SCIPexpriteratorFree(&it);
-
-         for( c = 0; c < nvars; ++c )
-         {
-            var = SCIPgetConsExprExprAuxVar(varexprs[c]);
-            if( nunbounded > 0 )
-            {
-               if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-               {
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation / nunbounded);
-                  *addedbranchscores = TRUE;
-               }
-            }
-            else
-            {
-               if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-               {
-#if 0
-                  if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-                     weight = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-                  else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-                     weight = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
-                  else
-                     weight = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-#elif 0
-                  weight = 1.0;
-#else
-                  weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-                  if( weight < 0.05 )
-                     weight = 0.05;
-#endif
-
-                  assert(weightsum > 0.0);
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation * weight / weightsum);
-                  SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * weight / weightsum,
-                     100*weight / weightsum, violation,
-                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-                  *addedbranchscores = TRUE;
-               }
-            }
-         }
-
-         SCIPfreeBufferArray(scip, &varexprs);
+         SCIPfreeBufferArray(scip, &exprs);
       }
 
       if( *addedbranchscores )
