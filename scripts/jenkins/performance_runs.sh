@@ -174,7 +174,7 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
   cd ..
 
   rm -rf papilo
-  git clone git@git.zib.de:bzfgottw/presolve papilo
+  git clone https://github.com/lgottwald/PaPILO.git papilo
   cd papilo
   git checkout ${PAPILOBRANCHNAME}
   git pull
