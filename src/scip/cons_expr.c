@@ -262,6 +262,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
+   char                     branchviolsplit; /**< method used to split violation in expression onto variables */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5655,9 +5656,60 @@ SCIP_RETCODE initSepa(
    return SCIP_OKAY;
 }
 
+/** gets weight of variable when splitting violation score onto several variables in an expression */
+static
+SCIP_Real getViolSplitWeight(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_VAR*               var,              /**< variable */
+   SCIP_SOL*               sol               /**< current solution */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   switch( conshdlrdata->branchviolsplit )
+   {
+      case 'e' :  /* evenly: everyone gets the same score */
+         return 1.0;
+
+      case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
+      {
+         SCIP_Real weight;
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+         return MAX(0.05, weight);
+      }
+
+      case 'd' :  /* domain width */
+         return SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+         break;
+
+      case 'l' :  /* logarithmic domain width: log-scale if width below 0.1 and 10, otherwise actual width */
+      {
+         SCIP_Real width = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+         assert(width > 0.0);
+         if( width > 10.0 )
+            return 10.0*log10(width);
+         if( width < 0.1 )
+            return 0.1/(-log10(width));
+         return width;
+      }
+
+      default :
+         SCIPerrorMessage("invalid value for parameter constraints/expr/branching/violsplit");
+         SCIPABORT();
+         return SCIP_INVALID;
+   }
+}
+
 /** adds branching score to a set of expressions, thereby distributing the score
  *
  * Each expression must either be a variable expression or have an aux-variable.
+ *
+ * If unbounded variables are present, each unbounded var gets an even score.
+ * If no unbounded variables, then parameter constraints/expr/branching/violsplit decides weight for each var.
  */
 static
 void addConsExprExprsBranchScore(
@@ -5694,25 +5746,8 @@ void addConsExprExprsBranchScore(
 
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
          ++nunbounded;
-#if 0
-      else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-         weightsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-      else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-         weightsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
-      else
-         weightsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-#elif 0
-      else
-         weightsum += 1.0;
-#else
       else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-      {
-         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-         if( weight < 0.05 )
-            weight = 0.05;
-         weightsum += weight;
-      }
-#endif
+         weightsum += getViolSplitWeight(scip, conshdlr, var, sol);
    }
 
    *success = FALSE;
@@ -5731,22 +5766,9 @@ void addConsExprExprsBranchScore(
       }
       else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       {
-#if 0
-         if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-            weight = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-         else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-            weight = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
-         else
-            weight = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-#elif 0
-         weight = 1.0;
-#else
-         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
-         if( weight < 0.05 )
-            weight = 0.05;
-#endif
-
          assert(weightsum > 0.0);
+
+         weight = getViolSplitWeight(scip, conshdlr, var, sol);
          SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[i], branchscore * weight / weightsum);
          SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", branchscore * weight / weightsum,
             100*weight / weightsum, branchscore,
@@ -14437,6 +14459,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
          &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
+         "method used to split violation in expression onto variables: 'e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
+         &conshdlrdata->branchviolsplit, TRUE, 'm', "emdl", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
