@@ -126,7 +126,7 @@ PAPILOBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-  PAPILOBRANCHNAME="master"
+  PAPILOBRANCHNAME="bugfix-v1.0"
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
   PAPILOBRANCHNAME="master"
