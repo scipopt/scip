@@ -364,7 +364,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          int nvars;
          int varssize;
          SCIP_VAR* var;
-         SCIP_Real domainwidthsum = 0.0;  /* sum of width of domain over all candidates with bounded domain */
+         SCIP_Real weight;
+         SCIP_Real weightsum = 0.0; /* sum of weights over all candidates with bounded domain */
          int nunbounded = 0;  /* number of candidates with unbounded domain */
 
          assert(expr != NULL);
@@ -402,19 +403,26 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
                      ++nunbounded;
 #if 0
                   else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-                     domainwidthsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                     weightsum += 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
                   else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-                     domainwidthsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
+                     weightsum += 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
                   else
-                     domainwidthsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+                     weightsum += SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+#elif 0
+                  else
+                     weightsum += 1.0;
 #else
                   else
-                     domainwidthsum += 1.0;
+                  {
+                     weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                     if( weight < 0.05 )
+                        weight = 0.05;
+                     weightsum += weight;
+                  }
 #endif
                }
             }
          }
-         assert(domainwidthsum >= 0.0);
 
          SCIPexpriteratorFree(&it);
 
@@ -433,22 +441,25 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
             {
                if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                {
-                  SCIP_Real domainwidth;
 #if 0
                   if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 10.0 )
-                     domainwidth = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                     weight = 10.0*log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
                   else if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.1 )
-                     domainwidth = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
+                     weight = 0.1/(-log10(SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)));
                   else
-                     domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+                     weight = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+#elif 0
+                  weight = 1.0;
 #else
-                  domainwidth = 1.0;
+                  weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+                  if( weight < 0.05 )
+                     weight = 0.05;
 #endif
 
-                  assert(domainwidthsum > 0.0);
-                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation * domainwidth / domainwidthsum);
-                  SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * domainwidth / domainwidthsum,
-                     100*domainwidth / domainwidthsum, violation,
+                  assert(weightsum > 0.0);
+                  SCIPaddConsExprExprBranchScore(scip, conshdlr, varexprs[c], violation * weight / weightsum);
+                  SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violation * weight / weightsum,
+                     100*weight / weightsum, violation,
                      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
                   *addedbranchscores = TRUE;
                }
