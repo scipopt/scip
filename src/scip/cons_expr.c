@@ -6404,30 +6404,36 @@ SCIP_RETCODE branching(
 
    if( ncands > 1 )
    {
+      SCIP_Real minscore;
+      SCIP_Real maxscore;
+
       /* if more than one candidate, then sort by score */
       SCIPsortDownRealPtr(candscores, (void**)cands, ncands);
 
+      minscore = candscores[ncands-1];
+      maxscore = candscores[0];
+
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), candscores[ncands-1]); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), maxscore,
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[ncands-1])), minscore); )
 
       /* find how many candidates have a score close to the maximum
        * (TODO could do a binary search as array is sorted by score)
        * TODO should we choose random from all candidates, using the score's as probability distribution?
        */
+      minscore = MIN(0.0, minscore);
       for( c = 1; c < ncands; ++c )
       {
          assert(cands[c-1] != cands[c]);  /* we should have no duplicates */
 
          /* stop if score is below threshold */
-         if( candscores[c] < conshdlrdata->branchhighscorefactor * candscores[0] )
+         if( candscores[c] - minscore < conshdlrdata->branchhighscorefactor * (maxscore - minscore) )
          {
             ncands = c;
             break;
          }
       }
       assert(ncands > 0);
-      assert(candscores[ncands-1] >= conshdlrdata->branchhighscorefactor * candscores[0]);
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[0])), candscores[0],
