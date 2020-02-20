@@ -7851,7 +7851,7 @@ SCIP_RETCODE bilinearTermsResize(
    assert(conshdlrdata != NULL);
 
    /* check whether array is large enough */
-   if( reqsize < conshdlrdata->bilintermssize )
+   if( reqsize <= conshdlrdata->bilintermssize )
       return SCIP_OKAY;
 
    /* compute new size */
@@ -7980,7 +7980,6 @@ SCIP_RETCODE bilinearTermsInsertAll(
             x = SCIPgetConsExprExprAuxVar(children[0]);
             y = x;
          }
-
          /* check whether the expression is of the form f(..) * g(..) */
          else if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
          {
