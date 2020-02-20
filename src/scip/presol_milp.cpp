@@ -74,11 +74,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
-#define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
-#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+#define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
