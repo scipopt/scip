@@ -633,6 +633,7 @@ Fixed bugs
 - fixed wrong assert in updateLazyBounds()
 - fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 - fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
+- fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
 
 Miscellaneous
 -------------
