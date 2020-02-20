@@ -1130,6 +1130,50 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
+/** collects all bilinear terms for a given set of constraints
+ *
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
+ *       or SCIPgetConsExprBilinTerm().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConsExprBilinTerms(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONS**                conss,          /**< expression constraints */
+   int                        nconss          /**< total number of expression constraints */
+   );
+
+/** returns the total number of bilinear terms that are contained in all expression constraints
+ *
+ *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprNBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns all bilinear terms that are contained in all expression constraints
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
+ */
+SCIP_EXPORT
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns the bilinear term that representing the product of two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
+ */
+SCIP_EXPORT
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   );
+
 /** upgrading method for expression constraints into more specific constraints
  *
  * the method might upgrade an expression constraint into a set of upgrade constraints

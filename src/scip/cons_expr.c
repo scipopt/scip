@@ -264,6 +264,12 @@ struct SCIP_ConshdlrData
    /* facets of envelops of vertex-polyhedral functions */
    SCIP_RANDNUMGEN*         vp_randnumgen;   /**< random number generator used to perturb reference point */
    SCIP_LPI*                vp_lp[SCIP_MAXVERTEXPOLYDIM+1];  /**< LPs used to compute facets for functions of different dimension */
+
+   /* hashing of bilinear terms */
+   SCIP_HASHTABLE*          bilinhashtable;  /**< hash table for bilinear terms */
+   SCIP_CONSEXPR_BILINTERM* bilinterms;      /**< bilinear terms */
+   int                      nbilinterms;     /**< total number of bilinear terms */
+   int                      bilintermssize;  /**< size of bilinterms array */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -7785,6 +7791,285 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    return SCIP_OKAY;
 }
 
+/** hash key retrieval function for bilinear term entries */
+static
+SCIP_DECL_HASHGETKEY(bilinearTermsGetHashkey)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int idx;
+
+   conshdlrdata = (SCIP_CONSHDLRDATA*)userptr;
+   assert(conshdlrdata != NULL);
+
+   idx = ((int)(size_t)elem) - 1;
+   assert(idx >= 0 && idx < conshdlrdata->nbilinterms);
+
+   return (void*)&conshdlrdata->bilinterms[idx];
+}
+
+/** returns TRUE iff the bilinear term entries are equal */
+static
+SCIP_DECL_HASHKEYEQ(bilinearTermsIsHashkeyEq)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_BILINTERM* entry1;
+   SCIP_CONSEXPR_BILINTERM* entry2;
+
+   /* get corresponding entries */
+   entry1 = (SCIP_CONSEXPR_BILINTERM*)key1;
+   entry2 = (SCIP_CONSEXPR_BILINTERM*)key2;
+   assert(entry1->x != NULL && entry1->y != NULL);
+   assert(entry2->x != NULL && entry2->y != NULL);
+   assert(SCIPvarCompare(entry1->x, entry1->y) < 1);
+   assert(SCIPvarCompare(entry2->x, entry2->y) < 1);
+
+   return entry1->x == entry2->x && entry1->y == entry2->y;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_BILINTERM* entry;
+
+   entry = (SCIP_CONSEXPR_BILINTERM*)key;
+   assert(entry->x != NULL && entry->y != NULL);
+   assert(SCIPvarCompare(entry->x, entry->y) < 1);
+
+   return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
+}
+
+/** resizes hash table for bilinear terms */
+static
+SCIP_RETCODE bilinearTermsResize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   int                   reqsize             /**< required size */
+   )
+{
+   int newsize;
+
+   assert(conshdlrdata != NULL);
+
+   /* check whether array is large enough */
+   if( reqsize <= conshdlrdata->bilintermssize )
+      return SCIP_OKAY;
+
+   /* compute new size */
+   newsize = SCIPcalcMemGrowSize(scip, reqsize);
+   assert(reqsize <= newsize);
+
+   /* realloc array */
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bilinterms, conshdlrdata->bilintermssize,
+      newsize) );
+   conshdlrdata->bilintermssize = newsize;
+
+   return SCIP_OKAY;
+}
+
+/** stores the variables of a bilinear term in the data of the constraint handler */
+static
+SCIP_RETCODE bilinearTermsInsert(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   int                   nlockspos,          /**< number of positive expression locks */
+   int                   nlocksneg           /**< number of negative expression locks */
+   )
+{
+   SCIP_CONSEXPR_BILINTERM* term;
+
+   assert(conshdlrdata != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(nlockspos >= 0);
+   assert(nlocksneg >= 0);
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* ensure size of bilinterms array */
+   SCIP_CALL( bilinearTermsResize(scip, conshdlrdata, conshdlrdata->nbilinterms + 1) );
+
+   /* set values in the created bilinear term */
+   term = &conshdlrdata->bilinterms[conshdlrdata->nbilinterms];
+   assert(term != NULL);
+   term->x = x;
+   term->y = y;
+   term->auxvar = auxvar;
+   term->nlockspos = nlockspos;
+   term->nlocksneg = nlocksneg;
+
+   /* capture variable */
+   SCIP_CALL( SCIPcaptureVar(scip, x) );
+   SCIP_CALL( SCIPcaptureVar(scip, y) );
+   if( auxvar != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   }
+
+   /* increase the total number of bilinear terms */
+   ++(conshdlrdata->nbilinterms);
+
+   return SCIP_OKAY;
+}
+
+/** iterates through all expressions of all expression constraints and adds the corresponding bilinear terms to the
+ *  hash table
+ */
+static
+SCIP_RETCODE bilinearTermsInsertAll(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< expression constraints */
+   int                   nconss              /**< total number of expression constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPRHDLR* producthdlr;
+   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   int c;
+
+   assert(conss != NULL || nconss == 0);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether the bilinear terms have been stored already */
+   if( conshdlrdata->bilinterms != NULL )
+      return SCIP_OKAY;
+
+   /* create and initialize iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
+   /* get product and pow expression handlers */
+   producthdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
+   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
+   /* iterate through all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_EXPR* expr;
+
+      assert(conss != NULL && conss[c] != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* iterate through all expressions */
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_CONSEXPR_EXPR** children = SCIPgetConsExprExprChildren(expr);
+         SCIP_VAR* x = NULL;
+         SCIP_VAR* y = NULL;
+
+         /* check whether the expression is of the form f(..)^2 */
+         if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+         {
+            x = SCIPgetConsExprExprAuxVar(children[0]);
+            y = x;
+         }
+         /* check whether the expression is of the form f(..) * g(..) */
+         else if( SCIPgetConsExprExprHdlr(expr) == producthdlr && SCIPgetConsExprExprNChildren(expr) == 2 )
+         {
+            x = SCIPgetConsExprExprAuxVar(children[0]);
+            y = SCIPgetConsExprExprAuxVar(children[1]);
+         }
+
+         /* add variables to the hash table */
+         if( x != NULL && y != NULL )
+         {
+            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr),
+               SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr)) );
+         }
+      }
+   }
+
+   /* release iterator */
+   SCIPexpriteratorFree(&it);
+
+   /* create hash table and insert stored bilinear terms */
+   if( conshdlrdata->nbilinterms > 0 )
+   {
+      int i;
+
+      assert(conshdlrdata->bilinhashtable == NULL);
+
+      SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), conshdlrdata->nbilinterms,
+         bilinearTermsGetHashkey, bilinearTermsIsHashkeyEq, bilinearTermsGetHashkeyVal,
+         (void*)conshdlrdata) );
+
+      for( i = 0; i < conshdlrdata->nbilinterms; ++i )
+      {
+         /* insert the index of the bilinear term into the hash table; note that the index of the i-th element is (i+1)
+          * because zero can not be inserted into hash table
+          */
+         SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)(i+1)) );/*lint !e571 !e776*/
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees hash table for bilinear terms */
+static
+SCIP_RETCODE bilinearTermsFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   int i;
+
+   assert(conshdlrdata != NULL);
+
+   /* check whether bilinear terms have been stored */
+   if( conshdlrdata->bilinterms == NULL )
+   {
+      assert(conshdlrdata->bilinterms == NULL);
+      assert(conshdlrdata->nbilinterms == 0);
+      assert(conshdlrdata->bilintermssize == 0);
+
+      return SCIP_OKAY;
+   }
+
+   /* release variables */
+   for( i = 0; i < conshdlrdata->nbilinterms; ++i )
+   {
+      /* it might be that there is a bilinear term without a corresponding auxiliary variable */
+      if( conshdlrdata->bilinterms[i].auxvar != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxvar) );
+      }
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].y) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].x) );
+   }
+
+   /* free hash table */
+   if( conshdlrdata->bilinhashtable != NULL )
+   {
+      SCIPhashtableFree(&conshdlrdata->bilinhashtable);
+   }
+
+   /* free bilinterms array; reset counters */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bilinterms, conshdlrdata->bilintermssize);
+   conshdlrdata->nbilinterms = 0;
+   conshdlrdata->bilintermssize = 0;
+
+   return SCIP_OKAY;
+}
+
+
 /** @} */
 
 /*
@@ -8416,6 +8701,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
+   /* free hash table for bilinear terms */
+   SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
+
    return SCIP_OKAY;
 }
 
@@ -8491,6 +8779,9 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
    /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
+
+   /* collect all bilinear terms */
+   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -12951,6 +13242,102 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
 
    return conshdlrdata->lastboundrelax;
+}
+
+/** collects all bilinear terms for a given set of constraints
+ *
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
+ *       or SCIPgetConsExprBilinTerm().
+ */
+SCIP_RETCODE SCIPcollectConsExprBilinTerms(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONS**                conss,          /**< expression constraints */
+   int                        nconss          /**< total number of expression constraints */
+   )
+{
+   assert(consexprhdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   SCIP_CALL( bilinearTermsInsertAll(scip, consexprhdlr, conss, nconss) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the total number of bilinear terms that are contained in all expression constraints
+ *
+ *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+int SCIPgetConsExprNBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nbilinterms;
+}
+
+/** returns all bilinear terms that are contained in all expression constraints
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
+ */
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->bilinterms;
+}
+
+/** returns the bilinear term that representing the product of two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
+ */
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_BILINTERM entry;
+   int idx;
+
+   assert(consexprhdlr != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* use a new entry to find the image in the bilinear hash table */
+   entry.x = x;
+   entry.y = y;
+   idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
+   assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
+
+   /* the index is -1 if the entry does not exist */
+   return idx >= 0 ? &conshdlrdata->bilinterms[idx] : NULL;
 }
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
