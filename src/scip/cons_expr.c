@@ -7838,7 +7838,7 @@ SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
    return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
 }
 
-/** resizes hash table for bilinear terms */
+/** resizes array of bilinear terms */
 static
 SCIP_RETCODE bilinearTermsResize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8022,7 +8022,7 @@ SCIP_RETCODE bilinearTermsInsertAll(
    return SCIP_OKAY;
 }
 
-/** frees hash table for bilinear terms */
+/** frees array of bilinear terms and hash table */
 static
 SCIP_RETCODE bilinearTermsFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13301,7 +13301,7 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    return conshdlrdata->bilinterms;
 }
 
-/** returns the bilinear term that representing the product of two given variables
+/** returns the bilinear term representing the product of the two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  * @return The method returns NULL if the variables do not appear bilinearly.
