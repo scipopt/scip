@@ -367,7 +367,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
 }
 
 /* x^2 + y^2 + w*z should not be handled by this nlhandler */
-Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
+Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
@@ -405,7 +405,7 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
 }
 
 /* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler */
-Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
+Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
