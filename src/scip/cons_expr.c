@@ -13336,8 +13336,14 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
    assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
 
-   /* the index is -1 if the entry does not exist */
-   return idx >= 0 ? &conshdlrdata->bilinterms[idx] : NULL;
+   if( idx >= 0 )
+   {
+      assert(conshdlrdata->bilinterms[idx].x == x);
+      assert(conshdlrdata->bilinterms[idx].y == y);
+      return &conshdlrdata->bilinterms[idx];
+   }
+
+   return NULL;
 }
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
