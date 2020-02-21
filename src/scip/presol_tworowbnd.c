@@ -577,7 +577,7 @@ SCIP_RETCODE transformAndSolve(
    SCIP_Bool maxsolvable;
    SCIP_Real maxobj;
    SCIP_Bool minswapsolvable;
-   SCIP_Real minswapobj;
+   SCIP_Real minswapobj = 0.0;
    SCIP_Bool maxswapsolvable;
    SCIP_Real maxswapobj;
 
