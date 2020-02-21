@@ -475,6 +475,7 @@ SCIP_RETCODE strongPruneSteinerTreePc(
    assert(connected[solroot]);
    assert(graph_pc_isPcMw(g));
    assert(!graph_pc_knotIsDummyTerm(g, solroot));
+   assert(graph_pc_isMw(g) || graph_pc_costsEqualOrgCosts(scip, g, cost));
    assert(g->extended);
 
    /* todo find best root? */
@@ -623,7 +624,7 @@ SCIP_RETCODE pruneSteinerTreePc(
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
    int solroot = g->source;
 
-#ifndef NEDBUG
+#ifndef NDEBUG
    int* result_dbg;
    STP_Bool* connected_dbg;
    const int nedges = graph_get_nEdges(g);
@@ -811,7 +812,7 @@ SCIP_RETCODE graph_solPruneFromEdges(
 SCIP_RETCODE graph_solPruneFromTmHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< (possibly biased) edge costs */
+   const SCIP_Real*      cost,               /**< edge costs (original edge costs for PC!) */
    int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
    )
@@ -830,7 +831,7 @@ SCIP_RETCODE graph_solPruneFromTmHeur(
    {
       if( graph_pc_isPc(g) )
       {
-         assert(cost);
+         assert(graph_pc_costsEqualOrgCosts(scip, g, cost));
          SCIP_CALL( pruneSteinerTreePc(scip, g, cost, result, connected) );
       }
       else
@@ -1174,8 +1175,12 @@ SCIP_Real graph_solGetObj(
    assert(!graph_pc_isPcMw(g) || g->extended);
 
    for( int e = 0; e < nedges; e++ )
+   {
+      assert(soledge[e] == CONNECT || soledge[e] == UNKNOWN);
+
       if( soledge[e] == CONNECT )
          obj += edgecost[e];
+   }
 
    return obj;
 }

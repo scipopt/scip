@@ -53,7 +53,7 @@
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
-#define DEFAULT_BIAS  3                      /**< bias */
+#define DEFAULT_PCMODE  4                    /**< solving mode for PC/MW */
 
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
@@ -70,8 +70,6 @@ int getUgRank(void);
  * Data structures
  */
 
-/* bias_none is only used for PC/RPC */
-enum PCMW_Bias { bias_none = 0, bias_standard = 1, bias_full = 2, bias_all = 3 };
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -91,7 +89,7 @@ struct SCIP_HeurData
    unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    unsigned int          timing;             /**< timing for timing mask */
-   int                   pcmwbias;           /**< bias */
+   enum PCMW_TmMode      pcmw_mode;          /**< solving mode for PCMW */
 };
 
 /*
@@ -372,7 +370,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    for( int k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
 
-   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
+   graph_path_st(g, cost, dijkdist, dijkedge, start, connected);
 
    /* cost will actually only be used for hop-constrained problem */
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
@@ -401,9 +399,9 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    assert(graph_pc_isPcMw(g));
 
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      graph_path_st_rpcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
+      graph_path_st_rpcmw(g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
    else
-      graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, costsAreBiased, dijkdist, dijkedge, start, connected);
+      graph_path_st_pcmw(g, orderedprizes, orderedprizes_id, cost, prize, costsAreBiased, dijkdist, dijkedge, start, connected);
 
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, result, connected));
 
@@ -417,8 +415,9 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
 static
 SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
+   GRAPH*                g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs (possibly biased!) */
+   const SCIP_Real*      cost_org,           /**< (un-biased) edge costs, only needed for PC/RPC */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
@@ -428,7 +427,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 {
    graph_path_st_pcmw_full(g, cost, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1398,7 +1397,7 @@ void initTerminalPrioPcMw(
          minprio = MIN(terminalprio[k], minprio);
 
       // todo why only marking for this case???
-      graph_pc_markOrgGraph(scip, graph);
+      graph_pc_markOrgGraph(graph);
 
       graph->mark[graph->source] = TRUE;
 
@@ -1612,7 +1611,7 @@ SCIP_RETCODE runPcMW(
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_Real*            best_resultObj,     /**< objective value */
-   SCIP_Real*            prize,              /**< prizes (for PCMW) or NULL */
+   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
    int*                  result,             /**< temporary array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int*                  best_result,        /**< final array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int*                  dijkedge,           /**< temp */
@@ -1622,8 +1621,7 @@ SCIP_RETCODE runPcMW(
    SCIP_Real*            cost,               /**< arc costs */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
    SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
-   SCIP_Bool             pcmwfull,           /**< use full computation of tree (i.e. connect all terminals and prune) */
-   enum PCMW_Bias        bias                /**< bias */
+   enum PCMW_TmMode      pcmwmode            /**< mode */
 )
 {
    SCIP_Real* terminalprio = NULL;
@@ -1641,7 +1639,7 @@ SCIP_RETCODE runPcMW(
 
    assert(maxruns <= nterms);
    assert(graph->extended);
-   assert(bias == bias_none || bias == bias_standard || bias == bias_full);
+   assert(pcmwmode != pcmode_all);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
@@ -1658,11 +1656,10 @@ SCIP_RETCODE runPcMW(
       graph_pc_getOrgCosts(scip, graph, costorg);
    }
 
-   if( bias == bias_full )
+   if( pcmwmode == pcmode_biasfull )
    {
       graph_pc_getBiased(scip, graph, costbiased, prizebiased);
       initOrderedPrizesPcMw(graph, costbiased, prizebiased, orderedprizes, orderedprizes_id);
-      assert(!prize);
    }
    else
    {
@@ -1708,39 +1705,33 @@ SCIP_RETCODE runPcMW(
          continue;
       }
 
-      if( pcmwfull )
+      if( pcmwmode == pcmode_fulltree )
       {
-         SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, cost, dijkdist, result, dijkedge, start, connected) );
+         SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph,
+               cost, costorg, dijkdist, result, dijkedge, start, connected) );
+      }
+      else if( pcmwmode == pcmode_biasfull )
+      {
+         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+               costbiased, costorg, prizebiased, TRUE, dijkdist, result, dijkedge, start, connected));
+      }
+      else if( pcmwmode == pcmode_simple )
+      {
+         assert(graph_pc_isPc(graph));
+
+         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+               costorg, costorg, prize_in, FALSE, dijkdist, result, dijkedge, start, connected));
       }
       else
       {
-         if( bias == bias_full )
-         {
-            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-                  costbiased, costorg, prizebiased, TRUE, dijkdist, result, dijkedge, start, connected));
-         }
-         else if( bias == bias_none )
-         {
-            assert(graph_pc_isPc(graph));
+         assert(pcmwmode == pcmode_bias);
 
-            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-                  costorg, costorg, prize_in, FALSE, dijkdist, result, dijkedge, start, connected));
-         }
-         else
-         {
-            assert(bias == bias_standard);
-
-            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-                  cost, costorg, prize_in, TRUE, dijkdist, result, dijkedge, start, connected));
-         }
+         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+               cost, costorg, prize_in, TRUE, dijkdist, result, dijkedge, start, connected));
       }
 
-      /* compute objective value (wrt original costs) */
-      obj = 0.0;
-
-      for( int e = 0; e < nedges; e++ ) /* todo: save result array as char put into computeSteinerTreeDijkPcMw */
-         if( result[e] == CONNECT )
-            obj += graph->cost[e];
+      /* compute objective value (w.r.t. original costs!) */
+      obj = graph_solGetObj(graph, result, 0.0, nedges);
 
       if( obj < *best_resultObj )
       {
@@ -2413,10 +2404,10 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
 /** execute shortest paths heuristic to obtain a Steiner tree */
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP heuristic data or NULL for taking TM */
+   enum PCMW_TmMode      pcmw_tmmode,        /**< mode for PC/MW */
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
-   SCIP_Real*            prize,              /**< prizes (for PCMW) or NULL */
+   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
    int                   bestincstart,       /**< best incumbent start vertex */
@@ -2424,10 +2415,10 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Real*            costrev,            /**< reversed arc costs */
    SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
-   SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
+   SCIP_HEURDATA* heurdata;
    SCIP_PQUEUE* pqueue = NULL;
    SCIP_Real* dijkdist = NULL;
    SCIP_Real** pathdist = NULL;
@@ -2461,11 +2452,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
 #endif
 
-   if( heurdata == NULL )
-   {
-      assert(SCIPfindHeur(scip, "TM") != NULL);
-      heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-   }
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+   assert(heurdata);
 
    beststart = bestincstart;
    (*success) = FALSE;
@@ -2542,27 +2530,36 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    /* perform SPH computations, differentiate between STP variants todo refactor */
    if( graph_pc_isPcMw(graph) )
    {
-      enum PCMW_Bias bias = heurdata->pcmwbias;
       SCIP_Real best_resultObj = FARAWAY;
+      const enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
+      const SCIP_Bool run_all = (pcmw_mode == pcmode_all);
 
-      assert(graph_pc_isPc(graph) || bias != bias_none);
+      assert(graph_pc_isPc(graph) || pcmw_mode != pcmode_simple);
+      assert(pcmw_mode != pcmode_fromheurdata);
+      assert(graph_valid(scip, graph));
 
-      if( graph_pc_isPc(graph) && (bias == bias_none || bias == bias_all) )
+      if( graph_pc_isPc(graph) && (pcmw_mode == pcmode_simple || run_all) )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmwfull, bias_none));
+               dijkdist, cost, nodepriority, success, pcmode_simple));
       }
 
-      if( bias == bias_standard || bias == bias_all )
+      if( pcmw_mode == pcmode_bias || pcmw_mode == pcmode_biasAndFulltree || run_all )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmwfull, bias_standard));
+               dijkdist, cost, nodepriority, success, pcmode_bias));
       }
 
-      if( bias == bias_full || bias == bias_all )
+      if( pcmw_mode == pcmode_biasfull || run_all )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmwfull, bias_full) );
+               dijkdist, cost, nodepriority, success, pcmode_biasfull) );
+      }
+
+      if( pcmw_mode == pcmode_fulltree || pcmw_mode == pcmode_biasAndFulltree || run_all )
+      {
+         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
+            dijkdist, cost, nodepriority, success, pcmode_fulltree) );
       }
    }
    else
@@ -2723,7 +2720,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP_Real randlower;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
-   int save;
 
    assert(scip != NULL);
    assert(result != NULL);
@@ -2806,11 +2802,19 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
 
    for( int e = 0; e < nedges; e++ )
    {
-      if( SCIPisZero(scip, cost[e]) )
+      const SCIP_Real eps = SCIPepsilon(scip);
+      const SCIP_Real double_eps = 2.0 * eps;
+
+      assert(cost[e] >= -eps);
+
+      if( cost[e] <= eps )
       {
-         cost[e] = SCIPepsilon(scip) * 2.0;
-         assert(!SCIPisZero(scip, cost[e]));
+         assert(SCIPisZero(scip, cost[e]));
+
+         cost[e] = double_eps;
       }
+
+      assert(!SCIPisZero(scip, cost[e]));
    }
 
    for( int e = 0; e < nedges; e++ )
@@ -2820,13 +2824,9 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    for( int e = 0; e < nedges; e++ )
       result[e] = UNKNOWN;
 
-   save = heurdata->pcmwbias;
-   heurdata->pcmwbias = 1;
-
    /* build a Steiner tree */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success, FALSE));
-
-   heurdata->pcmwbias = save;
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_biasAndFulltree,
+      graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success));
 
    SCIPfreeBufferArrayNull(scip, &prize);
    SCIPfreeBufferArrayNull(scip, &nodepriority);
@@ -2846,6 +2846,7 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
    char paramdesc[SCIP_MAXSTRLEN];
+   int pcmwmode = -1;
 
    /* create TM primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -2890,10 +2891,13 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/type",
          "Heuristic: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA",
          &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwbias",
-         "Bias: 0 none, 1 standard, 2 full, 3 try all",
-         &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 3, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwmode",
+         "PC/MW solving mode: 0 simple, 1 bias, 2 full bias, 3 full tree, 4 all",
+         &pcmwmode, FALSE, DEFAULT_PCMODE, 0, 4, NULL, NULL) );
 
+   assert(pcmwmode >= 0 && pcmwmode <= 4);
+
+   heurdata->pcmw_mode = pcmwmode;
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
 
    /* create random number generator */

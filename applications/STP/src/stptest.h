@@ -59,6 +59,7 @@
       if (!(cond))                     \
       {                                \
          printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
+         printf("\n");                 \
          abort();                      \
       }                                \
    } while(0)
@@ -101,6 +102,7 @@ extern SCIP_RETCODE    stptest_testHeurLocal(SCIP*);
 /* stptest_heurtm.c
  */
 extern SCIP_RETCODE    stptest_testSolPrune(SCIP*);
+extern SCIP_RETCODE    stptest_testHeurTm(SCIP*);
 
 
 #endif /* APPLICATIONS_STP_SRC_STPTEST_H_ */

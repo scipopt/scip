@@ -829,7 +829,6 @@ inline static void utdist(
 /** connect given node to tree */
 static inline
 void stPcmwConnectNode(
-   SCIP*                 scip,               /**< SCIP data structure */
    int                   k,                  /**< the vertex */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
@@ -895,14 +894,14 @@ void stPcmwInit(
          ntermspos++;
    }
 
-   *npseudoterms = ntermspos;
+   if( npseudoterms )
+      *npseudoterms = ntermspos;
 }
 
 
 /** initialize */
 static inline
 void stRpcmwInit(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
@@ -915,7 +914,7 @@ void stRpcmwInit(
    int* const RESTRICT state = g->path_state;
 
    /* unmark dummy terminals */
-   graph_pc_markOrgGraph(scip, g);
+   graph_pc_markOrgGraph(g);
    assert(graph_pc_knotIsFixedTerm(g, g->source));
 
    for( int k = 0; k < nnodes; k++ )
@@ -933,7 +932,8 @@ void stRpcmwInit(
       }
    }
 
-   *nrealterms = nrterms;
+   if( nrealterms )
+      *nrealterms = nrterms;
 }
 
 
@@ -2561,7 +2561,6 @@ void graph_path_st_pcmw_extendOut(
 
 /** Find a directed tree rooted in node 'start' and spanning all terminals */
 void graph_path_st(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edgecosts */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
@@ -2664,7 +2663,6 @@ void graph_path_st(
  *  Note that this function overwrites g->mark.
  *  */
 void graph_path_st_pcmw(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
    const int*            orderedprizes_id,   /**< ordered prizes ids */
@@ -2682,7 +2680,7 @@ void graph_path_st_pcmw(
    int* const RESTRICT state = g->path_state;
    int ntermspos = -1;
 
-   assert(scip && g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
+   assert(g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
    assert(start  <  g->knots);
    assert(g->extended);
@@ -2745,14 +2743,14 @@ void graph_path_st_pcmw(
                   }
                }
 
-               assert(prizesum >= 0.0 && SCIPisLT(scip, prizesum, FARAWAY));
+               assert(prizesum >= 0.0 && LT(prizesum, FARAWAY));
 
                connectK = (prize[k] + prizesum >= pathdist[k]);
             }
 
             if( connectK )
             {
-               stPcmwConnectNode(scip, k, g, orderedprizes, orderedprizes_id, pathdist, pathedge, connected,
+               stPcmwConnectNode(k, g, orderedprizes, orderedprizes_id, pathdist, pathedge, connected,
                      &maxprizeidx, &maxprizeval, &count, &nterms);
 
                assert(nterms <= ntermspos);
@@ -2842,7 +2840,7 @@ void graph_path_st_pcmw_reduce(
  *  Note that this function overwrites g->mark.
  *  */
 void graph_path_st_pcmw_full(
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
@@ -2855,20 +2853,14 @@ void graph_path_st_pcmw_full(
    const int nnodes = g->knots;
    const int nterms = graph_pc_isRootedPcMw(g) ? g->terms : g->terms - 1;
 
-   assert(start  >= 0);
-   assert(start  <  g->knots);
+   assert(start >= 0 && start < g->knots);
    assert(graph_pc_isPcMw(g));
    assert(g->extended);
 
-   /* initialize */
-   for( int k = nnodes - 1; k >= 0; --k )
-   {
-      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
-      state[k]     = UNKNOWN;
-      pathdist[k] = FARAWAY;
-      pathedge[k] = -1;
-      connected[k] = FALSE;
-   }
+   if( graph_pc_isRootedPcMw(g) )
+      stRpcmwInit(g, pathdist, pathedge, connected, NULL);
+   else
+      stPcmwInit(g, pathdist, pathedge, connected, NULL);
 
    pathdist[start] = 0.0;
    connected[start] = TRUE;
@@ -2906,12 +2898,15 @@ void graph_path_st_pcmw_full(
                connected[node] = TRUE;
                resetX(pathdist, heap, state, &heapsize, node, 0.0);
 
+               assert(!Is_term(g->term[node]) && !Is_pseudoTerm(g->term[node]));
                assert(pathedge[node] != -1);
             }
 
             /* have all terminals been reached? */
             if( ++termscount == nterms )
+            {
                break;
+            }
          }
 
          /* update adjacent vertices */
@@ -2927,6 +2922,17 @@ void graph_path_st_pcmw_full(
          }
       }
    }
+
+#ifndef NDEBUG
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph_pc_knotIsFixedTerm(g, k) )
+            assert(connected[k]);
+      }
+   }
+#endif
 }
 
 
@@ -3102,7 +3108,7 @@ void graph_path_st_pcmw_extendBiased(
    *extensions = FALSE;
 
    /* unmark dummy terminals */
-   graph_pc_markOrgGraph(scip, g);
+   graph_pc_markOrgGraph(g);
    assert(graph_pc_knotIsFixedTerm(g, g->source));
 
    /* initialize */
@@ -3213,7 +3219,6 @@ void graph_path_st_pcmw_extendBiased(
  *  positive vertices (as long as this is profitable).
  *  */
 void graph_path_st_rpcmw(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
    const int*            orderedprizes_id,   /**< ordered prizes ids */
@@ -3230,13 +3235,13 @@ void graph_path_st_rpcmw(
    int* const heap = g->path_heap;
    int* const state = g->path_state;
 
-   assert(scip && g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
+   assert(g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
    assert(start  <  g->knots);
    assert(g->extended);
    assert(graph_pc_isRootedPcMw(g));
 
-   stRpcmwInit(scip, g, pathdist, pathedge, connected, &nrterms);
+   stRpcmwInit(g, pathdist, pathedge, connected, &nrterms);
 
    assert(nrterms >= 1);
    pathdist[start] = 0.0;
@@ -3277,7 +3282,7 @@ void graph_path_st_rpcmw(
          state[k] = UNKNOWN;
 
          /* if k is fixed terminal positive vertex and close enough, connect its path to current subtree */
-         if( Is_anyTerm(g->term[k]) && (Is_term(g->term[k]) || SCIPisGE(scip, prize[k], pathdist[k]))
+         if( Is_anyTerm(g->term[k]) && (Is_term(g->term[k]) || GE(prize[k], pathdist[k]))
             && !connected[k] )
          {
             int node;
@@ -3285,7 +3290,7 @@ void graph_path_st_rpcmw(
             assert(k != start);
             assert(pathedge[k] != -1);
             assert(!graph_pc_knotIsDummyTerm(g, k));
-            assert(graph_pc_knotIsFixedTerm(g, k) || SCIPisGE(scip, prize[k], pathdist[k]));
+            assert(graph_pc_knotIsFixedTerm(g, k) || GE(prize[k], pathdist[k]));
 
             if( !graph_pc_knotIsNonLeafTerm(g, k) )
                termscount++;

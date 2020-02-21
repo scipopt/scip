@@ -98,7 +98,8 @@ SCIP_RETCODE computeSteinerTree(
       graph_get_edgeCosts(graph, cost, costrev);
    }
 
-   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, success, FALSE));
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, success));
 
    if( pcmw )
    {
@@ -1543,7 +1544,6 @@ SCIP_RETCODE reduce_boundHopRc(
    )
 {
    SCIP_VAR** vars;
-   SCIP_HEURDATA* tmheurdata;
    SCIP_Real min;
    SCIP_Real bound;
    SCIP_Real maxmin;
@@ -1653,12 +1653,9 @@ SCIP_RETCODE reduce_boundHopRc(
 
    if( SCIPisLT(scip, objval, 0.0) )
    {
-      /* get TM heuristic data */
-      assert(SCIPfindHeur(scip, "TM") != NULL);
-      tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-
       /* compute UB */
-      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, NULL, result, 50, root, cost, costrev, &hopfactor, NULL, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, graph,
+         NULL, NULL, result, 50, root, cost, costrev, &hopfactor, NULL, &success) );
 
       objval = 0.0;
       for( e = 0; e < nedges; e++ )

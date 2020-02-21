@@ -162,8 +162,8 @@ SCIP_RETCODE computeNewSols(
    SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
    /* run shortest path heuristic */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, NULL, soledge, nruns,
-         prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, success, FALSE));
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, prunegraph, nodearrint, NULL, soledge, nruns,
+         prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, success));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 

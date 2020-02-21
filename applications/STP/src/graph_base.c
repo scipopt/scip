@@ -385,7 +385,7 @@ SCIP_Bool graphisValidPcMw(
       {
          int e;
          int e2;
-         int pterm;
+         int pterm = -1;
          const int term = k;
 
          nProperTerms++;
@@ -419,6 +419,7 @@ SCIP_Bool graphisValidPcMw(
             return FALSE;
          }
 
+         assert(pterm >= 0);
          assert(pterm != root);
 
          if( e2 != g->term2edge[term] )
@@ -427,9 +428,9 @@ SCIP_Bool graphisValidPcMw(
             return FALSE;
          }
 
-         if( g->cost[e] != g->prize[pterm] )
+         if( !EQ(g->cost[e], g->prize[pterm]) )
          {
-            SCIPdebugMessage("prize mismatch for node %d: \n", k);
+            SCIPdebugMessage("prize mismatch for node %d: %f!=%f \n", pterm, g->cost[e], g->prize[pterm]);
             return FALSE;
          }
       }
@@ -2547,8 +2548,6 @@ SCIP_RETCODE graph_init(
    p->csr_storage = NULL;
    p->dcsr_storage = NULL;
    p->pseudoancestors = NULL;
-
-   SCIPdebugMessage("Initialized new graph \n");
 
    return SCIP_OKAY;
 }

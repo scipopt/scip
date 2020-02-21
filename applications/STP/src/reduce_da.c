@@ -190,7 +190,8 @@ SCIP_RETCODE computeSteinerTreeTM(
 
    SCIPStpHeurTMCompStarts(graph, startstm, &runstm);
 
-   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, startstm, NULL, result, runstm, graph->source, cost, costrev, NULL, NULL, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      graph, startstm, NULL, result, runstm, graph->source, cost, costrev, NULL, NULL, &success) );
    assert(success);
 
    obj = getSolObj(scip, graph, result);
@@ -3042,7 +3043,8 @@ SCIP_RETCODE reduce_daPcMw(
          SCIP_Real ub;
 
          /* compute second solution and add to pool */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, BND_TMHEUR_NRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+            graph, NULL, NULL, result2, BND_TMHEUR_NRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, &success) );
          assert(success);
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );

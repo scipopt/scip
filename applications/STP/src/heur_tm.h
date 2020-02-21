@@ -36,9 +36,17 @@
 
 #define DEFAULT_HOPFACTOR 0.33
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/** TM mode for PC/MW
+ *  NOTE: bias_simple is only used for PC/RPC */
+enum PCMW_TmMode { pcmode_simple = 0, pcmode_bias = 1, pcmode_biasfull = 2,
+                   pcmode_fulltree = 3, pcmode_all = 4, pcmode_biasAndFulltree = 5, pcmode_fromheurdata = 6 };
+
 
 /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
 SCIP_EXPORT
@@ -58,10 +66,10 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
 SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   enum PCMW_TmMode      pcmw_tmmode,        /**< mode for PC/MW */
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
-   SCIP_Real*            prize,              /**< prizes (for PCMW) or NULL */
+   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
    int                   bestincstart,       /**< best incumbent start vertex */
@@ -69,8 +77,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Real*            costrev,            /**< reversed arc costs */
    SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
-   SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    );
 
 /** run shortest path heuristic, but bias edge costs towards best current LP solution */

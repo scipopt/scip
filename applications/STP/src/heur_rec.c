@@ -362,7 +362,7 @@ SCIP_RETCODE computeReducedProbSolution(
 {
    SCIP_Real* cost;
    SCIP_Real* costrev;
-   SCIP_Real* orgprize = NULL;
+   SCIP_Real* prize = NULL;
    SCIP_Real* nodepriority;
    const int nsolnodes = solgraph->knots;
    const int nsoledges = solgraph->edges;
@@ -370,50 +370,41 @@ SCIP_RETCODE computeReducedProbSolution(
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
    assert(soledges != NULL);
+   assert(graph_valid(scip, solgraph));
 
    SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n", solgraph->knots, nsoledges, solgraph->terms);
 
-   /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nsolnodes) );
 
-   if( pcmw )
-      SCIP_CALL( SCIPallocBufferArray(scip, &orgprize, nsolnodes) );
-
    for( int i = 0; i < nsolnodes; i++ )
       nodepriority[i] = 0.0;
 
-   /*
-    * 1. modify edge costs
-    */
-
-   /* copy edge costs */
    BMScopyMemoryArray(cost, solgraph->cost, nsoledges);
 
    for( int e = 0; e < nsoledges; e++ )
    {
-      IDX* curr;
+      IDX* curr = ancestors[e];
       SCIP_Real avg = 0.0;
       int i = 0;
       SCIP_Bool fixed = FALSE;
 
-      curr = ancestors[e];
-
-      if( curr != NULL )
+      while( curr != NULL )
       {
-         while( curr != NULL )
-         {
-            i++;
-            avg += edgeweight[curr->index];
-            if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5
-                  && SCIPvarGetUbGlobal(vars[flipedge(edgeancestor[curr->index])] ) < 0.5 )
-               fixed = TRUE;
+         i++;
+         avg += edgeweight[curr->index];
+         if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5
+               && SCIPvarGetUbGlobal(vars[flipedge(edgeancestor[curr->index])] ) < 0.5 )
+            fixed = TRUE;
 
-            curr = curr->parent;
-         }
-         avg = avg / (double) i;
-         assert(avg >= 1);
+         curr = curr->parent;
+      }
+
+      if( i > 0 )
+      {
+         avg /= (double) i;
+         assert(avg >= 1.0);
       }
 
       /* is an ancestor edge fixed? */
@@ -434,11 +425,9 @@ SCIP_RETCODE computeReducedProbSolution(
    /* adapted prizes */
    if( pcmw )
    {
-      SCIP_Real* const prize = solgraph->prize;
-
-      assert(prize != NULL);
-      assert(orgprize != NULL);
       assert(solgraph->extended);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &prize, nsolnodes) );
 
       for( int k = 0; k < nsolnodes; k++ )
       {
@@ -450,10 +439,13 @@ SCIP_RETCODE computeReducedProbSolution(
             assert(term >= 0 && root2termedge >= 0);
             assert(solgraph->source != k);
             assert(Is_term(solgraph->term[term]));
-
-            orgprize[k] = prize[k];
-            prize[k] = cost[root2termedge];
             assert(solgraph->cost[root2termedge] > 0.0);
+
+            prize[k] = cost[root2termedge];
+         }
+         else
+         {
+            prize[k] = solgraph->prize[k];
          }
       }
    }
@@ -464,47 +456,23 @@ SCIP_RETCODE computeReducedProbSolution(
       soledges[e] = UNKNOWN;
    }
 
-   /* initialize shortest path algorithm */
    SCIP_CALL( graph_path_init(scip, solgraph) );
 
-   /*
-    *  2. compute solution
-    */
-
    // todo: run prune heuristic with changed weights!
-
    {
       SCIP_Bool success;
       SCIP_Real hopfactor = 0.1;
 
-      /* run TM heuristic */
-      SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, solgraph, NULL, NULL, soledges, heurdata->ntmruns,
-         solgraph->source, cost, costrev, &hopfactor, nodepriority, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, solgraph, NULL, prize, soledges, heurdata->ntmruns,
+         solgraph->source, cost, costrev, &hopfactor, nodepriority, &success) );
 
       assert(SCIPisStopped(scip) || success);
       assert(SCIPisStopped(scip) || graph_solIsValid(scip, solgraph, soledges));
    }
 
-   /* reset vertex weights */
-   if( pcmw )
-   {
-      SCIP_Real* const prize = solgraph->prize;
+   SCIPfreeBufferArrayNull(scip, &prize);
 
-      assert(orgprize != NULL);
-
-      for( int k = 0; k < nsolnodes; k++ )
-         if( Is_pseudoTerm(solgraph->term[k]) )
-         {
-            assert(k != solgraph->source);
-            prize[k] = orgprize[k];
-         }
-
-      SCIPfreeBufferArray(scip, &orgprize);
-   }
-
-   assert(graph_valid(scip, solgraph));
-
-   /* run local heuristic (with original costs) */
+   /* run local heuristic with original costs! */
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
          && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
    {
@@ -1609,7 +1577,6 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP_Bool*            success             /**< solution improved? */
    )
 {
-   SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
    int* unodemap;
    STP_Bool* solnodes;
@@ -1747,16 +1714,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /*** step 3: compute solution on new graph ***/
 
-
-   /* get TM heuristic data */
-   assert(SCIPfindHeur(scip, "TM") != NULL);
-   tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-
    SCIP_CALL( graph_path_init(scip, newgraph) );
 
    /* compute Steiner tree to obtain upper bound */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost,
-         newgraph->cost, &dummy, NULL, success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, &dummy, NULL, success) );
 
    graph_path_exit(scip, newgraph);
 

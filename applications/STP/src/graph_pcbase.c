@@ -1474,9 +1474,39 @@ void graph_pc_getOrgCosts(
 }
 
 
+/** are the given costs equal to the original edge costs? */
+SCIP_Bool graph_pc_costsEqualOrgCosts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the graph */
+   const SCIP_Real*      edgecosts           /**< edge costs to be checked */
+)
+{
+   SCIP_Real* costorg;
+   const int nedges = graph_get_nEdges(graph);
+   SCIP_Bool isEqual = TRUE;
+
+   assert(scip && edgecosts);
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &costorg, nedges) );
+   graph_pc_getOrgCosts(scip, graph, costorg);
+
+   for( int e = 0; e < nedges; ++e )
+   {
+      if( !EQ(edgecosts[e], costorg[e]) )
+      {
+         isEqual = FALSE;
+         break;
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &costorg);
+
+   return isEqual;
+}
+
+
 /** mark original graph (without dummy terminals) */
 void graph_pc_markOrgGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< the graph */
 )
 {
@@ -1498,7 +1528,7 @@ void graph_pc_markOrgGraph(
       {
          g->mark[head] = FALSE;
          assert(g->grad[head] == 2);
-         assert(SCIPisGT(scip, g->cost[e], 0.0));
+         assert(GT(g->cost[e], 0.0));
       }
    }
 
