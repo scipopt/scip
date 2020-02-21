@@ -595,7 +595,7 @@ SECTION: Using SCIP as a standalone solver
     ANSWER:
     <p>
         The size of the search tree is reported in the SCIP statistics as "nodes" at termination does not necessarily include
-        all nodes that have been created by branching. This statistic only reports the number of nodes that were focused during
+        all nodes that have been created by branching. This statistic only reports the number of nodes that were processed during
         the search.
         In particular open nodes that are pruned from the search tree when a new and better incumbent solution becomes available,
         are unaccounted for.
