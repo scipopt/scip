@@ -837,36 +837,26 @@ SCIP_RETCODE delSymConss(
          SCIP_CALL( SCIPdelCons(scip, propdata->schreiersimsconss[i]) );
          SCIP_CALL( SCIPreleaseCons(scip, &propdata->schreiersimsconss[i]) );
       }
+
+      SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
+      propdata->nschreiersimsconss = 0;
    }
 
-   SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
-   propdata->nschreiersimsconss = 0;
-
-   if ( propdata->ngenconss == 0 )
-   {
-      if ( propdata->genconss != NULL )
-         SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
-      propdata->triedaddconss = FALSE;
-   }
-   else
+   for (i = 0; i < propdata->ngenconss; ++i)
    {
       assert( propdata->genconss != NULL );
-      assert( propdata->nperms > 0 );
-      assert( propdata->nperms >= propdata->ngenconss );
+      assert( propdata->genconss[i] != NULL );
 
-      for (i = 0; i < propdata->ngenconss; ++i)
-      {
-         assert( propdata->genconss[i] != NULL );
-
-         SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
-      }
-
-      /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
-      propdata->ngenconss = 0;
-      propdata->triedaddconss = FALSE;
+      SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
    }
+
+   /* free pointers to symmetry group and binary variables */
+   assert( propdata->nperms > 0 );
+   assert( propdata->nperms >= propdata->ngenconss );
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
+   propdata->ngenconss = 0;
+   propdata->triedaddconss = FALSE;
 
    return SCIP_OKAY;
 }
