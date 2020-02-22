@@ -68,6 +68,10 @@ If the installation was succesful, you should be able to test the scripts on our
 ./run_training.sh testdata/
 ```
 
+Th directory "testdata/" contains only a handful of example log files to verify that the R packages have been set up successfully.
+For good training results in a practical scenario, it is recommended to provide at least 50-100 such log files.
+Smaller test beds can be enriched, for example, by running SCIP multiple times per instance with different random seed initializations.
+
 At successful termination, the training summarizes the training in several new files in the output directory "output/".
 The output of the script is explained further below.
 
