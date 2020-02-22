@@ -3204,11 +3204,11 @@ SCIP_RETCODE createConflictGraphSchreierSims(
 }
 
 
-/* frees conflict graph */
+/** frees conflict graph */
 static
 SCIP_RETCODE freeConflictGraphSchreierSims(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_DIGRAPH**        conflictgraph,      /**< conflict graph */
    int                   nnodes              /**< number of nodes in conflict graph */
    )
 {
@@ -3216,6 +3216,7 @@ SCIP_RETCODE freeConflictGraphSchreierSims(
 
    assert( scip != NULL );
    assert( conflictgraph != NULL );
+   assert( *conflictgraph != NULL );
    assert( nnodes > 0 );
 
    /* free node data */
@@ -3224,18 +3225,18 @@ SCIP_RETCODE freeConflictGraphSchreierSims(
       SCIP_NODEDATA* nodedata;
 
       /* get node data */
-      nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
+      nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(*conflictgraph, i);
 
       /* free node data (might not have been allocated if all components are already blocked) */
       if ( nodedata != NULL )
       {
          SCIPfreeBlockMemory(scip, &nodedata);
       }
-      SCIPdigraphSetNodeData(conflictgraph, NULL, i);
+      SCIPdigraphSetNodeData(*conflictgraph, NULL, i);
    }
 
    /* free conflict graph */
-   SCIPdigraphFree(&conflictgraph);
+   SCIPdigraphFree(conflictgraph);
 
    return SCIP_OKAY;
 }
@@ -4187,7 +4188,7 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIPfreeBufferArray(scip, &orbits);
    if ( conflictgraphcreated )
    {
-      SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
+      SCIP_CALL( freeConflictGraphSchreierSims(scip, &conflictgraph, nvars) );
    }
    SCIPfreeBufferArray(scip, &inactiveperms);
 
