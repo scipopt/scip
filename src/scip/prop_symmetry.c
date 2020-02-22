@@ -164,8 +164,8 @@
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
 
 /* default parameters for Schreier Sims cuts */
-#define DEFAULT_SCHREIERSIMSTIEBREAKRULE 1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
-#define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
+#define DEFAULT_SCHREIERSIMSTIEBREAKRULE   1 /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
+#define DEFAULT_SCHREIERSIMSLEADERRULE     1 /**< Should the first element in the orbit be selected as leader? */
 #define DEFAULT_SCHREIERSIMSLEADERVARTYPE 14 /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
@@ -656,7 +656,7 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
 
-   /*  release variables */
+   /* release variables */
    if ( propdata->schreiersimsenabled && propdata->schreiersimsleadervartype != (int) SCIP_VARTYPE_BINARY )
    {
       for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
@@ -667,6 +667,7 @@ SCIP_RETCODE freeSymmetryData(
          }
       }
    }
+
    if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
@@ -725,6 +726,7 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
       propdata->ngenconss = 0;
    }
+
    if ( propdata->schreiersimsconss != NULL )
    {
       assert( propdata->nschreiersimsconss > 0 );
@@ -741,6 +743,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->schreiersimsconss = NULL;
       propdata->nschreiersimsconss = 0;
    }
+
    if ( propdata->leaders != NULL )
    {
       assert( propdata->maxnleaders > 0 );
@@ -2253,6 +2256,7 @@ SCIP_RETCODE determineSymmetry(
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
       propdata->schreiersimsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -2262,6 +2266,7 @@ SCIP_RETCODE determineSymmetry(
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
       propdata->schreiersimsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -2540,13 +2545,13 @@ SCIP_RETCODE determineSymmetry(
             propdata->nmovedpermvars += 1;
 
             if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
-               propdata->nmovedbinpermvars += 1;
+               ++propdata->nmovedbinpermvars;
             else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_INTEGER )
-               propdata->nmovedintpermvars += 1;
+               ++propdata->nmovedintpermvars;
             else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_IMPLINT )
-               propdata->nmovedimplintpermvars += 1;
+               ++propdata->nmovedimplintpermvars;
             else
-               propdata->nmovedcontpermvars += 1;
+               ++propdata->nmovedcontpermvars;
          }
 
          /* Only catch binary variables, since integer variables should be fixed pointwise; implicit integer variables
@@ -2940,7 +2945,7 @@ SCIP_RETCODE detectOrbitopes(
 }
 
 
-/* update symmetry information of conflict graph */
+/** update symmetry information of conflict graph */
 static
 SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2959,7 +2964,6 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
 {
    int i;
    int j;
-   int orbitsize;
 
    assert( scip != NULL );
    assert( conflictgraph != NULL );
@@ -3001,7 +3005,10 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
    for (j = 0; j < norbits; ++j)
    {
       int posinorbit = 0;
+      int orbitsize;
+
       orbitsize = orbitbegins[j + 1] - orbitbegins[j];
+      assert( orbitsize >= 0 );
 
       for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++i)
       {
@@ -3026,6 +3033,7 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
 
          /* get node data */
          nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, pos);
+         assert( nodedata != NULL );
          assert( nodedata->var == var );
 
          nodedata->orbitidx = j;
@@ -3064,7 +3072,6 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
       for (j = 0; j < SCIPdigraphGetNSuccessors(conflictgraph, i); ++j)
       {
          nodedataconflict = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvaridx[j]);
-
          assert( nodedataconflict != NULL );
 
          if ( nodedataconflict->active && nodedataconflict->orbitidx == curorbit )
@@ -3079,11 +3086,11 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
 }
 
 
-/* create conflict graph either for symmetric or for all variables
+/** create conflict graph either for symmetric or for all variables
  *
- * The routine just creates the graph, but does not add (symmetry) information to its nodes.
- * This has to be done separately by the routine updateSymInfoConflictGraphSchreierSims().
- **/
+ *  This routine just creates the graph, but does not add (symmetry) information to its nodes.
+ *  This has to be done separately by the routine updateSymInfoConflictGraphSchreierSims().
+ */
 static
 SCIP_RETCODE createConflictGraphSchreierSims(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3112,6 +3119,7 @@ SCIP_RETCODE createConflictGraphSchreierSims(
    assert( conflictgraph != NULL );
    assert( graphvars != NULL );
    assert( ngraphvars > 0 );
+   assert( success != NULL );
 
    *success = FALSE;
 
@@ -3155,8 +3163,7 @@ SCIP_RETCODE createConflictGraphSchreierSims(
       SCIPdebugMsg(scip, "\tAdd edges for constraint %s.\n", SCIPconsGetName(cons));
 
       /* iterate over pairs of variables in constraint and add bidirected arc
-       * if both are affected by a symmetry or active
-       */
+       * if both are affected by a symmetry or active */
       for (i = 0; i < nsetppcvars; ++i)
       {
          if ( onlypermvars )
@@ -3244,7 +3251,7 @@ SCIP_RETCODE freeConflictGraphSchreierSims(
 }
 
 
-/* temporarily adapt symmetry data to new variable order given by Schreier Sims */
+/** temporarily adapt symmetry data to new variable order given by Schreier Sims */
 static
 SCIP_RETCODE adaptSymmetryDataSchreierSims(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3289,8 +3296,7 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
       posinpermvar[i] = i;
 
    /* Iterate over leaders and put the l-th leader to the l-th position of the lexicographic order.
-    * We do this by swapping the l-th leader with the element at position l of the current permvars array.
-    */
+    * We do this by swapping the l-th leader with the element at position l of the current permvars array. */
    for (l = 0; l < nleaders; ++l)
    {
       leader = leaders[l];
@@ -3483,7 +3489,7 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
-/* add Schreier Sims cuts for a specific orbit */
+/** add Schreier Sims cuts for a specific orbit */
 static
 SCIP_RETCODE addSchreierSimsConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3507,9 +3513,9 @@ SCIP_RETCODE addSchreierSimsConssOrbit(
    int orbitsize;
    int posleader;
    int poscur;
-   int ncuts;
+   int ncuts = 0;
+   SCIP_Bool addcuts = FALSE;
    int i;
-   SCIP_Bool addcuts;
 
    assert( scip != NULL );
    assert( conflictgraph != NULL || ! useconflictgraph );
@@ -3593,12 +3599,13 @@ SCIP_RETCODE addSchreierSimsConssOrbit(
             assert( SCIPvarGetLbLocal(vars[1]) < 0.5 );
             assert( useconflictgraph );
 
+            /* if variable is fixed */
             if ( SCIPvarGetUbLocal(vars[1]) > 0.5 )
             {
                SCIP_NODEDATA* nodedata;
 
                SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
-               *nchgbds += 1;
+               ++(*nchgbds);
 
                /* deactivate the fixed variable (cannot contribute to a conflict anymore) */
                nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, orbits[poscur]);
@@ -3875,7 +3882,6 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
                for (j = 0; j < nconflictvars; ++j)
                {
                   neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
-
                   assert( neighbordata != NULL );
 
                   if ( neighbordata->var == var && neighbordata->active )
@@ -3996,13 +4002,13 @@ SCIP_RETCODE addSchreierSimsConss(
                ++nmovedpermvars;
 
                if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_BINARY )
-                  nmovedbinpermvars += 1;
+                  ++nmovedbinpermvars;
                else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_INTEGER )
-                  nmovedintpermvars += 1;
+                  ++nmovedintpermvars;
                else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_IMPLINT )
-                  nmovedimplintpermvars += 1;
+                  ++nmovedimplintpermvars;
                else
-                  nmovedcontpermvars += 1;
+                  ++nmovedcontpermvars;
                break;
             }
          }
@@ -4019,16 +4025,19 @@ SCIP_RETCODE addSchreierSimsConss(
       selectedtype = SCIP_VARTYPE_BINARY;
       nvarsselectedtype = nmovedbinpermvars;
    }
+
    if ( ISSCHREIERSIMSINTACTIVE(leadervartype) && nmovedintpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_INTEGER;
       nvarsselectedtype = nmovedintpermvars;
    }
+
    if ( ISSCHREIERSIMSIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_IMPLINT;
       nvarsselectedtype = nmovedimplintpermvars;
    }
+
    if ( ISSCHREIERSIMSCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
@@ -4202,7 +4211,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROP*            prop,               /**< symmetry breaking propagator */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL)*/
-   SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early  (or NULL) */
+   SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early (or NULL) */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -4927,6 +4936,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                   return SCIP_OKAY;
                }
             }
+
             for (i = 0; i < propdata->nschreiersimsconss; ++i)
             {
                SCIP_CALL( SCIPpresolCons(scip, propdata->schreiersimsconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
