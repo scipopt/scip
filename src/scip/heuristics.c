@@ -855,7 +855,7 @@ SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables to the corresponding
-                                               *   target variables */
+                                              *   target variables */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -1069,7 +1069,6 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* free local memory */
    SCIPfreeBufferArray(sourcescip, &consvals);
    SCIPfreeBufferArray(sourcescip, &consvars);
-
 
    return SCIP_OKAY;
 }

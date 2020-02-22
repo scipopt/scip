@@ -621,7 +621,6 @@ SCIP_RETCODE aggregation(
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);
 
-
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
          SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
@@ -697,7 +696,6 @@ SCIP_RETCODE cancelCol(
    SCIP_VAR* cancelvar;
    SCIP_Real ncols;
    int maxfillin;
-
 
    ncols = SCIPmatrixGetNColumns(matrix);
    colishashing = ishashingcols[colidx];
@@ -775,7 +773,6 @@ SCIP_RETCODE cancelCol(
             i1 = tmpinds[i];
             i2 = tmpinds[j];
 
-
             assert(cancelcolinds[i] < cancelcolinds[j]);
 
             if( cancelcolinds[i1] < cancelcolinds[i2] )
@@ -795,7 +792,6 @@ SCIP_RETCODE cancelCol(
 
             hashingcolconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &colconspair);
             nretrieves++;
-
 
             if( hashingcolconspair == NULL ||
                hashingcolconspair->colindex == colidx || isblockedvar[hashingcolconspair->colindex] )
@@ -1085,10 +1081,8 @@ SCIP_RETCODE cancelCol(
          break;
    }
 
-
    if( nchgcoef != 0 )
    {
-
       /* update counters */
       *nchgcoefs += nchgcoef;
       *ncanceled += SCIPmatrixGetColNNonzs(matrix, colidx) - cancelcollen;
@@ -1591,7 +1585,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
       }
       SCIPsortIntInt(colsparsity, colidxsorted, ncols);
-
 
       /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);

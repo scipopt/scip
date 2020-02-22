@@ -96,7 +96,6 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
 
-
    SCIPstatReset(*stat, set, transprob, origprob);
 
    return SCIP_OKAY;

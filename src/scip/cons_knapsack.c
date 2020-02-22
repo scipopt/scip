@@ -1164,7 +1164,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( j = 0; j < nmyitems && intprofits; ++j )
       intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
 
-
    /* if no item is left then goto end */
    if( nmyitems == 0 )
    {
@@ -6920,7 +6919,6 @@ SCIP_RETCODE checkParallelObjective(
 
          SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
             SCIPconsGetName(cons), cutoffbound);
-
 
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted

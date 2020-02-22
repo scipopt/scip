@@ -4389,7 +4389,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
    }
 
-
    return SCIP_OKAY;
 }
 

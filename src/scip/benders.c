@@ -71,13 +71,13 @@
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
-                                                     merge candidates */
+                                                  *  merge candidates */
 
 #define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 #define SLACKVAR_NAME         "##bendersslackvar"     /** the name for the Benders' slack variables added to each
-                                                          constraints in the subproblems */
+                                                       *  constraints in the subproblems */
 #define NLINEARCONSHDLRS 5
 
 /* event handler properties */
@@ -2566,7 +2566,6 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_CALL( SCIPpqueueCreate(&benders->subprobqueue, benders->nsubproblems, 1.1,
             benders->benderssubcomp == NULL ? benderssubcompdefault : benders->benderssubcomp, NULL) );
 
-
       for( i = 0; i < benders->nsubproblems; i++ )
       {
          SCIP_SUBPROBLEMSOLVESTAT* solvestat;
@@ -2921,7 +2920,6 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
          SCIP_CALL( SCIPgetBendersSubproblemVar(set->scip, benders, vars[i], &subvar, j) );
          j++;
       }
-
 
       /* if the variable is a linking variable and it is not fixed, then a convex combination with the corepoint is
        * computed.
@@ -3438,7 +3436,6 @@ SCIP_RETCODE generateBendersCuts(
          i = solveidx[k];
 
          convexsub = SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT;
-
 
          /* cuts can only be generated if the subproblem is not independent and if it has been solved. Additionally, the
           * status of the subproblem solving must not be INFEASIBLE while in a cut strengthening round.
@@ -4287,7 +4284,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             objective = SCIPsetInfinity(set);
       }
    }
-
 
    if( !enhancement )
    {
@@ -5270,7 +5266,7 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
                                               *   to the newly created master variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
-                                                  corresponding newly created constraints, or NULL */
+                                              *   corresponding newly created constraints, or NULL */
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    )
 {
