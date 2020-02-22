@@ -3519,31 +3519,36 @@ SCIP_RETCODE addSchreierSimsConssOrbit(
    assert( orbitvarinconflict != NULL || ! useconflictgraph );
    assert( norbitvarinconflict >= 0 );
    assert( norbitvarinconflict > 0 || ! useconflictgraph );
+   assert( nchgbds != NULL );
 
    orbitsize = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx];
 
    /* variables in conflict with leader are fixed and not treated by a cut; trailing -1 to not count the leader */
-   ncuts = 0;
-   addcuts = FALSE;
    if ( propdata->schreiersimsaddcuts )
       addcuts = TRUE;
    else if ( propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
       || propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTS
       || propdata->schreiersimstiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
       addcuts = propdata->addconflictcuts;
+
    if ( addcuts )
       ncuts = orbitsize - norbitvarinconflict - 1;
 
    /* (re-)allocate memory for Schreier Sims cuts and leaders */
-   if ( propdata->nschreiersimsconss == 0 && ncuts > 0 )
+   if ( ncuts > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
+      if ( propdata->nschreiersimsconss == 0 )
+      {
+         assert( propdata->schreiersimsconss == NULL );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
+               propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
+      }
    }
-   else if ( ncuts > 0 )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
-            propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
-   }
+
    if ( propdata->nleaders == 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
