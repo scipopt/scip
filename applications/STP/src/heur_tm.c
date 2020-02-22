@@ -2825,7 +2825,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       result[e] = UNKNOWN;
 
    /* build a Steiner tree */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_biasAndFulltree,
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_bias,
       graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success));
 
    SCIPfreeBufferArrayNull(scip, &prize);
