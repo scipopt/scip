@@ -3575,12 +3575,7 @@ SCIP_RETCODE addSchreierSimsConssOrbit(
 
       if ( i == orbitleaderidx )
       {
-#ifndef NDEBUG
-         if ( orbitvarinconflict != NULL )
-         {
-            assert( ! orbitvarinconflict[i] );
-         }
-#endif
+         assert( orbitvarinconflict == NULL || ! orbitvarinconflict[i] );
          continue;
       }
 
