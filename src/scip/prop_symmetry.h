@@ -55,10 +55,10 @@ enum SCIP_LeaderTiebreakRule
 /** variable types for leader in Schreier Sims cuts */
 enum SCIP_SchreierSimsType
 {
-   SCIP_SCHREIERSIMSTYPE_BINARY                 = 1,    /**< binary variables */
-   SCIP_SCHREIERSIMSTYPE_INTEGER                = 2,    /**< integer variables */
-   SCIP_SCHREIERSIMSTYPE_IMPLINT                = 4,    /**< implicitly integer variables */
-   SCIP_SCHREIERSIMSTYPE_CONTINUOUS             = 8     /**< continuous variables */
+   SCIP_SSTTYPE_BINARY                 = 1,    /**< binary variables */
+   SCIP_SSTTYPE_INTEGER                = 2,    /**< integer variables */
+   SCIP_SSTTYPE_IMPLINT                = 4,    /**< implicitly integer variables */
+   SCIP_SSTTYPE_CONTINUOUS             = 8     /**< continuous variables */
 };
 
 typedef enum SCIP_SchreierSimsType SCIP_SCHREIERSIMSTYPE;
