@@ -3436,7 +3436,7 @@ SCIP_RETCODE addSymresackConss(
    assert( npermvars > 0 );
 
    /* adapt natural variable order to a variable order that is compatible with Schreier Sims cuts */
-   if ( propdata->nleaders > 0 && propdata->sstleadervartype == SCIP_VARTYPE_BINARY )
+   if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
       for (p = 0; p < nperms; ++p)
@@ -3531,7 +3531,7 @@ SCIP_RETCODE addSymresackConss(
       }
    }
 
-   if ( propdata->nleaders > 0 && propdata->sstleadervartype == SCIP_VARTYPE_BINARY)
+   if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
       SCIPfreeBufferArray(scip, &modifiedpermvars);
       for (p = nperms - 1; p >= 0; --p)
