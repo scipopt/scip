@@ -3731,7 +3731,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
 {
    SCIP_NODEDATA* nodedata;
    int* conflictvars;
-   int nconflictvars;
+   int nconflictvars = 0;
    int varidx;
    int orbitcriterion;
    int curcriterion;
@@ -3831,10 +3831,14 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
       }
 
       /* store variables in conflict with leader */
-      leader = SCIPhashmapGetImageInt(varmap, permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
-      assert( leader < SCIPdigraphGetNNodes(conflictgraph) );
+      if ( useconflictgraph )
+      {
+         leader = SCIPhashmapGetImageInt(varmap, permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
+         assert( leader < SCIPdigraphGetNNodes(conflictgraph) );
 
-      nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
+         nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
+      }
+
       if ( *success && tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && nconflictvars > 0 )
       {
          SCIP_VAR* var;
@@ -3842,6 +3846,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
 
          conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
          assert( conflictvars != NULL );
+         assert( orbitvarinconflict != NULL );
 
          for (i = 0; i < orbitsize; ++i)
          {
@@ -3869,6 +3874,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
    }
    else
    {
+      assert( useconflictgraph );
       orbitcriterion = 0;
 
       /* iterate over variables and select the first one that meets the tiebreak rule */
@@ -3902,6 +3908,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
       /* store variables in conflict with leader */
       leader = SCIPhashmapGetImageInt(varmap, permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
       assert( leader < SCIPdigraphGetNNodes(conflictgraph) );
+      assert( norbitvarinconflict != NULL );
 
       nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
       if ( *success && nconflictvars > 0 )
