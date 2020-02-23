@@ -290,7 +290,7 @@ struct SCIP_PropData
    int                   sstleaderrule;      /**< rule to select leader  */
    int                   ssttiebreakrule;    /**< tie break rule for leader selection */
    int                   sstleadervartype;   /**< bitset encoding which variable types can be leaders;
-                                                     *   if multiple types are allowed, take the one with most affected vars */
+                                              *   if multiple types are allowed, take the one with most affected vars */
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
@@ -621,6 +621,33 @@ SCIP_Bool checkSymmetryDataFree(
 #endif
 
 
+/** checks whether a variable has a type compatible with the leader vartype */
+static
+SCIP_Bool isLeadervartypeCompatible(
+   SCIP_VAR*             var,                /**< variable to check */
+   int                   leadervartype       /**< bit set encoding possible leader variable types */
+   )
+{
+   SCIP_VARTYPE vartype;
+   int vartypeencoding;
+
+   assert( var != NULL );
+
+   vartype = SCIPvarGetType(var);
+
+   if ( vartype == SCIP_VARTYPE_BINARY )
+      vartypeencoding = 1;
+   else if ( vartype == SCIP_VARTYPE_INTEGER )
+      vartypeencoding = 2;
+   else if ( vartype == SCIP_VARTYPE_IMPLINT )
+      vartypeencoding = 4;
+   else
+      vartypeencoding = 8;
+
+   return (SCIP_Bool) vartypeencoding & leadervartype;
+}
+
+
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -661,12 +688,12 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
 
-   /* release variables */
-   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_VARTYPE_BINARY )
+   /* release variables if the leader type is not binary */
+   if ( propdata->sstenabled && propdata->sstleadervartype != SCIP_SSTTYPE_BINARY )
    {
       for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
       {
-         if ( (int) SCIPvarGetType(propdata->permvars[i]) == propdata->sstleadervartype )
+         if ( isLeadervartypeCompatible(propdata->permvars[i], propdata->sstleadervartype) )
          {
             SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
          }
@@ -2630,11 +2657,11 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* if Schreier-Sims cuts are enabled, also apply this rule to variables of the handable type */
-   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_VARTYPE_BINARY )
+   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
    {
       for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
       {
-         if ( (int) SCIPvarGetType(propdata->permvars[j]) != propdata->sstleadervartype )
+         if ( ! isLeadervartypeCompatible(propdata->permvars[j], propdata->sstleadervartype) )
             continue;
 
          SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
@@ -5392,7 +5419,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/sstleadervartype",
          "bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);" \
          "if multiple types are allowed, take the one with most affected vars",
-         &propdata->sstleadervartype, TRUE, DEFAULT_SSTLEADERVARTYPE, 0, 15, NULL, NULL) );
+         &propdata->sstleadervartype, TRUE, DEFAULT_SSTLEADERVARTYPE, 1, 15, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/addconflictcuts",
