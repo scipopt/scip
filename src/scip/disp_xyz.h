@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludeDispXyz(
 
 /** TODO add further methods to this group for documentation purposes */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

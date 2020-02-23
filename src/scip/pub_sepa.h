@@ -188,7 +188,7 @@ SCIP_Bool SCIPsepaIsInitialized(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

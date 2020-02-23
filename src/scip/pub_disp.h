@@ -128,7 +128,7 @@ void SCIPdispTime(
    int                   width               /**< width to fit into */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

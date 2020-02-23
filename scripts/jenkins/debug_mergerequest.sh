@@ -20,8 +20,15 @@
 # TESTMODE  | ""                                       | minlp, short
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="minlp"}
+: ${TESTMODE:=""}
 : ${GITBRANCH:=${gitlabTargetBranch}}
+
+if [ "${gitlabTriggerPhrase}" != "" ]; then
+  TESTMODE=$(echo $gitlabTriggerPhrase | cut -f3 -d " ") # get third field (testset)
+else
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
+fi
 
 ORIGBRANCH=${GITBRANCH}
 
@@ -74,9 +81,9 @@ RANDOMSEED=$(date +%Y%m%d%H%M)
 # jobs running
 
 if [ "${TESTMODE}" == "short" ]; then
-  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=50 QUEUE=opt TEST=short TIME=10 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=0"
+  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} OPT=dbg EXCLUSIVE=false MEM=50 QUEUE=opt TEST=short TIME=10 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "minlp" ]; then
-  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP_debug TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest"
+  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} OPT=dbg EXCLUSIVE=false MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP_debug TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest"
 fi
 
 

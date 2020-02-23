@@ -2124,7 +2124,7 @@ SCIP_RETCODE SCIPpriceLoop(
                FALSE : SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot) + 1);
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
 
-         /* set stoppricing to TRUE, of the first pricer wants to stop pricing */
+         /* set stoppricing to TRUE, if the first pricer wants to stop pricing */
          if( p == 0 && stopearly )
             stoppricing = TRUE;
 
@@ -5065,7 +5065,7 @@ SCIP_RETCODE SCIPsolveCIP(
                }
             }
          }
-         else if( !unbounded )
+         else if( !unbounded || branched )
          {
             /* node solution is not feasible */
             if( !branched )

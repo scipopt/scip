@@ -205,7 +205,7 @@ SCIP_Real SCIPgetSepaMinEfficacy(
 #define SCIPgetSepaMinEfficacy(scip)         (SCIPtreeGetCurrentDepth((scip)->tree) == 0 ? (scip)->set->sepa_minefficacyroot : (scip)->set->sepa_minefficacy)
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

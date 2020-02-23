@@ -527,7 +527,7 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Constraint methods
@@ -870,7 +870,7 @@ int SCIPconsGetNUpgradeLocks(
 
 #endif
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicProblemMethods
  *
@@ -928,7 +928,7 @@ void SCIPprintLinConsStats(
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

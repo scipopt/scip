@@ -8688,8 +8688,9 @@ SCIP_RETCODE SCIPlpFlush(
       checkLinks(lp);
    }
 
-   /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+   /* if the cutoff bound was changed in between and it is not disabled (e.g. for column generation),
+    * we want to re-optimize the LP even if nothing else has changed */
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set) ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -12311,9 +12312,9 @@ SCIP_RETCODE updateLazyBounds(
       /* if the column has a lazy lower bound, mark its lower bounds as changed */
       if( !SCIPsetIsInfinity(set, -col->lazylb) )
       {
-         assert((!(lp->divinglazyapplied)) || (col->flushedlb == col->lb)); /*lint !e777*/
+         assert((!(lp->divinglazyapplied)) || (col->flushedlb == col->lb) || col->lbchanged); /*lint !e777*/
          assert(lp->divinglazyapplied || SCIPsetIsGT(set, col->lb, col->lazylb)
-            || (col->flushedlb == -SCIPlpiInfinity(lp->lpi))); /*lint !e777*/
+            || (col->flushedlb == -SCIPlpiInfinity(lp->lpi)) || col->lbchanged); /*lint !e777*/
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
@@ -12325,9 +12326,9 @@ SCIP_RETCODE updateLazyBounds(
       /* if the column has a lazy upper bound, mark its upper bounds as changed */
       if( !SCIPsetIsInfinity(set, col->lazyub) )
       {
-         assert((!(lp->divinglazyapplied)) || (col->flushedub == col->ub)); /*lint !e777*/
+         assert((!(lp->divinglazyapplied)) || (col->flushedub == col->ub) || col->ubchanged); /*lint !e777*/
          assert(lp->divinglazyapplied || SCIPsetIsLT(set, col->ub, col->lazyub)
-            || (col->flushedub == SCIPlpiInfinity(lp->lpi))); /*lint !e777*/
+            || (col->flushedub == SCIPlpiInfinity(lp->lpi)) || col->ubchanged); /*lint !e777*/
 
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
@@ -14793,9 +14794,27 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       for( c = 0; c < nlpicols; ++c )
       {
          if( SCIPsetIsPositive(set, ray[c]) )
-            rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+         {
+            if( !SCIPsetIsInfinity(set, primsol[c]) )
+               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+            /* if the primsol is infinity, as well as the bound, don't scale the ray to 0 */
+            else
+            {
+               assert(SCIPsetIsInfinity(set, lpicols[c]->ub));
+               rayscale = MIN(rayscale, 1/ray[c]);
+            }
+         }
          else if( SCIPsetIsNegative(set, ray[c]) )
-            rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+         {
+            if( !SCIPsetIsInfinity(set, -primsol[c]) )
+               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+            /* if the primsol is infinity, as well as the bound, don't scal the ray to 0 */
+            else
+            {
+               assert(SCIPsetIsInfinity(set, -lpicols[c]->lb));
+               rayscale = MIN(rayscale, -1/ray[c]);
+            }
+         }
 
          assert(SCIPsetIsFeasPositive(set, rayscale));
       }
@@ -18469,17 +18488,18 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    return SCIP_OKAY;
 }
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
-SCIP_RETCODE SCIPlpGetDegeneracy(
+SCIP_RETCODE SCIPlpGetDualDegeneracy(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable-constraint ratio */
    )
 {
    assert(lp != NULL);
@@ -18490,7 +18510,7 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
    {
       lp->validdegeneracylp = stat->nlps;
 
-      /* if the LP was solved to optimality, we determine the degeneracy */
+      /* if the LP was solved to optimality, we determine the dual degeneracy */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_COL** cols;

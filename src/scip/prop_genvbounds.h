@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    );
 
-/* @} */
+/** @} */
 
 
 /** creates the genvbounds propagator and includes it in SCIP

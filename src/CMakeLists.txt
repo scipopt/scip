@@ -962,7 +962,7 @@ target_link_libraries(libscip PRIVATE
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
     ${SYM_LIBRARIES}
-    ${PRESOLVELIB_IMPORTED_TARGETS})
+    ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
     set(SOPLEX_NEEDED 0)
@@ -986,7 +986,7 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
 endif()
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PRESOLVELIB_IMPORTED_TARGETS})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)

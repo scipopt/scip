@@ -178,9 +178,9 @@ SCIP_RETCODE SCIPgetBinvarsDataLinking(
    int*                  nbinvars            /**< pointer to store the number of binary variables, or NULL */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

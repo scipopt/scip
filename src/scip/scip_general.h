@@ -361,7 +361,7 @@ void SCIPprintExternalCodes(
 
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

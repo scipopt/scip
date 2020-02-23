@@ -100,7 +100,7 @@ void SCIPchgDispMode(
    SCIP_DISPMODE         mode                /**< the display column mode */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
