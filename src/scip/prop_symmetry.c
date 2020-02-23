@@ -2306,21 +2306,18 @@ SCIP_RETCODE determineSymmetry(
    /* do not compute symmetry if there are no binary variables */
    if ( SCIPgetNBinVars(scip) == 0 )
    {
-      SCIP_Bool terminate = TRUE;
-
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
 
       /* terminate if only Schreier Sims for binary variables is selected */
       if ( propdata->sstenabled )
       {
-         if ( (ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0)
-            || (ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0)
-            || (ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0) )
-            terminate = FALSE;
+         if ( ! ((ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0)
+               || (ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0)
+               || (ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0)) )
+            return SCIP_OKAY;
       }
-
-      if ( terminate )
+      else
          return SCIP_OKAY;
    }
 
