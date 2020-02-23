@@ -3934,7 +3934,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int leaderrule;
    int tiebreakrule;
    int leadervartype;
-   int selectedtype;
+   SCIP_VARTYPE selectedtype;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -4121,7 +4121,7 @@ SCIP_RETCODE addSchreierSimsConss(
             for (p = 0; p < norbits; ++p)
             {
                /* stop if the first element of an orbits has the wrong vartype */
-               if ( (int) SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
+               if ( SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
                {
                   success = FALSE;
                   break;
