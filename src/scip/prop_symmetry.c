@@ -166,13 +166,13 @@
 #define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
 /* default parameters for Schreier Sims cuts */
-#define DEFAULT_SSTTIEBREAKRULE   1          /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
-#define DEFAULT_SSTLEADERRULE     1          /**< Should the first element in the orbit be selected as leader? */
+#define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims cuts? */
+#define DEFAULT_SSTLEADERRULE     1          /**< index of rule for selecting leader variables for Schreier Sims cuts? */
 #define DEFAULT_SSTLEADERVARTYPE 14          /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 #define DEFAULT_SSTADDCUTS            TRUE   /**< Should Schreier Sims cuts be added? */
-#define DEFAULT_SSTMIXEDCOMPONENTS    FALSE /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
+#define DEFAULT_SSTMIXEDCOMPONENTS    FALSE  /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
