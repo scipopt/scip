@@ -4201,11 +4201,11 @@ SCIP_RETCODE addSstConss(
             && ! conflictgraphcreated )
             leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
          if ( (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
-            && ! ISSSTBINACTIVE(leadervartype) )
+            && selectedtype != SCIP_VARTYPE_BINARY )
             leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
          if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! conflictgraphcreated )
             tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
-         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! ISSSTBINACTIVE(leadervartype) )
+         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
             tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
          /* select orbit and leader */
