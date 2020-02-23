@@ -191,14 +191,14 @@
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
 /* macros for getting activeness of symmetry handling methods */
-#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
-#define ISSSTACTIVE(x)             ((x & SYM_HANDLETYPE_SST) != 0)
+#define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   (((unsigned) x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
+#define ISSSTACTIVE(x)             (((unsigned) x & SYM_HANDLETYPE_SST) != 0)
 
-#define ISSSTBINACTIVE(x)          ((x & SCIP_SSTTYPE_BINARY) != 0)
-#define ISSSTINTACTIVE(x)          ((x & SCIP_SSTTYPE_INTEGER) != 0)
-#define ISSSTIMPLINTACTIVE(x)      ((x & SCIP_SSTTYPE_IMPLINT) != 0)
-#define ISSSTCONTACTIVE(x)         ((x & SCIP_SSTTYPE_CONTINUOUS) != 0)
+#define ISSSTBINACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_BINARY) != 0)
+#define ISSSTINTACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_INTEGER) != 0)
+#define ISSSTIMPLINTACTIVE(x)      (((unsigned) x & SCIP_SSTTYPE_IMPLINT) != 0)
+#define ISSSTCONTACTIVE(x)         (((unsigned) x & SCIP_SSTTYPE_CONTINUOUS) != 0)
 
 
 /** propagator data */
