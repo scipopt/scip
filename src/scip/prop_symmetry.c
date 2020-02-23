@@ -3975,7 +3975,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int leaderrule;
    int tiebreakrule;
    int leadervartype;
-   SCIP_VARTYPE selectedtype;
+   SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
