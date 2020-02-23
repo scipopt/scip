@@ -3940,7 +3940,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
-   SCIP_DIGRAPH* conflictgraph;
+   SCIP_DIGRAPH* conflictgraph = NULL;
    SCIP_HASHMAP* varmap = NULL;
    SCIP_VAR** vars;
    int nvars;
@@ -4173,6 +4173,7 @@ SCIP_RETCODE addSchreierSimsConss(
          /* update symmetry information of conflict graph */
          if ( conflictgraphcreated )
          {
+            assert( conflictgraph != NULL );
             SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
                   varmap, orbits, orbitbegins, norbits) );
          }
@@ -4234,6 +4235,7 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIPfreeBufferArray(scip, &orbits);
    if ( conflictgraphcreated )
    {
+      assert( conflictgraph != NULL );
       SCIP_CALL( freeConflictGraphSchreierSims(scip, &conflictgraph, nvars) );
    }
    SCIPfreeBufferArray(scip, &inactiveperms);
