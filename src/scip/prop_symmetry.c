@@ -216,11 +216,11 @@ struct SCIP_PropData
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    int**                 permstrans;         /**< pointer to store transposed permutation generators as (npermvars x nperms) matrix */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
-   int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component */
-   int                   nmovedbinpermvars;  /**< number of binary variables moved by any permutation in a symmetry component */
-   int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation in a symmetry component */
-   int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation in a symmetry component */
-   int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation in a symmetry component */
+   int                   nmovedpermvars;     /**< number of variables moved by any permutation */
+   int                   nmovedbinpermvars;  /**< number of binary variables moved by any permutation */
+   int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation */
+   int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation */
+   int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
