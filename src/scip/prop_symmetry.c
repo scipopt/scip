@@ -3510,9 +3510,11 @@ SCIP_RETCODE addSymresackConss(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
 
             /* adapt permutation to leader */
-            if ( propdata->nleaders > 0 )
+            if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
             {
                assert( (propdata->componentblocked[i] & SYM_HANDLETYPE_SST) != 0 );
+               assert( modifiedperms != NULL );
+               assert( modifiedpermvars != NULL );
 
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[permidx], modifiedpermvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
