@@ -229,7 +229,7 @@ struct SCIP_PropData
                                               *   component i in components array */
    int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   int*                  componentblocked;   /**< array to store which symmetry methods have been applied to a component using
+   unsigned*             componentblocked;   /**< array to store which symmetry methods have been applied to a component using
                                               *   the same bitset as for misc/usesymmetry */
 
    /* further symmetry information */
@@ -3963,7 +3963,7 @@ SCIP_RETCODE addSstConss(
    int* componentbegins;
    int* vartocomponent;
    int ncomponents;
-   int* componentblocked;
+   unsigned* componentblocked;
 
    int orbitidx;
    int orbitleaderidx;
