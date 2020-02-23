@@ -603,7 +603,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nbinpermvars == 0 );
    assert( propdata->nperms == -1 || propdata->nperms == 0 );
    assert( propdata->nmaxperms == 0 );
-   assert( propdata->nmovedpermvars == 0 );
+   assert( propdata->nmovedpermvars == -1 );
    assert( propdata->nmovedbinpermvars == 0 );
    assert( propdata->nmovedintpermvars == 0 );
    assert( propdata->nmovedimplintpermvars == 0 );
@@ -827,7 +827,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nbinpermvars = 0;
       propdata->nperms = -1;
       propdata->nmaxperms = 0;
-      propdata->nmovedpermvars = 0;
+      propdata->nmovedpermvars = -1;
       propdata->nmovedbinpermvars = 0;
       propdata->nmovedintpermvars = 0;
       propdata->nmovedimplintpermvars = 0;
@@ -2553,6 +2553,8 @@ SCIP_RETCODE determineSymmetry(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1list, propdata->npermvars) );
 
       /* insert variables into hashmap  */
+      assert( propdata->nmovedpermvars == -1 );
+      propdata->nmovedpermvars = 0;
       for (v = 0; v < propdata->npermvars; ++v)
       {
          SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
@@ -4048,8 +4050,10 @@ SCIP_RETCODE addSstConss(
    mixedcomponents = propdata->sstmixedcomponents;
 
    /* if not already computed, get number of affected vars */
-   if ( nmovedpermvars == 0 )
+   if ( nmovedpermvars == -1 )
    {
+      nmovedpermvars = 0;
+
       for (v = 0; v < npermvars; ++v)
       {
          for (p = 0; p < nperms; ++p)
@@ -5283,7 +5287,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nbg1 = 0;
    propdata->permvarsevents = NULL;
    propdata->inactiveperms = NULL;
-   propdata->nmovedpermvars = 0;
+   propdata->nmovedpermvars = -1;
    propdata->nmovedbinpermvars = 0;
    propdata->nmovedintpermvars = 0;
    propdata->nmovedimplintpermvars = 0;
