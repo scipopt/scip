@@ -165,14 +165,14 @@
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
 #define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
-/* default parameters for Schreier Sims cuts */
-#define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims cuts? */
-#define DEFAULT_SSTLEADERRULE     1          /**< index of rule for selecting leader variables for Schreier Sims cuts? */
+/* default parameters for Schreier Sims constraints */
+#define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
+#define DEFAULT_SSTLEADERRULE     1          /**< index of rule for selecting leader variables for Schreier Sims constraints? */
 #define DEFAULT_SSTLEADERVARTYPE 14          /**< bitset encoding which variable types can be leaders (1-bit: binary; 2-bit: integer; 4-bit: impl. int; 8-bit: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
-#define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
-#define DEFAULT_SSTADDCUTS            TRUE   /**< Should Schreier Sims cuts be added? */
-#define DEFAULT_SSTMIXEDCOMPONENTS    FALSE  /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
+#define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
+#define DEFAULT_SSTADDCUTS            TRUE   /**< Should Schreier Sims constraints be added? */
+#define DEFAULT_SSTMIXEDCOMPONENTS    FALSE  /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -283,8 +283,8 @@ struct SCIP_PropData
    SCIP_Bool             offoundreduction;   /**< whether orbital fixing has found a reduction since the last time computing symmetries */
    SCIP_Bool             disableofrestart;   /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
-   /* data necessary for Schreier Sims cuts */
-   SCIP_Bool             sstenabled;         /**< Use Schreier Sims cuts? */
+   /* data necessary for Schreier Sims constraints */
+   SCIP_Bool             sstenabled;         /**< Use Schreier Sims constraints? */
    SCIP_CONS**           sstconss;           /**< list of generated schreier sims conss */
    int                   nsstconss;          /**< number of generated schreier sims conss */
    int                   sstleaderrule;      /**< rule to select leader  */
@@ -294,9 +294,9 @@ struct SCIP_PropData
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
-   SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
-   SCIP_Bool             sstaddcuts;         /**< Should Schreier Sims cuts be added? */
-   SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims cuts be added if a symmetry component contains variables of different types? */
+   SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
+   SCIP_Bool             sstaddcuts;         /**< Should Schreier Sims constraints be added? */
+   SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -2487,7 +2487,7 @@ SCIP_RETCODE determineSymmetry(
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
 
-      /* currently we can only handle non-binary symmetries by Schreier-Sims cuts */
+      /* currently we can only handle non-binary symmetries by Schreier-Sims constraints */
       if ( ! propdata->sstenabled )
          return SCIP_OKAY;
    }
@@ -2504,7 +2504,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   /* we only need the components for orbital fixing, orbitope detection, and Schreier Sims cuts */
+   /* we only need the components for orbital fixing, orbitope detection, and Schreier Sims constraints */
    if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) || propdata->sstenabled )
    {
       SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
@@ -2589,7 +2589,7 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims cuts */
+   /* set up data for Schreier Sims constraints */
    if ( propdata->sstenabled && ! propdata->ofenabled )
    {
       int v;
@@ -2653,7 +2653,7 @@ SCIP_RETCODE determineSymmetry(
       }
    }
 
-   /* if Schreier-Sims cuts are enabled, also capture symmetric variables and forbid multi aggregation of handable vars */
+   /* if Schreier-Sims constraints are enabled, also capture symmetric variables and forbid multi aggregation of handable vars */
    if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
    {
       for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
@@ -3318,7 +3318,7 @@ SCIP_RETCODE adaptSymmetryDataSst(
    SCIP_VAR**            origpermvars,       /**< array of permutation vars w.r.t. original variable ordering */
    SCIP_VAR**            modifiedpermvars,   /**< memory for array of permutation vars w.r.t. new variable ordering */
    int                   npermvars,          /**< length or modifiedpermvars array */
-   int*                  leaders,            /**< leaders of Schreier Sims cuts */
+   int*                  leaders,            /**< leaders of Schreier Sims constraints */
    int                   nleaders            /**< number of leaders */
    )
 {
@@ -3435,7 +3435,7 @@ SCIP_RETCODE addSymresackConss(
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
-   /* adapt natural variable order to a variable order that is compatible with Schreier Sims cuts */
+   /* adapt natural variable order to a variable order that is compatible with Schreier Sims constraints */
    if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
@@ -3547,7 +3547,7 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
-/** add Schreier Sims cuts for a specific orbit */
+/** add Schreier Sims constraints for a specific orbit */
 static
 SCIP_RETCODE addSstConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3556,8 +3556,8 @@ SCIP_RETCODE addSstConssOrbit(
    SCIP_VAR**            permvars,           /**< permvars array */
    int*                  orbits,             /**< symmetry orbits */
    int*                  orbitbegins,        /**< array storing begin position for each orbit */
-   int                   orbitidx,           /**< index of orbit for Schreier Sims cuts */
-   int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims cuts */
+   int                   orbitidx,           /**< index of orbit for Schreier Sims constraints */
+   int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims constraints */
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
    int                   norbitvarinconflict, /**< number of variables in conflict with orbit leader */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
@@ -3601,7 +3601,7 @@ SCIP_RETCODE addSstConssOrbit(
    if ( addcuts )
       ncuts = orbitsize - norbitvarinconflict - 1;
 
-   /* (re-)allocate memory for Schreier Sims cuts and leaders */
+   /* (re-)allocate memory for Schreier Sims constraints and leaders */
    if ( ncuts > 0 )
    {
       if ( propdata->nsstconss == 0 )
@@ -3628,7 +3628,7 @@ SCIP_RETCODE addSstConssOrbit(
       propdata->maxnleaders += 10;
    }
 
-   /* add Schreier Sims cuts vars[0] >= vars[1], where vars[0] is always the leader */
+   /* add Schreier Sims constraints vars[0] >= vars[1], where vars[0] is always the leader */
    posleader = orbitbegins[orbitidx] + orbitleaderidx;
    poscur = orbitbegins[orbitidx] - 1;
    vars[0] = permvars[orbits[posleader]];
@@ -3701,7 +3701,7 @@ SCIP_RETCODE addSstConssOrbit(
 }
 
 
-/** selection rule of next orbit/leader in orbit for Schreier Sims cuts */
+/** selection rule of next orbit/leader in orbit for Schreier Sims constraints */
 static
 SCIP_RETCODE selectOrbitLeaderSstConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3958,7 +3958,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
 }
 
 
-/** add Schreier Sims cuts to the problem */
+/** add Schreier Sims constraints to the problem */
 static
 SCIP_RETCODE addSstConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -4136,7 +4136,7 @@ SCIP_RETCODE addSstConss(
       }
    }
 
-   SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims cuts.\n");
+   SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims constraints.\n");
    SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
 
    ninactiveperms = 0;
@@ -4169,7 +4169,7 @@ SCIP_RETCODE addSstConss(
          inactiveperms[components[p]] = FALSE;
       ninactiveperms = nperms - componentbegins[c + 1] + componentbegins[c];
 
-      /* as long as the stabilizer is non-trivial, add Schreier Sims cuts */
+      /* as long as the stabilizer is non-trivial, add Schreier Sims constraints */
       while ( ninactiveperms < nperms )
       {
          int nchanges = 0;
@@ -4216,7 +4216,7 @@ SCIP_RETCODE addSstConss(
          assert( 0 <= orbitleaderidx && orbitleaderidx < orbitbegins[orbitidx + 1] - orbitbegins[orbitidx] );
          SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
-         /* add Schreier Sims cuts for the selected orbit */
+         /* add Schreier Sims constraints for the selected orbit */
          SCIP_CALL( addSstConssOrbit(scip, conflictgraph, propdata, permvars,
                orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
@@ -4244,7 +4244,7 @@ SCIP_RETCODE addSstConss(
          inactiveperms[components[p]] = TRUE;
    }
 
-   /* if Schreier Sims cuts have been added, store that Schreier Sims has been used for this component */
+   /* if Schreier Sims constraints have been added, store that Schreier Sims has been used for this component */
    for (c = 0; c < ncomponents; ++c)
    {
       if ( norbitleadercomponent[c] > 0 )
@@ -4349,7 +4349,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
       }
 
-      /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims cuts are active) */
+      /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
       if ( propdata->ngenconss == 0 )
          SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
    }
@@ -5422,17 +5422,17 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/addconflictcuts",
-         "Should Schreier Sims cuts be added if we use a conflict based rule?",
+         "Should Schreier Sims constraints be added if we use a conflict based rule?",
          &propdata->addconflictcuts, TRUE, DEFAULT_ADDCONFLICTCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/sstaddcuts",
-         "Should Schreier Sims cuts be added?",
+         "Should Schreier Sims constraints be added?",
          &propdata->sstaddcuts, TRUE, DEFAULT_SSTADDCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/sstmixedcomponents",
-         "Should Schreier Sims cuts be added if a symmetry component contains variables of different types?",
+         "Should Schreier Sims constraints be added if a symmetry component contains variables of different types?",
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
