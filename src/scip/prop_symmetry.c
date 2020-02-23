@@ -3084,6 +3084,7 @@ SCIP_RETCODE updateSymInfoConflictGraphSst(
 
             assert( SCIPhashmapExists(varmap, var) );
             pos = SCIPhashmapGetImageInt(varmap, var);
+            assert( pos != INT_MAX );
          }
 
          /* get node data */
