@@ -116,13 +116,13 @@
 #include <scip/cons_and.h>
 #include <scip/cons_logicor.h>
 #include <scip/cons_or.h>
-#include "scip/cons_orbitope.h"
-#include "scip/cons_symresack.h"
+#include <scip/cons_orbitope.h>
+#include <scip/cons_symresack.h>
 #include <scip/cons_xor.h>
 #include <scip/cons_linking.h>
 #include <scip/cons_bounddisjunction.h>
 #include <scip/misc.h>
-#include "scip/scip_datastructures.h"
+#include <scip/scip_datastructures.h>
 
 #include <scip/prop_symmetry.h>
 #include <symmetry/compute_symmetry.h>
