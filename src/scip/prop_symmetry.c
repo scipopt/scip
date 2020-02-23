@@ -2303,7 +2303,7 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* do not compute symmetry if there are no binary variables */
+   /* do not compute symmetry if there are no binary variables and non-binary variables cannot be handled */
    if ( SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
@@ -2478,7 +2478,7 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* exit if no binary variables are affected by symmetry */
+   /* exit if no binary variables are affected by symmetry and we cannot handle non-binary symmetries */
    if ( ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
@@ -2653,7 +2653,7 @@ SCIP_RETCODE determineSymmetry(
       }
    }
 
-   /* if Schreier-Sims cuts are enabled, also apply this rule to variables of the handable type */
+   /* if Schreier-Sims cuts are enabled, also capture symmetric variables and forbid multi aggregation of handable vars */
    if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
    {
       for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
