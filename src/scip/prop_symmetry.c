@@ -3938,7 +3938,6 @@ SCIP_RETCODE addSchreierSimsConss(
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
-   SCIP_Bool success;
    int* norbitleadercomponent;
 
    int c;
@@ -4083,9 +4082,7 @@ SCIP_RETCODE addSchreierSimsConss(
       if ( componentblocked[c] )
       {
          for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
-         {
             inactiveperms[components[p]] = TRUE;
-         }
       }
    }
 
@@ -4096,7 +4093,7 @@ SCIP_RETCODE addSchreierSimsConss(
    /* iterate over components and compute orbits */
    for (c = 0; c < ncomponents; ++c)
    {
-      success = TRUE;
+      SCIP_Bool success = TRUE;
 
       if ( componentblocked[c] )
          continue;
@@ -4147,13 +4144,15 @@ SCIP_RETCODE addSchreierSimsConss(
          if ( ! success )
             break;
 
+         assert( 0 <= orbitidx && orbitidx < norbits );
+         assert( 0 <= orbitleaderidx && orbitleaderidx < orbitbegins[orbitidx + 1] - orbitbegins[orbitidx] );
          SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
          /* add Schreier Sims cuts for the selected orbit */
          SCIP_CALL( addSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
                orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
-         norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]] += 1;
+         ++norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]];
 
          if ( nchgbds != NULL )
             *nchgbds += nchanges;
