@@ -3992,15 +3992,21 @@ SCIP_RETCODE addSchreierSimsConss(
             {
                ++nmovedpermvars;
 
-               if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_BINARY )
+               switch ( SCIPvarGetType(permvars[v]) )
+               {
+               case SCIP_VARTYPE_BINARY:
                   ++nmovedbinpermvars;
-               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_INTEGER )
+                  break;
+               case SCIP_VARTYPE_INTEGER:
                   ++nmovedintpermvars;
-               else if ( SCIPvarGetType(permvars[v]) == SCIP_VARTYPE_IMPLINT )
+                  break;
+               case SCIP_VARTYPE_IMPLINT:
                   ++nmovedimplintpermvars;
-               else
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+               default:
                   ++nmovedcontpermvars;
-               break;
+               }
             }
          }
       }
