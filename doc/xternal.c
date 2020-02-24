@@ -6662,9 +6662,9 @@
  * - the number of blocks;
  * - the number of linking variables and linking constraints;
  * - the size of the largest as well as the smallest block;
- * - the area score using computeAreaScore();
- * - the modularity using computeModularity();
- * - the block graph statistics using buildBlockGraph(). A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
+ * - the area score;
+ * - the modularity;
+ * - the block graph statistics: A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
  * Note that the linking constraints are intentionally skipped in this computation.
  * \f$ G = (V,E) \f$ denotes a block graph, with vertex set \f$V\f$ and edge set \f$E\f$.
  * Each vertex in the graph represents a block in the decomposition; \f$V = \{v_{1},\dots,v_{k}\}\f$.
