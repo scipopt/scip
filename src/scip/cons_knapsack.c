@@ -11585,6 +11585,10 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* sort the constraint */
    sortItems(consdata0);
 
+   /* see #2970 */
+   if( consdata0->capacity == 0 )
+      return SCIP_OKAY;
+
    /* check constraint against all prior constraints */
    for( c = (consdata0->presolvedtiming == SCIP_PRESOLTIMING_EXHAUSTIVE ? firstchange : 0); c < chkind; ++c )
    {
@@ -11614,6 +11618,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       /* sort the constraint */
       sortItems(consdata1);
+
+      /* see #2970 */
+      if( consdata1->capacity == 0 )
+         continue;
 
       quotient = ((SCIP_Real) consdata0->capacity) / ((SCIP_Real) consdata1->capacity);
 
@@ -11667,8 +11675,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
 
          assert(v == v0 || v == v1);
-	 assert(v0 >= 0);
-	 assert(v1 >= 0);
+         assert(v0 >= 0);
+         assert(v1 >= 0);
 
          /* both variables are the same */
          if( consdata0->vars[v0] == consdata1->vars[v1] )
