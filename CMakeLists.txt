@@ -245,7 +245,7 @@ endif()
 
 # look for presolvelib
 if(PAPILO)
-   find_package(PAPILO)
+   find_package(PAPILO CONFIG)
 endif()
 if(PAPILO_FOUND)
    set(SCIP_WITH_PAPILO on)
