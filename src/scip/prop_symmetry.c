@@ -3869,9 +3869,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          }
       }
    }
-   else
+   else if ( useconflictgraph )
    {
-      assert( useconflictgraph );
       orbitcriterion = 0;
 
       /* iterate over variables and select the first one that meets the tiebreak rule */
