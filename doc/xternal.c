@@ -6662,7 +6662,21 @@
  * - the number of blocks;
  * - the number of linking variables and linking constraints;
  * - the size of the largest as well as the smallest block;
- * - the area score;
+ * - the area score:
+ * This score is also used by GCG to rank decompositions during the automatic detection procedure.
+ * For a decomposition
+ * \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$,
+ * the area score is defined as
+ * \f[
+ *   \text{areascore}(\mathcal{D}) = 1 - \frac{ \sum_{b=1}^k \lvert D^{\text{row}}_{b} \rvert
+ *     \lvert D^{\text{col}}_{b} \rvert + n\lvert L^{\text{row}} \rvert + m\lvert L^{\text{col}} \rvert -
+ *     \lvert L^{\text{row}} \rvert \lvert L^{\text{col}} \rvert }{mn}
+ *   \enspace.
+ * \f]
+ * In the case of a mixed-integer program, the area score intuitively measures the coverage of the rearranged matrix by 0's.
+ * Decompositions with few linking variables and/or constraints and many small blocks \f$A_{[D^{\text{row}}_{b},D^{\text{col}}_{b}]}\f$
+ * will have an area score close to \f$1\f$, whereas coarse decompositions of a matrix have smaller area scores.
+ * The trivial decomposition with a single block has the worst possible area score of 0.
  * - the modularity;
  * - the block graph statistics: A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
  * Note that the linking constraints are intentionally skipped in this computation.
