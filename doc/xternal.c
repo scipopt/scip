@@ -6677,7 +6677,17 @@
  * Decompositions with few linking variables and/or constraints and many small blocks \f$A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\f$
  * will have an area score close to \f$1\f$, whereas coarse decompositions of a matrix have smaller area scores.
  * The trivial decomposition with a single block has the worst possible area score of 0.
- * - the modularity;
+ * - the modularity:
+ * This measure is used to assess the quality of the community structure within a decomposition.
+ * The modularity of the decomposition is computed as follows:
+ * \f[
+ * \begin{aligned}
+ * \sum_{q=1}^{k} \dfrac{e_{q}}{m} \left(1-\dfrac{e_{q}}{m}\right),
+ * \end{aligned}
+ * \f]
+ * where \f$e_{q}\f$ is the number of inner edges within block \f$q\f$ and \f$m\f$ is the total number of edges.
+ * The presence of an inner edge is identified through the presence of a variable in a constraint,
+ * both—the variable and the constraint—belonging to the same block.
  * - the block graph statistics: A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
  * Note that the linking constraints are intentionally skipped in this computation.
  * \f$ G = (V,E) \f$ denotes a block graph, with vertex set \f$V\f$ and edge set \f$E\f$.
