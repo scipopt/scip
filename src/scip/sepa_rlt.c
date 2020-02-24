@@ -160,6 +160,10 @@ SCIP_RETCODE createSepaData(
       if( bilinterms[i].auxvar == NULL )
          continue;
 
+      /* if only initial rows are requested, skip products that contain at least one auxiliary variable */
+      if( sepadata->onlyinitial && (SCIPvarIsRelaxationOnly(bilinterms[i].x) || SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
+         continue;
+
       for( j = 0; j < 2; ++j )
       {
          SCIP_VAR* var = (j == 0) ? bilinterms[i].x : bilinterms[i].y;
