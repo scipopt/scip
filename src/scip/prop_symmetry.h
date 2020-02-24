@@ -34,35 +34,6 @@ extern "C" {
 
 #include <symmetry/type_symmetry.h>
 
-/** selection rules for leaders in Schreier Sims cuts */
-enum SCIP_LeaderRule
-{
-   SCIP_LEADERRULE_FIRSTINORBIT        = 0,       /**< first var in orbit */
-   SCIP_LEADERRULE_LASTINORBIT         = 1,       /**< last var in orbit */
-   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2,       /**< var with most conflicting vars in its orbit */
-   SCIP_LEADERRULE_MAXCONFLICTS        = 3        /**< var with most conflicting vars in problem */
-};
-typedef enum SCIP_LeaderRule SCIP_LEADERRULE;
-
-/** tie breaks for leader rule based on the leader's orbit */
-enum SCIP_LeaderTiebreakRule
-{
-   SCIP_LEADERTIEBREAKRULE_MINORBIT            = 0,    /**< orbit of minimum size */
-   SCIP_LEADERTIEBREAKRULE_MAXORBIT            = 1,    /**< orbit of maximum size */
-   SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT = 2     /**< orbit with maximum number of vars in conflict with leader */
-};
-
-/** variable types for leader in Schreier Sims cuts */
-enum SCIP_SchreierSimsType
-{
-   SCIP_SSTTYPE_BINARY                 = 1,    /**< binary variables */
-   SCIP_SSTTYPE_INTEGER                = 2,    /**< integer variables */
-   SCIP_SSTTYPE_IMPLINT                = 4,    /**< implicitly integer variables */
-   SCIP_SSTTYPE_CONTINUOUS             = 8     /**< continuous variables */
-};
-
-typedef enum SCIP_SchreierSimsType SCIP_SCHREIERSIMSTYPE;
-
 /** include symmetry propagator */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropSymmetry(
