@@ -3634,16 +3634,13 @@ SCIP_RETCODE addSstConssOrbit(
 
    /* add Schreier Sims constraints vars[0] >= vars[1], where vars[0] is always the leader */
    posleader = orbitbegins[orbitidx] + orbitleaderidx;
-   poscur = orbitbegins[orbitidx] - 1;
    vars[0] = permvars[orbits[posleader]];
    vals[0] = -1.0;
    vals[1] = 1.0;
    propdata->leaders[propdata->nleaders++] = orbits[posleader];
    *nchgbds = 0;
-   for (i = 0; i < orbitsize; ++i)
+   for (i = 0, poscur = orbitbegins[orbitidx]; i < orbitsize; ++i, ++poscur)
    {
-      ++poscur;
-
       if ( i == orbitleaderidx )
       {
          assert( orbitvarinconflict == NULL || ! orbitvarinconflict[i] );
