@@ -6525,13 +6525,13 @@
 
 /**@page DECOMP How to provide a problem decomposition
  *
- * Most Mixed Integer Programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
+ * Most mixed-integer programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
  * maybe except for a few outlier columns/rows with many nonzeros.
  * A decomposition identifies subproblems (subsets of rows and columns) that are only linked to each other via a set of linking rows and/or linking
  * columns, but are otherwise independent.
  * The special case of completely independent subproblems (with no linking rows and columns), for example, can be solved by solving
  * the much smaller subproblems and concatenating their optimal solutions.
- * This case has already been integrated into SCIP as a successful presolving technique.
+ * This case has already been integrated into SCIP as a successful presolving technique (see @ref cons_components.c).
  * Another use of decomposition within SCIP is the @ref BENDDECF "Benders Decomposition framework".
  *
  * Since SCIP 7.0, it is easier to pass user decompositions to SCIP that can be used within Benders decomposition or by user algorithms.
@@ -6539,7 +6539,7 @@
  *
  * @section DECOMP_OVERVIEW Overview
  *
- * In the following, we present decompositions of Mixed Integer Programs. However, the generalization to Constraint Integer Programs is straightforward.
+ * In the following, we present decompositions of mixed-integer programs. However, the generalization to Constraint Integer Programs is straightforward.
  *
  * Concretely, for \f$k \geq 0\f$ we call a partition \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$ of the rows and columns of the constraint matrix \f$A\f$ into \f$k + 1\f$ pieces each,
  *
