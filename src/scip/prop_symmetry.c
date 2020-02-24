@@ -3004,7 +3004,7 @@ SCIP_RETCODE detectOrbitopes(
 
 /** update symmetry information of conflict graph */
 static
-SCIP_RETCODE updateSymInfoConflictGraphSst(
+SCIP_RETCODE updateSymInfoConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_VAR**            graphvars,          /**< variables encoded in conflict graph (either all vars or permvars) */
@@ -3147,10 +3147,10 @@ SCIP_RETCODE updateSymInfoConflictGraphSst(
 /** create conflict graph either for symmetric or for all variables
  *
  *  This routine just creates the graph, but does not add (symmetry) information to its nodes.
- *  This has to be done separately by the routine updateSymInfoConflictGraphSst().
+ *  This has to be done separately by the routine updateSymInfoConflictGraphSST().
  */
 static
-SCIP_RETCODE createConflictGraphSst(
+SCIP_RETCODE createConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH**        conflictgraph,      /**< pointer to store conflict graph */
    SCIP_VAR**            graphvars,          /**< variables encoded in conflict graph */
@@ -3274,7 +3274,7 @@ SCIP_RETCODE createConflictGraphSst(
 
 /** frees conflict graph */
 static
-SCIP_RETCODE freeConflictGraphSst(
+SCIP_RETCODE freeConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH**        conflictgraph,      /**< conflict graph */
    int                   nnodes              /**< number of nodes in conflict graph */
@@ -3312,7 +3312,7 @@ SCIP_RETCODE freeConflictGraphSst(
 
 /** temporarily adapt symmetry data to new variable order given by Schreier Sims */
 static
-SCIP_RETCODE adaptSymmetryDataSst(
+SCIP_RETCODE adaptSymmetryDataSST(
    SCIP*                 scip,               /**< SCIP instance */
    int**                 origperms,          /**< permutation matrix w.r.t. original variable ordering */
    int**                 modifiedperms,      /**< memory for permutation matrix w.r.t. new variable ordering */
@@ -3450,7 +3450,7 @@ SCIP_RETCODE addSymresackConss(
       for (i = 0; i < npermvars; ++i)
          modifiedpermvars[i] = permvars[i];
 
-      SCIP_CALL( adaptSymmetryDataSst(scip, perms, modifiedperms, nperms, permvars, modifiedpermvars, npermvars,
+      SCIP_CALL( adaptSymmetryDataSST(scip, perms, modifiedperms, nperms, permvars, modifiedpermvars, npermvars,
             propdata->leaders, propdata->nleaders) );
    }
 
@@ -3553,7 +3553,7 @@ SCIP_RETCODE addSymresackConss(
 
 /** add Schreier Sims constraints for a specific orbit */
 static
-SCIP_RETCODE addSstConssOrbit(
+SCIP_RETCODE addSSTConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL if useconflictgraph == FALSE */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
@@ -3679,7 +3679,7 @@ SCIP_RETCODE addSstConssOrbit(
          }
          else if ( addcuts )
          {
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Sstcut_%d_%d", orbits[posleader], orbits[poscur]);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_%d_%d", orbits[posleader], orbits[poscur]);
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
                   FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -3689,7 +3689,7 @@ SCIP_RETCODE addSstConssOrbit(
       }
       else if ( addcuts )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Sstcut_%d_%d", orbits[posleader], orbits[poscur]);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_%d_%d", orbits[posleader], orbits[poscur]);
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
                FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -3704,7 +3704,7 @@ SCIP_RETCODE addSstConssOrbit(
 
 /** selection rule of next orbit/leader in orbit for Schreier Sims constraints */
 static
-SCIP_RETCODE selectOrbitLeaderSstConss(
+SCIP_RETCODE selectOrbitLeaderSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL if useconflictgraph == FALSE */
    SCIP_VAR**            graphvars,          /**< variables encoded in conflict graph */
@@ -3947,7 +3947,7 @@ SCIP_RETCODE selectOrbitLeaderSstConss(
 
 /** add Schreier Sims constraints to the problem */
 static
-SCIP_RETCODE addSstConss(
+SCIP_RETCODE addSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
@@ -4105,7 +4105,7 @@ SCIP_RETCODE addSstConss(
          || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS
          || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
-      SCIP_CALL( createConflictGraphSst(scip, &conflictgraph, vars, nvars, FALSE,
+      SCIP_CALL( createConflictGraphSST(scip, &conflictgraph, vars, nvars, FALSE,
             permvarmap, &conflictgraphcreated) );
    }
 
@@ -4189,7 +4189,7 @@ SCIP_RETCODE addSstConss(
          if ( conflictgraphcreated )
          {
             assert( conflictgraph != NULL );
-            SCIP_CALL( updateSymInfoConflictGraphSst(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
+            SCIP_CALL( updateSymInfoConflictGraphSST(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
                   varmap, orbits, orbitbegins, norbits) );
          }
 
@@ -4206,7 +4206,7 @@ SCIP_RETCODE addSstConss(
             tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
          /* select orbit and leader */
-         SCIP_CALL( selectOrbitLeaderSstConss(scip, conflictgraph, vars, nvars, varmap,
+         SCIP_CALL( selectOrbitLeaderSSTConss(scip, conflictgraph, vars, nvars, varmap,
                permvars, npermvars, orbits, orbitbegins, norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype,
                &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
 
@@ -4218,7 +4218,7 @@ SCIP_RETCODE addSstConss(
          SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
          /* add Schreier Sims constraints for the selected orbit */
-         SCIP_CALL( addSstConssOrbit(scip, conflictgraph, propdata, permvars,
+         SCIP_CALL( addSSTConssOrbit(scip, conflictgraph, propdata, permvars,
                orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
          ++norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]];
@@ -4263,7 +4263,7 @@ SCIP_RETCODE addSstConss(
    if ( conflictgraphcreated )
    {
       assert( conflictgraph != NULL );
-      SCIP_CALL( freeConflictGraphSst(scip, &conflictgraph, nvars) );
+      SCIP_CALL( freeConflictGraphSST(scip, &conflictgraph, nvars) );
    }
    SCIPfreeBufferArray(scip, &inactiveperms);
 
@@ -4331,7 +4331,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->sstenabled )
    {
-      SCIP_CALL( addSstConss(scip, propdata, nchgbds) );
+      SCIP_CALL( addSSTConss(scip, propdata, nchgbds) );
    }
 
    /* possibly stop */
