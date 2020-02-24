@@ -3097,7 +3097,6 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
          nodedata->orbitidx = j;
          nodedata->orbitsize = orbitsize;
          nodedata->posinorbit = posinorbit++;
-         SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, pos);
       }
    }
 
@@ -3137,7 +3136,6 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
       }
 
       nodedata->nconflictinorbit = nconflictinorbit;
-      SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, i);
    }
 
    return SCIP_OKAY;
@@ -3300,7 +3298,6 @@ SCIP_RETCODE freeConflictGraphSST(
       {
          SCIPfreeBlockMemory(scip, &nodedata);
       }
-      SCIPdigraphSetNodeData(*conflictgraph, NULL, i);
    }
 
    /* free conflict graph */
