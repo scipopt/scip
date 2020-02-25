@@ -4073,6 +4073,10 @@ SCIP_RETCODE addSSTConss(
          }
       }
    }
+   propdata->nmovedbinpermvars = nmovedbinpermvars;
+   propdata->nmovedintpermvars = nmovedintpermvars;
+   propdata->nmovedimplintpermvars = nmovedimplintpermvars;
+   propdata->nmovedcontpermvars = nmovedcontpermvars;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
