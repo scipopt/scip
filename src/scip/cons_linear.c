@@ -16202,6 +16202,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* ensure that rhs >= lhs is satisfied without numerical tolerance */
+      if( SCIPisEQ(scip, consdata->rhs, consdata->lhs) )
+      {
+         consdata->lhs = consdata->rhs;
+         assert(consdata->row == NULL);
+      }
+
       if( consdata->eventdata == NULL )
       {
          /* catch bound change events of variables */
