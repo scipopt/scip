@@ -3619,15 +3619,10 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
 
    if ( propdata->nleaders == 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
-      propdata->maxnleaders = 10;
+      propdata->maxnleaders = MIN(propdata->nperms, propdata->npermvars);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), propdata->maxnleaders) );
    }
-   else if ( propdata->nleaders == propdata->maxnleaders )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->leaders),
-            propdata->maxnleaders, propdata->maxnleaders + 10) );
-      propdata->maxnleaders += 10;
-   }
+   assert( propdata->nleaders < propdata->maxnleaders );
 
    /* add Schreier Sims constraints vars[0] >= vars[1], where vars[0] is always the leader */
    posleader = orbitbegins[orbitidx] + orbitleaderidx;
