@@ -705,6 +705,7 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
       SCIPerrorMessage("Cannot change symmetry handling method during (pre)solving.\n");
+      return SCIP_INVALIDCALL;
    }
 
    return SCIP_OKAY;
