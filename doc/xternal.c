@@ -6639,6 +6639,9 @@
  * Note that SCIPcomputeDecompVarsLabels() will ignore the existing variable labels and computes again the labels based on the constraint labels only;
  * SCIPcomputeDecompConsLabels() works in the same way and ignores the existing constraint labels.
  *
+ * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
+ * Access to all decompositions in the DecompStore is possible with SCIPgetDecomps().
+ *
  * @section DECOMP_READDEC Reading a decomposition from a file
  *
  * Alternatively, after a problem has been read, a related decomposition can be read from a dec-file.
@@ -6698,9 +6701,6 @@
  * Note that building the block graph can become computationally expensive with large and dense decompositions.
  * Thus, it is possible through a user parameter <code>decomposition/maxgraphedge</code> to define a maximum edge limit.
  * The construction process will be interrupted once this limit is reached, in which case only approximate estimations of the block graph statistics will be displayed and accompanied with a warning message.
- *
- * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
- * Access to all decompositions in the DecompStore is possible with SCIPgetDecomps().
  *
  */
 
