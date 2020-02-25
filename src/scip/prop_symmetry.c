@@ -633,6 +633,8 @@ SCIP_Bool isLeadervartypeCompatible(
    int vartypeencoding;
 
    assert( var != NULL );
+   assert( leadervartype >= 0 );
+   assert( leadervartype <= 15 );
 
    vartype = SCIPvarGetType(var);
 
@@ -645,7 +647,7 @@ SCIP_Bool isLeadervartypeCompatible(
    else
       vartypeencoding = 8;
 
-   return (SCIP_Bool) vartypeencoding & leadervartype;
+   return (SCIP_Bool) (vartypeencoding & (unsigned) leadervartype);
 }
 
 
@@ -690,7 +692,7 @@ SCIP_RETCODE freeSymmetryData(
    }
 
    /* release variables if the leader type is not binary */
-   if ( propdata->sstenabled && propdata->sstleadervartype != SCIP_SSTTYPE_BINARY )
+   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
    {
       for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
       {
@@ -2239,7 +2241,7 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
-{
+{ /* lint --e{641} */
    SCIP_Bool successful;
    int maxgenerators;
    int nhandleconss;
@@ -3131,6 +3133,7 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
       /* get conflicts in orbit by couting the active neighbors of i in the same orbit */
       for (j = 0; j < SCIPdigraphGetNSuccessors(conflictgraph, i); ++j)
       {
+         assert( conflictvaridx != NULL );
          nodedataconflict = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvaridx[j]);
          assert( nodedataconflict != NULL );
 
@@ -3399,12 +3402,12 @@ SCIP_RETCODE addSymresackConss(
    int*                  componentbegins,    /**< array containing begin positions of components in components array */
    int                   ncomponents         /**< number of components */
    )
-{
+{ /* lint --e{641} */
    SCIP_PROPDATA* propdata;
    SCIP_VAR** permvars;
    SCIP_Bool conssaddlp;
-   int** modifiedperms;
-   SCIP_VAR** modifiedpermvars;
+   int** modifiedperms = NULL;
+   SCIP_VAR** modifiedpermvars = NULL;
    int** perms;
    int nsymresackcons = 0;
    int npermvars;
@@ -3567,7 +3570,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
    SCIP_Bool             useconflictgraph    /**< whether conflict graph shall be used */
    )
-{
+{ /*lint --e{613,641}*/
    SCIP_CONS* cons;
    char name[SCIP_MAXSTRLEN];
    SCIP_VAR* vars[2];
@@ -3732,11 +3735,11 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int nconflictvars = 0;
    int varidx;
    int orbitcriterion;
-   int curcriterion;
+   int curcriterion = INT_MIN;
    int orbitsize;
    int i;
    SCIP_NODEDATA* neighbordata;
-   int leader;
+   int leader = -1;
    int j;
 
    assert( scip != NULL );
@@ -3761,7 +3764,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    *success = FALSE;
 
    /* select the leader and its orbit */
-   if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
+   if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == (int) SCIP_LEADERRULE_LASTINORBIT )
    {
       orbitcriterion = INT_MIN;
 
@@ -3772,16 +3775,14 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          if ( SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
-         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MINORBIT )
+         if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
             curcriterion = orbitbegins[i] - orbitbegins[i + 1];
-         else if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXORBIT )
+         else if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXORBIT )
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
-            varidx = -1;
-
             /* get first or last active variable in orbit */
-            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT )
             {
                int cnt = orbitbegins[i];
 
@@ -3837,10 +3838,12 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
       }
 
-      if ( *success && tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && nconflictvars > 0 )
+      if ( *success && tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && nconflictvars > 0 )
       {
          SCIP_VAR* var;
          orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
+         assert( useconflictgraph );
+         assert( leader >= 0 && leader < npermvars );
 
          conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
          assert( conflictvars != NULL );
@@ -3888,7 +3891,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          if ( nodedata->orbitidx == -1 )
             continue;
 
-         if ( leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT )
+         if ( leaderrule == (int) SCIP_LEADERRULE_MAXCONFLICTSINORBIT )
             curcriterion = nodedata->nconflictinorbit;
          else
             curcriterion = SCIPdigraphGetNSuccessors(conflictgraph, i);
@@ -3952,7 +3955,7 @@ SCIP_RETCODE addSSTConss(
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
-{
+{ /* lint --e{641} */
    SCIP_DIGRAPH* conflictgraph = NULL;
    SCIP_HASHMAP* varmap = NULL;
    SCIP_VAR** vars;
@@ -4128,7 +4131,6 @@ SCIP_RETCODE addSSTConss(
    SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims constraints.\n");
    SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
 
-   ninactiveperms = 0;
    if ( nchgbds != NULL )
       *nchgbds = 0;
 
