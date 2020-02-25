@@ -2241,7 +2241,7 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
-{ /* lint --e{641} */
+{ /*lint --e{641}*/
    SCIP_Bool successful;
    int maxgenerators;
    int nhandleconss;
@@ -2880,7 +2880,7 @@ SCIP_RETCODE detectOrbitopes(
        * column 0 */
       coltoextend = 0;
       for (j = 0; j < npermsincomponent; ++j)
-      {  /* lint --e{850} */
+      {  /*lint --e{850}*/
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
@@ -3402,7 +3402,7 @@ SCIP_RETCODE addSymresackConss(
    int*                  componentbegins,    /**< array containing begin positions of components in components array */
    int                   ncomponents         /**< number of components */
    )
-{ /* lint --e{641} */
+{ /*lint --e{641}*/
    SCIP_PROPDATA* propdata;
    SCIP_VAR** permvars;
    SCIP_Bool conssaddlp;
@@ -3955,7 +3955,7 @@ SCIP_RETCODE addSSTConss(
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
-{ /* lint --e{641} */
+{ /*lint --e{641}*/
    SCIP_DIGRAPH* conflictgraph = NULL;
    SCIP_HASHMAP* varmap = NULL;
    SCIP_VAR** vars;
