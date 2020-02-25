@@ -287,6 +287,7 @@ struct SCIP_PropData
    SCIP_Bool             sstenabled;         /**< Use Schreier Sims constraints? */
    SCIP_CONS**           sstconss;           /**< list of generated schreier sims conss */
    int                   nsstconss;          /**< number of generated schreier sims conss */
+   int                   maxnsstconss;       /**< maximum number of conss in sstconss */
    int                   sstleaderrule;      /**< rule to select leader  */
    int                   ssttiebreakrule;    /**< tie break rule for leader selection */
    int                   sstleadervartype;   /**< bitset encoding which variable types can be leaders;
@@ -771,9 +772,10 @@ SCIP_RETCODE freeSymmetryData(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->sstconss, propdata->nsstconss);
+      SCIPfreeBlockMemoryArray(scip, &propdata->sstconss, propdata->maxnsstconss);
       propdata->sstconss = NULL;
       propdata->nsstconss = 0;
+      propdata->maxnsstconss = 0;
    }
 
    if ( propdata->leaders != NULL )
@@ -870,8 +872,9 @@ SCIP_RETCODE delSymConss(
          SCIP_CALL( SCIPreleaseCons(scip, &propdata->sstconss[i]) );
       }
 
-      SCIPfreeBlockMemoryArray(scip, &propdata->sstconss, propdata->nsstconss);
+      SCIPfreeBlockMemoryArray(scip, &propdata->sstconss, propdata->maxnsstconss);
       propdata->nsstconss = 0;
+      propdata->maxnsstconss = 0;
    }
 
    for (i = 0; i < propdata->ngenconss; ++i)
@@ -3608,12 +3611,18 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       if ( propdata->nsstconss == 0 )
       {
          assert( propdata->sstconss == NULL );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->sstconss), ncuts) );
+         assert( propdata->maxnsstconss == 0 );
+         propdata->maxnsstconss = 2 * ncuts;
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->sstconss), propdata->maxnsstconss) );
       }
-      else
+      else if ( propdata->nsstconss + ncuts > propdata->maxnsstconss )
       {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, propdata->maxnsstconss + 2 * ncuts);
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->sstconss),
-               propdata->nsstconss, propdata->nsstconss + ncuts) );
+               propdata->maxnsstconss, newsize) );
+         propdata->maxnsstconss = newsize;
       }
    }
 
@@ -5289,6 +5298,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->sstenabled = FALSE;
    propdata->sstconss = NULL;
    propdata->nsstconss = 0;
+   propdata->maxnsstconss = 0;
    propdata->leaders = NULL;
    propdata->nleaders = 0;
    propdata->maxnleaders = 0;
