@@ -704,10 +704,7 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
-      if ( SCIPparamGetInt(param) > 0 )
-      {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
-      }
+      SCIPerrorMessage("Cannot change symmetry handling method during (pre)solving.\n");
    }
 
    return SCIP_OKAY;
