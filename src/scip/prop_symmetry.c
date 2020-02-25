@@ -3548,9 +3548,9 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
-/** add Schreier Sims constraints for a specific orbit */
+/** add Schreier Sims constraints for a specific orbit and update Schreier Sims table */
 static
-SCIP_RETCODE addSSTConssOrbit(
+SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL if useconflictgraph == FALSE */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
@@ -4213,8 +4213,8 @@ SCIP_RETCODE addSSTConss(
          assert( 0 <= orbitleaderidx && orbitleaderidx < orbitbegins[orbitidx + 1] - orbitbegins[orbitidx] );
          SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
-         /* add Schreier Sims constraints for the selected orbit */
-         SCIP_CALL( addSSTConssOrbit(scip, conflictgraph, propdata, permvars,
+         /* add Schreier Sims constraints for the selected orbit and update Schreier Sims table */
+         SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, conflictgraph, propdata, permvars,
                orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
          ++norbitleadercomponent[propdata->vartocomponent[orbits[orbitbegins[orbitidx] + orbitleaderidx]]];
