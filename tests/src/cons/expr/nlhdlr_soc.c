@@ -25,9 +25,6 @@
 
 #include <string.h>
 
-/* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
- * we actually need them
- */
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_soc.c"
 

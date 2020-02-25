@@ -1577,10 +1577,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
             termbegins[npos + nneg - 1] = ntranscoefs - nrhstranscoefs;
          }
          else
-         {
-            SCIPdebugMsg(scip, "Failed because rhsterm [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
             goto CLEANUP;
-         }
       }
    }
    assert(nextlhsterm == npos + nneg - 1);
