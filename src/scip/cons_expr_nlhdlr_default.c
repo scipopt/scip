@@ -274,36 +274,18 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    {
       SCIP_Real violation;
 
-      /* check how much is the violation on the side that we estimate */
-      if( auxvalue == SCIP_INVALID ) /*lint !e777*/
-      {
-         /* if cannot evaluate, then always branch */
-         violation = SCIPinfinity(scip);
-      }
-      else
-      {
-         SCIP_Real auxval;
-
-         /* get value of auxiliary variable of this expression */
-         assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-         auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-         /* compute the violation
-          * if we underestimate, then we enforce expr <= auxval, so violation is (positive part of) auxvalue - auxval
-          * if we overestimate,  then we enforce expr >= auxval, so violation is (positive part of) auxval - auxvalue
-          */
-         if( !overestimate )
-            violation = MAX(0.0, auxvalue - auxval);
-         else
-            violation = MAX(0.0, auxval - auxvalue);
-      }
-      assert(violation >= 0.0);
+#ifdef BRSCORE_RELVIOL
+      SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#else
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#endif
+      assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
       for( c = 0; c < nchildren; ++c )
       {
          if( branchcand[c] )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], REALABS(violation));
+            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation);
             *addedbranchscores = TRUE;
          }
       }

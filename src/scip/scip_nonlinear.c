@@ -723,7 +723,7 @@ void computeBilinEnvelope2(
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);
@@ -793,7 +793,7 @@ void computeBilinEnvelope2(
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);

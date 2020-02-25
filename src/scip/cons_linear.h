@@ -374,9 +374,9 @@ SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

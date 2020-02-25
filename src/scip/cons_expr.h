@@ -1020,6 +1020,77 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
    );
 
+/** computes absolute violation for auxvar relation in an expression w.r.t. original variables
+ *
+ * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
+ * Assume that f(x) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ *
+ * If necessary, f is evaluated in the given solution. If that fails (domain error),
+ * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */
+   );
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   );
+
+/** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
+ * the absolute violation divided by max(1,|f(w)|).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   );
+
 /** @} */
 
 
@@ -1057,6 +1128,50 @@ unsigned int SCIPgetConsExprCurBoundsTag(
 SCIP_EXPORT
 unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** collects all bilinear terms for a given set of constraints
+ *
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
+ *       or SCIPgetConsExprBilinTerm().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConsExprBilinTerms(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONS**                conss,          /**< expression constraints */
+   int                        nconss          /**< total number of expression constraints */
+   );
+
+/** returns the total number of bilinear terms that are contained in all expression constraints
+ *
+ *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprNBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns all bilinear terms that are contained in all expression constraints
+ *
+ * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
+ */
+SCIP_EXPORT
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns the bilinear term that representing the product of two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
+ */
+SCIP_EXPORT
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
    );
 
 /** upgrading method for expression constraints into more specific constraints
@@ -1175,6 +1290,35 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gets absolute violation of expression constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetAbsViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
+/** gets scaled violation of expression constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * The scaling that is applied to the absolute violation of the constraint
+ * depends on the setting of parameter constraints/expr/violscale.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetRelViolationConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   );
+
 /** gives the unique index of an expression constraint
  *
  * Each expression constraint gets an index assigned when it is created.
@@ -1291,6 +1435,7 @@ void SCIPsetConsExprNlhdlrInitExit(
 );
 
 /** set the reformulate callback of a nonlinear handler */
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */

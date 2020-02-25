@@ -52,6 +52,17 @@ typedef enum
 
 } SCIP_MONOTONE;
 
+/** bilinear term data */
+struct SCIP_ConsExpr_BilinTerm
+{
+   SCIP_VAR*             x;                  /**< first variable */
+   SCIP_VAR*             y;                  /**< second variable */
+   SCIP_VAR*             auxvar;             /**< auxiliary variable for the product of x and y */
+   int                   nlockspos;          /**< number of positive expression locks */
+   int                   nlocksneg;          /**< number of negative expression locks */
+};
+typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
+
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
  * Implements a relaxation scheme for variable bounds and translates between different infinity values.
@@ -681,7 +692,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - nlhdlr : nonlinear handler
  *  - expr : expression to be reformulated
  * output:
- *  - simplifiedexpr : the simplified expression (NULL if expr can not be reformulated)
+ *  - refexpr : the reformulated expression (NULL if expr can not be reformulated)
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
    SCIP* scip, \

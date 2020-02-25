@@ -58,6 +58,18 @@ SCIP_RETCODE SCIPgetSymmetry(
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
 
+/** return whether orbital fixing is enabled */
+SCIP_EXPORT
+SCIP_Bool SCIPisOrbitalfixingEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** return number of the symmetry group's generators */
+SCIP_EXPORT
+int SCIPgetSymmetryNGenerators(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

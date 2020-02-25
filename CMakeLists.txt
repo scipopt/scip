@@ -5,10 +5,16 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-# for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
+   # this happens with the cplex static lib
+   if(LPS MATCHES "cpx")
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
+   endif()
 endif()
 
 set(SCIP_VERSION_MAJOR 7)
@@ -54,7 +60,7 @@ option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
-option(PRESOLVELIB "should presolvelib be linked" ON)
+option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -62,8 +68,8 @@ option(PARASCIP "should scip be compiled thread safe" OFF)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
-option(NOBLKMEM "should block and buffer memory be disabled" OFF)
-option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(NOBLKMEM "should block memory be disabled" OFF)
+option(NOBUFMEM "should buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
@@ -238,13 +244,13 @@ else()
 endif()
 
 # look for presolvelib
-if(PRESOLVELIB)
-   find_package(PRESOLVELIB)
+if(PAPILO)
+   find_package(PAPILO)
 endif()
-if(PRESOLVELIB_FOUND)
-   set(SCIP_WITH_PRESOLVELIB on)
+if(PAPILO_FOUND)
+   set(SCIP_WITH_PAPILO on)
 else()
-   set(PRESOLVELIB_IMPORTED_TARGETS "")
+   set(PAPILO_IMPORTED_TARGETS "")
 endif()
 
 #search the selected LP solver library

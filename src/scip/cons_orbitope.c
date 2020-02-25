@@ -401,7 +401,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
 
       /* get set packing/partitioning variables */
       nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-      assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
       /* constraint does not contain enough variables */
       if ( nsetppcvars < ncols )

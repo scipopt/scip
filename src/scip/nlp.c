@@ -965,6 +965,9 @@ SCIP_RETCODE nlrowAddToLinearCoef(
          SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
       }
 
+      if( SCIPsetIsZero(set, coef) )
+         return SCIP_OKAY;
+
       if( !SCIPvarIsActive(var) )
       {
          int j;
@@ -986,10 +989,10 @@ SCIP_RETCODE nlrowAddToLinearCoef(
          return SCIP_OKAY;
       }
    }
-   assert(!removefixed || SCIPvarIsActive(var));
-
-   if( SCIPsetIsZero(set, coef) )
+   else if( SCIPsetIsZero(set, coef) )
       return SCIP_OKAY;
+
+   assert(!removefixed || SCIPvarIsActive(var));
 
    pos = nlrowSearchLinearCoef(nlrow, var);
 
@@ -3620,6 +3623,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    assert(pos >= 0);
    assert(pos < nlp->nnlrows);
    assert(!nlp->indiving);
+   assert(nlp->nlrows != NULL);
 
    nlrow = nlp->nlrows[pos];
    assert(nlrow != NULL);

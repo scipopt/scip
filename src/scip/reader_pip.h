@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

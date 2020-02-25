@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

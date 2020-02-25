@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
