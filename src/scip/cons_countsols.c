@@ -1859,7 +1859,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
       }
 
-      if ( symcomptiming < 2 &&
+      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -1979,7 +1979,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
       }
 
-      if ( symcomptiming < 2 &&
+      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \

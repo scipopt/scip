@@ -36,6 +36,11 @@ extern "C" {
 
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
+/** symmetry timings */
+#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
+#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
+#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
+
 /** define sense of rhs */
 enum SYM_Rhssense
 {
@@ -90,6 +95,8 @@ enum SCIP_SSTType
 };
 
 typedef enum SCIP_SSTType SCIP_SSTTYPE;
+
+
 
 
 #ifdef __cplusplus

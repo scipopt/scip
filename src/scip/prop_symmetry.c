@@ -4970,8 +4970,8 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_Bool earlyterm = FALSE;
 
       /* skip presolving if we are not at the end if addconsstiming == 2 */
-      assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= 2 );
-      if ( propdata->addconsstiming > 1 && ! SCIPisPresolveFinished(scip) )
+      assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= SYM_COMPUTETIMING_AFTERPRESOL );
+      if ( propdata->addconsstiming > SYM_COMPUTETIMING_DURINGPRESOL && ! SCIPisPresolveFinished(scip) )
          return SCIP_OKAY;
 
       /* possibly stop */
@@ -5040,8 +5040,8 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    }
 
    /* run OF presolving */
-   assert( 0 <= propdata->ofsymcomptiming && propdata->ofsymcomptiming <= 2 );
-   if ( propdata->ofenabled && propdata->performpresolving && propdata->ofsymcomptiming <= 1 )
+   assert( 0 <= propdata->ofsymcomptiming && propdata->ofsymcomptiming <= SYM_COMPUTETIMING_AFTERPRESOL );
+   if ( propdata->ofenabled && propdata->performpresolving && propdata->ofsymcomptiming <= SYM_COMPUTETIMING_DURINGPRESOL )
    {
       SCIP_Bool infeasible;
       int nprop;
@@ -5066,7 +5066,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
          propdata->offoundreduction = TRUE;
       }
    }
-   else if ( propdata->ofenabled && propdata->ofsymcomptiming == 1 )
+   else if ( propdata->ofenabled && propdata->ofsymcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
