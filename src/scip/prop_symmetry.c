@@ -630,7 +630,7 @@ SCIP_Bool isLeadervartypeCompatible(
    )
 {
    SCIP_VARTYPE vartype;
-   int vartypeencoding;
+   unsigned int vartypeencoding;
 
    assert( var != NULL );
    assert( leadervartype >= 0 );
