@@ -1825,7 +1825,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
                   var = (*nlhdlrexprdata)->vars[(*nlhdlrexprdata)->transcoefsidx[termstart + i]];
 
                   SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
-                  rhsval += (*nlhdlrexprdata)->transcoefs[termstart + i] * varval;
+                  lhsval += (*nlhdlrexprdata)->transcoefs[termstart + i] * varval;
                }
 
                disvarval = SQR(lhsval) / rhsval;
