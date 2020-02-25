@@ -3540,6 +3540,9 @@ SCIP_RETCODE addSymresackConss(
 
    if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
+      assert( modifiedperms != NULL );
+      assert( modifiedpermvars != NULL );
+
       SCIPfreeBufferArray(scip, &modifiedpermvars);
       for (p = nperms - 1; p >= 0; --p)
       {
@@ -3822,7 +3825,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             *orbitidx = i;
             *success = TRUE;
 
-            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT )
                *leaderidx = 0;
             else
                *leaderidx = orbitbegins[i + 1] - orbitbegins[i] - 1;
@@ -3914,6 +3917,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       if ( *success && nconflictvars > 0 )
       {
          SCIP_VAR* var;
+         assert( orbitvarinconflict != NULL );
 
          orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
 
