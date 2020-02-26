@@ -70,7 +70,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   convtermssize;      /**< size of the convterms array */
 #endif
 
-   SCIP_Real*            exprvals0;          /**< 'off' values of the term for each indicator variable */
+   SCIP_Real*            exprvals0;          /**< 'off' values of the expression for each indicator variable */
 
    SCIP_CONSEXPR_EXPR**  varexprs;           /**< variable expressions */
    int                   nvarexprs;          /**< total number of variable expressions */
@@ -695,9 +695,6 @@ SCIP_RETCODE addCut(
    {
       SCIP_Bool infeasible;
 
-      SCIPdebugMsg(scip, "Separating sol point by perspective cut\n");
-      SCIPprintRowprepSol(scip, rowprep, sol, NULL);
-
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
@@ -1075,16 +1072,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
          SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
 
-         SCIPinfoMessage(scip, NULL, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
+         SCIPdebugMsg(scip, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the handler for an estimator */
          SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
                overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
-
-         if( !success )
-         {
-            SCIPinfoMessage(scip, NULL, "\nhandler couldn't estimate");
-         }
 
          if( success )
          {
@@ -1092,17 +1084,16 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
             SCIP_VAR* var;
             SCIP_Bool var_is_sc;
 
-            SCIPinfoMessage(scip, NULL, "\nrowprep before perspectivy is: ");
+            SCIPdebugMsg(scip, "\nrowprep before perspectivy is: ");
+#ifdef SCIP_DEBUG
             SCIPprintRowprep(scip, rowprep, NULL);
+#endif
 
             /* perspectivy the estimator by adding (1-z)(g0 - c - sum aix0i),
              * where sum aixi + c = rowprep */
 
             /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
             cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
-
-            SCIPinfoMessage(scip, NULL, "\nexpr = %g at %s = 0 ", cst0, SCIPvarGetName(indicator));
-            SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
 
             for( v = 0; v < rowprep->nvars; ++v )
             {
@@ -1116,7 +1107,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
                assert(var_is_sc);
 
                cst0 -= rowprep->coefs[v]*val0;
-               SCIPinfoMessage(scip, NULL, "\nvar %s = %g at 0 ", SCIPvarGetName(var), val0);
             }
 
             /* update the rowprep by adding cst0 - cst0*z */
@@ -1125,8 +1115,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
             SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-            SCIPinfoMessage(scip, NULL, "\nrowprep after perspectivy is: ");
+            SCIPdebugMsg(scip, "\nrowprep after perspectivy is: ");
+#ifdef SCIP_DEBUG
             SCIPprintRowprep(scip, rowprep, NULL);
+#endif
 
             SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
          }

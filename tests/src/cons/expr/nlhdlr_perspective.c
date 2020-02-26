@@ -179,7 +179,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
 {
    SCIP_HASHMAP* scvars;
    SCIP_HASHMAPENTRY* entry;
-   SCIP_SCVARDATA* scvdata;
+   SCVARDATA* scvdata;
    SCIP_Bool result, infeas;
    int nbndchgs, c;
    SCIP_Real val0;
@@ -202,7 +202,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
 
    /* check result */
    cr_expect_eq(SCIPhashmapGetNElements(scvars), 1, "Expected 1 semicontinuous variable, got %d", SCIPhashmapGetNElements(scvars));
-   scvdata = SCIPhashmapGetImage(scvars, (void*)x_1);
+   scvdata = (SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)x_1);
    cr_expect_eq(scvdata->nbnds, 3, "Expected 3 on/off bounds for variable x1, got %d", scvdata->nbnds);
 
    cr_expect_eq(scvdata->bvars[0], (void*)z_1, "bvars[0] expected to be z1, got %s", SCIPvarGetName(scvdata->bvars[0]));
@@ -218,7 +218,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
       entry = SCIPhashmapGetEntry(scvars, c);
       if( entry != NULL )
       {
-         scvdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+         scvdata = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
          SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
          SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
          SCIPfreeBlockMemory(scip, &scvdata);
@@ -285,10 +285,10 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    /* check the 'off' values */
    cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
-   cr_assert_eq(nlhdlrexprdata->termvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->termvals0[0]);
+   cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
    cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
-   cr_assert_eq(nlhdlrexprdata->termvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->termvals0[1]);
+   cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
    SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
@@ -485,10 +485,10 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    /* check the 'off' values */
    cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
-   cr_assert_eq(nlhdlrexprdata->termvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->termvals0[0]);
+   cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
    cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
-   cr_assert_eq(nlhdlrexprdata->termvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->termvals0[1]);
+   cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
    /* separate */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
