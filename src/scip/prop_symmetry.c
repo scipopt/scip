@@ -3619,6 +3619,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nweaksbcs = 0;
 #endif
    SCIP_Real rowcolumnratio;
+   SCIP_Real orbitopepctbinrows;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3642,6 +3643,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    assert( propdata->permvars != NULL );
 
    rowcolumnratio = propdata->rowcolumnratio;
+   orbitopepctbinrows = propdata->orbitopepctbinrows;
 
    /* create array for permutation order */
    SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
@@ -3763,6 +3765,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       for (j = 0; j < ncompcolors; ++j)
       {
+         int ncomps;
          int nbinarycomps = 0;
          int largestcolorcomp = -1;
          int largestcompsize = 0;
@@ -3784,7 +3787,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             continue;
          }
 
-         SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, compcolorbegins[j+1] - compcolorbegins[j],
+         ncomps = compcolorbegins[j+1] - compcolorbegins[j];
+
+         SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, ncomps,
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
          /* check whether components of this color build an orbitope (with > 2 columns) */
@@ -3849,10 +3854,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
             binaffected, intaffected, contaffected);
 #endif
 
-         useorbitope = TRUE;
+         /* only use the orbitope if there are enough binary rows according to parameters */
          if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize) )
             useorbitope = FALSE;
-         if ( isorbitope && nbinarycomps > 0 && useorbitope )
+         else if ( SCIPisLT(scip, (SCIP_Real) nbinarycomps, orbitopepctbinrows * (SCIP_Real) ncomps) )
+            useorbitope = FALSE;
+         else
+            useorbitope = TRUE;
+
+         if ( isorbitope && useorbitope )
          {
             int* firstvaridx;
             int* chosencomp;
@@ -3860,6 +3870,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
               nbinarycomps, largestcompsize);
 
+            assert( nbinarycomps > 0 );
             assert( largestcompsize > 2 );
 
             firstvaridx = propdata->addweaksbcs ? &(firstvaridxpercolor[j]) : NULL; /*lint !e613*/
