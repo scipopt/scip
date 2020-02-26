@@ -42,6 +42,8 @@
 #define NLHDLR_DESC         "soc nonlinear handler"
 #define NLHDLR_PRIORITY     100
 #define DEFAULT_ALLOWEIGENVALUECOMPS TRUE
+#define DEFAULT_MAXROUNDS   10
+#define DEFAULT_MAXROUNDSROOT 10
 
 /*
  * Data structures
@@ -108,7 +110,11 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_Bool alloweigenvaluecomps;           /**< whether Eigenvalue computations should be done to detect complex cases */
+   SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */
+   int                   nenfocalls;         /**< number of enforcement calls for the previous node */
+   int                   maxenforounds;      /**< maximum number of enforcement rounds in non-root rounds */
+   int                   maxenforoundsroot;  /**< maximum number of enforcement rounds in the root round */
+   SCIP_Bool             alloweigenvaluecomps; /**< whether Eigenvalue computations should be done to detect complex cases */
 };
 
 /*
@@ -1920,6 +1926,9 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NODE* node;
+   int depth;
    int naggrs;
    int k;
    SCIP_Bool infeasible;
@@ -1928,6 +1937,25 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    assert(nlhdlrexprdata->disrow != NULL);
 
    *result = SCIP_DIDNOTFIND;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(SCIPfindConsExprNlhdlr(conshdlr, NLHDLR_NAME));
+   assert(nlhdlrdata != NULL);
+
+   if( SCIPgetCurrentNode(scip) != nlhdlrdata->prevnode )
+   {
+      nlhdlrdata->nenfocalls = 0;
+      nlhdlrdata->prevnode = SCIPgetCurrentNode(scip);
+   }
+
+   /* only call separator a given number of times at each node */
+   depth = SCIPgetDepth(scip);
+   if( (depth == 0 && nlhdlrdata->maxenforoundsroot >= 0 && nlhdlrdata->nenfocalls >= nlhdlrdata->maxenforoundsroot)
+      || (depth > 0 && nlhdlrdata->maxenforounds >= 0 && nlhdlrdata->nenfocalls >= nlhdlrdata->maxenforounds) )
+   {
+      return SCIP_OKAY;
+   }
+
+   ++nlhdlrdata->nenfocalls;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
@@ -1993,6 +2021,9 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
 
    /* create nonlinear handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+
+   nlhdlrdata->nenfocalls = 0;
+   nlhdlrdata->prevnode = NULL;
 
    /* TODO: create and store nonlinear handler specific data here */
 
