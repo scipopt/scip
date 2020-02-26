@@ -42,9 +42,9 @@
 #define NLHDLR_DESC           "soc nonlinear handler"
 #define NLHDLR_PRIORITY             100
 #define DEFAULT_MINCUTEFFICACY     1e-3 /** default value for parameter mincutefficacy */
+#define DEFAULT_MAXENFOROUNDSROOT     1 /** default value for parameter maxenforoundsroot */
+#define DEFAULT_MAXENFOROUNDS        10 /** default value for parameter maxenforounds */
 #define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
-#define DEFAULT_MAXROUNDS   10
-#define DEFAULT_MAXROUNDSROOT 10
 
 /*
  * Data structures
@@ -113,10 +113,10 @@ struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */
    int                   nenfocalls;         /**< number of enforcement calls for the previous node */
-   SCIP_Real mincutefficacy;                 /**< minimum efficacy a cut need to be added */
-   SCIP_Bool compeigenvalues;                /**< whether Eigenvalue computations should be done to detect complex cases */
-   int                   maxenforounds;      /**< maximum number of enforcement rounds in non-root rounds */
+   SCIP_Real             mincutefficacy;     /**< minimum efficacy a cut need to be added */
    int                   maxenforoundsroot;  /**< maximum number of enforcement rounds in the root round */
+   int                   maxenforounds;      /**< maximum number of enforcement rounds in non-root rounds */
+   SCIP_Bool             compeigenvalues;    /**< whether Eigenvalue computations should be done to detect complex cases */
 };
 
 /*
@@ -2042,6 +2042,14 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxenforounds",
+         "maximal number of enforcement rounds in non-root nodes (-1: unlimited)",
+         &nlhdlrdata->maxenforounds, FALSE, DEFAULT_MAXENFOROUNDS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxenforoundsroot",
+         "maximal number of enforcement rounds in the root node (-1: unlimited)",
+         &nlhdlrdata->maxenforoundsroot, FALSE, DEFAULT_MAXENFOROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mincutefficacy",
          "Minimum efficacy which a cut needs in order to be added.",
          &nlhdlrdata->mincutefficacy, FALSE, DEFAULT_MINCUTEFFICACY, 0.0, SCIPinfinity(scip), NULL, NULL) );
