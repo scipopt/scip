@@ -7397,6 +7397,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    int i;
    SCIP_Real facetvalue;
    SCIP_Real mindomwidth;
+   SCIP_RETCODE lpsolveretcode;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7525,12 +7526,19 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
     */
    if( conshdlrdata->vp_dualsimplex )
    {
-      SCIP_CALL( SCIPlpiSolveDual(lp) );
+      lpsolveretcode = SCIPlpiSolveDual(lp);
    }
    else
    {
-      SCIP_CALL( SCIPlpiSolvePrimal(lp) );
+      lpsolveretcode = SCIPlpiSolvePrimal(lp);
    }
+   if( lpsolveretcode == SCIP_LPERROR )
+   {
+      SCIPdebugMsg(scip, "LP error, aborting.\n");
+      goto CLEANUP;
+   }
+   SCIP_CALL( lpsolveretcode );
+
    /* any dual feasible solution should provide a valid estimator (and a dual optimal one a facet) */
    if( !SCIPlpiIsDualFeasible(lp) )
    {
@@ -10944,6 +10952,31 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    return SCIP_OKAY;
 }
 
+/** remove all children of expr
+ *
+ * only use if you really know what you are doing
+ */
+SCIP_RETCODE SCIPremoveConsExprExprChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   for( c = 0; c < expr->nchildren; ++c )
+   {
+      assert(expr->children[c] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[c])) );
+   }
+
+   expr->nchildren = 0;
+
+   return SCIP_OKAY;
+}
+
 /** overwrites/replaces a child of an expressions
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
@@ -13557,6 +13590,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for convex expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(scip, conshdlr) );
 
+   /* include nonlinear handler for concave expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrConcave(scip, conshdlr) );
+
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
 
@@ -14670,7 +14706,10 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
 
       /* check whether target has been missed */
       if( *success && overestimate == (*facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]] > targetvalue) )
+      {
+         SCIPdebugMsg(scip, "computed secant, but missed target %g (facetvalue=%g, overestimate=%d)\n", targetvalue, *facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]], overestimate);
          *success = FALSE;
+      }
    }
    else if( nvars == 2 )
    {
