@@ -704,7 +704,7 @@ static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 /** checks whether expression is a sum with more than one child and each child being a variable ...
  *
  * ... or going to be a variable if expr is a nlhdlr-specific copy
- * Within constructExpr(), we can have expression of any type which are a copy of an original expression,
+ * Within constructExpr(), we can have an expression of any type which is a copy of an original expression,
  * but without children. At the end of constructExpr() (after the loop with the stack), these expressions
  * will remain as leafs and will eventually be turned into variables in collectLeafs(). Thus we treat
  * every child that has no children as if it were a variable. Theoretically, there is still the possibility
@@ -795,6 +795,7 @@ SCIP_RETCODE constructExpr(
           * this check takes care of this when x and y are original variables
           * however, it isn't unlikely that we will have sums that become linear after we add auxvars for some children
           * this will be handled in a postprocessing below
+          * for now, the check is performed on the original expression since there is not enough information in nlexpr yet
           */
 #ifdef SCIP_MORE_DEBUG
          SCIPprintConsExprExpr(scip, conshdlr, SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr), NULL);
@@ -803,6 +804,7 @@ SCIP_RETCODE constructExpr(
       }
       else if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
       {
+         /* if we are here, either convexity or concavity is required; try to check for this curvature */
          SCIP_Bool success;
          int method;
 
@@ -1651,7 +1653,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConcave)
 
    curvature = SCIPgetConsExprExprCurvature(nlexpr);
    assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
-   /* we can only estimating on non-concave side */
+   /* we can only be estimating on non-convex side */
    if( curvature == SCIP_EXPRCURV_CONCAVE )
       overestimate = FALSE;
    else if( curvature == SCIP_EXPRCURV_CONVEX )
