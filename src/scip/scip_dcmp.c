@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_dcmp.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for working with decompositions
  * @author Gregor Hendel
  */

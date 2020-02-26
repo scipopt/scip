@@ -3402,6 +3402,9 @@ SCIP_RETCODE conflictAddConflictCons(
 #endif
       assert(conflictset->validdepth == 0);
 
+      /* check conflict set on debugging solution */
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->root, conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) );
+
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */

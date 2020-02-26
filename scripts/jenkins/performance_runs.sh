@@ -126,7 +126,7 @@ PAPILOBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-  PAPILOBRANCHNAME="master"
+  PAPILOBRANCHNAME="bugfix-v1.0"
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
   PAPILOBRANCHNAME="master"
@@ -174,7 +174,7 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
   cd ..
 
   rm -rf papilo
-  git clone git@git.zib.de:bzfgottw/presolve papilo
+  git clone git@github.com:lgottwald/PaPILO.git papilo
   cd papilo
   git checkout ${PAPILOBRANCHNAME}
   git pull

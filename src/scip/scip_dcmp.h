@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_dcmp.h
- * @ingroup TODO
+ * @ingroup DecompMethods
  * @brief  public methods for decompositions
  * @author Gregor Hendel
  */
@@ -33,6 +33,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup DecompMethods
+ *
+ * @{
+ */
 
 /** creates a decomposition */
 SCIP_EXPORT
@@ -145,6 +150,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_Bool             uselimits           /**< respect user limits on potentially expensive graph statistics? */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }
