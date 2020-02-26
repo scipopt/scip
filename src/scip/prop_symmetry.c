@@ -238,6 +238,7 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
+   SCIP_Bool             nonbinaryallowed;   /**< whether nonbinary symmetries should be computed and stored */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -671,22 +672,13 @@ SCIP_RETCODE freeSymmetryData(
    /*  release variables */
    if ( propdata->npermvars > 0 )
    {
-      assert( propdata->binvaraffected || ! propdata->detectsubgroups || ! propdata->onlybinsubgroups );
+      int nvarstorelease;
 
-      if ( propdata->binvaraffected )
-      {
-         for (i = 0; i < propdata->nbinpermvars; ++i)
-         {
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-         }
-      }
+      nvarstorelease = propdata->nonbinaryallowed ? propdata->npermvars : propdata->nbinpermvars;
 
-      if ( propdata->detectsubgroups && ! propdata->onlybinsubgroups )
+      for (i = 0; i < nvarstorelease; ++i)
       {
-         for (i = propdata->nbinpermvars; i < propdata->npermvars; ++i)
-         {
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-         }
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
    }
 
@@ -2230,6 +2222,7 @@ SCIP_RETCODE determineSymmetry(
    int maxgenerators;
    int nhandleconss;
    int nconss;
+   int nvarstocapture;
    unsigned int type = 0;
    int nvars;
    int j;
@@ -2276,6 +2269,8 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   propdata->nonbinaryallowed = propdata->detectsubgroups && ! propdata->onlybinsubgroups;
+
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
@@ -2290,7 +2285,7 @@ SCIP_RETCODE determineSymmetry(
    if ( SCIPgetNBinVars(scip) == 0 )
    {
       propdata->ofenabled = FALSE;
-      if ( ! propdata->detectsubgroups || propdata->onlybinsubgroups )
+      if ( ! propdata->nonbinaryallowed )
          propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
@@ -2449,13 +2444,13 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* exit if no binary variables are affected by symmetry */
+   /* exit if no binary variables are affected by symmetry and nonbinary symmetry is not allowed */
    if ( ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
       /* if no subgroups shall be detected, free symmetry data*/
-      if ( ! propdata->detectsubgroups || ! propdata->onlybinsubgroups )
+      if ( ! propdata->nonbinaryallowed )
       {
          /* free data and exit */
          SCIP_CALL( freeSymmetryData(scip, propdata) );
@@ -2568,7 +2563,8 @@ SCIP_RETCODE determineSymmetry(
     *
     * note: binary variables are in the beginning of permvars
     */
-   for (j = 0; j < propdata->nbinpermvars; ++j)
+   nvarstocapture = propdata->nonbinaryallowed ? propdata->npermvars : propdata->nbinpermvars;
+   for (j = 0; j < nvarstocapture; ++j)
    {
       SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
 
@@ -2584,31 +2580,6 @@ SCIP_RETCODE determineSymmetry(
             {
                SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
                break;
-            }
-         }
-      }
-   }
-
-   /* if nonbinary subgroups are detected and handled, do the same for the other variables */
-   if ( propdata->detectsubgroups && ! propdata->onlybinsubgroups )
-   {
-      for (j = propdata->nbinpermvars; j < propdata->npermvars; ++j)
-      {
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
-
-         if ( propdata->compressed )
-         {
-            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-         }
-         else
-         {
-            for (p = 0; p < propdata->nperms; ++p)
-            {
-               if ( propdata->perms[p][j] != j )
-               {
-                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-                  break;
-               }
             }
          }
       }
@@ -4332,8 +4303,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   assert( propdata->binvaraffected || ! propdata->symconsenabled
-      || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
+   assert( propdata->binvaraffected || ! propdata->symconsenabled || propdata->nonbinaryallowed );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -4350,7 +4320,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected || (propdata->detectsubgroups && ! propdata->onlybinsubgroups) );
+   assert( propdata->binvaraffected || propdata->nonbinaryallowed );
    propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
