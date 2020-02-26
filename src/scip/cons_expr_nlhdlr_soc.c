@@ -38,10 +38,11 @@
 
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "soc"
-#define NLHDLR_DESC         "soc nonlinear handler"
-#define NLHDLR_PRIORITY     100
-#define DEFAULT_ALLOWEIGENVALUECOMPS TRUE
+#define NLHDLR_NAME           "soc"
+#define NLHDLR_DESC           "soc nonlinear handler"
+#define NLHDLR_PRIORITY             100
+#define DEFAULT_MINCUTEFFICACY     1e-3 /** default value for parameter mincutefficacy */
+#define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
 #define DEFAULT_MAXROUNDS   10
 #define DEFAULT_MAXROUNDSROOT 10
 
@@ -112,9 +113,10 @@ struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */
    int                   nenfocalls;         /**< number of enforcement calls for the previous node */
+   SCIP_Real mincutefficacy;                 /**< minimum efficacy a cut need to be added */
+   SCIP_Bool compeigenvalues;                /**< whether Eigenvalue computations should be done to detect complex cases */
    int                   maxenforounds;      /**< maximum number of enforcement rounds in non-root rounds */
    int                   maxenforoundsroot;  /**< maximum number of enforcement rounds in the root round */
-   SCIP_Bool             alloweigenvaluecomps; /**< whether Eigenvalue computations should be done to detect complex cases */
 };
 
 /*
@@ -1663,7 +1665,7 @@ SCIP_RETCODE detectSOC(
             nlhdlrexprdata, success) );
    }
 
-   if( !(*success) && nlhdlrdata->alloweigenvaluecomps )
+   if( !(*success) && nlhdlrdata->compeigenvalues )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression */
       SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs,
@@ -1983,11 +1985,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
       if( row != NULL )
       {
+         SCIP_Real cutefficacy;
+
+         cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
          /* check whether cut is applicable */
-         if( SCIPisCutApplicable(scip, row) )
+         if( SCIPisCutApplicable(scip, row) && cutefficacy >= nlhdlrdata->mincutefficacy )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-            SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
+            SCIPdebugMsg(scip, "added cut with efficacy %g\n", cutefficacy);
 
             if( infeasible )
                *result = SCIP_CUTOFF;
@@ -2037,9 +2042,13 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/alloweigenvaluecomps",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mincutefficacy",
+         "Minimum efficacy which a cut needs in order to be added.",
+         &nlhdlrdata->mincutefficacy, FALSE, DEFAULT_MINCUTEFFICACY, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/compeigenvalues",
          "Should Eigenvalue computations be done to detect complex cases in quadratic constraints?",
-         &nlhdlrdata->alloweigenvaluecomps, FALSE, DEFAULT_ALLOWEIGENVALUECOMPS, NULL, NULL) );
+         &nlhdlrdata->compeigenvalues, FALSE, DEFAULT_COMPEIGENVALUES, NULL, NULL) );
 
    return SCIP_OKAY;
 }
