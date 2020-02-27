@@ -585,7 +585,7 @@ SCIP_RETCODE aggregation(
     */
    if( isimpliedfree )
    {
-      SCIP_CALL( SCIPmatrixRemoveColumnBounds(scip, matrix, colidx2) );
+      SCIPmatrixRemoveColumnBounds(scip, matrix, colidx2);
    }
 
    assert(!SCIPdoNotMultaggrVar(scip, aggregatedvar));

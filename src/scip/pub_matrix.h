@@ -316,7 +316,7 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
 
 /** removes a columns bounds and updates the activities accordingly */
 SCIP_EXPORT
-SCIP_RETCODE SCIPmatrixRemoveColumnBounds(
+void SCIPmatrixRemoveColumnBounds(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int                   col                 /**< column variable to remove bounds from */
