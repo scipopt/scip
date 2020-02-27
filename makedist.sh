@@ -58,7 +58,8 @@ check/testset/stochastic.test \
 applications/*/check/testset/* \
 examples/*/check/testset/* \
 interfaces/*/check/testset/* \
-src/scip/githash.c
+src/scip/githash.c \
+scripts/trainEstimation/
 
 # compress the archive
 gzip -c $NAME.tar > release/$NAME.tgz
