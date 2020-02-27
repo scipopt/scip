@@ -445,8 +445,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          int rowlen = rowvec.getLength();
 
          /* retrieve SCIP compatible left and right hand sides */
-         SCIP_Real lhs = rflags[i].test(RowFlag::LHS_INF) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
-         SCIP_Real rhs = rflags[i].test(RowFlag::RHS_INF) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+         SCIP_Real lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         SCIP_Real rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
 
          /* create variable array matching the value array */
          tmpvars.clear();
