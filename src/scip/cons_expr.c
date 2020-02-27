@@ -259,6 +259,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if at least this factor times the maximal branching score */
    SCIP_Real                branchviolweight;/**< weight by how much to consider the violation assigned to a variable for its branching score */
    SCIP_Real                branchdualweight;/**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
+   SCIP_Real                branchpscostweight;/**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
@@ -313,6 +314,7 @@ typedef struct
    SCIP_Real               auxviol;          /**< aux-violation score of candidate */
    SCIP_Real               domain;           /**< domain score of candidate */
    SCIP_Real               dual;             /**< dual score of candidate */
+   SCIP_Real               pscost;           /**< pseudo-cost score of candidate */
    SCIP_Real               vartype;          /**< variable type score of candidate */
    SCIP_Real               weighted;         /**< weighted variable score */
 } BRANCHCAND;
@@ -6319,7 +6321,7 @@ void scoreBranchingCandidates(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* initialize max-scores to 0 */
+   /* initialize counts to 0 */
    memset(&maxscore, 0, sizeof(BRANCHCAND));
 
    for( c = 0; c < ncands; ++c )
@@ -6368,6 +6370,50 @@ void scoreBranchingCandidates(
          maxscore.dual = MAX(cands[c].dual, maxscore.dual);
       }
 
+      if( conshdlrdata->branchpscostweight != 0.0 )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPgetConsExprExprAuxVar(cands[c].expr);
+         assert(var != NULL);
+
+         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+            cands[c].pscost = SCIP_INVALID;
+         else
+         {
+            SCIP_Real brpoint;
+            SCIP_Real pscostdown;
+            SCIP_Real pscostup;
+
+            /* - branch_relpscost deems pscosts as reliable, if the pseudo-count is at least between 1 and 4; I use 2 for now
+             *   alternatively, it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
+             * - the pscostdown/up is from branch_pscost, assuming strategy == 's' (the default) (TODO: handle other strategies (d,l)
+             * - TODO use dual-score if no reliable pseudo-cost (?)
+             */
+            brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
+            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= 2.0 )
+               pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
+            else
+               pscostdown = SCIP_INVALID;
+            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= 2.0 )
+               pscostup   = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
+            else
+               pscostup   = SCIP_INVALID;
+
+            if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
+               cands[c].pscost = SCIP_INVALID;
+            else if( pscostdown == SCIP_INVALID )
+               cands[c].pscost = pscostup;
+            else if( pscostup == SCIP_INVALID )
+               cands[c].pscost = pscostdown;
+            else
+               cands[c].pscost = SCIPgetBranchScore(scip, NULL, pscostdown, pscostup);  /* pass NULL for var to avoid multiplication with branch-factor */
+         }
+
+         if( cands[c].pscost != SCIP_INVALID )
+            maxscore.pscost = MAX(cands[c].pscost, maxscore.pscost);
+      }
+
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
          SCIP_VAR* var;
@@ -6399,17 +6445,21 @@ void scoreBranchingCandidates(
     */
    for( c = 0; c < ncands; ++c )
    {
+      SCIP_Real weightsum;
+
       ENFOLOG(
          SCIP_VAR* var;
          var = SCIPgetConsExprExprAuxVar(cands[c].expr);
-         SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:(", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          )
 
       cands[c].weighted = 0.0;
+      weightsum = 0.0;
 
       if( maxscore.auxviol > 0.0 )
       {
          cands[c].weighted += conshdlrdata->branchviolweight * cands[c].auxviol / maxscore.auxviol;
+         weightsum += conshdlrdata->branchviolweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, cands[c].auxviol / maxscore.auxviol); )
       }
@@ -6417,6 +6467,7 @@ void scoreBranchingCandidates(
       if( maxscore.domain > 0.0 )
       {
          cands[c].weighted += conshdlrdata->branchdomainweight * cands[c].domain / maxscore.domain;
+         weightsum += conshdlrdata->branchdomainweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(domain)", conshdlrdata->branchdomainweight, cands[c].domain / maxscore.domain); )
       }
@@ -6424,18 +6475,39 @@ void scoreBranchingCandidates(
       if( maxscore.dual > 0.0 )
       {
          cands[c].weighted += conshdlrdata->branchdualweight * cands[c].dual / maxscore.dual;
+         weightsum += conshdlrdata->branchdualweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(dual)", conshdlrdata->branchdualweight, cands[c].dual / maxscore.dual); )
+      }
+
+      /* use pseudo-costs, if we have some for at least half the candidates */
+      if( maxscore.pscost > 0.0 )
+      {
+         if( cands[c].pscost != SCIP_INVALID )
+         {
+            cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
+            weightsum += conshdlrdata->branchpscostweight;
+
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(pscost)", conshdlrdata->branchpscostweight, cands[c].pscost / maxscore.pscost); )
+         }
+         else
+         {
+            /* do not add pscostscore, if not available, also do not add into weightsum */
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " +0.0*    n/a(pscost)"); )
+         }
       }
 
       if( maxscore.vartype > 0.0 )
       {
          cands[c].weighted += conshdlrdata->branchvartypeweight * cands[c].vartype / maxscore.vartype;
+         weightsum += conshdlrdata->branchvartypeweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(vartype)", conshdlrdata->branchvartypeweight, cands[c].vartype / maxscore.vartype); )
       }
+      assert(weightsum > 0.0);  /* we should have got at least one valid score */
+      cands[c].weighted /= weightsum;
 
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " = %g\n", cands[c].weighted); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " ) / %g = %g\n", weightsum, cands[c].weighted); )
    }
 }
 
@@ -14474,6 +14546,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/dualweight",
          "weight by how much to consider the dual values of rows that contain a variable for its branching score",
          &conshdlrdata->branchdualweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostweight",
+         "weight by how much to consider the pseudo cost of a variable for its branching score",
+         &conshdlrdata->branchpscostweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/domainweight",
          "weight by how much to consider the domain width in branching score",
