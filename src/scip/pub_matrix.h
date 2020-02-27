@@ -314,6 +314,14 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    int*                  pclass              /**< parallel row classes */
    );
 
+/** removes a columns bounds and updates the activities accordingly */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmatrixRemoveColumnBounds(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int                   col                 /**< column variable to remove bounds from */
+   );
+
 /** detect parallel columns, obj ignored */
 SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixGetParallelCols(

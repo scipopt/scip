@@ -549,6 +549,7 @@ void getImpliedBounds(
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< matrix datastructure */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_VAR**            vars,               /**< the current variables */
    int                   colidx1,            /**< one of the indexes of column to try nonzero cancellation for */
@@ -577,6 +578,15 @@ SCIP_RETCODE aggregation(
 
    presoldata->naggregated += 1;
    aggregatedvar = vars[colidx2];
+
+   /* if the variable is implied free, we make sure that the columns bounds are removed,
+    * so that subsequent checks for implied bounds do not interfere with the exploitation
+    * of this variables implied bounds
+    */
+   if( isimpliedfree )
+   {
+      SCIP_CALL( SCIPmatrixRemoveColumnBounds(scip, matrix, colidx2) );
+   }
 
    assert(!SCIPdoNotMultaggrVar(scip, aggregatedvar));
 
@@ -988,7 +998,7 @@ SCIP_RETCODE cancelCol(
                if( ++ntotfillin > maxfillin )
                   break;
             }
-
+CHECKFILLINAGAIN:
             if( ntotfillin > maxfillin || ntotfillin >= ncancel )
                continue;
 
@@ -1000,6 +1010,20 @@ SCIP_RETCODE cancelCol(
 
             if( cancelrate > bestcancelrate )
             {
+               if( ishashingcols[hashingcolconspair->colindex] )
+               {
+                  SCIP_Bool lbimplied;
+                  SCIP_Bool ubimplied;
+                  getImpliedBounds(scip, matrix, hashingcolconspair->colindex, &ubimplied, &lbimplied);
+
+                  if( !lbimplied || !ubimplied )
+                  {
+                     ishashingcols[hashingcolconspair->colindex] = FALSE;
+                     ntotfillin += 2;
+                     goto CHECKFILLINAGAIN;
+                  }
+               }
+
                bestnfillin = ntotfillin;
                bestcand = hashingcolconspair->colindex;
                bestscale = scale;
@@ -1093,7 +1117,7 @@ SCIP_RETCODE cancelCol(
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
          cancelcollen = tmpcollen;
-         SCIP_CALL( aggregation(scip, presoldata, vars, colidx, bestcand, !isaddedcons, -bestscale) );
+         SCIP_CALL( aggregation(scip, matrix, presoldata, vars, colidx, bestcand, ishashingcols[bestcand], -bestscale) );
       }
       else
          break;

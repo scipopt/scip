@@ -567,7 +567,7 @@ SCIP_RETCODE SCIPmatrixCreate(
    /* next, clean up aggregations and fixings in logicor costraints, since this cannot lead
     * to further fixings but the logicor constraint can also get downgraded to a linear constraint
     */
-   SCIP_CALL( SCIPcleanupConssLogicor(scip, TRUE, naddconss, ndelconss, nchgcoefs) );  
+   SCIP_CALL( SCIPcleanupConssLogicor(scip, TRUE, naddconss, ndelconss, nchgcoefs) );
 
    /* finally, clean up aggregations and fixings in knapsack and linear constraints since now no new linaer constraints
     * can come up due to downgrading and the remaining cleanup methods cannot fix any more variables
@@ -1123,6 +1123,52 @@ void SCIPmatrixPrintRow(
             SCIPvarGetLbGlobal(matrix->vars[col]), SCIPvarGetUbGlobal(matrix->vars[col]));
    }
    printf(" <= %.15g ###\n", matrix->rhs[row]);
+}
+
+/** removes a columns bounds and updates the activities accordingly */
+SCIP_RETCODE SCIPmatrixRemoveColumnBounds(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int                   col                 /**< column variable to remove bounds from */
+   )
+{
+   int i;
+   int colmatend = matrix->colmatbeg[col] + matrix->colmatcnt[col];
+
+   for( i = matrix->colmatbeg[col]; i != colmatend; ++i )
+   {
+      int row = matrix->colmatind[i];
+      SCIP_Real val = matrix->colmatval[i];
+
+      /* set lower bound to infinity if necessary */
+      if( !SCIPisInfinity(scip, -matrix->lb[col]) )
+      {
+         matrix->lb[col] = -SCIPinfinity(scip);
+
+         if( val > 0.0 )
+            matrix->minactivityneginf[row]++;
+         else
+            matrix->maxactivityneginf[row]++;
+      }
+
+      /* set upper bound to infinity if necessary */
+      if( !SCIPisInfinity(scip, matrix->ub[col]) )
+      {
+         matrix->ub[col] = SCIPinfinity(scip);
+
+         if( val > 0.0 )
+            matrix->maxactivityposinf[row]++;
+         else
+            matrix->minactivityposinf[row]++;
+      }
+
+      /* consider infinite bound contributions for the activities */
+      if( matrix->maxactivityneginf[row] + matrix->maxactivityposinf[row] > 0 )
+         matrix->maxactivity[row] = SCIPinfinity(scip);
+
+      if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
+         matrix->minactivity[row] = -SCIPinfinity(scip);
+   }
 }
 
 /** detect parallel rows of matrix. rhs/lhs are ignored. */
