@@ -351,7 +351,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::QUIET);
+   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
 #endif
 
    /* communicate the time limit */
@@ -370,22 +370,22 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* evaluate the result */
    switch(res.status)
    {
-      case PresolveStatus::INFEASIBLE:
+      case PresolveStatus::kInfeasible:
          *result = SCIP_CUTOFF;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected infeasibility\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNBND_OR_INFEAS:
-      case PresolveStatus::UNBOUNDED:
+      case PresolveStatus::kUnbndOrInfeas:
+      case PresolveStatus::kUnbounded:
          *result = SCIP_UNBOUNDED;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected unboundedness\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNCHANGED:
+      case PresolveStatus::kUnchanged:
          *result = SCIP_DIDNOTFIND;
          data->lastncols = nvars;
          data->lastnrows = nconss;
@@ -394,7 +394,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::REDUCED:
+      case PresolveStatus::kReduced:
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
          *result = SCIP_SUCCESS;
@@ -475,7 +475,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
       switch( type )
       {
-      case ReductionType::FIXED_COL:
+      case ReductionType::kFixedCol:
       {
          SCIP_Bool infeas;
          SCIP_Bool fixed;
@@ -492,7 +492,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
-      case ReductionType::SUBSTITUTED_COL:
+      case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
          SCIP_Real side = res.postsolve.values[first];
@@ -589,7 +589,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          break;
       }
       default:
-      case ReductionType::PARALLEL_COL:
+      case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
       }
    }
@@ -601,7 +601,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       for( int i = 0; i != problem.getNCols(); ++i )
       {
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kLbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
@@ -617,7 +617,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
          }
 
-         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kUbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
