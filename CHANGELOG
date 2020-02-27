@@ -199,8 +199,9 @@ Features
   the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
 
 - new event handler event_estim.c/h that approximates search tree completion and estimates tree size
-  to (optionally) trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
+  to trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
 - new display column that reports approx. search tree completion during the search, and an overview in the statistics table
+- added resources (script, tutorial, test data) to adapt tree size estimation to user instances.
 
 - Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
   symmetries. Previously, some plugins were disabled, which is not necessary anymore.
@@ -255,6 +256,8 @@ Performance improvements
 - improved full orbitope propagation using a static implementation or a dynamic reordering of orbitope rows by a global rank function
 
 - improved detection of packing/partitioning orbitopes
+
+- enable an in-tree restart if after a reasonable initialization, the estimated size of the remaining tree is large.
 
 
 Examples and applications
