@@ -166,7 +166,6 @@ SCIP_DECL_HASHKEYVAL(consPairHashval)
    return SCIPhashThree(conspair->consindex1, conspair->consindex2, SCIPrealHashCode(conspair->conscoef2 / conspair->conscoef1));
 }
 
-
 /** calculate maximal activity of one row without one specific column */
 static
 SCIP_Real getMaxActivitySingleRowWithoutCol(
@@ -176,14 +175,14 @@ SCIP_Real getMaxActivitySingleRowWithoutCol(
    int                   col                 /**< column index */
    )
 {
-   int c;
-   SCIP_Real val;
+   SCIP_Real* valpnt;
    int* rowpnt;
    int* rowend;
-   SCIP_Real* valpnt;
    SCIP_Real maxactivity;
+   SCIP_Real val;
    SCIP_Real lb;
    SCIP_Real ub;
+   int c;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -230,14 +229,14 @@ SCIP_Real getMinActivitySingleRowWithoutCol(
    int                   col                 /**< column index */
    )
 {
-   int c;
-   SCIP_Real val;
+   SCIP_Real* valpnt;
    int* rowpnt;
    int* rowend;
-   SCIP_Real* valpnt;
    SCIP_Real minactivity;
+   SCIP_Real val;
    SCIP_Real lb;
    SCIP_Real ub;
+   int c;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -413,7 +412,6 @@ void getMinMaxActivityResiduals(
    }
 }
 
-
 /** calculate the upper and lower bound of one variable from one row */
 static
 void getVarBoundsOfRow(
@@ -482,7 +480,6 @@ void getVarBoundsOfRow(
    }
 }
 
-
 /** detect implied variable bounds */
 static
 void getImpliedBounds(
@@ -493,11 +490,11 @@ void getImpliedBounds(
    SCIP_Bool*            lbimplied           /**< flag indicating an implied lower bound */
    )
 {
-   SCIP_Real impliedub;
-   SCIP_Real impliedlb;
+   SCIP_Real* valpnt;
    int* colpnt;
    int* colend;
-   SCIP_Real* valpnt;
+   SCIP_Real impliedub;
+   SCIP_Real impliedlb;
    SCIP_Real ub;
    SCIP_Real lb;
 
@@ -544,11 +541,11 @@ void getImpliedBounds(
       *lbimplied = TRUE;
 }
 
-
 /** y = weight1 * var[colidx1] + var[colidx2] */
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< matrix datastructure */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_VAR**            vars,               /**< the current variables */
    int                   colidx1,            /**< one of the indexes of column to try nonzero cancellation for */
@@ -559,24 +556,44 @@ SCIP_RETCODE aggregation(
 {
    SCIP_VAR* tmpvars[2];
    SCIP_Real coefs[2];
-   SCIP_VAR* aggregatedvar;
-   SCIP_VAR* newvar;
-   SCIP_CONS* newcons;
-   SCIP_Real newlb;
-   SCIP_Real newub;
    char newvarname[SCIP_MAXSTRLEN];
    char newconsname[SCIP_MAXSTRLEN];
-   SCIP_Bool infeasible;
-   SCIP_Bool aggregated;
+   SCIP_CONS* newcons;
+   SCIP_VAR* aggregatedvar;
+   SCIP_VAR* newvar;
    SCIP_VARTYPE newvartype;
    SCIP_Real constant;
+   SCIP_Real newlb;
+   SCIP_Real newub;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool infeasible;
+   SCIP_Bool aggregated;
+#ifndef NDEBUG
+   if( isimpliedfree )
+   {
+      SCIP_Bool lbimplied;
+      SCIP_Bool ubimplied;
+
+      getImpliedBounds(scip, matrix, colidx2, &ubimplied, &lbimplied);
+      assert(lbimplied && ubimplied);
+   }
+#endif
 
    assert( !SCIPisZero(scip, weight1) );
 
    presoldata->naggregated += 1;
    aggregatedvar = vars[colidx2];
+
+   /* if the variable is implied free, we make sure that the columns bounds are removed,
+    * so that subsequent checks for implied bounds do not interfere with the exploitation
+    * of this variables implied bounds
+    */
+   if( isimpliedfree )
+   {
+      SCIPdebugMsg(scip, "remove column bounds of column %d\n", colidx2);
+      SCIPmatrixRemoveColumnBounds(scip, matrix, colidx2);
+   }
 
    assert(!SCIPdoNotMultaggrVar(scip, aggregatedvar));
 
@@ -636,6 +653,8 @@ SCIP_RETCODE aggregation(
       SCIP_CALL( SCIPdebugGetSolVal(scip, vars[colidx1], &val1) );
       SCIP_CALL( SCIPdebugGetSolVal(scip, vars[colidx2], &val2) );
       SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, weight1 * val1 + val2) );
+
+      SCIPdebugMsg(scip, "set debug solution value of %s to %g\n", SCIPvarGetName(newvar), weight1 * val1 + val2);
    }
 #endif
 
@@ -651,8 +670,14 @@ SCIP_RETCODE aggregation(
 
    vars[colidx2] = newvar;
 
-   if( !isimpliedfree )
+   /* create a linear constraint that ensures that var[colidx2].lb <= y - weight1 * var[colidx1] <= var[colidx2].ub;
+    * note that it might happen that vars[colidx2] is not implied free even though it has infinite bounds because
+    * getImpliedBounds() considers infinite bounds to be implied
+    */
+   if( !isimpliedfree && (!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)) )
    {
+      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
+         coefs[1], SCIPvarGetName(tmpvars[1]), rhs);
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, newconsname, 2, tmpvars, coefs,
@@ -692,25 +717,24 @@ SCIP_RETCODE cancelCol(
    SCIP_Bool             isaddedcons         /**< whether a linear constraint required to added to keep the validity */
    )
 {
-   int* cancelcolinds;
-   SCIP_Real* cancelcolvals;
-   int bestcand;
-   int bestnfillin;
-   SCIP_Real bestscale;
-   SCIP_Real bestcancelrate;
-   int* tmpinds;
-   SCIP_Real* scores;
-   SCIP_Real* tmpvals;
-   int cancelcollen;
-   int* colidxptr;
-   SCIP_Real* colvalptr;
-   int nchgcoef;
-   int nretrieves;
-   SCIP_Bool colishashing;
    SCIP_VAR* cancelvar;
+   SCIP_Real* cancelcolvals;
+   SCIP_Real* colvalptr;
+   SCIP_Real* tmpvals;
+   SCIP_Real* scores;
+   int* cancelcolinds;
+   int* colidxptr;
+   int* tmpinds;
+   SCIP_Real bestcancelrate;
+   SCIP_Real bestscale;
    SCIP_Real ncols;
+   SCIP_Bool colishashing;
+   int cancelcollen;
+   int bestnfillin;
+   int nretrieves;
    int maxfillin;
-
+   int bestcand;
+   int nchgcoef;
    ncols = SCIPmatrixGetNColumns(matrix);
    colishashing = ishashingcols[colidx];
    cancelcollen = SCIPmatrixGetColNNonzs(matrix, colidx);
@@ -738,10 +762,10 @@ SCIP_RETCODE cancelCol(
    nretrieves = 0;
    while( TRUE ) /*lint !e716 */
    {
-      int i;
-      int j;
       COLCONSPAIR colconspair;
       int maxlen;
+      int i;
+      int j;
 
       bestcand = -1;
       bestnfillin = 0;
@@ -766,23 +790,23 @@ SCIP_RETCODE cancelCol(
       {
          for( j = i + 1; j < maxlen; ++j )
          {
-            int a,b;
-            int ncancel;
-            int ntotfillin;
-            int hashingcollen;
             COLCONSPAIR* hashingcolconspair;
+            SCIP_VAR* hashingcolvar;
             SCIP_Real* hashingcolvals;
             int* hashingcolinds;
-            SCIP_VAR* hashingcolvar;
             SCIP_Real hashingcollb;
             SCIP_Real hashingcolub;
-            SCIP_Bool hashingcolisbin;
-            SCIP_Real scale;
             SCIP_Real cancelrate;
-            int i1,i2;
-            SCIP_Bool abortpair;
             SCIP_Real rowlhs;
             SCIP_Real rowrhs;
+            SCIP_Real scale;
+            SCIP_Bool hashingcolisbin;
+            SCIP_Bool abortpair;
+            int hashingcollen;
+            int ntotfillin;
+            int ncancel;
+            int a,b;
+            int i1,i2;
 
             i1 = tmpinds[i];
             i2 = tmpinds[j];
@@ -984,7 +1008,7 @@ SCIP_RETCODE cancelCol(
                if( ++ntotfillin > maxfillin )
                   break;
             }
-
+CHECKFILLINAGAIN:
             if( ntotfillin > maxfillin || ntotfillin >= ncancel )
                continue;
 
@@ -996,6 +1020,25 @@ SCIP_RETCODE cancelCol(
 
             if( cancelrate > bestcancelrate )
             {
+               if( ishashingcols[hashingcolconspair->colindex] )
+               {
+                  SCIP_Bool lbimplied;
+                  SCIP_Bool ubimplied;
+
+                  /* recompute whether a variable is still implied free; after some previous multi-aggregations of
+                   * some variables, it might be that other variables that are contained in the same linear rows of the
+                   * matrix are not implied free anymore (see #2971)
+                   */
+                  getImpliedBounds(scip, matrix, hashingcolconspair->colindex, &ubimplied, &lbimplied);
+
+                  if( !lbimplied || !ubimplied )
+                  {
+                     ishashingcols[hashingcolconspair->colindex] = FALSE;
+                     ntotfillin += 2;
+                     goto CHECKFILLINAGAIN;
+                  }
+               }
+
                bestnfillin = ntotfillin;
                bestcand = hashingcolconspair->colindex;
                bestscale = scale;
@@ -1014,12 +1057,15 @@ SCIP_RETCODE cancelCol(
 
       if( bestcand != -1 )
       {
-         int a;
-         int b;
          SCIP_Real* hashingcolvals;
          int* hashingcolinds;
          int hashingcollen;
          int tmpcollen;
+         int a;
+         int b;
+
+         SCIPdebugMsg(scip, "cancelcol %d (%s) candidate column %d (%s) (bestcancelrate = %g, bestscale = %g)\n",
+            colidx, SCIPvarGetName(cancelvar), bestcand, SCIPvarGetName(vars[bestcand]), bestcancelrate, bestscale);
 
          hashingcolvals = SCIPmatrixGetColValPtr(matrix, bestcand);
          hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, bestcand);
@@ -1089,7 +1135,14 @@ SCIP_RETCODE cancelCol(
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
          cancelcollen = tmpcollen;
-         SCIP_CALL( aggregation(scip, presoldata, vars, colidx, bestcand, !isaddedcons, -bestscale) );
+         SCIP_CALL( aggregation(scip, matrix, presoldata, vars, colidx, bestcand, ishashingcols[bestcand], -bestscale) );
+
+         /* the newly created variable is now at the position bestcand and is assumed to have the same coefficients.
+          * this is not the case if the variable is not implied free since then a new constraint was added and the
+          * nonzero fillin would not be counted correctly if we do not block this variable
+          */
+         if( !ishashingcols[bestcand] )
+            isblockedvar[bestcand] = TRUE;
       }
       else
          break;
@@ -1173,7 +1226,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualsparsify)
 }
 
 
-/** execution method of presolver */ 
+/** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 {  /*lint --e{715}*/
@@ -1197,8 +1250,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    int c;
    int i;
    int j;
-   int nconspairs;
    int conspairssize;
+   int nconspairs;
    int numcancel;
    int nfillin;
 
@@ -1272,9 +1325,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    /* collect implied free variables and their number of nonzeros */
    for( c = 0; c < ncols; c++ )
    {
-      int nnonz;
       SCIP_Bool lbimplied;
       SCIP_Bool ubimplied;
+      int nnonz;
 
       vars[c] = SCIPmatrixGetVar(matrix, c);
 
@@ -1311,10 +1364,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
        */
       if( nnonz >= 2 && (lbimplied && ubimplied) )
       {
-         int* colinds;
          SCIP_Real* colvals;
-         int npairs;
+         int* colinds;
          int failshift;
+         int npairs;
 
          colinds = SCIPmatrixGetColIdxPtr(matrix, c);
          colvals = SCIPmatrixGetColValPtr(matrix, c);
@@ -1384,8 +1437,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    /* insert conspairs into hash table */
    for( c = 0; c < nconspairs; ++c )
    {
-      SCIP_Bool insert;
       COLCONSPAIR* otherconspair;
+      SCIP_Bool insert;
 
       assert(conspairs != NULL);
 
@@ -1460,6 +1513,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       for( c = 0; c < ncols; c++ )
       {
          int nnonz;
+
          nnonz = SCIPmatrixGetColNNonzs(matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
 
