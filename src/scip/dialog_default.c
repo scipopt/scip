@@ -5123,7 +5123,6 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {

@@ -3176,7 +3176,6 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
          SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
                !SCIPisInfinity(scip, consdata->rhs)) );
-
       }
 
       /* apply aggregation on y */

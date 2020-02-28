@@ -2711,7 +2711,6 @@ SCIP_Real aggrRowGetMinActivity(
          *infdelta = TRUE;
          goto TERMINATE;
       }
-
    }
 
   TERMINATE:

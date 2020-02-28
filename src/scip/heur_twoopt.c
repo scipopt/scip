@@ -55,13 +55,13 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default parameter values */
-#define DEFAULT_INTOPT                FALSE /**< optional integer optimization is applied by default */
-#define DEFAULT_WAITINGNODES              0 /**< default number of nodes to wait after current best solution before calling heuristic */
-#define DEFAULT_MATCHINGRATE            0.5 /**< default percentage by which two variables have to match in their LP-row set to be
-                                             *   associated as pair by heuristic */
-#define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
-#define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-#define DEFAULT_RANDSEED                 37 /**< initial random seed */
+#define DEFAULT_INTOPT                FALSE  /**< optional integer optimization is applied by default */
+#define DEFAULT_WAITINGNODES              0  /**< default number of nodes to wait after current best solution before calling heuristic */
+#define DEFAULT_MATCHINGRATE            0.5  /**< default percentage by which two variables have to match in their LP-row set to be
+                                              *   associated as pair by heuristic */
+#define DEFAULT_MAXNSLAVES              199  /**< default number of slave candidates for a master variable */
+#define DEFAULT_ARRAYSIZE                10  /**< the default array size for temporary arrays */
+#define DEFAULT_RANDSEED                 37  /**< initial random seed */
 
 /*
  * Data structures

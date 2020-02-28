@@ -993,7 +993,7 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
                                               *   to the newly created master variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
-                                                  corresponding newly created constraints, or NULL */
+                                              *   corresponding newly created constraints, or NULL */
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    )
 {
