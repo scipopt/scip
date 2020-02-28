@@ -165,6 +165,7 @@
 #define DEFAULT_MAXNCONSSSUBGROUP  500000    /**< Maximum number of constraints up to which subgroup structures are detected */
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 #define DEFAULT_ONLYBINSUBGROUPS     TRUE    /**< Should only subgroups on binary variables be handled */
+#define DEFAULT_SUBGRPPERMRATIO     0.501    /**< minimum percentage of permutations a subgroup has to use to be valid */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -262,6 +263,7 @@ struct SCIP_PropData
    int                   maxnconsssubgroup;  /**< Maximum number of constraints up to which subgroup structures are detected */
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             onlybinsubgroups;   /**< whether only subgroups on binary variables should be handled */
+   SCIP_Real             subgrppermratio;    /**< minimum percentage of permutations a subgroup has to use to be valid */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -3755,6 +3757,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
       assert( nusedperms <= ntwocycleperms );
       assert( ncompcolors < propdata->npermvars );
 
+      if ( SCIPisLT(scip, (SCIP_Real) nusedperms, propdata->subgrppermratio * (SCIP_Real) npermsincomp) )
+      {
+         SCIPdebugMsg(scip, "  -> skipping component, since less than %f%% of the permutations were used",
+            propdata->subgrppermratio);
+
+         continue;
+      }
+
       SCIPdebugMsg(scip, "  number of different colors in the graph: %d\n", ncompcolors);
 
       if ( propdata->addweaksbcs )
@@ -3867,7 +3877,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             int* firstvaridx;
             int* chosencomp;
 
-            SCIPdebugMsg(scip, "      detected an orbitope with %d columns and %d rows\n",
+            SCIPdebugMsg(scip, "      detected an orbitope with %d rows and %d columns\n",
               nbinarycomps, largestcompsize);
 
             assert( nbinarycomps > 0 );
@@ -5430,6 +5440,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/onlybinsubgroups",
          "Should only subgroups on binary variables be handled?",
          &propdata->onlybinsubgroups, TRUE, DEFAULT_ONLYBINSUBGROUPS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/subgrppermratio",
+         "minimum percentage of permutations a subgroup has to use to be valid",
+         &propdata->subgrppermratio, TRUE, DEFAULT_SUBGRPPERMRATIO, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/disableofrestart",
