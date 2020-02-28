@@ -5689,7 +5689,7 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
-         /* make sure the min activity is reliable */
+         /* make sure the max activity is reliable */
          if( !consdata->validmaxact )
          {
             consdataRecomputeMaxactivity(scip, consdata);
