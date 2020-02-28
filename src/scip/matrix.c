@@ -1125,7 +1125,7 @@ void SCIPmatrixPrintRow(
    printf(" <= %.15g ###\n", matrix->rhs[row]);
 }
 
-/** removes a column's bounds and updates the activities accordingly */
+/** removes the bounds of a column and updates the activities accordingly */
 void SCIPmatrixRemoveColumnBounds(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX*          matrix,             /**< constraint matrix */
@@ -1140,7 +1140,7 @@ void SCIPmatrixRemoveColumnBounds(
       int row = matrix->colmatind[i];
       SCIP_Real val = matrix->colmatval[i];
 
-      /* set lower bound to infinity if necessary */
+      /* set lower bound to -infinity if necessary */
       if( !SCIPisInfinity(scip, -matrix->lb[col]) )
       {
          matrix->lb[col] = -SCIPinfinity(scip);
