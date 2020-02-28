@@ -663,7 +663,7 @@ SCIP_RETCODE aggregation(
 
    /* create a linear constraint that ensures that var[colidx2].lb <= y - weight1 * var[colidx1] <= var[colidx2].ub;
     * note that it might happen that vars[colidx2] is not implied free even though it has infinite bounds because
-    * getImpliedBounds() consideres infinite bounds to be implied
+    * getImpliedBounds() considers infinite bounds to be implied
     */
    if( !isimpliedfree && (!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)) )
    {
