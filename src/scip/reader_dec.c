@@ -303,7 +303,6 @@ SCIP_RETCODE readDecomposition(
       SCIPerrorMessage("Errors parsing decomposition <%s>. No decomposition added\n.", filename);
    }
 
-
    SCIPfreeBufferArray(scip, &labels);
    SCIPfreeBufferArray(scip, &conss);
 

@@ -56,20 +56,20 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_NODESOFS      500           /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_MAXNODES      5000          /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01          /* factor by which Mutation should at least improve the incumbent      */
-#define DEFAULT_MINNODES      500           /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.8           /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     FALSE         /* should subproblem be created out of the rows in the LP rows,
-                                             * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                             * cutpool of the original scip be copied to constraints of the subscip */
-#define DEFAULT_BESTSOLLIMIT   -1           /* limit on number of improving incumbent solutions in sub-CIP            */
-#define DEFAULT_USEUCT         FALSE        /* should uct node selection be used at the beginning of the search?     */
-#define DEFAULT_RANDSEED       19           /* initial random seed */
+#define DEFAULT_NODESOFS      500            /**< number of nodes added to the contingent of the total nodes          */
+#define DEFAULT_MAXNODES      5000           /**< maximum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which Mutation should at least improve the incumbent      */
+#define DEFAULT_MINNODES      500            /**< minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINFIXINGRATE 0.8            /**< minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_NWAITINGNODES 200            /**< number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     FALSE          /**< should subproblem be created out of the rows in the LP rows,
+                                              *   otherwise, the copy constructors of the constraints handlers are used */
+#define DEFAULT_COPYCUTS      TRUE           /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                              *   cutpool of the original scip be copied to constraints of the subscip */
+#define DEFAULT_BESTSOLLIMIT   -1            /**< limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_USEUCT         FALSE         /**< should uct node selection be used at the beginning of the search?     */
+#define DEFAULT_RANDSEED       19            /**< initial random seed */
 /*
  * Data structures
  */

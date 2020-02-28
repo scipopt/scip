@@ -58,8 +58,8 @@
 #define BENDERSCUT_LPCUT         TRUE
 
 #define SCIP_DEFAULT_DISPLAYFREQ 20
-#define SLACKVAR_NAME         "##bendersslackvar"     /** the name for the Benders' slack variables added to each
-                                                          constraints in the subproblems */
+#define SLACKVAR_NAME    "##bendersslackvar" /** the name for the Benders' slack variables added to each
+                                              *  constraints in the subproblems */
 
 struct SCIP_BenderscutData
 {

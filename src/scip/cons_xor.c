@@ -3728,7 +3728,6 @@ SCIP_RETCODE detectRedundantConstraints(
 
             if( fixed )
                ++(*nfixedvars);
-
          }
 
          /* fix integral variable if present */

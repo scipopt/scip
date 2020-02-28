@@ -1506,7 +1506,7 @@ SCIP_RETCODE createSolFromNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol                 /**< buffer to store solution value; if pointing to NULL a new solution is
-                                                created, otherwise values in the given one are overwritten */
+                                              *   created, otherwise values in the given one are overwritten */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -1926,7 +1926,7 @@ SCIP_RETCODE storeSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data */
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found,
-                                                no solution found, or fixing is infeasible (cutoff) */
+                                              *   no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             transsol,           /**< solution to fix variables */
    SCIP_SOL*             bestsol             /**< solution we create a original scip solution from */
    )
