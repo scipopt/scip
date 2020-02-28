@@ -1929,7 +1929,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_NODE* node;
    int depth;
    int naggrs;
    int k;
