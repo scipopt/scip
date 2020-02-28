@@ -5854,7 +5854,7 @@ SCIP_RETCODE sortAllBilinTerms(
    int                   nbilinterms,        /**< total number of bilinear terms */
    SCIP_CONS**           bilinconss,         /**< array for mapping each term to its constraint */
    int*                  bilinposs           /**< array for mapping each term to its position in the corresponding
-                                               *  bilinconss constraint */
+                                              *   bilinconss constraint */
    )
 {
    int* perm;

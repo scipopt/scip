@@ -223,6 +223,7 @@
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
+ * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  */
 
 /**@page AUTHORS SCIP Authors

@@ -9839,7 +9839,7 @@ SCIP_RETCODE SCIPlpGetBInvRow(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -9865,7 +9865,7 @@ SCIP_RETCODE SCIPlpGetBInvCol(
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
-                                               *  (-1: if we do not store sparsity informations) */
+                                              *   (-1: if we do not store sparsity informations) */
    )
 {
    assert(lp != NULL);
@@ -18584,7 +18584,6 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
                   {
                      ++nimplicitfixedrows;
                   }
-
                }
             }
             else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_BASIC )

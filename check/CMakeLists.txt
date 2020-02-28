@@ -114,6 +114,7 @@ set(settings_fastMIP
     "separating_off"
     "vbcvisualization"
     "enable_treeprofile_regression_forest"
+    "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
 #    "emphasis_numerics"
