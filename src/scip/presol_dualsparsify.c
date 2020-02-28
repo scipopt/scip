@@ -569,6 +569,16 @@ SCIP_RETCODE aggregation(
    SCIP_Real rhs;
    SCIP_Bool infeasible;
    SCIP_Bool aggregated;
+#ifndef NDEBUG
+   if( isimpliedfree )
+   {
+      SCIP_Bool lbimplied;
+      SCIP_Bool ubimplied;
+
+      getImpliedBounds(scip, matrix, colidx2, &ubimplied, &lbimplied);
+      assert(lbimplied && ubimplied);
+   }
+#endif
 
    assert( !SCIPisZero(scip, weight1) );
 
@@ -1129,6 +1139,13 @@ CHECKFILLINAGAIN:
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
          cancelcollen = tmpcollen;
          SCIP_CALL( aggregation(scip, matrix, presoldata, vars, colidx, bestcand, ishashingcols[bestcand], -bestscale) );
+
+         /* the newly created variable is now at the position bestcand and is assumed to have the same coefficients.
+          * this is not the case if the variable is not implied free since then a new constraint was added and the
+          * nonzero fillin would not be counted correctly if we do not block this variable
+          */
+         if( !ishashingcols[bestcand] )
+            isblockedvar[bestcand] = TRUE;
       }
       else
          break;
