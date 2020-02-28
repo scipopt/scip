@@ -32,6 +32,9 @@ do
       if test "$i" = "-r"
       then
           REMOVE=1
+      elif test "$i" = "-U"
+      then
+          UPLOAD=1
       elif test "$i" = "-E"
       then
           UPLOAD=1

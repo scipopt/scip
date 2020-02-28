@@ -9,7 +9,7 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | sed 's/\(portal\|tes
 # -------------------------------------------------------------------------------------------------
 
 .PHONY: testfscip
-testfscip: check/check_fscip.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check_fscip.awk
+testfscip: check/check_fscip.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh
 		cd check; \
 		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \

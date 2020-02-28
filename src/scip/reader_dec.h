@@ -18,6 +18,7 @@
  * @brief  file reader for decompositions in the constraint based dec-file format.
  * @author Gregor Hendel
  *
+ *
  * This reader allows to read a file containing decompositions for constraints of the current original problem. The
  * standard line ending for this format is '.dec'. The content of the file should obey the following format
  *

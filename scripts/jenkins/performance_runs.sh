@@ -65,7 +65,7 @@ if [ "${TRS_CONFIG}" == "custom" ]; then
     TRS_SETTINGS=minlp_default
     TRS_QUEUE=M640
     TRS_SEEDS=0
-    TRS_PERMUTE=5
+    TRS_PERMUTE=4
   elif [[ "${TRS_TESTSET}" =~ ^mip ]]; then
     TRS_TIME=7200
     TRS_SETTINGS=default
@@ -74,7 +74,7 @@ if [ "${TRS_CONFIG}" == "custom" ]; then
     elif [ "${TRS_TESTSET}" == "miplib2017_benchmark" ]; then
       TRS_QUEUE=M640
     fi
-    TRS_SEEDS=5
+    TRS_SEEDS=4
     TRS_PERMUTE=0
   else
     echo "Error in configuration, TRS_TESTSET has to be in the following list: miplib2017_benchmark, minlpdev-solvable, mipdev2-solvable."
@@ -126,7 +126,7 @@ PAPILOBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v70-bugfix"
   SOPLEXBRANCHNAME="bugfix-50"
-  PAPILOBRANCHNAME="master"
+  PAPILOBRANCHNAME="bugfix-v1.0"
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   SOPLEXBRANCHNAME="master"
   PAPILOBRANCHNAME="master"
@@ -174,7 +174,7 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
   cd ..
 
   rm -rf papilo
-  git clone git@git.zib.de:bzfgottw/presolve papilo
+  git clone git@github.com:lgottwald/PaPILO.git papilo
   cd papilo
   git checkout ${PAPILOBRANCHNAME}
   git pull

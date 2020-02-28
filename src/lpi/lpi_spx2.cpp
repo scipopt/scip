@@ -81,12 +81,19 @@
 #undef SCIP_DEBUG
 #endif
 
-/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, see soplex#136, e.g.,
  * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
  */
 #ifdef __GNUC__
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
+/* disable -Wdeprecated-copy warnings in SoPlex headers, see soplex#206 */
+#ifdef __GNUC__
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #endif
 #endif
 

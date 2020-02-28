@@ -43,6 +43,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/debug.h"
 #include "scip/presol_dualsparsify.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_matrix.h"
@@ -625,6 +626,19 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
          SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
+
+   /* set the debug solution value for the new variable */
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      SCIP_CALL( SCIPdebugGetSolVal(scip, vars[colidx1], &val1) );
+      SCIP_CALL( SCIPdebugGetSolVal(scip, vars[colidx2], &val2) );
+      SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, weight1 * val1 + val2) );
+   }
+#endif
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
