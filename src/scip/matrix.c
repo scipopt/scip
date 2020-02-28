@@ -1132,8 +1132,8 @@ void SCIPmatrixRemoveColumnBounds(
    int                   col                 /**< column variable to remove bounds from */
    )
 {
-   int i;
    int colmatend = matrix->colmatbeg[col] + matrix->colmatcnt[col];
+   int i;
 
    for( i = matrix->colmatbeg[col]; i != colmatend; ++i )
    {
@@ -1143,8 +1143,6 @@ void SCIPmatrixRemoveColumnBounds(
       /* set lower bound to -infinity if necessary */
       if( !SCIPisInfinity(scip, -matrix->lb[col]) )
       {
-         matrix->lb[col] = -SCIPinfinity(scip);
-
          if( val > 0.0 )
             matrix->minactivityneginf[row]++;
          else
@@ -1154,21 +1152,22 @@ void SCIPmatrixRemoveColumnBounds(
       /* set upper bound to infinity if necessary */
       if( !SCIPisInfinity(scip, matrix->ub[col]) )
       {
-         matrix->ub[col] = SCIPinfinity(scip);
-
          if( val > 0.0 )
             matrix->maxactivityposinf[row]++;
          else
             matrix->minactivityposinf[row]++;
       }
 
-      /* consider infinite bound contributions for the activities */
-      if( matrix->maxactivityneginf[row] + matrix->maxactivityposinf[row] > 0 )
-         matrix->maxactivity[row] = SCIPinfinity(scip);
+      assert(matrix->maxactivityneginf[row] + matrix->maxactivityposinf[row] > 0);
+      assert(matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0);
 
-      if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
-         matrix->minactivity[row] = -SCIPinfinity(scip);
+      /* mark the activities of the rows to be infinite */
+      matrix->maxactivity[row] = SCIPinfinity(scip);
+      matrix->minactivity[row] = -SCIPinfinity(scip);
    }
+
+   matrix->lb[col] = -SCIPinfinity(scip);
+   matrix->ub[col] = SCIPinfinity(scip);
 }
 
 /** detect parallel rows of matrix. rhs/lhs are ignored. */
