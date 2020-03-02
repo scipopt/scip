@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -97,9 +97,45 @@ SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets the total number of times, the relaxation handler was called */
+/** gets the total number of times the relaxation handler was called */
 SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNCalls(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler cut off a node */
+SCIP_EXPORT
+SCIP_Longint SCIPrelaxGetNCutoffs(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler improved a node's lower bound */
+SCIP_EXPORT
+SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the time in seconds spent for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
+SCIP_EXPORT
+SCIP_Real SCIPrelaxGetImprovedLowerboundTime(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler added constraints */
+SCIP_EXPORT
+SCIP_Longint SCIPrelaxGetNAddedConss(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler reduced variable domains */
+SCIP_EXPORT
+SCIP_Longint SCIPrelaxGetNReducedDomains(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler separated cutting planes */
+SCIP_EXPORT
+SCIP_Longint SCIPrelaxGetNSeparatedCuts(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
@@ -115,7 +151,7 @@ void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

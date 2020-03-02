@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_inttobinary.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
  */
@@ -21,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/debug.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -90,9 +92,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nintvars) );
 
-   /* scan the integer variables for possible conversion into binaries;
-    * we have to collect the variables first in an own 
-    */
+   /* scan the integer variables for possible conversion into binaries */
    for( v = 0; v < nintvars; ++v )
    {
       SCIP_Real lb;
@@ -104,8 +104,8 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
       lb = SCIPvarGetLbGlobal(vars[v]);
       ub = SCIPvarGetUbGlobal(vars[v]);
 
-      /* check if bounds are exactly one apart */
-      if( SCIPisEQ(scip, lb, ub - 1.0) )
+      /* check if bounds are exactly one apart; if the lower bound is too large, aggregations will be rejected */
+      if( SCIPisEQ(scip, lb, ub - 1.0) && !SCIPisHugeValue(scip, REALABS(lb) / SCIPfeastol(scip)) )
       {
          SCIP_VAR* binvar;
          char binvarname[SCIP_MAXSTRLEN];
@@ -120,6 +120,24 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          SCIP_CALL( SCIPcreateVar(scip, &binvar, binvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );
+
+                     /* set up debug solution */
+#ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
+         {
+            SCIP_SOL* debugsol;
+
+            SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+            /* set solution value in the debug solution if it is available */
+            if( debugsol != NULL )
+            {
+               SCIP_Real val;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, binvar, val - lb) );
+            }
+         }
+#endif
 
          /* aggregate integer and binary variable */
          SCIP_CALL( SCIPaggregateVars(scip, vars[v], binvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
@@ -138,12 +156,14 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
             *result = SCIP_CUTOFF;
             break;
          }
+         else if( aggregated )
+         {
+            assert(redundant);
 
-         assert(redundant);
-         assert(aggregated);
-         (*nchgvartypes)++;
-         ++(*naggrvars);
-         *result = SCIP_SUCCESS;
+            (*nchgvartypes)++;
+            ++(*naggrvars);
+            *result = SCIP_SUCCESS;
+         }
       }
    }
 

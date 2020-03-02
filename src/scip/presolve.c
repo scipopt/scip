@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for presolving
  * @author Michael Winkler
  */
@@ -674,6 +675,8 @@ void collectNonBinaryImplicationData(
 
          if( implboundtypes[w] == SCIP_BOUNDTYPE_UPPER )
          {
+            SCIP_Bool redundant;
+
             idx += nvars;
 
             assert(counts[idx] <= pos - nredvars + 1);
@@ -691,8 +694,11 @@ void collectNonBinaryImplicationData(
                break;
             }
 
+            /* ignore implications that are redundant with respect to the current global bounds (see #2888) */
+            redundant = SCIPisLE(scip, SCIPvarGetUbGlobal(implvars[w]), implbounds[w]);
+
             /* update implication counter and implied upper bound */
-            if( counts[idx] == pos - nredvars )
+            if( counts[idx] == pos - nredvars && !redundant )
             {
                ++counts[idx];
 
@@ -741,6 +747,8 @@ void collectNonBinaryImplicationData(
          }
          else
          {
+            SCIP_Bool redundant;
+
             assert(counts[idx] <= pos - nredvars + 1);
 
             /* set variable 'var' with bound implies other set variable 'implvars[w]' with a non-worse bound than the
@@ -756,8 +764,11 @@ void collectNonBinaryImplicationData(
                break;
             }
 
+            /* ignore implications that are redundant with respect to the current global bounds (see #2888) */
+            redundant = SCIPisGE(scip, SCIPvarGetLbGlobal(implvars[w]), implbounds[w]);
+
             /* update implication counter */
-            if( counts[idx] == pos - nredvars )
+            if( counts[idx] == pos - nredvars && !redundant )
             {
                ++counts[idx];
 
@@ -1143,6 +1154,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       if( issetvar[varidx] < 0 )
       {
          SCIP_VAR** probvars;
+         int probidx;
 
          SCIPdebugMsg(scip, "marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
 
@@ -1162,17 +1174,10 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             if( implidx[w] == countnonzeros[ncountnonzeros-1] && counts[implidx[w]] == 0 )
                --ncountnonzeros;
 
+            probidx = implidx[w] < nprobvars ? implidx[w] : implidx[w] - nprobvars;
             /* only for non-binary variables we need to correct the bounds */
-            if( implidx[w] < nprobvars )
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w]]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w]] = lastbounds[w];
-            }
-            else
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w] - nprobvars]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w] - nprobvars] = lastbounds[w];
-            }
+            if( !SCIPvarIsBinary(probvars[probidx]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
+               newbounds[implidx[w]] = lastbounds[w];
          }
 
          reducedset = TRUE;

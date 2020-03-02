@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -134,6 +134,15 @@ SCIP_CONS** SCIPconshdlrGetCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets array with delayed update constraints
+ *
+ * @attention Usually, there should be no need to access this array. Use this only if you are absolutely sure what you are doing.
+ */
+SCIP_EXPORT
+SCIP_CONS** SCIPconshdlrGetUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets total number of existing transformed constraints of constraint handler */
 SCIP_EXPORT
 int SCIPconshdlrGetNConss(
@@ -165,6 +174,12 @@ int SCIPconshdlrGetNActiveConss(
 /** gets number of enabled constraints of constraint handler */
 SCIP_EXPORT
 int SCIPconshdlrGetNEnabledConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraints that have delayed updates */
+SCIP_EXPORT
+int SCIPconshdlrGetNUpdateConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -512,7 +527,7 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Constraint methods
@@ -855,7 +870,7 @@ int SCIPconsGetNUpgradeLocks(
 
 #endif
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicProblemMethods
  *
@@ -913,7 +928,7 @@ void SCIPprintLinConsStats(
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_heur.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for primal heuristic plugins and divesets
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -328,9 +329,11 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
                                               *   otherwise use the score function of the SOS1 constraint handler */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    )
 {
    SCIP_DIVESET* divesetptr = NULL;
@@ -340,11 +343,27 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_CALL( SCIPdivesetCreate(&divesetptr, heur, name, scip->set, scip->messagehdlr, scip->mem->setmem,
          minreldepth, maxreldepth, maxlpiterquot, maxdiveubquot, maxdiveavgquot, maxdiveubquotnosol,
          maxdiveavgquotnosol, lpresolvedomchgquot, lpsolvefreq, maxlpiterofs, initialseed, backtrack,
-         onlylpbranchcands, specificsos1score, divesetgetscore) );
+         onlylpbranchcands, ispublic, specificsos1score, divesetgetscore, divesetavailable) );
 
    assert(divesetptr != NULL);
    if( diveset != NULL )
       *diveset = divesetptr;
+
+   return SCIP_OKAY;
+}
+
+/** check specific preconditions for diving, e.g., if an incumbent solution is available */
+SCIP_RETCODE SCIPisDivesetAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
+   )
+{
+   assert(scip != NULL);
+   assert(diveset != NULL);
+   assert(available != NULL);
+
+   SCIP_CALL( SCIPdivesetIsAvailable(diveset, scip->set, available) );
 
    return SCIP_OKAY;
 }

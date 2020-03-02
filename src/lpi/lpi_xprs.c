@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,7 +52,7 @@
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         SCIPmessagePrintWarning((messagehdlr), "%s:%d: LP Error: Xpress returned %d\n", __FILE__, __LINE__, _restat_); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -2304,7 +2304,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -3564,6 +3564,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
       ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
@@ -3609,7 +3611,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
-      *dval = (double) ictrlval;
+      /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
+      *dval = (double) -ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3641,31 +3644,51 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
+       * For consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* Xpress does not pose any restriction on dval,
+       * however for consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      assert( dval >= 0.0 );
+      /* Xpress poses no restriction on dval
+       * However for consistency we assert it to be nonnegative.
+       */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
-     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
-     if (dval >= INT_MAX)
-       ival = 0;
-     else
-       ival = (int) floor(dval);
+     /* From the Xpress documentation:
+      * dval>0   If an integer solution has been found, stop MIP search after dval seconds,
+      *   otherwise continue until an integer solution is finally found.
+      * dval<0   Stop in LP or MIP search after dval seconds.
+      * dval=0   No time limit
+      */
+      assert( dval > 0.0 );
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
-     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-     break;
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:

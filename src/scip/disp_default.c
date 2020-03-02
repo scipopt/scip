@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp_default.c
+ * @ingroup DEFPLUGINS_DISP
  * @brief  default display columns
  * @author Tobias Achterberg
  */
@@ -27,6 +28,7 @@
 #include "scip/pub_disp.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
+#include "scip/pub_relax.h"
 #include "scip/pub_sol.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
@@ -127,9 +129,10 @@
 #define DISP_STRI_CONCMEMUSED       TRUE
 
 #define DISP_NAME_MEMTOTAL      "memtotal"
-#define DISP_DESC_MEMTOTAL      "total number of bytes in block memory"
-#define DISP_HEAD_MEMTOTAL      "mem"
-#define DISP_WIDT_MEMTOTAL      5
+#define DISP_DESC_MEMTOTAL      "total number of bytes in block memory or the creator name when a new incumbent solution was found"
+#define DISP_HEAD_MEMTOTAL      "mem/heur"
+#define DISP_WIDT_MEMTOTAL      8 /* the width of the column is 8, since we print 8 characters for new incumbents */
+#define DISP_WIDT_MEMONLY       5 /* for memory output, we only use 5 characters because this is easier to decipher */
 #define DISP_PRIO_MEMTOTAL      20000
 #define DISP_POSI_MEMTOTAL      1500
 #define DISP_STRI_MEMTOTAL      TRUE
@@ -410,12 +413,23 @@ static
 SCIP_DECL_DISPINITSOL(SCIPdispInitsolSolFound)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0
+      || strcmp(SCIPdispGetName(disp), DISP_NAME_MEMTOTAL) == 0);
    assert(scip != NULL);
 
    SCIPdispSetData(disp, (SCIP_DISPDATA*)SCIPgetBestSol(scip));
 
    return SCIP_OKAY;
+}
+
+/** returns TRUE if this solution should be displayed in the output */
+static
+SCIP_Bool isDisplaySol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution data structure, e.g., current incumbent solution */
+   )
+{
+   return SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
 }
 
 /** output method of display column to output file stream 'file' for character of best solution */
@@ -434,7 +448,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       SCIPdispSetData(disp, NULL);
 
    dispdata = SCIPdispGetData(disp);
-   if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+   if( sol != (SCIP_SOL*)dispdata && isDisplaySol(scip, sol) )
    {
       SCIP_HEUR* heur;
       char c;
@@ -706,15 +720,67 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcMemUsed)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' for allocated and used memory */
+/** output method of display column to output file stream 'file' for allocated and used memory, or creator name after a
+ *  new incumbent solution has been found
+ */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
 {  /*lint --e{715}*/
+   SCIP_SOL* sol;
+   SCIP_DISPDATA* dispdata;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMTOTAL) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMTOTAL);
+   sol = SCIPgetBestSol(scip);
+   if( sol == NULL )
+      SCIPdispSetData(disp, NULL);
+
+   dispdata = SCIPdispGetData(disp);
+   /* display */
+   if( sol != (SCIP_SOL*)dispdata && isDisplaySol(scip, sol) )
+   {
+      SCIP_HEUR* heur;
+      SCIP_RELAX* relax;
+      char const* infostr;
+
+      switch( SCIPsolGetType(sol) )
+      {
+      case SCIP_SOLTYPE_LPRELAX:
+         infostr = "LP  ";
+         break;
+      case SCIP_SOLTYPE_STRONGBRANCH:
+         infostr = "strongbranch";
+         break;
+      case SCIP_SOLTYPE_PSEUDO:
+         infostr = "pseudosol";
+         break;
+      case SCIP_SOLTYPE_RELAX:
+         relax = SCIPsolGetRelax(sol);
+         infostr = relax != NULL ? SCIPrelaxGetName(relax) : "relaxation";
+         break;
+      case SCIP_SOLTYPE_HEUR:
+         heur = SCIPsolGetHeur(sol);
+         infostr = heur != NULL ? SCIPheurGetName(heur) : "heuristic";
+         break;
+      case SCIP_SOLTYPE_UNKNOWN:
+      default:
+         infostr = "unknown";
+         break;
+      }
+      SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_MEMTOTAL, DISP_WIDT_MEMTOTAL, infostr);
+
+      SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
+   }
+   else
+   {
+      /* for memory output, we only use 5 characters because this is easier to decipher */
+      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0);
+      SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, "");
+      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMONLY);
+      SCIPinfoMessage(scip, file, " ");
+   }
 
    return SCIP_OKAY;
 }
@@ -882,11 +948,14 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutPoolSize)
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConflicts)
 {  /*lint --e{715}*/
+   SCIP_Longint applied;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNConflictConssApplied(scip), DISP_WIDT_CONFLICTS);
+   applied = SCIPgetNConflictConssApplied(scip) + SCIPgetNConflictDualproofsApplied(scip);
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, applied, DISP_WIDT_CONFLICTS);
 
    return SCIP_OKAY;
 }
@@ -1368,7 +1437,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMTOTAL, DISP_DESC_MEMTOTAL, DISP_HEAD_MEMTOTAL,
          SCIP_DISPSTATUS_AUTO,
          dispCopyDefault,
-         NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsedTotal, NULL,
+         NULL, NULL, NULL, SCIPdispInitsolSolFound, NULL, SCIPdispOutputMemUsedTotal, NULL,
          DISP_WIDT_MEMTOTAL, DISP_PRIO_MEMTOTAL, DISP_POSI_MEMTOTAL, DISP_STRI_MEMTOTAL) );
 
    assert(SCIPfindDisp(scip, DISP_NAME_DEPTH) == NULL);

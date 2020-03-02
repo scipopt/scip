@@ -3,11 +3,11 @@ CXX		=	icpc
 LINKCC		=	icc
 LINKCXX		=	icpc
 FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
-OFLAGS		+=	-O2 -fp-model extended -fp-model fast -w1 -ip -mtune=core2 #-msse4.1 -fno-rtti
+OFLAGS		+=	-O2 -fp-model precise -w1 -ip -mtune=native # -fno-rtti
 CFLAGS		+=      -std=c99 -D_XOPEN_SOURCE=600
 CXXFLAGS	+=	-std=c++0x
 ARFLAGS		=	crs
-LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -static-intel
+LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -shared-intel
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

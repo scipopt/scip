@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,18 +93,18 @@ void SCIPstatResetPresolving(
    SCIP_PROB*            origprob            /**< original problem, or NULL */
    );
 
-/* reset primal-dual integral */
-void SCIPstatResetPrimalDualIntegral(
+/** reset primal-dual, primal-reference, and dual-reference integral */
+void SCIPstatResetPrimalDualIntegrals(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             partialreset        /**< should time and integral value be kept? (in combination with no statistical
                                               *  reset, integrals are added for each problem to be solved) */
    );
 
-/** update the primal-dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
- *  upper and lower bound, respectively
+/** update the primal-dual, primal-reference, and reference-dual integral statistics.
+ *  method accepts + and - SCIPsetInfinity() as values for upper and lower bound, respectively
  */
-void SCIPstatUpdatePrimalDualIntegral(
+void SCIPstatUpdatePrimalDualIntegrals(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -113,12 +113,31 @@ void SCIPstatUpdatePrimalDualIntegral(
    SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
    );
 
-/** update and return the primal-dual integral statistic */
+/** optionally update and return the reference-dual integral statistic */
+SCIP_Real SCIPstatGetDualReferenceIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Bool             update              /**< should the value be updated first? */
+   );
+
+/** optionally update and return the primal-reference integral statistic */
+SCIP_Real SCIPstatGetPrimalReferenceIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Bool             update              /**< should the value be updated first? */
+   );
+
+/** optionally update and return the primal-dual integral statistic */
 SCIP_Real SCIPstatGetPrimalDualIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_PROB*            origprob            /**< original problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Bool             update              /**< should the value be updated first? */
    );
 
 /** reset current branch and bound run specific statistics */

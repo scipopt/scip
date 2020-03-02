@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dualval.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  dualval primal heuristic
  * @author Tobias Buchwald
  *
@@ -65,7 +66,7 @@
 
 #define HEUR_NAME             "dualval"
 #define HEUR_DESC             "primal heuristic using dual values"
-#define HEUR_DISPCHAR         'Y'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -1112,7 +1113,8 @@ SCIP_RETCODE createSubSCIP(
       heurdata->integervars[j++] = vars[i];
 
       var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-      assert( var != NULL );
+      if( var == NULL )
+         continue;
 
       /* in this case our variable is an indicator variable */
       if( SCIPhashmapGetImage(heurdata->indicators, SCIPhashmapGetImage(heurdata->varsubsciptoscip, var)) != NULL )
@@ -1363,7 +1365,7 @@ SCIP_RETCODE createSubSCIP(
       }
    }
 
-   /* set up relaxation constraints for continous variables */
+   /* set up relaxation constraints for continuous variables */
    if( heurdata->relaxcontvars )
    {
       for( i = 0; i < nvars; ++i )
@@ -1384,7 +1386,8 @@ SCIP_RETCODE createSubSCIP(
             continue;
 
          var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-         assert( var != NULL );
+         if( var == NULL )
+            continue;
 
          /* in this case, we have a normal variable */
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "relax_ub_%s", SCIPvarGetName(var));
@@ -1445,7 +1448,8 @@ SCIP_RETCODE createSubSCIP(
          continue;
 
       subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-      assert( subvar != NULL );
+      if( subvar == NULL )
+         continue;
 
       SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, subvar, SCIPvarGetObj(var)) );
 
@@ -1502,7 +1506,7 @@ SCIP_RETCODE createSolFromNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol                 /**< buffer to store solution value; if pointing to NULL a new solution is
-                                                created, otherwise values in the given one are overwritten */
+                                              *   created, otherwise values in the given one are overwritten */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -1922,7 +1926,7 @@ SCIP_RETCODE storeSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data */
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found,
-                                                no solution found, or fixing is infeasible (cutoff) */
+                                              *   no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             transsol,           /**< solution to fix variables */
    SCIP_SOL*             bestsol             /**< solution we create a original scip solution from */
    )

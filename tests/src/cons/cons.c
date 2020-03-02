@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -123,7 +123,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
    /* now add a cutting plane: x+y <= 2 */
    vars = SCIPgetVars(scip);
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "MyCut");
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 0.0, 2.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, 0.0, 2.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], 1.0) );

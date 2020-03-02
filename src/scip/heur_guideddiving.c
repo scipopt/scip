@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_guideddiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
  * @author Tobias Achterberg
  */
@@ -36,7 +37,7 @@
 
 #define HEUR_NAME             "guideddiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
-#define HEUR_DISPCHAR         'g'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1007000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          7
@@ -44,6 +45,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
@@ -193,7 +195,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    assert(diveset != NULL);
 
    /* call generic diving algorithm */
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    return SCIP_OKAY;
 }
@@ -259,6 +261,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
    return SCIP_OKAY;
 }
 
+/** callback to check preconditions for diving, e.g., if an incumbent solution is available */
+static
+SCIP_DECL_DIVESETAVAILABLE(divesetAvailableGuideddiving)
+{
+   /* don't dive with guided diving if no feasible solutions exists or
+    * if this solution lives in the original variable space,
+    * because it might violate the global bounds of the current problem
+    */
+   if( SCIPgetNSols(scip) == 0 || SCIPsolIsOriginal(SCIPgetBestSol(scip)))
+      *available = FALSE;
+   else
+      *available = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * heuristic specific interface methods
  */
@@ -290,7 +308,8 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreGuideddiving) );
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES,
+         divesetGetScoreGuideddiving, divesetAvailableGuideddiving) );
 
    return SCIP_OKAY;
 }

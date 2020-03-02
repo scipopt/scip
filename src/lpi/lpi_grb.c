@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3593,7 +3593,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -5444,10 +5444,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
       assert(temp >= -1 && temp <= 3);
-      if ( temp == 0 )
-         *ival = 0;
-      else
+      if( temp == -1 )
          *ival = 1;
+      else
+         *ival = temp;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -5505,11 +5505,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival >= 0 && ival <= 1);
-      if ( ival == 0 )
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
-      else
+      if( ival == 1 )
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, -1) );
+      else
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
@@ -5554,6 +5553,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_OUTPUTFLAG, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
       {
          double itlim;
          itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);
@@ -5633,21 +5634,54 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= 1e-2 */
+      if( dval < 1e-9 )
+         dval = 1e-9;
+      else if( dval > 1e-2 )
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_FEASIBILITYTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= 1e-2 */
+      if (dval < 1e-9)
+         dval = 1e-9;
+      else if( dval > 1e-2 )
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 0 <= dval <= 1 */
+      assert( dval >= 0.0 );
+      if( dval > 1.0 )
+         dval = 1.0;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* gurobi requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.999 )
+         dval = 0.999;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

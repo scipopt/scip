@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_gauge.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  gauge separator
  * @author Felipe Serrano
  *
@@ -218,7 +219,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
-            NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
    objvaridx = nvars;
@@ -996,17 +997,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
     *        - we can also use convex combination of solutions; there is a function SCIPvarGetAvgSol!
     *        - can add an event handler to only update when a new solution has been found
     */
-   if( !sepadata->isintsolavailable && sepadata->computeintsol )
-   {
-      SCIP_Bool success;
-
-      success = FALSE;
-      SCIP_CALL( computeInteriorPoint(scip, sepa, &success) );
-
-      if( success )
-         sepadata->isintsolavailable = TRUE;
-   }
-
    if( !sepadata->isintsolavailable )
    {
       if( SCIPgetNSols(scip) > 0 )
@@ -1015,7 +1005,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
          SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->intsol, SCIPgetBestSol(scip)) );
          sepadata->isintsolavailable = TRUE;
       }
-      else if( SCIPhasNLPSolution(scip, NULL) )
+      else if( SCIPhasNLPSolution(scip) )
       {
          SCIPdebugMsg(scip, "Using NLP solution as interior point!\n");
          SCIP_CALL( SCIPcreateNLPSol(scip, &sepadata->intsol, NULL) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  reduced cost strengthening using root node reduced costs and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -105,7 +106,6 @@ struct SCIP_PropData
 /** reset structure memember of propagator data structure */
 static
 void propdataReset(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data to reset */
    )
 {
@@ -160,7 +160,7 @@ SCIP_RETCODE propdataCreate(
 {
    SCIP_CALL( SCIPallocBlockMemory(scip, propdata) );
 
-   propdataReset(scip, *propdata);
+   propdataReset(*propdata);
 
    return SCIP_OKAY;
 }
@@ -211,7 +211,7 @@ SCIP_RETCODE propdataExit(
    /* free memory for non-zero reduced cost variables */
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->redcostvars, propdata->nredcostvars);
 
-   propdataReset(scip, propdata);
+   propdataReset(propdata);
 
    return SCIP_OKAY;
 }
@@ -598,7 +598,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

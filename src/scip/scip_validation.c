@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_validation.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for validation
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -63,11 +64,11 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
-                                               *  or NULL */
+                                              *   or NULL */
    SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    )
 {
    SCIP_Bool localfeasible;

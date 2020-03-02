@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,7 +17,7 @@
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
  * @author Jakob Witzig
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 
@@ -176,6 +176,7 @@ SCIP_EXPORT
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool             useglbbounds,       /**< consider global bound although the cut is local? */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    );
 
@@ -449,7 +450,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

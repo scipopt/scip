@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mutation.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that tries to randomly mutate the incumbent solution
  * @author Timo Berthold
  */
@@ -47,7 +48,7 @@
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
-#define HEUR_DISPCHAR         'M'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          8
@@ -55,20 +56,20 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_NODESOFS      500           /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_MAXNODES      5000          /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01          /* factor by which Mutation should at least improve the incumbent      */
-#define DEFAULT_MINNODES      500           /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.8           /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     FALSE         /* should subproblem be created out of the rows in the LP rows,
-                                             * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                             * cutpool of the original scip be copied to constraints of the subscip */
-#define DEFAULT_BESTSOLLIMIT   -1           /* limit on number of improving incumbent solutions in sub-CIP            */
-#define DEFAULT_USEUCT         FALSE        /* should uct node selection be used at the beginning of the search?     */
-#define DEFAULT_RANDSEED       19           /* initial random seed */
+#define DEFAULT_NODESOFS      500            /**< number of nodes added to the contingent of the total nodes          */
+#define DEFAULT_MAXNODES      5000           /**< maximum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which Mutation should at least improve the incumbent      */
+#define DEFAULT_MINNODES      500            /**< minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINFIXINGRATE 0.8            /**< minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_NWAITINGNODES 200            /**< number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     FALSE          /**< should subproblem be created out of the rows in the LP rows,
+                                              *   otherwise, the copy constructors of the constraints handlers are used */
+#define DEFAULT_COPYCUTS      TRUE           /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                              *   cutpool of the original scip be copied to constraints of the subscip */
+#define DEFAULT_BESTSOLLIMIT   -1            /**< limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_USEUCT         FALSE         /**< should uct node selection be used at the beginning of the search?     */
+#define DEFAULT_RANDSEED       19            /**< initial random seed */
 /*
  * Data structures
  */
@@ -176,51 +177,6 @@ SCIP_RETCODE determineVariableFixings(
       /* store the possibly adjusted solution value as fixing value */
       fixedvals[i] = solval;
    }
-
-   return SCIP_OKAY;
-}
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< mutation heuristic structure                        */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
 }
@@ -383,25 +339,12 @@ SCIP_RETCODE setupAndSolveSubscipMutation(
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      }
-      if( success )
-         *result = SCIP_FOUNDSOL;
-   }
+   /* check, whether a solution was found;
+    * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+    */
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
+   if( success )
+      *result = SCIP_FOUNDSOL;
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -309,6 +309,22 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of Benders' decomposition */
    );
 
+/** sets the subproblem comparison method for determining the solving order in Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetBendersSubproblemComp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   );
+
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
 SCIP_EXPORT
 SCIP_BENDERS* SCIPfindBenders(
@@ -507,7 +523,8 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    SCIP_SOL*             sol,                /**< primal solution used to setup tht problem, NULL for LP solution */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** calls the solving method for a single Benders' decomposition subproblem
@@ -534,7 +551,6 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
@@ -613,6 +629,7 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -655,7 +672,27 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
-/* @} */
+/** applies a Benders' decomposition to the selected decomposition from the decomposition store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPapplyBendersDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   int                   decompindex         /**< the index of the decomposition that will be applied */
+   );
+
+/** @} */
 
 /**@addtogroup PublicBenderscutsMethods
  *
@@ -853,9 +890,9 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
@@ -863,7 +900,28 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
-/* @} */
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
+ *
+ *  When calling the function, the user must be sure that the variables are associated with the input SCIP instance.
+ *  The main use of this method is to transfer Benders' cuts between solvers in ParaSCIP.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** @} */
 
 #ifdef __cplusplus
 }

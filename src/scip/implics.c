@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for implications, variable bounds, and clique tables
  * @author Tobias Achterberg
  */
@@ -316,7 +317,7 @@ SCIP_RETCODE SCIPvboundsDel(
    if( (*vbounds)->len == 0 )
       SCIPvboundsFree(vbounds, blkmem);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** reduces the number of variable bounds stored in the given variable bounds data structure */
@@ -900,7 +901,7 @@ void SCIPimplicsGetVarImplics(
 
    *haslowerimplic = (poslower >= 0);
    *hasupperimplic = (posupper >= 0);
-}
+}  /*lint !e438*/
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
 SCIP_Bool SCIPimplicsContainsImpl(
@@ -914,8 +915,8 @@ SCIP_Bool SCIPimplicsContainsImpl(
    int posupper;
    int posadd;
 
-   return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
-}
+   return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd); /*lint !e438*/
+}  /*lint !e638*/
 
 
 
@@ -1748,11 +1749,9 @@ SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 
    clique = (SCIP_CLIQUE*)key;
 
-   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]), \
-                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])), \
-                                               SCIPcombineThreeInt(clique->nvars, \
-                                                                   clique->values[0], \
-                                                                   clique->values[clique->nvars-1]));
+   return clique->nvars == 0 ? 0 : SCIPhashFour(SCIPvarGetIndex(clique->vars[0]), \
+                                                SCIPvarGetIndex(clique->vars[clique->nvars-1]), \
+                                                clique->nvars, 2*clique->values[0] +  clique->values[clique->nvars-1]);
 }
 
 #define HASHTABLE_CLIQUETABLE_SIZE 100
@@ -1875,7 +1874,6 @@ SCIP_RETCODE sortAndMergeClique(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
-   SCIP_VAR* var;
    int noldbdchgs;
    int startidx;
 
@@ -1901,13 +1899,13 @@ SCIP_RETCODE sortAndMergeClique(
    /* sort variables and corresponding clique values regarding variables indices before merging multiples */
    SCIPsortPtrBool((void**) clqvars, clqvalues, SCIPvarComp, *nclqvars);
 
-   var = NULL;
    noldbdchgs = *nbdchgs;
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
     * new clique */
    startidx = *nclqvars - 1;
    while( startidx >= 0 )
    {
+      SCIP_VAR* var;
       int nones;
       int nzeros;
       int curr;
@@ -2094,6 +2092,8 @@ SCIP_RETCODE sortAndMergeClique(
       w = 0;
       while( startidx < *nclqvars )
       {
+         SCIP_VAR* var;
+
          var = clqvars[startidx];
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
@@ -2171,7 +2171,7 @@ SCIP_RETCODE sortAndMergeClique(
                      *infeasible = TRUE;
                      return SCIP_OKAY;
                   }
-                  --startidx;
+                  --startidx; /*lint !e850*/
                }
 
                SCIPsetDebugMsg(set, "fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), (clique != NULL) ? (int) clique->id : -1,
@@ -2543,6 +2543,14 @@ SCIP_RETCODE SCIPcliquetableAdd(
    /* did we stop early due to a pair of negated variables? */
    if( nvars == 0 || *infeasible )
       goto FREEMEM;
+
+   if( !SCIPsetIsInfinity(set, set->presol_clqtablefac) && SCIPcliquetableGetNEntries(cliquetable) + nvars > set->presol_clqtablefac * stat->nnz )
+   {
+      SCIPsetDebugMsg(set, "reject %d-variable clique to keep clique table entries below threshold of %g entries\n",
+         nvars, set->presol_clqtablefac * stat->nnz);
+
+      goto FREEMEM;
+   }
 
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
@@ -2941,8 +2949,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       cliquetableSwapCliques(cliquetable, 0, cliquetable->ndirtycliques);
       cliqueCheck(clique);
 
-      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING */
-#if 0
+      /* @todo check if we can/want to aggregate variables with the following code */
+#ifdef SCIP_DISABLED_CODE
       if( clique->nvars == 2 && clique->equation && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING )
       {
          SCIP_VAR* var0;
@@ -3366,13 +3374,13 @@ unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
-   int id;
+   unsigned int id;
 
    assert(clique != NULL);
 
-   id = clique->id;
+   id = clique->id; /*lint !e732*/
 
-   return (unsigned int)id;
+   return id;
 }
 
 /** gets index of the clique in the clique table */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -63,6 +64,7 @@ SCIP_RETCODE paramTestFixed(
    )
 {  /*lint --e{715}*/
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    if( param->isfixed )
    {
@@ -83,6 +85,7 @@ SCIP_RETCODE paramTestBool(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
+   assert(messagehdlr != NULL);
 
    if( value != TRUE && value != FALSE )
    {
@@ -103,6 +106,7 @@ SCIP_RETCODE paramTestInt(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
@@ -124,6 +128,7 @@ SCIP_RETCODE paramTestLongint(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
@@ -145,6 +150,7 @@ SCIP_RETCODE paramTestReal(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
    {
@@ -166,6 +172,7 @@ SCIP_RETCODE paramTestChar(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+   assert(messagehdlr != NULL);
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
@@ -204,6 +211,7 @@ SCIP_RETCODE paramTestString(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+   assert(messagehdlr != NULL);
 
    if( value == NULL )
    {
@@ -234,6 +242,7 @@ SCIP_RETCODE paramWrite(
    )
 {
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    /* write parameters at default values only, if the onlychanged flag is not set or if the parameter is fixed */
    if( onlychanged && SCIPparamIsDefault(param) && !SCIPparamIsFixed(param) )
@@ -2312,6 +2321,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "numerics") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
@@ -2871,6 +2885,33 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/crossover/minfixingrate", 0.5, quiet) );
    }
 
+   /* set specific parameters for Adaptive Large Neighborhood Search heuristic, if the heuristic is included */
+#ifndef NDEBUG
+   if( SCIPsetFindHeur(set, "alns") != NULL )
+#endif
+   {
+      /* activate all neighborhoods explicitly (keep list in alphabetic order) */
+      int nneighborhoods = 9;
+      const char* neighborhoodnames[] = {
+               "crossover",
+               "dins",
+               "localbranching",
+               "mutation",
+               "proximity",
+               "rens",
+               "rins",
+               "trustregion",
+               "zeroobjective"
+      };
+      for( i = 0; i < nneighborhoods; ++i )
+      {
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", neighborhoodnames[i]);
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, paramname, TRUE, quiet) );
+      }
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/alns/nodesquot", 0.2, quiet) );
+      SCIP_CALL( paramSetLongint(paramset, set, messagehdlr, "heuristics/alns/nodesofs", (SCIP_Longint)2000, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2885,32 +2926,41 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 19
+   SCIP_HEUR** heurs;
+   int nheurs;
+
+#define NEXPENSIVEHEURFREQS 12
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
-      "heuristics/crossover/freq",
       "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
-      "heuristics/gins/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
-      "heuristics/lpface/freq",
-      "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
       "heuristics/pscostdiving/freq",
-      "heuristics/rens/freq",
-      "heuristics/rins/freq",
       "heuristics/rootsoldiving/freq",
-      "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"
    };
 
    SCIP_CALL( paramsetSetHeuristicsDefault(paramset, set, messagehdlr, quiet) );
 
-   /* explicitly turn off expensive heuristics, if included */
+   /* disable all heuristics that use subSCIPs */
+   heurs = SCIPgetHeurs(set->scip);
+   nheurs = SCIPgetNHeurs(set->scip);
+   for( i = 0; i < nheurs; ++i )
+   {
+      if( SCIPheurUsesSubscip(heurs[i]) )
+      {
+         char paramname[SCIP_MAXSTRLEN];
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
+      }
+   }
+
+   /* explicitly turn off further expensive heuristics, if included */
    for( i = 0; i < NEXPENSIVEHEURFREQS; ++i )
       if( SCIPhashtableRetrieve(paramset->hashtable, (void*)expensiveheurfreqs[i]) != NULL )
       {
@@ -3197,6 +3247,30 @@ SCIP_RETCODE paramsetSetPresolvingFast(
 #endif
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "sparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable dual sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "dualsparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualsparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable tworowbnd presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", 0, quiet) );
    }
 
    /* explicitly forbid the use of implications in logicor presolving */
@@ -3668,6 +3742,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3861,6 +3936,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
                }
             }
          }
+
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "heuristics/useuctsubscip", TRUE, quiet) );
       }
       break;
    case SCIP_PARAMEMPHASIS_PHASEPROOF:
@@ -3877,10 +3954,47 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/dynamicweights", TRUE, quiet) );
       break;
 
+   case SCIP_PARAMEMPHASIS_NUMERICS:
+
+      /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
+
+      /* The higher the Markowitz Parameter is, more sparse pivots will be ignored and the numerically
+      more stable ones will be used as pivot */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999, quiet) );
+
+      /* Added parameters as suggested here: https://git.zib.de/integer/scip/issues/2002#note_92716 */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/fastmip", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/scaling", 2, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 40, quiet) );
+
+      /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultaggrquot", 10.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxdualmultaggrquot", 10.0, quiet) );
+
+      /* When upgrading constr with knapsack/setppc causes problems */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc", FALSE, quiet) );
+
+      /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
+
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
+#ifdef SCIP_WITH_PRESOLVELIB
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
+#endif
+
+      break;
+
    default:
       SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
-   }  
+   }
    return SCIP_OKAY;
 }
 
@@ -3979,6 +4093,9 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
    }
+
+   /* marking that the sub-SCIPs have been deactivated */
+   set->subscipsoff = TRUE;
 
    return SCIP_OKAY;
 }
@@ -4226,6 +4343,7 @@ SCIP_Bool SCIPparamIsValidBool(
    SCIP_Bool             value               /**< value to check */
    )
 {  /*lint --e{715}*/
+   assert(param != NULL);
    return ( value == TRUE || value == FALSE );
 }
 
@@ -4295,6 +4413,8 @@ SCIP_Bool SCIPparamIsValidString(
    )
 {  /*lint --e{715}*/
    unsigned int i;
+
+   assert(param != NULL);
 
    for( i = 0; i < (unsigned int) strlen(value); ++i )
    {

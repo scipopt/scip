@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -267,18 +267,27 @@ SCIP_Bool SCIPmatrixDownlockConflict(
 #define SCIPmatrixGetRowNMaxActNegInf(matrix,row)      (matrix->maxactivityneginf[row])
 #define SCIPmatrixGetRowNMaxActPosInf(matrix,row)      (matrix->maxactivityposinf[row])
 #define SCIPmatrixGetCons(matrix,row)                  (matrix->cons[row])
-#define SCIPmatrixUplockConflict(matrix,col)           (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col] ? FALSE : TRUE)
-#define SCIPmatrixDownlockConflict(matrix,col)         (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col] ? FALSE : TRUE)
 
 #endif
 
-/** initialize matrix */
+/** initialize matrix by copying all check constraints
+ *
+ *  @note Completeness is checked by testing whether all check constraints are from a list of linear constraint handlers
+ *        that can be represented.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
+   SCIP_Bool             onlyifcomplete,     /**< should matrix creation be skipped if matrix will not be complete? */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
-   SCIP_Bool*            complete            /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            complete,           /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible during matrix creation */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints during matrix creation */
+   int*                  ndelconss,          /**< pointer to count number of deleted specialized linear constraints during matrix creation */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients during matrix creation */
+   int*                  nchgbds,            /**< pointer to count number of changed bounds during matrix creation */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables during matrix creation */
    );
 
 /** frees the constraint matrix */
@@ -305,7 +314,15 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    int*                  pclass              /**< parallel row classes */
    );
 
-/** detect parallel rows, obj ignored */
+/** removes the bounds of a column and updates the activities accordingly */
+SCIP_EXPORT
+void SCIPmatrixRemoveColumnBounds(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int                   col                 /**< column variable to remove bounds from */
+   );
+
+/** detect parallel columns, obj ignored */
 SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixGetParallelCols(
    SCIP*                 scip,               /**< current SCIP instance */

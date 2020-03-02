@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_linesearchdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that fixes variables with a large difference to their root solution
  * @author Tobias Achterberg
  */
@@ -33,7 +34,7 @@
 
 #define HEUR_NAME             "linesearchdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings following the line from root solution to current solution"
-#define HEUR_DISPCHAR         'l'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1006000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          6
@@ -41,6 +42,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
@@ -169,7 +171,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    return SCIP_OKAY;
 }
@@ -251,6 +253,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
    return SCIP_OKAY;
 }
 
+#define divesetAvailableLinesearchdiving NULL
+
 /*
  * primal heuristic specific interface methods
  */
@@ -283,7 +287,8 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving, divesetAvailableLinesearchdiving) );
 
    return SCIP_OKAY;
 }

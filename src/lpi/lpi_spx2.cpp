@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,12 +81,19 @@
 #undef SCIP_DEBUG
 #endif
 
-/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, see soplex#136, e.g.,
  * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
  */
 #ifdef __GNUC__
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
+/* disable -Wdeprecated-copy warnings in SoPlex headers, see soplex#206 */
+#ifdef __GNUC__
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #endif
 #endif
 
@@ -1070,6 +1077,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -2911,7 +2923,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -3251,23 +3263,39 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       if( primsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getPrimalReal(primsol, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), primsol);
          (void)lpi->spx->getPrimalReal(tmp);
+#endif
       }
       if( dualsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getDualReal(dualsol, lpi->spx->numRowsReal());
+#else
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
          (void)lpi->spx->getDualReal(tmp);
+#endif
       }
       if( activity != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getSlacksReal(activity, lpi->spx->numRowsReal());  /* in SoPlex, the activities are called "slacks" */
+#else
          Vector tmp(lpi->spx->numRowsReal(), activity);
          (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+#endif
       }
       if( redcost != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+         (void)lpi->spx->getRedCostReal(redcost, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), redcost);
          (void)lpi->spx->getRedCostReal(tmp);
+#endif
       }
    }
 #ifndef NDEBUG
@@ -3300,8 +3328,12 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getPrimalRayReal(ray, lpi->spx->numColsReal());
+#else
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3333,8 +3365,12 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getDualFarkasReal(dualfarkas, lpi->spx->numRowsReal());
+#else
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -4185,6 +4221,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->intParam(SoPlex::ITERLIMIT);
+      if( *ival == -1 )
+          *ival = INT_MAX;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
@@ -4258,7 +4296,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert(ival >= -1);
+      assert( ival >= 0 );
+      /* -1 <= ival, -1 meaning no time limit, 0 stopping immediately */
+      if( ival >= INT_MAX )
+         ival = -1;
       (void) lpi->spx->setIntParam(SoPlex::ITERLIMIT, ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
@@ -4375,6 +4416,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4397,31 +4443,50 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restrictions on dval */
       if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       else
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* soplex requires 0 < dval < DEFAULT_INFINITY (= 1e100), -1 means unlimited */
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert(dval >= -1.5);
-      if( dval < 0.0 )
+      /* 0 <= dval <= inf */
+      assert( dval >= 0.0 || dval == -1.0 );
+      if( dval == -1 )
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
       else
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
-      lpi->checkcondition = (dval >= 0);
+      lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

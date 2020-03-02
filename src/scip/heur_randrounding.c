@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_randrounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
  * @author Gregor Hendel
  *
@@ -51,7 +52,7 @@
 
 #define HEUR_NAME             "randrounding"
 #define HEUR_DESC             "fast LP rounding heuristic"
-#define HEUR_DISPCHAR         'G'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -200
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
@@ -62,7 +63,7 @@
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 #define DEFAULT_RANDSEED         23          /**< default random seed */
 #define DEFAULT_USESIMPLEROUNDING    FALSE   /**< should the heuristic apply the variable lock strategy of simple rounding,
-                                               *  if possible? */
+                                              *   if possible? */
 #define DEFAULT_MAXPROPROUNDS 1              /**< limit of rounds for each propagation call */
 #define DEFAULT_PROPAGATEONLYROOT TRUE       /**< should the probing part of the heuristic be applied exclusively at the root node */
 
@@ -304,8 +305,7 @@ SCIP_RETCODE performLPRandRounding(
    int nlpcands;
 
    /* only call heuristic, if an optimal LP solution is at hand */
-   if ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
    if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
@@ -461,8 +461,8 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
+   /* only call heuristic, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
@@ -473,8 +473,8 @@ SCIP_DECL_HEUREXEC(heurExecRandrounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't call heuristic, if we have already processed the current LP solution but no relaxation solution is available */
-   if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
+   /* don't call heuristic, if we have already processed the current LP solution */
+   if( SCIPgetNLPs(scip) == heurdata->lastlp )
       return SCIP_OKAY;
 
    propagate = (!heurdata->propagateonlyroot || SCIPgetDepth(scip) == 0);

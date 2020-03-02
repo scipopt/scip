@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_probing.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the probing mode
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -555,6 +556,11 @@ SCIP_Bool SCIPisObjChangedProbing(
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
  *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
  *
+ *  @note Conflict analysis can run if the propagation finds infeasibilities. SCIPpropagateProbing can even find
+ *  globally valid bound changes. For this reason, the function restores the original objective (i.e. undoes the changes
+ *  done by SCIPchgVarObjProbing before performing the propagation, as the propagators don't know that the objective
+ *  might have changed. Thus, SCIPpropagateProbing can have an effect on the problem after probing ends.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -624,7 +630,7 @@ SCIP_RETCODE SCIPpropagateProbing(
       *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
    SCIP_CALL( SCIPpropagateDomains(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->conflict, scip->cliquetable,
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->conflict, scip->cliquetable,
          SCIPgetDepth(scip), maxproprounds, SCIP_PROPTIMING_ALWAYS, cutoff) );
 
    if( ndomredsfound != NULL )
@@ -791,6 +797,9 @@ SCIP_RETCODE solveProbingLP(
  *  no separation or pricing is applied
  *
  *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
+ *
+ *  @note if the LP is infeasible or the objective limit is reached, and if all columns are in the LP and no external
+ *  pricers exist then conflict analysis will be run. This can have an effect on the problem after probing ends.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -993,7 +1002,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
       relax = set->relaxs[r];
       assert( relax != NULL );
 
-      SCIP_CALL( SCIPrelaxExec(relax, set, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
+      SCIP_CALL( SCIPrelaxExec(relax, set, scip->tree, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
 
       switch( result )
       {
@@ -1020,6 +1029,81 @@ SCIP_RETCODE SCIPsolveProbingRelax(
    }
 
    return SCIP_OKAY;
+}
+
+/** print statistics of probing */
+char* SCIPsnprintfProbingStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
+   )
+{
+   char* ptr = strbuf;
+   const int nvartypes = 4;
+
+   assert(scip != NULL);
+   assert(strbuf != NULL);
+
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_VAR** vars;
+      int nbinvars = SCIPgetNBinVars(scip);
+      int nintvars = SCIPgetNIntVars(scip);
+      int nimplvars = SCIPgetNImplVars(scip);
+      int nvars = SCIPgetNVars(scip);
+      int vartypeend[] = {
+            nbinvars,
+            nbinvars + nintvars,
+            nbinvars + nintvars + nimplvars,
+            nvars
+      };
+      const char* vartypenames[] = {
+            "binary",
+            "integer",
+            "implicit integer",
+            "continuous"
+      };
+      int nvartypefixed[4];
+      int nvarsfixed = 0;
+      int depth;
+      int probingdepth;
+      int vartypestart = 0;
+      int v;
+      int p;
+
+      vars = SCIPgetVars(scip);
+      BMSclearMemoryArray(nvartypefixed, nvartypes);
+
+      /* loop over vartypes and count fixings */
+      for( p = 0; p < nvartypes; ++p )
+      {
+         for( v = vartypestart; v < vartypeend[p]; ++v )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+               ++nvartypefixed[p];
+         }
+         nvarsfixed += nvartypefixed[p];
+         vartypestart = vartypeend[p];
+      }
+
+      depth = SCIPgetDepth(scip);
+      probingdepth = SCIPgetProbingDepth(scip);
+
+      ptr += SCIPsnprintf(ptr, len, "Depth: (%d total, %d probing) ", depth, probingdepth);
+      ptr += SCIPsnprintf(ptr, len, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
+
+      for( p = 0; p < nvartypes; ++p )
+      {
+         int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
+         ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
+      }
+   }
+   else
+   {
+      (void) SCIPsnprintf(strbuf, len, "Not in probing");
+   }
+
+   return strbuf;
 }
 
 /** gets the candidate score and preferred rounding direction for a candidate variable */
@@ -1051,13 +1135,14 @@ SCIP_RETCODE SCIPgetDivesetScore(
 void SCIPupdateDivesetLPStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
    assert(scip != NULL);
    assert(diveset != NULL);
 
-   SCIPdivesetUpdateLPStats(diveset, scip->stat, niterstoadd);
+   SCIPdivesetUpdateLPStats(diveset, scip->stat, niterstoadd, divecontext);
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -1069,7 +1154,8 @@ void SCIPupdateDivesetStats(
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
+   SCIP_Bool             leavewassol,        /**< was a solution found at the leaf? */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
    assert(scip != NULL);
@@ -1077,7 +1163,7 @@ void SCIPupdateDivesetStats(
    assert(SCIPinProbing(scip));
 
    SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound,
-         nbestsolsfound, nconflictsfound, leavewassol);
+         nbestsolsfound, nconflictsfound, leavewassol, divecontext);
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings

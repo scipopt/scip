@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi/expr.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for expressions, expression trees, expression graphs, and related
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -2984,7 +2985,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             if( SCIPintervalIsEmpty(infinity, childval) )
             {
                SCIPintervalSetEmpty(result);
-               break;
+               return SCIP_OKAY;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
             continue;
@@ -9405,6 +9406,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 {
    SCIP_EXPRGRAPHNODE* node_;
    int pos;
+   int i;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9424,6 +9426,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
    assert(pos < (*node)->nparents);
    assert((*node)->parents[pos] == parent);
 
+#ifdef SCIP_DISABLED_CODE
    /* move last parent to pos, if pos is before last
     * update sorted flag */
    if( pos < (*node)->nparents-1 )
@@ -9431,6 +9434,13 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
       (*node)->parents[pos]  = (*node)->parents[(*node)->nparents-1];
       (*node)->parentssorted = ((*node)->nparents <= 2);
    }
+#else
+   /* move all parents behind pos one position up
+    * this is faster than moving the last parent to position pos if there are many repeated calls to this function as the parents array remains sorted
+    */
+   for( i = pos+1; i < (*node)->nparents; ++i )
+      (*node)->parents[i-1] = (*node)->parents[i];
+#endif
    --(*node)->nparents;
 
    /* keep pointer to *node in case it is still used */
@@ -9587,7 +9597,7 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
    SCIP_EXPRGRAPHNODE*   newchild            /**< node that should take position of oldchild */
    )
 {
-   int i;
+   int childpos = -1;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9600,27 +9610,34 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
 
    SCIPdebugMessage("replace child %p in node %p by %p\n", (void*)*oldchild, (void*)node, (void*)newchild);
 
-   /* search for oldchild in children array */
-   for( i = 0; i < node->nchildren; ++i )
+   /* let's see if child is just next to the place where we looked in a previous call to this function */
+   if( exprgraph->lastreplacechildpos >= 0 && exprgraph->lastreplacechildpos+1 < node->nchildren && node->children[exprgraph->lastreplacechildpos+1] == *oldchild )
    {
-      if( node->children[i] == *oldchild )
-      {
-         /* add as parent to newchild */
-         SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
-
-         /* remove as parent from oldchild */
-         SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
-
-         /* set newchild as child i */
-         node->children[i] = newchild;
-
-         /* we're done */
-         break;
-      }
+      childpos = exprgraph->lastreplacechildpos+1;
    }
-   assert(i < node->nchildren); /* assert that oldchild has been found in children array */
+   else for( childpos = 0; childpos < node->nchildren; ++childpos )
+   {
+      /* search for oldchild in children array */
+      if( node->children[childpos] == *oldchild )
+         break;
+   }
+   assert(childpos >= 0);
+   assert(childpos < node->nchildren);
+   assert(node->children[childpos] == *oldchild);
+
+   /* add as parent to newchild */
+   SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
+
+   /* remove as parent from oldchild */
+   SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
+
+   /* set newchild as child i */
+   node->children[childpos] = newchild;
 
    node->simplified = FALSE;
+
+   /* remember to look next to childpos first next time */
+   exprgraph->lastreplacechildpos = childpos;
 
    return SCIP_OKAY;
 }
@@ -11261,7 +11278,7 @@ void exprgraphNodePropagateBounds(
          }
 
          SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[i]->bounds, n, tmp);
-         SCIPdebugPrintf(" -> c%d = [%10g, %10g]\n", i, childbounds.inf, childbounds.sup);
+         SCIPdebugPrintf(" with c%d = [%10g, %10g] -> c%d = [%10g, %10g]\n", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup, i, childbounds.inf, childbounds.sup);
          if( SCIPintervalIsEmpty(infinity, childbounds) )
          {
             SCIPdebugMessage(" -> cutoff\n");
@@ -16009,7 +16026,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen,
+         exprgraph->varbounds[i].inf < -100.0 ? MIN(-100.0, exprgraph->varbounds[i].sup) : exprgraph->varbounds[i].inf,
+         exprgraph->varbounds[i].sup >  100.0 ? MAX( 100.0, exprgraph->varbounds[i].inf) : exprgraph->varbounds[i].sup);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
@@ -16216,7 +16235,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(!SCIPisFinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
+            assert(!SCIPisFinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), 10*eps));  /*lint !e777*/
          }
       }
 #endif

@@ -5,17 +5,23 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-# for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
+   # this happens with the cplex static lib
+   if(LPS MATCHES "cpx")
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
+   endif()
 endif()
 
-set(SCIP_VERSION_MAJOR 6)
+set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 3)
+set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 34)
+set(SCIP_VERSION_API 68)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -54,6 +60,7 @@ option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
+option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -61,8 +68,8 @@ option(PARASCIP "should scip be compiled thread safe" OFF)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
-option(NOBLKMEM "should block and buffer memory be disabled" OFF)
-option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(NOBLKMEM "should block memory be disabled" OFF)
+option(NOBUFMEM "should buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
@@ -195,8 +202,8 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
+# use C++14 standard
+set(CMAKE_CXX_STANDARD 14)
 
 # set function visibility default to hidden
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -234,6 +241,16 @@ if(GMP_FOUND)
     set(SCIP_WITH_GMP on)
 else()
     set(GMP_LIBRARIES "")
+endif()
+
+# look for presolvelib
+if(PAPILO)
+   find_package(PAPILO CONFIG)
+endif()
+if(PAPILO_FOUND)
+   set(SCIP_WITH_PAPILO on)
+else()
+   set(PAPILO_IMPORTED_TARGETS "")
 endif()
 
 #search the selected LP solver library

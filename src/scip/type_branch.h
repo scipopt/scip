@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,11 @@
  *  - \ref scip::ObjBranchrule "C++ wrapper class"
  */
 
+/** @defgroup DEFPLUGINS_BRANCH Default branching rules
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default branching rules of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_BRANCH_H__
@@ -41,6 +46,7 @@ extern "C" {
 typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate storage */
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
 typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */
+typedef struct SCIP_Treemodel SCIP_TREEMODEL;     /**< parameter storage for the Treemodel branching rules */
 
 
 /** copy method for branchrule plugins (called when SCIP copies plugins)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,19 +67,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
  * \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
 
-/** separate orbisack solutions */
-SCIP_EXPORT
-SCIP_RETCODE SCIPseparateCoversOrbisack(
-   SCIP*                 scip,               /**< pointer to scip */
-   SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
-   SCIP_SOL*             sol,                /**< solution to be separated */
-   SCIP_VAR**            vars1,              /**< variables of first columns */
-   SCIP_VAR**            vars2,              /**< variables of second columns */
-   int                   nrows,              /**< number of rows */
-   SCIP_Bool*            infeasible,         /**< memory address to store whether we detected infeasibility */
-   int*                  ngen                /**< memory address to store number of generated cuts */
-   );
-
 
 /** checks whether a given binary solution is feasible for the orbisack */
 SCIP_EXPORT
@@ -107,6 +94,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    int                   nrows,              /**< number of rows in variable matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
    SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons,        /**< whether the orbisack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -149,12 +137,13 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in constraint matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
-   SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sorttpl.c
+ * @ingroup OTHER_CFILES
  * @brief  template functions for sorting
  * @author Michael Winkler
  * @author Tobias Achterberg
@@ -36,6 +37,7 @@
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
  */
 #include "scip/def.h"
+#include "scip/dbldblarith.h"
 #define SORTTPL_SHELLSORTMAX    25 /* maximal size for shell sort */
 #define SORTTPL_MINSIZENINTHER 729 /* minimum input size to use ninther (median of nine) for pivot selection */
 
@@ -807,25 +809,31 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    )
 {
    int i;
-   SCIP_Real weightsum = 0.0;
+   SCIP_Real QUAD(weightsum);
+   QUAD_ASSIGN(weightsum, -capacity);
 
    for( i = 0; i < len; i++ )
    {
       if ( weights != NULL )
-         weightsum += weights[i];
+      {
+         SCIPquadprecSumQD(weightsum, weightsum, weights[i]);
+      }
       else
-         weightsum += 1.0;
+      {
+         SCIPquadprecSumQD(weightsum, weightsum, 1.0);
+      }
 
       /* check that the weight sum exceeds the capacity at the median element */
       if( i == medianpos )
       {
-         assert(weightsum > capacity);
+         assert(QUAD_TO_DBL(weightsum) >  -SCIP_DEFAULT_EPSILON);
       }
       else if( i < medianpos )
       {
          /* check that the partial sorting is correct w.r.t. the median element and that capacity is not exceeded */
          assert(medianpos == len || ! SORTTPL_ISBETTER(key[medianpos], key[i]));
-         assert(weightsum <= capacity);
+
+         assert(QUAD_TO_DBL(weightsum) <= SCIP_DEFAULT_EPSILON );
       }
       else
       {

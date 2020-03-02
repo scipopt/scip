@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reopt.c
+ * @ingroup OTHER_CFILES
  * @brief  data structures and methods for collecting reoptimization information
  * @author Jakob Witzig
  */
@@ -3571,9 +3572,8 @@ SCIP_RETCODE changeAncestorBranchings(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE*            node,               /**< node of the branch and bound tree */
    unsigned int          id,                 /**< id of stored node */
-   SCIP_Bool             afterdualintobranching /**< convert all bound changes made directly after the first bound
-                                                 *   changes based on dual information into normal branchings
-                                                 */
+   SCIP_Bool             afterdualbranching  /**< convert all bound changes made directly after the first bound
+                                              *   changes based on dual information into normal branchings */
    )
 {
    SCIP_REOPTTREE* reopttree;
@@ -3647,7 +3647,7 @@ SCIP_RETCODE changeAncestorBranchings(
 #endif
    }
 
-   if( afterdualintobranching && reoptnode->nafterdualvars > 0 )
+   if( afterdualbranching && reoptnode->nafterdualvars > 0 )
    {
       /* check the memory to convert this bound changes into 'normal' */
       SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], set, blkmem,
@@ -6144,7 +6144,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
             }
             else
             {
-               assert(SCIP_LPSOLSTAT_OBJLIMIT || SCIP_LPSOLSTAT_OPTIMAL || SCIP_LPSOLSTAT_NOTSOLVED);
+               assert( lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
                /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
@@ -6801,8 +6801,7 @@ SCIP_RETCODE transformDualredsToLinear(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
-                                               *  pruned by the dual reductions
-                                               */
+                                              *  pruned by the dual reductions */
    SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
@@ -6864,8 +6863,7 @@ SCIP_RETCODE transformDualredsToBounddisjunction(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
-                                               *  pruned by the dual reductions
-                                               */
+                                              *  pruned by the dual reductions */
    SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
@@ -7836,7 +7834,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
 
          if( id == 0 )
          {
-            SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, lp, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
+            SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
                   SCIP_ROWORIGINTYPE_REOPT, NULL, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, cut) );
 
@@ -7845,7 +7843,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
          }
          else
          {
-            SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, lp, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
+            SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
                   SCIP_ROWORIGINTYPE_REOPT, NULL, TRUE, TRUE, TRUE) );
             SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, FALSE, root,
                   &infeasible) );

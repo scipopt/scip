@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="6.0.3"
+VERSION="7.0.0"
 NAME="scip-$VERSION"
 if test ! -e release
 then
@@ -58,7 +58,8 @@ check/testset/stochastic.test \
 applications/*/check/testset/* \
 examples/*/check/testset/* \
 interfaces/*/check/testset/* \
-src/scip/githash.c
+src/scip/githash.c \
+scripts/trainEstimation/
 
 # compress the archive
 gzip -c $NAME.tar > release/$NAME.tgz

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intshifting.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
  *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg
@@ -43,7 +44,7 @@
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
-#define HEUR_DISPCHAR         'i'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -10000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0

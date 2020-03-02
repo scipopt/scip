@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -19,25 +19,26 @@
 ### display of the solving process
 
 # environment variables passed as arguments
-INSTANCE=$1      #  instance name to solve
-SCIPPATH=$2      # - path to working directory for test (usually, the check subdirectory)
-TMPFILE=$3       # - the batch file to control SCIP
-SETNAME=$4       # - specified basename of settings-file, or 'default'
-SETFILE=$5       # - instance/settings specific set-file
-THREADS=$6       # - the number of LP solver threads to use
-SETCUTOFF=$7     # - should optimal instance value be used as objective limit (0 or 1)?
-FEASTOL=$8       # - feasibility tolerance, or 'default'
-TIMELIMIT=$9     # - time limit for the solver
-MEMLIMIT=${10}   # - memory limit for the solver
-NODELIMIT=${11}  # - node limit for the solver
-LPS=${12}        # - LP solver to use
-DISPFREQ=${13}   # - display frequency for chronological output table
-REOPT=${14}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
-OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-CLIENTTMPDIR=${16}
-SOLBASENAME=${17}
-VISUALIZE=${18}
-SOLUFILE=${19}   # - solu file, only necessary if $SETCUTOFF is 1
+INSTANCE=$1        #  instance name to solve
+SCIPPATH=$2        # - path to working directory for test (usually, the check subdirectory)
+TMPFILE=$3         # - the batch file to control XPRESS
+SETNAME=$4         # - specified basename of settings-file, or 'default'
+SETFILE=$5         # - instance/settings specific set-file
+THREADS=$6         # - the number of LP solver threads to use
+SETCUTOFF=$7       # - should optimal instance value be used as objective limit (0 or 1)?
+FEASTOL=$8         # - feasibility tolerance, or 'default'
+TIMELIMIT=$9       # - time limit for the solver
+MEMLIMIT=${10}     # - memory limit for the solver
+NODELIMIT=${11}    # - node limit for the solver
+LPS=${12}          # - LP solver to use
+DISPFREQ=${13}     # - display frequency for chronological output table
+REOPT=${14}        # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+OPTCOMMAND=${15}   # - command that should per executed after reading the instance, e.g. optimize, presolve or count
+CLIENTTMPDIR=${16} # - directory for temporary files
+SOLBASENAME=${17}  # - base name for solution file
+VISUALIZE=${18}    # - true, if the branch-and-bound search should be visualized
+SOLUFILE=${19}     # - solu file, only necessary if $SETCUTOFF is 1
+
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
 #   echo "argument $((i+1)): ${args[$i]}"
@@ -93,6 +94,18 @@ then
     #echo "Reference value $OBJECTIVEVAL"
     echo set misc referencevalue $OBJECTIVEVAL      >> $TMPFILE
 fi
+
+INSTANCENAME=${INSTANCE%%.gz}
+for i in gz mps cip lp
+do
+    INSTANCENAME=${INSTANCENAME%%.${i}}
+done
+INSTANCESETTINGSFILE=${INSTANCENAME}.set
+if test -f $INSTANCESETTINGSFILE
+then
+    echo set load ${INSTANCESETTINGSFILE} >> $TMPFILE
+fi
+
 echo set limits time $TIMELIMIT        >> $TMPFILE
 echo set limits nodes $NODELIMIT       >> $TMPFILE
 echo set limits memory $MEMLIMIT       >> $TMPFILE
@@ -114,15 +127,22 @@ if test "$REOPT" = false
 then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
-
+    INSTANCENAME=${INSTANCE%%.gz}
+    # if a decomposition in gzipped format (.dec.gz) with the basename of the instance lies in the same directory,
+    # read it into SCIP, as well
+    DECOMP=${INSTANCENAME}.dec.gz
+    if test -f $DECOMP
+    then
+	echo read $DECOMP            >> $TMPFILE
+    fi
     # set objective limit: optimal solution value from solu file, if existent
     if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
         if test ""$OBJECTIVEVAL != ""
         then
             echo set limits objective $OBJECTIVEVAL >> $TMPFILE
-            echo set heur emph off                 >> $TMPFILE
         fi
+        echo set heur emph off                 >> $TMPFILE
     fi
 
     echo display parameters                >> $TMPFILE

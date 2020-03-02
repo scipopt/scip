@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,9 +102,11 @@
 #define READER_EXTENSION        "cap"
 
 
-#define DEFAULT_USEBENDERS       FALSE
+#define DEFAULT_USEBENDERS       TRUE
 #define DEFAULT_NUMSCENARIOS      250
 #define DEFAULT_RANDOMSEED          1
+#define DEFAULT_QUADCOSTS       FALSE   /**< should the problem be formulated with quadratic costs */
+
 
 #define MAXNCOSTS                   7
 
@@ -113,6 +115,7 @@ struct SCIP_ReaderData
    SCIP_Bool             usebenders;         /**< should Benders' decomposition be used to solve the problem */
    int                   nscenarios;         /**< the number of scenarios */
    int                   randomseed;         /**< the random seed used to generate the scenarios */
+   SCIP_Bool             quadcosts;          /**< should the problem be formulated with quadratic costs */
 };
 
 /**@} */
@@ -422,7 +425,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
 
       /* create a new problem in SCIP */
       SCIP_CALL( SCIPprobdataCreate(scip, name, costs, demands, capacity, fixedcost, ncustomers, nfacilities,
-              nscenarios, readerdata->usebenders) );
+              nscenarios, readerdata->usebenders, readerdata->quadcosts) );
    }
 
    (void)SCIPfclose(file);
@@ -492,6 +495,10 @@ SCIP_RETCODE SCIPincludeReaderScflp(
          "reading/" READER_NAME "/randomseed",
          "the random seed used to generate the scenarios",
          &readerdata->randomseed, FALSE, DEFAULT_RANDOMSEED, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/quadcosts", "should the problem be formulated with quadratic costs",
+         &readerdata->quadcosts, FALSE, DEFAULT_QUADCOSTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

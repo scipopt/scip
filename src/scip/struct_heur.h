@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,27 @@
 extern "C" {
 #endif
 
+
+struct SCIP_DivesetStats
+{
+   SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
+   SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
+   SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
+   SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
+   SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
+   SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
+   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
+   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
+   SCIP_Longint          nconflictsfound;    /**< the total number of added conflicts during the execution of this dive set */
+   int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
+   int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
+   int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
+   int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
+   int                   ncalls;             /**< the total number of calls of this dive set */
+   int                   nsolcalls;          /**< number of calls with a leaf solution */
+};
+typedef struct SCIP_DivesetStats SCIP_DIVESETSTATS;
+
 /** common settings for diving heuristics */
 struct SCIP_Diveset
 {
@@ -40,6 +61,7 @@ struct SCIP_Diveset
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_DIVESETSTATS*    divesetstats[3];    /**< statistics for individual contexts */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -50,29 +72,16 @@ struct SCIP_Diveset
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             lpresolvedomchgquot;/**< percentage of immediate domain changes during probing to trigger LP resolve */
-   SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
-   SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
-   SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
-   SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
-   SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
-   SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
-   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
-   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
-   SCIP_Longint          nconflictsfound;    /**< the total number of added conflicts during the execution of this dive set */
-   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
-   int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
-   int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
-   int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
-   int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
-   int                   ncalls;             /**< the total number of calls of this dive set */
-   int                   nsolcalls;          /**< number of calls with a leaf solution */
    int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    unsigned int          initialseed;        /**< initial seed for the random number generator */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             ispublic;           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask;       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)); /**< callback to check availability of dive set at the current stage, or NULL if always available */
 };
 
 /** primal heuristics data */

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -55,7 +55,6 @@ MAINCXXSRC	=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
 # C sources in GAMS I/O directory
 MAINGOBJ	=	gdxcc.o gevmcc.o gmomcc.o optcc.o
 MAINGSRC	=	$(addprefix $(GAMSIODIR)/,$(MAINGOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.$(OPT)
 
 MAIN		=	lib$(MAINNAME).$(BASE).$(LPS).$(LIBEXT)
 MAINFILE	=	$(LIBDIR)/$(MAIN)
@@ -108,23 +107,16 @@ $(LIBDIR):
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
-		-rm -f $(OBJDIR)/*.o
+		-rm -f $(OBJDIR)/*.o $(OBJDIR)/*.d
 		-rmdir $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
-
-.PHONY: depend
-depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINCSRC) $(MAINCXXSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
-		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
-		>$(MAINDEP)'
 
 .PHONY: test
 test:
 		./test.sh $(MAINFILE)
 
--include	$(MAINDEP)
+-include	$(MAINOBJFILES:.o=.d)
 
 $(MAINFILE):	$(LIBDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
@@ -134,17 +126,16 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
 $(OBJDIR)/%.o:	$(GAMSIODIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS:-pedantic=) -Wno-shadow -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS:-pedantic=) $(DFLAGS) -Wno-shadow -c $< $(CC_o)$@
 
 #---- EOF --------------------------------------------------------------------

@@ -3,8 +3,15 @@ IP/stochastic/cargo/4node128.smps
 IP/stochastic/cargo/4node256.smps
 IP/stochastic/cargo/4node4096.smps
 IP/stochastic/pltexp/pltexpA2_6.smps
-IP/stochastic/pltexp/pltexpA3_6.smps
-IP/stochastic/pltexp/pltexpA4_6.smps
+IP/stochastic/pltexp/pltexpA2_16.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_0_5.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_0_10.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_0_20.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_0_30.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_1_5.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_1_10.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_1_20.smps
+IP/stochastic/rrtailassign/qf_rrtailassign_1_30.smps
 IP/stochastic/rrtailassign-coeff/qf_rrtailassign_0_10.smps
 IP/stochastic/rrtailassign-coeff/qf_rrtailassign_0_20.smps
 IP/stochastic/rrtailassign-coeff/qf_rrtailassign_1_10.smps

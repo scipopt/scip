@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */
@@ -62,7 +63,9 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{ /*lint --e{715}*/
+{
+   SCIP_UNUSED(signum);
+
    ninterrupts++;
    if( ninterrupts >= 5 )
    {

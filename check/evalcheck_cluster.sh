@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -16,6 +16,7 @@
 
 # if RBCLI_TAG is set, then it will be passed as tags to rbcli
 export LANG=C
+export LC_NUMERIC=C
 
 REMOVE=0
 UPLOAD=0
@@ -31,6 +32,13 @@ do
       if test "$i" = "-r"
       then
           REMOVE=1
+      elif test "$i" = "-U"
+      then
+          UPLOAD=1
+      elif test "$i" = "-E"
+      then
+          UPLOAD=1
+          EXPIRE=1
       elif test "$i" = "-R"
       then
           REMOVE=1
@@ -59,9 +67,6 @@ do
   ERRFILE=$DIR/$EVALFILE.err
   SETFILE=$DIR/$EVALFILE.set
   METAFILE=$DIR/$EVALFILE.meta
-  RESFILE=$DIR/$EVALFILE.res
-  TEXFILE=$DIR/$EVALFILE.tex
-  PAVFILE=$DIR/$EVALFILE.pav
 
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
@@ -82,6 +87,32 @@ do
       echo ""
       echo create overall output and error file for $EVALFILE
 
+      # check first if all out and err files exist for this eval-file.
+      NMISSING=0
+      for i in `cat $DIR/$EVALFILE.eval` DONE
+      do
+        if test "$i" = "DONE"
+        then
+            break
+        fi
+
+        for extension in out err
+        do
+            FILE=${i}.${extension}
+            if ! test -e ${FILE}
+            then
+                echo Missing $FILE
+                ((NMISSING++))
+            fi
+        done
+      done
+
+      if [ ${NMISSING} -gt 0 -a ${REMOVE} -eq 1 ]
+      then
+        echo "Exiting because ${NMISSING} out/err file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
+        exit
+      fi
+
       for i in `cat $DIR/$EVALFILE.eval` DONE
         do
         if test "$i" = "DONE"
@@ -98,8 +129,6 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $FILE --
-
             echo @01 $FILE ==MISSING==  >> $OUTFILE
             echo                        >> $OUTFILE
         fi
@@ -113,8 +142,6 @@ do
                 rm -f $FILE
             fi
         else
-            echo Missing $FILE --
-
             echo @01 $FILE ==MISSING==  >> $ERRFILE
             echo                        >> $ERRFILE
         fi
@@ -146,63 +173,19 @@ do
   fi
 
   # check if the out file exists
-  if test -e $DIR/$EVALFILE.out
+  if test -e $OUTFILE
   then
       echo create results for $EVALFILE
 
-      # detect test set
-      TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
-      # detect test used solver
-      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
-
-      echo "Testset " $TSTNAME
-      echo "Solver  " $SOLVER
-
-      if test -f testset/$TSTNAME.test
-      then
-          TESTFILE=testset/$TSTNAME.test
-      else
-          TESTFILE=""
-      fi
-
-      # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-      SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
-      do
-          if test -f testset/${f}.solu
-          then
-              SOLUFILE=testset/${f}.solu
-              break
-          fi
-      done
-
-      if test "$SOLVER" = "gurobi_cl"
-      then
-          awk -f check_gurobi.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cplex"
-      then
-          awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "xpress"
-      then
-          awk -f check_xpress.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "mosek"
-      then
-          awk -f check_mosek.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cbc"
-      then
-          awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      # we should not check for SOLVER = scip here, because check.awk needs also to be called for examples with other names
-      else
-          awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      fi
+      # run check.awk (or the solver specialization) to evaluate the outfile
+      . ./evaluate.sh $OUTFILE
 
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
       then
           if test "$EXPIRE" = "1"
           then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+6 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               if test -z "$RBCLI_TAG"

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,8 +129,12 @@ struct SCIP_Stat
    SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_Real             firstlptime;        /**< time needed to solve the very first LP in the root node */
    SCIP_Real             lastbranchvalue;    /**< domain value of the last branching */
+   SCIP_Real             dualrefintegral;    /**< current reference-dual integral value */
+   SCIP_Real             primalrefintegral;  /**< current primal-reference integral value */
    SCIP_Real             primaldualintegral; /**< current primal-dual integral value */
    SCIP_Real             previousgap;        /**< primal dual gap preceding the current gap */
+   SCIP_Real             previousdualrefgap; /**< reference-dual gap preceding the current gap */
+   SCIP_Real             previousprimalrefgap; /**< primal-reference gap preceding the current gap */
    SCIP_Real             previntegralevaltime;/**< last time of primal-dual integral evaluation */
    SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
@@ -186,6 +190,7 @@ struct SCIP_Stat
    SCIP_Longint          ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
    SCIP_Longint          nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
    SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
+   SCIP_Longint          nnodezeroitlps;     /**< number of LPs solved with 0 iterations for node relaxations */
    SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
    SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */

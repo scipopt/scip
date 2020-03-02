@@ -1,27 +1,371 @@
-@page RN60 Release notes for SCIP 6.0
+@page RN70 Release notes for SCIP 7.0
 
-@section RN603 SCIP 6.0.3
+@section RN700 SCIP 7.0.0
 *************************
 
 Features
 --------
+
+- Using the parameter "propagating/symmetry/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart. If orbital fixing
+  has found a reduction before the restart occured, symmetries have to be updated to ensure correctness.
+  To this end, the user can decide via "propagating/symmetry/disableofrestart" whether orbital fixing is disabled or
+   whether symmetries are recomputed.
+
+- extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
+
+- extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
+  scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
+- extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
+  when the subproblem is convex nonlinear.
+
+- extended Benders framework to create copies of Benders decompositions that can be used in a multithreading environment
+
+- additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
+  instances, e.g., when used in UG
+
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
+- Trust region, a new LNS heuristic, has been added to SCIP as both a standalone primal heuristic heur_trustregion.c
+  and as a neighborhood inside of Adaptive Large Neighborhood Search (heur_alns.c). This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
+  applied to Benders' decomposition.
+
+- Modularity of symmetry handling has been increased. It is now possible to use orbitopes (i.e., polyhedral symmetry
+  handling techniques) and orbital fixing on the same instance.
+
+- cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
+  method and Kelly's method. The cut strengthening is enabled by setting the paramemter
+  "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
+  "corepointperturb" control the behavior of the cut strengthening method. Additionally, the parameter
+  "cutstrengthenintpoint" allows the user to specify the solution that is used to initialize the core point. The options
+  are the first LP solution, the first integer feasible solution, a relative interior point, a solution vector of all
+  ones and a solution vector of all zeros. Also, the core point can be reinitialized after each update to the incumbent
+  solution.
+
+- added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
+  and skip strong branching for very high degeneracy rates
+
+- GINS heuristic can make use of a user-provided decomposition labels in two ways:
+ 1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
+ 2. by selecting an interval of consecutive blocks as neighborhood, until fixing rate is reached. In this case, no variable is randomly selected.
+
+- extend potential parameter of GINS to allow computation based on local LP solution, as well
+
+- new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
+  At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
+  During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
+  The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
+- Added new penalty alternating direction method (PADM) primal heuristic that splits the problem into several sub-SCIPs
+  according to a user-provided decomposition. The sub-SCIPs are solved on an alternating basis until a feasible solution of
+  the original problem is found.
+
+- Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
+  whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
+
+- The symmetry code has been completely restructured. The presolvers presol_symbreak and presol_symmetry as well as the propagator
+  prop_orbitalfixing have been merged into the single propagator prop_symmetry to avoid storing the same information
+  multiple times. This propagator is now responsible for adding symmetry handling constraints as well as activating orbital
+  fixing. Moreover, the new file symmetry.c contains general functions for symmetry computations like orbit computations.
+
+- Variables can now be marked as "relaxation-only". This flag should be used to introduce new variables that are required
+  to define a relaxation, but that are not part of any checked constraints. Essentially, these variables should only be used
+  in the current SCIP solve and disregarded after a restart or in SCIP copies. Hence, these variables are not copied by SCIPcopy and
+  SCIPgetVarCopy, they are currently not used in conflict constraints, and cuts involving them are not upgraded to linear constraints.
+  Relaxation-only variables cannot appear in the objective function.
+
+- The OSiL reader now supports nonlinear expressions of type "signpower".
+
+- Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
+
+- If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
+  recompute symmetries if a restart occured.
+
+- upgrade some more quadratic constraints to second-order cone constraints, that is,
+  handle linear binary variables as if squared in simple upgrade and
+  do not require bounds for variables that have a zero entry in the computed eigenvectors in the non-simple upgrade
+
+- new variable event when changing the variable type
+
+- It is no longer necessary to provide a SCIP pointer for the subproblem in SCIPaddBendersSubproblem if custom solving
+  methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
+  cut generation methods can be used.
+
+- Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
+  symresacks even if the underlying permutation is not monotone.
+
+- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features:
+  1) no cutoff or domain reduction: only branching;
+  2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls
+     - basically, do not update any statistic;
+  3) donotbranch (optional): do no perform branching. So that the brancher can be called as an oracle only
+     (on which variable would you branch ? But do not branch please);
+  4) scoreall (optional): keep scoring variables, even if infeasibility is detected;
+  5) collectscores (optional): store the candidate scores from the last call, which can then be retrieved by calling SCIPgetVanillafullstrongData();
+  6) integralcands (optional): consider integral candidates for branching,
+     i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
+
+- If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
+
+- Locally valid cuts / rows are now considered for dual proof analysis when `conflict/uselocalrows` is set to TRUE.
+
+- Linking variables in the linking constraint handler (cons_linking.{ch}) can now be integer or continuous. The coefficients of the binary variables are therefore now stored as SCIP_Real.
+
+- To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
+  not affected by any symmetry.
+
+- Allow to filter first variables from orbits and transfer pseudo cost information to variables in orbit
+
+- Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
+
+- Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
+  available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
+  the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
+  decomposition subproblems. A priority queue has been added to help with load balancing.
+
+- The Benders' decomposition framework can handle MINLPs. If a convex relaxation of the MINLP exists, then this is
+  solved to generate optimality and feasibility cuts. The extensions to the framework are:
+  - New generic solving methods to solve convex NLP subproblems.
+  - Modification to benderscut_opt and benderscut_feas to enable the generation of cuts from convex NLPs.
+  - Addition of benderscut_feasalt to generate feasibility cuts from an alternative subproblem that minimises the
+    violation of infeasible problems.
+  - Better handling of subproblem solution results
+
+- Adds a feasibility phase to the Benders' decomposition subproblem solving methods. The feasibility phase adds slack
+  variables to each of the constraints to ensure feasibility of the subproblem. A large coefficient is given to these
+  slack variables in the objective function to penalise constraint violations. The coefficients are progressively
+  increased until all slack variables take the value 0.0.
+
+- Improved convexity check for Benders' decomposition subproblems. The constraints of the subproblem are now checked for
+  convexity in the initialisation of the Benders' decomposition algorithm. This enables the solving of convex NLPs as
+  Benders' decomposition subproblems.
+
+- Benders' decomposition can be applied using decomposition supplied in the DEC format. To apply Benders' decomposition
+  the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
+
+- new event handler event_estim.c/h that approximates search tree completion and estimates tree size
+  to trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
+- new display column that reports approx. search tree completion during the search, and an overview in the statistics table
+- added resources (script, tutorial, test data) to adapt tree size estimation to user instances.
+
+- Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
+  symmetries. Previously, some plugins were disabled, which is not necessary anymore.
+
+- A new presolver "dualsparsify" was added. It tries to combine columns (i.e. variables) to cancel nonzero coefficients in the constraint matrix.
+
+- The presolver "tworowbnd" was implemented with better performance.
+
+- To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
 - allow disabling of pricers during solving process
 
 Performance improvements
 ------------------------
 
+- Extended cut presolving by removing variables that been fixed at their bounds
+
+- Improved branching point selection when branching on externals branching candidates. Instead of using exactly the
+  LP solution, a point closer to the middle of the variables domain is chosen.
+
+- Matrix presolvers that do not work on incomplete matrices now skip matrix creation if unsupported constraint types are detected.
+
+- consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
+  up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
+  with Benders' decomposition.
+
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
+  use only permutations that can contribute to a variable's orbit;
+
+- allow rapid learning at local nodes
+
+- allow to recompute cut without using fractional values for sepa_cgmip
+
+- restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
+
+- variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
+- Improved domcol presolver to not require a complete representation of all constraints in the matrix
+
+- performance improvement of adaptive large neighborhood search heuristic on merely continuous problems. The heuristic
+  stops if presolving in the sub-SCIP fixes less than 50 % of the current target fixing rate over all variables
+  (including continuous).
+
+- reduce memory usage in symmetry detection by a staggered allocation with decreasing overhead for larger instances
+
+- improved full orbitope propagation using a static implementation or a dynamic reordering of orbitope rows by a global rank function
+
+- improved detection of packing/partitioning orbitopes
+
+- enable an in-tree restart if after a reasonable initialization, the estimated size of the remaining tree is large.
+
+
 Examples and applications
 -------------------------
+
+- added methods to set and get hmin and hmax for optcumulative constraints
 
 Interface changes
 -----------------
 
 ### New and changed callbacks
 
+- new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
+  which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
+
+- new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
+
+- new `idempotent` argument to SCIPgetVarStrongbranchInt() and SCIPgetVarStrongbranchFrac(),
+  so that statistics are not updated during the call. Likewise, new `updatecol` and `updatestat` arguments to SCIPcolGetStrongbranch().
+
+- callback `SCIP_DECL_CONSHDLRENFOLP` can now also return SCIP_SOLVELP as *result, which indicates to the SCIP core that the LP relaxation
+  should be solved again because the primal feasibility tolerance of the LP has been tightened (using SCIPsetLPFeastol())
+
+- extension of SCIP_PQUEUE by a new callback SCIP_DECL_PQUEUEELEMCHGPOS to catch swaps as well as functionality to delete arbitrary elements from the priority queue.
+
 ### Deleted and changed API methods
 
+- LPI:
+  + now for all lp interfaces consistent requirements on SCIP_LPPAR:
+    LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
+  + now projecting SCIP_LPPAR values on feasible values for each lp interface
+  + add interface to Glop
+- Symmetry:
+  + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
+    handler has its own implementation of this routine with advanced features now
+  + renamed SCIPgetGeneratorsSymmetry() to SCIPgetSymmetry() and removed two arguments
+  + extended method SCIPgetSymmetry(): It is possible to access both the original and
+    transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
+  + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
+    SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
+    by "ismodelcons" to encode whether the constraints are model constraints or not
+  + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
+  + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
+    SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
+	and SCIPincludePropOrbitalfixing()
+  + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
+- SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
+    SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
+  + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
+    argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
+  - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
+
+- new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+  and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
+
+- new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
+  SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
+  parallel. Setting this argument to TRUE has a performance cost.
+
+- new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+- functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
+  receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
+
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+  - deprecated SCIPlpfeastol() and SCIPchgLpfeastol(), use SCIPgetLPFeastol() and SCIPsetLPFeastol()
+
+- new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
+  as single (standalone) heuristic or within Adaptive Diving.
+- new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
+
+- SCIPcopyVars, SCIPcopy, SCIPcopyConsCompression, and SCIPgetVarCopy do not copy variables that are marked as relaxation-only,
+  thus it cannot be assumed anymore that each active variable from the master SCIP also has a counterpart in the copy.
+  SCIPcopy, SCIPcopyConsCompression, and SCIPcopyConss can now return *valid=TRUE if some non-checked and non-enforced constraints were not copied, e.g.,
+  because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
+
+- linking constraint handler:
+  - changed type of vals argument from int *to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
+  - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
+  - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
+  - new method SCIPgetBinvarsDataLinking().
+
+- SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
+  Previously this result was returned through a parameter. The change was required to facilitate the integration with
+  the UG framework.
+
+- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
+
+- SCIPsetupBendersSubproblem takes a parameter of the enforcement type.
+
+- SCIPcreateNlpiProb takes a hashmap to store the map between the nlrows and the index in the nlrow array.
+
 ### New API functions
+
+- SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
+- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
+  SCIPbendersGetStoredCutOrigData().
+- added SCIPisConvexAbspower()
+- new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
+  SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
+  about the origin of the solution, ie, whether it was created by a relaxation handler,
+  by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
+  The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+- new API functions SCIPsetCommonSubscipParams(), SCIPtranslateSubSol(), and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
+- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
+  by other primal heuristics.
+- new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
+  SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
+- new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
+- new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
+- new API function SCIPgetNConflictDualproofsApplied()
+- new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
+- new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
+- new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
+  feasibility tolerance for the LP relaxation
+- new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
+- new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
+  decomposition subproblem solves. The comparison method is used to help with load balancing.
+- new API function SCIPgetRowObjParallelism to get the objective parallelism of a row
+- new API function SCIPcolGetAge to get the age of a column
+- added SCIPhashThree(), SCIPhashFive(), SCIPhashSix(), and SCIPhashSeven() that complement SCIPhashTwo(), SCIPhashFour() to combine 32bit integers to
+  a 32bit hash value
+- new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
+  solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
+  This avoids the need for a SCIP instance to solve the Benders' decomposition subproblem and generating cuts.
+- new API function SCIPconsAddCoef used for adding a coefficient to a linear-type constraint.
+- new API functions SCIPconsNonlinearGetRhs, SCIPconsNonlinearGetLhs and SCIPconsNonlinearAddLinearCoef for getting the
+  RHS and LHS from a nonlinear-type constraint and adding a linear coefficient to the constraint.
+- new API function SCIPbendersSolSlackVarsActive for checking whether any slack variables from the feasibility phase are
+  active in the subproblem solution.
+- new API functions SCIPbendersSetSubproblemType and SCIPbendersGetSubproblemType sets and gets the subproblem type.
+  This is either:
+  - Convex constraints with continuous variables
+  - Convex constraints with discrete variables
+  - Non-convex constraints with continuous variables
+  - Non-convex constraints with discrete variables
+- new API functions SCIPbendersSetSubproblemIsNonlinear() and SCIPbendersSubproblemIsNonlinear() for setting and
+  identifying whether the Benders' decomposition subproblems contain nonlinear constraints. Similarly, the functions
+  SCIPbendersSetMasterIsNonlinear() and SCIPbendersMasterIsNonlinear() sets and identifies whether the Benders'
+  decomposition master problem contains nonlinear constraints.
+- new API function SCIPapplyBendersDecomposition for applying Benders' decomposition given a decomposition in the DEC
+  format
+- new API function SCIPwasNodeLastBranchParent to query if a node has been the parent of the most recent branching in the tree
+- new API functions SCIPtreemodelInit(), SCIPtreemodelFree(), SCIPtreemodelIsEnabled(), SCIPtreemodelSelectCandidate() related to the new
+  treemodel way of comparing branching candidates. These functions are only currently used for reliability pscost branching, but they can be used
+  in other parts of the code.
+- New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
+- new API functions SCIPisOrbitalfixingEnabled() and SCIPgetSymmetryNGenerators() to check whether orbital fixing is
+  enabled and to get the number of generators of the current symmetry group, respectively
+
+### Event system
+
+- new event type SCIP_EVENTTYPE_NODEDELETE to react on nodes that are about to be deleted from the tree
 
 ### Command line interface
 
@@ -29,18 +373,205 @@ Interface changes
 
 ### Changed parameters
 
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../symmetry/recomputerestart"
+- Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
+- Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
+- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: -1, old value: 5) in cons_orbitope.c
+- all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
+- deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
+- changed default value of "presolving/symbreak/detectorbitopes" (new value: TRUE, old value: FALSE)
+- extended range of "misc/usesymmetry" (new range: [0,3], old range: [0,2])
+- deleted parameter "constraints/orbisack/checkalwaysfeas"
+- deleted parameter "constraints/orbitope/checkalwaysfeas"
+- deleted parameter "constraints/symresack/checkalwaysfeas"
+- deleted parameter "presolving/symmetry/maxgenerators"
+- deleted parameter "presolving/symmetry/checksymmetries"
+- deleted parameter "presolving/symmetry/displaynorbitvars"
+- deleted parameter "presolving/symbreak/conssaddlp"
+- deleted parameter "presolving/symbreak/addsymresacks"
+- deleted parameter "presolving/symbreak/computeorbits"
+- deleted parameter "presolving/symbreak/detectorbitopes"
+- deleted parameter "presolving/symbreak/addconsstiming"
+- deleted parameter "propagating/orbitalfixing/symcomptiming"
+- deleted parameter "propagating/orbitalfixing/performpresolving"
+- deleted parameter "propagating/orbitalfixing/recomputerestart"
+- changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
+- changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
+- changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
+- replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
+  tolerance to initialize the primal feasibility tolerance of the LP solver
 - enabling aggressive presolving now activates all available presolving plugins,
   and decreases the presolving/restartfac parameter correctly with respect to default.
+- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+  the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
+  of the RINS heuristic.
 
 ### New parameters
 
+- the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
+  behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
+  checking.
+- constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
+  branching strategy is provided (only possible for non-model constraints)
+
+- new parameters heuristics/shiftandpropagate/minfixingratelp and heuristics/locks/minfixingratelp to stop the
+  heuristics after propagating integer fixings if no sufficient fixing of the all variables (including continuous)
+  could be achieved. These parameters help to avoid solving LP's that are comparable in hardness to the main root LP.
+
+- Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
+  the branching point for an external branching candidate closer to the middle of the candidates domain. The
+  default of 0.75 and 0.5, respectively, uses a point that is 75*alpha% closer to the middle of the domain, where
+  alpha is the relative width of the candidates domain (width of local domain divided by width of global domain),
+  if the latter is below 0.5, and alpha=1.0 otherwise. That is, with the default settings, a branching point is
+  chosen closer to the middle of the candidates domain if the variables local domain is still similar to its
+  global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
+  domain.
+
+- Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
+  High values sacrifice performance for stability.
+
+- Added parameters benders/<bendersname>/lnsmaxcalls and benders/<bendersname>/lnsmaxcallsroot to the Benders'
+  decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
+  branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
+  parameters only have effect if the lnscheck parameter is set to TRUE.
+
+- Added parameter cons/linear/maxmultaggrquot to limit the maximum coefficient dynamism of an equation on which
+  multiaggregation is performed. This replaces a compiler define of the same name.
+  Default value is 1000, smaller values make multiaggregations numerically more stable.
+- new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
+
+- new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
+
+- new parameter separation/rapidlearning/checkexec to check whether rapid learning is allowed to run locally
+- new parameters separation/rapidlearning/check{degeneracy,dualbound,leaves,nsols,obj} to enable checking the respective feature for local rapid learning
+- new parameter separation/rapidlearning/maxcalls to limit the number of rapid learning executions
+- new parameter separation/rapidlearning/nwaitingnodes to set the number of waiting nodes before the dual bound is checked
+- new parameter separation/rapidlearning/mindegeneracy to set the minimal threshold of degenerate basic-variables
+- new parameters separation/rapidlearning/minvarconsratio to set the minimal ratio of unfixed variables in relation to basis size
+
+- new parameters to control the Benders' decomposition two-phase method.
+  - constraints/benderslp/depthfreq: after the maxdepth is reached, then the two-phase method will only be called at
+    nodes at a depth divisible by depthfreq.
+  - constraints/benderslp/stalllimit: after the maxdepth is reached, if there has been no improvement in the dual bound
+    for stalllimit number of nodes, then the two-phase method is executed for the next fractional LP solution that is
+    encountered.
+  - constraints/benderslp/iterlimit: after the root node, only iterlimit fractional LP solutions are used at each node
+    to generate Benders' decomposition cuts.
+
+- new parameters for symmetry handling
+  - new parameter "propagating/symmetry/maxgenerators"
+  - new parameter "propagating/symmetry/checksymmetries"
+  - new parameter "propagating/symmetry/displaynorbitvars"
+  - new parameter "propagating/symmetry/conssaddlp"
+  - new parameter "propagating/symmetry/addsymresacks"
+  - new parameter "propagating/symmetry/detectorbitopes"
+  - new parameter "propagating/symmetry/addconsstiming"
+  - new parameter "propagating/symmetry/ofsymcomptiming"
+  - new parameter "propagating/symmetry/performpresolving"
+  - new parameter "propagating/symmetry/recomputerestart"
+  - new parameter "constraints/symresack/checkmonotonicity"
+  - new parameter "propagating/symmetry/compresssymmetries"
+  - new parameter "propagating/symmetry/compressthreshold"
+  - new parameter "propagating/symmetry/disableofrestart"
+
+- new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
+  benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
+
+- new parameters to control enhancements for solving MINLPs by Benders' decomposition
+  - benders/<bendersname>/execfeasphase: enables the feasibility phase for solving the Benders' decomposition
+    subproblems
+  - benders/<bendersname>/slackvarcoef: the initial coefficient of the slack variable for the feasibility phase
+  - benders/<bendersname>/checkconsconvexity: should the constraints be checked for convexity. This can be set to FALSE
+    if you are certain that the NLP subproblem is convex.
+
+- new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
+
+- new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
+
+- new return code SCIP_NOTIMPLEMENTED for functions, e.g., in the LPI that have not been implemented (yet)
+
+- new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
+- new parameter branching/relpscost/filtercandssym to allow filtering from orbits
+
+- new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
+
+- new parameters for tree size estimation and restarts:
+    - estimation/restarts/restartpolicy (default value n)
+    - estimation/method (default value c)
+    - estimation/restarts/restartlimit (default value 1)
+    - estimation/restarts/minnodes (default value 1000)
+    - estimation/restarts/countonlyleaves (default value FALSE)
+    - estimation/restarts/restartfactor (default value 2)
+    - estimation/coefmonoprog (default value 0.3667)
+    - estimation/coefmonossg (default value 0.6333)
+    - estimation/restarts/hitcounterlim (default value 50)
+    - estimation/reportfreq (default value -1)
+    - estimation/regforestfilename (default value "-")
+    - estimation/completiontype (default value a)
+    - estimation/treeprofile/enabled (default value FALSE)
+    - estimation/treeprofile/minnodesperdepth (default value 20)
+    - estimation/useleafts (default value TRUE)
+    - estimation/ssg/nmaxsubtrees (default value -1)
+    - estimation/ssg/nminnodeslastsplit (default value 0)
+
+- new parameter constraints/linear/extractcliques to turn clique extraction off
+
+- new emphasis setting emphasis/numerics to increase numerical stability of (mostly) presolving operations such as (multi-)aggregations at the cost of performance.
+
+- new parameters for treemodel:
+  - new parameter branching/treemodel/enable to enable the treemodel in reliability pscost branching and possible
+    future parts of the code where it could be used.
+  - new parameter branching/treemodel/highrule to specify which branching rule to use when treemodel thinks the node
+    is high in the tree.
+  - new parameter branching/treemodel/lowrule to specify which branching rule to use when treemodel thinks the node
+    is low in the tree.
+  - new parameter branching/treemodel/height to specify at which (estimated) height a node is high or low in the tree.
+  - new parameter branching/treemodel/filterhigh to specify whether to filter dominated candidates in nodes which are
+    high in the tree.
+  - new parameter branching/treemodel/filterlow to specify whether to filter dominated candidates in nodes which are
+    low in the tree.
+  - new parameter branching/treemodel/maxfpiter to specify the maximum number of fixed-point iterations to use when
+    computing the ratio of a variable using the fixed-point method.
+  - new parameter branching/treemodel/maxsvtsheight to specify the maximum height to compute the SVTS score exactly
+    before approximating it using the ratio.
+  - new parameter branching/treemodel/fallbackinf defines the fallback strategy to use when the tree size estimates
+    obtained by SVTS are infinite.
+  - new parameter branching/treemodel/fallbacknoprim defines the fallback strategy to use when no primal bound is known
+    and thus SVTS would not be able to compute a tree size (it would be infinite).
+  - new parameter branching/treemodel/smallpscost defines the value under which pscosts are considered too small to be
+    the deciding factor for branching, in which case it may be better not to use the treemodel.
+
+- new parameters for symmetry handling constraint handlers to enforce that also non-model constraint are copied:
+  - new parameter "constraints/orbisack/forceconscopy"
+  - new parameter "constraints/orbitope/forceconscopy"
+  - new parameter "constraints/symresack/forceconscopy"
+
+
 ### Data structures
+
+- small changes in constants of hash functions
+- added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
+- extended SCIPpqueueCreate() by additional callback argument SCIP_DECL_PQUEUEELEMCHGPOS to catch position changes
+- new methods SCIPpqueueDelPos() to delete elements at a specific position in the priority queue and SCIPpqueueFind() to
+  find a specific position. It is recommended to track position changes using the new callback SCIP_DECL_PQUEUEELEMCHGPOS.
+  In contrast, using SCIPpqueueFind() can be slow because it needs to compare the element it searches for
+  with each slot in the queue.
+
+### Build system
+
+- The default value for DFLAGS in the non-cmake buildsystem has changed from -MM to -MMD. This will break the
+  generation of depend.* files if that was done by a compiler call that relied on -MM. The new preferred way
+  to handle compilation dependencies is to additionally use $(DFLAGS) when compiling the object files (.o) and
+  to include the generated .d files in the Makefile, see also "Build system / Makefile" below.
 
 Deleted files
 -------------
 
 Unit tests
 ----------
+ - new unit test for treemodel.
 
 Testing
 -------
@@ -52,12 +583,21 @@ Build system
 
 ### Makefile
 
+- Removed static object compilation dependency files (depend.*). If using a GCC compatible compiler, then dependency
+  files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
+  file (.o) in the corresponding obj subdirectory.
 - added support for building against Ipopt >= 3.13
 
 Fixed bugs
 ----------
 
-- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+- fix and improve memory handling in symmetry computation
+- fix shown number of applied conflicts in solving statistics
+- fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
+- fix minor bug in cut score calculation
+- fixed several bugs related to rounding locks of variables not being updated correctly
+- small fix in cons_varbound.c to skip changing bounds of multi-aggregated variables in separation callback
+- fixed issue in SCIPtightenVar* and SCIPinferVar* that occurs for small bound changes
 - fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 - fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
 - fixed bug in freeing the reoptimization data if no problem exists
@@ -69,10 +609,47 @@ Fixed bugs
 - fixed update of LP size information when an LP error occured during probing
 - handle special case of variable bound constraints during aggregating variables
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
-
+- fixed an issue in repair heuristic in the case of loose (noncolumn) variables
+- allow user to correctly set heuristics/alns/(un)fixtol
+- fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
+- fixed bug in cons_indicator if addopposite is true
+- fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
+- added safety check in conversion to rational number to avoid overflow
+- fixed bug in interval evaluation with power-operator in certain situations
+- fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
+- SCIPmatrixCreate() returns complete=FALSE when locks do not add up
+- fixed bug in sepa_oddcylce when variables are fixed
+- fixed numerical issues related to tighter constraint sides in varbound constraint handler
+- fixed update of watchedvars in logicor constraint handler in case of a restart during the tree
+- fixed treatment of multi-aggregated variables in logicor constraint handler
+- handle special case of redundant implications
+- fixed numerical issue related to almost-0-values in pseudosolution conflict analysis
+- fixed numerical issue related to very large greatest common dividers in linear constraint handler
+- avoid using implications on multiaggregated variables when propagating implications
+- fixed creation of (Lagrangian) variable bounds in the OBBT propagator
+- fixed sorting of primal solutions
+- fixed cleaning of clean buffer in conflict analysis
+- avoid probing on variables with huge bounds in shift and propagate heuristic
+- fix issue in printing solutions for variables that have been added by the dual sparsify presolver
+- fix issue related to fixing redundant logic-or constraints after presolving
+- fixed bug when parsing logic-or and and-constraints
+- fixed wrong assert in updateLazyBounds()
+- fixed bug in pricestore, which resulted in too many problem variables being added
+- fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
+- fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
+- fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
+- redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
+- fixed adding already added quadratic rows to NLP relaxation during solve
 
 Miscellaneous
 -------------
+
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
+  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+- added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
+- added more output for completing a partial solution
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
@@ -80,6 +657,7 @@ Miscellaneous
 Known bugs
 ----------
 
+@page RN60 Release notes for SCIP 6.0
 
 @section RN602 SCIP 6.0.2
 *************************

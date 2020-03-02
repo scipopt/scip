@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3446,7 +3446,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -5161,6 +5161,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->getIterationLimit();
+      if( *ival == -1 )
+         *ival = INT_MAX;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->spx->getPresolving();
@@ -5211,7 +5213,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert(ival >= -1);
+      assert( ival >= 0 );
+      /* -1 <= ival, -1 meaning no time limit, 0 stopping immediately */
+      if( ival >= INT_MAX )
+         ival = -1;
       lpi->spx->setIterationLimit(ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
@@ -5334,10 +5339,14 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setFeastol(dval);
       break;
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setOpttol(dval);
       break;
 #endif
@@ -5348,15 +5357,20 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* soplex requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert(dval >= -1.5);
+      assert( dval >= 0.0 || dval == -1.0 );
       lpi->rowrepswitch = dval;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
-      lpi->checkcondition = (dval >= 0);
+      lpi->checkcondition = (dval >= 0.0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

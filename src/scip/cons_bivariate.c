@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_bivariate.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for bivariate nonlinear constraints \f$\textrm{lhs} \leq f(x,y) + c z \leq \textrm{rhs}\f$
  * @author Martin Ballerstein
  * @author Dennis Michaels
@@ -1509,7 +1510,7 @@ SCIP_RETCODE generateLinearizationCut(
    /* setup SCIP row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), fgrad) );
 
@@ -1800,7 +1801,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
       assert(SCIPisFinite(coefs[1]));
       assert(SCIPisFinite(constant));
 
-      SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowCons(scip, row, cons, "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
       if( consdata->z != NULL )
@@ -3390,7 +3391,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             assert(SCIPisFinite(constant));
 
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, cons, cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3426,7 +3427,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = -cutcoeff[1] / cutcoeff[2];
             coefs[1] = -cutcoeff[0] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveoverest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
                   TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3456,7 +3457,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             assert(SCIPisFinite(constant));
 
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, cons, cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3489,7 +3490,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = cutcoeff[0] / cutcoeff[2];
             coefs[1] = cutcoeff[1] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveunderest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
                   TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3908,6 +3909,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
+      assert(fswapped != NULL); /*lint !e644*/
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];
@@ -4102,6 +4104,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
+      assert(fswapped != NULL);  /*lint !e644*/
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];
@@ -4303,7 +4306,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    rhs = consdata->rhs + cutcoeff[3]/cutcoeff[2];
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), "1ConvexUnderest", -SCIPinfinity(scip), rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, "1ConvexUnderest", -SCIPinfinity(scip), rhs,
          TRUE, FALSE /* modifiable */, TRUE /* removable */) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
@@ -4312,7 +4315,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
       SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->z, consdata->zcoef) );
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** generates a cut */
@@ -6047,8 +6050,8 @@ SCIP_RETCODE enforceConstraint(
     * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
     * but in any case we need an efficacy that is at least lpfeastol
     */
-   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPlpfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPlpfeastol(scip));  /*lint !e666*/
+   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPgetLPFeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPgetLPFeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult,
          &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
@@ -6069,7 +6072,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
 
-   leastpossibleefficacy = SCIPlpfeastol(scip);
+   leastpossibleefficacy = SCIPgetLPFeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
@@ -6283,7 +6286,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
          SCIPenableNLP(scip);
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -8053,7 +8056,7 @@ SCIP_RETCODE SCIPcreateConsBasicBivariate(
    return SCIP_OKAY;
 }
 
-/** gets the linear variable of a bivariate constraint, or NULL if no such variable */
+/** gets the linear variable of a bivariate constraint, or NULL if no such variable */   /*lint -e{715}*/
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8065,7 +8068,7 @@ SCIP_VAR* SCIPgetLinearVarBivariate(
    return SCIPconsGetData(cons)->z;
 }
 
-/** gets the coefficients of the linear variable of a bivariate constraint */
+/** gets the coefficients of the linear variable of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8077,7 +8080,7 @@ SCIP_Real SCIPgetLinearCoefBivariate(
    return SCIPconsGetData(cons)->zcoef;
 }
 
-/** gets the expression tree of a bivariate constraint */
+/** gets the expression tree of a bivariate constraint */   /*lint -e{715}*/
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8089,7 +8092,7 @@ SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    return SCIPconsGetData(cons)->f;
 }
 
-/** gets the left hand side of a bivariate constraint */
+/** gets the left hand side of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8101,7 +8104,7 @@ SCIP_Real SCIPgetLhsBivariate(
    return SCIPconsGetData(cons)->lhs;
 }
 
-/** gets the right hand side of a bivariate constraint */
+/** gets the right hand side of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

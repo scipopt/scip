@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,10 +60,11 @@ typedef enum SCIP_SideType SCIP_SIDETYPE;
 /** type of origin of row */
 enum SCIP_RowOriginType
 {
-   SCIP_ROWORIGINTYPE_UNSPEC = 0,       /**< unspecified origin of row */
-   SCIP_ROWORIGINTYPE_CONS   = 1,       /**< row created by constraint handler */
-   SCIP_ROWORIGINTYPE_SEPA   = 2,       /**< row created by separator */
-   SCIP_ROWORIGINTYPE_REOPT  = 3        /**< row created by reoptimization */
+   SCIP_ROWORIGINTYPE_UNSPEC   = 0,     /**< unspecified origin of row */
+   SCIP_ROWORIGINTYPE_CONSHDLR = 1,     /**< row created by a constraint handler */
+   SCIP_ROWORIGINTYPE_CONS     = 2,     /**< row created by a constraint */
+   SCIP_ROWORIGINTYPE_SEPA     = 3,     /**< row created by separator */
+   SCIP_ROWORIGINTYPE_REOPT    = 4      /**< row created by reoptimization */
 };
 typedef enum SCIP_RowOriginType SCIP_ROWORIGINTYPE;
 

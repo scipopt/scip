@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -46,16 +46,9 @@ do
         TESTFILE=""
     fi
 
-    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-    SOLUFILE=""
-    for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
-    do
-        if test -f testset/${f}.solu
-        then
-            SOLUFILE=testset/${f}.solu
-            break
-        fi
-    done
+    # call method to obtain solution file
+    # defines the following environment variable: SOLUFILE
+    . ./configuration_solufile.sh $TSTNAME
 
     awk -f check_count.awk $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

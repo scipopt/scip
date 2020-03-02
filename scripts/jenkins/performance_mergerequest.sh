@@ -17,17 +17,23 @@
 # Arguments | defaultvalue                             | possibilities
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, v60-bugfix, consexpr
-# TESTMODE  | ""                                       | mip, minlp, short
+# TESTMODE  | ""                                       | mip, minlp, short, minlplib
 # QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="all"}
-: ${GITBRANCH:=${gitlabTargetBranch}}
+: ${TESTMODE:=""}
 : ${QUICKMODE:=""}
+: ${GITBRANCH:=${gitlabTargetBranch}}
 
 if [ "${gitlabTriggerPhrase}" != "" ]; then
+  TESTMODE=$(echo $gitlabTriggerPhrase | cut -f3 -d " ") # get third field (testset)
   QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
+else
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
+
+env
 
 ORIGBRANCH=${GITBRANCH}
 
@@ -51,9 +57,12 @@ elif [ "${TESTMODE}" == "minlp" ]; then
     echo "Testing minlp continue"
     TESTMODE=continue_minlp
   fi
+elif [ "${TESTMODE}" == "minlplib" ]; then
+  echo "Testing minlplib"
+  TESTMODE=quick_minlplib
 else
-  echo "Nothing to do, exiting."
-  exit 0
+  echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
+  exit 1
 fi
 
 ######################################
@@ -81,17 +90,16 @@ export MRSETTINGS="MR-${gitlabMergeRequestIid}"
 ####################################
 # NOTES:
 #  - If you change the configuration, you have to make sure that you update the number of jobs in the N_JOBS array.
-#  - Jobs indices start at 1 and not at zero.
 #  - For all jobs the calls to 'make' and 'make testcluster' the flags are concatenated from
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
+#  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs will be executed. If you need more you should overthink you overall concept.
 #  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=mergerequest"
 
 RANDOMSEED=$(date +%Y%m%d%H%M)
-export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running
@@ -106,6 +114,8 @@ elif [ "${TESTMODE}" == "quick_mip" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=1"
 elif [ "${TESTMODE}" == "quick_minlp" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=1"
+elif [ "${TESTMODE}" == "quick_minlplib" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=MINLP_minlplib TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest"
 elif [ "${TESTMODE}" == "continue_mip" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=2 GLBSEEDSHIFT=2"
 elif [ "${TESTMODE}" == "continue_minlp" ]; then
@@ -144,7 +154,7 @@ elif [ "${TESTMODE}" == "minlp" ]; then
 # elif [ "${testmode}" == "sap" ]; then
 fi
 
-# get git hash of comparison run
+# get git hash of current performance comparison run
 export COMPAREHASH=$(git rev-parse origin/performance-${GITBRANCH})
 
 # ensure that the current branch is based on the last performance run
@@ -168,12 +178,20 @@ if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
 fi
 set -e
 
-#export COMPARERBIDS=$(grep "${COMPAREHASH}" ${COMPARERBDB} | cut -d ' ' -f 2)
-
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
+
+# We have to export these variables to make them available to cmake.
+# Scripts will also use nonexported variables correctly.
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_master/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_master/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/performance_soplex_${GITBRANCH}/
+  export PAPILO_DIR=/nfs/OPTI/adm_timo/performance_papilo_${GITBRANCH}/
+fi
 
 ###################
 ### Compilation ###
@@ -186,16 +204,7 @@ BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-git clone git@git.zib.de:integer/soplex.git
-cd soplex
-git checkout performance-${GITBRANCH}
-mkdir build
-cd build
-cmake ..
-make -j4
-cd ../../
-
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=$(pwd -P)/soplex/build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
 make -j4
 cd ..
 

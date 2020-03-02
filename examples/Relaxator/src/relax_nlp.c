@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,7 +95,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, NULL, SCIPgetCutoffbound(scip),
          TRUE, TRUE) );
    SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
@@ -138,7 +138,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting NLP relaxation solution, which improved upon earlier solution\n");
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
          for( i = 0; i < nvars; ++i )
          {
@@ -153,11 +153,11 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
             SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
    #endif
 
-            SCIP_CALL( SCIPsetRelaxSolVal(scip, vars[i], primal[i]) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, relax, vars[i], primal[i]) );
          }
 
          /* mark relaxation solution to be valid */
-         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, relax, TRUE) );
       }
 
       SCIPdebugMsg(scip, "NLP lower bound = %g\n", relaxval);
