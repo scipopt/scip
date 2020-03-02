@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_dcmp.h
- * @ingroup TODO
+ * @ingroup DecompMethods
  * @brief  public methods for decompositions
  * @author Gregor Hendel
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup DecompMethods
+ *
+ * @{
+ */
 
 /** creates a decomposition */
 SCIP_EXPORT
@@ -169,6 +174,8 @@ char* SCIPdecompPrintStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    char*                 strbuf              /**< string buffer storage */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

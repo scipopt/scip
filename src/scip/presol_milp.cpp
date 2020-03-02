@@ -74,11 +74,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
-#define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
-#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
+#define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
@@ -351,7 +351,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::QUIET);
+   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
 #endif
 
    /* communicate the time limit */
@@ -370,22 +370,22 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* evaluate the result */
    switch(res.status)
    {
-      case PresolveStatus::INFEASIBLE:
+      case PresolveStatus::kInfeasible:
          *result = SCIP_CUTOFF;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected infeasibility\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNBND_OR_INFEAS:
-      case PresolveStatus::UNBOUNDED:
+      case PresolveStatus::kUnbndOrInfeas:
+      case PresolveStatus::kUnbounded:
          *result = SCIP_UNBOUNDED;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected unboundedness\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNCHANGED:
+      case PresolveStatus::kUnchanged:
          *result = SCIP_DIDNOTFIND;
          data->lastncols = nvars;
          data->lastnrows = nconss;
@@ -394,7 +394,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::REDUCED:
+      case PresolveStatus::kReduced:
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
          *result = SCIP_SUCCESS;
@@ -445,8 +445,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          int rowlen = rowvec.getLength();
 
          /* retrieve SCIP compatible left and right hand sides */
-         SCIP_Real lhs = rflags[i].test(RowFlag::LHS_INF) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
-         SCIP_Real rhs = rflags[i].test(RowFlag::RHS_INF) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+         SCIP_Real lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         SCIP_Real rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
 
          /* create variable array matching the value array */
          tmpvars.clear();
@@ -475,7 +475,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
       switch( type )
       {
-      case ReductionType::FIXED_COL:
+      case ReductionType::kFixedCol:
       {
          SCIP_Bool infeas;
          SCIP_Bool fixed;
@@ -492,7 +492,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
-      case ReductionType::SUBSTITUTED_COL:
+      case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
          SCIP_Real side = res.postsolve.values[first];
@@ -589,7 +589,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          break;
       }
       default:
-      case ReductionType::PARALLEL_COL:
+      case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
       }
    }
@@ -601,7 +601,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       for( int i = 0; i != problem.getNCols(); ++i )
       {
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kLbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
@@ -617,7 +617,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
          }
 
-         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kUbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
@@ -661,11 +661,16 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
-#ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (link coming soon) [GitHash: {}]", PAPILO_GITHASH);
+#if defined(PAPILO_VERSION_TWEAK) && PAPILO_VERSION_TWEAK != 0
+   String name = fmt::format("PaPILO {}.{}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH, PAPILO_VERSION_TWEAK);
 #else
-   String desc("parallel presolve for integer and linear optimization (link coming soon)");
+   String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
+#endif
+
+#ifdef PAPILO_GITHASH_AVAILABLE
+   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO) [GitHash: {}]", PAPILO_GITHASH);
+#else
+   String desc("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO)");
 #endif
 
    /* add external code info for the presolve library */

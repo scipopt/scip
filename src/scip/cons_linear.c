@@ -5524,9 +5524,6 @@ SCIP_RETCODE tightenVarBoundsEasy(
    if( !consdata->validminact )
       consdataRecomputeMinactivity(scip, consdata);
    assert(consdata->validminact);
-   if( !consdata->validmaxact )
-      consdataRecomputeMaxactivity(scip, consdata);
-   assert(consdata->validmaxact);
 
    if( val > 0.0 )
    {
@@ -5535,6 +5532,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* min activity should be valid at this point (if this is not true, then some decisions might be wrong!) */
+         assert(consdata->validminact);
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
@@ -5585,12 +5585,19 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
+         /* make sure the max activity is reliable */
+         if( !consdata->validmaxact )
+         {
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+         assert(consdata->validmaxact);
+
+
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
-
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -5632,6 +5639,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* min activity should be valid at this point (if this is not true, then some decisions might be wrong!) */
+         assert(consdata->validminact);
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
@@ -5680,6 +5690,13 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* make sure the max activity is reliable */
+         if( !consdata->validmaxact )
+         {
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+         assert(consdata->validmaxact);
 
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
@@ -16203,6 +16220,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      /* ensure that rhs >= lhs is satisfied without numerical tolerance */
+      if( SCIPisEQ(scip, consdata->rhs, consdata->lhs) )
+      {
+         consdata->lhs = consdata->rhs;
+         assert(consdata->row == NULL);
+      }
 
       if( consdata->eventdata == NULL )
       {

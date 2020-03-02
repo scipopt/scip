@@ -351,9 +351,9 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS		+=	-DSCIP_WITH_PAPILO -I$(LIBDIR)/include/papilo/external/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS		+=	-DSCIP_WITH_PAPILO -isystem $(LIBDIR)/include/papilo/external/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
 SOFTLINKS	+=	$(LIBDIR)/include/papilo
-LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO library directory\n"
+LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO directory\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -942,7 +942,7 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PRESOLLIB)
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PAPILO)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -1482,7 +1482,7 @@ endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
 endif
-ifneq ($(PRESOLLIB),$(LAST_PRESOLLIB))
+ifneq ($(PAPILO),$(LAST_PAPILO))
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
@@ -1510,7 +1510,7 @@ endif
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
-		@echo "LAST_PRESOLLIB=$(PRESOLLIB)" >> $(LASTSETTINGS)
+		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
