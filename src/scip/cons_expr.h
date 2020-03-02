@@ -408,6 +408,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
 );
 

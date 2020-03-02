@@ -253,7 +253,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
-   SCIP_Bool                branchaux;       /**< whether to branch on auxiliary variables */
+   int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
    SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if at least this factor times the maximal branching score */
@@ -5931,7 +5931,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
    *success = FALSE;
 
-   if( SCIPgetConsExprBranchAux(conshdlr) )
+   if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
@@ -5952,7 +5952,7 @@ SCIP_RETCODE registerBranchingCandidates(
       if( !isConsViolated(scip, conss[c]) )
          continue;
 
-      if( !SCIPgetConsExprBranchAux(conshdlr) )
+      if( !SCIPgetConsExprBranchAux(scip, conshdlr) )
       {
          int i;
 
@@ -6036,7 +6036,7 @@ SCIP_RETCODE registerBranchingCandidates(
       }
    }
 
-   if( SCIPgetConsExprBranchAux(conshdlr) )
+   if( SCIPgetConsExprBranchAux(scip, conshdlr) )
       SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -6079,7 +6079,7 @@ SCIP_RETCODE collectBranchingCandidates(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( SCIPgetConsExprBranchAux(conshdlr) )
+   if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
@@ -6116,7 +6116,7 @@ SCIP_RETCODE collectBranchingCandidates(
          else if( attempt == 1 && consviol >= conshdlrdata->branchhighviolfactor * maxrelconsviol )
             continue;
 
-         if( !SCIPgetConsExprBranchAux(conshdlr) )
+         if( !SCIPgetConsExprBranchAux(scip, conshdlr) )
          {
             int i;
 
@@ -6196,7 +6196,7 @@ SCIP_RETCODE collectBranchingCandidates(
          break;
    }
 
-   if( SCIPgetConsExprBranchAux(conshdlr) )
+   if( SCIPgetConsExprBranchAux(scip, conshdlr) )
       SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -11523,6 +11523,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
  * Currently returns value of constraints/expr/branching/aux parameter.
  */
 SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
 )
 {
@@ -11533,7 +11534,7 @@ SCIP_Bool SCIPgetConsExprBranchAux(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   return conshdlrdata->branchaux;
+   return conshdlrdata->branchauxmindepth <= SCIPgetDepth(scip);
 }
 
 /** creates and captures an expression with given expression data and children */
@@ -13290,9 +13291,9 @@ void SCIPaddConsExprExprBranchScore(
    assert(conshdlrdata != NULL);
 
    /* if not allowing to branch on auxvars, then expr must be a var-expr */
-   assert(SCIPgetConsExprBranchAux(conshdlr) || expr->exprhdlr == conshdlrdata->exprvarhdlr);
+   assert(SCIPgetConsExprBranchAux(scip, conshdlr) || expr->exprhdlr == conshdlrdata->exprvarhdlr);
    /* if allowing to branch on auxvars, then expr must be a var-expr or have an auxvar */
-   assert(!SCIPgetConsExprBranchAux(conshdlr) || (expr->exprhdlr == conshdlrdata->exprvarhdlr || expr->auxvar != NULL));
+   assert(!SCIPgetConsExprBranchAux(scip, conshdlr) || (expr->exprhdlr == conshdlrdata->exprvarhdlr || expr->auxvar != NULL));
 
    /* reset branching score if we are in a different enfo round */
    if( expr->brscoretag != conshdlrdata->enforound )
@@ -13345,7 +13346,7 @@ SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
    }
 
    /* if allowing to branch on auxiliary variables, then can call internal addConsExprExprsBranchScore immediately */
-   if( SCIPgetConsExprBranchAux(conshdlr) )
+   if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       addConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success);
       return SCIP_OKAY;
@@ -14523,9 +14524,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
          &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branching/aux",
-         "whether to allow branching on auxiliary variables (variables added for extended formulation)",
-         &conshdlrdata->branchaux, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/branching/aux",
+         "from which depth on in the tree to allow branching on auxiliary variables (variables added for extended formulation)",
+         &conshdlrdata->branchauxmindepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branching/external",
          "whether to use external branching candidates and branching rules for branching",
