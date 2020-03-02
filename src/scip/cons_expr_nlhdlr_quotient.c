@@ -371,7 +371,7 @@ SCIP_INTERVAL intEval(
    )
 {
    SCIP_INTERVAL result;
-   SCIP_INTERVAL denom;
+   SCIP_INTERVAL denominterval;
 
    /* return empty interval if the domain of x is empty */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
@@ -381,11 +381,11 @@ SCIP_INTERVAL intEval(
    }
 
    /* compute bounds for denominator */
-   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &denom, denom, c);
-   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &denom, denom, d);
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &denominterval, bnds, c);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &denominterval, denominterval, d);
 
    /* there is no useful interval if 0 is in the interior of the interval of the denominator */
-   if( SCIPintervalGetInf(denom) < 0.0 && SCIPintervalGetSup(denom) > 0.0 )
+   if( SCIPintervalGetInf(denominterval) < 0.0 && SCIPintervalGetSup(denominterval) > 0.0 )
    {
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &result);
       return result;
@@ -394,20 +394,76 @@ SCIP_INTERVAL intEval(
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
    {
-      /* TODO */
+      SCIPintervalSetBounds(&result, SCIPintervalGetInf(bnds), SCIPintervalGetSup(bnds));
    }
    else if( a*d - b*c < 0.0 ) /* monotone decreasing */
    {
-      /* TODO */
+      SCIPintervalSetBounds(&result, SCIPintervalGetSup(bnds), SCIPintervalGetInf(bnds));
    }
    else /* a d = b c implies that f(x) = b / d + e, i.e., f is constant */
    {
       assert(a*d - b*c == 0.0);
 
-      /* TODO */
+      SCIPintervalSet(&result, b / d + e);
+      return result;
    }
 
-   /* don't forget the constant */
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &result, result, a);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &result, result, b);
+   SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &result, result, denominterval);
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &result, result, e);
+
+   return result;
+}
+
+/** helper method to compute reverse propagation for (a x + b) / (c x + d) + e */
+static
+SCIP_INTERVAL revpropEval(
+   SCIP_INTERVAL         bnds,               /**< bounds on (a x + b) / (c x + d) + e */
+   SCIP_Real             a,                  /**< coefficient in nominator */
+   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             c,                  /**< coefficient in denominator */
+   SCIP_Real             d,                  /**< constant in denominator */
+   SCIP_Real             e                   /**< constant */
+   )
+{
+   SCIP_INTERVAL result;
+   SCIP_Real infval;
+   SCIP_Real supval;
+   SCIP_Real infpropval;
+   SCIP_Real suppropval;
+
+   /* return empty interval if the domain of the expression is empty */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
+   {
+      SCIPintervalSetEmpty(&result);
+      return result;
+   }
+
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bnds) || a*d - b*c == 0.0 )
+   {
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &result);
+      return result;
+   }
+
+   infval = SCIPintervalGetInf(bnds);
+   supval = SCIPintervalGetSup(bnds);
+
+   /* TODO: can we really assume this? */
+   assert(infval > a / c || supval < a / c);
+
+   infpropval = (d * infval - b) / (a - c * infval);
+   suppropval = (d * supval - b) / (a - c * supval);
+
+   /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
+   if( a*d - b*c > 0.0 ) /* monotone increasing */
+   {
+      SCIPintervalSetBounds(&result, infpropval, suppropval);
+   }
+   else if( a*d - b*c < 0.0 ) /* monotone decreasing */
+   {
+      SCIPintervalSetBounds(&result, suppropval, infpropval);
+   }
 
    return result;
 }
@@ -497,9 +553,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
 { /*lint --e{715}*/
-   SCIP_INTERVAL intervalnom;
-   SCIP_INTERVAL intervaldenom;
-   SCIP_INTERVAL result;
+   SCIP_INTERVAL varbnds;
+   SCIP_INTERVAL tmp;
 
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->nomvar != NULL);
@@ -509,31 +564,74 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
       return SCIP_OKAY;
 
-   /* compute bounds for variable in the nominator and in the denominator */
-   intervalnom = intevalvar(scip, nlhdlrexprdata->nomvar, intevalvardata);
-   intervaldenom = intervalnom;
+   SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->nomvar),
+      SCIPvarGetUbLocal(nlhdlrexprdata->nomvar));
 
-   /* compute bounds for denominator */
-   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &intervaldenom, intervaldenom, nlhdlrexprdata->denomcoef);
-   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &intervaldenom, intervaldenom, nlhdlrexprdata->denomconst);
+   tmp = intEval(varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+      nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
+
+   /* intersect intervals if we have learned a tighter interval */
+   if( SCIPisGT(scip, tmp.inf, (*interval).inf) || SCIPisLT(scip, tmp.sup, (*interval).sup) )
+      SCIPintervalIntersect(interval, *interval, tmp);
 
    return SCIP_OKAY;
 }
 
 
 /** nonlinear handler callback for reverse propagation */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_INTERVAL exprbounds;
+   SCIP_INTERVAL result;
+   SCIP_Real varlb;
+   SCIP_Real varub;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nomvar != NULL);
+   assert(nlhdlrexprdata->denomvar != NULL);
+
+   /* it is not possible to compute tighter intervals if both variables are different */
+   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
+      return SCIP_OKAY;
+
+   exprbounds = SCIPgetConsExprExprActivity(scip, expr);
+   varlb = SCIPvarGetLbLocal(nlhdlrexprdata->nomvar);
+   varlb = SCIPvarGetUbLocal(nlhdlrexprdata->nomvar);
+
+   result = revpropEval(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+      nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
+
+   if( SCIPisLT(scip, varlb , result.inf) || SCIPisGT(scip, varub, result.sup) )
+   {
+      SCIP_INTERVAL varbnds;
+      SCIP_Bool tightened;
+
+      SCIPintervalSetBounds(&varbnds, varlb, varub);
+      SCIPintervalIntersect(&result, result, varbnds);
+
+      /* tighten bounds of x */
+      SCIPdebugMsg(scip, "try to tighten bounds of %s: [%g,%g] -> [%g,%g]\n",
+         SCIPvarGetName(nlhdlrexprdata->nomvar), varlb, varub, result.inf, result.sup);
+
+      SCIP_CALL( SCIPtightenVarLb(scip, nlhdlrexprdata->nomvar, result.inf, force,
+         infeasible, &tightened) );
+
+      if( tightened )
+         ++(*nreductions);
+
+      if( !(*infeasible) )
+      {
+         SCIP_CALL( SCIPtightenVarUb(scip, nlhdlrexprdata->nomvar, result.sup, force,
+            infeasible, &tightened) );
+
+         if( tightened )
+            ++(*nreductions);
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrReversepropQuotient NULL
-#endif
 
 
 /*
