@@ -1730,7 +1730,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    if( addbranchscores )
    {
       SCIP_Real violation;
-      int i;
 
       /* check how much is the violation on the side that we estimate */
       if( auxvalue == SCIP_INVALID ) /*lint !e777*/
@@ -1757,11 +1756,28 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       }
       assert(violation >= 0.0);
 
-      /* TODO should/could do something more elaborate as in cons_expr_product */
-      for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-         SCIPaddConsExprExprBranchScore(scip, conshdlr, (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[i]), REALABS(violation));
+      if( nlhdlrexprdata->nleafs == 1 )
+      {
+         SCIP_CONSEXPR_EXPR* e;
+         e = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[0]);
+         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, &e, 1, violation, sol, addedbranchscores) );
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR** exprs;
+         int c;
 
-      *addedbranchscores = TRUE;
+         /* map leaf expressions back to original expressions
+          * TODO do this once at end of detect and store in nlhdlrexprdata
+          */
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nlhdlrexprdata->nleafs) );
+         for( c = 0; c < nlhdlrexprdata->nleafs; ++c )
+               exprs[c] = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[c]);
+
+         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nlhdlrexprdata->nleafs, violation, sol, addedbranchscores) );
+
+         SCIPfreeBufferArray(scip, &exprs);
+      }
    }
 
    return SCIP_OKAY;
