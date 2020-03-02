@@ -385,3 +385,61 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects simple quotient expressi
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+
+/* tests interval evaluation for ((+/-)4x + 1) / (-3x + 3) + 2*/
+Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quotient expression")
+{
+   SCIP_INTERVAL varbnds;
+   SCIP_INTERVAL result;
+
+   /* test interval including 0 */
+
+   varbnds.inf = 0.0;
+   varbnds.sup = 2.0;
+
+   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+
+   cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, result));
+
+   /* test positive part for monotone increasing expression */
+
+   varbnds.inf = 2.0;
+   varbnds.sup = 9.0;
+
+   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+
+   cr_expect(SCIPisEQ(scip, result.inf, 1.0));
+   cr_expect(SCIPisEQ(scip, result.sup, -37.0 / 24.0 - 2.0));
+
+   /* test negative part for monotone increasing expression */
+
+   varbnds.inf = -1.0;
+   varbnds.sup = 0.0;
+
+   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+
+   cr_expect(SCIPisEQ(scip, result.inf, -3.0));
+   cr_expect(SCIPisEQ(scip, result.sup, 1.0 / 3.0 - 2.0));
+
+
+   /* test positive part for monotone decreasing expression */
+
+   varbnds.inf = 2.0;
+   varbnds.sup = 9.0;
+
+   result = intEval(varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+
+   cr_expect(SCIPisEQ(scip, result.inf, 35.0 / 24.0 - 2.0));
+   cr_expect(SCIPisEQ(scip, result.sup, 7.0 / 9.0 - 2.0));
+
+   /* test negative part for monotone decreasing expression */
+
+   varbnds.inf = -1.0;
+   varbnds.sup = 0.0;
+
+   result = intEval(varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+
+   cr_expect(SCIPisEQ(scip, result.inf, 1.0 / 3.0 - 2.0));
+   cr_expect(SCIPisEQ(scip, result.sup, 5.0 / 6.0 - 2.0));
+
+}
