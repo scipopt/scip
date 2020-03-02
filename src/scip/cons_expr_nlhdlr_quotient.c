@@ -173,6 +173,9 @@ SCIP_Bool isExprUnivariateLinear(
   *
   * 1. prod(f(x), pow(g(y),-1))
   * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
+  *
+  * @TODO: at the moment quotients like xy / z are not detected, because they are turned into a product expression
+  * with three children, i,e., x * y * (1 / z)
   */
 static
 SCIP_RETCODE detectExpr(
@@ -309,31 +312,28 @@ SCIP_RETCODE detectExpr(
       /* create auxiliary variables if we are in the solving stage */
       else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         if( x == NULL )
-         {
-            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
-            a = 1.0;
-            b = 0.0;
+         assert(x == NULL);
+         assert(y == NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
+         a = 1.0;
+         b = 0.0;
 
 #ifdef SCIP_DEBUG
-            SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
-            SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
-            SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
+         SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
+         SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
 #endif
-         }
-         if( y == NULL )
-         {
-            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
-            c = 1.0;
-            d = 0.0;
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
+         c = 1.0;
+         d = 0.0;
 
 #ifdef SCIP_DEBUG
-            SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
-            SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
-            SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(y));
+         SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
+         SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(y));
 #endif
-         }
-
          *success = TRUE;
       }
    }
