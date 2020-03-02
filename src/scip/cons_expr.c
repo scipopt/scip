@@ -5853,7 +5853,9 @@ SCIP_RETCODE addConsExprExprBranchScoresAuxVars(
    SCIPexpriteratorFree(&it);
 
    if( nexprs > 0 )
-      addConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success);
+   {
+      SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success) );
+   }
    else
       *success = FALSE;
 
