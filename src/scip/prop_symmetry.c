@@ -3584,6 +3584,9 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    int ncuts = 0;
    SCIP_Bool addcuts = FALSE;
    int i;
+#ifndef NDEBUG
+   int j;
+#endif
 
    assert( scip != NULL );
    assert( conflictgraph != NULL || ! useconflictgraph );
@@ -3655,6 +3658,12 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       }
 
       vars[1] = permvars[orbits[poscur]];
+#ifndef NDEBUG
+      for (j = 0; j < propdata->nleaders - 1; ++j)
+      {
+         assert( propdata->leaders[j] != orbits[poscur] );
+      }
+#endif
 
       /* if the i-th variable in the orbit is in a conflict with the leader, fix it to 0 */
       if ( useconflictgraph )
@@ -4127,7 +4136,7 @@ SCIP_RETCODE addSSTConss(
    }
 
    /* allocate data structures necessary for orbit computations and conflict graph */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inactiveperms, nperms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
 
@@ -4149,14 +4158,8 @@ SCIP_RETCODE addSSTConss(
       *nchgbds = 0;
 
    /* initialize array indicating whether permutations shall not be considered for orbit permutations */
-   for (c = 0; c < ncomponents; ++c)
-   {
-      if ( componentblocked[c] )
-      {
-         for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
-            inactiveperms[components[p]] = TRUE;
-      }
-   }
+   for (p = 0; p < nperms; ++p)
+      inactiveperms[p] = TRUE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &norbitleadercomponent, ncomponents) );
    for (c = 0; c < ncomponents; ++c)
