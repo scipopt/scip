@@ -3598,7 +3598,6 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    assert( orbitleaderidx >= 0 );
    assert( orbitvarinconflict != NULL || ! useconflictgraph );
    assert( norbitvarinconflict >= 0 );
-   assert( norbitvarinconflict > 0 || ! useconflictgraph );
    assert( nchgbds != NULL );
 
    orbitsize = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx];
