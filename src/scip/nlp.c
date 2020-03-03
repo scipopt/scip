@@ -3604,6 +3604,14 @@ void nlpMoveNlrow(
 
    nlp->nlrows[newpos] = nlp->nlrows[oldpos];
    nlp->nlrows[newpos]->nlpindex = newpos;
+
+   /* update nlpi to nlp row index mapping */
+   if( nlp->nlrows[newpos]->nlpiindex >= 0 )
+   {
+      assert(nlp->nlrowmap_nlpi2nlp != NULL);
+      assert(nlp->nlrows[newpos]->nlpiindex < nlp->sizenlrows_solver);
+      nlp->nlrowmap_nlpi2nlp[nlp->nlrows[newpos]->nlpiindex] = newpos;
+   }
 }
 
 /** deletes nonlinear row with given position from NLP */

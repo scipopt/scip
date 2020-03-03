@@ -415,6 +415,7 @@ Interface changes
 - New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
 - new API functions SCIPisOrbitalfixingEnabled() and SCIPgetSymmetryNGenerators() to check whether orbital fixing is
   enabled and to get the number of generators of the current symmetry group, respectively
+- new API function SCIPdelNlRow() to remove a row from the NLP
 
 ### Event system
 
