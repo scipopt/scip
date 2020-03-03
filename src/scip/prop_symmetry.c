@@ -3865,10 +3865,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
          /* only use the orbitope if there are enough binary rows according to parameters */
-         if ( SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize) )
+         if ( nbinarycomps == 0
+            || SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize)
+            || SCIPisLT(scip, (SCIP_Real) nbinarycomps, orbitopepctbinrows * (SCIP_Real) ncomps) )
+         {
             useorbitope = FALSE;
-         else if ( SCIPisLT(scip, (SCIP_Real) nbinarycomps, orbitopepctbinrows * (SCIP_Real) ncomps) )
-            useorbitope = FALSE;
+         }
          else
             useorbitope = TRUE;
 
