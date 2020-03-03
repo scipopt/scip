@@ -3766,6 +3766,12 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    *norbitvarinconflict = 0;
    *success = FALSE;
 
+   /* terminate if leader or tiebreak rule cannot be checked */
+   if ( ! useconflictgraph && (leaderrule == (int) SCIP_LEADERRULE_MAXCONFLICTS
+         || leaderrule == (int) SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+         || tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
+      return SCIP_OKAY;
+
    /* select the leader and its orbit */
    if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == (int) SCIP_LEADERRULE_LASTINORBIT )
    {
