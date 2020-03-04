@@ -641,6 +641,8 @@ Fixed bugs
 - fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
 - redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
 - fixed adding already added quadratic rows to NLP relaxation during solve
+- fixed issue related to variable locks in the varbound constraint handler
+- fixed bug in the quadratic constraint handler when changing infinite constraint sides
 
 Miscellaneous
 -------------
