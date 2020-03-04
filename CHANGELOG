@@ -651,6 +651,7 @@ Fixed bugs
 - fixed a case when activities of a linear constraint got unreliable but where still used for reductions
 - ensure that lhs <= rhs for linear constraints (without tolerances)
 - make handling of read errors in SCIPfread() consistent between version with and without ZLIB
+- additional checks in some presolvers for time limit being exceeded
 
 Miscellaneous
 -------------
