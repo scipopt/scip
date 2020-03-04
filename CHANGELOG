@@ -585,12 +585,15 @@ Build system
 
 ### Cmake
 
+- avoid problem with doubly defined object together with CPLEX
+
 ### Makefile
 
 - Removed static object compilation dependency files (depend.*). If using a GCC compatible compiler, then dependency
   files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
   file (.o) in the corresponding obj subdirectory.
 - added support for building against Ipopt >= 3.13
+- unify compiler switches for Intel compiler and avoid problem with doubly defined object together with CPLEX
 
 Fixed bugs
 ----------
