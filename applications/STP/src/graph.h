@@ -256,6 +256,7 @@ typedef struct dijkstra_data
    int*                  visitlist;          /**< stores all visited nodes */
    DHEAP*                dheap;              /**< Dijkstra heap, initially cleaned */
    STP_Bool*             visited;            /**< stores whether a node has been visited, initially set to FALSE */
+   SCIP_Real*            pc_costshift;       /**< cost shift per node for PC or NULL */
    int                   nvisits;            /**< number of visited nodes, initially set to -1 */
 } DIJK;
 
@@ -388,6 +389,7 @@ extern void           graph_free_dcsr(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 /* misc: */
 extern SCIP_RETCODE  graph_dijkLimited_init(SCIP*, const GRAPH*, DIJK*);
+extern SCIP_RETCODE  graph_dijkLimited_initPcShifts(SCIP*, const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_reset(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_clean(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_freeMembers(SCIP*, DIJK*);

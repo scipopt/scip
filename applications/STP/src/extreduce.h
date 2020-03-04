@@ -85,6 +85,7 @@ typedef struct distance_data
    DHEAP* dheap;
    RANGE* closenodes_range;          /* of size nnodes */
    int* closenodes_indices;          /* of size closenodes_totalsize */
+   int* closenodes_prededges;        /* of size closenodes_totalsize; NULL in opt mode */
    SCIP_Real* closenodes_distances;  /* of size closenodes_totalsize */
    int* pathroot_blocksizes;         /* of size nedges / 2 */
    int* pathroot_blocksizesmax;      /* of size nedges / 2 */

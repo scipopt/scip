@@ -301,12 +301,15 @@ SCIP_RETCODE distCloseNodesCompute(
    const RANGE* const RESTRICT range_csr = dcsr->range;
    const int* const RESTRICT head_csr = dcsr->head;
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   const SCIP_Real* const pc_costshifts = distdata->dijkdata->pc_costshift;
    const int nnodes = g->knots;
    const SCIP_Real closenodes_maxcost = distCloseNodesGetMaxCost(startvertex, distdata);
    int clodenode_count;
+   const SCIP_Bool isPc = graph_pc_isPc(g);
 
    assert(dcsr && g && distdata);
    assert(startvertex >= 0 && startvertex < g->knots);
+   assert(!isPc || pc_costshifts);
 
    SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &dist, nnodes) );
@@ -332,10 +335,14 @@ SCIP_RETCODE distCloseNodesCompute(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
+      const SCIP_Real k_dist = dist[k];
 
       if( k != startvertex )
       {
-         if( GT(dist[k], closenodes_maxcost) )
+         if( isPc )
+            dist[k] += pc_costshifts[k];
+
+         if( GT(k_dist, closenodes_maxcost) )
             break;
 
          closenodes_indices[clodenode_count] = k;
@@ -352,7 +359,9 @@ SCIP_RETCODE distCloseNodesCompute(
 
          if( state[m] != CONNECT )
          {
-            const SCIP_Real distnew = dist[k] + cost_csr[e];
+            const SCIP_Real distnew = isPc ?
+               k_dist + cost_csr[e] - pc_costshifts[m]
+             : k_dist + cost_csr[e];
 
             if( distnew < dist[m] )
             {
@@ -369,6 +378,92 @@ SCIP_RETCODE distCloseNodesCompute(
    *nclosenodes = clodenode_count;
 
    return SCIP_OKAY;
+}
+
+
+
+/* prints info about lost node */
+static
+void distCloseNodesPrintLostNodeInfo(
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   vertex_base,        /**< vertex for check */
+   int                   index_lost,         /**< vertex that is lost */
+   const int*            closenodes_indices, /**< indices of newly found close nodes */
+   const SCIP_Real*      closenodes_dists,   /**< distances of newly found close nodes */
+   int                   nclosenodes         /**< number of newly found close nodes */
+)
+{
+#ifdef SCIP_DEBUG
+   RANGE* const org_range = distdata->closenodes_range;
+   int* const org_indices = distdata->closenodes_indices;
+   SCIP_Real* const org_dists = distdata->closenodes_distances;
+   const int org_start = org_range[vertex_base].start;
+   const int org_end = org_range[vertex_base].end;
+   const int vertex_lost = org_indices[index_lost];
+
+   assert(org_start <= index_lost && index_lost < org_end);
+
+   SCIPdebugMessage("could not find vertex_base %d in new close nodes \n", vertex_lost);
+   printf("new nodes: \n");
+
+   for( int k = 0; k < nclosenodes; ++k )
+   {
+      printf("(idx=%d dist=%f) ", k, closenodes_dists[k]);
+      graph_knot_printInfo(g, closenodes_indices[k]);
+   }
+
+   printf("original nodes: \n");
+
+   for( int k = org_start; k < org_end; ++k )
+   {
+      printf("(dist=%f) ", org_dists[k]);
+      graph_knot_printInfo(g, org_indices[k]);
+   }
+
+#ifndef NDEBUG
+   {
+      int index = index_lost;
+      int vertex = vertex_lost;
+      const int* const prededges = distdata->closenodes_prededges;
+
+      assert(prededges);
+
+      printf("path from lost node=%d to base=%d \n", vertex_lost, vertex_base);
+
+      while( vertex != vertex_base )
+      {
+         const int prededge = 2 * prededges[index];
+
+         assert(prededge >= 0);
+
+         graph_edge_printInfo(g, prededge);
+
+         if( distdata->dijkdata->pc_costshift )
+            printf("vertex %d shift=%f \n", vertex, distdata->dijkdata->pc_costshift[vertex]);
+
+         assert(vertex == g->head[prededge] || vertex == g->tail[prededge]);
+
+         if( vertex == g->head[prededge] )
+            vertex = g->tail[prededge];
+         else
+            vertex = g->head[prededge];
+
+         if( vertex != vertex_base )
+         {
+            /* get the index of the next vertex */
+            for( index = org_start; index != org_end; index++ )
+            {
+               if( org_indices[index] == vertex )
+                  break;
+            }
+
+            assert(index != org_end);
+         }
+      }
+   }
+#endif
+#endif
 }
 
 /* Is each original close node to 'vertex' included in the 'closenodes_indices' array?
@@ -418,29 +513,17 @@ SCIP_Bool distCloseNodesIncluded(
       const SCIP_Real org_dist = org_dists[i];
       const int org_node = org_indices[i];
       const int new_index = newnodeindex[org_node] - 1;
+#ifndef NDEBUG
+      const int prededge = 2 * distdata->closenodes_prededges[i];
 
       assert(new_index >= -1);
+      assert(distdata->closenodes_prededges);
+      assert(org_node == g->tail[prededge] || org_node == g->head[prededge]);
+#endif
 
       if( new_index == -1 )
       {
-         SCIPdebugMessage("could not find vertex %d in new close nodes \n", org_node);
-#ifdef SCIP_DEBUG
-         printf("new nodes: \n");
-
-         for( int k = 0; k < nclosenodes; ++k )
-         {
-            printf("(idx=%d dist=%f) ", k, closenodes_dists[k]);
-            graph_knot_printInfo(g, closenodes_indices[k]);
-         }
-
-         printf("original nodes: \n");
-
-         for( int k = org_start; k < org_end; ++k )
-         {
-            printf("(dist=%f) ", org_dists[k]);
-            graph_knot_printInfo(g, org_indices[k]);
-         }
-#endif
+         distCloseNodesPrintLostNodeInfo(g, distdata, vertex, i, closenodes_indices, closenodes_dists, nclosenodes);
 
          isIncluded = FALSE;
          break;

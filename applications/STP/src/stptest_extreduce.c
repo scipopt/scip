@@ -115,7 +115,10 @@ void extTearDown(
    REDCOST*              redcostdata         /**< reduced cost data */
    )
 {
-   reduce_redcostdataFreeMembers(scip, redcostdata);
+   assert(scip && graph);
+
+   if( redcostdata )
+      reduce_redcostdataFreeMembers(scip, redcostdata);
 
    stptest_graphTearDown(scip, graph);
 }
@@ -405,6 +408,212 @@ SCIP_RETCODE testMldistsStoring(
    return SCIP_OKAY;
 }
 
+
+
+/** test close nodes are computed correctly */
+static
+SCIP_RETCODE testDistCloseNodesPcAreValid1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DISTDATA distdata;
+   GRAPH* graph;
+   const int nnodes = 4;
+   const int nedges = 8;
+   const int nclosenodes = 3;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 2.1);
+   graph_edge_addBi(scip, graph, 2, 3, 1.0);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
+
+   graph->prize[0] = 5.0;
+   graph->prize[1] = 0.6;
+   graph->prize[2] = 0.5;
+   graph->prize[3] = 0.5;
+
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   /* test close nodes */
+   {
+      const RANGE* node_range = distdata.closenodes_range;
+      const int* node_idx = distdata.closenodes_indices;
+      const SCIP_Real* node_dist = distdata.closenodes_distances;
+
+      STPTEST_ASSERT(node_idx[node_range[0].start] == 1);
+      STPTEST_ASSERT(node_idx[node_range[0].start + 1] == 2);
+      STPTEST_ASSERT(node_idx[node_range[0].start + 2] == 3);
+
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start], 1.0));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 1], 1.0));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 2], 1.5));
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+   extTearDown(scip, graph, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** test close nodes are computed correctly */
+static
+SCIP_RETCODE testDistCloseNodesPcAreValid2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DISTDATA distdata;
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 10;
+   const int nclosenodes = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 4 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.5);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 2.0);
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 2, 0.5);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
+
+   graph->prize[0] = 5.0;
+   graph->prize[1] = 2.0;
+   graph->prize[2] = 1.0;
+   graph->prize[3] = 1.0;
+   graph->prize[4] = 0.0;
+
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   /* test close nodes */
+   {
+      const RANGE* node_range = distdata.closenodes_range;
+      const SCIP_Real* node_dist = distdata.closenodes_distances;
+
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start], 1.5));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 1], 1.5));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 2], 1.5));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 3], 1.5));
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+   extTearDown(scip, graph, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** test close nodes are computed correctly */
+static
+SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DISTDATA distdata;
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 12;
+   const int nclosenodes = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.5);
+   graph_edge_addBi(scip, graph, 2, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.2);
+   graph_edge_addBi(scip, graph, 3, 4, 0.7);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
+
+   graph->prize[0] = 0.0;
+   graph->prize[1] = 1.2;
+   graph->prize[2] = 0.4;
+   graph->prize[3] = 1.0;
+   graph->prize[4] = 2.0;
+
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   /* test close nodes */
+   {
+      const RANGE* node_range = distdata.closenodes_range;
+      const int* node_idx = distdata.closenodes_indices;
+      const SCIP_Real* node_dist = distdata.closenodes_distances;
+
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start], 1.0));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 1], 1.0));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 2], 1.5));
+      STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 3], 1.0));
+
+      STPTEST_ASSERT(node_idx[node_range[0].start + 3] == 4);
+
+      extreduce_edgeRemove(scip, 2, graph, &distdata);
+      extreduce_edgeRemove(scip, 4, graph, &distdata);
+      extreduce_edgeRemove(scip, 8, graph, &distdata);
+
+      STPTEST_ASSERT(extreduce_distCloseNodesAreValid(scip, graph, &distdata));
+   }
+
+   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+   extTearDown(scip, graph, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** test close nodes are computed correctly */
@@ -1521,6 +1730,10 @@ SCIP_RETCODE stptest_extreduce(
 )
 {
    assert(scip);
+
+   SCIP_CALL( testDistCloseNodesPcAreValid1(scip) );
+   SCIP_CALL( testDistCloseNodesPcAreValid2(scip) );
+   SCIP_CALL( testDistCloseNodesPcAreValidAfterDeletion(scip) );
 
    SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
    SCIP_CALL( testPcEdgeNotDeleted(scip) );

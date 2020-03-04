@@ -1454,6 +1454,8 @@ SCIP_RETCODE graph_dijkLimited_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visitlist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visited), nnodes) );
 
+   dijkdata->pc_costshift = NULL;
+
    graph_heap_create(scip, nnodes, NULL, NULL, &(dijkdata->dheap));
 
    dijkdata->nvisits = -1;
@@ -1465,6 +1467,58 @@ SCIP_RETCODE graph_dijkLimited_init(
    {
       visited[k] = FALSE;
       distance[k] = FARAWAY;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes PC shifts per node */
+SCIP_RETCODE graph_dijkLimited_initPcShifts(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int pseudoroot = graph_pc_isRootedPcMw(g) ? -1 : g->source;
+   const SCIP_Real* const costs = g->cost;
+   SCIP_Real* pc_costshift;
+
+   assert(scip && dijkdata);
+   assert(!dijkdata->pc_costshift);
+   assert(graph_pc_isPc(g));
+   assert(!g->extended);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->pc_costshift), nnodes) );
+
+   pc_costshift = dijkdata->pc_costshift;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && k != pseudoroot )
+      {
+         SCIP_Real mincost = g->prize[k];
+
+         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( g->tail[e] == pseudoroot )
+               continue;
+
+            if( costs[e] < mincost )
+               mincost = costs[e];
+         }
+
+         pc_costshift[k] = mincost;
+
+         assert(GT(pc_costshift[k], 0.0));
+      }
+      else
+      {
+         assert(EQ(g->prize[k], 0.0) || (EQ(g->prize[k], FARAWAY) && k == pseudoroot));
+
+         pc_costshift[k] = 0.0;
+      }
    }
 
    return SCIP_OKAY;
@@ -1534,6 +1588,7 @@ void graph_dijkLimited_freeMembers(
    DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
+   SCIPfreeMemoryArrayNull(scip, &(dijkdata->pc_costshift));
    SCIPfreeMemoryArray(scip, &(dijkdata->distance));
    SCIPfreeMemoryArray(scip, &(dijkdata->visitlist));
    SCIPfreeMemoryArray(scip, &(dijkdata->visited));
