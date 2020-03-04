@@ -308,6 +308,18 @@ SCIP_RETCODE detectExpr(
 
          /* during presolving, it only makes sense to detect the quotient if both variables are the same */
          *success = (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) || (x == y);
+
+         /* if the variables are different and it is not of the form x / y, add auxiliary variables */
+         if( *success && x != y && (a != 0.0 || b != 0.0 || c != 0.0 || d != 0.0) )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
+            a = 1.0;
+            b = 0.0;
+
+            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, denomexpr, &y) );
+            c = 1.0;
+            d = 0.0;
+         }
       }
       /* create auxiliary variables if we are in the solving stage */
       else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
@@ -372,6 +384,8 @@ SCIP_INTERVAL intEval(
 {
    SCIP_INTERVAL result;
    SCIP_INTERVAL denominterval;
+   SCIP_Real infeval;
+   SCIP_Real supeval;
 
    /* return empty interval if the domain of x is empty */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
@@ -391,27 +405,24 @@ SCIP_INTERVAL intEval(
       return result;
    }
 
+   infeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
+   supeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
+
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
    {
-      SCIPintervalSetBounds(&result, SCIPintervalGetInf(bnds), SCIPintervalGetSup(bnds));
+      SCIPintervalSetBounds(&result, infeval, supeval);
    }
    else if( a*d - b*c < 0.0 ) /* monotone decreasing */
    {
-      SCIPintervalSetBounds(&result, SCIPintervalGetSup(bnds), SCIPintervalGetInf(bnds));
+      SCIPintervalSetBounds(&result, supeval, infeval);
    }
    else /* a d = b c implies that f(x) = b / d + e, i.e., f is constant */
    {
       assert(a*d - b*c == 0.0);
 
       SCIPintervalSet(&result, b / d + e);
-      return result;
    }
-
-   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &result, result, a);
-   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &result, result, b);
-   SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &result, result, denominterval);
-   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &result, result, e);
 
    return result;
 }
@@ -428,8 +439,6 @@ SCIP_INTERVAL revpropEval(
    )
 {
    SCIP_INTERVAL result;
-   SCIP_Real infval;
-   SCIP_Real supval;
    SCIP_Real infpropval;
    SCIP_Real suppropval;
 
@@ -440,20 +449,15 @@ SCIP_INTERVAL revpropEval(
       return result;
    }
 
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bnds) || a*d - b*c == 0.0 )
+   /* if the expression is constant or the limit lies inside the domain, nothing can be propagated */
+   if( a*d - b*c == 0.0 || bnds.inf < a / c && bnds.sup > a / c )
    {
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &result);
       return result;
    }
 
-   infval = SCIPintervalGetInf(bnds);
-   supval = SCIPintervalGetSup(bnds);
-
-   /* TODO: can we really assume this? */
-   assert(infval > a / c || supval < a / c);
-
-   infpropval = (d * infval - b) / (a - c * infval);
-   suppropval = (d * supval - b) / (a - c * supval);
+   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf);
+   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup);
 
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
@@ -561,7 +565,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    assert(nlhdlrexprdata->denomvar != NULL);
 
    /* it is not possible to compute tighter intervals if both variables are different */
-   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
+   if( nlhdlrexprdata->nomvar != nlhdlrexprdata->denomvar )
       return SCIP_OKAY;
 
    SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->nomvar),
@@ -592,7 +596,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
    assert(nlhdlrexprdata->denomvar != NULL);
 
    /* it is not possible to compute tighter intervals if both variables are different */
-   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
+   if( nlhdlrexprdata->nomvar != nlhdlrexprdata->denomvar )
       return SCIP_OKAY;
 
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
