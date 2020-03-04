@@ -656,6 +656,7 @@ Fixed bugs
 - make handling of read errors in SCIPfread() consistent between version with and without ZLIB
 - correclty drop variable events in cons_indicator in restart
 - fixed bug in cons_orbitope with upgrading of orbitope constraints
+- additional checks in some presolvers for time limit being exceeded
 
 Miscellaneous
 -------------
