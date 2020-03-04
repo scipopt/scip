@@ -161,6 +161,9 @@ Features
 
 - allow disabling of pricers during solving process
 
+- added emphasis setting for numerically challenging instances
+
+
 Performance improvements
 ------------------------
 
@@ -643,6 +646,11 @@ Fixed bugs
 - fixed adding already added quadratic rows to NLP relaxation during solve
 - fixed issue related to variable locks in the varbound constraint handler
 - fixed bug in the quadratic constraint handler when changing infinite constraint sides
+- fixed sorting of variables in linear constraint handler
+- added additional checks to ensure numerical stability of dual proofs
+- fixed a case when activities of a linear constraint got unreliable but where still used for reductions
+- ensure that lhs <= rhs for linear constraints (without tolerances)
+- make handling of read errors in SCIPfread() consistent between version with and without ZLIB
 
 Miscellaneous
 -------------
@@ -760,6 +768,7 @@ Performance improvements
 
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
+- don't consider implied redcost by default in the reduced cost propagator
 
 Interface changes
 -----------------
