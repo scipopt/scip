@@ -326,6 +326,7 @@ SCIP_RETCODE createAuxVar(
 static
 SCIP_RETCODE propagateBoundsQuadExpr(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_QUADEXPRTERM     quadexpr,           /**< quadratic expression to propagate */
    SCIP_INTERVAL         b,                  /**< interval acting as linear coefficient */
    SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
@@ -360,7 +361,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
 #endif
 
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, quadexpr.expr, newrange, force, reversepropqueue, infeasible,
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, quadexpr.expr, newrange, force, reversepropqueue, infeasible,
             nreductions) );
 
    return SCIP_OKAY;
@@ -1231,7 +1232,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          nlhdlrexprdata->nposinfinityquadact > 0 ?  SCIP_INTERVAL_INFINITY : nlhdlrexprdata->maxquadfiniteact);
 
    SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprActivity(scip, expr), quadactivity);
-   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, nlhdlrexprdata->nlinexprs,
+   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlhdlrexprdata->nlinexprs,
             nlhdlrexprdata->linexprs, nlhdlrexprdata->lincoefs, SCIPgetConsExprExprSumConstant(expr),
             rhs, reversepropqueue, infeasible, nreductions, force) );
 
@@ -1362,7 +1363,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
             continue;
 
-         SCIP_CALL( propagateBoundsQuadExpr(scip, quadexpr, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, quadexpr, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
 
          /* stop if we find infeasibility */
          if( *infeasible )

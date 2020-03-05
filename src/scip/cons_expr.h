@@ -812,6 +812,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */

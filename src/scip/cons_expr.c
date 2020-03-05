@@ -1281,7 +1281,7 @@ SCIP_RETCODE forwardPropExpr(
                /* update expression activity and tighten bounds of auxiliary variable, if any
                 * this will also update expr->activitylastchanged, if activity is changing
                 */
-               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &tighteninfeasible, ntightenings) );
+               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consexprhdlr, expr, interval, force, NULL, &tighteninfeasible, ntightenings) );
 
                if( tighteninfeasible && infeasible != NULL )
                   *infeasible = TRUE;
@@ -1327,6 +1327,7 @@ SCIP_RETCODE forwardPropExpr(
 static
 SCIP_RETCODE reversePropQueue(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_QUEUE*             queue,            /**< queue of expression to propagate */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               allexprs,         /**< whether reverseprop should be called for all expressions, regardless of whether their interval was tightened */
@@ -1374,7 +1375,7 @@ SCIP_RETCODE reversePropQueue(
 #endif
 
             nreds = 0;
-            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
             *ntightenings += nreds;
          }
@@ -1391,7 +1392,7 @@ SCIP_RETCODE reversePropQueue(
 #endif
 
          /* call the reverseprop of the exprhdlr */
-         SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, expr, queue, infeasible, &nreds, force) );
+         SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, queue, infeasible, &nreds, force) );
          assert(nreds >= 0);
          *ntightenings += nreds;
       }
@@ -1566,7 +1567,7 @@ SCIP_RETCODE propConss(
             SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
             SCIPintervalSetBounds(&conssides, lhs, rhs);
 
-            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, conssides, force, allexprs ? NULL : queue, &cutoff, &ntightenings) );
+            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, consdata->expr, conssides, force, allexprs ? NULL : queue, &cutoff, &ntightenings) );
 
             if( cutoff )
             {
@@ -1601,7 +1602,7 @@ SCIP_RETCODE propConss(
       if( !cutoff )
       {
          /* apply backward propagation */
-         SCIP_CALL( reversePropQueue(scip, queue, force, allexprs, &cutoff, &ntightenings) );
+         SCIP_CALL( reversePropQueue(scip, conshdlr, queue, force, allexprs, &cutoff, &ntightenings) );
 
          /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
          success = ntightenings > 0;
@@ -1940,7 +1941,7 @@ SCIP_RETCODE detectNlhdlr(
           * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
           * NOTE: This assumes that reverseprop of the nlhdlr can be called before a preceding inteval call.
           */
-         SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
+         SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
       }
    }
 
@@ -10463,7 +10464,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->proptime) );
-      SCIP_CALL( expr->exprhdlr->reverseprop(scip, expr, reversepropqueue, infeasible, nreductions, force) );
+      SCIP_CALL( expr->exprhdlr->reverseprop(scip, conshdlr, expr, reversepropqueue, infeasible, nreductions, force) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->proptime) );
 
       /* update statistics */
@@ -12078,6 +12079,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
  */
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
@@ -12095,6 +12097,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_INTERVAL newactivity;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
 
@@ -12103,9 +12106,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
     */
 #ifndef NDEBUG
    {
-      SCIP_CONSHDLR* conshdlr;
       SCIP_CONSHDLRDATA* conshdlrdata;
-      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(expr->activitytag >= conshdlrdata->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->activity));
    }
@@ -12137,12 +12138,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIPintervalIntersectEps(&newactivity, SCIPepsilon(scip), expr->activity, newbounds);
    if( newactivity.inf != expr->activity.inf || newactivity.sup != expr->activity.sup ) /*lint !e777*/
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-      assert(conshdlr != NULL);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
       expr->activity = newactivity;
@@ -14486,7 +14482,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(SCIPreversepropConsExprNlhdlr)
    }
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->proptime) );
-   SCIP_CALL( nlhdlr->reverseprop(scip, nlhdlr, expr, nlhdlrexprdata, reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( nlhdlr->reverseprop(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, reversepropqueue, infeasible, nreductions, force) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->proptime) );
 
    /* update statistics */
