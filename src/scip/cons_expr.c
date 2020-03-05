@@ -1270,6 +1270,7 @@ SCIP_RETCODE forwardPropExpr(
             if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
             {
                expr->activity = interval;
+               expr->activitylastchanged = conshdlrdata->curboundstag;
                if( infeasible != NULL )
                   *infeasible = TRUE;
             }
@@ -1277,7 +1278,9 @@ SCIP_RETCODE forwardPropExpr(
             {
                SCIP_Bool tighteninfeasible;
 
-               /* update expression activity and tighten bounds of auxiliary variable, if any */
+               /* update expression activity and tighten bounds of auxiliary variable, if any
+                * this will also update expr->activitylastchanged, if activity is changing
+                */
                SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &tighteninfeasible, ntightenings) );
 
                if( tighteninfeasible && infeasible != NULL )
@@ -1286,7 +1289,11 @@ SCIP_RETCODE forwardPropExpr(
             else
             {
                /* update expression activity only */
-               expr->activity = interval;
+               if( expr->activity.inf != interval.inf || expr->activity.sup != interval.sup ) /*lint !e777*/
+               {
+                  expr->activity = interval;
+                  expr->activitylastchanged = conshdlrdata->curboundstag;
+               }
                /* SCIPdebugMsg(scip, "expr <%p> (%s) activity set to [%.15g, %.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup); */
             }
 
@@ -12085,6 +12092,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_Real newub;
    SCIP_Bool tightenlb;
    SCIP_Bool tightenub;
+   SCIP_INTERVAL newactivity;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -12126,7 +12134,20 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
-   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, newbounds);
+   SCIPintervalIntersectEps(&newactivity, SCIPepsilon(scip), expr->activity, newbounds);
+   if( newactivity.inf != expr->activity.inf || newactivity.sup != expr->activity.sup ) /*lint !e777*/
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      assert(conshdlr != NULL);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      expr->activity = newactivity;
+      expr->activitylastchanged = conshdlrdata->curboundstag;
+   }
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
