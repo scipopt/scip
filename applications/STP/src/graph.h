@@ -157,7 +157,7 @@ typedef struct
                                                    of all nodes               */
    int*                  term2edge;          /**< (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of edge to twin terminal or -1 */
 
-   SCIP_Real*            prize;              /**< For (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of node costs       */
+   SCIP_Real*            prize;              /**< For NWSTP, (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of node costs       */
    SCIP_Real*            costbudget;         /**< budget cost value for (R)BMWCSP:  Array [0..nodes-1] */
    SCIP_Real             budget;             /**< budget value for (R)BMWCSP */
 
@@ -427,6 +427,9 @@ extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* 
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
+extern SCIP_RETCODE   graph_2nw(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_nw2sap(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_nw2pc(SCIP*, PRESOL*, GRAPH*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);

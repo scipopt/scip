@@ -1225,17 +1225,19 @@ SCIP_RETCODE graph_load(
                   if( stp_type != STP_NWSPG && stp_type != STP_NWPTSPG )
                      stp_type = STP_NWSPG;
 
-                  if( Is_term(g->term[nwcount]) )
-                     presol->fixed += nodeweight;
-                  else
-                     /* add node-weight to edge-weights of all incoming edges */
-                     for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
-                        g->cost[i] += nodeweight;
+                  if( g->prize == NULL )
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
 
-                  nwcount++;
+                  assert(nwcount < nodes);
+                  g->prize[nwcount++] = nodeweight;
+
                   break;
                case KEY_NODEWEIGHTS_END :
                   curf.section = &section_table[0];
+
+                  assert(nwcount == nodes);
+                  SCIP_CALL( graph_2nw(scip, presol, g) );
+
                   break;
                case KEY_OBSTACLES_RR :
                   assert(nobstacles > 0);

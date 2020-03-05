@@ -573,7 +573,7 @@ SCIP_RETCODE graph_PcToSap(
 SCIP_RETCODE graph_pc_initPrizes(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int                   sizeprize          /**< size of prize array to allocate (or -1) */
+   int                   sizeprize           /**< size of prize array to allocate (or -1) */
    )
 {
    assert(scip != NULL);
@@ -2314,9 +2314,14 @@ SCIP_RETCODE graph_pc_2rpc(
          assert(graph->head[graph->term2edge[k]] == node);
          assert(graph->head[graph->term2edge[node]] == k);
       }
+      else if( Is_term(graph->term[k]) )
+      {
+         assert(EQ(graph->prize[k], FARAWAY));
+         graph_pc_knotToFixedTermProperty(graph, k);
+      }
       else
       {
-         assert(graph->prize[k] == FARAWAY || graph->prize[k] == 0.0);
+         assert(graph->prize[k] == 0.0);
       }
    }
 

@@ -3090,6 +3090,122 @@ SCIP_Bool graph_isMarked(
 }
 
 
+/** alters the graph for node-weighted Steiner tree problems */
+SCIP_RETCODE graph_nw2pc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PRESOL*               presol,             /**< presolving struct */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   SCIP_Real maxweight = 0.0;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int nterms_org = g->terms;
+
+   assert(scip && presol);
+   assert(g->prize);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( maxweight < g->prize[k] )
+         maxweight = g->prize[k];
+   }
+
+   assert(LT(maxweight, BLOCKED));
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) )
+      {
+         presol->fixed += g->prize[k];
+         g->prize[k] = FARAWAY;
+         g->source = k;
+      }
+      else
+      {
+         g->prize[k] = maxweight - g->prize[k];
+
+         assert(GE(g->prize[k], 0.0));
+
+         if( GT(g->prize[k], 0.0) )
+            graph_knot_chg(g, k, STP_TERM);
+      }
+   }
+
+   SCIPdebugMessage("maxweight=%f \n", maxweight);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      g->cost[e] += maxweight;
+   }
+
+   assert(nterms_org >= 1);
+
+   presol->fixed -= (nterms_org - 1) * maxweight;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !EQ(g->prize[k], FARAWAY) )
+         presol->fixed -= g->prize[k];
+   }
+
+   SCIPdebugMessage("presol->fixed=%f \n", presol->fixed);
+
+   SCIP_CALL( graph_pc_2rpc(scip, g) );
+
+   return SCIP_OKAY;
+}
+
+
+/** alters the graph for node-weighted Steiner tree problems */
+SCIP_RETCODE graph_nw2sap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PRESOL*               presol,             /**< presolving struct */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && presol);
+   assert(g->prize);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      const SCIP_Real nodeweight = g->prize[k];
+
+      if( Is_term(g->term[k]) )
+      {
+         presol->fixed += nodeweight;
+      }
+      else
+      {
+         /* add node-weight to edge-weights of all incoming edges */
+         for( int i = g->inpbeg[i]; i != EAT_LAST; i = g->ieat[i] )
+            g->cost[i] += nodeweight;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** alters the graph for node-weighted Steiner tree problems */
+SCIP_RETCODE graph_2nw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PRESOL*               presol,             /**< presolving struct */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+#ifdef NW_TRANS_SIMPLE
+   SCIP_CALL( graph_nw2sap(scip, presol, g) );
+#else
+   SCIP_CALL( graph_nw2pc(scip, presol, g) );
+#endif
+
+   return SCIP_OKAY;
+}
+
+
 void graph_show(
    const GRAPH*          p                   /**< the graph */
    )
