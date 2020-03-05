@@ -1215,7 +1215,18 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalBilinear)
 
    if( nlhdlrdata->useinteval && nlhdlrexprdata->nunderineqs + nlhdlrexprdata->noverineqs > 0 )
    {
-      SCIP_INTERVAL tmp = intevalBilinear(scip, expr, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs,
+      SCIP_INTERVAL tmp;
+
+      /* skip inteval, if bounds on children haven't changed since activity of this expression was computed last */
+      if( SCIPgetConsExprExprActivityTag(expr) > 0
+         && SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[0]) < SCIPgetConsExprExprActivityTag(expr)
+         && SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[1]) < SCIPgetConsExprExprActivityTag(expr) )
+      {
+         *interval = SCIPgetConsExprExprActivity(scip, expr);
+         return SCIP_OKAY;
+      }
+
+      tmp = intevalBilinear(scip, expr, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs,
          nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs);
 
       /* intersect intervals if we have learned a tighter interval */

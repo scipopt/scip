@@ -689,6 +689,8 @@ Test(propagate, forwardprop_uses_expressions_bounds)
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    expr->children[0]->activitytag = conshdlrdata->curboundstag;
    expr->children[1]->activitytag = conshdlrdata->curboundstag;
+   expr->children[0]->activitylastchanged = conshdlrdata->curboundstag;
+   expr->children[1]->activitylastchanged = conshdlrdata->curboundstag;
 
    /* new interval should be [0,2] intersected with [-2, 0.4]; note that it is important to have the activitytag
     * set to curboundstag; otherwise the explicitly set intervals are going to be overwritten

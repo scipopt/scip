@@ -70,6 +70,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   nneginfinityquadact;/**< number of quadratic terms contributing -infinity to activity */
    int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
    SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic term as defined in nlhdlrIntervalQuadratic */
+   SCIP_INTERVAL         quadactivity;       /**< activity of quadratic part (sum of quadactivities) */
    unsigned int          activitiestag;      /**< value of activities tag when activities were computed */
 };
 
@@ -1019,8 +1020,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 { /*lint --e{715}*/
 
-   SCIP_INTERVAL quadactivity;
-
    assert(scip != NULL);
    assert(expr != NULL);
 
@@ -1029,6 +1028,28 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    assert(nlhdlrexprdata->quadactivities != NULL);
 
    SCIPdebugMsg(scip, "Interval evaluation of quadratic expr\n");
+
+   /*
+    * check whether any term has changed its activity since we computed activity
+    */
+   {
+      SCIP_Bool callinteval;
+      int i;
+
+      callinteval = nlhdlrexprdata->activitiestag == 0;
+      for( i = 0; !callinteval && i < nlhdlrexprdata->nlinexprs; ++i )
+         callinteval = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->linexprs[i]) >= nlhdlrexprdata->activitiestag;
+
+      for( i = 0; !callinteval && i < nlhdlrexprdata->nquadexprs; ++i )
+         callinteval = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->quadexprterms[i].expr) >= nlhdlrexprdata->activitiestag;
+
+      if( !callinteval )
+      {
+         SCIPdebugMsg(scip, "Skip computing activity as no term has changed since last time\n");
+         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity, nlhdlrexprdata->quadactivity);
+         return SCIP_OKAY;
+      }
+   }
 
    /*
     * compute activity of linear part
@@ -1065,7 +1086,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    nlhdlrexprdata->nposinfinityquadact = 0;
    nlhdlrexprdata->minquadfiniteact = 0.0;
    nlhdlrexprdata->maxquadfiniteact = 0.0;
-   SCIPintervalSet(&quadactivity, 0.0);
+   SCIPintervalSet(&nlhdlrexprdata->quadactivity, 0.0);
    {
       SCIP_BILINEXPRTERM* bilinterms;
       int i;
@@ -1139,7 +1160,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 #endif
 
          SCIPintervalSetBounds(&nlhdlrexprdata->quadactivities[i], quadlb, quadub);
-         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &quadactivity, quadactivity, nlhdlrexprdata->quadactivities[i]);
+         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &nlhdlrexprdata->quadactivity, nlhdlrexprdata->quadactivity, nlhdlrexprdata->quadactivities[i]);
 
          /* get number of +/-infinity contributions and compute finite activity */
          if( quadlb <= -SCIP_INTERVAL_INFINITY )
@@ -1170,11 +1191,11 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
          }
       }
 
-      SCIPdebugMsg(scip, "Activity of quadratic part is [%g, %g]\n", quadactivity.inf, quadactivity.sup);
+      SCIPdebugMsg(scip, "Activity of quadratic part is [%g, %g]\n", nlhdlrexprdata->quadactivity.inf, nlhdlrexprdata->quadactivity.sup);
    }
 
    /* interval evaluation is linear activity + quadactivity */
-   SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity,  quadactivity);
+   SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity,  nlhdlrexprdata->quadactivity);
 
    nlhdlrexprdata->activitiestag = SCIPgetConsExprCurBoundsTag(SCIPfindConshdlr(scip, "expr"));
 

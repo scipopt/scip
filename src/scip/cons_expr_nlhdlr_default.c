@@ -323,11 +323,40 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
 { /*lint --e{715}*/
+   unsigned int activitytag;
+   SCIP_Bool callinteval;
+   int nchildren;
+
    assert(scip != NULL);
    assert(expr != NULL);
 
-   /* call the interval evaluation callback of the expression handler */
-   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, intevalvardata) );
+   /* decide whether inteval of exprhdlr needs to be called:
+    * we want to call it if the expression has no children, i.e., it's probably a variable, so its bounds may have changed
+    * if it has children, then we want to call inteval, if there is at least one child which activity has changed since the
+    * activity of the current interval was computed the last time (if there is equality in the tag comparison below, we cannot
+    * be certain whether inteval is necessary)
+    */
+   activitytag = SCIPgetConsExprExprActivityTag(expr);
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+   if( nchildren == 0 || activitytag == 0 )
+   {
+      callinteval = TRUE;
+   }
+   else
+   {
+      int c;
+      callinteval = SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[0]) >= activitytag;
+      for( c = 1; !callinteval && c < nchildren; ++c )
+         callinteval = SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[c]) >= activitytag;
+   }
+
+   if( callinteval )
+   {
+      /* call the interval evaluation callback of the expression handler */
+      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, intevalvardata) );
+   }
+   else
+      *interval = SCIPgetConsExprExprActivity(scip, expr);
 
    return SCIP_OKAY;
 }
