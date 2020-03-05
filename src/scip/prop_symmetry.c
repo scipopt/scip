@@ -2123,6 +2123,14 @@ SCIP_RETCODE determineSymmetry(
    assert( propdata->usesymmetry >= 0 );
    assert( propdata->ofenabled || propdata->symconsenabled );
 
+   /* do not compute symmetry if reoptimization is enabled */
+   if ( SCIPisReoptEnabled(scip) )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
    {
@@ -2145,14 +2153,6 @@ SCIP_RETCODE determineSymmetry(
 
    /* do not compute symmetry if there are active pricers */
    if ( SCIPgetNActivePricers(scip) > 0 )
-   {
-      propdata->ofenabled = FALSE;
-      propdata->symconsenabled = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* do not compute symmetry if reoptimization is enabled */
-   if ( SCIPisReoptEnabled(scip) )
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
