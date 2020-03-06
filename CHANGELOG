@@ -670,6 +670,7 @@ Miscellaneous
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
+- new subsection "How to provide a problem decomposition" in the documentation
 
 Known bugs
 ----------
