@@ -1047,6 +1047,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       {
          SCIPdebugMsg(scip, "Skip computing activity as no term has changed since last time\n");
          SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity, nlhdlrexprdata->quadactivity);
+         nlhdlrexprdata->activitiestag = SCIPgetConsExprCurBoundsTag(SCIPfindConshdlr(scip, "expr"));
          return SCIP_OKAY;
       }
    }
