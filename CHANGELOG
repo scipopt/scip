@@ -214,6 +214,9 @@ Features
 
 - allow disabling of pricers during solving process
 
+- added emphasis setting for numerically challenging instances
+
+
 Performance improvements
 ------------------------
 
@@ -635,12 +638,15 @@ Build system
 
 ### Cmake
 
+- avoid problem with doubly defined object together with CPLEX
+
 ### Makefile
 
 - Removed static object compilation dependency files (depend.*). If using a GCC compatible compiler, then dependency
   files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
   file (.o) in the corresponding obj subdirectory.
 - added support for building against Ipopt >= 3.13
+- unify compiler switches for Intel compiler and avoid problem with doubly defined object together with CPLEX
 
 Fixed bugs
 ----------
@@ -694,6 +700,16 @@ Fixed bugs
 - fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
 - redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
 - fixed adding already added quadratic rows to NLP relaxation during solve
+- fixed issue related to variable locks in the varbound constraint handler
+- fixed bug in the quadratic constraint handler when changing infinite constraint sides
+- fixed sorting of variables in linear constraint handler
+- added additional checks to ensure numerical stability of dual proofs
+- fixed a case when activities of a linear constraint got unreliable but where still used for reductions
+- ensure that lhs <= rhs for linear constraints (without tolerances)
+- make handling of read errors in SCIPfread() consistent between version with and without ZLIB
+- correclty drop variable events in cons_indicator in restart
+- fixed bug in cons_orbitope with upgrading of orbitope constraints
+- additional checks in some presolvers for time limit being exceeded
 
 Miscellaneous
 -------------
@@ -811,6 +827,7 @@ Performance improvements
 
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
+- don't consider implied redcost by default in the reduced cost propagator
 
 Interface changes
 -----------------
