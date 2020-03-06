@@ -31,6 +31,9 @@
 /* define to get enforcement logging into file */
 /* #define ENFOLOGFILE "consexpr_enfo.log" */
 
+/* define to get more debug output from domain propagation */
+/* #define DEBUG_PROP */
+
 /*lint -e528*/
 
 #include <assert.h>
@@ -1138,6 +1141,13 @@ SCIP_RETCODE forwardPropExpr(
                   *infeasible = TRUE; */
                break;
             }
+
+#ifdef DEBUG_PROP
+            SCIPdebugMsg(scip, "interval evaluation of expr %p ", (void*)expr);
+            SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
+            SCIPdebugMsgPrint(scip, ", current activity = [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+#endif
+
             /* store activity that we start with */
             prevactivity = expr->activity;
 
@@ -1177,14 +1187,15 @@ SCIP_RETCODE forwardPropExpr(
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = expr->activity;
                   SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, intevalvar, intevalvardata) );
-#ifdef SCIP_DEBUG
-                  SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
-                  SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
-                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->activity.inf, expr->activity.sup, nlhdlr->name);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 #endif
 
                   /* update expr->activity by intersecting with computed activity */
                   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, nlhdlrinterval);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+#endif
                }
             }
             else
@@ -1213,22 +1224,20 @@ SCIP_RETCODE forwardPropExpr(
                {
                   SCIP_INTERVAL exprhdlrinterval = expr->activity;
                   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
-
-#ifdef SCIP_DEBUG
-                  SCIPdebugMsg(scip, "computed interval [%.15g, %.15g] for expr ", exprhdlrinterval.inf, exprhdlrinterval.sup);
-                  SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
-                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->activity.inf, expr->activity.sup, expr->exprhdlr->name);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, exprhdlrinterval.inf, exprhdlrinterval.sup);
 #endif
 
                   /* update expr->activity by intersecting with computed activity */
                   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, exprhdlrinterval);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+#endif
                }
                else
                {
-#ifdef SCIP_DEBUG
-                  SCIPdebugMsg(scip, "skip inteval by exprhdlr <%s> for expr ", expr->exprhdlr->name);
-                  SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
-                  SCIPdebugMsgPrint(scip, " as children activity hasn't changed since last eval\n");
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " exprhdlr <%s>::inteval skip as children activity hasn't changed since last eval\n", expr->exprhdlr->name);
 #endif
                }
             }
@@ -1243,14 +1252,18 @@ SCIP_RETCODE forwardPropExpr(
                   expr->activity.inf = SCIPceil(scip, expr->activity.inf);
                if( expr->activity.sup <  SCIP_INTERVAL_INFINITY )
                   expr->activity.sup = SCIPfloor(scip, expr->activity.sup);
-               /* SCIPdebugMsg(scip, "applying integrality: [%.15g,%.15g]\n", interval.inf, interval.sup); */
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " applying integrality: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+#endif
             }
 
             /* get interval with auxiliary variable bounds */
             if( expr->auxvar != NULL )
             {
                auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
-               SCIPdebugMsg(scip, "auxvar <%s> bounds: [%.15g,%.15g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " auxvar <%s> bounds: [%.15g,%.15g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
+#endif
 
                /* it would be odd if the domain of an auxiliary variable were empty */
                assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
@@ -1280,7 +1293,9 @@ SCIP_RETCODE forwardPropExpr(
                         SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
                         SCIPisUbBetter(scip, compareinterval.sup, expr->activity.inf, expr->activity.sup))) )
                {
-                  /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue, new activity = [%.15g,%.15g] is not subset of previous one = [%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup, compareinterval.inf, compareinterval.sup);
+#endif
                   SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
                   expr->inqueue = TRUE;
                }
@@ -1298,9 +1313,22 @@ SCIP_RETCODE forwardPropExpr(
                auxvarbounds = prevactivity;
             SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, auxvarbounds);
 #endif
+#ifdef DEBUG_PROP
+            SCIPdebugMsg(scip, " apply previous activity = [%.20g, %.20g] and auxvar <%s> bounds = [%.20g, %.20g]: [%.20g, %.20g]\n",
+               prevactivity.inf, prevactivity.sup,
+               expr->auxvar != NULL ? SCIPvarGetName(expr->auxvar) : "n/a",
+               expr->auxvar != NULL ? auxvarbounds.inf : -SCIP_INTERVAL_INFINITY,
+               expr->auxvar != NULL ? auxvarbounds.sup :  SCIP_INTERVAL_INFINITY,
+               expr->activity.inf, expr->activity.sup);
+#endif
 
             if( expr->activity.inf != prevactivity.inf || expr->activity.sup != prevactivity.sup ) /*lint !e777*/
+            {
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " new activity != previous one -> activitylastchanged = %d\n", conshdlrdata->curboundstag);
+#endif
                expr->activitylastchanged = conshdlrdata->curboundstag;
+            }
 
             if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
@@ -12155,11 +12183,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    oldlb = SCIPintervalGetInf(expr->activity);
    oldub = SCIPintervalGetSup(expr->activity);
 
-/* #ifdef SCIP_DEBUG
+#ifdef DEBUG_PROP
    SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
    SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds), force);
-#endif */
+#endif
 
    if( expr->isintegral )
    {
@@ -12170,7 +12198,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          newbounds.inf = SCIPceil(scip, newbounds.inf);
       if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
          newbounds.sup = SCIPfloor(scip, newbounds.sup);
-      /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup);
+#endif
    }
 
    SCIPintervalIntersectEps(&newactivity, SCIPepsilon(scip), expr->activity, newbounds);
@@ -12179,10 +12209,18 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
-      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, expr->activity.inf, expr->activity.sup);
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
+#endif
 
       expr->activity = newactivity;
       expr->activitylastchanged = conshdlrdata->curboundstag;
+   }
+   else
+   {
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p equals existing one\n", newbounds.inf, newbounds.sup, (void*)expr);
+#endif
    }
 
    /* check if the new bounds lead to an empty interval */
@@ -12195,7 +12233,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
    *cutoff = FALSE;
 
-   /* SCIPdebugMsg(scip, "expr <%p> (%s) activity set to [%.15g, %.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup); */
    newlb = SCIPintervalGetInf(expr->activity);
    newub = SCIPintervalGetSup(expr->activity);
 
@@ -12281,7 +12318,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
       {
          /* @todo put children which are in the queue to the end of it! */
-         /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))); */
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+#endif
          SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
          expr->inqueue = TRUE;
       }
