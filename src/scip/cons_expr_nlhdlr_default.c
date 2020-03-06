@@ -345,8 +345,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    else
    {
       int c;
-      callinteval = SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[0]) >= activitytag;
-      for( c = 1; !callinteval && c < nchildren; ++c )
+      callinteval = SCIPgetConsExprExprActivityLastChangedTag(expr) >= activitytag;
+      for( c = 0; !callinteval && c < nchildren; ++c )
          callinteval = SCIPgetConsExprExprActivityLastChangedTag(SCIPgetConsExprExprChildren(expr)[c]) >= activitytag;
    }
 
