@@ -3295,8 +3295,8 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, varscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, varconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, varconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
@@ -3321,8 +3321,8 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, vbdvarscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, vbdvarconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, vbdvarconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
