@@ -1019,6 +1019,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 { /*lint --e{715}*/
+   SCIP_Bool inteval_linear = FALSE;
+   SCIP_Bool inteval_quad = FALSE;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1030,31 +1032,28 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    SCIPdebugMsg(scip, "Interval evaluation of quadratic expr\n");
 
    /*
-    * check whether any term has changed its activity since we computed activity
+    * check whether any linear or quadratic term has changed its activity since we computed activity last time
     */
+   if( nlhdlrexprdata->activitiestag == 0 )
    {
-      SCIP_Bool callinteval;
+      inteval_linear = TRUE;
+      inteval_quad = TRUE;
+   }
+   else
+   {
       int i;
 
-      callinteval = nlhdlrexprdata->activitiestag == 0;
-      for( i = 0; !callinteval && i < nlhdlrexprdata->nlinexprs; ++i )
-         callinteval = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->linexprs[i]) >= nlhdlrexprdata->activitiestag;
+      for( i = 0; !inteval_linear && i < nlhdlrexprdata->nlinexprs; ++i )
+         inteval_linear = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->linexprs[i]) >= nlhdlrexprdata->activitiestag;
 
-      for( i = 0; !callinteval && i < nlhdlrexprdata->nquadexprs; ++i )
-         callinteval = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->quadexprterms[i].expr) >= nlhdlrexprdata->activitiestag;
-
-      if( !callinteval )
-      {
-         SCIPdebugMsg(scip, "Skip computing activity as no term has changed since last time\n");
-         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity, nlhdlrexprdata->quadactivity);
-         nlhdlrexprdata->activitiestag = SCIPgetConsExprCurBoundsTag(SCIPfindConshdlr(scip, "expr"));
-         return SCIP_OKAY;
-      }
+      for( i = 0; !inteval_quad && i < nlhdlrexprdata->nquadexprs; ++i )
+         inteval_quad = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->quadexprterms[i].expr) >= nlhdlrexprdata->activitiestag;
    }
 
    /*
-    * compute activity of linear part
+    * compute activity of linear part, if some linear term has changed
     */
+   if( inteval_linear )
    {
       int i;
 
@@ -1079,20 +1078,27 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       SCIPdebugMsg(scip, "Activity of linear part is [%g, %g]\n", nlhdlrexprdata->linactivity.inf,
             nlhdlrexprdata->linactivity.sup);
    }
+   else
+   {
+      SCIPdebugMsg(scip, "Activity of linear part is still [%g, %g]\n", nlhdlrexprdata->linactivity.inf,
+            nlhdlrexprdata->linactivity.sup);
+   }
 
    /*
-    * compute activity of quadratic part
+    * compute activity of quadratic part, if some quadratic term has changed
     */
-   nlhdlrexprdata->nneginfinityquadact = 0;
-   nlhdlrexprdata->nposinfinityquadact = 0;
-   nlhdlrexprdata->minquadfiniteact = 0.0;
-   nlhdlrexprdata->maxquadfiniteact = 0.0;
-   SCIPintervalSet(&nlhdlrexprdata->quadactivity, 0.0);
+   if( inteval_quad )
    {
       SCIP_BILINEXPRTERM* bilinterms;
       int i;
 
       SCIPdebugMsg(scip, "Computing activity of quadratic part\n");
+
+      nlhdlrexprdata->nneginfinityquadact = 0;
+      nlhdlrexprdata->nposinfinityquadact = 0;
+      nlhdlrexprdata->minquadfiniteact = 0.0;
+      nlhdlrexprdata->maxquadfiniteact = 0.0;
+      SCIPintervalSet(&nlhdlrexprdata->quadactivity, 0.0);
 
       bilinterms = nlhdlrexprdata->bilinexprterms;
       for( i = 0; i < nlhdlrexprdata->nquadexprs; ++i )
@@ -1193,6 +1199,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       }
 
       SCIPdebugMsg(scip, "Activity of quadratic part is [%g, %g]\n", nlhdlrexprdata->quadactivity.inf, nlhdlrexprdata->quadactivity.sup);
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "Activity of quadratic part is still [%g, %g]\n", nlhdlrexprdata->quadactivity.inf, nlhdlrexprdata->quadactivity.sup);
    }
 
    /* interval evaluation is linear activity + quadactivity */
