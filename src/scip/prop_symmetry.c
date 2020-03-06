@@ -94,6 +94,22 @@
  * @note If, besides orbital fixing, also symmetry handling constraints shall be added, orbital fixing is only applied
  *       to symmetry components that are not handled by orbitope constraints.
  *
+ *
+ * @section SST Cuts derived from the Schreier Sims table
+ *
+ * SST cuts have been introduced by@n
+ * D. Salvagnin: Symmetry Breaking Inequalities from the Schreier-Sims table. CPAIOR 2018 Proceedings, 521-529, 2018.
+ *
+ * These inequalities are computed as follows. Throughout these procedure a set of so-called leaders is maintained.
+ * Initially the set of leaders is empty. In a first step, select a variable \f$x_i\f$ and compute its orbit w.r.t.
+ * the symmetry group of the mixed-integer program. For each variable \f$x_j\f$ in the orbit of \f$x_i\f$, the
+ * inequality \f$x_i \geq x_j\f$ is a valid symmetry handling inequality, which can be added to the mixed-integer
+ * program. We call \f$x_i\f$ the leader of this inequality. Add the leader \f$x_i\f$ to the set of leaders and
+ * compute the pointwise stabilizer of the leader set. In the next step, select a new variable, compute its orbit
+ * w.r.t. the stabilizer group of the leaders, add the inequalities based on this orbit, and add the new leader
+ * to the set of leaders. This procedure is iterated until the pointwise stabilizer group of the leaders has become
+ * trivial.
+ *
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
  * @todo Check whether one should switch the role of 0 and 1
