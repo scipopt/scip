@@ -3326,11 +3326,11 @@ SCIP_RETCODE applyFixings(
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
-	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	    if( !SCIPisInfinity(scip, -lhs) )
 	    {
-	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	 }
       }
