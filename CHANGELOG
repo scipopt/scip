@@ -657,6 +657,7 @@ Fixed bugs
 - correclty drop variable events in cons_indicator in restart
 - fixed bug in cons_orbitope with upgrading of orbitope constraints
 - additional checks in some presolvers for time limit being exceeded
+- fixed bug in presolving of cons_varbound with multi-aggregated variables
 
 Miscellaneous
 -------------
