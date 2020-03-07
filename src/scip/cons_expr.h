@@ -810,10 +810,9 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
-/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
- *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+/** tightens the activity of an expression and bounds of corresponding variable (if any)
  *
- *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
+ *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
@@ -821,9 +820,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               force,            /**< force tightening of variable bound and add to reversepropqueue even if tightening is below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 

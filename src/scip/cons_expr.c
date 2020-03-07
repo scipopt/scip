@@ -1018,6 +1018,81 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
+/** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to its activity
+ *
+ *  Expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED.
+ *
+ *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
+ */
+static
+SCIP_RETCODE tightenAuxVarBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Bool tightened;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(cutoff != NULL);
+
+   /* the current activity must be valid and should not be empty */
+   assert(expr->activitytag >= SCIPconshdlrGetData(conshdlr)->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->activity));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity));
+
+   *cutoff = FALSE;
+
+   /* do not tighten variable in problem stage (important for unittests)
+    * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   var = SCIPgetConsExprExprAuxVar(expr);
+   if( var == NULL )
+      return SCIP_OKAY;
+
+   /* force tightening if it would mean fixing the variable */
+   force = force || SCIPisEQ(scip, expr->activity.inf, expr->activity.sup);
+
+   /* try to tighten lower bound of (auxiliary) variable */
+   SCIP_CALL( SCIPtightenVarLb(scip, var, expr->activity.inf, force, cutoff, &tightened) );
+   if( tightened )
+   {
+      if( ntightenings != NULL )
+         ++*ntightenings;
+      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var));
+   }
+   if( *cutoff )
+   {
+      SCIPdebugMsg(scip, "cutoff when tightening lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), expr->activity.inf);
+      return SCIP_OKAY;
+   }
+
+   /* try to tighten upper bound of (auxiliary) variable */
+   SCIP_CALL( SCIPtightenVarUb(scip, var, expr->activity.sup, force, cutoff, &tightened) );
+   if( tightened )
+   {
+      if( ntightenings != NULL )
+         ++*ntightenings;
+      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+   }
+   if( *cutoff )
+   {
+      SCIPdebugMsg(scip, "cutoff when tightening ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), expr->activity.sup);
+      return SCIP_OKAY;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** propagate bounds of the expressions in a given expression tree and tries to tighten the bounds of the auxiliary
  *  variables accordingly
  */
@@ -1322,6 +1397,13 @@ SCIP_RETCODE forwardPropExpr(
                expr->activity.inf, expr->activity.sup);
 #endif
 
+            /* mark the current node to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
+            if( SCIPisInfinity(scip, expr->activity.inf) || SCIPisInfinity(scip, -expr->activity.sup) )
+            {
+               SCIPdebugMsg(scip, "cut off due to activity [%g,%g] beyond infinity\n", expr->activity.inf, expr->activity.sup);
+               SCIPintervalSetEmpty(&expr->activity);
+            }
+
             if( expr->activity.inf != prevactivity.inf || expr->activity.sup != prevactivity.sup ) /*lint !e777*/
             {
 #ifdef DEBUG_PROP
@@ -1330,6 +1412,9 @@ SCIP_RETCODE forwardPropExpr(
                expr->activitylastchanged = conshdlrdata->curboundstag;
             }
 
+            /* remember that activity is uptodate now */
+            expr->activitytag = conshdlrdata->curboundstag;
+
             if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
                if( infeasible != NULL )
@@ -1337,25 +1422,17 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( tightenauxvars )
             {
-               /* we actually want to update expression activity via SCIPtightenConsExprExprInterval to also tighten bounds of auxiliary variable, if any
-                * so reset to prevactivity and let SCIPtightenConsExprExprInterval set expr->activity
-                * this may also update expr->activitylastchanged again, but that doesn't matter
-                * TODO: maybe split-off the part from SCIPtightenConsExprExprInterval that tightens the auxvar bounds only and call that here instead
-                */
                SCIP_Bool tighteninfeasible;
-               SCIP_INTERVAL newactivity;
 
-               newactivity = expr->activity;
-               expr->activity = prevactivity;
-
-               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consexprhdlr, expr, newactivity, force, NULL, &tighteninfeasible, ntightenings) );
-
-               if( tighteninfeasible && infeasible != NULL )
-                  *infeasible = TRUE;
+               SCIP_CALL( tightenAuxVarBounds(scip, consexprhdlr, expr, force, &tighteninfeasible, ntightenings) );
+               if( tighteninfeasible )
+               {
+                  if( infeasible != NULL )
+                     *infeasible = TRUE;
+                  SCIPintervalSetEmpty(&expr->activity);
+                  expr->activitylastchanged = conshdlrdata->curboundstag;
+               }
             }
-
-            /* remember that activity is uptodate now */
-            expr->activitytag = conshdlrdata->curboundstag;
 
             break;
          }
@@ -12138,29 +12215,22 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    return SCIP_OKAY;
 }
 
-/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
- *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+/** tightens the activity of an expression and bounds of corresponding variable (if any)
  *
- *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
+ *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
  */
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               force,            /**< force tightening of variable bound and add to reversepropqueue even if tightening is below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    )
 {
-   SCIP_Real oldlb;
-   SCIP_Real oldub;
-   SCIP_Real newlb;
-   SCIP_Real newub;
-   SCIP_Bool tightenlb;
-   SCIP_Bool tightenub;
-   SCIP_INTERVAL newactivity;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -12170,23 +12240,15 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* the code below assumes that current activity is valid
     * if it turns out that we cannot ensure that, then we should change code
     */
-#ifndef NDEBUG
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(expr->activitytag >= conshdlrdata->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->activity));
-   }
-#endif
-
+   assert(expr->activitytag >= SCIPconshdlrGetData(conshdlr)->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->activity));
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity));
 
-   oldlb = SCIPintervalGetInf(expr->activity);
-   oldub = SCIPintervalGetSup(expr->activity);
+   *cutoff = FALSE;
 
 #ifdef DEBUG_PROP
    SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
-   SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds), force);
+   SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", expr->activity.inf, expr->activity.sup, newbounds.inf, newbounds.sup, force);
 #endif
 
    if( expr->isintegral )
@@ -12203,128 +12265,71 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 #endif
    }
 
-   SCIPintervalIntersectEps(&newactivity, SCIPepsilon(scip), expr->activity, newbounds);
-   if( newactivity.inf != expr->activity.inf || newactivity.sup != expr->activity.sup ) /*lint !e777*/
+   /* treat the new bounds as empty if either the lower/upper bound is above/below +/- SCIPinfinity() */
+   if( SCIPisInfinity(scip, newbounds.inf) || SCIPisInfinity(scip, -newbounds.sup) )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-#ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
-#endif
-
-      expr->activity = newactivity;
-      expr->activitylastchanged = conshdlrdata->curboundstag;
+      SCIPdebugMsg(scip, "cut off due to bound being beyond infinity\n");
+      SCIPintervalSetEmpty(&newbounds);
    }
-   else
+
+   /* intersect with previous activity, but ensure it's not-empty if very close disjoint intervals */
+   SCIPintervalIntersectEps(&newbounds, SCIPepsilon(scip), expr->activity, newbounds);
+
+   /* stop if new bounds are not different than previous */
+   if( newbounds.inf == expr->activity.inf && newbounds.sup == expr->activity.sup ) /*lint !e777*/
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p equals existing one\n", newbounds.inf, newbounds.sup, (void*)expr);
 #endif
+
+      return SCIP_OKAY;
    }
+
+#ifdef DEBUG_PROP
+   SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
+#endif
+
+   assert(SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, newbounds, expr->activity));  /* due to intersect above */
+
+   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback and we see a tightening */
+   if( reversepropqueue != NULL && !expr->inqueue && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
+   {
+      /* if newbounds allows a sufficient tightening, then do reversepropagation
+       * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+       * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
+       */
+      if( force ||
+          (expr->activity.inf <= -SCIP_INTERVAL_INFINITY && newbounds.inf > -SCIP_INTERVAL_INFINITY) ||
+          (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && newbounds.sup >  SCIP_INTERVAL_INFINITY) ||
+          SCIPisLbBetter(scip, newbounds.inf, expr->activity.inf, expr->activity.sup) ||
+          SCIPisUbBetter(scip, newbounds.sup, expr->activity.inf, expr->activity.sup) )
+      {
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue, new activity = [%.15g,%.15g] proper subset of previous one = [%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), newbounds.inf, newbounds.sup, expr->activity.inf, expr->activity.sup);
+#endif
+         SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+         expr->inqueue = TRUE;
+      }
+   }
+
+   /* now finally update the activity in the expression */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   expr->activity = newbounds;
+   expr->activitylastchanged = conshdlrdata->curboundstag;
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
    {
-      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%.15g,%.15g] with old bounds [%.15g,%.15g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
+      SCIPdebugMsg(scip, "cut off due to empty intersection with previous activity\n");
 
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
-   *cutoff = FALSE;
 
-   newlb = SCIPintervalGetInf(expr->activity);
-   newub = SCIPintervalGetSup(expr->activity);
-
-   /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
-   if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
-   {
-      SCIPdebugMsg(scip, "cut off due to infinite new bounds [%g,%g]\n", newlb, newub);
-
-      SCIPintervalSetEmpty(&expr->activity);
-      *cutoff = TRUE;
-
-      return SCIP_OKAY;
-   }
-
-   /* force tightening if it would mean fixing the variable */
-   force = force || SCIPisEQ(scip, newlb, newub);
-
-   /* check which bound can be tightened
-    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will likely have tightenlb|tightenub */
-   if( force )
-   {
-      tightenlb = !SCIPisHugeValue(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
-      tightenub = !SCIPisHugeValue(scip, newub) && SCIPisLT(scip, newub, oldub);
-   }
-   else
-   {
-      tightenlb = !SCIPisHugeValue(scip, -newlb) && SCIPisLbBetter(scip, newlb, oldlb, oldub);
-      tightenub = !SCIPisHugeValue(scip, newub) && SCIPisUbBetter(scip, newub, oldlb, oldub);
-   }
-
-   /* tighten interval of the expression and variable bounds of linearization variables */
-   if( tightenlb || tightenub )
-   {
-      SCIP_VAR* var;
-
-      /* tighten bounds of linearization variable
-       * but: do not tighten variable in problem stage (important for unittests)
-       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
-       */
-      var = SCIPgetConsExprExprAuxVar(expr);
-      if( var != NULL && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) )
-      {
-         SCIP_Bool tightened;
-
-         if( tightenlb )
-         {
-            SCIP_CALL( SCIPtightenVarLb(scip, var, newlb, force, cutoff, &tightened) );
-
-            if( tightened )
-            {
-               if( ntightenings != NULL )
-                  ++*ntightenings;
-               SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), newlb);
-            }
-
-            if( *cutoff )
-            {
-               SCIPintervalSetEmpty(&expr->activity);
-               return SCIP_OKAY;
-            }
-         }
-
-         if( tightenub )
-         {
-            SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
-
-            if( tightened )
-            {
-               if( ntightenings != NULL )
-                  ++*ntightenings;
-               SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), newub);
-            }
-
-            if( *cutoff )
-            {
-               SCIPintervalSetEmpty(&expr->activity);
-               return SCIP_OKAY;
-            }
-         }
-      }
-
-      /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
-      if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
-      {
-         /* @todo put children which are in the queue to the end of it! */
-#ifdef DEBUG_PROP
-         SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-#endif
-         SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
-         expr->inqueue = TRUE;
-      }
-   }
+   /* update bounds on auxiliary variable */
+   SCIP_CALL( tightenAuxVarBounds(scip, conshdlr, expr, force, cutoff, ntightenings) );
 
    return SCIP_OKAY;
 }
