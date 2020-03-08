@@ -1377,7 +1377,7 @@ SCIP_RETCODE forwardPropExpr(
             }
 
             /* tighten activity from inteval with prevactivity and auxiliary variable bounds (if any) */
-#if 0
+#if 1
             SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, prevactivity);
             if( expr->auxvar != NULL )
                SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, auxvarbounds);
