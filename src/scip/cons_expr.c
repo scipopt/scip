@@ -1332,6 +1332,13 @@ SCIP_RETCODE forwardPropExpr(
 #endif
             }
 
+            /* mark the current node to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
+            if( SCIPisInfinity(scip, expr->activity.inf) || SCIPisInfinity(scip, -expr->activity.sup) )
+            {
+               SCIPdebugMsg(scip, "cut off due to activity [%g,%g] beyond infinity\n", expr->activity.inf, expr->activity.sup);
+               SCIPintervalSetEmpty(&expr->activity);
+            }
+
             /* get interval with auxiliary variable bounds */
             if( expr->auxvar != NULL )
             {
@@ -1358,11 +1365,10 @@ SCIP_RETCODE forwardPropExpr(
 
                /* if compareinterval allow a further tightening, then do reversepropagation
                 * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
-                * but skip if interval is beyond SCIP-infinity (something like [-5e20,-2e20]; mainly because asserts in SCIPisXbBetter fail then)
+                * if not force, require a minimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
                 */
                if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, expr->activity, compareinterval)) ||
-                  (!force && !SCIPisInfinity(scip, expr->activity.inf) && !SCIPisInfinity(scip, -expr->activity.sup) &&
+                  (!force &&
                      ((expr->activity.inf <= -SCIP_INTERVAL_INFINITY && compareinterval.inf > -SCIP_INTERVAL_INFINITY) ||
                       (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && compareinterval.sup >  SCIP_INTERVAL_INFINITY) ||
                         SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
@@ -1376,36 +1382,25 @@ SCIP_RETCODE forwardPropExpr(
                }
             }
 
-            /* tighten activity from inteval with prevactivity and auxiliary variable bounds (if any) */
-#if 1
-            SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, prevactivity);
-            if( expr->auxvar != NULL )
-               SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, auxvarbounds);
-#else
-            if( expr->auxvar != NULL )
-               SCIPintervalIntersectEps(&auxvarbounds, SCIPepsilon(scip), prevactivity, auxvarbounds);
-            else
-               auxvarbounds = prevactivity;
-            SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, auxvarbounds);
-#endif
-#ifdef DEBUG_PROP
-            SCIPdebugMsg(scip, " apply previous activity = [%.20g, %.20g] and auxvar <%s> bounds = [%.20g, %.20g]: [%.20g, %.20g]\n",
-               prevactivity.inf, prevactivity.sup,
-               expr->auxvar != NULL ? SCIPvarGetName(expr->auxvar) : "n/a",
-               expr->auxvar != NULL ? auxvarbounds.inf : -SCIP_INTERVAL_INFINITY,
-               expr->auxvar != NULL ? auxvarbounds.sup :  SCIP_INTERVAL_INFINITY,
-               expr->activity.inf, expr->activity.sup);
-#endif
-
-            /* mark the current node to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
-            if( SCIPisInfinity(scip, expr->activity.inf) || SCIPisInfinity(scip, -expr->activity.sup) )
+            if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               SCIPdebugMsg(scip, "cut off due to activity [%g,%g] beyond infinity\n", expr->activity.inf, expr->activity.sup);
-               SCIPintervalSetEmpty(&expr->activity);
+               /* tighten activity from inteval with prevactivity and auxiliary variable bounds (if any) */
+               SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, prevactivity);
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " apply previous activity = [%.20g, %.20g]: [%.20g, %.20g]\n", prevactivity.inf, prevactivity.sup, expr->activity.inf, expr->activity.sup);
+#endif
+               if( expr->auxvar != NULL )
+               {
+                  SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, auxvarbounds);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " apply auxvar <%s> bounds = [%.20g, %.20g]: [%.20g, %.20g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
+#endif
+               }
             }
 
             if( expr->activity.inf != prevactivity.inf || expr->activity.sup != prevactivity.sup ) /*lint !e777*/
             {
+               /* remember that activity has changed now */
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, " new activity != previous one -> activitylastchanged = %d\n", conshdlrdata->curboundstag);
 #endif
