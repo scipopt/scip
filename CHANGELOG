@@ -163,7 +163,6 @@ Features
 
 - added emphasis setting for numerically challenging instances
 
-
 Performance improvements
 ------------------------
 
@@ -240,6 +239,7 @@ Interface changes
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
   + add interface to Glop
+  + fixed mapping between scaling parameter values in Gurobi LPI lpi_grb
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
@@ -290,7 +290,7 @@ Interface changes
   because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
 
 - linking constraint handler:
-  - changed type of vals argument from int *to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
+  - changed type of vals argument from int* to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
   - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
@@ -580,6 +580,8 @@ Unit tests
 Testing
 -------
 
+ - fixed an issue that may have lead to wrong status reports in the evaluation scripts
+
 Build system
 ------------
 
@@ -644,6 +646,7 @@ Fixed bugs
 - fixed bug in pricestore, which resulted in too many problem variables being added
 - fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 - fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
+- fixed bug in debug solution mechanism in connection to variables created by presol_inttobinary
 - fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
 - redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
 - fixed adding already added quadratic rows to NLP relaxation during solve
@@ -654,10 +657,11 @@ Fixed bugs
 - fixed a case when activities of a linear constraint got unreliable but where still used for reductions
 - ensure that lhs <= rhs for linear constraints (without tolerances)
 - make handling of read errors in SCIPfread() consistent between version with and without ZLIB
-- correclty drop variable events in cons_indicator in restart
+- correctly drop variable events in cons_indicator in restart
 - fixed bug in cons_orbitope with upgrading of orbitope constraints
 - additional checks in some presolvers for time limit being exceeded
 - fixed bug in presolving of cons_varbound with multi-aggregated variables
+- improve numerics in conflict analysis by using double-double arithmetic
 
 Miscellaneous
 -------------
