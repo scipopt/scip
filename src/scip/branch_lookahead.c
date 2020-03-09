@@ -2428,13 +2428,13 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the lb is now strictly greater than before */
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened (%d).\n",
-               SCIPvarGetName(var), domreds->lowerboundnproofs[i]);
             *domred = TRUE;
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
             nboundsadded++;
 #endif
 #ifdef SCIP_STATISTIC
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened (%d).\n",
+               SCIPvarGetName(var), domreds->lowerboundnproofs[i]);
             statistics->ndomredproofnodes += domreds->lowerboundnproofs[i];
 #endif
 
@@ -2479,13 +2479,13 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the ub is now strictly smaller than before */
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened (%d).\n",
-               SCIPvarGetName(var), domreds->upperboundnproofs[i]);
             *domred = TRUE;
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
             nboundsadded++;
 #endif
 #ifdef SCIP_STATISTIC
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened (%d).\n",
+               SCIPvarGetName(var), domreds->upperboundnproofs[i]);
             statistics->ndomredproofnodes += domreds->upperboundnproofs[i];
 #endif
 
