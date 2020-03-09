@@ -1365,14 +1365,17 @@ SCIP_RETCODE forwardPropExpr(
 
                /* if compareinterval allow a further tightening, then do reversepropagation
                 * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-                * if not force, require a minimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
+                * if not force, require a change from unbounded to bounded,
+                *   or a minimal tightening as defined by SCIPis{Lb,Ub}Better,
+                *   or a change from unfixed to fixed
                 */
                if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, expr->activity, compareinterval)) ||
                   (!force &&
                      ((expr->activity.inf <= -SCIP_INTERVAL_INFINITY && compareinterval.inf > -SCIP_INTERVAL_INFINITY) ||
                       (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && compareinterval.sup >  SCIP_INTERVAL_INFINITY) ||
-                        SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
-                        SCIPisUbBetter(scip, compareinterval.sup, expr->activity.inf, expr->activity.sup))) )
+                      (SCIPisEQ(scip, expr->activity.inf, expr->activity.sup) && !SCIPisEQ(scip, compareinterval.inf, compareinterval.sup)) ||
+                      SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
+                      SCIPisUbBetter(scip, compareinterval.sup, expr->activity.inf, expr->activity.sup))) )
                {
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue, new activity = [%.15g,%.15g] is not subset of previous one = [%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup, compareinterval.inf, compareinterval.sup);
