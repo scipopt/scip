@@ -12280,36 +12280,31 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-#ifdef DEBUG_PROP
-   SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
-#endif
-
    assert(SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, newbounds, expr->activity));  /* due to intersect above */
 
-   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback and we see a tightening */
-   if( reversepropqueue != NULL && !expr->inqueue && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
+   /* if newbounds do not allow a sufficient tightening, then do not store new activity and do not add to queue for reverse propagation
+    * if not force, require a change from unbounded to bounded, a fixing, or a minimal tightening as defined by SCIPis{Lb,Ub}Better
+    */
+   if( !force &&
+       (expr->activity.inf > -SCIP_INTERVAL_INFINITY || newbounds.inf <= -SCIP_INTERVAL_INFINITY) &&  /* lower bound still unbounded */
+       (expr->activity.sup <  SCIP_INTERVAL_INFINITY || newbounds.sup <=  SCIP_INTERVAL_INFINITY) &&  /* upper bound still unbounded */
+       !SCIPisEQ(scip, newbounds.inf, newbounds.sup) &&  /* new bounds are not fixing activity */
+       !SCIPisLbBetter(scip, newbounds.inf, expr->activity.inf, expr->activity.sup) &&  /* lower bound is not sufficiently better */
+       !SCIPisUbBetter(scip, newbounds.sup, expr->activity.inf, expr->activity.sup) )   /* upper bound is not sufficiently better */
    {
-      /* if newbounds allows a sufficient tightening, then do reversepropagation
-       * might provide tighter bounds for children, thus add this expression to the reversepropqueue
-       * if not force, require a mimimal tightening as defined by SCIPis{Lb,Ub}Better of change from unbounded to bounded,
-       */
-      if( force ||
-          (expr->activity.inf <= -SCIP_INTERVAL_INFINITY && newbounds.inf > -SCIP_INTERVAL_INFINITY) ||
-          (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && newbounds.sup >  SCIP_INTERVAL_INFINITY) ||
-          SCIPisLbBetter(scip, newbounds.inf, expr->activity.inf, expr->activity.sup) ||
-          SCIPisUbBetter(scip, newbounds.sup, expr->activity.inf, expr->activity.sup) )
-      {
 #ifdef DEBUG_PROP
-         SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue, new activity = [%.15g,%.15g] proper subset of previous one = [%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), newbounds.inf, newbounds.sup, expr->activity.inf, expr->activity.sup);
+      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p not sufficiently tighter than existing one -- rejecting update\n", newbounds.inf, newbounds.sup, (void*)expr);
 #endif
-         SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
-         expr->inqueue = TRUE;
-      }
+      return SCIP_OKAY;
    }
 
    /* now finally update the activity in the expression */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+#ifdef DEBUG_PROP
+   SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
+#endif
 
    expr->activity = newbounds;
    expr->activitylastchanged = conshdlrdata->curboundstag;
@@ -12321,6 +12316,16 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
       *cutoff = TRUE;
       return SCIP_OKAY;
+   }
+
+   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback and we see a tightening */
+   if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
+   {
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+#endif
+      SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+      expr->inqueue = TRUE;
    }
 
    /* update bounds on auxiliary variable */
