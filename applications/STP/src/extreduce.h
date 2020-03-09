@@ -68,6 +68,7 @@ typedef struct extension_data_permanent
    SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
    int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
    int                   nnodes;             /**< number of nodes */
+   SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
 } EXTPERMA;
 
 
@@ -168,6 +169,17 @@ typedef struct extension_data
 } EXTDATA;
 
 
+/** initial extension component */
+typedef struct initial_extension_component
+{
+   int*                  compedges;          /**< edges of the component */
+   int*                  extleaves;          /**< leaves to extend from */
+   int                   nextleaves;         /**< number of extension nodes */
+   int                   ncompedges;         /**< number of edges of the component */
+   int                   comproot;           /**< component root */
+} EXTCOMP;
+
+
 /* inline methods
  */
 
@@ -228,6 +240,21 @@ int extLeafFindPos(
 }
 
 
+/** can we extend the tree from given leaf? */
+inline static
+SCIP_Bool extLeafIsExtendable(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
+   int                   leaf                /**< the leaf */
+)
+{
+   assert(graph && isterm);
+   assert(leaf >= 0 && leaf < graph->knots);
+
+   return (!isterm[leaf] && graph->grad[leaf] <= STP_EXT_MAXGRAD);
+}
+
+
 /** Gets proper SD value. I.e., non-negative, but possible FARAWAY */
 static inline
 SCIP_Real extSdGetProper(
@@ -256,13 +283,17 @@ extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_core.c
  */
-extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, SCIP_Bool, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+
+extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
 
 /* extreduce_util.c
  */
+extern void               extreduce_extCompRevert(const GRAPH*, const EXTPERMA*, EXTCOMP*);
+extern SCIP_Bool          extreduce_extCompIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
@@ -328,6 +359,8 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 
 /* extreduce_data.c
  */
+
+void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, EXTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);

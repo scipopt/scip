@@ -64,8 +64,10 @@ SCIP_RETCODE extCheckArc(
       assert(graph_isMarked(graph));
    }
 
+   extpermanent.redcostEqualAllow = equality;
+
    /* actual test */
-   SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, edge, equality, &distdata, &extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, edge, &distdata, &extpermanent, deletable) );
 
    /* clean up */
    extreduce_extPermaFreeMembers(scip, &extpermanent);
@@ -95,8 +97,10 @@ SCIP_RETCODE extCheckEdge(
    SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, &distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
+   extpermanent.redcostEqualAllow = allowEquality;
+
    /* actual test */
-   SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, edge, allowEquality, &distdata, &extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, edge, &distdata, &extpermanent, deletable) );
 
    /* clean up */
    extreduce_extPermaFreeMembers(scip, &extpermanent);

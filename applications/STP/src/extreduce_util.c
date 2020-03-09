@@ -1001,6 +1001,79 @@ SCIP_Real distDataGetNormalDist(
  */
 
 
+/** reverts extension component (makes root the only extension leaf) */
+void extreduce_extCompRevert(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTPERMA*       extperma,           /**< extension data */
+   EXTCOMP*              extcomp             /**< component to be cleaned for */
+)
+{
+   int* const extleaves = extcomp->extleaves;
+   int* const compedges = extcomp->compedges;
+   const int ncompedges = extcomp->ncompedges;
+   const int comproot_org = extcomp->comproot;
+
+#ifndef NDEBUG
+   assert(extcomp->ncompedges >= 1);
+   assert(extcomp->comproot == graph->tail[extcomp->compedges[0]]);
+   if( extcomp->ncompedges == 1 )
+   {
+      assert(extcomp->ncompedges == 1);
+      assert(extcomp->nextleaves == 1);
+   }
+   else
+   {
+      assert(extcomp->ncompedges >= 3);
+      assert(extcomp->nextleaves >= 2);
+   }
+#endif
+
+   for( int i = 0; i < ncompedges; ++i )
+   {
+      compedges[i] = flipedge(compedges[i]);
+   }
+
+   assert(extleaves[0] != extcomp->comproot);
+
+   extcomp->comproot = extleaves[0];
+   extleaves[0] = comproot_org;
+   extcomp->nextleaves = 1;
+}
+
+
+/** is extension component promising candidate for extension? */
+SCIP_Bool extreduce_extCompIsPromising(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTPERMA*       extperma,           /**< extension data */
+   const EXTCOMP*        extcomp             /**< component to be cleaned for */)
+{
+   const int* const extleaves = extcomp->extleaves;
+   const SCIP_Bool* const isterm = extperma->isterm;
+   const STP_Bool* const edgedeleted = extperma->edgedeleted;
+   const int nextleaves = extcomp->nextleaves;
+   const SCIP_Bool compIsSingleEdge = (extcomp->ncompedges == 1);
+
+   assert(extcomp->ncompedges == 1 || extcomp->ncompedges >= 3);
+
+   /* single edge deletion and already deleted? */
+   if( compIsSingleEdge && edgedeleted && edgedeleted[extcomp->compedges[0]] )
+   {
+      return FALSE;
+   }
+
+   /* go over all possible extensions and see whether any of them are promising */
+   for( int i = 0; i < nextleaves; ++i )
+   {
+      const int leaf = extleaves[i];
+
+      if( extLeafIsExtendable(graph, isterm, leaf) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** initializes distance data */
 SCIP_RETCODE extreduce_distDataInit(
    SCIP*                 scip,               /**< SCIP */

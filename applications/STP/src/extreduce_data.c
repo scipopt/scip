@@ -37,6 +37,88 @@
 
 
 
+
+
+/** helper function */
+static inline
+void postCleanSDs(
+   MLDISTS*              sds                 /**< distance structure */
+)
+{
+   const int nlevels = extreduce_mldistsNlevels(sds);
+
+   assert(nlevels == 2 || nlevels == 1);
+
+   extreduce_mldistsLevelRemoveTop(sds);
+
+   if( nlevels == 2 )
+      extreduce_mldistsLevelRemoveTop(sds);
+}
+
+
+/** helper function */
+static inline
+void postCleanMSTs(
+    CSRDEPO*              msts                /**< CSR depository containing MSTs */
+)
+{
+#ifndef NDEBUG
+   const int nmsts = graph_csrdepo_getNcsrs(msts);
+
+   assert(nmsts == 1 || nmsts == 2);
+#endif
+
+   graph_csrdepo_clean(msts);
+}
+
+
+/** cleans-up after trying to rule out a component */
+void extreduce_extCompClean(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be cleaned for */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+   MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+   CSRDEPO* const msts_comp = reddata->msts_comp;
+   CSRDEPO* const msts_levelbase = reddata->msts_levelbase;
+   const int* const compedges = extcomp->compedges;
+   const int ncompedges = extcomp->ncompedges;
+   int* const tree_deg = extdata->tree_deg;
+
+   assert(ncompedges >= 1);
+
+   for( int i = 0; i < ncompedges; ++i )
+   {
+      const int edge = compedges[i];
+      const int head = graph->head[edge];
+      const int tail = graph->tail[edge];
+
+      tree_deg[head] = 0;
+      tree_deg[tail] = 0;
+
+      graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
+   }
+
+   postCleanSDs(sds_vertical);
+   postCleanSDs(sds_horizontal);
+
+   postCleanMSTs(msts_comp);
+   postCleanMSTs(msts_levelbase);
+
+   extreduce_extdataClean(extdata);
+   extreduce_reddataClean(extdata->reddata);
+   extreduce_pcdataClean(extdata->pcdata);
+
+   assert(extreduce_extdataIsClean(graph, extdata));
+   assert(extreduce_reddataIsClean(graph, extdata->reddata));
+   assert(extreduce_pcdataIsClean(graph, extdata->pcdata));
+}
+
+
 /** initialize permanent extension data struct */
 SCIP_RETCODE extreduce_extPermaInit(
    SCIP*                 scip,               /**< SCIP */
@@ -87,6 +169,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    extperm->pcSdToNode = pcSdToNode;
    extperm->tree_deg = tree_deg;
    extperm->nnodes = nnodes;
+   extperm->redcostEqualAllow = FALSE;
 
    if( pcmw )
    {

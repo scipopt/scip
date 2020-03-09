@@ -31,6 +31,9 @@
 #include "graph.h"
 #include "extreduce.h"
 
+#define EXT_PSEUDO_DEGREE_MIN 3
+#define EXT_PSEUDO_DEGREE_MAX 5
+
 #ifndef NDEBUG
 /** all good with the graph->mark array? */
 static
@@ -53,6 +56,45 @@ SCIP_Bool graphmarkIsClean(
    return TRUE;
 }
 #endif
+
+
+/** is node a good candidate for pseudo deletion? */
+static inline
+SCIP_Bool pseudodeleteNodeIsPromising(
+   const GRAPH*          g,                  /**< graph data structure  */
+   int                   node                /**< node */
+)
+{
+   const SCIP_Bool pc = graph_pc_isPc(g);
+   int degree = -1;
+
+   assert(node >= 0);
+
+   if( pc )
+   {
+      if( !g->mark[node] || graph_pc_knotIsFixedTerm(g, node) )
+         return FALSE;
+
+      if( Is_term(g->term[node]) && !graph_pc_termIsNonLeafTerm(g, node) )
+         return FALSE;
+
+      degree = graph_pc_realDegree(g, node, FALSE);
+   }
+   else
+   {
+      if( Is_term(g->term[node]) )
+         return FALSE;
+
+      degree = g->grad[node];
+   }
+
+   assert(degree >= 0);
+
+   if( degree < EXT_PSEUDO_DEGREE_MIN || degree > EXT_PSEUDO_DEGREE_MAX  )
+      return FALSE;
+
+   return TRUE;
+}
 
 
 /** deletes an edge and makes corresponding adaptations */
@@ -179,10 +221,12 @@ SCIP_RETCODE extreduce_deleteArcs(
          if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
 
+         extpermanent.redcostEqualAllow = allowequality;
+
          if( !edgedeletable[e] )
          {
             SCIP_Bool deletable;
-            SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, e, allowequality, &distdata, &extpermanent,
+            SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, e, &distdata, &extpermanent,
                   &deletable) );
 
             if( deletable )
@@ -193,7 +237,7 @@ SCIP_RETCODE extreduce_deleteArcs(
          {
             SCIP_Bool erevdeletable = FALSE;
 
-            SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, erev, allowequality, &distdata, &extpermanent,
+            SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, erev, &distdata, &extpermanent,
                   &erevdeletable) );
 
             if( erevdeletable )
@@ -258,7 +302,11 @@ SCIP_RETCODE extreduce_deleteEdges(
          if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
 
-         SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, e, allowequality, &distdata, &extpermanent, &deletable) );
+         extpermanent.redcostEqualAllow = allowequality;
+
+         // todo acually utilize the allow equality!
+
+         SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, e, &distdata, &extpermanent, &deletable) );
 
          if( deletable )
          {
@@ -275,6 +323,7 @@ SCIP_RETCODE extreduce_deleteEdges(
 
    return SCIP_OKAY;
 }
+
 
 
 /** extended reduction test for pseudo-eliminating nodes */
@@ -294,6 +343,7 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
 
    assert(scip && redcostdata && edgedeletable);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
+   assert(graph_isMarked(graph));
 
    *nelims = 0;
 
@@ -304,18 +354,37 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDeletable, nnodes) );
 
-   /* main loop */
    for( int i = 0; i < nnodes; ++i )
    {
       SCIP_Bool nodeisDeletable = FALSE;
 
-      SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, FALSE, &distdata, &extpermanent, &nodeisDeletable) );
+      if( pseudodeleteNodeIsPromising(graph, i) )
+      {
+         // todo set allow equality here
+
+         SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, &distdata, &extpermanent, &nodeisDeletable) );
+      }
 
       pseudoDeletable[i] = nodeisDeletable;
    }
 
    // todo: perform the actual pseudo-elimination based on pseudoDeletable
 
+   // todo: if single edges are ledge, try to eliminate via extended reudction?
+
+   /* do the actual pseudo-eliminations now */
+   for( int i = 0; i < nnodes; ++i )
+   {
+      SCIP_Bool success;
+
+      if( !pseudoDeletable[i] )
+         continue;
+
+      // todo: fill cuttoff value from SD...probably would be good to give both SD and DA dists to method! need extra struct...and method!
+      // outsource the creation of the cuttoff array!
+      SCIP_CALL(graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, i, &success));
+
+   }
 
 
    SCIPfreeBufferArray(scip, &pseudoDeletable);
@@ -323,6 +392,174 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
    extFree(scip, graph, &distdata, &extpermanent);
 
    assert(graphmarkIsClean(redcostdata, graph));
+
+   return SCIP_OKAY;
+}
+
+
+/** check (directed) arc */
+SCIP_RETCODE extreduce_checkArc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   int                   edge,               /**< edge to be checked */
+   DISTDATA*             distdata,           /**< data for distance computations */
+   EXTPERMA*             extpermanent,       /**< extension data */
+   SCIP_Bool*            edgeIsDeletable     /**< is edge deletable? */
+)
+{
+   const SCIP_Bool* isterm = extpermanent->isterm;
+   const int root = redcostdata->redCostRoot;
+   const SCIP_Real* redcost = redcostdata->redEdgeCost;
+   const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
+   const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
+   const SCIP_Real cutoff = redcostdata->cutoff;
+   const int head = graph->head[edge];
+   const int tail = graph->tail[edge];
+   const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + nodeToTermpaths[head].dist;
+   SCIP_Bool restoreAntiArcDeleted = FALSE;
+   STP_Bool* const edgedeleted = extpermanent->edgedeleted;
+
+   assert(scip && graph && redcost && rootdist && nodeToTermpaths && distdata);
+   assert(edge >= 0 && edge < graph->edges);
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
+   assert(graph->mark[tail] && graph->mark[head]);
+   assert(graph_isMarked(graph));
+   assert(extreduce_extPermaIsClean(graph, extpermanent));
+
+   /* trivial rule-out? */
+   if( SCIPisGT(scip, edgebound, cutoff) || (extpermanent->redcostEqualAllow && SCIPisEQ(scip, edgebound, cutoff)) || head == root )
+   {
+      *edgeIsDeletable = TRUE;
+      return SCIP_OKAY;
+   }
+
+   if( edgedeleted && !edgedeleted[flipedge(edge)] )
+   {
+      edgedeleted[flipedge(edge)] = TRUE;
+      restoreAntiArcDeleted = TRUE;
+   }
+
+   *edgeIsDeletable = FALSE;
+
+   /* can we extend from 'edge'? */
+   if( extLeafIsExtendable(graph, isterm, head) )
+   {
+      int comphead = graph->head[edge];
+      int compedge = edge;
+      EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
+         .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge] };
+
+      SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
+   }
+
+   if( restoreAntiArcDeleted )
+   {
+      assert(edgedeleted);
+      edgedeleted[flipedge(edge)] = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** check edge */
+SCIP_RETCODE extreduce_checkEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   int                   edge,               /**< edge to be checked */
+   DISTDATA*             distdata,           /**< data for distance computations */
+   EXTPERMA*             extpermanent,       /**< extension data */
+   SCIP_Bool*            edgeIsDeletable     /**< is edge deletable? */
+)
+{
+   assert(scip && graph && edgeIsDeletable && distdata && extpermanent);
+   assert(edge >= 0 && edge < graph->edges);
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
+   assert(graph_isMarked(graph));
+   assert(extreduce_extPermaIsClean(graph, extpermanent));
+
+   *edgeIsDeletable = FALSE;
+
+   {
+      int comphead = graph->head[edge];
+      int compedge = edge;
+      EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
+                          .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge] };
+
+      SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** check node for possible  */
+SCIP_RETCODE extreduce_checkNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   int                   node,               /**< node to be checked */
+   DISTDATA*             distdata,           /**< data for distance computations */
+   EXTPERMA*             extpermanent,       /**< extension data */
+   SCIP_Bool*            isPseudoDeletable   /**< is node pseudo-deletable? */
+)
+{
+   int degree;
+   int degree_count;
+   int comproot = -1;
+   int* compedges;
+   int* extleaves;
+
+   assert(scip && graph && redcostdata && distdata && extpermanent && isPseudoDeletable);
+   assert(node >= 0 && node < graph->knots);
+
+   degree = graph->grad[node];
+   assert(degree >= 3);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &compedges, degree) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &extleaves, degree - 1) );
+
+   degree_count = 0;
+
+   for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      if( 0 == degree_count )
+      {
+         compedges[degree_count] = flipedge(e);
+         comproot = graph->head[e];
+      }
+      else
+      {
+         compedges[degree_count] = e;
+         extleaves[degree_count - 1] = graph->head[e];
+      }
+
+      degree_count++;
+   }
+
+   assert(degree_count == degree);
+   assert(comproot >= 0);
+
+   {
+      EXTCOMP extcomp = { .compedges = compedges, .extleaves = extleaves,
+                          .nextleaves = degree - 1, .ncompedges = degree, .comproot = comproot };
+
+      SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isPseudoDeletable) );
+
+   }
+
+   // todo: if not successfull, try with root as only ext leaf!
+
+
+   // todo: this function (or subfunction) should put one MST after the other on the stack, in order to be able to find
+   // pseudo-deletable edges!
+
+
+
+   SCIPfreeBufferArray(scip, &extleaves);
+   SCIPfreeBufferArray(scip, &compedges);
 
    return SCIP_OKAY;
 }
