@@ -1133,28 +1133,24 @@ void extProcessInitialComponent(
    const GRAPH*          graph,              /**< graph data structure */
    const EXTCOMP*        extcomp,            /**< component to be checked */
    EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            ruledOut            /**< initial component ruled out? */
+   SCIP_Bool*            ruledOut,           /**< initial component ruled out? */
+   SCIP_Bool*            success             /**< extension successful? */
 )
 {
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
    const int comproot = extcomp->comproot;
-   SCIP_Bool success;
    SCIP_Bool conflict;
 
    assert(compedges);
    assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
    assert(ncompedges < extdata->extstack_maxsize);
    assert(comproot >= 0 && comproot < graph->knots);
-   assert(!(*ruledOut));
+   assert(FALSE == (*ruledOut) && TRUE == (*success));
 
 #ifdef SCIP_DEBUG
    printf("\n --- ADD initial component --- \n\n");
 #endif
-
-   // todo method needs to be adapted for pseudo-elimination!
-   // maybe add a dummy first entry to stack...if that is reached the elimination is successful
-   assert(ncompedges == 1);
 
    for( int i = 0; i < ncompedges; i++ )
    {
@@ -1187,10 +1183,9 @@ void extProcessInitialComponent(
    extdata->tree_deg[comproot] = 1;
 
    /* expand the single edge */
-   success = TRUE;
-   extStackTopExpand(scip, graph, extdata, &success);
+   extStackTopExpand(scip, graph, extdata, success);
 
-   assert(success);
+   assert(*success);
    assert(extStackGetPosition(extdata) == 0);
 
    /* early rule-out? */
@@ -1221,15 +1216,13 @@ void extProcessInitialComponent(
    /* the single edge component could not be ruled-out, so set its stage to 'marked' */
    extdata->extstack_state[extStackGetPosition(extdata)] = EXT_STATE_MARKED;
 
-   extExtend(scip, graph, extdata, &success);
+   extExtend(scip, graph, extdata, success);
 
-   assert(success);
+   assert(success || ncompedges >= 3);
 }
 
 
-/** Check whether edge can be deleted.
- *  Only extends from the 'head' of the edge! */
-// todo middle function in between for single arcs?
+/** Checks whether component can be ruled out. */
 static
 void extProcessComponent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1249,11 +1242,11 @@ void extProcessComponent(
 
    assert(!(*deletable));
 
-   /* put 'edge' on the stack */
-   extProcessInitialComponent(scip, graph, extcomp, extdata, deletable);
+   /* put 'extcomp' on the stack */
+   extProcessInitialComponent(scip, graph, extcomp, extdata, deletable, &success);
 
-   /* early rule-out? */
-   if( *deletable )
+   /* early rule-out? or no success? */
+   if( *deletable || !success )
    {
       extreduce_extCompClean(scip, graph, extcomp, extdata);
       return;
@@ -1261,7 +1254,6 @@ void extProcessComponent(
 
    assert(extstack_state[0] == EXT_STATE_MARKED);
 
-   // todo put this loop in some 'extCheckComponent' and add extProcessInitialEdge, extProcessInitialPseudoNode
    /* limited DFS backtracking; stops once back at 'edge' */
    while( extdata->extstack_ncomponents > 1 )
    {
@@ -1347,6 +1339,7 @@ SCIP_RETCODE extreduce_checkComponent(
    const int nnodes = graph->knots;
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
+   const SCIP_Bool isPseudoElim = (extcomp->ncompedges > 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, maxncomponents + 1) );
@@ -1362,6 +1355,8 @@ SCIP_RETCODE extreduce_checkComponent(
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
+   /* is the component (or the reverted one) promising? Or are we trying pseudo elimination? */
+   if( extreduce_extCompFullIsPromising(graph, extpermanent, extcomp) || isPseudoElim )
    {
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
          .tree_innerPrize = 0.0 };

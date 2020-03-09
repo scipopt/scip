@@ -1074,6 +1074,24 @@ SCIP_Bool extreduce_extCompIsPromising(
 }
 
 
+/** is extension component or its reversed version promising candidate for extension? */
+SCIP_Bool extreduce_extCompFullIsPromising(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTPERMA*       extperma,           /**< extension data */
+   const EXTCOMP*        extcomp             /**< component to be cleaned for */)
+{
+   assert(graph && extperma && extcomp);
+
+   if( extreduce_extCompIsPromising(graph, extperma, extcomp) )
+      return TRUE;
+
+   if( extLeafIsExtendable(graph, extperma->isterm, extcomp->comproot) )
+      return TRUE;
+
+   return FALSE;
+}
+
+
 /** initializes distance data */
 SCIP_RETCODE extreduce_distDataInit(
    SCIP*                 scip,               /**< SCIP */

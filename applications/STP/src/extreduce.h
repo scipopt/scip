@@ -294,6 +294,7 @@ extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, 
  */
 extern void               extreduce_extCompRevert(const GRAPH*, const EXTPERMA*, EXTCOMP*);
 extern SCIP_Bool          extreduce_extCompIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
+extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
