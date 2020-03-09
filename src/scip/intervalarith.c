@@ -93,11 +93,15 @@ void intervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
+#ifndef NDEBUG
    if( fesetround(roundmode) != 0 )
    {
       SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
       abort();
    }
+#else
+   (void) fesetround(roundmode);
+#endif
 }
 
 /** gets current rounding mode of floating point operations */
@@ -141,11 +145,15 @@ void intervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
+#ifndef NDEBUG
    if( write_rnd(roundmode) != 0 )
    {
       SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
       abort();
    }
+#else
+   (void) write_rnd(roundmode);
+#endif
 }
 
 /** gets current rounding mode of floating point operations */
@@ -189,11 +197,15 @@ void intervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
+#ifndef NDEBUG
    if( (_controlfp(roundmode, _MCW_RC) & _MCW_RC) != roundmode )
    {
       SCIPerrorMessage("error setting rounding mode to %x\n", roundmode);
       abort();
    }
+#else
+   (void) _controlfp(roundmode, _MCW_RC);
+#endif
 }
 
 /** gets current rounding mode of floating point operations */
