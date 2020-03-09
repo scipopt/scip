@@ -230,8 +230,6 @@ struct SCIP_ConshdlrData
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             enforound;       /**< total number of enforcement calls, including current one */
 
-   SCIP_Longint             lastpropnodenum; /**< number of node for which propagation has been called last */
-
    int                      lastconsindex;   /**< last used consindex, plus one */
 
    /* parameters */
@@ -1635,9 +1633,6 @@ SCIP_RETCODE propConss(
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
    cutoff = FALSE;
-
-   /* remember that we called propagation for this node */
-   conshdlrdata->lastpropnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* main propagation loop */
    do
@@ -6681,14 +6676,10 @@ SCIP_RETCODE consEnfo(
    if( conshdlrdata->propinenforce )
    {
       SCIP_RESULT propresult;
-      SCIP_Bool force;
       int nchgbds = 0;
       int ndelconss = 0;
 
-      /* force tightenings when calling propagation for the first time for a node */
-      force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
-      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
+      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
 
       if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
       {
@@ -8979,7 +8970,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
    SCIP_RESULT propresult;
-   SCIP_Bool force;
    unsigned int soltag;
    int nchgbds;
    int ndelconss;
@@ -9000,15 +8990,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
-   /* force tightenings when calling propagation for the first time for a node */
-   force = conshdlrdata->lastpropnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
    /* try to propagate
     * TODO obey propinenfo parameter, but we need something to recognize cutoff
     */
    nchgbds = 0;
    ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
 
    if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
@@ -9150,18 +9137,10 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   SCIP_Bool force;
-   int nchgbds;
-   int ndelconss;
+   int nchgbds = 0;
+   int ndelconss = 0;
 
-   /* force tightenings when calling propagation for the first time for a node */
-   force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
-   nchgbds = 0;
-   ndelconss = 0;
-
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, result, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, SCIPgetDepth(scip) == 0, result, &nchgbds, &ndelconss) );
    assert(nchgbds >= 0);
 
    /* TODO would it make sense to check for redundant constraints? */
@@ -9204,7 +9183,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds, ndelconss) );
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
