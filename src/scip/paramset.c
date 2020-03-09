@@ -3958,23 +3958,32 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
+
       /* The higher the Markowitz Parameter is, more sparse pivots will be ignored and the numerically
       more stable ones will be used as pivot */
-      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999 , quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999, quiet) );
+
       /* Added parameters as suggested here: https://git.zib.de/integer/scip/issues/2002#note_92716 */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/fastmip", 0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/scaling", 2, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 20, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 40, quiet) );
+
       /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultaggrquot", 10.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxdualmultaggrquot", 10.0, quiet) );
+
       /* When upgrading constr with knapsack/setppc causes problems */
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack" , 0, quiet) );
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc", FALSE, quiet) );
+
       /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation" , 0, quiet) );
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques" , 0, quiet) );
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
+
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
 #ifdef SCIP_WITH_PRESOLVELIB
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );

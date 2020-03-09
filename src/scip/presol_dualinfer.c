@@ -1179,7 +1179,7 @@ void infinityCountUpdate(
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
    SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
    SCIP_Bool*            isubimplied,        /**< flags indicating of the upper bound is implied */
-   SCIP_Real*            mincolact ,         /**< minimal column activities */
+   SCIP_Real*            mincolact,          /**< minimal column activities */
    int*                  mincolactinf,       /**< number of infinity contributions to minimal column activity */
    SCIP_Bool             ubinfchange,        /**< flag indicating if the upper bound has changed from infinity to a finite value */
    SCIP_Bool             lbinfchange         /**< flag indicating if the lower bound has changed from -infinity to a finite value */
@@ -1390,7 +1390,6 @@ SCIP_RETCODE determineBestBounds(
          SCIP_CALL( SCIPaddCons(subscip, constraints[cidx]) );
       }
    }
-
 
    /* determine lower dual bound via a minimization problem */
    SCIP_CALL( SCIPsetObjsense(subscip,SCIP_OBJSENSE_MINIMIZE) );
@@ -1706,7 +1705,6 @@ SCIP_RETCODE dualBoundStrengthening(
 
       for( i = 0; i < nimplubvars; i++)
       {
-
          if( ((SCIP_Longint)pospp) + posmm + pospm + posmp > maxhashes )
             break;
 

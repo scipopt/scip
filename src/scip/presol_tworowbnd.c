@@ -553,7 +553,6 @@ SCIP_RETCODE transformAndSolve(
    SCIP_Real*            newubsoriginal,     /**< buffer array for new upper bounds not adjusted to individual single-row LPs */
    SCIP_Real*            newubscopy,         /**< buffer array for adjusted upper bounds */
    SCIP_Bool*            success,            /**< return (success || "found better bounds") */
-   SCIP_Bool*            redundant,          /**< return whether first row is redundant */
    SCIP_Bool*            infeasible          /**< we return (infeasible || "detected infeasibility") */
    )
 {
@@ -578,7 +577,7 @@ SCIP_RETCODE transformAndSolve(
    SCIP_Bool maxsolvable;
    SCIP_Real maxobj;
    SCIP_Bool minswapsolvable;
-   SCIP_Real minswapobj;
+   SCIP_Real minswapobj = 0.0;
    SCIP_Bool maxswapsolvable;
    SCIP_Real maxswapobj;
 
@@ -942,19 +941,6 @@ SCIP_RETCODE transformAndSolve(
       }
    }
 
-   /* redundancy check */
-   if( mininfs == 0 && !swaprow1 )
-   {
-      assert(minobj != SCIP_INVALID); /*lint !e777*/
-      if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
-          || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) ) /*lint !e644*/
-         (*redundant) = TRUE;
-      else
-         (*redundant) = FALSE;
-   }
-   else
-      (*redundant) = FALSE;
-
    /* in this case the objective is swapped. therefore the minimum and the maximum of the support switch roles */
    if( swaprow1 )
    {
@@ -1098,7 +1084,6 @@ SCIP_RETCODE applyLPboundTightening(
    SCIP_Bool             swaprow2,           /**< should row2 <= rhs be used in addition to lhs <= row2 */
    SCIP_Real*            lbs,                /**< lower variable bounds */
    SCIP_Real*            ubs,                /**< upper variable bounds */
-   SCIP_Bool*            delcons,            /**< flags which constraints are redundant and can be removed */
    SCIP_Bool*            success             /**< return (success || "found better bounds") */
    )
 {
@@ -1111,8 +1096,6 @@ SCIP_RETCODE applyLPboundTightening(
    SCIP_Real* newubsoriginal;
    SCIP_Real* newubscopy;
    SCIP_Bool* cangetbnd;
-   SCIP_Bool row1redundant;
-   SCIP_Bool row2redundant;
    SCIP_Bool infeasible;
 
 #ifdef SCIP_DEBUG_2RB
@@ -1140,22 +1123,12 @@ SCIP_RETCODE applyLPboundTightening(
    infeasible = FALSE;
    SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, aoriginal, acopy,
                                 coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy,
-                                newubsoriginal, newubscopy, success, &row1redundant, &infeasible) );
-
-   if( row1redundant )
-   {
-      delcons[row1] = TRUE;
-   }
+                                newubsoriginal, newubscopy, success, &infeasible) );
 
    /* Switch roles and use row1 to strengthen row2 */
    SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, aoriginal, acopy,
                                 coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy,
-                                newubsoriginal, newubscopy, success, &row2redundant, &infeasible) );
-
-   if( row2redundant && !row1redundant )
-   {
-      delcons[row2] = TRUE;
-   }
+                                newubsoriginal, newubscopy, success, &infeasible) );
 
    SCIPfreeBufferArray(scip, &cangetbnd);
    SCIPfreeBufferArray(scip, &newubscopy);
@@ -1185,8 +1158,7 @@ SCIP_RETCODE processHashlists(
    int*                  rowidxlist1,        /**< list of row indices corresponding to hashes in hashlist1 */
    int*                  rowidxlist2,        /**< list of row indices corresponding to hashes in hashlist2 */
    SCIP_Real*            newlbs,             /**< lower variable bounds, new bounds will be written here */
-   SCIP_Real*            newubs,             /**< upper variable bounds, new bound will be written here */
-   SCIP_Bool*            delcons             /**< flags which constraints are redundant and can be removed */
+   SCIP_Real*            newubs              /**< upper variable bounds, new bound will be written here */
    )
 {
    int i;
@@ -1244,7 +1216,7 @@ SCIP_RETCODE processHashlists(
                      swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
                      SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                           swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
+                           swaprow1, swaprow2, newlbs, newubs, &success) );
 
                      if( success )
                         combinefails = 0;
@@ -1357,7 +1329,6 @@ SCIP_DECL_PRESOLINIT(presolInitTworowbnd)
 static
 SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 {  /*lint --e{715}*/
-
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
@@ -1365,14 +1336,12 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIP_PRESOLDATA* presoldata;
    int oldnchgbds;
    int oldnfixedvars;
-   int ndelcons;
    int nrows;
    int ncols;
    SCIP_Real* oldlbs;
    SCIP_Real* oldubs;
    SCIP_Real* newlbs;
    SCIP_Real* newubs;
-   SCIP_Bool* delcons;
    int* rowidxptr;
    SCIP_Real* rowvalptr;
    SCIP_VAR* var;
@@ -1558,7 +1527,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmp[i], rowidxlistmp[i]);
 #endif
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &delcons, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldlbs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldubs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, ncols) );
@@ -1578,7 +1546,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    {
      SCIPdebugMsg(scip, "processing pp and mm\n");
      SCIP_CALL( processHashlists(scip, presoldata, matrix, hashlistpp, hashlistmm, pospp, posmm, rowidxlistpp,
-                                 rowidxlistmm, newlbs, newubs, delcons) );
+                                 rowidxlistmm, newlbs, newubs) );
    }
 
    /* Process pm and mp hashlists */
@@ -1586,7 +1554,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    {
      SCIPdebugMsg(scip, "processing pm and mp\n");
      SCIP_CALL( processHashlists(scip, presoldata, matrix, hashlistpm, hashlistmp, pospm, posmp, rowidxlistpm,
-                                 rowidxlistmp, newlbs, newubs, delcons) );
+                                 rowidxlistmp, newlbs, newubs) );
    }
 
    /* Apply reductions */
@@ -1654,108 +1622,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       }
    }
 
-   /* Remove redundant constraints */
-   ndelcons = 0;
-   for( i = 0; i < nrows; i++ )
-   {
-      if( delcons[i] )
-      {
-         ndelcons++;
-         delcons[i] = FALSE; /* Remove nonzero from clean buffer array */
-         SCIPdebugMsg(scip, "removing redundant constraint %s\n", SCIPmatrixGetRowName(matrix, i));
-         SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
-      }
-      else
-      {
-         SCIP_Real rowinf;
-         SCIP_Real rowsup;
-
-         rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
-         rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
-
-         rowinf = 0;
-         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-         {
-            k = rowidxptr[j];
-            if( SCIPisPositive(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, -newlbs[k]) )
-                  rowinf += rowvalptr[j] * newlbs[k];
-               else
-               {
-                  rowinf = -SCIPinfinity(scip);
-                  break;
-               }
-            }
-            else if( SCIPisNegative(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, newubs[k]) )
-                  rowinf += rowvalptr[j] * newubs[k];
-               else
-               {
-                  rowinf = -SCIPinfinity(scip);
-                  break;
-               }
-            }
-         }
-
-         rowsup = 0;
-         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-         {
-            k = rowidxptr[j];
-            if( SCIPisPositive(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, newubs[k]) )
-                  rowsup += rowvalptr[j] * newubs[k];
-               else
-               {
-                  rowsup = SCIPinfinity(scip);
-                  break;
-               }
-            }
-            else if( SCIPisNegative(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, -newlbs[k]) )
-                  rowsup += rowvalptr[j] * newlbs[k];
-               else
-               {
-                  rowsup = SCIPinfinity(scip);
-                  break;
-               }
-            }
-         }
-
-         if( !SCIPisInfinity(scip, -rowinf) )
-         {
-            if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, i), rowinf) )
-            {
-               ndelcons++;
-               SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
-               SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i));
-            }
-            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i))
-                && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
-            {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n",
-                            SCIPmatrixGetRowName(matrix, i), rowinf);
-               infeasible = TRUE;
-            }
-         }
-         if( !SCIPisInfinity(scip, rowsup) )
-         {
-            if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
-            {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n",
-                            SCIPmatrixGetRowName(matrix, i), rowsup);
-               infeasible = TRUE;
-            }
-         }
-      }
-   }
-   (*ndelconss) += ndelcons;
-
    /* set result */
-   if( *nchgbds > oldnchgbds || *nfixedvars > oldnfixedvars || ndelcons > 0 )
+   if( *nchgbds > oldnchgbds || *nfixedvars > oldnfixedvars )
    {
       *result = SCIP_SUCCESS;
       presoldata->nuselessruns = 0;
@@ -1773,7 +1641,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIPfreeBufferArray(scip, &newlbs);
    SCIPfreeBufferArray(scip, &oldubs);
    SCIPfreeBufferArray(scip, &oldlbs);
-   SCIPfreeCleanBufferArray(scip, &delcons);
    SCIPfreeBlockMemoryArray(scip, &rowidxlistmp, listsizemp);
    SCIPfreeBlockMemoryArray(scip, &rowidxlistpm, listsizepm);
    SCIPfreeBlockMemoryArray(scip, &rowidxlistmm, listsizemm);
@@ -1782,7 +1649,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIPfreeBlockMemoryArray(scip, &hashlistpm, listsizepm);
    SCIPfreeBlockMemoryArray(scip, &hashlistmm, listsizemm);
    SCIPfreeBlockMemoryArray(scip, &hashlistpp, listsizepp);
-
 
    SCIPmatrixFree(scip, &matrix);
 
