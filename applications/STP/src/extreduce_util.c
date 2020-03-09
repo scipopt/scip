@@ -1010,28 +1010,29 @@ void extreduce_extCompRevert(
 {
    int* const extleaves = extcomp->extleaves;
    int* const compedges = extcomp->compedges;
-   const int ncompedges = extcomp->ncompedges;
    const int comproot_org = extcomp->comproot;
+   const SCIP_Bool compIsSingleEdge = (extcomp->ncompedges == 1);
 
-#ifndef NDEBUG
    assert(extcomp->ncompedges >= 1);
    assert(extcomp->comproot == graph->tail[extcomp->compedges[0]]);
-   if( extcomp->ncompedges == 1 )
+
+   if( compIsSingleEdge )
    {
-      assert(extcomp->ncompedges == 1);
       assert(extcomp->nextleaves == 1);
    }
    else
    {
+      const int firstedge = compedges[0];
+
       assert(extcomp->ncompedges >= 3);
       assert(extcomp->nextleaves >= 2);
-   }
-#endif
+      assert(graph->head[compedges[1]] == extleaves[0]);
 
-   for( int i = 0; i < ncompedges; ++i )
-   {
-      compedges[i] = flipedge(compedges[i]);
+      compedges[0] = compedges[1];
+      compedges[1] = flipedge(firstedge);
    }
+
+   compedges[0] = flipedge(compedges[0]);
 
    assert(extleaves[0] != extcomp->comproot);
 

@@ -1673,7 +1673,6 @@ void mstLevelLeafTryExtMst(
       assert(GE(tree_cost, 0.0));
    }
 
-
    graph_csrdepo_getTopCSR(msts_comp, &topmst);
 
    assert(topmst.nnodes == extdata->tree_nleaves);
@@ -1861,6 +1860,7 @@ void extreduce_mstLevelVerticalAddLeaf(
     * also check for bottleneck rule-out! */
    mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
+   // todo: don't do for initial component...
    /* if not yet ruled out, check whether extending the SD MST helps */
    if( !(*leafRuledOut) )
    {

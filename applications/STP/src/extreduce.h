@@ -213,6 +213,47 @@ int extStackGetTopRoot(
 }
 
 
+/** currently at initial component? */
+static inline
+SCIP_Bool extIsAtInitialComp(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_ncomponents > 0);
+
+   return ((extdata->extstack_ncomponents - 1) == 0);
+}
+
+
+/** is the initial component a single edge? */
+static inline
+SCIP_Bool extInitialCompIsEdge(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_start[1] > 1);
+   assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
+
+   return (extdata->extstack_start[1] == 1);
+}
+
+
+/** is the initial component a star? */
+static inline
+SCIP_Bool extInitialCompIsStar(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_start[1] > 1);
+   assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
+
+   return (extdata->extstack_start[1] >= 3);
+}
+
+
 /** Finds position of given leaf in leaves data.
  *  Returns -1 if leaf could not be found. */
 static inline

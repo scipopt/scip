@@ -382,6 +382,7 @@ void extTreeStackTopRootRemove(
    {
       assert(extdata->tree_nleaves == 1);
       assert(extdata->tree_deg[comproot] == 1);
+      assert(extIsAtInitialComp(extdata));
 
       extdata->tree_deg[comproot] = 0;
    }
@@ -1014,6 +1015,10 @@ void extStackTopExpand(
 
    extreduce_mstLevelInit(reddata, extdata);
 
+   int todo; // call new method instead of collect edges? Also simple rule out? No, should not happen! Or maybe just do it inside...
+   // better be explicit!
+   // extStackTopCollectInitialEdges()
+
    /* Note: Also computes ancestor SDs for leaves that are not ruled-out
     * and adds them to vertical level! */
    extStackTopCollectExtEdges(scip, graph, extdata, extedges, &nextedges);
@@ -1041,6 +1046,8 @@ void extStackTopExpand(
    {
       /* use the just collected edges 'extedges' to build components and add them to the stack */
       extStackAddCompsExpanded(scip, graph, nextedges, extedges, extdata, success);
+
+      // todo new method here: extStackAddCompInitial
 
 #ifndef NDEBUG
       {
@@ -1124,6 +1131,20 @@ void extExtend(
    SCIPfreeBufferArray(scip, &extedges);
 }
 
+#if 0
+static inline
+void extPreprocessInitialEdge()
+{
+
+}
+
+static inline
+void extPreprocessInitialStar()
+{
+
+}
+#endif
+
 
 /** Adds extensions initial component to stack (needs to be star component rooted in root).
   * If no extensions are added, then the component has been ruled-out. */
@@ -1182,7 +1203,7 @@ void extProcessInitialComponent(
 
    extdata->tree_deg[comproot] = 1;
 
-   /* expand the single edge */
+   /* expand the initial component */
    extStackTopExpand(scip, graph, extdata, success);
 
    assert(*success);
@@ -1319,12 +1340,6 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_Bool*            compIsDeletable     /**< is component deletable? */
 )
 {
-   const SCIP_Bool* isterm = extpermanent->isterm;
-   const int root = redcostdata->redCostRoot;
-   const SCIP_Real* redcost = redcostdata->redEdgeCost;
-   const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
-   const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
-   const SCIP_Real cutoff = redcostdata->cutoff;
    int* extstack_data;
    int* extstack_start;
    int* extstack_state;
@@ -1339,7 +1354,8 @@ SCIP_RETCODE extreduce_checkComponent(
    const int nnodes = graph->knots;
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
-   const SCIP_Bool isPseudoElim = (extcomp->ncompedges > 1);
+
+   assert(extreduce_extCompFullIsPromising(graph, extpermanent, extcomp) || (extcomp->ncompedges > 1));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, maxncomponents + 1) );
@@ -1355,9 +1371,14 @@ SCIP_RETCODE extreduce_checkComponent(
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
-   /* is the component (or the reverted one) promising? Or are we trying pseudo elimination? */
-   if( extreduce_extCompFullIsPromising(graph, extpermanent, extcomp) || isPseudoElim )
    {
+      const SCIP_Bool* isterm = extpermanent->isterm;
+      const int root = redcostdata->redCostRoot;
+      const SCIP_Real* redcost = redcostdata->redEdgeCost;
+      const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
+      const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
+      const SCIP_Real cutoff = redcostdata->cutoff;
+
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
          .tree_innerPrize = 0.0 };
       REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,

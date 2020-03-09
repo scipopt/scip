@@ -442,7 +442,7 @@ SCIP_RETCODE extreduce_checkArc(
 
    *edgeIsDeletable = FALSE;
 
-   /* can we extend from 'edge'? */
+   /* can we extend from head of 'edge'? */
    if( extLeafIsExtendable(graph, isterm, head) )
    {
       int comphead = graph->head[edge];
@@ -474,6 +474,8 @@ SCIP_RETCODE extreduce_checkEdge(
    SCIP_Bool*            edgeIsDeletable     /**< is edge deletable? */
 )
 {
+   const SCIP_Bool* const isterm = extpermanent->isterm;
+
    assert(scip && graph && edgeIsDeletable && distdata && extpermanent);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
@@ -482,6 +484,8 @@ SCIP_RETCODE extreduce_checkEdge(
 
    *edgeIsDeletable = FALSE;
 
+   /* is any extension possible? */
+   if( extLeafIsExtendable(graph, isterm, graph->tail[edge]) || extLeafIsExtendable(graph, isterm, graph->head[edge]) )
    {
       int comphead = graph->head[edge];
       int compedge = edge;
