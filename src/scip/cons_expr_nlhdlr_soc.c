@@ -522,7 +522,10 @@ SCIP_RETCODE generateCutSol(
 
    /* if the soc is not violated don't compute cut */
    if( SCIPisFeasLE(scip, fvalue, 0.0) )
+   {
+      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below feastol\n", disaggidx, fvalue);
       return SCIP_OKAY;
+   }
 
    assert(!SCIPisZero(scip, denominator));
 
@@ -590,6 +593,11 @@ SCIP_RETCODE generateCutSol(
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, disaggidx);
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation);
+      /* SCIPprintRowprep(scip, rowprep, NULL); */
    }
 
    /* free memory */
@@ -1957,6 +1965,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       || (nlhdlrdata->enfofreq == 0 && depth != 0)
       || (nlhdlrdata->enfofreq > 0 && depth % nlhdlrdata->enfofreq != 0) )
    {
+      SCIPdebugMsg(scip, "not running at depth=%d and nenfocalls=%d due to timing parameters (maxenforoundsroot=%d, maxenforounds=%d, enfofreq=%d)\n",
+         depth, nlhdlrdata->nenfocalls, nlhdlrdata->maxenforoundsroot, nlhdlrdata->maxenforounds, nlhdlrdata->enfofreq);
       return SCIP_OKAY;
    }
 
@@ -1969,6 +1979,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol), SCIPgetLPFeastol(scip) ) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
+      SCIPdebugMsg(scip, "added aggregation row to LP, cutoff=%d\n", infeasible);
 
       if( infeasible )
       {
@@ -1991,6 +2002,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          SCIP_Real cutefficacy;
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
+
+         SCIPdebugMsg(scip, "generated row for aggregation %d, efficacy=%g, minefficacy=%g\n", k, cutefficacy, nlhdlrdata->mincutefficacy);
+
          /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) && cutefficacy >= nlhdlrdata->mincutefficacy )
          {

@@ -5611,8 +5611,12 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
       return SCIP_OKAY;
+   }
+   else
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
    }
 
    *result = SCIP_DIDNOTFIND;
