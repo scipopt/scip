@@ -100,6 +100,14 @@ Features
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 
+- added new SCIP_DECOMP* object to store user decompositions. The user can specify one or several decompositions by assigning variable
+  and/or constraint labels either through the API or by reading a file in DEC format (which is one of the formats that GCG writes).
+  This format specifies constraint labels, variable labels are inferred from that. The decomposition is transformed after presolving.
+- statistics regarding the number of blocks, the largest and smallest blocks, the border, and the constraint graph are printed for the original decomposition,
+  and for each decomposition after presolving.
+- the decomposition can be used as initial decomposition for the Benders functionality of SCIP.
+- new subsection "How to provide a problem decomposition" in the SCIP documentation
+
 - GINS heuristic can make use of a user-provided decomposition labels in two ways:
  1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
  2. by selecting an interval of consecutive blocks as neighborhood, until fixing rate is reached. In this case, no variable is randomly selected.
@@ -728,7 +736,6 @@ Miscellaneous
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
-- new subsection "How to provide a problem decomposition" in the documentation
 
 Known bugs
 ----------
