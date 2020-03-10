@@ -1008,16 +1008,16 @@ void extStackTopExpand(
    const int* const extstack_state = extdata->extstack_state;
    for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
       extedges[i] = -1;
-#endif
 
    assert(scip && graph && success);
    assert(EXT_STATE_NONE == extstack_state[stackpos]);
+#endif
 
    extreduce_mstLevelInit(reddata, extdata);
 
-   int todo; // call new method instead of collect edges? Also simple rule out? No, should not happen! Or maybe just do it inside...
-   // better be explicit!
-   // extStackTopCollectInitialEdges()
+   int todo; // call new method instead of collect edges? Also simple rule out? No, should not happen!
+   // better be explicit: extStackTopCollectInitialEdges()
+   // better new overall method: extStackTopExpandInitial
 
    /* Note: Also computes ancestor SDs for leaves that are not ruled-out
     * and adds them to vertical level! */
@@ -1029,7 +1029,6 @@ void extStackTopExpand(
    if( nextedges == 0 )
    {
       *success = TRUE;
-
       assert(extstack_state[stackpos] == EXT_STATE_NONE);
 
       /* not the initial component? */
@@ -1131,62 +1130,93 @@ void extExtend(
    SCIPfreeBufferArray(scip, &extedges);
 }
 
-#if 0
+
+/** adds initial single edge to stack */
 static inline
-void extPreprocessInitialEdge()
-{
-
-}
-
-static inline
-void extPreprocessInitialStar()
-{
-
-}
-#endif
-
-
-/** Adds extensions initial component to stack (needs to be star component rooted in root).
-  * If no extensions are added, then the component has been ruled-out. */
-static
-void extProcessInitialComponent(
+void extPreprocessInitialEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const EXTCOMP*        extcomp,            /**< component to be checked */
-   EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            ruledOut,           /**< initial component ruled out? */
-   SCIP_Bool*            success             /**< extension successful? */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int edge = extcomp->compedges[0];
+
+   assert(0 <= edge && edge < graph->edges);
+   assert(extcomp->ncompedges == 1);
+   assert(graph->tail[edge] == extcomp->comproot);
+
+#ifdef SCIP_DEBUG
+   printf("\n --- ADD initial edge component --- \n\n");
+   SCIPdebugMessage("...initial edge %d: %d->%d \n\n", e, graph->tail[edge], graph->head[edge]);
+#endif
+
+   extdata->extstack_data[0] = edge;
+}
+
+
+/** adds initial star component edges to stack */
+static inline
+void extPreprocessInitialStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   EXTDATA*              extdata             /**< extension data */
 )
 {
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
-   const int comproot = extcomp->comproot;
-   SCIP_Bool conflict;
 
-   assert(compedges);
-   assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
-   assert(ncompedges < extdata->extstack_maxsize);
-   assert(comproot >= 0 && comproot < graph->knots);
-   assert(FALSE == (*ruledOut) && TRUE == (*success));
+   assert(ncompedges >= 3);
+   assert(graph->tail[compedges[0]] == extcomp->comproot);
 
 #ifdef SCIP_DEBUG
-   printf("\n --- ADD initial component --- \n\n");
+   printf("\n --- ADD initial star component --- \n\n");
 #endif
 
-   for( int i = 0; i < ncompedges; i++ )
+   extdata->extstack_data[0] = compedges[0];
+
+   for( int i = 1; i < ncompedges; i++ )
    {
       const int e = compedges[i];
-      const int tail = graph->tail[e];
 
-      assert(e >= 0 && e < graph->edges);
-      assert(tail == comproot);
-
-      SCIPdebugMessage("edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
+      assert(graph->tail[e] == graph->head[compedges[0]]);
+      SCIPdebugMessage("...star edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
 
       extdata->extstack_data[i] = e;
-      extLeafAdd(tail, extdata);
-      extreduce_mstAddRootLevel(scip, tail, extdata);
    }
+
+#ifdef SCIP_DEBUG
+   printf(" \n");
+#endif
+}
+
+
+/** Initial component preprocessing:
+ *  The component root is added to the tree and the stack,
+ *  and the remainder is added to the stack to allow for further expansion. */
+static inline
+void extPreprocessInitialComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int ncompedges = extcomp->ncompedges;
+   const int comproot = extcomp->comproot;
+   const SCIP_Bool compIsEdge = (ncompedges == 1);
+
+   assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
+   assert(comproot >= 0 && comproot < graph->knots);
+
+   if( compIsEdge )
+      extPreprocessInitialEdge(scip, graph, extcomp, extdata);
+   else
+      extPreprocessInitialStar(scip, graph, extcomp, extdata);
+
+   extreduce_mstAddRootLevel(scip, comproot, extdata);
+   extLeafAdd(comproot, extdata);
 
    extdata->tree_root = comproot;
    extdata->extstack_ncomponents = 1;
@@ -1197,11 +1227,52 @@ void extProcessInitialComponent(
    extdata->tree_redcostSwap[comproot] = 0.0;
    extdata->tree_parentEdgeCost[comproot] = -1.0;
 
-   assert(ncompedges > 1 || extdata->tree_leaves[0] == comproot);
+   assert(extcomp->ncompedges > 1 || extdata->tree_leaves[0] == comproot);
    assert(extdata->tree_deg[comproot] == 0);
-   assert(extdata->tree_nleaves == ncompedges);
+   assert(extdata->tree_nleaves == extcomp->ncompedges);
 
    extdata->tree_deg[comproot] = 1;
+}
+
+
+/** helper for rule-out during initial component processing */
+static inline
+void extPostprocessInitialRuleOut(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const PSEUDOANS* const pseudoancestors = graph->pseudoancestors;
+   const int* const compedges = extcomp->compedges;
+   int* const pseudoancestor_mark = extdata->reddata->pseudoancestor_mark;
+   const int ncompedges = extcomp->ncompedges;
+
+   /* necessary because these edges will be deleted in clean-up otherwise */
+   for( int i = 0; i < ncompedges; i++ )
+   {
+      graph_pseudoAncestors_hashEdge(pseudoancestors, compedges[i], pseudoancestor_mark);
+   }
+}
+
+
+/** Adds extensions initial component to stack (needs to be star component rooted in root).
+  * If no extensions are added, then the component has been ruled-out. */
+static inline
+void extProcessInitialComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            ruledOut,           /**< initial component ruled out? */
+   SCIP_Bool*            success             /**< extension successful? */
+)
+{
+   SCIP_Bool conflict;
+
+   assert(FALSE == (*ruledOut) && TRUE == (*success));
+
+   extPreprocessInitialComponent(scip, graph, extcomp, extdata);
 
    /* expand the initial component */
    extStackTopExpand(scip, graph, extdata, success);
@@ -1213,10 +1284,7 @@ void extProcessInitialComponent(
    if( extdata->extstack_state[0] == EXT_STATE_NONE )
    {
       *ruledOut = TRUE;
-
-      /* necessary because this edge will be deleted in clean-up otherwise */
-      graph_pseudoAncestors_hashEdge(graph->pseudoancestors, compedges[0], extdata->reddata->pseudoancestor_mark);
-
+      extPostprocessInitialRuleOut(graph, extcomp, extdata);
       return;
    }
 
@@ -1224,33 +1292,31 @@ void extProcessInitialComponent(
 
    conflict = FALSE;
    extTreeStackTopAdd(scip, graph, extdata, &conflict);
-
    assert(!conflict);
 
-   /* NOTE: necessary to keep the MST graph up-to-date */
+   /* NOTE: anyway necessary to keep the MST graph up-to-date! */
    if( extTreeRuleOutPeriph(scip, graph, extdata) )
    {
       *ruledOut = TRUE;
       return;
    }
 
-   /* the single edge component could not be ruled-out, so set its stage to 'marked' */
+   /* the initial component could not be ruled-out, so set its stage to 'marked' */
    extdata->extstack_state[extStackGetPosition(extdata)] = EXT_STATE_MARKED;
-
    extExtend(scip, graph, extdata, success);
 
-   assert(success || ncompedges >= 3);
+   assert(success || extcomp->ncompedges >= 3);
 }
 
 
-/** Checks whether component can be ruled out. */
+/** Checks whether component 'extcomp' (star or single edge) can be ruled out. */
 static
 void extProcessComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const EXTCOMP*        extcomp,            /**< component to be checked */
+   const EXTCOMP*        extcomp,            /**< initial component to be checked */
    EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            deletable           /**< is arc deletable? */
+   SCIP_Bool*            deletable           /**< is component deletable? */
 )
 {
    int* const extstack_state = extdata->extstack_state;
@@ -1260,13 +1326,12 @@ void extProcessComponent(
    assert(extreduce_extdataIsClean(graph, extdata));
    assert(extreduce_reddataIsClean(graph, extdata->reddata));
    assert(extreduce_pcdataIsClean(graph, extdata->pcdata));
+   assert(FALSE == (*deletable));
 
-   assert(!(*deletable));
-
-   /* put 'extcomp' on the stack */
+   /* put initial component on the stack */
    extProcessInitialComponent(scip, graph, extcomp, extdata, deletable, &success);
 
-   /* early rule-out? or no success? */
+   /* early rule-out? or no extension possible? */
    if( *deletable || !success )
    {
       extreduce_extCompClean(scip, graph, extcomp, extdata);
@@ -1275,7 +1340,7 @@ void extProcessComponent(
 
    assert(extstack_state[0] == EXT_STATE_MARKED);
 
-   /* limited DFS backtracking; stops once back at 'edge' */
+   /* limited DFS backtracking; stops once back at initial component */
    while( extdata->extstack_ncomponents > 1 )
    {
       const int stackposition = extStackGetPosition(extdata);
@@ -1329,7 +1394,7 @@ void extProcessComponent(
 }
 
 
-/** check (directed) arc */
+/** check component for possible elimination */
 SCIP_RETCODE extreduce_checkComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
@@ -1403,6 +1468,7 @@ SCIP_RETCODE extreduce_checkComponent(
 
       extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
 
+      /* also try the other way? */
       if( !(*compIsDeletable) && extcomp->allowReversion )
       {
          extreduce_extCompRevert(graph, extpermanent, extcomp);

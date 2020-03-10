@@ -1050,9 +1050,7 @@ SCIP_Bool extreduce_extCompIsPromising(
 {
    const int* const extleaves = extcomp->extleaves;
    const SCIP_Bool* const isterm = extperma->isterm;
-   const STP_Bool* const edgedeleted = extperma->edgedeleted;
    const int nextleaves = extcomp->nextleaves;
-   const SCIP_Bool compIsSingleEdge = (extcomp->ncompedges == 1);
 
    assert(extcomp->ncompedges == 1 || extcomp->ncompedges >= 3);
 
