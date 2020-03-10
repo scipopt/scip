@@ -1056,12 +1056,6 @@ SCIP_Bool extreduce_extCompIsPromising(
 
    assert(extcomp->ncompedges == 1 || extcomp->ncompedges >= 3);
 
-   /* single edge deletion and already deleted? */
-   if( compIsSingleEdge && edgedeleted && edgedeleted[extcomp->compedges[0]] )
-   {
-      return FALSE;
-   }
-
    /* go over all possible extensions and see whether any of them are promising */
    for( int i = 0; i < nextleaves; ++i )
    {

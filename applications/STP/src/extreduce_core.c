@@ -1403,7 +1403,7 @@ SCIP_RETCODE extreduce_checkComponent(
 
       extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
 
-      if( !(*compIsDeletable) )
+      if( !(*compIsDeletable) && extcomp->allowReversion )
       {
          extreduce_extCompRevert(graph, extpermanent, extcomp);
 

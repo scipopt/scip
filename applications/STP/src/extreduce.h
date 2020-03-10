@@ -177,6 +177,7 @@ typedef struct initial_extension_component
    int                   nextleaves;         /**< number of extension nodes */
    int                   ncompedges;         /**< number of edges of the component */
    int                   comproot;           /**< component root */
+   SCIP_Bool             allowReversion;     /**< allow change of comproot? (with extleaves = \{comproot\}) */
 } EXTCOMP;
 
 

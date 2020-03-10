@@ -448,7 +448,8 @@ SCIP_RETCODE extreduce_checkArc(
       int comphead = graph->head[edge];
       int compedge = edge;
       EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
-         .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge] };
+         .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge],
+         .allowReversion = FALSE };
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
    }
@@ -490,7 +491,8 @@ SCIP_RETCODE extreduce_checkEdge(
       int comphead = graph->head[edge];
       int compedge = edge;
       EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
-                          .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge] };
+                          .nextleaves = 1, .ncompedges = 1,
+                          .comproot = graph->tail[edge], .allowReversion = TRUE };
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
    }
@@ -548,7 +550,8 @@ SCIP_RETCODE extreduce_checkNode(
 
    {
       EXTCOMP extcomp = { .compedges = compedges, .extleaves = extleaves,
-                          .nextleaves = degree - 1, .ncompedges = degree, .comproot = comproot };
+                          .nextleaves = degree - 1, .ncompedges = degree,
+                          .comproot = comproot, .allowReversion = TRUE };
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isPseudoDeletable) );
 
