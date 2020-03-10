@@ -41,8 +41,17 @@ extern "C" {
 /** define to identify SCIP version with thread-safe version of message handlers */
 #define SCIP_THREADSAFE_MESSAGEHDLRS
 
+/** define for the filename of __FILE__ */
+#ifdef _MSC_VER
+#include <string.h>
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else
+#include <libgen.h>
+#define __FILENAME__ (basename(__FILE__))
+#endif
+
 /** prints an error message */
-#define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILE__, __LINE__); \
+#define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILENAME__, __LINE__); \
                                         SCIPmessagePrintError
 
 /** define used in blockmemshell/memory.c */
@@ -55,7 +64,7 @@ extern "C" {
 #define SCIPdebug(x)                        x
 
 /** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
-#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
+#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILENAME__, __LINE__), printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintf                 printf
@@ -90,7 +99,7 @@ extern "C" {
 #define SCIPstatistic(x)                        x
 
 /** prints a statistic message if SCIP_STATISTIC flag is set */
-#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__), printf
+#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILENAME__, __LINE__), printf
 
 /** executes printf command only if SCIP_STATISTIC flag is set */
 #define SCIPstatisticPrintf                 printf
