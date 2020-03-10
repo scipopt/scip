@@ -3076,7 +3076,7 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
    {
       SCIP_NODEDATA* nodedata;
 
-      nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
+      nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
 
       /* possibly create node data */
       if ( nodedata == NULL )
@@ -3857,7 +3857,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             if ( varidx == -1 )
                continue;
 
-            nodedata = SCIPdigraphGetNodeData(conflictgraph, varidx);
+            nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, varidx);
             assert( nodedata != NULL );
             assert( nodedata->orbitidx == i );
 
@@ -3909,7 +3909,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
             for (j = 0; j < nconflictvars; ++j)
             {
-               neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+               neighbordata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
 
                assert( neighbordata != NULL );
 
@@ -3934,7 +3934,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          if ( SCIPvarGetType(graphvars[i]) != leadervartype )
             continue;
 
-         nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
+         nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
          assert( nodedata != NULL );
 
          /* skip variables not affected by symmetry */
@@ -3981,7 +3981,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
             for (j = 0; j < nconflictvars; ++j)
             {
-               neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+               neighbordata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
                assert( neighbordata != NULL );
 
                if ( neighbordata->var == var && neighbordata->active )
