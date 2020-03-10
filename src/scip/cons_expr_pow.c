@@ -296,7 +296,6 @@ void computeSecant(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(success != NULL);
-   assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointPow */
    assert(xlb >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
    assert(xub >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
    assert(exponent != 1.0);
@@ -305,6 +304,12 @@ void computeSecant(
 
    /* infinite bounds will not work */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+      return;
+
+   /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
+    * e.g., when handling odd or signed power
+    */
+   if( SCIPisEQ(scip, xlb, xub) )
       return;
 
    /* first handle some special cases */
