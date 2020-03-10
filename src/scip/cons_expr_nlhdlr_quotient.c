@@ -38,8 +38,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary nonlinear handler data */
-
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
@@ -472,6 +470,141 @@ SCIP_INTERVAL revpropEval(
    return result;
 }
 
+/** sets up a rowprep from given data */
+static
+SCIP_RETCODE assembleRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
+   const char*           name,               /**< name of type of cut */
+   SCIP_Bool             overestimate,       /**< whether overestimating */
+   SCIP_Real             linconst,           /**< constant term */
+   SCIP_Real             lincoef,            /**< coefficient of childvar */
+   SCIP_VAR*             childvar,           /**< child var */
+   SCIP_VAR*             auxvar              /**< auxiliary variable */
+   )
+{
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(childvar != NULL);
+   assert(auxvar != NULL);
+
+   /* for overestimators, mirror back */
+   if( overestimate )
+      linconst *= -1.0;
+
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%lld", name,
+      SCIPvarGetName(childvar), SCIPgetNLPs(scip));
+
+   SCIPaddRowprepConstant(*rowprep, linconst);
+
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, 2) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, childvar, lincoef) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE sepaEqualVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution point */
+   SCIP_VAR*             x,                  /**< argument variable */
+   SCIP_Real             a,                  /**< coefficient in nominator */
+   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             c,                  /**< coefficient in denominator */
+   SCIP_Real             d,                  /**< constant in denominator */
+   SCIP_Real             e,                  /**< constant */
+   SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
+   SCIP_ROWPREP**        cut,                /**< pointer to store the resulting cut */
+   SCIP_Bool*            success             /**< buffer to store whether separation was successful */
+   )
+{
+   char* name;
+   SCIP_INTERVAL bnds;
+   SCIP_Real singularity;
+   SCIP_Real linconst;
+   SCIP_Real lincoef;
+   SCIP_Bool monincreasing;
+   SCIP_Bool isinleftpart;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(sol != NULL);
+   assert(success != NULL);
+   assert(cut != NULL);
+   assert(x != NULL);
+
+   bnds.inf = SCIPvarGetLbLocal(x);
+   bnds.sup = SCIPvarGetUbLocal(x);
+   singularity = -d / c;
+
+   /* if 0 is in the denom interval, estimation is not possible */
+   if( bnds.inf < singularity && bnds.sup > singularity )
+   {
+      *success = FALSE;
+      *cut = NULL;
+
+      return SCIP_OKAY;
+   }
+
+   isinleftpart = bnds.sup < singularity;
+   monincreasing = (a * b - c * d > 0.0);
+
+   /* There are 8 cases, in 4 we need a secant and in the other 4 a tangent:
+    *
+    * mon. incr. + overestimate + left hand side  -->  secant
+    * mon. incr. + overestimate + right hand side -->  tangent
+    * mon. incr. + understimate + left hand side  -->  tangent
+    * mon. incr. + understimate + right hand side -->  secant
+    * mon. decr. + overestimate + left hand side  -->  tangent
+    * mon. decr. + overestimate + right hand side -->  secant
+    * mon. decr. + understimate + left hand side  -->  secant
+    * mon. decr. + understimate + right hand side -->  tangent
+    */
+   if( monincreasing == (overestimate == isinleftpart) )
+   {
+      SCIP_Real lbeval;
+      SCIP_Real ubeval;
+
+      /* if one of the bounds is infinite, secant cannot be computed */
+      if( SCIPisInfinity(scip, -bnds.inf) || SCIPisInfinity(scip, bnds.sup) )
+         return SCIP_OKAY;
+
+      lbeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
+      ubeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
+
+      /* compute coefficient and constant of linear estimator */
+      lincoef = (ubeval - lbeval) / (bnds.sup - bnds.inf);
+      linconst = ubeval - lincoef * bnds.sup;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_secant", expr);
+   }
+   else
+   {
+      SCIP_Real solvarval;
+      SCIP_Real soleval;
+
+      solvarval = SCIPgetSolVal(scip, sol, x);
+      soleval = (a * solvarval + b) / (c * solvarval + d) + e;
+
+      /* compute coefficient and constant of linear estimator */
+      lincoef = SQR((a * d - b * c) / (d + c * solvarval));
+      linconst = soleval - lincoef * solvarval;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_tangent", expr);
+   }
+
+   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, linconst,
+         lincoef, x, SCIPgetConsExprExprAuxVar(expr)) );
+
+   assert(*cut != NULL);
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -657,7 +790,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
    /* create nonlinear handler data */
    nlhdlrdata = NULL;
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectQuotient, nlhdlrEvalauxQuotient, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME,
+      NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectQuotient, nlhdlrEvalauxQuotient, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrQuotient);
