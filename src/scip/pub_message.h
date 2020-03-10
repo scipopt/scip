@@ -26,6 +26,7 @@
 #define __SCIP_PUB_MESSAGE_H__
 
 #include <stdarg.h>
+#include <string.h>
 
 #include "scip/def.h"
 #include "scip/type_message.h"
@@ -41,13 +42,11 @@ extern "C" {
 /** define to identify SCIP version with thread-safe version of message handlers */
 #define SCIP_THREADSAFE_MESSAGEHDLRS
 
-/** define for the filename of __FILE__ */
-#ifdef _MSC_VER
-#include <string.h>
+/** define to get the filename of __FILE__ */
+#if defined(_WIN32) || defined(_WIN64)
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #else
-#include <libgen.h>
-#define __FILENAME__ (basename(__FILE__))
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
 /** prints an error message */
