@@ -1193,7 +1193,7 @@ SCIP_RETCODE forwardPropExpr(
          case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
             SCIP_INTERVAL prevactivity;
-            SCIP_INTERVAL auxvarbounds = {.inf = -SCIP_DEFAULT_INFINITY, .sup = SCIP_DEFAULT_INFINITY};  /* init just for lint and scan-build */
+            SCIP_INTERVAL auxvarbounds = { -SCIP_DEFAULT_INFINITY, SCIP_DEFAULT_INFINITY };  /* init just for lint and scan-build */
 
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
