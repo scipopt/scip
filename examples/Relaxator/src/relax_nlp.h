@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** creates the nlp relaxator and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelaxNlp(
    SCIP*                 scip                /**< SCIP data structure */
    );

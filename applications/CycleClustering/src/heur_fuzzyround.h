@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** creates the fuzzy rounding primal heuristic and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurFuzzyround(
    SCIP*                 scip                /**< SCIP data structure */
    );
