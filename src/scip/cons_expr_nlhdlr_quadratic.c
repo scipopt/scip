@@ -1019,9 +1019,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 { /*lint --e{715}*/
-   SCIP_Bool inteval_linear = FALSE;
-   SCIP_Bool inteval_quad = FALSE;
-
    assert(scip != NULL);
    assert(expr != NULL);
 
@@ -1032,28 +1029,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    SCIPdebugMsg(scip, "Interval evaluation of quadratic expr\n");
 
    /*
-    * check whether any linear or quadratic term has changed its activity since we computed activity last time
-    */
-   if( nlhdlrexprdata->activitiestag == 0 )
-   {
-      inteval_linear = TRUE;
-      inteval_quad = TRUE;
-   }
-   else
-   {
-      int i;
-
-      for( i = 0; !inteval_linear && i < nlhdlrexprdata->nlinexprs; ++i )
-         inteval_linear = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->linexprs[i]) >= nlhdlrexprdata->activitiestag;
-
-      for( i = 0; !inteval_quad && i < nlhdlrexprdata->nquadexprs; ++i )
-         inteval_quad = SCIPgetConsExprExprActivityLastChangedTag(nlhdlrexprdata->quadexprterms[i].expr) >= nlhdlrexprdata->activitiestag;
-   }
-
-   /*
     * compute activity of linear part, if some linear term has changed
     */
-   if( inteval_linear )
    {
       int i;
 
@@ -1078,16 +1055,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       SCIPdebugMsg(scip, "Activity of linear part is [%g, %g]\n", nlhdlrexprdata->linactivity.inf,
             nlhdlrexprdata->linactivity.sup);
    }
-   else
-   {
-      SCIPdebugMsg(scip, "Activity of linear part is still [%g, %g]\n", nlhdlrexprdata->linactivity.inf,
-            nlhdlrexprdata->linactivity.sup);
-   }
 
    /*
     * compute activity of quadratic part, if some quadratic term has changed
     */
-   if( inteval_quad )
    {
       SCIP_BILINEXPRTERM* bilinterms;
       int i;
@@ -1199,10 +1170,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       }
 
       SCIPdebugMsg(scip, "Activity of quadratic part is [%g, %g]\n", nlhdlrexprdata->quadactivity.inf, nlhdlrexprdata->quadactivity.sup);
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "Activity of quadratic part is still [%g, %g]\n", nlhdlrexprdata->quadactivity.inf, nlhdlrexprdata->quadactivity.sup);
    }
 
    /* interval evaluation is linear activity + quadactivity */

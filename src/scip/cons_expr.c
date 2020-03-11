@@ -1202,7 +1202,6 @@ SCIP_RETCODE forwardPropExpr(
             {
                /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
-               expr->activitylastchanged = conshdlrdata->curboundstag;
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
@@ -1232,10 +1231,7 @@ SCIP_RETCODE forwardPropExpr(
              * because we know tighter bounds on the expression than what is given by forward propagation)
              */
             if( reversepropqueue != NULL )
-            {
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
-               expr->activitylastchanged = conshdlrdata->curboundstag;
-            }
 
             /* run interval eval of nonlinear handlers or expression handler */
             if( expr->nenfos > 0 )
@@ -1254,9 +1250,6 @@ SCIP_RETCODE forwardPropExpr(
                   if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
                      continue;
 
-                  if( reversepropqueue != NULL )
-                     expr->activitylastchanged = expr->activitytag;
-
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = expr->activity;
                   SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, intevalvar, intevalvardata) );
@@ -1273,46 +1266,18 @@ SCIP_RETCODE forwardPropExpr(
             }
             else
             {
-               SCIP_Bool callinteval;
-
-               /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly,
-                * if no children (e.g., var) or activity in a child of expr has changed since activity of expr was last updated, but:
-                * - if expr->activitytag == child->activitylastchanged, then it is not clear whether the child's activity has
-                *   last changed before the expr's activity was computed last (and thus we could skip reevaluating) or after
-                *   (e.g., in reverse propagation) - so we may still reevaluate unnecessarily
-                */
-               if( expr->nchildren == 0 || expr->activitytag == 0 )
-               {
-                  callinteval = TRUE;
-               }
-               else
-               {
-                  int c;
-                  callinteval = expr->activitylastchanged >= expr->activitytag;
-                  for( c = 0; !callinteval && c < expr->nchildren; ++c )
-                     callinteval = expr->children[c]->activitylastchanged >= expr->activitytag;
-               }
-
-               if( callinteval )
-               {
-                  SCIP_INTERVAL exprhdlrinterval = expr->activity;
-                  SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
+               /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+               SCIP_INTERVAL exprhdlrinterval = expr->activity;
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 #ifdef DEBUG_PROP
-                  SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, exprhdlrinterval.inf, exprhdlrinterval.sup);
+               SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, exprhdlrinterval.inf, exprhdlrinterval.sup);
 #endif
 
-                  /* update expr->activity by intersecting with computed activity */
-                  SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, exprhdlrinterval);
+               /* update expr->activity by intersecting with computed activity */
+               SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, exprhdlrinterval);
 #ifdef DEBUG_PROP
-                  SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+               SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
 #endif
-               }
-               else
-               {
-#ifdef DEBUG_PROP
-                  SCIPdebugMsg(scip, " exprhdlr <%s>::inteval skip as children activity hasn't changed since last eval\n", expr->exprhdlr->name);
-#endif
-               }
             }
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
@@ -1399,15 +1364,6 @@ SCIP_RETCODE forwardPropExpr(
                }
             }
 
-            if( expr->activity.inf != prevactivity.inf || expr->activity.sup != prevactivity.sup ) /*lint !e777*/
-            {
-               /* remember that activity has changed now */
-#ifdef DEBUG_PROP
-               SCIPdebugMsg(scip, " new activity != previous one -> activitylastchanged = %d\n", conshdlrdata->curboundstag);
-#endif
-               expr->activitylastchanged = conshdlrdata->curboundstag;
-            }
-
             /* remember that activity is uptodate now */
             expr->activitytag = conshdlrdata->curboundstag;
 
@@ -1426,7 +1382,6 @@ SCIP_RETCODE forwardPropExpr(
                   if( infeasible != NULL )
                      *infeasible = TRUE;
                   SCIPintervalSetEmpty(&expr->activity);
-                  expr->activitylastchanged = conshdlrdata->curboundstag;
                }
             }
 
@@ -12142,15 +12097,6 @@ unsigned int SCIPgetConsExprExprActivityTag(
    return expr->activitytag;
 }
 
-/** returns the tag associated with the last time the activity of the expression changed */
-SCIP_EXPORT
-unsigned int SCIPgetConsExprExprActivityLastChangedTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   return expr->activitylastchanged;
-}
-
 /** possibly reevaluates and then returns the activity of the expression
  *
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
@@ -12207,8 +12153,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -12280,16 +12224,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   /* now finally update the activity in the expression */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
 #ifdef DEBUG_PROP
    SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
 #endif
 
    expr->activity = newbounds;
-   expr->activitylastchanged = conshdlrdata->curboundstag;
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )

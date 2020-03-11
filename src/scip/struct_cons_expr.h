@@ -125,7 +125,6 @@ struct SCIP_ConsExpr_Expr
    /* domain propagation */
    SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
-   unsigned int            activitylastchanged; /**< tag of local variable bounds for which activity changed most recently, this should be less or equal to activitytag */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
 
    /* expression iterators data */

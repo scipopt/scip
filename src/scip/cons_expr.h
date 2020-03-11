@@ -789,12 +789,6 @@ unsigned int SCIPgetConsExprExprActivityTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** returns the tag associated with the last time the activity of the expression changed */
-SCIP_EXPORT
-unsigned int SCIPgetConsExprExprActivityLastChangedTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   );
-
 /** possibly reevaluates and then returns the activity of the expression
  *
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
