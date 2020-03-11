@@ -1200,6 +1200,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
          SCIPdebugMsg(scip, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
+         /* evaluate auxiliary before calling estimate */
+         SCIP_CALL( nlhdlr2->evalaux(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, sol) );
+
          /* ask the handler for an estimator */
          SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
                overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
