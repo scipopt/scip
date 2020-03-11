@@ -1516,7 +1516,7 @@ SCIP_RETCODE redLoopPc(
 
          if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
-         SCIP_CALL( reduce_sdStarPc(scip, getWorkLimits_pc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimits_pc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
 
          if( verbose )  printf("sdstarpcnelims %d \n", sdstarpcnelims);
 

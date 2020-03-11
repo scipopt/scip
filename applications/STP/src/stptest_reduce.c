@@ -581,6 +581,61 @@ SCIP_RETCODE sdPcMwTest4(
 }
 
 
+/** tests that SD star PC test kills an edge */
+static
+SCIP_RETCODE testSdStarPcKillsEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DIJK dijkdata;
+   GRAPH* graph;
+   int* star_base;
+   const int nnodes_org = 4;
+   const int nedges_org = 8;
+   int nnodes = -1;
+   int nedges = -1;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org - 1; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_add(graph, STP_TERM); // 3
+   graph->source = 3;
+
+   graph_edge_addBi(scip, graph, 0, 1, 2.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2,3
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 3, 1.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = 0.0;
+   graph->prize[1] = 0.0;
+   graph->prize[2] = 0.0;
+   graph->prize[3] = 1.1;  /* the pseudo root */
+
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, &nnodes, &nedges) );
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &dijkdata) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &star_base, nnodes) );
+
+   /* actual test: edge 0 should have been deleted */
+   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata.distance, star_base, dijkdata.visitlist, dijkdata.visited, dijkdata.dheap, &nelims) );
+
+   STPTEST_ASSERT(nelims == 1);
+   STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
+   for( int e = 2; e < nedges; e++ )
+      STPTEST_ASSERT(graph->oeat[e] != EAT_FREE);
+
+   SCIPfreeMemoryArray(scip, &star_base);
+   graph_dijkLimited_freeMembers(scip, &dijkdata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
 /** tests DCMST */
 SCIP_RETCODE stptest_dcmst(
    SCIP*                 scip                /**< SCIP data structure */
@@ -602,6 +657,7 @@ SCIP_RETCODE stptest_reduce_sdpcmw(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testSdStarPcKillsEdge(scip) );
    SCIP_CALL( sdPcMwTest1(scip) );
    SCIP_CALL( sdPcMwTest2(scip) );
    SCIP_CALL( sdPcMwTest4(scip) );

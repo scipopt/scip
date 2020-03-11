@@ -38,6 +38,8 @@
 #include "misc_stp.h"
 #include "probdata_stp.h"
 #include "scip/scip.h"
+#include "portab.h"
+
 
 #define VERTEX_CONNECT      0
 #define VERTEX_TEMPNEIGHBOR 1
@@ -455,7 +457,6 @@ void pcBiasCostsDCSR(
 
    BMScopyMemoryArray(costbiased, cost_csr, dcsr->nedges);
 
-
    /* compute minimum incident edge cost per vertex */
 
    for( int k = 0; k < nnodes; k++ )
@@ -480,7 +481,7 @@ void pcBiasCostsDCSR(
             {
                assert(g->mark[head]);
 
-               assert(costbiased[e] < FARAWAY && costbiased[e] > 0.0);
+               assert(LT(costbiased[e], FARAWAY) && costbiased[e] > 0.0);
 
                if( costbiased[e] < mincost_in[head] )
                   mincost_in[head] = costbiased[e];
@@ -2518,7 +2519,7 @@ SCIP_RETCODE reduce_sdStar(
                {
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-                  /* path still valid? */
+                  /* path still valid? todo really necessary? */
                   if( star_base[starbase] != SDSTAR_BASE_KILLED )
                   {
                      star_base[starnode] = SDSTAR_BASE_KILLED;
@@ -2562,6 +2563,171 @@ SCIP_RETCODE reduce_sdStar(
 
 
 /** SD star test for PcMw */
+SCIP_RETCODE reduce_sdStarPc2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< limit */
+   const int*            edgestate,          /**< state array or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            dist,               /**< vertex distances */
+   int*                  star_base,          /**< array of size nnodes */
+   int*                  visitlist,          /**< array of size nnodes */
+   STP_Bool*             visited,            /**< array of size nnodes */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   int*                  nelims              /**< point to store number of deleted edges */
+   )
+{
+   DCSR* dcsr;
+   RANGE* range_csr;
+   SCIP_Real* cost_dcsr_org;
+   SCIP_Real* cost_dcsr_biased;
+   int* head_csr;
+   int* edgeid_csr;
+   SCIP_Bool* edge_deletable;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   assert(g && scip && nelims && visited && visitlist && dheap && star_base);
+   assert(graph_pc_isPcMw(g) && !g->extended);
+   assert(graph_isMarked(g));
+
+   if( edgelimit <= 0 )
+      return SCIP_OKAY;
+
+   graph_heap_clean(TRUE, dheap);
+   graph_init_dcsr(scip, g);
+
+   dcsr = g->dcsr_storage;
+   range_csr = dcsr->range;
+   head_csr = dcsr->head;
+   edgeid_csr = dcsr->edgeid;
+   cost_dcsr_org = dcsr->cost;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost_dcsr_biased, dcsr->nedges) );
+
+   for( int e = 0; e < nedges / 2; e++ )
+      edge_deletable[e] = FALSE;
+
+   assert(dcsr && range_csr && edgeid_csr);
+
+   pcBiasCostsDCSR(scip, g, FALSE, cost_dcsr_biased, dist);
+
+   dcsr->cost = cost_dcsr_biased;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      dist[i] = FARAWAY;
+      star_base[i] = SDSTAR_BASE_UNSET;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      SCIP_Bool runloop;
+
+      if( !g->mark[i] )
+      {
+         assert(g->mark[i] == 2 || g->mark[i] == 0 || i == g->source);
+         continue;
+      }
+
+      runloop = TRUE;
+
+      while( runloop )
+      {
+         SCIP_Bool success;
+         int nvisits;
+         const int start = range_csr[i].start;
+
+         if( range_csr[i].end - start <= 1 )
+            break;
+
+         runloop = FALSE;
+
+         /* do the actual star run */
+         graph_sdStar(scip, g, TRUE, i, 2 * edgelimit, star_base, dist, visitlist, &nvisits, dheap, visited, &success);
+
+         if( success )
+         {
+            int enext;
+
+            /* check all star nodes (neighbors of i) */
+            for( int e = start; e < range_csr[i].end; e = enext )
+            {
+               const int starnode = head_csr[e];
+               const int starbase = star_base[starnode];
+               assert(star_base[starnode] >= 0);
+               assert(SCIPisLE(scip, dist[starnode], dcsr->cost[e]));
+               assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
+
+               enext = e + 1;
+
+               if( checkstate )
+               {
+                  const int orgedge = edgeid_csr[e];
+                  if( edgestate[orgedge] == EDGE_BLOCKED )
+                     continue;
+               }
+
+               /* shorter path to current star node found? */
+               if( starnode != starbase )
+               {
+                  assert(star_base[starbase] != SDSTAR_BASE_UNSET);
+
+                  /* path still valid?   */
+                  if( star_base[starbase] != SDSTAR_BASE_KILLED || !EQ(dist[starnode], dcsr->cost[e]) )
+                  {
+                     star_base[starnode] = SDSTAR_BASE_KILLED;
+                     edge_deletable[edgeid_csr[e] / 2] = TRUE;
+
+                     dcsr->cost = cost_dcsr_org;
+                     dcsr->cost2 = cost_dcsr_biased;
+                     graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+                     dcsr->cost = cost_dcsr_biased;
+                     dcsr->cost2 = NULL;
+
+                     (*nelims)++;
+                     enext--;
+                  }
+                  else
+                  {
+                     runloop = TRUE;
+                  }
+               }
+            } /* traverse star nodes */
+         } /* if success */
+
+         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges / 2; e++ )
+   {
+      if( edge_deletable[e] )
+         assert(dcsr->id2csredge[e * 2] == -1);
+      else if( g->oeat[e * 2] != EAT_FREE )
+         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+   }
+#endif
+
+   graph_edge_delBlocked(scip, g, edge_deletable, TRUE);
+
+   dcsr->cost = cost_dcsr_org;
+
+   SCIPfreeBufferArray(scip, &cost_dcsr_biased);
+   SCIPfreeBufferArray(scip, &edge_deletable);
+
+   graph_free_dcsr(scip, g);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** SD star test for PcMw
+ *  NOTE: deprecated */
 SCIP_RETCODE reduce_sdStarPc(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */

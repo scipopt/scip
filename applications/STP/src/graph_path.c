@@ -1187,6 +1187,7 @@ void graph_sdStar(
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
    const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
    SCIP_Real distlimit;
+   /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
    const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : SCIPepsilon(scip);
 
    assert(dcsr && g && dist && visitlist && nvisits && visited && dheap && success);
@@ -1245,7 +1246,7 @@ void graph_sdStar(
 
       assert(k != star_root);
       assert(state[k] == CONNECT);
-      assert(SCIPisLE(scip, dist[k], distlimit));
+      assert(LE(dist[k], distlimit));
 
       if( with_zero_edges && k == star_base[k] )
          state[k] = UNKNOWN;
@@ -1261,7 +1262,7 @@ void graph_sdStar(
          {
             const SCIP_Real distnew = dist[k] + cost_csr[e];
 
-            if( SCIPisGT(scip, distnew, distlimit) )
+            if( GT(distnew, distlimit) )
                continue;
 
             if( distnew < dist[m] )
@@ -1281,7 +1282,7 @@ void graph_sdStar(
 
                assert(star_base[m] != m);
             }
-            else if( SCIPisEQ(scip, distnew, dist[m]) && star_base[m] == m )
+            else if( EQ(distnew, dist[m]) && star_base[m] == m )
             {
                if( with_zero_edges && star_base[k] == star_base[m] )
                   continue;
