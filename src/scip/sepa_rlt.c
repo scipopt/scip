@@ -126,7 +126,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             onlyeqrows;         /**< indicates whether only equality rows should be used for rlt cuts */
    SCIP_Bool             onlycontrows;       /**< indicates whether only continuous rows should be used for rlt cuts */
-   SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be uswed for rlt cuts */
+   SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be used for rlt cuts */
    SCIP_Bool             useinsubscip;       /**< indicates whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< indicates whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< indicates whether the separator should use implicit products */
@@ -215,7 +215,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
 }
 
 
-/** helper method to free the separation data */
+/* helper method to free the separation data */
 static
 SCIP_RETCODE freeSepaData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -227,6 +227,7 @@ SCIP_RETCODE freeSepaData(
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
+   assert(sepadata->varssorted != NULL);
 
    /* release auxiliary variables that were captured for rlt */
    for( i = 0; i < sepadata->nbilinterms; ++i )
@@ -2970,7 +2971,7 @@ SCIP_RETCODE separateRltCuts(
                   }
                }
                else
-                  SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but not accepted by scip", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
+                  SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but is not violated", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
             } else
                SCIPdebugMsg(scip, "the generation of the cut failed\n");
 

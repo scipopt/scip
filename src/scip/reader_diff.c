@@ -918,7 +918,7 @@ SCIP_RETCODE readObjective(
    SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** reads a diff file */

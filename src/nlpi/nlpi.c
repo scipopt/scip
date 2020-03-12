@@ -716,6 +716,7 @@ SCIP_RETCODE SCIPnlpiSetStringPar(
 
    return SCIP_OKAY;
 }
+/**@} */
 
 /** sets message handler for message output */
 SCIP_RETCODE SCIPnlpiSetMessageHdlr(

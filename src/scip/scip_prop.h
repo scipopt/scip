@@ -222,7 +222,7 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    int                   presolpriority      /**< new presol priority of the propagator */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

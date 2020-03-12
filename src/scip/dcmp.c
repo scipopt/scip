@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dcmp.c
+ * @ingroup OTHER_CFILES
  * @brief  internal methods for decompositions and the decomposition store
  * @author Gregor Hendel
  */

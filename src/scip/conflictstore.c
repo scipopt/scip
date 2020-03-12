@@ -134,10 +134,10 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       int nvars2;
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons1, &nvars1, &success) );
-      assert(success)
+      assert(success);
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons2, &nvars2, &success) );
-      assert(success)
+      assert(success);
 
       if( nvars1 >= nvars2 )
          return -1;
@@ -693,7 +693,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** adds an original conflict constraint to the store

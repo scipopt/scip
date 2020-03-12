@@ -105,9 +105,9 @@ SCIP_RETCODE SCIPcreateConsBasicXyz(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

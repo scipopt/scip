@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -2447,6 +2447,7 @@ SCIP_RETCODE detectImpliedBounds(
       {
          SCIPsetDebugMsg(set, "conflict set (%p) is redundant because at least one global reduction, fulfills the conflict constraint\n", (void*)conflictset);
 
+         /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
       }
       else if( *nredvars > 0 )
@@ -2476,6 +2477,11 @@ SCIP_RETCODE detectImpliedBounds(
 
          SCIPsetDebugMsg(set, "removed %d redundant of %d variables from conflictset (%p)\n", (*nredvars), conflictset->nbdchginfos, (void*)conflictset);
          conflictset->nbdchginfos = nbdchginfos;
+      }
+      else
+      {
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
       }
 
      TERMINATE:
@@ -3395,6 +3401,9 @@ SCIP_RETCODE conflictAddConflictCons(
       int oldnbdchginfos = conflictset->nbdchginfos;
 #endif
       assert(conflictset->validdepth == 0);
+
+      /* check conflict set on debugging solution */
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->root, conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) );
 
       SCIPclockStart(conflict->dIBclock, set);
 

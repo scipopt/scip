@@ -349,7 +349,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
+SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
 {
    SCIP_VAR* auxvar;
    SCIP_ROWPREP* rowprep = NULL;
@@ -368,7 +368,6 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    *result = SCIP_DIDNOTFIND;
-   *ncuts = 0;
 
    /* get auxiliary variable */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
@@ -410,7 +409,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       return SCIP_OKAY;
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+   /* TODO if not allowweakcuts, maybe use SCIPcleanupRowprep2 */
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetLPFeastol(scip), NULL, &success) );
 
    if( success )
    {
@@ -419,12 +419,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
       SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &cut, rowprep, conshdlr) );
 
-      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= mincutviolation);
+      assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= SCIPgetLPFeastol(scip));
 
       /* add cut */
       SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
       if( *result == SCIP_CUTOFF )
@@ -505,7 +504,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL, NULL);
+   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, enfoHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, reversepropHdlr);
 
    return SCIP_OKAY;
@@ -589,7 +588,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, enfoHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );

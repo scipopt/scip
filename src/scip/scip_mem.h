@@ -228,7 +228,7 @@ void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -64,7 +64,7 @@ SCIP_RETCODE runSCIP(
 
    /* include TSP specific plugins */
    SCIP_CALL( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );
-   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) ); 
+   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(scip), TRUE) );

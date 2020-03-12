@@ -30,6 +30,7 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    SCIP_Real coef;
    SCIP_Real constant;
    SCIP_Bool islocal;
+   SCIP_Bool branchcand;
    SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateConsExprExprLog(scip, conshdlr, &expr, zexpr) );
@@ -37,22 +38,26 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    /* compute an overestimation (linearization) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
 
-   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), &coef, &constant, &islocal, &success) );
+   branchcand = TRUE;
+   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), &coef, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -1.0 + log(2.0), SCIPepsilon(scip));
    cr_assert_float_eq(coef, 0.5, SCIPepsilon(scip));
    cr_assert(!islocal);
+   cr_assert(!branchcand);
 
    /* compute an underestimation (secant) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
 
-   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), &coef, &constant, &islocal, &success) );
+   branchcand = TRUE;
+   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), &coef, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -log(3.0)/2.0, SCIPepsilon(scip));
    cr_assert_float_eq(coef, log(3.0)/2.0, SCIPepsilon(scip));
    cr_assert(islocal);
+   cr_assert(branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

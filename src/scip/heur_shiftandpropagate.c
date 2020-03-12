@@ -1923,8 +1923,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        * @todo this should not be necessary
        */
       if( heurdata->probing )
+      {
          SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex,lb, ub, violatedrows, violatedrowpos,
                &nviolatedrows) );
+      }
 
       SCIPdebugMsg(scip, "Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, matrix->transformstatus[permutedvarindex], matrix->upperbounds[permutedvarindex]);
@@ -2061,10 +2063,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             cutoff = TRUE;
             break;
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible */
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
+             */
             assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(var), origsolval + 1.0));
 
             ndomredsfound = 0;
@@ -2074,10 +2077,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible */
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
+             */
             assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), origsolval - 1.0));
 
             ndomredsfound = 0;

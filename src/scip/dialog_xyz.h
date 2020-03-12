@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPincludeDialogXyz(
 
 /** TODO: add further methods to this group for documentation purposes */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

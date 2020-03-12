@@ -893,7 +893,7 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real varconsratio;
 
          /* get LP degeneracy information */
-         SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+         SCIP_CALL( SCIPgetLPDualDegeneracy(scip, &degeneracy, &varconsratio) );
 
          assert(degeneracy >= 0.0);
          assert(degeneracy <= 1.0);

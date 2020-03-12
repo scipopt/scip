@@ -2156,8 +2156,11 @@ SCIP_RETCODE SCIPsolPrint(
       }
    }
 
-   /* display additional priced variables (if given problem data is original problem) */
-   if( !prob->transformed && !SCIPsolIsOriginal(sol) )
+   /* display additional priced variables (if given problem data is original problem); consider these variables only
+    * if there is at least one active pricer, otherwise we might print variables that have been added by, e.g., the
+    * dual sparsify presolver (see #2946)
+    */
+   if( !prob->transformed && !SCIPsolIsOriginal(sol) && set->nactivepricers > 0 )
    {
       assert(transprob != NULL);
       for( v = 0; v < transprob->nfixedvars; ++v )

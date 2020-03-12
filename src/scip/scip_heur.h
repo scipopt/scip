@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicDivesetMethods
  *
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIPisDivesetAvailable(
    SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

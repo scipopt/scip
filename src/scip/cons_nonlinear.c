@@ -1543,6 +1543,92 @@ SCIP_RETCODE chgLinearCoefPos(
    return SCIP_OKAY;
 }
 
+/** changes side of constraint and allow to change between finite and infinite
+ *
+ * takes care of updating events and locks of linear variables
+ */
+static
+SCIP_RETCODE chgSideNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         side,               /**< which side to change */
+   SCIP_Real             sideval             /**< new value for side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, side == SCIP_SIDETYPE_LEFT ? sideval : -sideval));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* if remaining finite or remaining infinite, then can just update the value */
+   if( side == SCIP_SIDETYPE_LEFT )
+   {
+      if( SCIPisInfinity(scip, -consdata->lhs) == SCIPisInfinity(scip, -sideval) )
+      {
+         consdata->lhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, consdata->rhs) == SCIPisInfinity(scip, sideval) )
+      {
+         consdata->rhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* catched boundchange events and locks for linear variables depends on whether side is finite, so first drop all */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      int j;
+      if( SCIPconsIsEnabled(cons) )
+      {
+         SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+      }
+
+      for( j = 0; j < NLOCKTYPES; j++ )
+      {
+         if( SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j) )
+         {
+            assert(SCIPconsIsTransformed(cons));
+            SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            break;
+         }
+      }
+   }
+
+   if( side == SCIP_SIDETYPE_LEFT )
+      consdata->lhs = sideval;
+   else
+      consdata->rhs = sideval;
+
+   /* catch boundchange events and locks on variables again */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      int j;
+      if( SCIPconsIsEnabled(cons) )
+      {
+         SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+      }
+
+      for( j = 0; j < NLOCKTYPES; j++ )
+      {
+         if( SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j) )
+         {
+            SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /* merges entries with same linear variable into one entry and cleans up entries with coefficient 0.0 */
 static
@@ -1650,13 +1736,11 @@ SCIP_RETCODE removeFixedLinearVariables(
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-               consdata->lhs -= offset;
-               assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+               SCIP_CALL( chgSideNonlinear(scip, cons, SCIP_SIDETYPE_LEFT, consdata->lhs - offset) );
             }
             if( !SCIPisInfinity(scip,  consdata->rhs) )
             {
-               consdata->rhs -= offset;
-               assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+               SCIP_CALL( chgSideNonlinear(scip, cons, SCIP_SIDETYPE_RIGHT, consdata->rhs - offset) );
             }
          }
 

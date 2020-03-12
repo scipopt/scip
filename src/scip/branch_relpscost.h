@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
