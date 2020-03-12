@@ -1827,7 +1827,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_Bool useglobal;
 
    useglobal = (int) node->depth <= tree->effectiverootdepth;
-/*
    if( useglobal )
    {
       oldlb = SCIPvarGetLbGlobal(var);
@@ -1838,7 +1837,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       oldlb = SCIPvarGetLbLocal(var);
       oldub = SCIPvarGetUbLocal(var);
    }
-*/
+
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
