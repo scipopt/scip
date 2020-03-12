@@ -2174,6 +2174,12 @@ SCIP_RETCODE reduce_da(
    if( graph->terms <= 2 )
       return SCIP_OKAY;
 
+#ifdef STP_RPC_FIXEDPROPER
+   assert(0 && "check");
+   if( rpc )
+      return SCIP_OKAY;
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
@@ -2976,7 +2982,7 @@ SCIP_RETCODE reduce_daPcMw(
    offset = 0.0;
 
    /* transform the problem to a real SAP */
-   SCIP_CALL( graph_pc_getSap(scip, graph, &transgraph, &offset) );
+   SCIP_CALL( graph_transPcGetSap(scip, graph, &transgraph, &offset) );
 
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
@@ -3182,7 +3188,7 @@ SCIP_RETCODE reduce_daPcMw(
          assert(0); // might actually happen!
       }
 
-      SCIP_CALL( graph_pc_getRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
+      SCIP_CALL( graph_transPcGetRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 
       assert(graph_valid(scip, transgraph) && STP_SAP == transgraph->stp_type);
 

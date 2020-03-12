@@ -1236,7 +1236,7 @@ SCIP_RETCODE graph_load(
                   curf.section = &section_table[0];
 
                   assert(nwcount == nodes);
-                  SCIP_CALL( graph_2nw(scip, presol, g) );
+                  SCIP_CALL( graph_transNw(scip, presol, g) );
 
                   break;
                case KEY_OBSTACLES_RR :
@@ -1285,26 +1285,30 @@ SCIP_RETCODE graph_load(
                      if( stp_type == STP_RMWCSP )
                      {
                         assert(nodes == termcount);
-                        SCIP_CALL( graph_pc_2rmw(scip, g) );
+                        SCIP_CALL( graph_transRmw(scip, g) );
                      }
                      else if( stp_type == STP_MWCSP )
                      {
                         assert(nodes == termcount);
-                        SCIP_CALL( graph_pc_2mw(scip, g) );
+                        SCIP_CALL( graph_transMw(scip, g) );
                      }
                      else if( stp_type == STP_BRMWCSP )
                      {
                         assert(nodes == termcount);
-                        SCIP_CALL( graph_pc_2rmw(scip, g) );
+                        SCIP_CALL( graph_transRmw(scip, g) );
                         g->stp_type = STP_BRMWCSP;
                      }
                      else if( stp_type == STP_PCSPG )
                      {
-                        SCIP_CALL( graph_pc_2pc(scip, g) );
+                        SCIP_CALL( graph_transPc(scip, g) );
                      }
                      else if( stp_type == STP_RPCSPG )
                      {
-                        SCIP_CALL( graph_pc_2rpc(scip, g) );
+#ifdef STP_RPC_FIXEDPROPER
+                        SCIP_CALL( graph_transRpc2FixedProper(scip, presol, g) );
+#else
+                        SCIP_CALL( graph_transRpc(scip, g) );
+#endif
                      }
                   }
                   curf.section = &section_table[0];

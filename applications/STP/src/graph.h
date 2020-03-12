@@ -73,6 +73,7 @@ typedef unsigned char STP_Bool;
 
 extern SCIP_Bool show; // todo delete
 
+//#define STP_RPC_FIXEDPROPER // only for testing
 
 /** fixed graph components */
 typedef struct fixed_graph_components FIXED;
@@ -427,9 +428,7 @@ extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* 
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
-extern SCIP_RETCODE   graph_2nw(SCIP*, PRESOL*, GRAPH*);
-extern SCIP_RETCODE   graph_nw2sap(SCIP*, PRESOL*, GRAPH*);
-extern SCIP_RETCODE   graph_nw2pc(SCIP*, PRESOL*, GRAPH*);
+
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
@@ -455,6 +454,21 @@ extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
 extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
+
+
+/* graph_trans.c
+ */
+extern SCIP_RETCODE   graph_transNw(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_transNw2sap(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_transNw2pc(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_transPc(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_transRpc(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_transRpc2FixedProper(SCIP*, PRESOL*, GRAPH*);
+extern SCIP_RETCODE   graph_transMw(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_transRmw(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_transPcmw2rooted(SCIP*, GRAPH*, SCIP_Real, SCIP_Bool);
+extern SCIP_RETCODE   graph_transPcGetSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
+extern SCIP_RETCODE   graph_transPcGetRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, int);
 
 
 /* graph_pcbase.c
@@ -483,18 +497,13 @@ extern void   graph_pc_adaptSap(SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*);
 extern void   graph_pc_termMarkProper(const GRAPH*, int*);
+extern void   graph_pc_shiftNonLeafCosts(SCIP*, GRAPH*);
 extern SCIP_Real graph_pc_getNonLeafTermOffset(SCIP*, const GRAPH*);
 extern SCIP_RETCODE   graph_pc_presolInit(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_initSubgraph(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_finalizeSubgraph(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_initPrizes(SCIP*, GRAPH*, int);
-extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real, SCIP_Bool);
-extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
-extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, int);
+extern SCIP_RETCODE   graph_pc_initTerm2Edge(SCIP*, GRAPH*, int);
 extern SCIP_RETCODE   graph_pc_contractNodeAncestors(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdgeUnordered(SCIP*, GRAPH*, int*, int, int);

@@ -1408,9 +1408,9 @@ SCIP_RETCODE redLoopMw(
    if( tryrmw && g->terms > 2 )
    {
 #ifdef WITH_UG
-      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum, FALSE) );
+      SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, FALSE) );
 #else
-      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum, TRUE) );
+      SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, TRUE) );
 #endif
    }
 
@@ -1662,9 +1662,9 @@ SCIP_RETCODE redLoopPc(
          assert(graph_pc_term2edgeIsConsistent(scip, g));
 
 #ifdef WITH_UG
-         SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum, FALSE));
+         SCIP_CALL(graph_transPcmw2rooted(scip, g, prizesum, FALSE));
 #else
-         SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum, TRUE));
+         SCIP_CALL(graph_transPcmw2rooted(scip, g, prizesum, TRUE));
 #endif
 
          rpc = (g->stp_type == STP_RPCSPG);

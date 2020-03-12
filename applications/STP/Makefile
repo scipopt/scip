@@ -79,6 +79,7 @@ CMAINOBJ	=	cmain.o \
 			graph_pcbase.o \
 			graph_save.o \
 			graph_sol.o \
+			graph_trans.o \
 			graph_util.o \
 			heur_ascendprune.o \
 			heur_slackprune.o \

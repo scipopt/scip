@@ -70,7 +70,7 @@ SCIP_RETCODE graphBuildV5E5(
 
       graph->prize[0] = 1.0;
 
-      SCIP_CALL( graph_pc_2pc(scip, graph) );
+      SCIP_CALL( graph_transPc(scip, graph) );
    }
 
    SCIP_CALL(graph_init_history(scip, graph));

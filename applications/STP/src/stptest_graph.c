@@ -322,7 +322,7 @@ SCIP_RETCODE stptest_graphSetUpPcExtended(
 {
    graph->stp_type = STP_PCSPG;
 
-   SCIP_CALL( graph_pc_2pc(scip, graph) );
+   SCIP_CALL( graph_transPc(scip, graph) );
 
    stptest_graphSetUp(scip, graph);
 

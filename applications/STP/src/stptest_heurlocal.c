@@ -147,7 +147,7 @@ SCIP_RETCODE localKeyPathExchangePc(
    graph_knot_chg(graph, 4, 0);
    graph_knot_chg(graph, 5, 0);
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -250,7 +250,7 @@ SCIP_RETCODE localKeyPathExchangePc2(
    graph_knot_chg(graph, 5, 0);
    graph_knot_chg(graph, 6, 0);
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -350,7 +350,7 @@ SCIP_RETCODE localKeyPathExchangeMw(
    graph->prize[6] = 0.5;
    graph->prize[7] = -1.0;
 
-   SCIP_CALL(graph_pc_2mw(scip, graph));
+   SCIP_CALL(graph_transMw(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -549,7 +549,7 @@ SCIP_RETCODE localKeyVertexPc(
    graph_knot_chg(graph, 5, 0);
    graph_knot_chg(graph, 6, 0);
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -667,7 +667,7 @@ SCIP_RETCODE localKeyVertexPc2(
    graph_knot_chg(graph, 8, 0);
 
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -788,7 +788,7 @@ SCIP_RETCODE localExtendPc(
    graph_knot_chg(graph, 8, 0);
 
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -1048,7 +1048,7 @@ SCIP_RETCODE localInsertion2pc(
    graph_knot_chg(graph, 3, 0);
    graph_knot_chg(graph, 4, 0);
 
-   SCIP_CALL(graph_pc_2pc(scip, graph));
+   SCIP_CALL(graph_transPc(scip, graph));
 
    nnodes = graph->knots;
    nedges = graph->edges;

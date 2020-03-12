@@ -60,7 +60,7 @@ SCIP_RETCODE checkSdWalk(
    GRAPH* graph = *g;
 
    /* build PC graph */
-   SCIP_CALL( graph_pc_2pc(scip, graph) );
+   SCIP_CALL( graph_transPc(scip, graph) );
 
    nnodes = graph->knots;
    nedges = graph->edges;
