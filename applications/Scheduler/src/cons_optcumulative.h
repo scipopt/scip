@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,32 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** set the left bound of the time axis to be considered (including hmin) */
+SCIP_RETCODE SCIPsetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmin                /**< left bound of time axis to be considered */
+   );
+
+/** returns the left bound of the time axis to be considered */
+int SCIPgetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** set the right bound of the time axis to be considered (not including hmax) */
+SCIP_RETCODE SCIPsetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmax                /**< right bound of time axis to be considered */
+   );
+
+/** returns the right bound of the time axis to be considered */
+int SCIPgetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 #ifdef __cplusplus

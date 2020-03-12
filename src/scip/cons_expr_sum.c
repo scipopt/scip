@@ -843,6 +843,10 @@ SCIP_RETCODE separatePointSum(
    return SCIP_OKAY;
 }
 
+/* TODO we should get rid of this somehow
+ * maybe initsepa of nlhdlr_default should call estimate,
+ * but it currently doesn't know for which expr's the estimator can be computed without a solution
+ */
 /** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
@@ -939,180 +943,28 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    return SCIP_OKAY;
 }
 
-/** separation deinitialization callback */
 static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSum)
 {  /*lint --e{715}*/
-
-   return SCIP_OKAY;
-}
-
-/** expression separation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
-{  /*lint --e{715}*/
-   SCIP_ROWPREP* rowprep;
-   SCIP_Real viol;
-   SCIP_Bool violreliable;
-   SCIP_Bool success = FALSE;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* create rowprep */
-   SCIP_CALL( separatePointSum(scip, expr, overestimate, &rowprep) );
-   assert(rowprep != NULL);
-
-   viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
-
-   SCIPdebugMsg(scip, "sepaSum %p with %d children sol %p: rowprep viol %g (reliable: %d min: %g)\n", (void*) expr, SCIPgetConsExprExprNChildren(expr), sol, viol, violreliable, mincutviolation);
-   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
-   if( SCIPisZero(scip, viol) )
-   {
-      SCIPfreeRowprep(scip, &rowprep);
-      return SCIP_OKAY;
-   }
-
-#if 0
-   for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
-   {
-      SCIP_VAR* auxvarchild = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
-      printf("%g %s[%g,%g] %g\n", SCIPgetConsExprExprData(expr)->coefficients[i], SCIPvarGetName(auxvarchild), SCIPgetSolVal(scip, sol, auxvarchild), SCIPvarGetLbGlobal(auxvarchild), SCIPvarGetUbGlobal(auxvarchild));
-   }
-#endif
-
-   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above mincutviolation
-    * (use a factor of 2 to get strictly above mincutviolation, also for numerics in the assert below)
-    * if the violation is not reliable, then we better go to the more powerful cleanup
-    */
-   if( violreliable )
-      (void) SCIPscaleupRowprep(scip, rowprep, 2.0 * mincutviolation / viol, &success);
-
-   if( !success )
-   {
-      SCIPdebugMsg(scip, "scaleup not sufficient, doing cleanup\n");
-
-      /* if scale-up is not sufficient, then do clean-up, which could relax the row */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-   }
-
-   /* create a SCIP_ROW and add it to the initial LP */
-   if( success )
-   {
-      SCIP_ROW* row;
-      SCIP_Bool infeasible;
-
-      SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
-
-      assert(SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable) >= mincutviolation && violreliable);
-
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "add %s cut with violation %g, reliable = %d\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable), violreliable);
-      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
-
-      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-      if( infeasible )
-      {
-         *result = SCIP_CUTOFF;
-      }
-      else
-      {
-         *result = SCIP_SEPARATED;
-         ++*ncuts;
-      }
-
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
-   /* else
-   {
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
-      SCIPdebugMsg(scip, "cleanup failed; viol %g reliable %u\n", viol, violreliable);
-      SCIPprintRowprep(scip, rowprep, NULL);
-   } */
-
-   /* free rowprep */
-   SCIPfreeRowprep(scip, &rowprep);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
-{
-   SCIP_ROWPREP* rowprep;
-   SCIP_Real violation;
-   SCIP_Real rowviol;
-   SCIP_VAR* auxvar;
-   int pos;
-   int i;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(success != NULL);
+   assert(branchcand != NULL);
 
-   *success = FALSE;
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
-   /* reproduce the separation that seems to have failed */
-   assert(auxvalue != SCIP_INVALID); /*lint !e777*/
-   violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
-   assert(violation != 0.0);
+   memcpy(coefs, exprdata->coefficients, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Real));
+   *constant = exprdata->constant;
+   *success = TRUE;
 
-   SCIPdebugMsg(scip, "branchscoresum %p sol %p viol %g\n", (void*)expr, sol, violation);
-
-   /* create rowprep */
-   SCIP_CALL( separatePointSum(scip, expr, violation > 0.0, &rowprep) );
-   assert(rowprep != NULL);
-
-   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
-
-   /* clean-up rowprep and remember where modifications happened */
-   rowprep->recordmodifications = TRUE;
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPfeastol(scip), &rowviol, NULL) );
-
-   SCIPdebugMsg(scip, "cleanupRowprep modified %d coefficents and %smodified side\n", rowprep->nmodifiedvars, rowprep->modifiedside ? "" : "not ");
-
-   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
-
-   /* separation must have failed because we had to relax the row (?)
-    * or the minimal cut violation was too large during separation
-    * or the cut violation was not reliable numerically (before cleanup or after cleanup, which may have reordered terms, which can lead to a different violation if unreliable)
-    * or the LP could not be solved (enfops)
+   /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
+    * if we branch for numerical reasons, then cons-expr-core should figure out what the candidates are
     */
-   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || rowviol <= SCIPfeastol(scip) || !SCIPisRowprepViolationReliable(scip, rowprep, sol) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
-
-   /* if no modifications in coefficients, then we cannot point to any branching candidates */
-   if( rowprep->nmodifiedvars == 0 )
-   {
-      SCIPfreeRowprep(scip, &rowprep);
-      return SCIP_OKAY;
-   }
-
-   /* sort modified variables to make lookup below faster */
-   SCIPsortPtr((void**)rowprep->modifiedvars, SCIPvarComp, rowprep->nmodifiedvars);
-
-   /* add each child which auxvar is found in modifiedvars to branching candidates */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
-   {
-      auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
-      assert(auxvar != NULL);
-
-      if( SCIPsortedvecFindPtr((void**)rowprep->modifiedvars, SCIPvarComp, auxvar, rowprep->nmodifiedvars, &pos) )
-      {
-         assert(rowprep->modifiedvars[pos] == auxvar);
-         SCIPaddConsExprExprBranchScore(scip, expr, brscoretag, REALABS(violation));
-
-         *success = TRUE;
-
-         SCIPdebugMsg(scip, "added branchingscore for expr %p with auxvar <%s> (coef %g)\n", SCIPgetConsExprExprChildren(expr)[i], SCIPvarGetName(auxvar), SCIPgetConsExprExprData(expr)->coefficients[i]);
-      }
-   }
-   /* for all of the modified variables, a branching score should have been added, except if the auxvar of this expression was modified/removed */
-   assert(*success || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == SCIPgetConsExprExprAuxVar(expr)));
-
-   SCIPfreeRowprep(scip, &rowprep);
+   memset(branchcand, 0, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Bool));
 
    return SCIP_OKAY;
 }
@@ -1249,8 +1101,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, exitSepaSum, sepaSum, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, NULL, estimateSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
@@ -1383,7 +1234,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions to propagate */
    SCIP_Real*            weights,            /**< weights of expressions in sum */
    SCIP_Real             constant,           /**< constant in sum */
-   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i \in interval */
+   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i in interval */
    SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
    int*                  nreductions,        /**< buffer to store the number of interval reductions */

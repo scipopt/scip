@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_erspective.h
+/**@file   cons_expr_nlhdlr_perspective.h
  * @brief  perspective nonlinear handler
  * @author Ksenia Bestuzheva
  */

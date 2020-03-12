@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3593,7 +3593,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -5444,10 +5444,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
       assert(temp >= -1 && temp <= 3);
-      if ( temp == 0 )
-         *ival = 0;
-      else
+      if( temp == -1 )
          *ival = 1;
+      else
+         *ival = temp;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -5505,11 +5505,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival >= 0 && ival <= 1);
-      if ( ival == 0 )
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
-      else
+      if( ival == 1 )
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, -1) );
+      else
+         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -1161,6 +1161,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+
 /*
  * Callback methods of expression handler
  */
@@ -1579,6 +1580,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1619,16 +1622,30 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       SCIP_VAR* y;
       SCIP_Real refpointx;
       SCIP_Real refpointy;
+      SCIP_INTERVAL bndx;
+      SCIP_INTERVAL bndy;
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
       x = SCIPgetConsExprExprAuxVar(child);
       assert(x != NULL);
 
+      bndx.inf = SCIPvarGetLbLocal(x);
+      bndx.sup = SCIPvarGetUbLocal(x);
+      if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+         SCIPintervalIntersectEps(&bndx, SCIPfeastol(scip), bndx, SCIPgetConsExprExprActivity(scip, child));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndx));
+
       /* collect second variable */
       child = SCIPgetConsExprExprChildren(expr)[1];
       y = SCIPgetConsExprExprAuxVar(child);
       assert(y != NULL);
+
+      bndy.inf = SCIPvarGetLbLocal(y);
+      bndy.sup = SCIPvarGetUbLocal(y);
+      if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+         SCIPintervalIntersectEps(&bndy, SCIPfeastol(scip), bndy, SCIPgetConsExprExprActivity(scip, child));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndy));
 
       coefs[0] = 0.0;
       coefs[1] = 0.0;
@@ -1639,19 +1656,18 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       refpointy = SCIPgetSolVal(scip, sol, y);
 
       /* adjust the reference points */
-      refpointx = MIN(MAX(refpointx, SCIPvarGetLbLocal(x)),SCIPvarGetUbLocal(x)); /*lint !e666*/
-      refpointy = MIN(MAX(refpointy, SCIPvarGetLbLocal(y)),SCIPvarGetUbLocal(y)); /*lint !e666*/
+      refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup); /*lint !e666*/
+      refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup); /*lint !e666*/
       assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
       assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
-      SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
-            SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &coefs[0], &coefs[1], constant,
+      SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, refpointx,
+            bndy.inf, bndy.sup, refpointy, overestimate, &coefs[0], &coefs[1], constant,
             success);
-
-      return SCIP_OKAY;
    }
    else
    {
+      SCIP_INTERVAL childbnds;
       SCIP_Real* box;
       SCIP_Real* xstar;
       int i;
@@ -1667,14 +1683,20 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
          child = SCIPgetConsExprExprChildren(expr)[i];
          var = SCIPgetConsExprExprAuxVar(child);
 
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         childbnds.inf = SCIPvarGetLbLocal(var);
+         childbnds.sup = SCIPvarGetUbLocal(var);
+         if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+            SCIPintervalIntersectEps(&childbnds, SCIPfeastol(scip), childbnds, SCIPgetConsExprExprActivity(scip, child));
+         assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbnds));
+
+         if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
          {
             SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
             goto CLEANUP;
          }
 
-         box[2*i] = SCIPvarGetLbLocal(var);
-         box[2*i+1] = SCIPvarGetUbLocal(var);
+         box[2*i] = childbnds.inf;
+         box[2*i+1] = childbnds.sup;
 
          xstar[i] = SCIPgetSolVal(scip, sol, var);
 
@@ -1690,6 +1712,104 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
 CLEANUP:
       SCIPfreeBufferArray(scip, &xstar);
       SCIPfreeBufferArray(scip, &box);
+   }
+
+   /* TODO check once whether we actually have integer vars in children and skip all this if not */
+   {
+      /* Mark only those children for branching that would be fixed after branching on it.
+       * As the children may not be actual variables that are branched on, but the branching score might be
+       * propagated down the tree first, we consider children with an auxiliary variable (that would be all
+       * if this exprhdlr is also used for estimate/separate) and then check the auxiliary variable whether
+       * it appears to be binary (locally).
+       * Also count number of discrete variables that would not be fixed after branching.
+       */
+      SCIP_Bool havewideinteger = FALSE;
+      SCIP_Bool havebranchcand = FALSE;
+      int i;
+
+      /* As branchcand is initialized to be all TRUE, we actually unmark those children we do not want to
+       * consider for branching.
+       */
+      for( i = 0; i < nchildren; ++i )
+      {
+         child = SCIPgetConsExprExprChildren(expr)[i];
+         var = SCIPgetConsExprExprAuxVar(child);
+         if( var == NULL )
+         {
+            branchcand[i] = FALSE;
+            continue;
+         }
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            branchcand[i] = FALSE;
+            continue;
+         }
+         /* skip fixed children */
+         if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.5 )
+         {
+            branchcand[i] = FALSE;
+            continue;
+         }
+         /* skip children with wide bounds (consider in fallback below) */
+         if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) >= 2.0 )
+         {
+            branchcand[i] = FALSE;
+            havewideinteger = TRUE;
+            continue;
+         }
+
+         havebranchcand = TRUE;
+      }
+
+      /* if we left at least one branching candidate, then we are done */
+      if( havebranchcand )
+         return SCIP_OKAY;
+
+      /* if there are no unfixed discrete children, then fall back to default rule */
+      if( !havewideinteger )
+      {
+         for( i = 0; i < nchildren; ++i )
+            branchcand[i] = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* mark all children for branching that are not at their bound (could be all children, in which case it is like the nlhdlr's default)
+       * as above we unmarked all children, we now mark all candidates
+       */
+      for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      {
+         SCIP_Real auxvarval;
+         SCIP_Real auxvarlb;
+         SCIP_Real auxvarub;
+
+         child = SCIPgetConsExprExprChildren(expr)[i];
+         var = SCIPgetConsExprExprAuxVar(child);
+         if( var == NULL )
+            continue;
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            continue;
+
+         auxvarval = SCIPgetSolVal(scip, sol, var);
+         auxvarlb = SCIPvarGetLbLocal(var);
+         auxvarub = SCIPvarGetUbLocal(var);
+
+         /* if at lower bound, then skip */
+         if( !SCIPisInfinity(scip, -auxvarlb) && SCIPisFeasEQ(scip, auxvarval, auxvarlb) )
+            continue;
+         /* if at upper bound, then skip */
+         if( !SCIPisInfinity(scip,  auxvarub) && SCIPisFeasEQ(scip, auxvarval, auxvarub) )
+            continue;
+
+         branchcand[i] = TRUE;
+         havebranchcand = TRUE;
+      }
+
+      /* if there are no branching candidates, then fall back to default rule */
+      if( !havebranchcand )
+      {
+         for( i = 0; i < nchildren; ++i )
+            branchcand[i] = TRUE;
+      }
    }
 
    return SCIP_OKAY;
@@ -1856,105 +1976,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityProduct)
    return SCIP_OKAY;
 }
 
-/** expression branching score callback */
-static
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
-{
-   SCIP_Real auxval;
-   SCIP_Real violation;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* childauxvar;
-   SCIP_Bool havewideinteger;
-   int c;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(success != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) > 1);
-
-   *success = FALSE;
-
-   /* get value of auxiliary variable of this expression */
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-   if( auxvalue == auxval )  /* absolute no violation */ /*lint !e777*/
-      return SCIP_OKAY;
-
-   violation = REALABS(auxvalue - auxval);
-
-   /* Add violation as branching score to only those children that would be fixed after branching on it
-    * as the children may not be actual variables that are branched on, but the branching score might be
-    * propagated down the tree first, we consider children with an auxiliary variable (that would be all
-    * if this exprhdlr is also used for estimate/separate) and then check the auxiliary variable whether
-    * it appears to be binary (locally).
-    * Also count number of discrete variables that would not be fixed after branching.
-    */
-   havewideinteger = FALSE;
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      child = SCIPgetConsExprExprChildren(expr)[c];
-      childauxvar = SCIPgetConsExprExprAuxVar(child);
-      if( childauxvar == NULL )
-         continue;
-      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
-         continue;
-      /* skip fixed children */
-      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) < 0.5 )
-         continue;
-      /* skip children with wide bounds (consider in fallback below) */
-      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) >= 2.0 )
-      {
-         havewideinteger = TRUE;
-         continue;
-      }
-
-      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
-      *success = TRUE;
-   }
-
-   /* if we passed on some branching score then we are done */
-   if( *success )
-      return SCIP_OKAY;
-
-   /* if there are no unfixed discrete children, then fall back to default rule */
-   if( !havewideinteger )
-      return SCIP_OKAY;
-
-   /* pass branching score to all unfixed discrete children not at their bound (could be all children, in which case it is like the nlhdlr's default) */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      SCIP_Real auxvarval;
-      SCIP_Real auxvarlb;
-      SCIP_Real auxvarub;
-
-      child = SCIPgetConsExprExprChildren(expr)[c];
-      childauxvar = SCIPgetConsExprExprAuxVar(child);
-      if( childauxvar == NULL )
-         continue;
-      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
-         continue;
-
-      auxvarval = SCIPgetSolVal(scip, sol, childauxvar);
-      auxvarlb = SCIPvarGetLbLocal(childauxvar);
-      auxvarub = SCIPvarGetUbLocal(childauxvar);
-
-      /* if at lower bound, then skip */
-      if( !SCIPisInfinity(scip, -auxvarlb) && SCIPisFeasEQ(scip, auxvarval, auxvarlb) )
-         continue;
-      /* if at upper bound, then skip */
-      if( !SCIPisInfinity(scip,  auxvarub) && SCIPisFeasEQ(scip, auxvarval, auxvarub) )
-         continue;
-
-      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
-      *success = TRUE;
-   }
-
-   /* if we didn't add branchscore for any child, then fall back to nlhdlr_default's branchscore rule */
-
-   return SCIP_OKAY;
-}
-
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1986,14 +2007,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreProduct) );
 
    return SCIP_OKAY;
 }

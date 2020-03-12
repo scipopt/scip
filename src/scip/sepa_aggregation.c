@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   sepa_aggregation.c
  * @ingroup DEFPLUGINS_SEPA
  * @brief  flow cover and complemented mixed integer rounding cuts separator (Marchand's version)
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Kati Wolter
  * @author Tobias Achterberg
  *
@@ -325,6 +325,7 @@ SCIP_RETCODE setupAggregationData(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + nimplvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->nbadvarsinrow, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrdata->aggrrow) );
+   assert( aggrdata->aggrrow != NULL );
    BMSclearMemoryArray(aggrdata->nbadvarsinrow, nrows);
 
    aggrdata->nbounddistvars = 0;
@@ -403,7 +404,11 @@ SCIP_RETCODE setupAggregationData(
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrows, aggrrowsminsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrowscoef, aggrrowsminsize) );
+               aggrdata->aggrrowssize = aggrrowsminsize;
             }
+            assert(aggrdata->aggrrows != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowscoef != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowssize > 0 || ncolnonzeros == 0);
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
@@ -413,6 +418,8 @@ SCIP_RETCODE setupAggregationData(
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
                /* coverity[var_deref_op] */
+               assert(aggrdata->aggrrows != NULL);  /* for lint */
+               assert(aggrdata->aggrrowscoef != NULL);
                aggrdata->aggrrows[aggrdata->naggrrows] = colrows[k];
                aggrdata->aggrrowscoef[aggrdata->naggrrows] = colrowvals[k];
                ++aggrdata->naggrrows;
@@ -633,6 +640,7 @@ SCIP_RETCODE aggregateNextRow(
          return SCIP_ERROR;
 
       assert(ngoodrows > 0); /* bounddistance was negative for this variable, so it should have good rows */
+      assert(ngoodrows <= nrows);
 
       for( k = 0; k < ngoodrows; ++k )
       {
@@ -671,7 +679,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
       goto TERMINATE;
    }
 
@@ -753,7 +761,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
    }
 
 TERMINATE:
@@ -793,10 +801,8 @@ SCIP_RETCODE aggregation(
    int nrows;
    int maxtestdelta;
 
-   SCIP_Real cutrhs;
-   SCIP_Real cutefficacy;
-
    assert(scip != NULL);
+   assert(aggrdata != NULL);
    assert(sepa != NULL);
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
@@ -829,7 +835,7 @@ SCIP_RETCODE aggregation(
    maxtestdelta = sepadata->maxtestdelta == -1 ? INT_MAX : sepadata->maxtestdelta;
 
    /* add start row to the initially empty aggregation row (aggrrow) */
-   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
+   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) ); /*lint !e644*/
 
    /* try to generate cut from the current aggregated row; add cut if found, otherwise add another row to aggrrow
     * in order to get rid of a continuous variable
@@ -837,15 +843,17 @@ SCIP_RETCODE aggregation(
    naggrs = 0;
    while( naggrs <= maxaggrs )
    {
-      int cutrank;
-      int cutnnz;
+      int cutrank = 0;
+      int cutnnz = 0;
       SCIP_Bool aggrsuccess;
       SCIP_Bool cmirsuccess;
-      SCIP_Bool cmircutislocal;
+      SCIP_Bool cmircutislocal = FALSE;
       SCIP_Bool flowcoversuccess;
       SCIP_Real flowcoverefficacy;
-      SCIP_Bool flowcovercutislocal;
+      SCIP_Bool flowcovercutislocal = FALSE;
       SCIP_ROW* cut = NULL;
+      SCIP_Real cutrhs = SCIP_INVALID;
+      SCIP_Real cutefficacy;
 
       *wastried = TRUE;
 
@@ -857,7 +865,7 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepflowcover )
       {
-         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
+         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
             cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
       }
       else
@@ -883,14 +891,12 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
-               sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
+         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal, sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( flowcoversuccess )
       {
          /* cppcheck-suppress uninitvar */
-         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
-               sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
+         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal, sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
 
       if ( *cutoff )

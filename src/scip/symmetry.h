@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,6 +95,32 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   that is handled by orbital fixing */
    );
 
+/** compute non-trivial orbits of symmetry group
+ *
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  This function is adapted from SCIPcomputeOrbitsFilterSym().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int*                  components,         /**< array containing the indices of permutations sorted by components */
+   int*                  componentbegins,    /**< array containing in i-th position the first position of component i in components array */
+   int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   int                   ncomponents,        /**< number of components of symmetry group */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int*                  varorbitmap         /**< array for storing the orbits for each variable */
+   );
 
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
 SCIP_EXPORT
@@ -104,19 +130,9 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    int                   nvars,              /**< number of variables */
    SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
-   );
-
-
-/** determine whether some binary variable is affected by symmetry group */
-SCIP_EXPORT
-SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
-   SCIP*                 scip,               /**< SCIP instance */
-   int**                 perms,              /**< permutations */
-   int                   nperms,             /**< number of permutations in perms */
-   SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
-   int                   npermvars,          /**< number of permvars in perms */
-   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
+   int*                  nbincyclesperm,     /**< pointer to store number of binary cycles */
+   SCIP_Bool*            allvarsbinary,      /**< pointer to strore whether all affected variables are binary */
+   SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    );
 
 /** determine number of variables affected by symmetry group */
@@ -127,7 +143,6 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
    int                   nperms,             /**< number of permutations in perms */
    SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
    int                   npermvars,          /**< number of permvars in perms */
-   int*                  nbinvarsaffected,   /**< pointer to store number of binary affected variables */
    int*                  nvarsaffected       /**< pointer to store number of all affected variables */
    );
 
@@ -167,6 +182,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int*                  perm,               /**< permutation */
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
+   SCIP_VAR**            permvars,           /**< permutation vars array */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether variables in an orbitope row are binary */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    );
@@ -183,11 +200,12 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
+   SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
    );
 
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

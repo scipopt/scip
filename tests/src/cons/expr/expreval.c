@@ -21,6 +21,7 @@
 
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
+#include "scip/struct_cons_expr.h"  /* I want an easy way to set locks in expression */
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sum.h"
@@ -93,7 +94,7 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    const char* inputs[2] = {"abs(<x>[C]) + abs(<x>[C])",
       "abs(abs(abs(<x>[C]) + abs(<y>[C])) * abs(<x>[C])^3 * abs(<y>[C]))"};
 
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -119,7 +120,7 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* test a more complicated expression |x + y| |x|^3 |y|*/
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -153,7 +154,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    const char* inputs[2] = {"exp(<x>[C]) + exp(<x>[C])", "exp(exp(<x>[C])) * exp(<y>[C])^2"};
    int i;
 
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -177,7 +178,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* complicated exponential expression e^(2y + e^x) */
-   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
    SCIPinfoMessage(scip, NULL, "testing expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
@@ -254,7 +255,7 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
       /* complicated logarithmic expression: log( log( exp(x) * exp(y) ) ) = log( x + y ) */
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr) );
       SCIPinfoMessage(scip, NULL, "testing expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
@@ -513,6 +514,89 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, mainexpr, NULL, i) );
       checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i);
    }
+
+   /* release all expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const_expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &mainexpr) );
+}
+
+Test(evalexpr, viol, .description = "Tests expression violation.")
+{
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+   SCIP_CONSEXPR_EXPR* const_expr;
+   SCIP_CONSEXPR_EXPR* prodexpr;
+   SCIP_CONSEXPR_EXPR* sumexpr;
+   SCIP_CONSEXPR_EXPR* mainexpr;
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
+   SCIP_VAR* auxvar;
+   SCIP_Real viol;
+   SCIP_Bool violunder;
+   SCIP_Bool violover;
+
+   /* we need sol to live in transformed space, so will recreate after changing stage */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   /* create all expressions */
+   SCIP_CALL( createExpr(&xexpr, &yexpr, &const_expr, &prodexpr, &sumexpr, &mainexpr) );
+
+   /* make it look like an expression with an auxvar */
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, mainexpr, &auxvar) );
+   mainexpr->nlocksneg = 1;
+
+   /* initialize solution values */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 4.0) );
+
+   /* evaluate main expression, print it, and check values for sub-expressions */
+   printf("evaluate and check expressions\n");
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, mainexpr, sol, 1) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EVALTAG) );
+   SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, mainexpr) );
+   SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
+   checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1);
+
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) + 5.0) );
+   SCIP_CALL( SCIPgetConsExprExprAbsOrigViolation(scip, conshdlr, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
+   cr_expect_float_eq(viol, 5.0, 1e-12, "got violation %g, but expected 5", viol);
+
+   /* because we don't have a positive lock, there should be no violation "on the other side" */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) - 5.0) );
+   SCIP_CALL( SCIPgetConsExprExprAbsOrigViolation(scip, conshdlr, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(!violover);
+   cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
+
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) + 5.0) );
+   SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
+   cr_expect_float_eq(viol, 8.0, 1e-12, "got violation %g, but expected 8", viol);
+
+   SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(violover);
+   cr_expect_float_eq(viol, 8.0 / REALABS(SCIPgetConsExprExprValue(mainexpr)-3.0), 1e-12, "got violation %g, but expected %g", viol, viol / REALABS(SCIPgetConsExprExprValue(mainexpr)-3.0));
+
+   /* because we don't have a positive lock, there should be no violation "on the other side" */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPgetConsExprExprValue(mainexpr) - 5.0) );
+   SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, mainexpr, SCIPgetConsExprExprValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_assert(!violunder);
+   cr_assert(!violover);
+   cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
+
+
+   mainexpr->nlocksneg = 0;
 
    /* release all expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPupdateDistributionScore(
    char                  scoreparam          /**< parameter to determine the way the score is calculated */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

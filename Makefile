@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -75,12 +75,9 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GAMS=$(GAMS)\\n\
-		SYM=$(SYM)\\n\
 		GMP=$(GMP)\\n\
 		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
-		WORHP=$(WORHP)\\n\
-		WORHPOPT=$(WORHPOPT)\\n\
 		LPS=$(LPS)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -90,9 +87,11 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
+		PAPILO=$(PAPILO)\\n\
 		READLINE=$(READLINE)\\n\
 		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
+		SYM=$(SYM)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
 		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
@@ -100,6 +99,8 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
 		VERSION=$(VERSION)\\n\
+		WORHP=$(WORHP)\\n\
+		WORHPOPT=$(WORHPOPT)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
@@ -254,6 +255,15 @@ LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e
 LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
 
+# glop only supports shared libraries
+LPSOPTIONS	+=	glop
+ifeq ($(LPS),glop)
+LPILIBOBJ	=	lpi/lpi_glop.o scip/bitencode.o scip/rbtree.o scip/message.o
+LPILIBSRC  	=	$(SRCDIR)/lpi/lpi_glop.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/shared/ortools
+LPIINSTMSG	=	"  -> \"ortools\" is the path to the OR-Tools directory.\n"
+endif
+
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
 LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
@@ -334,6 +344,16 @@ endif
 LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+endif
+
+#-----------------------------------------------------------------------------
+# PaPILO Library
+#-----------------------------------------------------------------------------
+
+ifeq ($(PAPILO),true)
+FLAGS		+=	-DSCIP_WITH_PAPILO -isystem $(LIBDIR)/include/papilo/external/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+SOFTLINKS	+=	$(LIBDIR)/include/papilo
+LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO directory\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -498,6 +518,7 @@ SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feas.o \
+			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
@@ -574,6 +595,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_solvingphase.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
+			scip/event_estim.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_adaptivediving.o \
@@ -608,6 +630,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_octane.o \
 			scip/heur_ofins.o \
 			scip/heur_oneopt.o \
+			scip/heur_padm.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_reoptsols.o \
@@ -653,6 +676,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
 			scip/presol_sparsify.o \
+			scip/presol_dualsparsify.o \
 			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
@@ -669,6 +693,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_cor.o \
+			scip/reader_dec.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -700,12 +725,15 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_minor.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
+
+SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
@@ -725,6 +753,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cutpool.o \
 			scip/cuts.o \
 			scip/debug.o \
+			scip/dcmp.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
@@ -741,6 +770,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_nonlinear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -765,6 +795,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cut.o \
 			scip/scip_datastructures.o\
 			scip/scip_debug.o \
+			scip/scip_dcmp.o \
 			scip/scip_dialog.o \
 			scip/scip_disp.o \
 			scip/scip_event.o \
@@ -813,6 +844,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/syncstore.o \
 			scip/table.o \
 			scip/tree.o \
+			scip/treemodel.o \
 			scip/var.o \
 			scip/visual.o \
 			tclique/tclique_branch.o \
@@ -824,11 +856,14 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBOBJ))
+SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBCPPOBJ))
 SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
+SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.cpp))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
-SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+SCIPPLUGININCSRC +=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.h))
+SCIPLIBLINK	 =	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 # define library that contains everything
@@ -906,7 +941,7 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM)
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PAPILO)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -966,6 +1001,37 @@ else
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
 				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
+			done'
+endif
+
+.PHONY: pclint
+pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+		-rm -f pclint.out
+
+		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
+			then \
+				echo "-> running pclint configuration"; \
+				CCPATH=`which $(CC)`; \
+				echo "-> path to compiler: "$${CCPATH}; \
+				cd pclint; \
+				echo "-> running $(PCLINTCONFIG)"; \
+				python $(PCLINTCONFIG) --compiler=$(CC) --compiler-bin=$${CCPATH} --config-output-lnt-file=co-gcc.lnt --config-output-header-file=co-gcc.h --generate-compiler-config ; \
+			fi'
+ifeq ($(FILES),)
+		@$(SHELL) -ec 'echo "-> running pclint ..."; \
+			for i in $^; \
+			do \
+				echo $$i; \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
+				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
+			done'
+else
+		@$(SHELL) -ec  'echo "-> running pclint on specified files ..."; \
+			for i in $(FILES); \
+			do \
+				echo $$i; \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
+				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif
 
@@ -1130,6 +1196,9 @@ $(LIBDIR)/shared: $(LIBDIR)
 
 $(LIBDIR)/include: $(LIBDIR)
 		@-mkdir -p $(LIBDIR)/include
+
+$(LIBDIR)/src: $(LIBDIR)
+		@-mkdir -p $(LIBDIR)/src
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
@@ -1412,6 +1481,9 @@ endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(PAPILO),$(LAST_PAPILO))
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1437,6 +1509,7 @@ endif
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
+		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1570,6 +1643,11 @@ ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif
 endif
+ifneq ($(PAPILO),true)
+ifneq ($(PAPILO),false)
+		$(error invalid PAPILO flag selected: PAPILO=$(PAPILO). Possible options are: true false)
+endif
+endif
 
 .PHONY: errorhints
 errorhints:
@@ -1599,10 +1677,11 @@ help:
 		@echo
 		@echo "  General options:"
 		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
-		@echo "  - LPS={clp|cpx|grb|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|xprs|none}: Determine LP-solver."
 		@echo "      clp: COIN-OR Clp LP-solver"
 		@echo "      cpx: CPLEX LP-solver"
-		@echo "      grb: Gurobi LP-solver (interface is in beta stage)"
+		@echo "      glop: Glop LP-solver"
+		@echo "      grb: Gurobi LP-solver"
 		@echo "      msk: Mosek LP-solver"
 		@echo "      qso: QSopt LP-solver"
 		@echo "      spx: old SoPlex LP-solver (for versions < 2)"

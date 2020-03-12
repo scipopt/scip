@@ -698,8 +698,6 @@ SCIP_RETCODE addCut(
    SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_ROWPREP*         rowprep,            /**< cut to be added */
    SCIP_SOL*             sol,                /**< solution to be separated */
-   double                mincutviolation,    /**< minimal acceptable cut violation */
-   int*                  ncuts,              /**< pointer to store the number of added cuts */
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
@@ -709,7 +707,7 @@ SCIP_RETCODE addCut(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetLPFeastol(scip), NULL, &success) );
 
    /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
    if( success )
@@ -727,7 +725,6 @@ SCIP_RETCODE addCut(
       else
       {
          *result = SCIP_SEPARATED;
-         ++*ncuts;
       }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -1140,7 +1137,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 #endif
 
 
-/** nonlinear handler separation callback
+/** nonlinear handler enforcement callback
  *
  * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
  * If g(x) = g0 if indicator z = 0, and a cut is given by sum aixi + c <= aux, where xi = xi0 if z = 0 for all i,
@@ -1148,7 +1145,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
  * the new cut is equivalent to the given cut, and at z = 0 it reduces to g0 <= aux.
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
+SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 { /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
@@ -1159,13 +1156,14 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    SCIP_CONSEXPR_NLHDLR* nlhdlr2;
    SCIP_Real cst0;
    SCIP_VAR* indicator;
+   SCIP_Bool addedbranchscores2;
 
    *result = SCIP_DIDNOTFIND;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "sepa method of perspective nonlinear handler called for expr %p: ", expr);
+   SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -1175,10 +1173,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(result != NULL);
-   assert(ncuts != NULL);
    assert(nlhdlrdata != NULL);
-
-   *ncuts = 0;
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
@@ -1205,12 +1200,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
          /* ask the handler for an estimator */
          SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
-               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
+               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success, FALSE, &addedbranchscores2) );
 
          if( success )
          {
             int v;
-            SCIP_VAR* var;
+            SCIP_VAR *var;
             SCIP_Bool var_is_sc;
 
             SCIPdebugMsg(scip, "\nrowprep before perspectivy is: ");
@@ -1224,32 +1219,31 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
             /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
             cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
 
-            for( v = 0; v < rowprep->nvars; ++v )
-            {
+            for( v = 0; v < rowprep->nvars; ++v ) {
                SCIP_Real val0;
 
                var = rowprep->vars[v];
 
                /* is var sc with respect to this indicator? */
-               SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc) );
+               SCIP_CALL(varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
 
                assert(var_is_sc);
 
-               cst0 -= rowprep->coefs[v]*val0;
+               cst0 -= rowprep->coefs[v] * val0;
             }
 
             /* update the rowprep by adding cst0 - cst0*z */
             SCIPaddRowprepConstant(rowprep, cst0);
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0) );
+            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
 
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
 
             SCIPdebugMsg(scip, "\nrowprep after perspectivy is: ");
 #ifdef SCIP_DEBUG
             SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-            SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
+            SCIP_CALL(addCut(scip, cons, rowprep, sol, result));
          }
 
          SCIPfreeRowprep(scip, &rowprep);
@@ -1298,57 +1292,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropPerspective)
 }
 #endif
 
-
-/** TODO do we still need this here or will other handlers take care of this? */
-/** nonlinear handler callback for branching scores */
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
-{ /*lint --e{715}*/
-   SCIP_Real violation;
-   int i;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
-   assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->varexprs != NULL);
-   assert(nlhdlrexprdata->nvarexprs > 0);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* we separate only convex functions here, so there should be little use for branching
-    * if violations are small or there are numerical issues, then we will not have generated a cut, though
-    * in that case, we will still branch, that is, register branchscores for all depending var exprs
-    */
-
-   /* compute violation */
-   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
-      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
-   else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
-      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-   else
-      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
-
-   /* if violation is not on the side that we need to enforce, then no need for branching */
-   if( violation <= 0.0 )
-      return SCIP_OKAY;
-
-   /* TODO try to figure out which variables appear linear and skip them here */
-   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
-   {
-      assert(nlhdlrexprdata->varexprs[i] != NULL);
-      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
-
-      SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
-   }
-
-   *success = TRUE;
-
-   return SCIP_OKAY;
-}
 
 /** nonlinear handler callback for reformulation */
 #if 0
@@ -1399,8 +1342,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaPerspective, NULL, NULL);
-   /* SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscorePerspective); */
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
 
    return SCIP_OKAY;
 }

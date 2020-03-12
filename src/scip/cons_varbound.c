@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -147,6 +147,7 @@ typedef enum Proprule PROPRULE;
 
 /**@name Local methods
  *
+ * @{
  */
 
 /** compares two varbound constraints   cons1: \f$ lhs1 \le x1 + c1 y1 \le rhs1 \f$   and   cons2: \f$ lhs2 \le x2 + c2 y2 \le rhs2 \f$
@@ -1121,7 +1122,8 @@ SCIP_RETCODE separateCons(
    vbdcoef = consdata->vbdcoef;
    assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
 
-   if( SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
+   /* if x is not multiaggregated and y is fixed, propagate bounds on x */
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR && SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
    {
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar)));
 
@@ -2699,16 +2701,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
 
@@ -2766,7 +2768,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
 /** for all varbound constraints with two integer variables make the coefficients integral */
 static
-SCIP_RETCODE prettifyConss(
+void prettifyConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
@@ -2784,7 +2786,7 @@ SCIP_RETCODE prettifyConss(
 
    /* if we cannot find any constraint for prettifying, stop */
    if( SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip) < 1 )
-      return SCIP_OKAY;
+      return;
 
    for( c = nconss - 1; c >= 0; --c )
    {
@@ -2920,8 +2922,6 @@ SCIP_RETCODE prettifyConss(
          }
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** replaces fixed and aggregated variables in variable bound constraint by active problem variables */
@@ -3120,6 +3120,11 @@ SCIP_RETCODE applyFixings(
       }
       else if( var != consdata->var )
       {
+         /* release and unlock old variable */
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          /* replace aggregated variable x in the constraint by its aggregation */
          if( varscalar > 0.0 )
          {
@@ -3164,11 +3169,14 @@ SCIP_RETCODE applyFixings(
 
             consdata->tightened = FALSE;
          }
-         /* release old variable */
-         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          consdata->var = var;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+
       }
 
       /* apply aggregation on y */
@@ -3219,15 +3227,37 @@ SCIP_RETCODE applyFixings(
             consdata->lhs -= consdata->vbdcoef * vbdvarconstant;
          if( !SCIPisInfinity(scip, consdata->rhs) )
             consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
-         consdata->vbdcoef *= vbdvarscalar;
 
          consdata->tightened = FALSE;
 
-         /* release old variable */
+         /* release and unlock old variable */
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
+
+         consdata->vbdcoef *= vbdvarscalar;
          consdata->vbdvar = vbdvar;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
       }
 
       /* catch the events again on the new variables */
@@ -3638,7 +3668,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->rhs = newrhs;
+         consdata->rhs = MAX(newrhs, consdata->lhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3678,7 +3708,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->lhs = newlhs;
+         consdata->lhs = MIN(newlhs, consdata->rhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3988,6 +4018,7 @@ SCIP_RETCODE upgradeConss(
 
 /**@name Linear constraint upgrading
  *
+ * @{
  */
 
 /** tries to upgrade a linear constraint into a variable bound constraint */
@@ -4580,7 +4611,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    if( !cutoff )
    {
       /* for varbound constraint with two integer variables make coefficients integral */
-      SCIP_CALL( prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides) );
+      prettifyConss(scip, conss, nconss, nchgcoefs, nchgsides);
 
       /* check if we can upgrade to a set-packing constraint */
       SCIP_CALL( upgradeConss(scip, conshdlrdata, conss, nconss, &cutoff, naggrvars, nchgbds, nchgcoefs, nchgsides, ndelconss, naddconss) );
@@ -5100,6 +5131,8 @@ SCIP_Real SCIPgetLhsVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5120,6 +5153,8 @@ SCIP_Real SCIPgetRhsVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5142,6 +5177,8 @@ SCIP_VAR* SCIPgetVarVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5162,6 +5199,8 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5184,6 +5223,8 @@ SCIP_Real SCIPgetVbdcoefVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5204,6 +5245,8 @@ SCIP_Real SCIPgetDualsolVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5228,6 +5271,8 @@ SCIP_Real SCIPgetDualfarkasVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5255,6 +5300,8 @@ SCIP_ROW* SCIPgetRowVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5266,6 +5313,53 @@ SCIP_ROW* SCIPgetRowVarbound(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** cleans up (multi-)aggregations and fixings from varbound constraints */
+SCIP_RETCODE SCIPcleanupConssVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (varbound) constraints */
+   int*                  nchgbds             /**< pointer to count number of bound changes */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgbds != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   eventhdlr = conshdlrdata->eventhdlr;
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, infeasible, nchgbds, ndelconss, naddconss) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
 }
 
 /**@} */

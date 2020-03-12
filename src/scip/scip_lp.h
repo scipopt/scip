@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1452,6 +1452,19 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns the parallelism of row with objective function
+ *
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetRowObjParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** output row to file stream via the message handler system
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1745,16 +1758,17 @@ SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLPDegeneracy(
+SCIP_RETCODE SCIPgetLPDualDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable constraint ratio */
    );
 
 /**@} */

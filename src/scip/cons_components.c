@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1338,7 +1338,7 @@ SCIP_RETCODE initProblem(
    /* create a priority queue for the components: we need exactly ncomponents slots in the queue so it should never be
     * resized
     */
-   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, ncomponents, 1.2, componentSort) );
+   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, ncomponents, 1.2, componentSort, NULL) );
 
    (*problem)->scip = scip;
    (*problem)->lowerbound = fixedvarsobjsum;
@@ -2481,18 +2481,12 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 static
 SCIP_DECL_CONSDELETE(consDeleteComponents)
 {  /*lint --e{715}*/
-   PROBLEM* problem;
-
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   problem = (PROBLEM*)(*consdata);
-
-   SCIP_CALL( freeProblem(&problem) );
-
-   *consdata = NULL;
+   SCIP_CALL( freeProblem((PROBLEM**) consdata) );
 
    return SCIP_OKAY;
 }
@@ -2530,8 +2524,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 #define consEnfolpComponents NULL
 #define consEnfopsComponents NULL
 #define consCheckComponents NULL
-
-/**@} */
 
 /**@name Interface methods
  *
@@ -2601,3 +2593,5 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    return SCIP_OKAY;
 }
+
+/**@} */

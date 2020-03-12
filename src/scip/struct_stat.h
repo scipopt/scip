@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -190,6 +190,7 @@ struct SCIP_Stat
    SCIP_Longint          ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
    SCIP_Longint          nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
    SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
+   SCIP_Longint          nnodezeroitlps;     /**< number of LPs solved with 0 iterations for node relaxations */
    SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
    SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */

@@ -497,7 +497,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPsetSolVal(scip, sol, z_1, 0.5);
    SCIPsetSolVal(scip, sol, z_2, 0.5);
 
-   SCIP_CALL( nlhdlrSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, SCIPfeastol(scip), TRUE, &result, &ncuts) );
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, TRUE, FALSE, FALSE, &result) );
    cr_assert(result == SCIP_SEPARATED);
    cuts = SCIPgetCuts(scip);
    cr_expect_eq(SCIPgetNCuts(scip), 2, "expecting 2 cuts, got %d\n", SCIPgetNCuts(scip));

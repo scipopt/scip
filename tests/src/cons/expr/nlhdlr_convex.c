@@ -62,7 +62,7 @@ void setup(void)
    /* get nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "convex") == 0 )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), CONVEX_NLHDLR_NAME) == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
          break;
@@ -160,7 +160,7 @@ SCIP_RETCODE detect(
    if( success )
    {
       cr_assert_not_null(nlhdlrexprdata);
-      SCIP_CALL( nlhdlrfreeExprDataConvex(scip, nlhdlr, expr, &nlhdlrexprdata) );
+      SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -169,7 +169,7 @@ SCIP_RETCODE detect(
    return SCIP_OKAY;
 }
 
-/* detects exp(exp(x1)) as an convex expression */
+/* tests detection of convex/concave subexpressions */
 Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 {
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);

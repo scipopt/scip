@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,7 +64,7 @@ SCIP_RETCODE runSCIP(
 
    /* include TSP specific plugins */
    SCIP_CALL( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );
-   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) ); 
+   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(scip), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(scip), TRUE) );

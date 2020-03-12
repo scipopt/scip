@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,6 +193,7 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
+   assert(scip != NULL);
    assert(opbinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
@@ -1207,6 +1208,10 @@ SCIP_RETCODE setObjective(
 
          for( t = 0; t < ntermcoefs; ++t )
          {
+            assert(terms != NULL);  /* for lint */
+            assert(ntermvars != NULL);
+            assert(termcoefs != NULL);
+
             vars = terms[t];
             nvars = ntermvars[t];
             assert(vars != NULL);
@@ -1343,7 +1348,10 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-	 if( SCIPvarIsNegated(linvars[v]) )
+         assert(linvars != NULL); /* for lint */
+         assert(coefs != NULL);
+
+         if( SCIPvarIsNegated(linvars[v]) )
 	 {
 	    SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
 
@@ -1437,6 +1445,7 @@ SCIP_RETCODE readConstraints(
          else
          {
             assert(nlincoefs == 1);
+            assert(lincoefs != NULL);
             opbinput->topcost = lincoefs[0];
          }
          SCIPdebugMsg(scip, "Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
@@ -1483,7 +1492,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch( sense )
+   switch( sense ) /*lint !e530*/
    {
    case OPB_SENSE_GE:
       lhs = sidevalue;
@@ -1571,7 +1580,10 @@ SCIP_RETCODE readConstraints(
 
    /* free memory */
    for( t = ntermcoefs - 1; t >= 0; --t )
+   {
+      assert(terms != NULL);  /* for lint */
       SCIPfreeBufferArrayNull(scip, &(terms[t]));
+   }
 
    SCIPfreeBufferArrayNull(scip, &ntermvars);
    SCIPfreeBufferArrayNull(scip, &termcoefs);
@@ -1999,8 +2011,11 @@ SCIP_RETCODE computeAndConstraintInfos(
          ++ncontainedands;
          v = 0;
 
+         assert(*nandvars != NULL);
          while( v < (*nandvars)[r] )
          {
+            assert(*andvars != NULL);
+            assert(*resvars != NULL);
             if( SCIPsortedvecFindPtr((void**)(*resvars), SCIPvarComp, (*andvars)[r][v], *nresvars, &pos) )
             {
                /* check if the found position "pos" is equal to an already visited and resultant in this constraint,
@@ -2124,11 +2139,11 @@ void appendBuffer(
    assert(linecnt != NULL);
    assert(extension != NULL);
 
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
+   if( (*linecnt) + (int) strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
+   (void) strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -4189,6 +4204,9 @@ SCIP_RETCODE SCIPreadOpb(
    OPBINPUT opbinput;
    SCIP_RETCODE retcode;
    int i;
+
+   assert(scip != NULL);  /* for lint */
+   assert(reader != NULL);
 
    /* initialize OPB input data */
    opbinput.file = NULL;

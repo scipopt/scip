@@ -478,7 +478,8 @@ SCIP_RETCODE assembleRowprep(
       linconst += lincoef * M_PI_2;
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s", iscos ? "cos" : "sin", name, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s_%lld", iscos ? "cos" : "sin", name,
+      SCIPvarGetName(childvar), SCIPgetNLPs(scip));
 
    SCIPaddRowprepConstant(*rowprep, linconst);
 
@@ -1086,6 +1087,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    /* get expression data */
@@ -1096,7 +1100,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
 
    *success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, coefs, constant, SCIPgetSolVal(scip, sol, childvar),
       SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), !overestimate);
-   *islocal = TRUE;
+   *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */
 
    return SCIP_OKAY;
 }
@@ -1232,7 +1236,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, NULL, estimateSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, estimateSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );

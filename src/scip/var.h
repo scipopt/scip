@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -384,6 +384,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             fixedval,           /**< value to fix variable at */
@@ -429,7 +430,8 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** return for given variables all their active counterparts; all active variables will be pairwise different */
@@ -490,6 +492,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -630,6 +633,7 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             addobj              /**< additional objective value for variable */
    );

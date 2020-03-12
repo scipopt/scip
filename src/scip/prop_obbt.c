@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -628,10 +628,14 @@ SCIP_RETCODE createGenVBound(
           * but we want the positive dual multiplier!
           */
          gamma_dual = -SCIProwGetDualsol(propdata->cutoffrow);
+
+         /* we need to treat gamma to be exactly 0 if it is below the dual feasibility tolerance, see #2914 */
+         if( EPSZ(gamma_dual, SCIPdualfeastol(scip)) )
+            gamma_dual = 0.0;
       }
 
       /* we need at least one nonzero coefficient or a nonzero dual multiplier for the objective cutoff */
-      if( ncoefs > 0 || !SCIPisZero(scip, gamma_dual) )
+      if( ncoefs > 0 || gamma_dual != 0.0 )
       {
          SCIP_Bool addgenvbound;                /* if everything is fine with the redcosts and the bounds, add the genvbound */
          SCIP_Real c;                           /* helper variable to calculate constant term in genvbound */
@@ -671,8 +675,8 @@ SCIP_RETCODE createGenVBound(
                assert(xk != xi);
 
                /* in this case dont add a genvbound */
-               if( ( (redcost > SCIPdualfeastol(scip))  && SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)) ) ||
-                  ( (redcost < -SCIPdualfeastol(scip))  && SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)) ) )
+               if( ( (redcost > SCIPdualfeastol(scip)) && SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)) ) ||
+                  ( (redcost < -SCIPdualfeastol(scip)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)) ) )
                {
                   addgenvbound = FALSE;
                   break;
@@ -696,10 +700,20 @@ SCIP_RETCODE createGenVBound(
          /* add genvbound */
          if( addgenvbound && !SCIPisInfinity(scip, -c) )
          {
+#ifndef NDEBUG
+            /* check whether the activity of the LVB in the optimal solution of the LP is equal to the LP objective value */
+            SCIP_Real activity = c - gamma_dual * SCIPgetCutoffbound(scip);
+
+            for( k = 0; k < ncoefs; ++k )
+               activity += genvboundcoefs[k] * SCIPvarGetLPSol(genvboundvars[k]);
+
+            SCIPdebugMsg(scip, "LVB activity = %g lpobj = %g\n", activity, SCIPgetLPObjval(scip));
+            assert(EPSZ(SCIPrelDiff(activity, SCIPgetLPObjval(scip)), 10.0 * SCIPdualfeastol(scip)));
+#endif
+
             SCIPdebugMsg(scip, "         adding genvbound\n");
             SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, genvboundvars, xi, genvboundcoefs, ncoefs,
-                  !SCIPisPositive(scip, gamma_dual) ? 0.0 : -gamma_dual, c, bound->boundtype) );
-
+                  gamma_dual < SCIPdualfeastol(scip) ? 0.0 : -gamma_dual, c, bound->boundtype) );
             *found = TRUE;
          }
 
@@ -1217,7 +1231,6 @@ SCIP_RETCODE filterRound(
                   propdata->ngenvboundsaggrfil += 1;
                   SCIPdebugMsg(scip, "found genvbound during aggressive filtering\n");
                }
-
             }
 
             /* restore objective function */
@@ -1648,7 +1661,7 @@ int nextBound(
       }
    }
 
-   return bestidx;
+   return bestidx;  /*lint !e438*/
 }
 
 /** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional

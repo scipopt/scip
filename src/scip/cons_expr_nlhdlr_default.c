@@ -109,8 +109,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
-   /* return sepa possibility if exprhdlr for expr has a sepa or estimate callback and enforcement is not ensured already */
-   if( (SCIPhasConsExprExprHdlrSepa(exprhdlr) || SCIPhasConsExprExprHdlrEstimate(exprhdlr)) && (!*enforcedbelow || !*enforcedabove) )
+   /* return sepa possibility if exprhdlr for expr has an estimate callback and enforcement is not ensured already */
+   if( SCIPhasConsExprExprHdlrEstimate(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -120,20 +120,19 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       }
 
       /* communicate back what the nlhdlr will do
-       * - it will enforce via separation on those sides that are not enforced yet
-       * - it will provide branching scores if it does separation
+       * - it will enforce via estimation/separation on those sides that are not enforced yet
        * - it needs to be called for this expression (success = TRUE)
        */
       if( !*enforcedbelow )
       {
-         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
          *enforcedbelow = TRUE;
          *success = TRUE;
       }
 
       if( !*enforcedabove )
       {
-         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
+         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
          *enforcedabove = TRUE;
          *success = TRUE;
       }
@@ -210,51 +209,20 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(ncuts != NULL);
-
-   /* if we did not say that we will separate on this side, then stand by it */
-   if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
-   {
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on underestimator\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-   if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
-   {
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on overestimator\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-
-   if( separated )
-   {
-      /* don't do anything if someone already separated */
-      *result = SCIP_DIDNOTFIND;
-      *ncuts = 0;
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as already separated\n", (void*)expr);
-
-      return SCIP_OKAY;
-   }
-
-   /* call the separation callback of the expression handler */
-   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
-
-   return SCIP_OKAY;
-}
-
-static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
    SCIP_Real constant;
+   SCIP_Bool* branchcand = NULL;
+   int nchildren;
+   int c;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(rowprep != NULL);
    assert(success != NULL);
 
+   *addedbranchscores = FALSE;
+
    /* if we did not say that we will separate on this side, then stand by it */
    if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
    {
@@ -267,12 +235,19 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       return SCIP_OKAY;
    }
 
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
    /* make sure enough space is available in rowprep arrays */
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPgetConsExprExprNChildren(expr)) );
-   assert(rowprep->varssize >= SCIPgetConsExprExprNChildren(expr));
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
+   assert(rowprep->varssize >= nchildren);
+
+   /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
+   for( c = 0; c < nchildren; ++c )
+      branchcand[c] = TRUE;
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success, branchcand) );
 
    if( *success )
    {
@@ -295,6 +270,37 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
+
+   if( addbranchscores )
+   {
+      SCIP_Real violation;
+
+#ifdef BRSCORE_RELVIOL
+      SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#else
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#endif
+      assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         if( branchcand[c] )
+         {
+            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation);
+            *addedbranchscores = TRUE;
+         }
+      }
+
+      if( *addedbranchscores )
+      {
+         /* count this branchscore as belonging to the exprhdlr, too
+          * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
+          */
+         SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &branchcand);
 
    return SCIP_OKAY;
 }
@@ -340,82 +346,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
-{ /*lint --e{715}*/
-   SCIP_Real auxval; /* value of expression in aux. variables */
-   SCIP_Real violation;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enfomethods;
-   int c;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(success != NULL);
-
-   enfomethods = (SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata;
-
-   /* if we did not say that we will provide branching scores, then stand by it */
-   if( (enfomethods & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* check which side is violated by how much
-    * NOTE: we are only interested in a violation on the side for which we also separate (or estimate)
-    * if we do not separate, then how would we know which variables to branch on to close the convexification gap?
-    */
-   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
-   {
-      /* if cannot evaluate, then always branch */
-      violation = SCIPinfinity(scip);
-   }
-   else
-   {
-      /* get value of auxiliary variable of this expression */
-      assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-      auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-      /* compute the violation
-       * if we said we separate below, then we enforce expr <= auxval, so violation is (positive part of) auxvalue - auxval
-       * if we said we separate above, then we enforce expr >= auxval, so violation is (positive part of) auxval - auxvalue
-       */
-      violation = 0.0;
-      if( enfomethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW )
-         violation = MAX(0.0, auxvalue - auxval);
-      if( enfomethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE )
-         violation = MAX(violation, auxval - auxvalue);
-   }
-   assert(violation >= 0.0);
-
-   SCIPdebugMsg(scip, "nlhdlrBranchscoreDefault %p: violation on sepa side: %g\n");
-
-   if( violation == 0.0 ) /*lint !e777*/
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* call the branching callback of the expression handler */
-   SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, auxvalue, brscoretag, success) );
-
-   if( *success )
-      return SCIP_OKAY;
-
-   /* fallback: add violation w.r.t. values in auxiliary variables as branching score for each child */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-      SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
-
-   *success = TRUE;
-
-   /* count this branchscore as belonging to the exprhdlr, too
-    * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
-    */
-   SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
-
-   return SCIP_OKAY;
-}
-
-static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -444,9 +374,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 
    return SCIP_OKAY;
 }

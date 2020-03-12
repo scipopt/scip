@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,12 +81,19 @@
 #undef SCIP_DEBUG
 #endif
 
-/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, see soplex#136, e.g.,
  * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
  */
 #ifdef __GNUC__
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
+/* disable -Wdeprecated-copy warnings in SoPlex headers, see soplex#206 */
+#ifdef __GNUC__
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #endif
 #endif
 
@@ -2916,7 +2923,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -3256,23 +3263,39 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       if( primsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getPrimalReal(primsol, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), primsol);
          (void)lpi->spx->getPrimalReal(tmp);
+#endif
       }
       if( dualsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getDualReal(dualsol, lpi->spx->numRowsReal());
+#else
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
          (void)lpi->spx->getDualReal(tmp);
+#endif
       }
       if( activity != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getSlacksReal(activity, lpi->spx->numRowsReal());  /* in SoPlex, the activities are called "slacks" */
+#else
          Vector tmp(lpi->spx->numRowsReal(), activity);
          (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+#endif
       }
       if( redcost != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+         (void)lpi->spx->getRedCostReal(redcost, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), redcost);
          (void)lpi->spx->getRedCostReal(tmp);
+#endif
       }
    }
 #ifndef NDEBUG
@@ -3305,8 +3328,12 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getPrimalRayReal(ray, lpi->spx->numColsReal());
+#else
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3338,8 +3365,12 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getDualFarkasReal(dualfarkas, lpi->spx->numRowsReal());
+#else
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )

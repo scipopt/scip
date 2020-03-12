@@ -296,7 +296,6 @@ void computeSecant(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(success != NULL);
-   assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointPow */
    assert(xlb >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
    assert(xub >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
    assert(exponent != 1.0);
@@ -305,6 +304,12 @@ void computeSecant(
 
    /* infinite bounds will not work */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+      return;
+
+   /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
+    * e.g., when handling odd or signed power
+    */
+   if( SCIPisEQ(scip, xlb, xub) )
       return;
 
    /* first handle some special cases */
@@ -490,6 +495,7 @@ void estimateSignedpower(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
+   SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
@@ -497,6 +503,8 @@ void estimateSignedpower(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
    /* assert((exponent >= 3.0 && EPSISINT((exponent-1.0)/2.0, 0.0)) || exponent > 1.0); <-> exponent > 1.0 */
    assert(exponent >= 1.0);
@@ -521,6 +529,9 @@ void estimateSignedpower(
 
          /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
          *islocal = SCIPisPositive(scip, xubglobal) && xref > -root * xubglobal;
+
+         /* tangent doesn't move after branching */
+         *branchcand = FALSE;
       }
    }
    else
@@ -545,6 +556,9 @@ void estimateSignedpower(
 
             /* if reference point is left of -root*xlbglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref < -root * xlbglobal;
+
+            /* tangent doesn't move after branching */
+            *branchcand = FALSE;
          }
       }
       else
@@ -559,6 +573,9 @@ void estimateSignedpower(
 
             /* if reference point is right of -root*xubglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref > -root * xubglobal;
+
+            /* tangent doesn't move after branching */
+            *branchcand = FALSE;
          }
          else
          {
@@ -613,6 +630,7 @@ void estimateHyperbolaPositive(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
+   SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
@@ -620,6 +638,8 @@ void estimateHyperbolaPositive(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT(exponent/2.0, 0.0) || xlb >= 0.0);
@@ -660,6 +680,9 @@ void estimateHyperbolaPositive(
          }
 
          computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
+
+         /* tangent will not change if branching on x (even if only locally valid, see checks below) */
+         *branchcand = FALSE;
 
          if( EPSISINT(exponent/2.0, 0.0) )
          {
@@ -707,7 +730,7 @@ void estimateHyperbolaPositive(
             }
 
             /* switch sign of x (mirror on ordinate) to make left bound finite and use its estimator */
-            estimateHyperbolaPositive(scip, exponent, root, overestimate, -xub, -xlb, -xref, -xubglobal, -xlbglobal, constant, slope, islocal, success);
+            estimateHyperbolaPositive(scip, exponent, root, overestimate, -xub, -xlb, -xref, -xubglobal, -xlbglobal, constant, slope, islocal, branchcand, success);
             if( *success )
                *slope = -*slope;
          }
@@ -749,6 +772,7 @@ void estimateHyperbolaPositive(
                 */
                computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
                *islocal = xref < xlbglobal * root;
+               *branchcand = FALSE;
             }
          }
       }
@@ -807,6 +831,7 @@ void estimateHyperbolaMixed(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
+   SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
 )
 {
@@ -814,6 +839,8 @@ void estimateHyperbolaMixed(
    assert(constant != NULL);
    assert(slope != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
    assert(exponent < 0.0);
    assert(EPSISINT((exponent-1.0)/2.0, 0.0));
@@ -848,6 +875,9 @@ void estimateHyperbolaMixed(
          computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
          /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
          *islocal = xlbglobal * xubglobal < 0.0;
+
+         /* tangent doesn't move by branching */
+         *branchcand = FALSE;
       }
       /* else: xlb is very close to zero, xub is <= 0, so slope would be infinite (for any reference point in [xlb, xub]) -> do not estimate */
    }
@@ -1455,7 +1485,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, childinterval.inf, exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1469,7 +1499,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing upper bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing upper bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, childinterval.sup, -exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1522,6 +1552,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
 
    *success = FALSE;
@@ -1591,16 +1623,22 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       {
          SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
          *islocal = FALSE; /* linearizations are globally valid */
+         *branchcand = FALSE;  /* there is no improvement due to branching */
       }
    }
    else if( exponent > 0.0 && iseven )
    {
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
    }
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
       SCIP_Real glb;
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
 
       /* if odd power, then check whether tangent on parabola is also globally valid, that is reference point is right of -root*global-lower-bound */
       glb = SCIPvarGetLbGlobal(childvar);
@@ -1626,7 +1664,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
       estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
-            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, success);
+            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
@@ -1635,7 +1673,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       {
          SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
       }
-      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, success);
+      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
    }
    else if( exponent < 0.0 )
    {
@@ -1643,7 +1681,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       assert(childlb < 0.0); /* should hold due to previous if */
       assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
 
-      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, success);
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
    }
    else
    {
@@ -1651,6 +1689,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       assert(exponent > 0.0); /* should hold due to previous if */
 
       estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
    }
 
    return SCIP_OKAY;
@@ -1713,7 +1754,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, interval.inf, exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -1727,7 +1768,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
          {
             if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
             {
-               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+               SCIPinfoMessage(scip, NULL, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
                   "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
                   exponent, interval.sup, -exprhdlrdata->minzerodistance);
                SCIPinfoMessage(scip, NULL, "Expression: ");
@@ -2246,6 +2287,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
 
    *success = FALSE;
@@ -2285,6 +2328,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
       SCIP_Real glb;
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
 
+      *branchcand = *islocal;
+
       /* if odd or signed power, then check whether tangent on parabola is also globally valid, that is reference point is right of -root*global-lower-bound */
       glb = SCIPvarGetLbGlobal(childvar);
       if( !*islocal && glb < 0.0 )
@@ -2309,7 +2354,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
       estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
-            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, success);
+            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
    }
 
    return SCIP_OKAY;
@@ -2450,7 +2495,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalPow) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimatePow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimatePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
@@ -2484,7 +2529,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSignpower(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSignpower) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateSignpower) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );

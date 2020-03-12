@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3494,6 +3494,18 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
+         /* We also need to update the events and locks if restart is forced, since global bound change events on binary
+          * variables are also caught in this case. If it would not be updated and forcerestart = TRUE, then an event
+          * might be dropped on a wrong variable. */
+         if ( conshdlrdata->forcerestart )
+         {
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED,
+                  conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
+                  (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+         }
+
          SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
          SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
@@ -3545,8 +3557,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->slackvar, cons, FALSE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -5575,7 +5587,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( (*consdata)->binvar != NULL );
 
       /* free events only in correct stages */
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_EXITSOLVE )
       {
          if ( (*consdata)->linconsactive )
          {
@@ -5930,7 +5942,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
       nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -6897,11 +6909,11 @@ SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
    assert( scip != NULL );
    assert( cons != NULL );
    assert( vars != NULL );
-   assert( varssize >= 0 );
    assert( success != NULL );
 
    if ( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert( varssize >= 0 );
 
    (*success) = TRUE;
 

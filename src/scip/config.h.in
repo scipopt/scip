@@ -17,6 +17,7 @@
 #cmakedefine TPI_OMP
 #cmakedefine NPARASCIP
 #cmakedefine WITH_SCIPDEF
+#cmakedefine SCIP_WITH_PAPILO
 #cmakedefine SCIP_WITH_ZLIB
 #cmakedefine SCIP_WITH_READLINE
 #cmakedefine SCIP_WITH_GMP

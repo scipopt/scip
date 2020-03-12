@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPdivesetReset(
    }
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, (int)(diveset->initialseed % INT_MAX)));
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }

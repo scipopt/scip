@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_crossoversub" */
+      /* set name to the original problem name and possibly add a suffix */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
       /* create the subproblem */

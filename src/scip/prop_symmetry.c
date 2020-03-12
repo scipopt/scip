@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,7 +54,7 @@
  *   constraints are considered, we have to reallocate memory.
  *
  *
- * @sectionOF Orbital Fixing
+ * @section OF Orbital Fixing
  *
  * Orbital fixing is implemented as introduced by@n
  * F. Margot: Exploiting orbits in symmetric ILP. Math. Program., 98(1-3):3–21, 2003.
@@ -152,17 +152,22 @@
 #define DEFAULT_DISPLAYNORBITVARS   FALSE    /**< Should the number of variables affected by some symmetry be displayed? */
 #define DEFAULT_USECOLUMNSPARSITY   FALSE    /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
 #define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
+#define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
+#define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
+#define DEFAULT_ONLYBINARYSYMMETRY   TRUE    /**< Is only symmetry on binary variables used? */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_ORBITOPEPCTBINROWS    0.9    /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
+#define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
 
 /* event handler properties */
@@ -179,11 +184,11 @@
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define SCIP_SPECIALVAL 1.12345678912345e+19 /**< special floating point value for handling zeros in bound disjunctions */
-
+#define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
 /* macros for getting activeness of symmetry handling methods */
-#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
+#define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   (((unsigned) x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 
 
 
@@ -192,7 +197,7 @@ struct SCIP_PropData
 {
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
-   int                   npermvarscaptured;  /**< number of captured variables */
+   int                   nbinpermvars;       /**< number of binary variables for permuations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
 #ifndef NDEBUG
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
@@ -214,6 +219,7 @@ struct SCIP_PropData
                                               *   further symmetry handling techniques */
 
    /* further symmetry information */
+   int                   nmovedvars;         /**< number of variables moved by some permutation */
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
 
@@ -221,10 +227,14 @@ struct SCIP_PropData
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
+   SCIP_Bool             compresssymmetries; /**< Should non-affected variables be removed from permutation to save memory? */
+   SCIP_Real             compressthreshold;  /**< Compression is used if percentage of moved vars is at most the threshold. */
+   SCIP_Bool             compressed;         /**< Whether symmetry data has been compressed */
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
+   SCIP_Bool             onlybinarysymmetry; /**< Whether only symmetry on binary variables is used */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -236,6 +246,7 @@ struct SCIP_PropData
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+   SCIP_Real             orbitopepctbinrows; /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
    int                   norbitopes;         /**< number of orbitope constraints */
    SCIP_Bool*            isnonlinvar;        /**< array indicating whether variables apper non-linearly */
    SCIP_Bool             islinearproblem;    /**< whether the whole problem is linear */
@@ -259,6 +270,8 @@ struct SCIP_PropData
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
+   SCIP_Bool             offoundreduction;   /**< whether orbital fixing has found a reduction since the last time computing symmetries */
+   SCIP_Bool             disableofrestart;   /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 };
 
 
@@ -529,7 +542,6 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 /** checks that symmetry data is all freed */
 static
 SCIP_Bool checkSymmetryDataFree(
-   SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -549,9 +561,11 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
    assert( propdata->npermvars == 0 );
+   assert( propdata->nbinpermvars == 0 );
    assert( propdata->nperms == -1 || propdata->nperms == 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->nmovedpermvars == 0 );
+   assert( propdata->nmovedvars == -1 );
    assert( propdata->binvaraffected == FALSE );
    assert( propdata->isnonlinvar == NULL );
 
@@ -559,8 +573,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->componentbegins == NULL );
    assert( propdata->components == NULL );
    assert( propdata->ncomponents == -1 );
-
-   assert( propdata->npermvarscaptured == 0 );
 
    return TRUE;
 }
@@ -584,35 +596,36 @@ SCIP_RETCODE freeSymmetryData(
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
-   /* drop events and release variables */
+   /* drop events */
    if ( propdata->permvarsevents != NULL )
    {
       assert( propdata->permvars != NULL );
       assert( propdata->npermvars > 0 );
-      assert( propdata->npermvarscaptured == propdata->npermvars );
 
       for (i = 0; i < propdata->npermvars; ++i)
       {
-         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[i] >= 0 )
+         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY )
          {
             /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
              * variables, for which no event has been catched. Since there currently is no way of checking whether a var
              * event has been caught for a particular variable, we use the stored eventfilter positions. */
-            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
+            if ( propdata->permvarsevents[i] >= 0 )
+            {
+               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+                     propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
+            }
          }
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
-      propdata->npermvarscaptured = 0;
    }
-   else
+
+   /*  release variables */
+   if ( propdata->binvaraffected || ! propdata->islinearproblem )
    {
-      for (i = 0; i < propdata->npermvarscaptured; ++i)
+      for (i = 0; i < propdata->nbinpermvars; ++i)
       {
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
-      propdata->npermvarscaptured = 0;
    }
 
    /* free lists for orbitopal fixing */
@@ -704,18 +717,21 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->isnonlinvar, propdata->npermvars);
 
       propdata->npermvars = 0;
+      propdata->nbinpermvars = 0;
       propdata->nperms = -1;
       propdata->nmaxperms = 0;
       propdata->nmovedpermvars = 0;
+      propdata->nmovedvars = -1;
       propdata->log10groupsize = -1.0;
       propdata->binvaraffected = FALSE;
       propdata->isnonlinvar = NULL;
    }
    propdata->nperms = -1;
 
-   assert( checkSymmetryDataFree(scip, propdata) );
+   assert( checkSymmetryDataFree(propdata) );
 
    propdata->computedsymmetry = FALSE;
+   propdata->compressed = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1348,23 +1364,161 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
+
+/** set symmetry data */
+static
+SCIP_RETCODE setSymmetryData(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR**            vars,               /**< vars present at time of symmetry computation */
+   int                   nvars,              /**< number of vars present at time of symmetry computation */
+   int                   nbinvars,           /**< number of binary vars present at time of symmetry computation */
+   SCIP_VAR***           permvars,           /**< pointer to permvars array */
+   int*                  npermvars,          /**< pointer to store number of permvars */
+   int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
+   int**                 perms,              /**< permutations matrix (nperms x nvars) */
+   int                   nperms,             /**< number of permutations */
+   int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry (if usecompression) or NULL */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store whether a binary variable is affected by symmetry */
+   SCIP_Bool             usecompression,     /**< whether symmetry data shall be compressed */
+   SCIP_Real             compressthreshold,  /**< if percentage of moved vars is at most threshold, compression is done */
+   SCIP_Bool*            compressed          /**< pointer to store whether compression has been performed */
+   )
+{
+   int i;
+   int p;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( nvars > 0 );
+   assert( permvars != NULL );
+   assert( npermvars != NULL );
+   assert( nbinpermvars != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( binvaraffected != NULL );
+   assert( SCIPisGE(scip, compressthreshold, 0.0) );
+   assert( SCIPisLE(scip, compressthreshold, 1.0) );
+   assert( compressed != NULL );
+
+   /* set default return values */
+   *permvars = vars;
+   *npermvars = nvars;
+   *nbinpermvars = nbinvars;
+   *binvaraffected = FALSE;
+   *compressed = FALSE;
+
+   /* if we possibly perform compression */
+   if ( usecompression && SCIPgetNVars(scip) >= COMPRESSNVARSLB )
+   {
+      SCIP_Real percentagemovedvars;
+      int* labelmovedvars;
+      int* labeltopermvaridx;
+      int nbinvarsaffected = 0;
+
+      assert( nmovedvars != NULL );
+
+      *nmovedvars = 0;
+
+      /* detect number of moved vars and label moved vars */
+      SCIP_CALL( SCIPallocBufferArray(scip, &labelmovedvars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &labeltopermvaridx, nvars) );
+      for (i = 0; i < nvars; ++i)
+      {
+         labelmovedvars[i] = -1;
+
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( perms[p][i] != i )
+            {
+               labeltopermvaridx[*nmovedvars] = i;
+               labelmovedvars[i] = (*nmovedvars)++;
+
+               if ( SCIPvarIsBinary(vars[i]) )
+                  ++nbinvarsaffected;
+               break;
+            }
+         }
+      }
+
+      if ( nbinvarsaffected > 0 )
+         *binvaraffected = TRUE;
+
+      /* check whether compression should be performed */
+      percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
+      if ( *nmovedvars > 0 && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
+      {
+         /* remove variables from permutations that are not affected by any permutation */
+         for (p = 0; p < nperms; ++p)
+         {
+            /* iterate over labels and adapt permutation */
+            for (i = 0; i < *nmovedvars; ++i)
+            {
+               assert( i <= labeltopermvaridx[i] );
+               perms[p][i] = labelmovedvars[perms[p][labeltopermvaridx[i]]];
+            }
+
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &perms[p], nvars, *nmovedvars) );
+         }
+
+         /* remove variables from permvars array that are not affected by any symmetry */
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvars, *nmovedvars) );
+         for (i = 0; i < *nmovedvars; ++i)
+         {
+            (*permvars)[i] = vars[labeltopermvaridx[i]];
+         }
+         *npermvars = *nmovedvars;
+         *nbinpermvars = nbinvarsaffected;
+         *compressed = TRUE;
+
+         SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+      }
+      SCIPfreeBufferArray(scip, &labeltopermvaridx);
+      SCIPfreeBufferArray(scip, &labelmovedvars);
+   }
+   else
+   {
+      /* detect whether binary variable is affected by symmetry and count number of binary permvars */
+      for (i = 0; i < nbinvars; ++i)
+      {
+         for (p = 0; p < nperms && ! *binvaraffected; ++p)
+         {
+            if ( perms[p][i] != i )
+            {
+               if ( SCIPvarIsBinary(vars[i]) )
+                  *binvaraffected = TRUE;
+               break;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** computes symmetry group of a MIP */
 static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_Bool             doubleequations,    /**< Double equations to positive/negative version? */
+   SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed from permutation to save memory? */
+   SCIP_Real             compressthreshold,  /**< Compression is used if percentage of moved vars is at most the threshold. */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             usecolumnsparsity,  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
+   int*                  nbinpermvars,       /**< pointer to store number of binary variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   int*                  nmovedvars,         /**< pointer to store number of moved vars */
    SCIP_Bool**           isnonlinvar,        /**< pointer to store whether each variable appears nonlinear */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store wether a binary variable is affected by symmetry */
+   SCIP_Bool*            compressed,         /**< pointer to store whether compression has been performed */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -1391,32 +1545,43 @@ SCIP_RETCODE computeSymmetryGroup(
    int nexprconss;
    int nconss;
    int nvars;
+   int nbinvars;
+   int nvarsorig;
    int nallvars;
    int c;
    int j;
 
    assert( scip != NULL );
    assert( npermvars != NULL );
+   assert( nbinpermvars != NULL );
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
    assert( log10groupsize != NULL );
+   assert( binvaraffected != NULL );
+   assert( compressed != NULL );
    assert( success != NULL );
    assert( isnonlinvar != NULL );
    assert( SYMcanComputeSymmetry() );
 
    /* init */
    *npermvars = 0;
+   *nbinpermvars = 0;
    *permvars = NULL;
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *nmovedvars = -1;
+   *binvaraffected = FALSE;
+   *compressed = FALSE;
    *success = FALSE;
 
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nvarsorig = nvars;
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || nvars == 0 )
@@ -1459,7 +1624,17 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( vars != NULL );
 
    /* fill matrixdata */
-   matrixdata.nmaxmatcoef = 100 * nvars;
+
+   /* use a staggered scheme for allocating space for non-zeros of constraint matrix since it can become large */
+   if ( nvars <= 100000 )
+      matrixdata.nmaxmatcoef = 100 * nvars;
+   else if ( nvars <= 1000000 )
+      matrixdata.nmaxmatcoef = 32 * nvars;
+   else if ( nvars <= 16700000 )
+      matrixdata.nmaxmatcoef = 16 * nvars;
+   else
+      matrixdata.nmaxmatcoef = INT_MAX / 10;
+
    matrixdata.nmatcoef = 0;
    matrixdata.nrhscoef = 0;
    matrixdata.nuniquemat = 0;
@@ -1497,6 +1672,10 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, isnonlinvar, nvars) );
       SCIP_CALL( SCIPhashsetCreate(&auxvars, SCIPblkmem(scip), nexprconss) );
       SCIP_CALL( SCIPexpriteratorCreate(&it, exprconshdlr, SCIPblkmem(scip)) );
+   }
+   else
+   {
+      *isnonlinvar = NULL;
    }
 
    /* allocate memory for getting the number of constraints that contain a variable */
@@ -1542,7 +1721,7 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "linking") == 0 )
       {
          SCIP_VAR** curconsvars;
-         int* curconsvals;
+         SCIP_Real* curconsvals;
          int i;
 
          /* get constraint variables and their coefficients */
@@ -1559,8 +1738,8 @@ SCIP_RETCODE computeSymmetryGroup(
          }
 
          /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
-         consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
-         consvals[nconsvars - 1] = -1;
+         consvars[nconsvars - 1] = SCIPgetLinkvarLinking(scip, cons);
+         consvals[nconsvars - 1] = -1.0;
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata, nconssforvar) );
@@ -2093,31 +2272,35 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
-   }
-   *success = TRUE;
 
-   if ( *nperms > 0 )
-   {
-      /* copy variables */
-      *permvars = vars;
-      *npermvars = nvars;
+      if ( *nperms > 0 )
+      {
+         SCIP_CALL( setSymmetryData(scip, vars, nvars, nbinvars, permvars, npermvars, nbinpermvars, *perms, *nperms,
+               nmovedvars, binvaraffected, compresssymmetries, compressthreshold, compressed) );
+      }
+      else
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
+         SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+      }
    }
    else
    {
       SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
       SCIPfreeBlockMemoryArray(scip, &vars, nvars);
    }
+   *success = TRUE;
 
    /* free matrix data */
-   SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
+   SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvarsorig);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvarsorig);
    SCIPhashtableFree(&vartypemap);
 
    if ( usecolumnsparsity )
-      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvarsorig);
 
    /* free cons expr specific data */
    if( nexprconss > 0 )
@@ -2154,9 +2337,10 @@ SCIP_RETCODE determineSymmetry(
    int maxgenerators;
    int nhandleconss;
    int nconss;
-   int type = 0;
+   unsigned int type = 0;
    int nvars;
    int j;
+   int p;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -2209,6 +2393,15 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   /* do not compute symmetry if there are no binary variables, but only those would be used */
+   if ( propdata->onlybinarysymmetry && SCIPgetNBinVars(scip) == 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    /* determine symmetry specification */
    if ( SCIPgetNBinVars(scip) > 0 )
       type |= (int) SYM_SPEC_BINARY;
@@ -2237,8 +2430,12 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* free symmetries after a restart to recompute them later */
-   if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   /* if a restart occured, either disable orbital fixing... */
+   if ( propdata->offoundreduction && propdata->disableofrestart  && SCIPgetNRuns(scip) > propdata->lastrestart )
+      propdata->ofenabled = FALSE;
+   /* ... or free symmetries after a restart to recompute them later */
+   else if ( (propdata->offoundreduction || propdata->recomputerestart)
+      && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       assert( propdata->npermvars > 0 );
       assert( propdata->permvars != NULL );
@@ -2301,10 +2498,11 @@ SCIP_RETCODE determineSymmetry(
    propdata->islinearproblem = (SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "expr")) == 0);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE,
-         propdata->checksymmetries, propdata->usecolumnsparsity, &propdata->npermvars, &propdata->permvars,
-         &propdata->nperms, &propdata->nmaxperms, &propdata->perms, &propdata->log10groupsize,
-         &propdata->isnonlinvar, &successful) );
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
+	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
+         &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms,
+         &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->isnonlinvar,
+         &propdata->binvaraffected, &propdata->compressed, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
@@ -2315,7 +2513,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if not successful */
    if ( ! successful )
    {
-      assert( checkSymmetryDataFree(scip, propdata) );
+      assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
 
       propdata->ofenabled = FALSE;
@@ -2327,7 +2525,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if no symmetries found */
    if ( propdata->nperms == 0 )
    {
-      assert( checkSymmetryDataFree(scip, propdata) );
+      assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
 
       propdata->ofenabled = FALSE;
@@ -2349,40 +2547,38 @@ SCIP_RETCODE determineSymmetry(
    /* display statistics: log10 group size, number of affected vars*/
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
 
-   /* determine affected binary variables */
-   /* TODO: Can the determination of affected variables be integrated somewhere? */
    if ( propdata->displaynorbitvars )
    {
-      int nbinvarsaffected;
-      int nvarsaffected;
-
-      SCIP_CALL( SCIPdetermineNVarsAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-            propdata->npermvars, &nbinvarsaffected, &nvarsaffected) );
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", nvarsaffected);
-      if ( nbinvarsaffected > 0 )
-         propdata->binvaraffected = TRUE;
-   }
-   else if ( propdata->islinearproblem && (propdata->symconsenabled || propdata->ofenabled) )
-   {
-      SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-            propdata->npermvars, &propdata->binvaraffected) );
+      if ( propdata->nmovedvars == -1 )
+      {
+         SCIP_CALL( SCIPdetermineNVarsAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+               propdata->npermvars, &(propdata->nmovedvars)) );
+      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", propdata->nmovedvars);
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* exit if problem is linear and no binary variables are affected by symmetry */
-   if ( propdata->islinearproblem && ! propdata->binvaraffected )
+   if ( ! propdata->binvaraffected )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
-
-      /* free data and exit */
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n",
+         SCIPgetSolvingTime(scip));
 
       /* disable OF and symmetry handling constraints */
       propdata->ofenabled = FALSE;
-      propdata->symconsenabled = FALSE;
 
-      return SCIP_OKAY;
+      if( propdata->islinearproblem )
+      {
+         propdata->symconsenabled = FALSE;
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) -> problem is linear, so free symmetry data.\n",
+            SCIPgetSolvingTime(scip));
+
+         /* free data and exit */
+         SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+         return SCIP_OKAY;
+      }
    }
 
    assert( propdata->nperms > 0 );
@@ -2413,7 +2609,6 @@ SCIP_RETCODE determineSymmetry(
    if ( propdata->ofenabled )
    {
       int componentidx;
-      int p;
       int v;
 
       /* transpose symmetries matrix here if necessary */
@@ -2428,16 +2623,6 @@ SCIP_RETCODE determineSymmetry(
             else
                propdata->permstrans[v][p] = v; /* ignore symmetry information on non-binary variables */
          }
-      }
-
-      /* free original perms matrix if no symmetry constraints are added */
-      if ( ! propdata->symconsenabled )
-      {
-         for (p = 0; p < propdata->nperms; ++p)
-         {
-            SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], nvars);
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
       }
 
       /* prepare array for active permutations */
@@ -2482,25 +2667,47 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* handle several general aspects */
 #ifndef NDEBUG
+   /* store objective coefficients for debug purposes */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
-#endif
    for (j = 0; j < propdata->npermvars; ++j)
-   {
-      /* symmetric variables are not allowed to be multi-aggregated */
-      /* TODO: Do we have to forbid multi-aggregation in any case? */
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-
-      /* store objective */
-#ifndef NDEBUG
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-      /* capture all variables */
+   /* capture binary variables and forbid multi-aggregation of symmetric variables
+    *
+    * note: binary variables are in the beginning of pervars
+    */
+   for (j = 0; j < propdata->nbinpermvars; ++j)
+   {
       SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
+      if ( propdata->compressed )
+      {
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+      }
+      else
+      {
+         for (p = 0; p < propdata->nperms; ++p)
+         {
+            if ( propdata->perms[p][j] != j )
+            {
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+               break;
+            }
+         }
+      }
    }
-   propdata->npermvarscaptured = propdata->npermvars;
+
+   /* free original perms matrix if no symmetry constraints are added */
+   if ( ! propdata->symconsenabled )
+   {
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], propdata->npermvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
+   }
 
    return SCIP_OKAY;
 }
@@ -2540,8 +2747,16 @@ SCIP_RETCODE detectOrbitopes(
 
    assert( propdata->nperms > 0 );
    assert( propdata->perms != NULL );
-   assert( propdata->npermvars > 0 );
+   assert( propdata->nbinpermvars >= 0 );
+   assert( propdata->npermvars >= 0 );
    assert( propdata->permvars != NULL );
+
+   /* exit if no symmetry on binary variables is present */
+   if ( propdata->nbinpermvars == 0 )
+   {
+      assert( ! propdata->binvaraffected );
+      return SCIP_OKAY;
+   }
 
    perms = propdata->perms;
    npermvars = propdata->npermvars;
@@ -2554,18 +2769,21 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
       SCIP_Bool* usedperm;
+      SCIP_Bool* rowisbinary;
       SCIP_Bool isorbitope = TRUE;
       SCIP_Bool infeasibleorbitope;
       int** orbitopevaridx;
       int* columnorder;
       int npermsincomponent;
       int ntwocyclescomp = INT_MAX;
+      int nbincyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
       int* nusedelems;
       int coltoextend;
       int j;
       int row;
+      int cnt;
 
       /* get properties of permutations */
       npermsincomponent = componentbegins[i + 1] - componentbegins[i];
@@ -2573,17 +2791,31 @@ SCIP_RETCODE detectOrbitopes(
       for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
          SCIP_Bool iscompoftwocycles = FALSE;
-         SCIP_Bool allvarsbinary = TRUE;
+         SCIP_Bool allvarsbinary;
          int ntwocyclesperm = 0;
+         int nbincyclesperm = 0;
+         SCIP_Bool onlybinorbitopes;
 
-         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         onlybinorbitopes = propdata->orbitopepctbinrows == 1.0 ? TRUE : FALSE;
+         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles,
+               &ntwocyclesperm, &nbincyclesperm, &allvarsbinary, onlybinorbitopes) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
+         {
             ntwocyclescomp = ntwocyclesperm;
+            nbincyclescomp = nbincyclesperm;
+
+            /* if the percentage of binary rows in the orbitope's action var matrix is too small, discard the orbitope */
+            if ( (SCIP_Real) nbincyclescomp <= (SCIP_Real) ntwocyclesperm * propdata->orbitopepctbinrows )
+            {
+               isorbitope = FALSE;
+               break;
+            }
+         }
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
+         if ( ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
          {
             isorbitope = FALSE;
             break;
@@ -2618,6 +2850,9 @@ SCIP_RETCODE detectOrbitopes(
       /* count how often an element was used in the potential orbitope */
       SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
+      /* store whether a row of the potential orbitope contains only binary variables */
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &rowisbinary, ntwocyclescomp) );
+
       /* fill first two columns of orbitopevaridx matrix */
       row = 0;
       for (j = 0; j < npermvars; ++j)
@@ -2629,6 +2864,11 @@ SCIP_RETCODE detectOrbitopes(
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
          {
+            assert( SCIPvarIsBinary(permvars[j]) == SCIPvarIsBinary(permvars[perms[permidx][j]]) );
+
+            if ( SCIPvarIsBinary(permvars[j]) )
+               rowisbinary[row] = TRUE;
+
             orbitopevaridx[row][0] = j;
             orbitopevaridx[row++][1] = perms[permidx][j];
             nusedelems[j] += 1;
@@ -2662,7 +2902,7 @@ SCIP_RETCODE detectOrbitopes(
             continue;
 
          SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[componentbegins[i] + j]], TRUE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], TRUE, &nusedelems, permvars, rowisbinary, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -2675,7 +2915,7 @@ SCIP_RETCODE detectOrbitopes(
             ++nusedperms;
             coltoextend = nfilledcols;
             columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 
@@ -2695,7 +2935,7 @@ SCIP_RETCODE detectOrbitopes(
             continue;
 
          SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[componentbegins[i] + j]], FALSE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], FALSE, &nusedelems, permvars, rowisbinary, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -2709,7 +2949,7 @@ SCIP_RETCODE detectOrbitopes(
             coltoextend = nfilledcols;
             columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
             ++nfilledcols;
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 
@@ -2720,23 +2960,29 @@ SCIP_RETCODE detectOrbitopes(
          goto FREEDATASTRUCTURES;
 
       /* we have found a potential orbitope, prepare data for orbitope conshdlr */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, ntwocyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbincyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, nbincyclescomp) );
+      cnt = 0;
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent + 1) ); /*lint !e866*/
-         varsallocorder[j] = vars[j]; /* to ensure that we can free the buffer in reverse order */
+         if ( ! rowisbinary[j] )
+            continue;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[cnt], npermsincomponent + 1) ); /*lint !e866*/
+         varsallocorder[cnt] = vars[cnt]; /* to ensure that we can free the buffer in reverse order */
+         ++cnt;
       }
+      assert( cnt == nbincyclescomp );
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
       SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
-            orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
+            orbitopevaridx, columnorder, nusedelems, rowisbinary, &infeasibleorbitope) );
 
       if ( ! infeasibleorbitope )
       {
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
-               ntwocyclescomp, npermsincomponent + 1, TRUE, FALSE,
+               nbincyclescomp, npermsincomponent + 1, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2749,7 +2995,7 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* free data structures */
-      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      for (j = nbincyclescomp - 1; j >= 0; --j)
       {
          SCIPfreeBufferArray(scip, &varsallocorder[j]);
       }
@@ -2757,6 +3003,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIPfreeBufferArray(scip, &vars);
 
    FREEDATASTRUCTURES:
+      SCIPfreeBufferArray(scip, &rowisbinary);
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
       for (j = ntwocyclescomp - 1; j >= 0; --j)
@@ -2795,6 +3042,15 @@ SCIP_RETCODE addSymresackConss(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->npermvars >= 0 );
+   assert( propdata->nbinpermvars >= 0 );
+
+   /* if no symmetries on binary variables are present */
+   if ( propdata->nbinpermvars == 0 )
+   {
+      assert( propdata->binvaraffected == 0 );
+      return SCIP_OKAY;
+   }
 
    perms = propdata->perms;
    permvars = propdata->permvars;
@@ -2920,6 +3176,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    {
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
+
+   /* disable orbital fixing if all components are handled by orbitopes */
+   if ( propdata->ncomponents == propdata->norbitopes )
+      propdata->ofenabled = FALSE;
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
@@ -3100,8 +3360,7 @@ SCIP_RETCODE computeBranchingVariables(
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
    SCIP_Shortbool*       bg1,                /**< bitset marking the variables globally fixed or branched to 1 */
    int*                  bg1list,            /**< array to store the variable indices globally fixed or branched to 1 */
-   int*                  nbg1,               /**< pointer to store the number of variables in bg1 and bg1list */
-   SCIP_Bool*            success             /**< pointer to store whether branching variables were computed successfully */
+   int*                  nbg1                /**< pointer to store the number of variables in bg1 and bg1list */
    )
 {
    SCIP_NODE* node;
@@ -3111,10 +3370,7 @@ SCIP_RETCODE computeBranchingVariables(
    assert( bg1 != NULL );
    assert( bg1list != NULL );
    assert( nbg1 != NULL );
-   assert( success != NULL );
    assert( *nbg1 >= 0 );
-
-   *success = TRUE;
 
    /* get current node */
    node = SCIPgetCurrentNode(scip);
@@ -3157,13 +3413,11 @@ SCIP_RETCODE computeBranchingVariables(
             /* we only consider binary variables */
             if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
             {
-               /* make sure that branching variable is known, since new binary variables may have
-                * been created meanwhile, e.g., by prop_inttobinary */
+               /* if branching variable is not known (may have been created meanwhile,
+                * e.g., by prop_inttobinary; may have been removed from symmetry data
+                * due to compression), continue with parent node */
                if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
-               {
-                  *success = FALSE;
-                  return SCIP_OKAY;
-               }
+                  break;
 
                if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
                {
@@ -3202,7 +3456,6 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_Shortbool* inactiveperms;
    SCIP_Shortbool* bg0;
    SCIP_Shortbool* bg1;
-   SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
    int* orbitbegins;
    int* orbits;
@@ -3217,6 +3470,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    int nactiveperms;
    int norbits;
    int npermvars;
+   int nbinpermvars;
    int** permstrans;
    int nperms;
    int p;
@@ -3254,6 +3508,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
+   nbinpermvars = propdata->nbinpermvars;
    permstrans = propdata->permstrans;
    inactiveperms = propdata->inactiveperms;
    components = propdata->components;
@@ -3272,17 +3527,8 @@ SCIP_RETCODE propagateOrbitalFixing(
    nbg1 = propdata->nbg1;
 
    /* get branching variables */
-   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, bg1, bg1list, &nbg1, &success) );
+   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, bg1, bg1list, &nbg1) );
    assert( nbg1 >= propdata->nbg1 );
-
-   if ( ! success )
-   {
-      /* clean bg1 */
-      for (j = propdata->nbg1; j < nbg1; ++j)
-         bg1[bg1list[j]] = FALSE;
-
-      return SCIP_OKAY;
-   }
 
    /* reset inactive permutations */
    nactiveperms = nperms;
@@ -3426,10 +3672,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    if ( nactiveperms == 0 )
       return SCIP_OKAY;
 
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
+   /* compute orbits of binary variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, nbinpermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, nbinpermvars) );
+   SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, nbinpermvars, permstrans, nperms, inactiveperms,
          orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent, propdata->componentblocked, ncomponents, propdata->nmovedpermvars) );
 
    if ( norbits > 0 )
@@ -3438,7 +3684,7 @@ SCIP_RETCODE propagateOrbitalFixing(
       int nfixedone = 0;
 
       SCIPdebugMsg(scip, "Perform orbital fixing on %d orbits (%d active perms).\n", norbits, nactiveperms);
-      SCIP_CALL( performOrbitalFixing(scip, permvars, npermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
+      SCIP_CALL( performOrbitalFixing(scip, permvars, nbinpermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
 
       propdata->nfixedzero += nfixedzero;
       propdata->nfixedone += nfixedone;
@@ -3616,11 +3862,15 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
 
       if ( infeasible )
+      {
          *result = SCIP_CUTOFF;
+         propdata->offoundreduction = TRUE;
+      }
       else if ( nprop > 0 )
       {
          *result = SCIP_SUCCESS;
          *nfixedvars += nprop;
+         propdata->offoundreduction = TRUE;
       }
    }
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == 1 )
@@ -3701,9 +3951,15 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
 
    if ( infeasible )
+   {
       *result = SCIP_CUTOFF;
+      propdata->offoundreduction = TRUE;
+   }
    else if ( nprop > 0 )
+   {
       *result = SCIP_REDUCEDDOM;
+      propdata->offoundreduction = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -3737,6 +3993,7 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
    propdata->nodenumber = -1;
+   propdata->offoundreduction = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3799,7 +4056,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    assert( propdata != NULL );
 
    propdata->npermvars = 0;
-   propdata->npermvarscaptured = 0;
+   propdata->nbinpermvars = 0;
    propdata->permvars = NULL;
 #ifndef NDEBUG
    propdata->permvarsobj = NULL;
@@ -3817,8 +4074,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->componentblocked = NULL;
 
    propdata->log10groupsize = -1.0;
+   propdata->nmovedvars = -1;
    propdata->binvaraffected = FALSE;
    propdata->computedsymmetry = FALSE;
+   propdata->islinearproblem = FALSE;
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
@@ -3843,6 +4102,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
    propdata->nodenumber = -1;
+   propdata->offoundreduction = FALSE;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
@@ -3906,6 +4166,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &propdata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/orbitopepctbinrows",
+         "percentage of binary rows of an orbitope matrix below which orbitopes are not added",
+         &propdata->orbitopepctbinrows, TRUE, DEFAULT_ORBITOPEPCTBINROWS, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/addconsstiming",
          "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving)",
@@ -3928,9 +4193,29 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/usecolumnsparsity",
+         "propagating/" PROP_NAME "/compresssymmetries",
+         "Should non-affected variables be removed from permutation to save memory?",
+         &propdata->compresssymmetries, TRUE, DEFAULT_COMPRESSSYMMETRIES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/compressthreshold",
+         "Compression is used if percentage of moved vars is at most the threshold.",
+         &propdata->compressthreshold, TRUE, DEFAULT_COMPRESSTHRESHOLD, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+     "propagating/" PROP_NAME "/usecolumnsparsity",
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/disableofrestart",
+         "Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?",
+         &propdata->disableofrestart, TRUE, DEFAULT_DISABLEOFRESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/onlybinarysymmetry",
+         "Is only symmetry on binary variables used?",
+         &propdata->onlybinarysymmetry, TRUE, DEFAULT_ONLYBINARYSYMMETRY, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
@@ -4020,4 +4305,47 @@ SCIP_RETCODE SCIPgetSymmetry(
       *ncomponents = propdata->ncomponents;
 
    return SCIP_OKAY;
+}
+
+/** return whether orbital fixing is enabled */
+SCIP_Bool SCIPisOrbitalfixingEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return FALSE;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   return propdata->ofenabled;
+}
+
+/** return number of the symmetry group's generators */
+int SCIPgetSymmetryNGenerators(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+      return 0;
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   if ( propdata->nperms < 0 )
+      return 0;
+   else
+      return propdata->nperms;
 }

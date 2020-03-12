@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -167,18 +167,21 @@ compilation settings:
               "dbg", "opt", or "prf"
 
 - $(LPS):     the LP solver to use
-              "spx2", "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+              "spx" (= "spx2"), "spx1", "clp", "cpx", "xprs", "msk", "grb", "glop", "qso", "none"
 
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
 
 - $(SYM):     the graph automorphism code (needed to handle symmetries) to use
-             "none", "bliss"
+              "none", "bliss"
+
+- $(TPI):     the task processing interface (needed for concurrent solve) to use
+              "none", "omp", "tny"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
-and neither an expressions interpreter nor symmetry handling techniques you would
-have the following names:
+using the gnu compiler in debug mode, using Soplex version as LP solver,
+and neither an expressions interpreter nor symmetry handling techniques or multi-threading,
+you would have the following names:
 - $(OSTYPE)  = linux
 - $(ARCH)    = x86
 - $(COMP)    = gnu
@@ -186,6 +189,7 @@ have the following names:
 - $(LPS)     = spx
 - $(EXPRINT) = none
 - $(SYM)     = none
+- $(TPI)     = none
 
 -----------------------------------------------------------------------------
 
@@ -200,10 +204,11 @@ Here is what you have to do to get SCIP running:
    - "LPS=spx"         to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
    - "LPS=spx1"        to use SoPlex as LP solver (based on the old interface for versions >= 1.4)
    - "LPS=cpx"         to use CPLEX as LP solver
+   - "LPS=grb"         to use Gurobi as LP solver
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver
    - "LPS=clp"         to use CLP as LP solver
-   - "LPS=grb"         to use Gurobi as LP solver
+   - "LPS=glop"        to use Glop as LP solver
    - "LPS=qso"         to use QSopt as LP solver
    - "LPS=none"        to use no LP solver
 
@@ -232,6 +237,9 @@ Here is what you have to do to get SCIP running:
    - "WORHP=true"      to enable WORHP interface (needs WORHP >= 1.10)
    - "WORHP=false"     to disable WORHP interface (default)
 
+   - "PRESOLLIB=true"  to enable the MILP presolver based on the presolving library
+   - "PRESOLLIB=false" to disable the MILP presolver based on the presolving library (default)
+
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
 
@@ -245,7 +253,14 @@ Here is what you have to do to get SCIP running:
    - "SHARED=true"     to create shared libraries
 
    - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
-   - "SYM=none"        to disable symmetry handling in mixed integer programs
+   - "SYM=none"        to disable symmetry handling in mixed integer programs (default)
+
+   - "TPI=omp"         to use the openmp interface for concurrent solves
+   - "TPI=tny"         to use the tinycthreads interface for concurrent solves
+   - "TPI=none"        to disable the task processing interface (default)
+
+   - "PRESOL=true"     to use the presolve library and enable the MILP-sepcific presolver
+   - "PRESOL=false"    to disable the presolve library (default)
 
    On some machines, you should use gmake instead of make.
 
@@ -553,14 +568,20 @@ make[1]: Leaving directory `/sw/scip'
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /cplex121/lib/x86-64_debian4.0_4.1/static_pic/libcplex.a lib/static/libcplex.linux.x86.gnu.a")
 
-   (c) to use XPRESS
+   (c) to use Gurobi
+       - ln -s <path to the include directory of Gurobi> <path to SCIP>/lib/include/grbinc
+         (e.g. "cd scip; ln -s /gurobi81/linux64/include lib/include/grbinc")
+       - ln -s <file libgurobi81.so> <path to SCIP>/lib/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).so
+         (e.g. "cd scip; ln -s /gurobi81/linux64/lib/libgurobi81.so lib/shared/libgurobi.linux.x86_64.gnu.so")
+
+   (d) to use XPRESS
        - ln -s <path to directory of xprs.h> <path to SCIP>/lib/include/xprsinc
          (e.g. "cd scip; ln -s /xpressmp/include lib/include/xprsinc")
        - ln -s <file libxprs.a> <path to SCIP>/lib/static/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/static/libxprs.linux.x86.gnu.a")
 
-   (d) to use MOSEK
+   (e) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskinc
          (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
@@ -568,38 +589,42 @@ make[1]: Leaving directory `/sw/scip'
          (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
-   (e) to use CLP
+   (f) to use CLP
        - ln -s <path to Clp main directory> <path to SCIP>/lib/include/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /Coin-Clp lib/include/libclp.linux.x86.gnu.opt")
 
-   (f) to use ZIMPL as additional file reader for reading *.zpl files
+   (g) to use Glop
+       - ln -s <path to OR-Tools main directory> <path to SCIP>/shared/ortools
+         (e.g. "cd scip; ln -s /ortools lib/shared/ortools")
+
+   (h) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/include/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/include/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/static/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
        Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
-   (g) to use IPOPT as NLP solver
+   (i) to use IPOPT as NLP solver
        - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
          (e.g. "cd scip; ln -s /Ipopt lib/shared/ipopt.linux.x86.gnu.opt")
          The path to the IPOPT installation is the path under where the Ipopt build has been installed.
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt with the ipopt_addlibs_cpp.txt file.
 
-   (h) to use WORHP as NLP solver
+   (j) to use WORHP as NLP solver
        - ln -s <path to WORHP installation> <path to SCIP>/lib/shared/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
          (e.g. "cd scip; ln -s /Worhp lib/shared/worhp.linux.x86.gnu.opt")
          The path to the WORHP installation is the path under where the Worhp build has been installed.
          It should contain the directories include/worhp with the WORHP header files and the directory lib with the WORHP libraries.
 
-   (i) to use FilterSQP as NLP solver
+   (k) to use FilterSQP as NLP solver
        - ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
        - ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP).a
 
-   (j) to use GAMS
+   (l) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 
-   (k) to use bliss
+   (m) to use bliss
        - ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
          (e.g. "cd scip; ln -s ../bliss" lib/include/bliss)
        - ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
