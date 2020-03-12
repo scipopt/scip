@@ -1335,7 +1335,7 @@ SCIP_RETCODE forwardPropExpr(
                   (!force &&
                      ((expr->activity.inf <= -SCIP_INTERVAL_INFINITY && compareinterval.inf > -SCIP_INTERVAL_INFINITY) ||
                       (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && compareinterval.sup >  SCIP_INTERVAL_INFINITY) ||
-                      (SCIPisEQ(scip, expr->activity.inf, expr->activity.sup) && !SCIPisEQ(scip, compareinterval.inf, compareinterval.sup)) ||
+                      (!SCIPisEQ(scip, expr->activity.inf, expr->activity.sup) && SCIPisEQ(scip, MAX(expr->activity.inf, compareinterval.inf), MIN(expr->activity.sup, compareinterval.sup))) || /*lint !e666*/
                       SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
                       SCIPisUbBetter(scip, compareinterval.sup, expr->activity.inf, expr->activity.sup))) )
                {
