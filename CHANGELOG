@@ -28,7 +28,7 @@ Interface changes
 ### Interfaces to external software
 ### Changed parameters
 
-- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7]
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 7
 
 ### New parameters
 
