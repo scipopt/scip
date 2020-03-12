@@ -1016,6 +1016,54 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
+/** returns whether intersecting oldinterval with newinterval would provide a properly smaller interval
+ *
+ * If subsetsufficient is TRUE, then the intersection being smaller than oldinterval is sufficient.
+ * If subsetsufficient is FALSE, then we require
+ *  - a change from an unbounded interval to bounded one, or
+ *  - or a change from an unfixed (width > epsilon) to a fixed interval, or
+ *  - a minimal tightening of one of the interval bounds as defined by SCIPis{Lb,Ub}Better.
+ */
+static
+SCIP_Bool isIntervalBetter(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_Bool               subsetsufficient, /**< whether the intersection being a proper subset of oldinterval is sufficient */
+   SCIP_INTERVAL           newinterval,      /**< new interval */
+   SCIP_INTERVAL           oldinterval       /**< old interval */
+   )
+{
+   assert(scip != NULL);
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, oldinterval));
+
+   if( subsetsufficient )
+      /* oldinterval \cap newinterval < oldinterval iff not oldinterval is subset of newinterval */
+      return !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, oldinterval, newinterval);
+
+   /* check whether lower bound of interval becomes finite */
+   if( oldinterval.inf <= -SCIP_INTERVAL_INFINITY && newinterval.inf > -SCIP_INTERVAL_INFINITY )
+      return TRUE;
+
+   /* check whether upper bound of interval becomes finite */
+   if( oldinterval.sup >=  SCIP_INTERVAL_INFINITY && newinterval.sup >  SCIP_INTERVAL_INFINITY )
+      return TRUE;
+
+   /* check whether intersection will have width <= epsilon, if oldinterval doesn't have yet */
+   if( !SCIPisEQ(scip, oldinterval.inf, oldinterval.sup) && SCIPisEQ(scip, MAX(oldinterval.inf, newinterval.inf), MIN(oldinterval.sup, newinterval.sup)) ) /*lint !e666*/
+      return TRUE;
+
+   /* check whether lower bound on interval will be better by SCIP's quality measures for boundchanges */
+   if( SCIPisLbBetter(scip, newinterval.inf, oldinterval.inf, oldinterval.sup) )
+      return TRUE;
+
+   /* check whether upper bound on interval will be better by SCIP's quality measures for boundchanges */
+   if( SCIPisUbBetter(scip, newinterval.sup, oldinterval.inf, oldinterval.sup) )
+      return TRUE;
+
+   return FALSE;
+}
+
+
 /** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to its activity
  *
  *  Nothing will happen if SCIP is not in presolve or solve.
@@ -1326,18 +1374,8 @@ SCIP_RETCODE forwardPropExpr(
 
                /* if compareinterval allow a further tightening, then it may provide tighter bounds for children
                 * thus add this expression to the reversepropqueue
-                *
-                * if not force, require a change from unbounded to bounded,
-                *   or a minimal tightening as defined by SCIPis{Lb,Ub}Better,
-                *   or a change from unfixed to fixed
                 */
-               if( (force && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, expr->activity, compareinterval)) ||
-                  (!force &&
-                     ((expr->activity.inf <= -SCIP_INTERVAL_INFINITY && compareinterval.inf > -SCIP_INTERVAL_INFINITY) ||
-                      (expr->activity.sup >=  SCIP_INTERVAL_INFINITY && compareinterval.sup >  SCIP_INTERVAL_INFINITY) ||
-                      (!SCIPisEQ(scip, expr->activity.inf, expr->activity.sup) && SCIPisEQ(scip, MAX(expr->activity.inf, compareinterval.inf), MIN(expr->activity.sup, compareinterval.sup))) || /*lint !e666*/
-                      SCIPisLbBetter(scip, compareinterval.inf, expr->activity.inf, expr->activity.sup) ||
-                      SCIPisUbBetter(scip, compareinterval.sup, expr->activity.inf, expr->activity.sup))) )
+               if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, compareinterval) && isIntervalBetter(scip, force, compareinterval, expr->activity) )
                {
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue, new activity = [%.15g,%.15g] is not subset of previous one = [%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup, compareinterval.inf, compareinterval.sup);
@@ -12185,37 +12223,27 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 #endif
    }
 
-   /* treat the new bounds as empty if either the lower/upper bound is above/below +/- SCIPinfinity() */
-   if( SCIPisInfinity(scip, newbounds.inf) || SCIPisInfinity(scip, -newbounds.sup) )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
    {
-      SCIPdebugMsg(scip, "cut off due to bound being beyond infinity\n");
-      SCIPintervalSetEmpty(&newbounds);
-   }
+      SCIPdebugMsg(scip, "cut off due to new bounds being empty\n");
 
-   /* intersect with previous activity, but ensure it's not-empty if very close disjoint intervals */
-   SCIPintervalIntersectEps(&newbounds, SCIPepsilon(scip), expr->activity, newbounds);
-
-   /* stop if new bounds are not different than previous */
-   if( newbounds.inf == expr->activity.inf && newbounds.sup == expr->activity.sup ) /*lint !e777*/
-   {
-#ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p equals existing one\n", newbounds.inf, newbounds.sup, (void*)expr);
-#endif
-
+      SCIPintervalSetEmpty(&expr->activity);
+      *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
-   assert(SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, newbounds, expr->activity));  /* due to intersect above */
+   /* treat the new bounds as empty if either the lower/upper bound is above/below +/- SCIPinfinity() */
+   if( SCIPisInfinity(scip, newbounds.inf) || SCIPisInfinity(scip, -newbounds.sup) )
+   {
+      SCIPdebugMsg(scip, "cut off due to new bounds being beyond infinity\n");
 
-   /* if newbounds do not allow a sufficient tightening, then do not store new activity and do not add to queue for reverse propagation
-    * if not force, require a change from unbounded to bounded, a fixing, or a minimal tightening as defined by SCIPis{Lb,Ub}Better
-    */
-   if( !force &&
-       (expr->activity.inf > -SCIP_INTERVAL_INFINITY || newbounds.inf <= -SCIP_INTERVAL_INFINITY) &&  /* lower bound still unbounded */
-       (expr->activity.sup <  SCIP_INTERVAL_INFINITY || newbounds.sup <=  SCIP_INTERVAL_INFINITY) &&  /* upper bound still unbounded */
-       !SCIPisEQ(scip, newbounds.inf, newbounds.sup) &&  /* new bounds are not fixing activity */
-       !SCIPisLbBetter(scip, newbounds.inf, expr->activity.inf, expr->activity.sup) &&  /* lower bound is not sufficiently better */
-       !SCIPisUbBetter(scip, newbounds.sup, expr->activity.inf, expr->activity.sup) )   /* upper bound is not sufficiently better */
+      SCIPintervalSetEmpty(&expr->activity);
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* if newbounds do not allow a sufficient tightening, then do not store new activity and do not add to queue for reverse propagation */
+   if( !isIntervalBetter(scip, force, newbounds, expr->activity) )
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p not sufficiently tighter than existing one -- rejecting update\n", newbounds.inf, newbounds.sup, (void*)expr);
@@ -12223,11 +12251,12 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-#ifdef DEBUG_PROP
-   SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p, was [%g,%g]\n", newbounds.inf, newbounds.sup, (void*)expr, expr->activity.inf, expr->activity.sup);
-#endif
+   /* apply new bounds to expr activity, but ensure it's not-empty if very close disjoint intervals */
+   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, newbounds);
 
-   expr->activity = newbounds;
+#ifdef DEBUG_PROP
+   SCIPdebugMsg(scip, "new activity [%g,%g] for expr %p\n", expr->activity.inf, expr->activity.sup, (void*)expr);
+#endif
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
