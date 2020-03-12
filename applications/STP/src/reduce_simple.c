@@ -56,6 +56,7 @@ SCIP_Bool hasAdjacentTerminals(
 }
 #endif
 
+
 static
 void getArticulationPoints(
    const GRAPH*          g,                  /**< graph data structure */
@@ -282,6 +283,35 @@ SCIP_Bool isMaxprizeTerm(
    return (t == i);
 }
 
+#if 1
+/** tries to reduce full graph for a rooted PC problem */
+static
+void rpcTryFullReduce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int root = g->source;
+
+   assert(g->stp_type == STP_RPCSPG);
+
+   if( g->grad[root] == 0 )
+      return;
+
+   if( graph_pc_nProperPotentialTerms(g) == 0 && graph_pc_nFixedTerms(g) == 1 )
+   {
+      const int nnodes = g->knots;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( i != root )
+         {
+            graph_knot_del(scip, g, i, TRUE);
+         }
+      }
+   }
+}
+#endif
 
 /** reduces non-terminal of degree 1 for a (rooted) PC problem */
 static
@@ -1265,7 +1295,7 @@ SCIP_RETCODE reduce_simple_pc(
    int nodes2[2];
    SCIP_Real maxprize = -1.0;
    const int nnodes = graph_get_nNodes(g);
-   const SCIP_Bool pc = (g->stp_type == STP_PCSPG);
+   const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
    const SCIP_Bool checkstate = (edgestate != NULL);
    SCIP_Bool rerun = TRUE;
 
@@ -1277,7 +1307,7 @@ SCIP_RETCODE reduce_simple_pc(
 
    SCIPdebugMessage("Degree Test: ");
 
-   if( !pc )
+   if( !isUnrooted )
       g->mark[g->source] = FALSE;
 
    /* main loop */
@@ -1324,7 +1354,7 @@ SCIP_RETCODE reduce_simple_pc(
           */
 
          assert(Is_term(g->term[i]));
-         fixedterm = (!pc && graph_pc_knotIsFixedTerm(g, i));
+         fixedterm = (!isUnrooted && graph_pc_knotIsFixedTerm(g, i));
 
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) && i != g->source )
@@ -1353,11 +1383,11 @@ SCIP_RETCODE reduce_simple_pc(
          {
             int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               if( g->mark[g->head[e]] || (!pc && g->head[e] == g->source) )
+               if( g->mark[g->head[e]] || (!isUnrooted && g->head[e] == g->source) )
                   break;
 
             assert(e != EAT_LAST);
-            assert(g->head[e] != g->source || !pc);
+            assert(g->head[e] != g->source || !isUnrooted);
 
             SCIP_CALL( pcmwReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
@@ -1370,7 +1400,7 @@ SCIP_RETCODE reduce_simple_pc(
                for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                {
                   const int i1 = g->head[e];
-                  if( g->mark[i1] || (!pc && i1 == g->source) )
+                  if( g->mark[i1] || (!isUnrooted && i1 == g->source) )
                   {
                      assert(edgecount < 2);
 
@@ -1424,7 +1454,7 @@ SCIP_RETCODE reduce_simple_pc(
             {
                const int i1 = g->head[e1];
 
-               if( !g->mark[i1] && (pc || i1 != g->source) )
+               if( !g->mark[i1] && (isUnrooted || i1 != g->source) )
                   continue;
 
                if( SCIPisLT(scip, g->cost[e1], mincost) )
@@ -1461,10 +1491,15 @@ SCIP_RETCODE reduce_simple_pc(
       } /* for i = 1, ..., nnodes */
    } /* main loops */
 
-   if( !pc )
+   if( !isUnrooted )
       g->mark[g->source] = TRUE;
 
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *countnew);
+
+#if 1
+   if( !isUnrooted )
+      rpcTryFullReduce(scip, g);
+#endif
 
    reduce_identifyNonLeafTerms(scip, g);
 

@@ -78,8 +78,57 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
 
+#ifdef DEBUG_ASCENDPRUNE
+
+/** debug method */
+static
+SCIP_RETCODE checkRedCostGraph(
+   const GRAPH*          g,                  /**< the graph */
+   const GRAPH*          redcostgraph,       /**< the redcost graph */
+   const int*            nodechild          /**< child of node in reduced cost graph */
+)
+{
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   const int nnodes = graph_get_nNodes(g);
+
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph_pc_knotIsFixedTerm(g, k) )
+         {
+            if( nodechild[k] < 0 || !graph_pc_knotIsFixedTerm(redcostgraph, nodechild[k]) )
+            {
+               printf("RPCMW child FAIL in AP \n\n\n");
+               return SCIP_ERROR;
+            }
+         }
+      }
+   }
+
+   for( int k = 0; k < nnodes && !pcmw; k++ )
+   {
+      if( Is_term(g->term[k]) )
+      {
+         const int i = nodechild[k];
+         if( i < 0 )
+         {
+            printf("FAIL in AP \n\n\n");
+            return SCIP_ERROR;
+         }
+
+         if( redcostgraph->grad[i] == 0 && redcostgraph->knots > 1 )
+         {
+            printf("FAIL GRAD \n\n\n");
+            return SCIP_ERROR;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /*
  * Callback methods of primal heuristic
@@ -502,37 +551,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP_CALL( reduceLevel0(scip, newgraph) );
 
 #ifdef DEBUG_ASCENDPRUNE
-   if( graph_pc_isRootedPcMw(g) )
-   {
-      for( int k = 0; k < nnodes; k++ )
-         if( graph_pc_knotIsFixedTerm(g, k) )
-            if( nodechild[k] < 0 || !graph_pc_knotIsFixedTerm(newgraph, nodechild[k]) )
-            {
-               printf("RPCMW child FAIL in AP \n\n\n");
-               return SCIP_ERROR;
-            }
-   }
-
-   for( int k = 0; k < nnodes && !pcmw; k++ )
-   {
-      if( Is_term(g->term[k]) )
-      {
-         const int i = nodechild[k];
-         if( i < 0 )
-         {
-            printf("k %d root %d \n", k, root);
-            printf("FAIL in AP \n\n\n");
-            return SCIP_ERROR;
-         }
-
-         if( newgraph->grad[i] == 0 && newgraph->knots > 1 )
-         {
-            printf("FAIL GRAD \n\n\n");
-            return SCIP_ERROR;
-
-         }
-      }
-   }
+   SCIP_CALL( checkRedCostGraph(g, newgraph, nodechild) );
 #endif
    assert(graph_valid(scip, newgraph));
 

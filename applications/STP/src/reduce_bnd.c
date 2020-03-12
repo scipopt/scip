@@ -207,6 +207,9 @@ SCIP_RETCODE reduce_bound(
    if( nterms <= 2 || (pcmw && nterms <= 3) )
       return SCIP_OKAY;
 
+   if( graph->grad[graph->source] == 0 )
+      return SCIP_OKAY;
+
    assert(nterms == (graph->terms - ((graph->stp_type == STP_PCSPG)? 1 : 0)));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
