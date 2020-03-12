@@ -15803,7 +15803,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    }
 #endif
 
-
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),

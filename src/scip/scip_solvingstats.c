@@ -3108,7 +3108,6 @@ void SCIPprintHeuristicStatistics(
             {
                SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
 
-
                SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d",
                         SCIPdivesetGetName(diveset),
                         SCIPdivesetGetNCalls(diveset, divecontext));

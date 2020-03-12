@@ -454,7 +454,6 @@ SCIP_Bool removeZeros(
       else
          isfixed = FALSE;
 
-
       if( EPSZ(val, minval) || isfixed )
       {
          if( REALABS(val) > QUAD_EPSILON )
