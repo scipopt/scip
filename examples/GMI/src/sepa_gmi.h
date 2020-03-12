@@ -34,7 +34,6 @@ extern "C" {
 #endif
 
 /** creates the GMI separator and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaGMI(
    SCIP*                 scip                /**< SCIP data structure */
    );

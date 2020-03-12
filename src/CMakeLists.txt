@@ -979,6 +979,7 @@ endif()
 
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
