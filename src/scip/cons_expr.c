@@ -1018,9 +1018,7 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
 
 /** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to its activity
  *
- *  Expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED.
- *
- *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
+ *  Nothing will happen if SCIP is not in presolve or solve.
  */
 static
 SCIP_RETCODE tightenAuxVarBounds(
@@ -1326,8 +1324,9 @@ SCIP_RETCODE forwardPropExpr(
                else
                   compareinterval = prevactivity;
 
-               /* if compareinterval allow a further tightening, then do reversepropagation
-                * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+               /* if compareinterval allow a further tightening, then it may provide tighter bounds for children
+                * thus add this expression to the reversepropqueue
+                *
                 * if not force, require a change from unbounded to bounded,
                 *   or a minimal tightening as defined by SCIPis{Lb,Ub}Better,
                 *   or a change from unfixed to fixed
@@ -12138,7 +12137,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    return SCIP_OKAY;
 }
 
-/** tightens the activity of an expression and bounds of corresponding variable (if any)
+/** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
  *
  *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
  */

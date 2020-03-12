@@ -804,7 +804,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
-/** tightens the activity of an expression and bounds of corresponding variable (if any)
+/** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
  *
  *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
  */
