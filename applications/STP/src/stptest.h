@@ -27,6 +27,7 @@
 
 #include <stdlib.h>
 #include "graph.h"
+#include "reduce.h"
 #include "scip/scip.h"
 
 #define STPTEST_ASSERT_MSG_ARGS(cond, msg, ...)  \
@@ -80,6 +81,10 @@ extern SCIP_RETCODE    stptest_graphSetUpPcExtended(SCIP*, GRAPH*, int*, int*);
 /* stptest_extreduce.c
  */
 extern SCIP_RETCODE    stptest_extreduce(SCIP*);
+extern void            stptest_extreduceTearDown(SCIP*, GRAPH*, REDCOST*);
+
+/* stptest_extutils.c
+ */
 extern SCIP_RETCODE    stptest_extmldists(SCIP*);
 
 /* stptest_reduce.c

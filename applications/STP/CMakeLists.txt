@@ -52,6 +52,7 @@ add_executable(scipstp
     src/reduce_util.c
     src/stptest_base.c
     src/stptest_extreduce.c
+    src/stptest_extutils.c
     src/stptest_graph.c
     src/stptest_heurlocal.c
     src/stptest_heurtm.c
