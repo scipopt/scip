@@ -148,7 +148,7 @@ SCIP_Real getMinDistCombination(
 }
 
 
-/** gets reduced cost of current tree rooted at leave 'root', called direct if tree cannot */
+/** gets reduced cost of current tree rooted at leave 'root' */
 static inline
 SCIP_Real extTreeGetDirectedRedcostProper(
    const GRAPH*          graph,              /**< graph data structure */
@@ -306,37 +306,44 @@ SCIP_Real extTreeGetDirectedRedcost(
 }
 
 
-/** gets reduced cost bound of current tree */
+/** checks for reduced-cost cutoff of current tree */
 static inline
-SCIP_Real extTreeGetRedcostBound(
+SCIP_Bool extTreeRedcostCutoff(
    const GRAPH*          graph,              /**< graph data structure */
    const EXTDATA*        extdata             /**< extension data */
 )
 {
+   REDDATA* const reddata = extdata->reddata;
    const int* const tree_leaves = extdata->tree_leaves;
+   const SCIP_Real cutoff = reddata->cutoff;
    const int nleaves = extdata->tree_nleaves;
-   SCIP_Real tree_redcost;
+   const SCIP_Bool allowEquality = reddata->equality;
 
-   assert(graph && extdata);
-   assert(nleaves > 1 && tree_leaves[0] == extdata->tree_root);
+#ifdef SCIP_DEBUG
+   SCIP_Real tree_redcost = FARAWAY;
+#endif
 
-   tree_redcost = FARAWAY;
-
-   // todo perhaps needs to be adapted for pseudo elimination tests...
-
-   /* take each leaf as root of the tree */
+   /* take each leaf as root of the tree and check whether cutoff condition is violated */
    for( int i = 0; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
       const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, extdata, leaf);
-      int todo;
-      // break early here!
-      // move the entire redcost stuff to an extra file!
 
+      if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
+      {
+         return FALSE;
+      }
+
+#ifdef SCIP_DEBUG
       tree_redcost = MIN(tree_redcost, tree_redcost_new);
+#endif
    }
 
-   return tree_redcost;
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("Rule-out periph (with red.cost=%f and cutoff=%f) \n", tree_redcost, cutoff);
+#endif
+
+   return TRUE;
 }
 
 
@@ -427,15 +434,8 @@ SCIP_Bool extreduce_redcostRuleOutPeriph(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   REDDATA* const reddata = extdata->reddata;
-   const SCIP_Real tree_redcost = extTreeGetRedcostBound(graph, extdata);
-   const SCIP_Real cutoff = reddata->cutoff;
+   assert(graph && extdata);
+   assert(extdata->tree_nleaves > 1 && extdata->tree_leaves[0] == extdata->tree_root);
 
-   if( reddata->equality ? GE(tree_redcost, cutoff) : GT(tree_redcost, cutoff) )
-   {
-      SCIPdebugMessage("Rule-out periph (with red.cost=%f) \n", tree_redcost);
-      return TRUE;
-   }
-
-   return FALSE;
+   return extTreeRedcostCutoff(graph, extdata);
 }
