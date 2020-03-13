@@ -917,7 +917,7 @@ SCIP_RETCODE testNodePseudoDeleted1(
    const int root = 0;
    SCIP_Real cutoff = 100.0;
    STP_Bool* edgedeleted = NULL;
-   int testedge = 0;
+   int testnode = 0;
    SCIP_Bool deletable;
 
    assert(scip);
@@ -946,7 +946,7 @@ SCIP_RETCODE testNodePseudoDeleted1(
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, &redcostdata);
 
-   SCIP_CALL( extCheckNode(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE) );
+   SCIP_CALL( extCheckNode(scip, graph, &redcostdata, edgedeleted, testnode, &deletable, FALSE) );
 
    STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
 
@@ -1108,6 +1108,11 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
+   SCIP_CALL( testNodePseudoDeleted1(scip) );
+
+   assert(0);
+
+
    SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
    SCIP_CALL( testPcEdgeNotDeleted(scip) );
    SCIP_CALL( testEdgeDeletedByCommonRedCostsTargets(scip) );
@@ -1127,7 +1132,6 @@ SCIP_RETCODE stptest_extreduce(
    SCIP_CALL( testEdgeDeletion2_deprecated(scip, 1) );
    SCIP_CALL( testEdgeDeletion1_deprecated(scip) );
 
-  // SCIP_CALL( testNodePseudoDeleted1(scip) );
 
 
    printf("extreduce test: all ok \n");

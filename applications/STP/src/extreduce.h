@@ -155,6 +155,7 @@ typedef struct extension_data
    SCIP_Real tree_cost;
    int tree_nDelUpArcs;
    int tree_root;
+   int tree_starcenter;
    int tree_nedges;
    int tree_depth;
    int tree_nleaves;
@@ -185,35 +186,6 @@ typedef struct initial_extension_component
 
 /* inline methods
  */
-
-/** returns current position in the stack */
-static inline
-int extStackGetPosition(
-   const EXTDATA*        extdata             /**< extension data */
-)
-{
-   assert(extdata);
-   assert(extdata->extstack_ncomponents > 0);
-
-   return (extdata->extstack_ncomponents - 1);
-}
-
-
-/** returns root of top component on the stack */
-static inline
-int extStackGetTopRoot(
-   const GRAPH*          graph,              /**< graph data structure */
-   const EXTDATA*        extdata             /**< extension data */
-)
-{
-   const int stackpos = extStackGetPosition(extdata);
-   const int comproot = graph->tail[extdata->extstack_data[extdata->extstack_start[stackpos]]];
-
-   assert(comproot >= 0);
-   assert(extdata->tree_deg[comproot] >= 1 || comproot == extdata->tree_root);
-
-   return comproot;
-}
 
 
 /** currently at initial component? */
@@ -254,6 +226,103 @@ SCIP_Bool extInitialCompIsStar(
    assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
 
    return (extdata->extstack_start[1] >= 3);
+}
+
+/** currently at initial star? */
+static inline
+SCIP_Bool extIsAtInitialStar(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   return (extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata));
+}
+
+
+/** returns current position in the stack */
+static inline
+int extStackGetPosition(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+   assert(extdata->extstack_ncomponents > 0);
+
+   return (extdata->extstack_ncomponents - 1);
+}
+
+
+/** returns root of top component on the stack */
+static inline
+int extStackGetTopRoot(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int stackpos = extStackGetPosition(extdata);
+   const int comproot = graph->tail[extdata->extstack_data[extdata->extstack_start[stackpos]]];
+
+   assert(comproot >= 0);
+   assert(extdata->tree_deg[comproot] >= 1 || comproot == extdata->tree_root);
+
+   return comproot;
+}
+
+
+/** returns start of outgoing edges of top */
+static inline
+int extStackGetTopOutEdgesStart(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata);
+
+   assert(stackpos == extStackGetPosition(extdata));
+
+   return (atInitialStar ? (extdata->extstack_start[stackpos] + 1) : extdata->extstack_start[stackpos]);
+}
+
+
+/** returns end of outgoing edges of top */
+static inline
+int extStackGetTopOutEdgesEnd(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   assert(extdata);
+   assert(stackpos == extStackGetPosition(extdata));
+
+   return (extdata->extstack_start[stackpos + 1]);
+}
+
+
+/** returns start of outgoing edges */
+static inline
+int extStackGetOutEdgesStart(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && (stackpos == 0);
+
+   assert(stackpos >= 0 && stackpos <= extStackGetPosition(extdata));
+
+   return (atInitialStar ? (extdata->extstack_start[stackpos] + 1) : extdata->extstack_start[stackpos]);
+}
+
+
+/** returns end of outgoing edges */
+static inline
+int extStackGetOutEdgesEnd(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   assert(extdata);
+   assert(stackpos >= 0 && stackpos <= extStackGetPosition(extdata));
+
+   return (extdata->extstack_start[stackpos + 1]);
 }
 
 
@@ -420,7 +489,7 @@ extern SCIP_Bool          extreduce_pcdataIsClean(const GRAPH*, const PCDATA*);
 
 /* extreduce_dbg.c
  */
-extern int             extreduce_extStackCompSize(const EXTDATA*, int);
+extern int             extreduce_extStackCompNOutedges(const EXTDATA*, int);
 extern SCIP_Bool       extreduce_stackTopIsHashed(const GRAPH*, const EXTDATA*);
 extern void            extreduce_extdataCleanArraysDbg(const GRAPH*, EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);

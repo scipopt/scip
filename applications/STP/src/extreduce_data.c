@@ -297,6 +297,7 @@ void extreduce_extdataClean(
    extdata->tree_nedges = 0;
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
+   extdata->tree_starcenter = -1;
    extdata->tree_redcost = 0.0;
    extdata->tree_cost = 0.0;
    extdata->ncostupdatestalls = 0;
@@ -379,6 +380,12 @@ SCIP_Bool extreduce_extdataIsClean(
    if( extdata->tree_nedges != 0 )
    {
       printf("extdata->tree_nedges %d \n", extdata->tree_nedges);
+      return FALSE;
+   }
+
+   if( extdata->tree_starcenter != -1 )
+   {
+      printf("extdata->tree_starcenter %d \n", extdata->tree_starcenter);
       return FALSE;
    }
 

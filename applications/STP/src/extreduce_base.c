@@ -529,6 +529,7 @@ SCIP_RETCODE extreduce_checkNode(
 
    degree_count = 0;
 
+   // todo extra method
    for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
    {
       if( 0 == degree_count )
@@ -552,6 +553,8 @@ SCIP_RETCODE extreduce_checkNode(
       EXTCOMP extcomp = { .compedges = compedges, .extleaves = extleaves,
                           .nextleaves = degree - 1, .ncompedges = degree,
                           .comproot = comproot, .allowReversion = TRUE };
+
+      *isPseudoDeletable = FALSE;
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isPseudoDeletable) );
 

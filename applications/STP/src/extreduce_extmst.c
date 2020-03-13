@@ -37,7 +37,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-// #define SCIP_DEBUG
+ #define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
 #include <string.h>
@@ -184,11 +184,20 @@ int extGetNancestorLeaves(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
-   const int compsize = extStackGetTopSize(extdata);
-   const int nleaves = extdata->tree_nleaves;
-   const int nleaves_ancestors = nleaves - compsize;
+   int nleaves_ancestors;
 
-   assert(nleaves_ancestors > 0 && nleaves_ancestors < nleaves);
+   if( extIsAtInitialComp(extdata) )
+   {
+      nleaves_ancestors = 1;
+   }
+   else
+   {
+      const int compsize = extStackGetTopSize(extdata);
+      const int nleaves = extdata->tree_nleaves;
+      nleaves_ancestors = nleaves - compsize;
+   }
+
+   assert(nleaves_ancestors > 0 && nleaves_ancestors < extdata->tree_nleaves);
 
    return nleaves_ancestors;
 }
@@ -281,11 +290,14 @@ void baseMstGetOrderedParentNodes(
 {
    int leavespos[STP_EXT_MAXGRAD];
    const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
    const int stackpos_parent = extStackGetLastMarked(extdata);
+   const int parentedges_start = extStackGetOutEdgesStart(extdata, stackpos_parent);
+   const int parentedges_end = extStackGetOutEdgesEnd(extdata, stackpos_parent);
    int compsize = 0;
 
-   for( int i = extstack_start[stackpos_parent]; i < extstack_start[stackpos_parent + 1]; i++ )
+   assert(parentedges_start < parentedges_end);
+
+   for( int i = parentedges_start; i != parentedges_end; i++ )
    {
       const int edge = extstack_data[i];
       const int compvert = graph->head[edge];
@@ -302,7 +314,7 @@ void baseMstGetOrderedParentNodes(
    }
 
    assert(compsize > 0);
-   assert(compsize == extreduce_extStackCompSize(extdata, stackpos_parent));
+   assert(compsize == extreduce_extStackCompNOutedges(extdata, stackpos_parent));
 
    *parentcomp_size = compsize;
 
@@ -335,7 +347,7 @@ void baseMstInitMsts(
 
    assert(nnodes_new >= 1 && stackpos_parent >= 0);
    assert(mst_parent->nnodes == extreduce_mldistsLevelNTargets(sds_vertical, level_parent));
-   assert(mst_parent->nnodes == nleaves - extreduce_extStackCompSize(extdata, stackpos_parent));
+   assert(mst_parent->nnodes == nleaves - extreduce_extStackCompNOutedges(extdata, stackpos_parent));
 
    SCIPdebugMessage("got MST level parent with n=%d, m=%d \n", mst_parent->nnodes, mst_parent->nedges);
 
@@ -515,6 +527,7 @@ void compMstInitMsts(
    graph_csrdepo_getTopCSR(msts_levelbase, mst_base);
 
 #ifndef NDEBUG
+   if( !extIsAtInitialComp(extdata) || extInitialCompIsEdge(extdata) )
    {
       const MLDISTS* const sds_vertical = reddata->sds_vertical;
       const int nnodes_base = mst_base->nnodes;
@@ -758,7 +771,8 @@ void bottleneckMarkRootPath(
       const SCIP_Bool isPc = graph_pc_isPc(graph);
 
       assert(currentNode != -1);
-      assert(tree_deg[childNode] == 1);
+      assert(!extInitialCompIsEdge(extdata) || tree_deg[childNode] == 1);
+      assert(childNode == extdata->tree_starcenter || tree_deg[childNode] == 1);
 
       while( currentNode != -1 )
       {
@@ -1181,23 +1195,26 @@ void mstCompLeafGetSDsToSiblings(
 {
    const MLDISTS* const sds_horizontal = extdata->reddata->sds_horizontal;
    const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
    const int* const ghead = graph->head;
    const int stackpos = extStackGetPosition(extdata);
+   const int topedges_start = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
    const int topleaf = ghead[edge2top];
    SCIP_Bool hitTopLeaf = FALSE;
 
 #ifndef NDEBUG
-   assert(leafRuledOut && sds);
-   assert((*leafRuledOut) == FALSE);
-   assert(extreduce_mldistsLevelNTopTargets(sds_horizontal) >= extStackGetTopSize(extdata) - 1);
-   assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
+   {
+      const SCIP_Bool atInitialStar = extIsAtInitialStar(extdata);
 
-   for( int j = extStackGetTopSize(extdata) - 2; j >= 0; j-- )
-      assert(EQ(sds[j], -1.0));
+      assert(leafRuledOut && sds);
+      assert((*leafRuledOut) == FALSE);
+      assert(atInitialStar || extreduce_mldistsLevelNTopTargets(sds_horizontal) >= extStackGetTopSize(extdata) - 1);
+      assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
+      assert(topedges_start <= topedges_end);
+   }
 #endif
 
-   for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
+   for( int i = topedges_start, j = 0; i != topedges_end; i++, j++ )
    {
       const int edge2sibling = extstack_data[i];
       const int sibling = ghead[edge2sibling];
@@ -1205,6 +1222,7 @@ void mstCompLeafGetSDsToSiblings(
       assert(extreduce_nodeIsInStackTop(graph, extdata, sibling));
       assert(extdata->tree_deg[sibling] == 1);
       assert(graph->tail[edge2top] == graph->tail[edge2sibling]);
+      assert(EQ(sds[j], -1.0));
 
       if( sibling == topleaf )
       {
@@ -1329,6 +1347,7 @@ void mstCompLeafGetSDs(
    const int compleaf = graph->head[edge2leaf];
 #endif
 
+   assert(compleaf != extdata->tree_starcenter);
    assert(leafRuledOut && !(*leafRuledOut));
 
    /* fill in the second part of the sds array */
@@ -1446,14 +1465,13 @@ void mstCompBuildMst(
    CSR mst_new;
    MSTXCOMP mstextcomp;
    const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
    const int stackpos = extStackGetPosition(extdata);
-   const int stackstart = extstack_start[stackpos];
-   const int stackend = extstack_start[stackpos + 1];
+   const int topedges_start = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
 
    assert(*ruledOut == FALSE);
    assert(EXT_STATE_EXPANDED == extdata->extstack_state[stackpos]);
-   assert(0 <= stackstart && stackstart < stackend);
+   assert(0 <= topedges_start && topedges_start < topedges_end);
 
    compMstInitMsts(extdata, &mst_base, &mst_new);
 
@@ -1461,7 +1479,7 @@ void mstCompBuildMst(
 
    /* add nodes (with special distances) to MST,
     * and compare with tree bottleneck distances for early rule-out */
-   for( int i = stackstart; i != stackend; i++ )
+   for( int i = topedges_start; i != topedges_end; i++ )
    {
       const int edge2leaf = extstack_data[i];
 
@@ -1548,7 +1566,8 @@ void mstLevelLeafAdjustVerticalSDs(
   if( extIsAtInitialComp(extdata) )
   {
      assert(nleaves == 1);
-     assert(neighbor_base == extdata->tree_root);
+     assert(!extInitialCompIsEdge(extdata) || neighbor_base == extdata->tree_root);
+     assert(!extInitialCompIsStar(extdata) || neighbor_base == extdata->tree_starcenter);
   }
   else
   {

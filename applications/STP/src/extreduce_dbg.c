@@ -1100,7 +1100,8 @@ SCIP_Bool extreduce_sdsverticalInSync(
    const int* const leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
    const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sds_vertical, topleaf);
-   const int nleaves_old = nleaves - compsize;
+   const SCIP_Bool atInitialComp = extIsAtInitialComp(extdata);
+   const int nleaves_old = atInitialComp ? 1 : (nleaves - compsize);
    SCIP_Bool isInSync = TRUE;
 #ifndef NDEBUG
    const int* const adjids = extreduce_mldistsTopTargetIds(sds_vertical, topleaf);
@@ -1154,7 +1155,10 @@ SCIP_Bool extreduce_sdshorizontalInSync(
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
    const int* const ghead = graph->head;
+   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata);
    const int stackpos = extStackGetPosition(extdata);
+   const int stackstart = atInitialStar ? (extstack_start[stackpos] + 1) : extstack_start[stackpos];
+   const int stackend = extstack_start[stackpos + 1];
    SCIP_Bool isInSync = TRUE;
 #ifndef NDEBUG
    SCIP_Bool hitTopLeaf = FALSE;
@@ -1165,7 +1169,7 @@ SCIP_Bool extreduce_sdshorizontalInSync(
       return TRUE;
 #endif
 
-   for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
+   for( int i = stackstart, j = 0; i < stackend; i++, j++ )
    {
       const int edge2sibling = extstack_data[i];
       const int sibling = ghead[edge2sibling];
@@ -1556,13 +1560,22 @@ SCIP_Bool extreduce_stackTopIsHashed(
 
 
 /** returns size of component on the stack */
-int extreduce_extStackCompSize(
+int extreduce_extStackCompNOutedges(
    const EXTDATA*        extdata,            /**< extension data */
    int                   stackpos            /**< position on the stack */
 )
 {
    const int* const stack_start = extdata->extstack_start;
-   const int size = stack_start[stackpos + 1] - stack_start[stackpos];
+   int size = stack_start[stackpos + 1] - stack_start[stackpos];
+   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && stack_start[1] > 1;
+
+   if( atInitialStar )
+   {
+      assert(size >= 3);
+      assert(size == stack_start[1]);
+
+      size--;
+   }
 
    assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
    assert(size > 0 && size < STP_EXT_MAXGRAD);

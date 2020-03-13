@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//  #define SCIP_DEBUG
+  #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -215,13 +215,12 @@ void extLeafRemoveTop(
    EXTDATA*              extdata            /**< extension data */
 )
 {
-   const int* const extstack_start = extdata->extstack_start;
    const int* const extstack_data = extdata->extstack_data;
    int* const tree_leaves = extdata->tree_leaves;
    const int stackpos_prev = extStackGetPrevMarked(extdata);
-   const int stackstart = extstack_start[stackpos_prev];
-   const int stackend = extstack_start[stackpos_prev + 1];
-   const int compsize = stackend - stackstart;
+   const int prevedges_start = extStackGetOutEdgesStart(extdata, stackpos_prev);
+   const int prevedges_end = extStackGetOutEdgesEnd(extdata, stackpos_prev);
+   const int compsize = prevedges_end - prevedges_start;
    int compleaves_start;
 
    assert(extdata);
@@ -248,7 +247,7 @@ void extLeafRemoveTop(
 #ifndef NDEBUG
    tree_leaves[(extdata->tree_nleaves) - 1] = toproot;
 
-   for( int i = stackstart; i < stackend; i++ )
+   for( int i = prevedges_start; i != prevedges_end; i++ )
    {
       const int edge = extstack_data[i];
       const int head = graph->head[edge];
@@ -259,7 +258,7 @@ void extLeafRemoveTop(
 
    compleaves_start = extdata->tree_nleaves - compsize;
 
-   for( int i = stackstart; i < stackend; i++ )
+   for( int i = prevedges_start; i < prevedges_end; i++ )
    {
       const int edge = extstack_data[i];
       const int head = graph->head[edge];
@@ -338,7 +337,6 @@ static inline
 void extTreeAddEdge(
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge,               /**< edge to be added */
-   int                   comproot,           /**< component root */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -348,19 +346,27 @@ void extTreeAddEdge(
    SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
    const SCIP_Real edgecost = graph->cost[edge];
    const int head = graph->head[edge];
+   const int tail = graph->tail[edge];
 
-   assert(comproot == graph->tail[edge] || extIsAtInitialComp(extdata));
    assert(tree_deg[head] == 0);
-   assert(tree_deg[comproot] > 0 || comproot == extdata->tree_root);
+   assert(tree_deg[tail] > 0 || tail == extdata->tree_root);
 
-   extLeafAdd(head, extdata);
+   if( extdata->tree_starcenter != head )
+   {
+      extLeafAdd(head, extdata);
+   }
+   else
+   {
+      assert(extInitialCompIsStar(extdata));
+      assert(extIsAtInitialComp(extdata));
+   }
 
    extdata->tree_cost += edgecost;
    tree_deg[head] = 1;
    tree_edges[(extdata->tree_nedges)++] = edge;
-   tree_parentNode[head] = comproot;
+   tree_parentNode[head] = tail;
    tree_parentEdgeCost[head] = edgecost;
-   tree_deg[comproot]++;
+   tree_deg[tail]++;
 }
 
 
@@ -389,6 +395,12 @@ void extTreeStackTopRootRemove(
 
       /* will be reset afterwards! */
       extdata->tree_deg[comproot] = 0;
+
+      if( extInitialCompIsStar(extdata) )
+      {
+         assert(extdata->tree_starcenter >= 0);
+         extdata->tree_deg[extdata->tree_starcenter] = 0;
+      }
    }
 }
 
@@ -407,14 +419,12 @@ void extTreeStackTopAdd(
    REDDATA* const reddata = extdata->reddata;
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
    const int stackpos = extStackGetPosition(extdata);
-   const int comproot = extStackGetTopRoot(graph, extdata);
    int conflictIteration = -1;
    const SCIP_Bool noReversedRedCostTree = extreduce_redcostReverseTreeRuledOut(graph, extdata);
 
    assert(!(*conflict));
    assert(stackpos >= 0);
    assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
-   assert(comproot >= 0 && comproot < graph->knots);
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
 
    extTreeStackTopRootRemove(graph, extdata);
@@ -428,7 +438,7 @@ void extTreeStackTopAdd(
       assert(edge >= 0 && edge < graph->edges);
 
       extreduce_redcostAddEdge(graph, edge, noReversedRedCostTree, reddata, extdata);
-      extTreeAddEdge(graph, edge, comproot, extdata);
+      extTreeAddEdge(graph, edge, extdata);
 
       /* no conflict found yet? */
       if( conflictIteration == -1 )
@@ -483,6 +493,7 @@ void extTreeStackTopRemove(
    const int compsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
 
    assert(compsize > 0);
+   assert(stackstart > 0);
    assert(tree_deg[comproot] > 1);
    assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
 
@@ -620,7 +631,7 @@ SCIP_Bool extTreeRuleOutPeriph(
 
 /** Stores extensions of tree from current (expanded and marked) stack top that cannot be ruled-out.
  *  Also computes SDs from leaves of any extension to the tree leaves and other extension leaves. */
-static
+static inline
 void extTreeFindExtensions(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
@@ -633,9 +644,10 @@ void extTreeFindExtensions(
 )
 {
    const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extStackGetPosition(extdata);
    const SCIP_Bool* const isterm = extdata->node_isterm;
+   const int stackpos = extStackGetPosition(extdata);
+   const int topedges_start = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
 
 #ifndef NDEBUG
    assert(graph && extdata && extedgesstart && extedges && nextensions && nextendableleaves && with_ruledout_leaf);
@@ -643,6 +655,7 @@ void extTreeFindExtensions(
    assert(EXT_STATE_MARKED == extdata->extstack_state[stackpos]);
    assert(!(*with_ruledout_leaf));
    assert(*nextensions == 0 && *nextendableleaves == 0);
+   assert(topedges_start < topedges_end);
 
    extreduce_extendInitDebug(extedgesstart, extedges);
 #endif
@@ -650,7 +663,7 @@ void extTreeFindExtensions(
    extedgesstart[0] = 0;
 
    /* loop over all leaves of top component */
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   for( int i = topedges_start; i < topedges_end; i++ )
    {
       int nleafextensions = 0;
       const int leaf = graph->head[extstack_data[i]];
@@ -950,7 +963,7 @@ void extStackAddCompInitialExpanded(
    const int nextedges = compIsStar ? (extstack_start[1] - 1) : extstack_start[1];
 
    assert(nextedges > 0);
-   assert(graph->tail[extedges[0]] == extdata->tree_root);
+   assert(graph->tail[extstack_data[0]] == extdata->tree_root);
 
    extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
    extreduce_mstLevelClose(scip, graph, extdata->tree_root, extdata);
@@ -1277,32 +1290,34 @@ void extPreprocessInitialStar(
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
    const int rootedge = compedges[0];
-   const int starbase = graph->head[rootedge];
+   const int starcenter = graph->head[rootedge];
    const int comproot = extcomp->comproot;
 
    assert(ncompedges >= 3);
-   assert(graph->tail[compedges[0]] == comproot);
+   assert(graph->tail[rootedge] == comproot);
 
 #ifdef SCIP_DEBUG
    printf("\n --- ADD initial star component --- \n\n");
+   SCIPdebugMessage("...root star edge %d: %d->%d \n", rootedge, comproot, starcenter);
 #endif
 
-   extdata->extstack_data[0] = compedges[0];
-   extdata->tree_deg[starbase] = ncompedges;
-   extdata->tree_parentNode[starbase] = comproot;
-   extdata->tree_parentEdgeCost[starbase] = graph->cost[rootedge];
+   extdata->extstack_data[0] = rootedge;
+   extdata->tree_deg[starcenter] = ncompedges;
+   extdata->tree_parentNode[starcenter] = comproot;
+   extdata->tree_parentEdgeCost[starcenter] = graph->cost[rootedge];
+   extdata->tree_starcenter = starcenter;
 
    for( int i = 1; i < ncompedges; i++ )
    {
       const int e = compedges[i];
 
-      assert(graph->tail[e] == starbase);
+      assert(graph->tail[e] == starcenter);
       SCIPdebugMessage("...star edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
 
       extdata->extstack_data[i] = e;
    }
 
-   extInnerNodeAdd(graph, starbase, extdata);
+   extInnerNodeAdd(graph, starcenter, extdata);
 
 #ifdef SCIP_DEBUG
    printf(" \n");
@@ -1419,7 +1434,8 @@ void extProcessInitialComponent(
    }
 
    /* the initial component could not be ruled-out, so set its stage to 'marked' */
-   extdata->extstack_state[extStackGetPosition(extdata)] = EXT_STATE_MARKED;
+   extdata->extstack_state[0] = EXT_STATE_MARKED;
+   assert(extStackGetPosition(extdata) == 0);
    extExtend(scip, graph, extdata, isExtendable);
 
    assert(isExtendable || extcomp->ncompedges >= 3);
@@ -1561,21 +1577,22 @@ SCIP_RETCODE extreduce_checkComponent(
       const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
       const SCIP_Real cutoff = redcostdata->cutoff;
 
-      PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1, .pcSdStart = -1,
-         .tree_innerPrize = 0.0 };
+      PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
+         .pcSdStart = -1, .tree_innerPrize = 0.0 };
       REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
          .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
          .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
-         .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow, .redCostRoot = root };
+         .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow,
+         .redCostRoot = root };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
          .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
          .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
          .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap,
          .tree_cost = 0.0, .tree_redcost = 0.0, .ncostupdatestalls = 0,
-         .tree_nDelUpArcs = 0, .tree_root = -1, .tree_nedges = 0, .tree_depth = 0,
+         .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
