@@ -93,6 +93,11 @@ SCIP_Bool pseudodeleteNodeIsPromising(
    if( degree < EXT_PSEUDO_DEGREE_MIN || degree > EXT_PSEUDO_DEGREE_MAX  )
       return FALSE;
 
+
+   // todo
+   if( degree != 3 )
+      return FALSE;
+
    return TRUE;
 }
 
@@ -351,7 +356,6 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
       return SCIP_OKAY;
 
    SCIP_CALL( extInit(scip, graph, edgedeletable, &distdata, &extpermanent) );
-
    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDeletable, nnodes) );
 
    for( int i = 0; i < nnodes; ++i )
@@ -360,15 +364,13 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
 
       if( pseudodeleteNodeIsPromising(graph, i) )
       {
-         // todo set allow equality here
+         extpermanent.redcostEqualAllow = result && !graph_solContainsNode(graph, result, i);
 
          SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, &distdata, &extpermanent, &nodeisDeletable) );
       }
 
       pseudoDeletable[i] = nodeisDeletable;
    }
-
-   // todo: perform the actual pseudo-elimination based on pseudoDeletable
 
    // todo: if single edges are ledge, try to eliminate via extended reudction?
 
@@ -383,12 +385,10 @@ SCIP_RETCODE extreduce_pseudodeleteNodes(
       // todo: fill cuttoff value from SD...probably would be good to give both SD and DA dists to method! need extra struct...and method!
       // outsource the creation of the cuttoff array!
       SCIP_CALL(graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, i, &success));
-
    }
 
 
    SCIPfreeBufferArray(scip, &pseudoDeletable);
-
    extFree(scip, graph, &distdata, &extpermanent);
 
    assert(graphmarkIsClean(redcostdata, graph));

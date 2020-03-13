@@ -599,6 +599,7 @@ extern void   graph_solPrint(const GRAPH*, const int*);
 extern SCIP_RETCODE   graph_solMarkPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
 extern SCIP_Bool graph_solIsUnreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_solIsValid(SCIP*, const GRAPH*, const int*);
+extern SCIP_Bool graph_solContainsNode(const GRAPH*, const int*, int);
 extern SCIP_Real graph_solGetObj(const GRAPH*, const int*, SCIP_Real, int);
 extern int       graph_solGetNedges(const GRAPH*, const int*);
 extern SCIP_RETCODE   graph_solGetOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);

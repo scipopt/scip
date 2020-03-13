@@ -983,6 +983,29 @@ SCIP_Bool graph_solIsUnreduced(
    return TRUE;
 }
 
+
+/** is the node contained in the solution? */
+SCIP_Bool graph_solContainsNode(
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array, indicating whether an edge is in the solution */
+   int                   node                /**< node to check for */
+   )
+{
+   assert(g && result);
+   assert(node >= 0 && node < g->knots);
+
+   for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      if( result[e] == CONNECT || result[flipedge(e)] == CONNECT )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
 /** verifies whether a given primal solution is feasible */
 SCIP_Bool graph_solIsValid(
    SCIP*                 scip,               /**< SCIP data structure */
