@@ -169,7 +169,9 @@ typedef struct extension_data
 } EXTDATA;
 
 
-/** initial extension component */
+/** initial extension component
+ *  NOTE: it is vital the the first edge of the star component comes from the root!
+ *  (will thus be constantly asserted) */
 typedef struct initial_extension_component
 {
    int*                  compedges;          /**< edges of the component */
@@ -234,7 +236,7 @@ SCIP_Bool extInitialCompIsEdge(
 )
 {
    assert(extdata);
-   assert(extdata->extstack_start[1] > 1);
+   assert(extdata->extstack_start[1] >= 1);
    assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
 
    return (extdata->extstack_start[1] == 1);
@@ -248,7 +250,7 @@ SCIP_Bool extInitialCompIsStar(
 )
 {
    assert(extdata);
-   assert(extdata->extstack_start[1] > 1);
+   assert(extdata->extstack_start[1] >= 1);
    assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
 
    return (extdata->extstack_start[1] >= 3);
@@ -382,6 +384,7 @@ extern void       extreduce_mstLevelRemove(REDDATA*);
 extern void       extreduce_mstLevelClose(SCIP*, const GRAPH*, int, EXTDATA*);
 extern void       extreduce_mstLevelInit(REDDATA*, EXTDATA*);
 extern void       extreduce_mstLevelVerticalAddLeaf(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void       extreduce_mstLevelVerticalAddLeafInitial(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
 extern void       extreduce_mstLevelVerticalClose(REDDATA*);
 extern void       extreduce_mstLevelVerticalRemove(REDDATA*);
 extern void       extreduce_mstLevelHorizontalAdd(SCIP*, const GRAPH*, int, const int*, EXTDATA*);

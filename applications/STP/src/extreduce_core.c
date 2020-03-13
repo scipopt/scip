@@ -348,7 +348,7 @@ void extTreeAddEdge(
    const SCIP_Real edgecost = graph->cost[edge];
    const int head = graph->head[edge];
 
-   assert(comproot == graph->tail[edge]);
+   assert(comproot == graph->tail[edge] || extIsAtInitialComp(extdata));
    assert(tree_deg[head] == 0);
    assert(tree_deg[comproot] > 0 || comproot == extdata->tree_root);
 
@@ -372,9 +372,11 @@ void extTreeStackTopRootRemove(
 {
    const int comproot = extStackGetTopRoot(graph, extdata);
 
-   /* update tree leaves array todo might need to be changed for pseudo-elimination */
-   if( comproot != extdata->tree_root )
+   /* update tree leaves array */
+   if( !extIsAtInitialComp(extdata) )
    {
+      assert(comproot != extdata->tree_root);
+
       extLeafRemove(comproot, extdata);
       extInnerNodeAdd(graph, comproot, extdata);
    }
@@ -382,8 +384,9 @@ void extTreeStackTopRootRemove(
    {
       assert(extdata->tree_nleaves == 1);
       assert(extdata->tree_deg[comproot] == 1);
-      assert(extIsAtInitialComp(extdata));
+      assert(comproot == extdata->tree_root);
 
+      /* will be reset afterwards! */
       extdata->tree_deg[comproot] = 0;
    }
 }
@@ -851,7 +854,6 @@ void extBacktrack(
    assert(!extreduce_treeIsFlawed(scip, graph, extdata));
 }
 
-
 /** Builds components from top edges and adds them.
  *  Backtracks if stack is too full.
  *  Helper method for 'extStackTopExpand' */
@@ -933,6 +935,32 @@ void extStackAddCompsExpanded(
 }
 
 
+/** adds initial component as 'expanded' to stack (including computation of horizontal SDs) */
+static inline
+void extStackAddCompInitialExpanded(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Bool compIsStar = extInitialCompIsStar(extdata);
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   /* in case of star component we want to skip the root edge for the horizontal SD computation */
+   const int* const extedges = compIsStar ? &(extstack_data[1]) : extstack_data;
+   const int nextedges = compIsStar ? (extstack_start[1] - 1) : extstack_start[1];
+
+   assert(nextedges > 0);
+   assert(graph->tail[extedges[0]] == extdata->tree_root);
+
+   extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
+   extreduce_mstLevelClose(scip, graph, extdata->tree_root, extdata);
+
+   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
+   extdata->extstack_ncomponents = 1;
+}
+
+
 /** Collects edges top component of stack that we need to consider for extension
  *  (i.e. which cannot be ruled out).
  *  Helper method for 'extStackTopExpand' */
@@ -985,6 +1013,58 @@ void extStackTopCollectExtEdges(
 }
 
 
+/** Computes ancestor SDs for leaves of initial component.
+ *  Also checks for possible rule-out. */
+static inline
+void extStackTopProcessInitialEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            initialRuleOut      /**< pointer to mark early rule-out */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extStackGetPosition(extdata);
+   const SCIP_Bool compIsEdge = extInitialCompIsEdge(extdata);
+   const int data_start = compIsEdge ? extstack_start[stackpos] : extstack_start[stackpos] + 1;
+   const int data_end = extstack_start[stackpos + 1];
+
+   assert(*initialRuleOut == FALSE);
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] >= 1);
+   assert(extreduce_mstTopCompInSync(scip, graph, extdata));
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] == extstack_start[1]);
+   assert(data_start < data_end);
+
+   /* compute SDs for all leaves (and try to rule each of them out) */
+   for( int i = data_start; i < data_end; i++ )
+   {
+      const int edge = extstack_data[i];
+
+      assert(edge >= 0 && edge < graph->edges);
+      assert(extdata->tree_deg[graph->head[edge]] == 0);
+      assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
+
+      /* computes the SDs from 'leaf' to all tree leaves in 'sds_vertical', unless the edge is ruled out */
+      extreduce_mstLevelVerticalAddLeafInitial(scip, graph, edge, extdata, initialRuleOut);
+
+      if( *initialRuleOut )
+      {
+         SCIPdebugMessage("initial component ruled-out! \n");
+         return;
+      }
+
+#if 0
+     if( extRuleOutEdgeCombinations(graph, extdata, e) )
+     {
+        // todo: need some marker here to say that we have a single edge!
+        continue;
+     }
+#endif
+   }
+}
+
+
 /** Expands top component of stack.
  *  I.e.. adds all possible subsets of the top component that cannot be ruled-out.
  *  Note: This method can backtrack:
@@ -1002,9 +1082,9 @@ void extStackTopExpand(
    int extedges[STP_EXT_MAXGRAD];
    REDDATA* const reddata = extdata->reddata;
    int nextedges = 0;
-   const int stackpos = extStackGetPosition(extdata);
 
 #ifndef NDEBUG
+   const int stackpos = extStackGetPosition(extdata);
    const int* const extstack_state = extdata->extstack_state;
    for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
       extedges[i] = -1;
@@ -1014,10 +1094,6 @@ void extStackTopExpand(
 #endif
 
    extreduce_mstLevelInit(reddata, extdata);
-
-   int todo; // call new method instead of collect edges? Also simple rule out? No, should not happen!
-   // better be explicit: extStackTopCollectInitialEdges()
-   // better new overall method: extStackTopExpandInitial
 
    /* Note: Also computes ancestor SDs for leaves that are not ruled-out
     * and adds them to vertical level! */
@@ -1030,23 +1106,14 @@ void extStackTopExpand(
    {
       *success = TRUE;
       assert(extstack_state[stackpos] == EXT_STATE_NONE);
+      assert(stackpos != 0);  /* not the initial component! */
 
-      /* not the initial component? */
-      if( stackpos != 0 )
-      {
-         extBacktrack(scip, graph, *success, FALSE, extdata);
-      }
-      else
-      {
-         extreduce_mstLevelVerticalRemove(reddata);
-      }
+      extBacktrack(scip, graph, *success, FALSE, extdata);
    }
    else
    {
       /* use the just collected edges 'extedges' to build components and add them to the stack */
       extStackAddCompsExpanded(scip, graph, nextedges, extedges, extdata, success);
-
-      // todo new method here: extStackAddCompInitial
 
 #ifndef NDEBUG
       {
@@ -1055,6 +1122,49 @@ void extStackTopExpand(
       }
 #endif
    }
+}
+
+
+/** same as 'extStackTopExpand', but for initial component only */
+static inline
+void extStackTopExpandInitial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            initialRuleOut      /**< pointer to mark early rule-out */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+
+#ifndef NDEBUG
+   const int nextedges = extdata->extstack_start[1];
+   const int* const extstack_state = extdata->extstack_state;
+
+   assert(EXT_STATE_NONE == extstack_state[0]);
+   assert(extStackGetPosition(extdata) == 0);
+   assert(extIsAtInitialComp(extdata));
+   assert(nextedges == 1 || nextedges >= 3);
+#endif
+
+   extreduce_mstLevelInit(reddata, extdata);
+   extStackTopProcessInitialEdges(scip, graph, extdata, initialRuleOut);
+   extreduce_mstLevelVerticalClose(reddata);
+
+   assert(extstack_state[0] == EXT_STATE_NONE);
+
+   /* initial component ruled out already? */
+   if( *initialRuleOut )
+   {
+      extreduce_mstLevelVerticalRemove(reddata);
+   }
+   else
+   {
+      extStackAddCompInitialExpanded(scip, graph, extdata);
+
+      assert(extstack_state[0] != EXT_STATE_NONE);
+   }
+
+   assert(*initialRuleOut || extdata->extstack_state[0] != EXT_STATE_NONE );
 }
 
 
@@ -1156,6 +1266,7 @@ void extPreprocessInitialEdge(
 
 
 /** adds initial star component edges to stack */
+/*  NOTE: it is vital the the first edge of the star component comes from the root! */
 static inline
 void extPreprocessInitialStar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1166,21 +1277,27 @@ void extPreprocessInitialStar(
 {
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
+   const int rootedge = compedges[0];
+   const int starbase = graph->head[rootedge];
+   const int comproot = extcomp->comproot;
 
    assert(ncompedges >= 3);
-   assert(graph->tail[compedges[0]] == extcomp->comproot);
+   assert(graph->tail[compedges[0]] == comproot);
 
 #ifdef SCIP_DEBUG
    printf("\n --- ADD initial star component --- \n\n");
 #endif
 
    extdata->extstack_data[0] = compedges[0];
+   extdata->tree_deg[starbase] = ncompedges;
+   extdata->tree_parentNode[starbase] = comproot;
+   extdata->tree_parentEdgeCost[starbase] = graph->cost[rootedge];
 
    for( int i = 1; i < ncompedges; i++ )
    {
       const int e = compedges[i];
 
-      assert(graph->tail[e] == graph->head[compedges[0]]);
+      assert(graph->tail[e] == starbase);
       SCIPdebugMessage("...star edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
 
       extdata->extstack_data[i] = e;
@@ -1215,6 +1332,7 @@ void extPreprocessInitialComponent(
    else
       extPreprocessInitialStar(scip, graph, extcomp, extdata);
 
+   /* for now, only the component root is marked as a leaf */
    extreduce_mstAddRootLevel(scip, comproot, extdata);
    extLeafAdd(comproot, extdata);
 
@@ -1227,9 +1345,9 @@ void extPreprocessInitialComponent(
    extdata->tree_redcostSwap[comproot] = 0.0;
    extdata->tree_parentEdgeCost[comproot] = -1.0;
 
-   assert(extcomp->ncompedges > 1 || extdata->tree_leaves[0] == comproot);
+   assert(extdata->tree_leaves[0] == comproot);
    assert(extdata->tree_deg[comproot] == 0);
-   assert(extdata->tree_nleaves == extcomp->ncompedges);
+   assert(extdata->tree_nleaves == 1);
 
    extdata->tree_deg[comproot] = 1;
 }
@@ -1265,25 +1383,21 @@ void extProcessInitialComponent(
    const EXTCOMP*        extcomp,            /**< component to be checked */
    EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            ruledOut,           /**< initial component ruled out? */
-   SCIP_Bool*            success             /**< extension successful? */
+   SCIP_Bool*            isExtendable        /**< extension possible? */
 )
 {
    SCIP_Bool conflict;
 
-   assert(FALSE == (*ruledOut) && TRUE == (*success));
+   assert(FALSE == (*ruledOut) && TRUE == (*isExtendable));
 
    extPreprocessInitialComponent(scip, graph, extcomp, extdata);
+   extStackTopExpandInitial(scip, graph, extdata, ruledOut);
 
-   /* expand the initial component */
-   extStackTopExpand(scip, graph, extdata, success);
-
-   assert(*success);
    assert(extStackGetPosition(extdata) == 0);
 
    /* early rule-out? */
-   if( extdata->extstack_state[0] == EXT_STATE_NONE )
+   if( *ruledOut )
    {
-      *ruledOut = TRUE;
       extPostprocessInitialRuleOut(graph, extcomp, extdata);
       return;
    }
@@ -1293,6 +1407,8 @@ void extProcessInitialComponent(
    conflict = FALSE;
    extTreeStackTopAdd(scip, graph, extdata, &conflict);
    assert(!conflict);
+   assert(extdata->tree_deg[extdata->tree_root] == 1);
+   assert(extdata->tree_deg[graph->head[extdata->extstack_data[0]]] == extcomp->ncompedges);
 
    /* NOTE: anyway necessary to keep the MST graph up-to-date! */
    if( extTreeRuleOutPeriph(scip, graph, extdata) )
@@ -1303,9 +1419,9 @@ void extProcessInitialComponent(
 
    /* the initial component could not be ruled-out, so set its stage to 'marked' */
    extdata->extstack_state[extStackGetPosition(extdata)] = EXT_STATE_MARKED;
-   extExtend(scip, graph, extdata, success);
+   extExtend(scip, graph, extdata, isExtendable);
 
-   assert(success || extcomp->ncompedges >= 3);
+   assert(isExtendable || extcomp->ncompedges >= 3);
 }
 
 

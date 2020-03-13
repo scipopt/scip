@@ -743,7 +743,6 @@ void bottleneckMarkRootPath(
    assert(bottleneckDist_node[vertex] == -1.0);
    assert(bottleneckDist_node[tree_root] == -1.0);
 
-
    if( vertex == tree_root )
    {
       bottleneckDist_node[vertex] = 0.0;
@@ -1505,7 +1504,7 @@ void mstLevelLeafSetVerticalSDs(
 
    assert(adjedgecosts && leaves && ruledOut);
    assert(*ruledOut == FALSE);
-   assert(neighbor_base == extdata->tree_root || extLeafFindPos(extdata, neighbor_base) > 0);
+   assert(extIsAtInitialComp(extdata) || extLeafFindPos(extdata, neighbor_base) > 0);
 
    for( int j = 0; j < nleaves; j++ )
    {
@@ -1546,10 +1545,10 @@ void mstLevelLeafAdjustVerticalSDs(
    const int nleaves = extdata->tree_nleaves;
 
   /* if the base is the root and the only leaf, we want to keep the SD */
-  if( nleaves == 1 )
+  if( extIsAtInitialComp(extdata) )
   {
+     assert(nleaves == 1);
      assert(neighbor_base == extdata->tree_root);
-     assert(extStackGetPosition(extdata) == 0);
   }
   else
   {
@@ -1566,6 +1565,7 @@ void mstLevelLeafAdjustVerticalSDs(
      assert(nleaves >= 2);
      assert(leaves_pos > 0 && leaves_pos < nleaves);
      assert(ids[leaves_pos] == neighbor_base);
+     assert(neighbor_base != extdata->tree_root);
 
      for( int i = leaves_pos + 1; i < nleaves; i++ )
      {
@@ -1820,10 +1820,15 @@ void extreduce_mstLevelInit(
    /* Reserve space for the SDs from each potential vertex of the new level to all leaves
     * of the tree except for the extending vertex.
     * But for the initial component we need to keep the root! */
-   if( extStackGetPosition(extdata) == 0 )
+   if( extIsAtInitialComp(extdata) )
+   {
+      assert(extdata->tree_nleaves == 1);
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
+   }
    else
+   {
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sds_vertical);
+   }
 
    SCIPdebugMessage("init MST level %d \n", extreduce_mldistsTopLevel(sds_vertical));
 
@@ -1853,6 +1858,7 @@ void extreduce_mstLevelVerticalAddLeaf(
    assert(extdata->tree_deg[neighbor_base] == 1);
    assert(extdata->tree_deg[neighbor] == 0);
    assert(*leafRuledOut == FALSE);
+   assert(!extIsAtInitialComp(extdata));
 
    mstLevelLeafInit(graph, neighbor_base, neighbor, extdata);
 
@@ -1860,7 +1866,6 @@ void extreduce_mstLevelVerticalAddLeaf(
     * also check for bottleneck rule-out! */
    mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
-   // todo: don't do for initial component...
    /* if not yet ruled out, check whether extending the SD MST helps */
    if( !(*leafRuledOut) )
    {
@@ -1873,6 +1878,36 @@ void extreduce_mstLevelVerticalAddLeaf(
    {
       bottleneckCheckNonLeaves(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
+
+   mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
+}
+
+
+/** similar to above, but only for initial component! */
+void extreduce_mstLevelVerticalAddLeafInitial(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< edge to the neighbor */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out? */
+)
+{
+   const int neighbor_base = graph->tail[edge2neighbor];
+   const int neighbor = graph->head[edge2neighbor];
+
+   assert(*leafRuledOut == FALSE);
+   assert(extIsAtInitialComp(extdata));
+   assert(!extInitialCompIsEdge(extdata) || neighbor_base == extdata->tree_root);
+   assert(!extInitialCompIsStar(extdata) || neighbor_base == graph->head[extdata->extstack_data[0]]);
+   assert(extdata->tree_deg[neighbor_base] >= 1);
+   assert(extdata->tree_deg[neighbor] == 0);
+
+   /* NOTE: also initializes bottlenecks from neighbor_base */
+   mstLevelLeafInit(graph, neighbor_base, neighbor, extdata);
+
+   /* compute and store SDs to all leaves;
+    * also check for bottleneck rule-out! */
+   mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
    mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
 }
@@ -2010,12 +2045,14 @@ void extreduce_mstLevelClose(
 #endif
 
    /* build a new 'mst_levelbase' MST */
-   if( extnode == extdata->tree_root )
+   if( extIsAtInitialComp(extdata) )
    {
+      assert(extnode == extdata->tree_root);
       mstLevelBuildBaseMstRoot(scip, reddata);
    }
    else
    {
+      assert(extnode != extdata->tree_root);
       mstLevelBuildBaseMst(scip, graph, extnode, reddata, extdata);
    }
 }
