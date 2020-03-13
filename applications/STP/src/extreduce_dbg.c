@@ -32,6 +32,7 @@
 #include <assert.h>
 #include "graph.h"
 #include "portab.h"
+#include <limits.h>
 #include "extreduce.h"
 
 
@@ -787,6 +788,59 @@ SCIP_Bool treeDistsAreFlawed(
    }
 
    return FALSE;
+}
+
+
+/** cleans extension data extensively for debugging */
+void extreduce_extdataCleanArraysDbg(
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const int maxstacksize = extreduce_getMaxStackSize();
+   const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
+   int* const extstack_data = extdata->extstack_data;
+   int* const extstack_start = extdata->extstack_start;
+   int* const extstack_state = extdata->extstack_state;
+   int* const tree_edges = extdata->tree_edges;
+   int* const tree_leaves = extdata->tree_leaves;
+   int* const tree_innerNodes = extdata->tree_innerNodes;
+   int* const tree_parentNode = extdata->tree_parentNode;
+   SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
+   SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
+
+   for( int i = 0; i < maxstacksize; ++i )
+   {
+      extstack_data[i] = INT_MIN;
+   }
+
+   for( int i = 0; i < maxncomponents + 1; ++i )
+   {
+      extstack_start[i] = INT_MIN;
+      extstack_state[i] = INT_MIN;
+   }
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      tree_edges[i] = INT_MIN;
+      tree_leaves[i] = INT_MIN;
+      tree_innerNodes[i] = INT_MIN;
+      tree_parentNode[i] = INT_MIN;
+   }
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      tree_edges[i] = INT_MIN;
+      tree_leaves[i] = INT_MIN;
+   }
+
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      tree_parentEdgeCost[i] = -FARAWAY;
+      tree_redcostSwap[i] = -FARAWAY;
+   }
 }
 
 

@@ -422,6 +422,7 @@ extern SCIP_Bool          extreduce_pcdataIsClean(const GRAPH*, const PCDATA*);
  */
 extern int             extreduce_extStackCompSize(const EXTDATA*, int);
 extern SCIP_Bool       extreduce_stackTopIsHashed(const GRAPH*, const EXTDATA*);
+extern void            extreduce_extdataCleanArraysDbg(const GRAPH*, EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_nodeIsInStackTop(const GRAPH*, const EXTDATA*, int);

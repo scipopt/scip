@@ -307,7 +307,7 @@ void extInnerNodeRemoveTop(
    assert(extdata && extdata->tree_innerNodes);
    assert(comproot >= 0);
 
-   /* update tree leaves array todo might need to be changed for pseudo-elimination */
+   /* update tree leaves array */
    if( comproot != extdata->tree_root )
    {
       const SCIP_Bool isPc = (graph->prize != NULL);
@@ -327,7 +327,8 @@ void extInnerNodeRemoveTop(
    }
    else
    {
-      assert(extdata->tree_ninnerNodes == 0);
+      assert(!extInitialCompIsEdge(extdata) || extdata->tree_ninnerNodes == 0);
+      assert(!extInitialCompIsStar(extdata) || extdata->tree_ninnerNodes == 1);
    }
 }
 
@@ -506,8 +507,6 @@ void extTreeStackTopRemove(
    }
 
    assert(tree_deg[comproot] == 1);
-
-  // for( int k = extdata->tree_nleaves - 1; k >= extdata->tree_nleaves - compsize; k-- ) printf("bt remove leaf %d \n", extdata->tree_leaves[k]);
 
    (extdata->tree_nedges) -= compsize;
    (extdata->tree_depth)--;
@@ -897,10 +896,10 @@ void extStackAddCompsExpanded(
 
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo we probably want to order so that the smallest components are put last!
-   // todo we might just ignore the single edge extensions if counter & (counter - 1) == 0, then add them at the end
-   // todo extra method!
-   // todo if single extensions are used first, might make sense to also have a special bottleneck test for this case!
-   // also good if we have the method that excludes everything except for the singletons!
+   // -we might just ignore the single edge extensions if counter & (counter - 1) == 0, then add them at the end
+   // -extra method!
+   // -if single extensions are used first, might make sense to also have a special bottleneck test for this case!
+   // -also good if we have the method that excludes everything except for the singletons!
    for( uint32_t counter = powsize - 1; counter >= 1; counter-- )
    {
       for( uint32_t j = 0; j < (uint32_t) nextedges; j++ )
@@ -1258,7 +1257,7 @@ void extPreprocessInitialEdge(
 
 #ifdef SCIP_DEBUG
    printf("\n --- ADD initial edge component --- \n\n");
-   SCIPdebugMessage("...initial edge %d: %d->%d \n\n", e, graph->tail[edge], graph->head[edge]);
+   SCIPdebugMessage("...initial edge %d: %d->%d \n\n", edge, graph->tail[edge], graph->head[edge]);
 #endif
 
    extdata->extstack_data[0] = edge;
@@ -1302,6 +1301,8 @@ void extPreprocessInitialStar(
 
       extdata->extstack_data[i] = e;
    }
+
+   extInnerNodeAdd(graph, starbase, extdata);
 
 #ifdef SCIP_DEBUG
    printf(" \n");
@@ -1581,6 +1582,10 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
          .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
          .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
+
+#ifdef STP_DEBUG_EXT
+      extreduce_extdataCleanArraysDbg(graph, &extdata);
+#endif
 
       extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
 
