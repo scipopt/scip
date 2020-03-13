@@ -1874,7 +1874,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
          childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
          infeasible, nreductions) );
    }
 
