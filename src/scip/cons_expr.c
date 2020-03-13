@@ -1020,7 +1020,7 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
  *
  * If subsetsufficient is TRUE, then the intersection being smaller than oldinterval is sufficient.
  * If subsetsufficient is FALSE, then we require
- *  - a change from an unbounded interval to bounded one, or
+ *  - a change from an unbounded interval to a bounded one, or
  *  - or a change from an unfixed (width > epsilon) to a fixed interval, or
  *  - a minimal tightening of one of the interval bounds as defined by SCIPis{Lb,Ub}Better.
  */
