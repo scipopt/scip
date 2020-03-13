@@ -209,6 +209,9 @@ SCIP_RETCODE checkCurvature(
 
    nlhdlrexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
 
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
    n  = nlhdlrexprdata->nquadexprs;
 
    /* do not check curvature if nn will be too large
