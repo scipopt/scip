@@ -331,6 +331,9 @@ SCIP_Bool extTreeRedcostCutoff(
 
       if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
       {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("NO rule-out periph (red.cost<=%f from root=%d and cutoff=%f) \n", tree_redcost_new, leaf, cutoff);
+#endif
          return FALSE;
       }
 
@@ -364,8 +367,8 @@ SCIP_Bool extreduce_redcostReverseTreeRuledOut(
 void extreduce_redcostAddEdge(
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge,               /**< edge to be added */
-   SCIP_Bool             noReversedTree,     /**< don't consider reversed tree? */
    const REDDATA*        reddata,            /**< reduction data */
+   SCIP_Bool*            noReversedTree,     /**< don't consider reversed tree? */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -375,9 +378,15 @@ void extreduce_redcostAddEdge(
    const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
    const int head = graph->head[edge];
 
-   if( noReversedTree || (edgedeleted && edgedeleted[flipedge(edge)]) )
+   if( *noReversedTree || (edgedeleted && edgedeleted[flipedge(edge)]) )
    {
       tree_redcostSwap[head] = FARAWAY;
+
+      if( head == extdata->tree_starcenter )
+      {
+         assert(extIsAtInitialStar(extdata));
+         *noReversedTree = TRUE;
+      }
    }
    else
    {

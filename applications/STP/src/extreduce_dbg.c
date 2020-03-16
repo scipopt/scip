@@ -1567,13 +1567,10 @@ int extreduce_extStackCompNOutedges(
 {
    const int* const stack_start = extdata->extstack_start;
    int size = stack_start[stackpos + 1] - stack_start[stackpos];
-   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && stack_start[1] > 1;
+   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && (stackpos == 0);
 
    if( atInitialStar )
    {
-      assert(size >= 3);
-      assert(size == stack_start[1]);
-
       size--;
    }
 

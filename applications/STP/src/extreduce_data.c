@@ -74,9 +74,9 @@ void postCleanMSTs(
 
 /** cleans-up after trying to rule out a component */
 void extreduce_extCompClean(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const EXTCOMP*        extcomp,            /**< component to be cleaned for */
+   SCIP_Bool             unhash,             /**< unhash component? */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -100,7 +100,8 @@ void extreduce_extCompClean(
       tree_deg[head] = 0;
       tree_deg[tail] = 0;
 
-      graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
+      if( unhash )
+         graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
    }
 
    postCleanSDs(sds_vertical);
@@ -319,7 +320,8 @@ void extreduce_pcdataClean(
 )
 {
    assert(pcdata);
-   assert(EQ(pcdata->tree_innerPrize, 0.0)); // todo might not actually hold...
+
+   pcdata->tree_innerPrize = 0.0;
 }
 
 
@@ -428,6 +430,7 @@ SCIP_Bool extreduce_reddataIsClean(
    {
       if( reddata->pseudoancestor_mark[i] != 0 )
       {
+         graph_knot_printInfo(graph, i);
          printf("pseudoancestor_mark %d \n", reddata->pseudoancestor_mark[i]);
          return FALSE;
       }

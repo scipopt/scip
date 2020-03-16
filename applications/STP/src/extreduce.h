@@ -385,7 +385,7 @@ SCIP_Real extSdGetProper(
  */
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern SCIP_RETCODE    extreduce_pseudodeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern SCIP_RETCODE    extreduce_pseudodeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, SCIP_Real*, int*);
 extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
@@ -466,7 +466,7 @@ extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_recosts.c
  */
-extern void            extreduce_redcostAddEdge(const GRAPH*, int, SCIP_Bool, const REDDATA*, EXTDATA*);
+extern void            extreduce_redcostAddEdge(const GRAPH*, int, const REDDATA*, SCIP_Bool*, EXTDATA*);
 extern void            extreduce_redcostRemoveEdge(int, const REDDATA*, EXTDATA*);
 extern SCIP_Bool       extreduce_redcostReverseTreeRuledOut(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
@@ -475,7 +475,7 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 /* extreduce_data.c
  */
 
-void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, EXTDATA*);
+void                      extreduce_extCompClean(const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);

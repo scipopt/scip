@@ -66,6 +66,9 @@
 #define SDSTAR_BASE_UNSET  -1
 #define SDSTAR_BASE_KILLED -2
 
+#define STP_DELPSEUDO_MAXGRAD   5
+#define STP_DELPSEUDO_MAXNEDGES 10
+
 typedef unsigned char STP_Bool;
 
 #include "scip/scip.h"

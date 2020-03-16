@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- // #define SCIP_DEBUG
+//  #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -420,7 +420,7 @@ void extTreeStackTopAdd(
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
    const int stackpos = extStackGetPosition(extdata);
    int conflictIteration = -1;
-   const SCIP_Bool noReversedRedCostTree = extreduce_redcostReverseTreeRuledOut(graph, extdata);
+   SCIP_Bool noReversedRedCostTree = extreduce_redcostReverseTreeRuledOut(graph, extdata);
 
    assert(!(*conflict));
    assert(stackpos >= 0);
@@ -437,7 +437,7 @@ void extTreeStackTopAdd(
       assert(extdata->tree_nedges < extdata->extstack_maxsize);
       assert(edge >= 0 && edge < graph->edges);
 
-      extreduce_redcostAddEdge(graph, edge, noReversedRedCostTree, reddata, extdata);
+      extreduce_redcostAddEdge(graph, edge, reddata, &noReversedRedCostTree, extdata);
       extTreeAddEdge(graph, edge, extdata);
 
       /* no conflict found yet? */
@@ -1371,7 +1371,7 @@ void extPreprocessInitialComponent(
 
 /** helper for rule-out during initial component processing */
 static inline
-void extPostprocessInitialRuleOut(
+void extUnhashInitialComponent(
    const GRAPH*          graph,              /**< graph data structure */
    const EXTCOMP*        extcomp,            /**< component to be checked */
    EXTDATA*              extdata             /**< extension data */
@@ -1385,7 +1385,7 @@ void extPostprocessInitialRuleOut(
    /* necessary because these edges will be deleted in clean-up otherwise */
    for( int i = 0; i < ncompedges; i++ )
    {
-      graph_pseudoAncestors_hashEdge(pseudoancestors, compedges[i], pseudoancestor_mark);
+      graph_pseudoAncestors_unhashEdge(pseudoancestors, compedges[i], pseudoancestor_mark);
    }
 }
 
@@ -1402,7 +1402,7 @@ void extProcessInitialComponent(
    SCIP_Bool*            isExtendable        /**< extension possible? */
 )
 {
-   SCIP_Bool conflict;
+   SCIP_Bool conflict = FALSE;
 
    assert(FALSE == (*ruledOut) && TRUE == (*isExtendable));
 
@@ -1414,15 +1414,20 @@ void extProcessInitialComponent(
    /* early rule-out? */
    if( *ruledOut )
    {
-      extPostprocessInitialRuleOut(graph, extcomp, extdata);
       return;
    }
 
    assert(extdata->extstack_state[0] == EXT_STATE_EXPANDED);
 
-   conflict = FALSE;
    extTreeStackTopAdd(scip, graph, extdata, &conflict);
-   assert(!conflict);
+
+   if( conflict )
+   {
+      assert(extInitialCompIsStar(extdata));
+      *ruledOut = TRUE;
+      return;
+   }
+
    assert(extdata->tree_deg[extdata->tree_root] == 1);
    assert(extdata->tree_deg[graph->head[extdata->extstack_data[0]]] == extcomp->ncompedges);
 
@@ -1430,6 +1435,7 @@ void extProcessInitialComponent(
    if( extTreeRuleOutPeriph(scip, graph, extdata) )
    {
       *ruledOut = TRUE;
+      extUnhashInitialComponent(graph, extcomp, extdata);
       return;
    }
 
@@ -1438,7 +1444,12 @@ void extProcessInitialComponent(
    assert(extStackGetPosition(extdata) == 0);
    extExtend(scip, graph, extdata, isExtendable);
 
-   assert(isExtendable || extcomp->ncompedges >= 3);
+   if( !(*isExtendable) )
+   {
+      extUnhashInitialComponent(graph, extcomp, extdata);
+   }
+
+   assert(*isExtendable || extcomp->ncompedges >= 3);
 }
 
 
@@ -1467,7 +1478,7 @@ void extProcessComponent(
    /* early rule-out? or no extension possible? */
    if( *deletable || !success )
    {
-      extreduce_extCompClean(scip, graph, extcomp, extdata);
+      extreduce_extCompClean(graph, extcomp, FALSE, extdata);
       return;
    }
 
@@ -1523,7 +1534,7 @@ void extProcessComponent(
 
    *deletable = success;
 
-   extreduce_extCompClean(scip, graph, extcomp, extdata);
+   extreduce_extCompClean(graph, extcomp, TRUE, extdata);
 }
 
 

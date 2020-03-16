@@ -40,8 +40,6 @@
 #include "graph.h"
 #include "heur_tm.h"
 
-#define STP_DELPSEUDO_MAXGRAD   5
-#define STP_DELPSEUDO_MAXNEDGES 10
 #define STP_DELPSEUDO_NOEDGE    -1
 #define STP_DELPSEUDO_SKIPEDGE  -2
 
