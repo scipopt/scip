@@ -90,6 +90,7 @@ SCIP_EXPORT
 SCIP_RETCODE
 SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nexprs,             /**< number of expressions to propagate */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions to propagate */
    SCIP_Real*            weights,            /**< weights of expressions in sum */

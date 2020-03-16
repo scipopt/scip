@@ -693,7 +693,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -0.8, 0.5);
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
    cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -0.8));
    cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
@@ -752,7 +752,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -1.0, 0.5);
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
    cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -1.0));
    cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));

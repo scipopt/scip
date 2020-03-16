@@ -78,55 +78,55 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define DEFAULT_USEBINARYCONSTRAINTS         FALSE /**< should binary constraints be collected and applied? */
-#define DEFAULT_ADDCLIQUE                    FALSE /**< add binary constraints with two variables found at the root node also as a clique? */
-#define DEFAULT_ADDBINCONSROW                0     /**< should binary constraints be added as rows to the base LP?
-                                                    *   (0: no, 1: separate, 2: as initial rows) */
-#define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
-#define DEFAULT_MERGEDOMAINREDUCTIONS        FALSE /**< should domain reductions of feasible siblings should be merged? */
-#define DEFAULT_PREFERSIMPLEBOUNDS           FALSE /**< should domain reductions only be applied if there are simple bound changes? */
-#define DEFAULT_ONLYVIOLDOMREDS              FALSE /**< Should only domain reductions that violate the LP solution be applied? */
-#define DEFAULT_MAXNVIOLATEDCONS             1     /**< How many constraints that are violated by the base lp solution
-                                                    *   should be gathered until the rule is stopped and they are added? */
-#define DEFAULT_MAXNVIOLATEDBINCONS          0     /**< How many binary constraints that are violated by the base lp
-                                                    *   solution should be gathered until the rule is stopped and they are
-                                                    *   added? */
-#define DEFAULT_MAXNVIOLATEDDOMREDS          1     /**< How many domain reductions that are violated by the base lp solution
-                                                    *   should be gathered until the rule is stopped and they are added? */
-#define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /**< If only non violating constraints are added, should the branching
-                                                    *   decision be stored till the next call? */
-#define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching
-                                                    *   result is recalculated. */
-#define DEFAULT_REEVALAGEFSB                 10LL  /**< Max number of LPs solved after which a previous FSB scoring
-                                                    *   result is recalculated. */
-#define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
-#define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
-                                                    *   collected and added? */
-#define DEFAULT_PROPAGATE                    TRUE  /**< Should domain propagation be executed before each temporary node is
-                                                    *   solved? */
-#define DEFAULT_USELEVEL2DATA                TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
-#define DEFAULT_APPLYCHILDBOUNDS             FALSE /**< should bounds known for child nodes be applied? */
-#define DEFAULT_ENFORCEMAXDOMREDS            FALSE /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
-#define DEFAULT_UPDATEBRANCHINGRESULTS       FALSE /**< should branching results (and scores) be updated w.r.t. proven dual bounds? */
-#define DEFAULT_MAXPROPROUNDS                0     /**< maximum number of propagation rounds to perform at temporary
-                                                    *   nodes (-1: unlimited, 0: SCIP default) */
-#define DEFAULT_ABBREVIATED                  TRUE /**< Toggles the abbreviated LAB. */
-#define DEFAULT_MAXNCANDS                    4     /**< If abbreviated: The max number of candidates to consider at the base node */
-#define DEFAULT_MAXNDEEPERCANDS              2     /**< If abbreviated: The max number of candidates to consider per deeper node
-                                                    *   (0: same as base node) */
-#define DEFAULT_REUSEBASIS                   TRUE  /**< If abbreviated: Should the information gathered to obtain the best
-                                                    *   candidates be reused? */
-#define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
-                                                    *   candidate. */
-#define DEFAULT_LEVEL2AVGSCORE               FALSE /**< should the average score be used for uninitialized scores in level 2? */
-#define DEFAULT_LEVEL2ZEROSCORE              FALSE /**< should uninitialized scores be set to 0? */
-#define DEFAULT_SCORINGFUNCTION              'a'   /**< scoring function to be used at the base level */
-#define DEFAULT_DEEPERSCORINGFUNCTION        'x'   /**< scoring function to be used at deeper levels */
-#define DEFAULT_SCORINGSCORINGFUNCTION       'd'   /**< scoring function to be used for FSB scoring */
-#define DEFAULT_MINWEIGHT                    0.8   /**< default value for the weight of the minimum in the convex combination of two
-                                                    *   child gains (taken from the paper) */
-#define DEFAULT_WORSEFACTOR                 -1.0   /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
-#define DEFAULT_FILTERBYMAXGAIN             FALSE  /**< should lookahead branching only be applied if the max gain in level 1 is not uniquely that of the best candidate? */
+#define DEFAULT_USEBINARYCONSTRAINTS   FALSE /**< should binary constraints be collected and applied? */
+#define DEFAULT_ADDCLIQUE              FALSE /**< add binary constraints with two variables found at the root node also as a clique? */
+#define DEFAULT_ADDBINCONSROW          0     /**< should binary constraints be added as rows to the base LP?
+                                              *   (0: no, 1: separate, 2: as initial rows) */
+#define DEFAULT_USEDOMAINREDUCTION     TRUE  /**< Should domain reductions be collected and applied? */
+#define DEFAULT_MERGEDOMAINREDUCTIONS  FALSE /**< should domain reductions of feasible siblings should be merged? */
+#define DEFAULT_PREFERSIMPLEBOUNDS     FALSE /**< should domain reductions only be applied if there are simple bound changes? */
+#define DEFAULT_ONLYVIOLDOMREDS        FALSE /**< Should only domain reductions that violate the LP solution be applied? */
+#define DEFAULT_MAXNVIOLATEDCONS       1     /**< How many constraints that are violated by the base lp solution
+                                              *   should be gathered until the rule is stopped and they are added? */
+#define DEFAULT_MAXNVIOLATEDBINCONS    0     /**< How many binary constraints that are violated by the base lp
+                                              *   solution should be gathered until the rule is stopped and they are
+                                              *   added? */
+#define DEFAULT_MAXNVIOLATEDDOMREDS    1     /**< How many domain reductions that are violated by the base lp solution
+                                              *   should be gathered until the rule is stopped and they are added? */
+#define DEFAULT_STOREUNVIOLATEDSOL     TRUE  /**< If only non violating constraints are added, should the branching
+                                              *   decision be stored till the next call? */
+#define DEFAULT_REEVALAGE              10LL  /**< Max number of LPs solved after which a previous prob branching
+                                              *   result is recalculated. */
+#define DEFAULT_REEVALAGEFSB           10LL  /**< Max number of LPs solved after which a previous FSB scoring
+                                              *   result is recalculated. */
+#define DEFAULT_RECURSIONDEPTH         2     /**< The max depth of LAB. */
+#define DEFAULT_ADDNONVIOCONS          FALSE /**< Should binary constraints, that are not violated by the base LP, be
+                                              *   collected and added? */
+#define DEFAULT_PROPAGATE              TRUE  /**< Should domain propagation be executed before each temporary node is
+                                              *   solved? */
+#define DEFAULT_USELEVEL2DATA          TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
+#define DEFAULT_APPLYCHILDBOUNDS       FALSE /**< should bounds known for child nodes be applied? */
+#define DEFAULT_ENFORCEMAXDOMREDS      FALSE /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
+#define DEFAULT_UPDATEBRANCHINGRESULTS FALSE /**< should branching results (and scores) be updated w.r.t. proven dual bounds? */
+#define DEFAULT_MAXPROPROUNDS          0     /**< maximum number of propagation rounds to perform at temporary
+                                              *   nodes (-1: unlimited, 0: SCIP default) */
+#define DEFAULT_ABBREVIATED            TRUE  /**< Toggles the abbreviated LAB. */
+#define DEFAULT_MAXNCANDS              4     /**< If abbreviated: The max number of candidates to consider at the base node */
+#define DEFAULT_MAXNDEEPERCANDS        2     /**< If abbreviated: The max number of candidates to consider per deeper node
+                                              *   (0: same as base node) */
+#define DEFAULT_REUSEBASIS             TRUE  /**< If abbreviated: Should the information gathered to obtain the best
+                                              *   candidates be reused? */
+#define DEFAULT_ABBREVPSEUDO           FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
+                                              *   candidate. */
+#define DEFAULT_LEVEL2AVGSCORE         FALSE /**< should the average score be used for uninitialized scores in level 2? */
+#define DEFAULT_LEVEL2ZEROSCORE        FALSE /**< should uninitialized scores be set to 0? */
+#define DEFAULT_SCORINGFUNCTION        'a'   /**< scoring function to be used at the base level */
+#define DEFAULT_DEEPERSCORINGFUNCTION  'x'   /**< scoring function to be used at deeper levels */
+#define DEFAULT_SCORINGSCORINGFUNCTION 'd'   /**< scoring function to be used for FSB scoring */
+#define DEFAULT_MINWEIGHT              0.8   /**< default value for the weight of the minimum in the convex combination of two
+                                              *   child gains (taken from the paper) */
+#define DEFAULT_WORSEFACTOR           -1.0   /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
+#define DEFAULT_FILTERBYMAXGAIN       FALSE  /**< should lookahead branching only be applied if the max gain in level 1 is not uniquely that of the best candidate? */
 
 #ifdef SCIP_DEBUG
 /* Adjusted debug message that also prints the current probing depth. */
@@ -398,7 +398,6 @@ SCIP_RETCODE candidateLoadWarmStartInfo(
       warmstartinfo = candidate->downwarmstartinfo;
    else
       warmstartinfo = candidate->upwarmstartinfo;
-
 
    /* As we solved the very same LP some time earlier and stored the state (the basis) and the norms, we can now set those in
     * the LP solver, such that the solution does not (in best case) need any further calculation.
@@ -2429,13 +2428,13 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the lb is now strictly greater than before */
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened (%d).\n",
-               SCIPvarGetName(var), domreds->lowerboundnproofs[i]);
             *domred = TRUE;
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
             nboundsadded++;
 #endif
 #ifdef SCIP_STATISTIC
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened (%d).\n",
+               SCIPvarGetName(var), domreds->lowerboundnproofs[i]);
             statistics->ndomredproofnodes += domreds->lowerboundnproofs[i];
 #endif
 
@@ -2480,13 +2479,13 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the ub is now strictly smaller than before */
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened (%d).\n",
-               SCIPvarGetName(var), domreds->upperboundnproofs[i]);
             *domred = TRUE;
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
             nboundsadded++;
 #endif
 #ifdef SCIP_STATISTIC
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened (%d).\n",
+               SCIPvarGetName(var), domreds->upperboundnproofs[i]);
             statistics->ndomredproofnodes += domreds->upperboundnproofs[i];
 #endif
 
@@ -2796,7 +2795,6 @@ SCIP_RETCODE executeBranching(
          downbranching ? "down" : "up", SCIPvarGetName(branchvar));
       SCIP_CALL( candidateLoadWarmStartInfo(scip, candidate, downbranching) );
    }
-
 
    /* apply domain propagation */
    if( config->propagate )
@@ -3312,7 +3310,6 @@ SCIP_RETCODE updateOldBranching(
    SCIP_Real             lpobjval            /**< base lp obj val */
    )
 {
-
    assert(scip != NULL);
    assert(persistent != NULL);
    assert(branchvar != NULL);
@@ -3627,7 +3624,6 @@ SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
 
    downscore = MAX(downscore, SCIPsumepsilon(scip)); /*lint !e666*/
    upscore = MAX(upscore, SCIPsumepsilon(scip)); /*lint !e666*/
-
 
    score += SCIPgetBranchScore(scip, branchvar, downscore, upscore)*nlowestlevelcutoffs;
 
@@ -4965,7 +4961,6 @@ SCIP_RETCODE selectVarRecursive(
       if( ndeepestnodes != NULL )
          *ndeepestnodes += downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes;
 
-
       if( !status->lperror && !status->limitreached )
       {
          SCIP_Real scoringlpobjval = useoldbranching ? oldlpobjval : lpobjval;
@@ -4990,7 +4985,6 @@ SCIP_RETCODE selectVarRecursive(
                (*ntotalgains)++;
             }
          }
-
 
          /* both child nodes are infeasible -> the current node is infeasible */
          if( SCIPallColsInLP(scip) && upbranchingresult->cutoff && downbranchingresult->cutoff )
@@ -5122,7 +5116,6 @@ SCIP_RETCODE selectVarRecursive(
                decision->updb = bestupbranchingresult->dualbound;
             }
          }
-
 
          /* the current candidate variable has a better score than the best candidate investigated so far */
          if( SCIPisRelGT(scip, score, bestscore) )
@@ -5592,7 +5585,6 @@ SCIP_RETCODE selectVarStart(
          if( candidatelist->ncandidates == 1 )
             statistics->nsingleafterfilter--;
 #endif
-
       }
       else if( status->cutoff )
       {
@@ -6000,7 +5992,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTIC
       branchruledata->statistics->noldcandidate++;
 #endif
-
    }
    else
    {

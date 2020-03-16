@@ -1097,7 +1097,6 @@ char* SCIPsnprintfProbingStats(
          int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
          ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
       }
-
    }
    else
    {
@@ -1105,7 +1104,6 @@ char* SCIPsnprintfProbingStats(
    }
 
    return strbuf;
-
 }
 
 /** gets the candidate score and preferred rounding direction for a candidate variable */

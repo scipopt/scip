@@ -1329,7 +1329,6 @@ SCIP_DECL_PRESOLINIT(presolInitTworowbnd)
 static
 SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 {  /*lint --e{715}*/
-
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
@@ -1650,7 +1649,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIPfreeBlockMemoryArray(scip, &hashlistpm, listsizepm);
    SCIPfreeBlockMemoryArray(scip, &hashlistmm, listsizemm);
    SCIPfreeBlockMemoryArray(scip, &hashlistpp, listsizepp);
-
 
    SCIPmatrixFree(scip, &matrix);
 

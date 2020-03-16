@@ -574,7 +574,7 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
       exprinterval.sup = 35;
       SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-      SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
@@ -718,7 +718,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
       SCIPintervalSet(&expr->activity, 35);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-      SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
