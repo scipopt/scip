@@ -2115,7 +2115,7 @@ void SCIPprobExternObjvalExact(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalex            /**< store external objective value */
+   SCIP_Rational*        objvalext           /**< store external objective value */
    )
 {
    SCIP_Rational* tmpval;
@@ -2132,14 +2132,14 @@ void SCIPprobExternObjvalExact(
    if( RatIsAbsInfinity(objval) )
    {
       RatSetReal(tmpval, (SCIP_Real) transprob->objsense);
-      RatMult(objvalex, tmpval, objval);
+      RatMult(objvalext, tmpval, objval);
    }
    else
    {
-      RatAddReal(objvalex, objval, transprob->objoffset);
-      RatMultReal(objvalex, objvalex, transprob->objscale);
-      RatMultReal(objvalex, objvalex, (SCIP_Real) transprob->objsense);
-      RatAddReal(objvalex, objvalex, origprob->objoffset);
+      RatAddReal(objvalext, objval, transprob->objoffset);
+      RatMultReal(objvalext, objvalext, transprob->objscale);
+      RatMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
+      RatAddReal(objvalext, objvalext, origprob->objoffset);
    }
 
    RatFreeBuffer(set->buffer, &tmpval);

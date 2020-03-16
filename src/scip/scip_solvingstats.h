@@ -1021,6 +1021,27 @@ SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets global exact dual bound
+ *
+ *  @return the exact global dual bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+void SCIPgetDualboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting obj value */
+   );
+
 /** gets global lower (dual) bound in transformed problem
  *
  *  @return the global lower (dual) bound in transformed problem
@@ -1038,6 +1059,26 @@ SCIP_Real SCIPgetDualbound(
 SCIP_EXPORT
 SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets global exact lower (dual) bound in transformed problem
+ *
+ *  @return the global exact lower (dual) bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+void SCIPgetLowerboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting bound */
    );
 
 /** gets dual bound of the root node for the original problem

@@ -1327,6 +1327,44 @@ SCIP_Real SCIPgetDualbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerbound(scip));
 }
 
+/** gets global exact dual bound
+ *
+ *  @return the exact global dual bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+void SCIPgetDualboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting obj value */
+   )
+{
+   SCIP_Rational* tmpval;
+   RatCreateBuffer(SCIPbuffer(scip), &tmpval);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* in case we are in presolving we use the stored dual bound if it exits */
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
+      RatSetReal(result, scip->transprob->dualbound);
+   else
+   {
+      /* all the lower bounds should be proved bounds, so SCIPgetLowerbound should be safe */
+      SCIPgetLowerboundExact(scip, tmpval);
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmpval, result);
+   }
+
+   RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+}
+
 /** gets global lower (dual) bound in transformed problem
  *
  *  @return the global lower (dual) bound in transformed problem
@@ -1371,6 +1409,51 @@ SCIP_Real SCIPgetLowerbound(
          return treelowerbound;
       else
          return scip->primal->upperbound;
+   }
+}
+
+/** gets global exact lower (dual) bound in transformed problem
+ *
+ *  @return the global exact lower (dual) bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPgetLowerboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting bound */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      RatSetString(result, "-inf");
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
+       * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
+       * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
+       */
+      return RatSetString(result, "-inf");
+   }
+   else
+   {
+      SCIP_Real treelowerbound;
+
+      /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
+       * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
+       * the global lower bound is given by the upper bound value
+       */
+      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+      RatSetReal(result, treelowerbound);
+      RatMIN(result, result, scip->primal->upperboundex);
    }
 }
 

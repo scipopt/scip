@@ -267,7 +267,7 @@ set(instances_MIPEX
     "instances/MIPEX/flugpl.zpl\;1201500"
     "instances/MIPEX/misc03.zpl\;3360"
     "instances/MIPEX/mod008.zpl\;307"
-    "instances/MIPEX/rgn.zpl\;82.1999974"
+    "instances/MIPEX/rgn.zpl\;2054999981/25000000"
     "instances/MIPEX/stein27.zpl\;18"
     "instances/MIPEX/stein45.zpl\;30"
     )

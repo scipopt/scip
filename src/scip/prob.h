@@ -477,7 +477,7 @@ void SCIPprobExternObjvalExact(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalex            /**< store external objective value */
+   SCIP_Rational*        objvalext           /**< store external objective value */
    );
 
 /** returns the internal value of the given external objective value */

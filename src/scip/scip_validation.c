@@ -224,6 +224,8 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    SCIP_Rational* dualviol;
    SCIP_Rational* pb;
    SCIP_Rational* db;
+   char rationalstring1[SCIP_MAXSTRLEN];
+   char rationalstring2[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(SCIPisExactSolve(scip));
@@ -278,18 +280,18 @@ SCIP_RETCODE SCIPvalidateSolveExact(
        * if the
        */
       SCIPgetPrimalboundExact(scip, pb);
-      // SCIPgetDualboundExact(scip, db);
+      SCIPgetDualboundExact(scip, db);
 
       /* compute the relative violation between the primal bound and dual reference value, and vice versa */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
       {
          RatRelDiff(primviol, dualreference, pb);
-         //RatRelDiff(dualviol, db, primalreference);
+         RatRelDiff(dualviol, db, primalreference);
       }
       else
       {
             RatRelDiff(primviol, pb, dualreference);
-            //RatRelDiff(dualviol, primalreference, db);
+            RatRelDiff(dualviol, primalreference, db);
       }
       localprimalboundcheck = RatIsZero(primviol);
       localdualboundcheck = RatIsZero(dualviol);
@@ -308,8 +310,12 @@ SCIP_RETCODE SCIPvalidateSolveExact(
          SCIPinfoMessage(scip, NULL, "Success");
       SCIPinfoMessage(scip, NULL, "\n");
       SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
-      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", RatApproxReal(primviol), RatApproxReal(dualreference));
-      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", RatApproxReal(dualviol), RatApproxReal(primalreference));
+      RatToString(primviol, rationalstring1, SCIP_MAXSTRLEN);
+      RatToString(dualreference, rationalstring2, SCIP_MAXSTRLEN);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %s (reference: %s)\n", "primal violation", rationalstring1, rationalstring2);
+      RatToString(dualviol, rationalstring1, SCIP_MAXSTRLEN);
+      RatToString(primalreference, rationalstring2, SCIP_MAXSTRLEN);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %s (reference: %s)\n", "dual violation", rationalstring1, rationalstring2);
    }
 
    if( feasible != NULL )
