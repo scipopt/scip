@@ -265,6 +265,7 @@ struct SCIP_ConshdlrData
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
    char                     branchviolsplit; /**< method used to split violation in expression onto variables */
    SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
+   char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -6387,21 +6388,75 @@ void scoreBranchingCandidates(
             SCIP_Real brpoint;
             SCIP_Real pscostdown;
             SCIP_Real pscostup;
+            char strategy;
 
-            /* - branch_relpscost deems pscosts as reliable, if the pseudo-count is at least between 1 and 4, param branchpscostreliable decides here
-             *   alternatively, it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
-             * - the pscostdown/up is from branch_pscost, assuming strategy == 's' (the default) (TODO: handle other strategies (d,l)
-             * - TODO use dual-score if no reliable pseudo-cost (?)
+            /* decide how to compute pseudo-cost scores
+             * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
+             * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
              */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               strategy = conshdlrdata->branchpscostupdatestrategy;
+            else
+               strategy = 'l';
+
             brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
+
+            /* branch_relpscost deems pscosts as reliable, if the pseudo-count is at least something between 1 and 4
+             * or it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
+             * For here, I use a simple #counts >= branchpscostreliable.
+             * TODO use SCIPgetVarPseudocostCount() instead?
+             */
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
-               pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
+            {
+               switch( strategy )
+               {
+                  case 's' :
+                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
+                     break;
+                  case 'd' :
+                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
+                     break;
+                  case 'l' :
+                     if( SCIPisInfinity(scip, SCIPgetSolVal(scip, NULL, var)) )
+                        pscostdown = SCIP_INVALID;
+                     else if( SCIPgetSolVal(scip, NULL, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                     else
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, NULL, var) - SCIPadjustedVarUb(scip, var, brpoint)));
+                     break;
+                  default :
+                     SCIPerrorMessage("branching strategy %c unknown\n", strategy);
+                     SCIPABORT();
+               }
+            }
             else
                pscostdown = SCIP_INVALID;
+
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
-               pscostup   = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
+            {
+               switch( strategy )
+               {
+                  case 's' :
+                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
+                     break;
+                  case 'd' :
+                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
+                     break;
+                  case 'l' :
+                     if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, NULL, var)) )
+                        pscostup = SCIP_INVALID;
+                     else if( SCIPgetSolVal(scip, NULL, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                     else
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, NULL, var) );
+                     break;
+                  default :
+                     SCIPerrorMessage("branching strategy %c unknown\n", strategy);
+                     SCIPABORT();
+               }
+            }
             else
-               pscostup   = SCIP_INVALID;
+               pscostup = SCIP_INVALID;
 
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
@@ -9653,6 +9708,17 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       if( nlhdlr->init != NULL )
       {
          SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
+      }
+   }
+
+   if( conshdlrdata->branchpscostweight != 0.0 )
+   {
+      SCIP_CALL( SCIPgetCharParam(scip, "branching/lpgainnormalize", &(conshdlrdata->branchpscostupdatestrategy)) );
+      if( strchr("lds", conshdlrdata->branchpscostupdatestrategy) == NULL )
+      {
+         SCIPerrorMessage("branching strategy %c unknown\n", conshdlrdata->branchpscostupdatestrategy);
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
       }
    }
 
