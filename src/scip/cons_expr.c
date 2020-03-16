@@ -6330,13 +6330,13 @@ void scoreBranchingCandidates(
 
    for( c = 0; c < ncands; ++c )
    {
-      if( conshdlrdata->branchviolweight != 0.0 )
+      if( conshdlrdata->branchviolweight > 0.0 )
       {
          /* cands[c].auxviol was set in collectBranchingCandidates, so only update maxscore here */
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchdomainweight != 0.0 )
+      if( conshdlrdata->branchdomainweight > 0.0 )
       {
          SCIP_Real domainwidth;
          SCIP_VAR* var;
@@ -6363,7 +6363,7 @@ void scoreBranchingCandidates(
       else
          cands[c].domain = 0.0;
 
-      if( conshdlrdata->branchdualweight != 0.0 )
+      if( conshdlrdata->branchdualweight > 0.0 )
       {
          SCIP_VAR* var;
 
@@ -6374,7 +6374,7 @@ void scoreBranchingCandidates(
          maxscore.dual = MAX(cands[c].dual, maxscore.dual);
       }
 
-      if( conshdlrdata->branchpscostweight != 0.0 )
+      if( conshdlrdata->branchpscostweight > 0.0 )
       {
          SCIP_VAR* var;
 
@@ -6635,8 +6635,6 @@ SCIP_RETCODE branching(
    if( ncands > 1 )
    {
       /* if more than one candidate, then compute scores and select */
-      SCIP_Real minweightedscore;
-      SCIP_Real maxweightedscore;
       int* perm;
       int c;
 
@@ -6647,24 +6645,20 @@ SCIP_RETCODE branching(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
       SCIPsortDown(perm, branchcandCompare, (void*)cands, ncands);
 
-      minweightedscore = cands[perm[ncands-1]].weighted;
-      maxweightedscore = cands[perm[0]].weighted;
-
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[0]].expr)), maxweightedscore,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands-1]].expr)), minweightedscore); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[0]].expr)), cands[perm[0]].weighted,
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands-1]].expr)), cands[perm[ncands-1]].weighted); )
 
       /* find how many candidates have a weighted score close to the maximum
        * (TODO could do a binary search as array is sorted by score)
        * TODO should we choose random from all candidates, using the score's as probability distribution?
        */
-      minweightedscore = MIN(0.0, minweightedscore);
       for( c = 1; c < ncands; ++c )
       {
          assert(cands[perm[c-1]].expr != cands[perm[c]].expr);  /* we should have no duplicates */
 
          /* stop if score is below threshold */
-         if( cands[perm[c]].weighted - minweightedscore < conshdlrdata->branchhighscorefactor * (maxweightedscore - minweightedscore) )
+         if( cands[perm[c]].weighted < conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted )
          {
             ncands = c;
             break;
@@ -6927,7 +6921,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       {
          SCIP_ROW* row;
 
-         if( conshdlrdata->branchdualweight != 0.0 )
+         if( conshdlrdata->branchdualweight > 0.0 )
          {
             /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
              * skip if gap is zero
@@ -9711,7 +9705,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       }
    }
 
-   if( conshdlrdata->branchpscostweight != 0.0 )
+   if( conshdlrdata->branchpscostweight > 0.0 )
    {
       SCIP_CALL( SCIPgetCharParam(scip, "branching/lpgainnormalize", &(conshdlrdata->branchpscostupdatestrategy)) );
       if( strchr("lds", conshdlrdata->branchpscostupdatestrategy) == NULL )
@@ -14623,11 +14617,11 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/domainweight",
          "weight by how much to consider the domain width in branching score",
-         &conshdlrdata->branchdomainweight, TRUE, 0.0, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchdomainweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/vartypeweight",
          "weight by how much to consider variable type (continue: 0, binary: 1, integer: 0.1, impl-integer: 0.01) in branching score",
-         &conshdlrdata->branchvartypeweight, TRUE, 0.0, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchvartypeweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
