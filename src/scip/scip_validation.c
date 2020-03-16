@@ -41,8 +41,10 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solex.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
+#include "scip/scip_exact.h"
 
 /** validate the result of the solve
  *
@@ -188,3 +190,140 @@ SCIP_RETCODE SCIPvalidateSolve(
 
    return SCIP_OKAY;
 }
+
+/** validate the result of an exact solve
+ *
+ *  the validation includes
+ *
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
+ *
+ *  - checking if the objective bounds computed by SCIP agree with external primal and dual reference bounds.
+ *
+ *  All external reference bounds the original problem space and the original objective sense.
+ *
+ *  For infeasible problems, +/-inf should be passed as reference bounds depending on the objective sense
+ *  of the original problem.
+ */
+SCIP_RETCODE SCIPvalidateSolveExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Rational*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
+   SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
+                                               *  or NULL */
+   SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
+                                               *  value, or NULL */
+   SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
+                                               *  value, or NULL */
+   )
+{
+   SCIP_Bool localfeasible;
+   SCIP_Bool localprimalboundcheck;
+   SCIP_Bool localdualboundcheck;
+   SCIP_Rational* primviol;
+   SCIP_Rational* dualviol;
+   SCIP_Rational* pb;
+   SCIP_Rational* db;
+
+   assert(scip != NULL);
+   assert(SCIPisExactSolve(scip));
+
+   RatCreate(&primviol);
+   RatCreate(&dualviol);
+   RatCreate(&pb);
+   RatCreate(&db);
+
+   /* if no problem exists, there is no need for validation */
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+   {
+      if( feasible != NULL )
+         *feasible = TRUE;
+      if( primalboundcheck != NULL )
+         *primalboundcheck = TRUE;
+      if( dualboundcheck != NULL )
+         *dualboundcheck = TRUE;
+
+      return SCIP_OKAY;
+   }
+
+   localfeasible = TRUE;
+   localdualboundcheck = TRUE;
+
+   /* check the best solution for feasibility in the original problem */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+      assert(SCIPisExactSol(scip, bestsol));
+
+      assert(bestsol != NULL);
+
+      SCIP_CALL( SCIPcheckSolexOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
+   }
+   else
+   {
+      localfeasible = TRUE;
+   }
+
+   RatSetInt(primviol, 0, 1);
+   RatSetInt(dualviol, 0, 1);
+
+   /* check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
+   /* solution for an infeasible problem */
+   if( SCIPgetNSols(scip) > 0 && ((SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && RatIsInfinity(dualreference))
+            || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && RatIsNegInfinity(dualreference))) )
+      localprimalboundcheck = FALSE;
+   else
+   {
+      /* check if reference primal bound is not better than the proven dual bound and, if SCIP claims to be optimal,
+       * if the
+       */
+      SCIPgetPrimalboundExact(scip, pb);
+      // SCIPgetDualboundExact(scip, db);
+
+      /* compute the relative violation between the primal bound and dual reference value, and vice versa */
+      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+      {
+         RatRelDiff(primviol, dualreference, pb);
+         //RatRelDiff(dualviol, db, primalreference);
+      }
+      else
+      {
+            RatRelDiff(primviol, pb, dualreference);
+            //RatRelDiff(dualviol, primalreference, db);
+      }
+      localprimalboundcheck = RatIsZero(primviol);
+      localdualboundcheck = RatIsZero(dualviol);
+   }
+
+   if( !quiet )
+   {
+      SCIPinfoMessage(scip, NULL, "Validation         : ");
+      if( ! localfeasible )
+         SCIPinfoMessage(scip, NULL, "Fail (infeasible)");
+      else if( ! localprimalboundcheck )
+         SCIPinfoMessage(scip, NULL, "Fail (primal bound)");
+      else if( ! localdualboundcheck )
+         SCIPinfoMessage(scip, NULL, "Fail (dual bound)");
+      else
+         SCIPinfoMessage(scip, NULL, "Success");
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", RatApproxReal(primviol), RatApproxReal(dualreference));
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", RatApproxReal(dualviol), RatApproxReal(primalreference));
+   }
+
+   if( feasible != NULL )
+      *feasible = localfeasible;
+   if( primalboundcheck != NULL )
+      *primalboundcheck = localprimalboundcheck;
+   if( dualboundcheck != NULL )
+      *dualboundcheck = localdualboundcheck;
+
+   RatFree(&primviol);
+   RatFree(&dualviol);
+   RatFree(&pb);
+   RatFree(&db);
+
+   return SCIP_OKAY;
+}
+

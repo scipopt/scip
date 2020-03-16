@@ -2109,6 +2109,42 @@ SCIP_Real SCIPprobExternObjval(
       return (SCIP_Real)transprob->objsense * transprob->objscale * (objval + transprob->objoffset) + origprob->objoffset;
 }
 
+/** returns the external value of the given internal objective value */
+void SCIPprobExternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        objval,             /**< internal objective value */
+   SCIP_Rational*        objvalex            /**< store external objective value */
+   )
+{
+   SCIP_Rational* tmpval;
+
+   assert(set != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(transprob->transformed);
+   assert(transprob->objscale > 0.0);
+   assert(set->misc_exactsolve);
+
+   RatCreateBuffer(set->buffer, &tmpval);
+
+   if( RatIsAbsInfinity(objval) )
+   {
+      RatSetReal(tmpval, (SCIP_Real) transprob->objsense);
+      RatMult(objvalex, tmpval, objval);
+   }
+   else
+   {
+      RatAddReal(objvalex, objval, transprob->objoffset);
+      RatMultReal(objvalex, objvalex, transprob->objscale);
+      RatMultReal(objvalex, objvalex, (SCIP_Real) transprob->objsense);
+      RatAddReal(objvalex, objvalex, origprob->objoffset);
+   }
+
+   RatFreeBuffer(set->buffer, &tmpval);
+}
+
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */

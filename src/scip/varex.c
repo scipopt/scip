@@ -647,8 +647,8 @@ SCIP_RETCODE SCIPvarNegateExactData(
    SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.ub) );
    SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.lb) );
 
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.lb) );
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.ub) );
+   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->locdom.lb) );
+   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->locdom.ub) );
 
    SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->obj) );
 
@@ -697,6 +697,9 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.lb, lb) );
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.ub, ub) );
 
+   SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
+   SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
+
    var->exactdata->excol = NULL;
    var->exactdata->exvarstatus = var->varstatus;
 
@@ -732,6 +735,8 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
+   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
+   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    targetvar->exactdata->excol = NULL;
    targetvar->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
@@ -764,6 +769,8 @@ SCIP_RETCODE SCIPvarFreeExactData(
          RatFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
          RatFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
          RatFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
+         RatFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
+         RatFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
          RatFreeBlock(blkmem, &(var)->exactdata->obj );
 
          BMSfreeBlockMemory(blkmem, &(var)->exactdata);

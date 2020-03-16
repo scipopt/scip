@@ -471,6 +471,15 @@ SCIP_Real SCIPprobExternObjval(
    SCIP_Real             objval              /**< internal objective value */
    );
 
+/** computes the exact external value of the given internal objective value */
+void SCIPprobExternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        objval,             /**< internal objective value */
+   SCIP_Rational*        objvalex            /**< store external objective value */
+   );
+
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */

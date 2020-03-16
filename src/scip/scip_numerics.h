@@ -857,6 +857,14 @@ SCIP_Bool SCIPparseReal(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
+/** parse a rational value */
+SCIP_Bool SCIPparseRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

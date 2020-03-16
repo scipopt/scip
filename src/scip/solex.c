@@ -1379,7 +1379,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
 }
 #endif
 
-/** checks primal CIP solution for feasibility
+/** checks primal CIP solution for exact feasibility
  *
  *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
  *        differently. There might be some variables which do not have an original counter part (e.g. in

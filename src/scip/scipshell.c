@@ -171,6 +171,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool onlyversion;
    SCIP_Real primalreference = SCIP_UNKNOWN;
    SCIP_Real dualreference = SCIP_UNKNOWN;
+   SCIP_Rational* primalreferencerational;
+   SCIP_Rational* dualreferencerational;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;
@@ -387,21 +389,50 @@ SCIP_RETCODE SCIPprocessShellArguments(
          if( primalrefstring != NULL && dualrefstring != NULL )
          {
             char *endptr;
-            if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
-                     ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
+            if( !SCIPisExactSolve(scip) )
             {
-               printf("error parsing primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
-               return SCIP_ERROR;
+               if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
+                        ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
+               {
+                  printf("error parsing primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
+                  return SCIP_ERROR;
+               }
+               else
+                  validatesolve = TRUE;
             }
             else
-               validatesolve = TRUE;
+            {
+               SCIP_Bool error;
+
+               RatCreateBlock(SCIPblkmem(scip), &primalreferencerational);
+               RatCreateBlock(SCIPblkmem(scip), &dualreferencerational);
+
+               error = !SCIPparseRational(scip, primalrefstring, primalreferencerational, &endptr) ||
+                       !SCIPparseRational(scip, primalrefstring, dualreferencerational, &endptr);
+               if( error )
+               {
+                  printf("error parsing exact primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
+                  return SCIP_ERROR;
+               }
+               else
+                  validatesolve = TRUE;
+            }
          }
          SCIP_CALL( fromCommandLine(scip, probname) );
 
          /* validate the solve */
          if( validatesolve )
          {
-            SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+            if( !SCIPisExactSolve(scip) )
+            {
+               SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvalidateSolveExact(scip, primalreferencerational, dualreferencerational, FALSE, NULL, NULL, NULL) );
+               RatFreeBlock(SCIPblkmem(scip), &dualreferencerational);
+               RatFreeBlock(SCIPblkmem(scip), &primalreferencerational);
+            }
          }
       }
       else

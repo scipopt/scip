@@ -131,6 +131,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/pub_varex.h"
 
 #include "scip/struct_sol.h"
 
@@ -143,6 +144,156 @@
 #ifndef NDEBUG
 #include "scip/struct_scip.h"
 #endif
+
+/** checks solution for exact feasibility in original problem without adding it to the solution store; to improve the
+ *  performance we use the following order when checking for violations:
+ *
+ *  1. variable bounds
+ *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
+ *  3. original constraints
+ *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
+ */
+static
+SCIP_RETCODE checkSolexOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
+   )
+{
+   SCIP_Rational* solval;
+   SCIP_Rational* lb;
+   SCIP_Rational* ub;
+   SCIP_RESULT result;
+   int v;
+   int c;
+   int h;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+   assert(SCIPisExactSol(scip, sol));
+
+   SCIP_CALL( SCIPcheckStage(scip, "checkSolexOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
+
+   if( !printreason )
+      completely = FALSE;
+
+   RatCreateBuffer(SCIPbuffer(scip), &solval);
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < scip->origprob->nvars; ++v )
+      {
+         SCIP_VAR* var;
+
+         var = scip->origprob->vars[v];
+         SCIPsolexGetVal(solval, sol, scip->set, scip->stat, var);
+
+         lb = SCIPvarGetLbOriginalExact(var);
+         ub = SCIPvarGetUbOriginalExact(var);
+
+         if( RatIsLT(solval, lb) || RatIsGT(solval, ub) )
+         {
+            *feasible = FALSE;
+
+            if( printreason )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), RatApproxReal(lb), RatApproxReal(ub), RatApproxReal(solval));
+            }
+
+            if( !completely )
+            {
+               RatFreeBuffer(SCIPbuffer(scip), &solval);
+               return SCIP_OKAY;
+            }
+         }
+      }
+   }
+
+   RatFreeBuffer(SCIPbuffer(scip), &solval);
+
+   /* call constraint handlers with positive or zero check priority that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
+      {
+         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+         {
+            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
+
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
+         }
+      }
+      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
+      else
+         break;
+   }
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
+               checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with negative check priority that don't need constraints;
+    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
+   for( ; h < scip->set->nconshdlrs; ++h )
+   {
+      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** returns value of variable in primal CIP solution, or in current LP/pseudo solution
  *
@@ -319,4 +470,107 @@ SCIP_Bool SCIPisExactSol(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPsolIsExactSol(sol);
+}
+
+/** checks solution for exact feasibility without adding it to the solution store
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcheckSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* return immediately if the solution is of type partial */
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
+   checklprows = checklprows || scip->set->misc_exactsolve;
+
+   if( !printreason )
+      completely = FALSE;
+
+   if( SCIPsolIsOriginal(sol) )
+   {
+      /* SCIPsolCheck() can only be called on transformed solutions */
+      SCIP_CALL( checkSolexOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsolexCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob,
+            printreason, completely, checkbounds, checkintegrality, checklprows, feasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks exact solution for feasibility in original problem without adding it to the solution store;
+ *  this method is used to double check a solution in order to validate the presolving process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcheckSolexOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             completely          /**< Should all violations be checked if printreason is true? */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSolexOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* return immediately if the solution is of type partial */
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !printreason )
+      completely = FALSE;
+
+   /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
+   SCIP_CALL( checkSolexOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIP_OKAY;
 }

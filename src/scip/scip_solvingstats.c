@@ -1499,6 +1499,31 @@ SCIP_Real SCIPgetPrimalbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetUpperbound(scip));
 }
 
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+void SCIPgetPrimalboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting obj value */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundex, result);
+}
+
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
  *
  *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)

@@ -142,6 +142,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nbestsolsfound = 0;
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
+   (*primal)->upperboundex = NULL;
    (*primal)->cutoffbound = SCIP_INVALID;
    (*primal)->updateviolations = TRUE;
    (*primal)->cutoffboundex = NULL;
@@ -188,7 +189,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    if( (*primal)->cutoffboundex != NULL )
+   {
+      RatFreeBlock(blkmem, &(*primal)->upperboundex);
       RatFreeBlock(blkmem, &(*primal)->cutoffboundex);
+   }
 
    BMSfreeMemory(primal);
 
@@ -1988,7 +1992,9 @@ SCIP_RETCODE primalAddSolex(
    SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
 
    SCIP_CALL( SCIPsolexOverwriteFPSol(sol, set, stat, origprob, transprob, tree) );
-   RatSet(primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+
+   RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+   RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
