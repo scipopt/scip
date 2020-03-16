@@ -4,33 +4,74 @@
  * during the cmake configuration of your project. If you need to make changes
  * edit the original file NOT THIS FILE.
  * --------------------------------------------------------------------------*/
-#ifndef _PRESOLVE_MISC_MULTIPRECISION_HPP_
-#define _PRESOLVE_MISC_MULTIPRECISION_HPP_
+#ifndef __SCIP_MULTIPRECISION_HPP_
+#define __SCIP_MULTIPRECISION_HPP_
 
-#include <boost/multiprecision/number.hpp>
 #include <numeric>
-#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <vector>
+#include <string>
 
-#if @SCIP_HAVE_GMP@
-#include <boost/multiprecision/gmp.hpp>
-using namespace boost::multiprecision;
-using Rational = boost::multiprecision::
-number<gmp_rational, et_on>;
-using Integer = mpz_int;
-using Float100 = mpf_float_100;
-using Float500 = mpf_float_500;
-using Float1000 = mpf_float_1000;
+#ifdef SCIP_WITH_EXACTSOLVE
+   #include <boost/multiprecision/number.hpp>
+   #include <boost/numeric/ublas/vector_sparse.hpp>
+
+   #if @SCIP_HAVE_GMP@
+   #include <boost/multiprecision/gmp.hpp>
+   using namespace boost::multiprecision;
+   using Rational = boost::multiprecision::number<gmp_rational, et_on>;
+   using Integer = mpz_int;
+   #else
+   #include <boost/multiprecision/cpp_int.hpp>
+   using namespace boost::multiprecision;
+   using Rational = cpp_rational;
+   using Integer = cpp_int;
+   #endif
+   using sparsevec = std::vector<SCIP_Rational>;
 #else
-#include <boost/multiprecision/cpp_int.hpp>
-using namespace boost::multiprecision;
-using Rational = cpp_rational;
-using Integer = cpp_int;
-using Float100 = number<boost::multiprecision::cpp_bin_float<100>>;
-using Float500 = number<boost::multiprecision::cpp_bin_float<500>>;
-using Float1000 = number<boost::multiprecision::cpp_bin_float<1000>>;
+   class Rational{
+      public:
+         double val;
+         Rational(){};
+         /// copy constructor
+         Rational(const Rational& r){};
+         Rational(const char* s){val = atof(s);}
+         inline int sign(){ return this->val > 0; }
+         inline bool is_zero(){ return this->val == 0; }
+         inline std::string str(){ return 0; }
+         Rational& operator=(const int& i){val = i;}
+         Rational& operator+(const Rational& r){};
+         Rational& operator+(const double& r){};
+         Rational& operator-(const Rational& r){};
+         Rational& operator-(const double& r){};
+         Rational& operator-(){};
+         Rational& operator*(const Rational& r){};
+         Rational& operator*(const double& r){};
+         Rational& operator+=(const Rational& r){};
+         Rational& operator+=(const double& r){};
+         Rational& operator-=(const Rational& r){};
+         Rational& operator-=(const double& r){};
+         Rational& operator/(const Rational& r){};
+         Rational& operator/(const double& r){};
+         friend std::ostream& operator<<(std::ostream& os, const Rational& q){};
+         friend double operator/(const double d, const Rational& r){return 0;};
+         friend bool operator<(const Rational& r, const double& d){return true;};
+         friend bool operator<(const Rational& r, const Rational& d){return true;};
+         friend bool operator>(const Rational& r, const double& d){return true;};
+         friend bool operator>(const Rational& r, const Rational& d){return true;};
+         friend bool operator<=(const Rational& r, const double& d){return true;};
+         friend bool operator<=(const Rational& r, const Rational& d){return true;};
+         friend bool operator>=(const Rational& r, const double& d){return true;};
+         friend bool operator>=(const Rational& r, const Rational& d){return true;};
+         friend bool operator==(const Rational& r, const double& d){return true;};
+         friend bool operator==(const Rational& r, const Rational& d){return true;};
+   };
+   using Integer = int;
+   using sparsevec = std::vector<SCIP_Rational>;
+   Rational& abs(Rational& r){return r;};
+   Rational& max(Rational& r1, Rational& r2){return r1;};
+   Rational& min(Rational& r1, Rational& r2){return r1;};
+   Rational& denominator(Rational& r){return r;};
+   Rational& numerator(Rational& r){return r;};
 #endif
-
-using sparsevec = std::vector<SCIP_Rational>; 
-//using densevec = boost::numeric::ublas::vector<Rational>;
 
 #endif

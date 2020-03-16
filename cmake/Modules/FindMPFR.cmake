@@ -21,7 +21,7 @@ if(STATIC_MPFR)
         PATH_SUFFIXES src/.libs)
 else()
     find_library(MPFR_LIBRARY
-        NAMES MPFR
+        NAMES libmpfr.so MPFR
         HINTS ${MPFR_DIR}
         PATH_SUFFIXES src/.libs)
 endif()

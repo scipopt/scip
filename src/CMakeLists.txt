@@ -1034,7 +1034,7 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
     add_sanitizers(scip)
 endif()
 
-target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${MPFR_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PRESOLVELIB_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)

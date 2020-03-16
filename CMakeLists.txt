@@ -74,6 +74,7 @@ SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 option(DEBUG_ADAPTOR "should rationals be used with a debug adaptor?" OFF)
+option(EXACTSOLVE "compile with support for exact rational solve (requires Boost and GMP to work)" ON)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -200,9 +201,19 @@ set(WITH_SCIPDEF on)
 # soplex and Boost is required
 find_package(SOPLEX REQUIRED CONFIG)
 set(lpiex lpi/lpiex_spx.cpp)
+
 #Multiprecision
-find_package(Boost 1.70.0 REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
+if(EXACTSOLVE)
+    message(STATUS "Building SCIP with support for exact solving mode.")
+    find_package(Boost 1.65.0)
+    add_definitions(-DSCIP_WITH_EXACTSOLVE)
+    if(Boost_FOUND)
+        include_directories(${Boost_INCLUDE_DIRS})
+    else()
+        message(FATAL_ERROR "Boost is needed to compile with exact solving support.\
+        Either install Boost or set -DEXACTSOLVE=off")
+    endif()
+endif()
 #if(NOT SOPLEX_GMP)
 #    message(WARNING "SoPlex with GMP is necessary for exact solving mode but Soplex_GMP is not set.
 #        Make sure to rebuild SoPlex with GMP enabled.")
@@ -261,7 +272,7 @@ endif()
 # MPFR
 find_package(MPFR)
 if(MPFR_FOUND)
-    set(SCIP_WITH_MPFR on)
+    add_definitions(-DSCIP_WITH_MPFR)
     include_directories(${MPFR_INCLUDE_DIRS})
 else()
     set(MPFR_LIBRARIES "")
