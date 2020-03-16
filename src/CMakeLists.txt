@@ -953,7 +953,12 @@ add_library(liblpi EXCLUDE_FROM_ALL
 setLibProperties(liblpi "lpi")
 
 add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
-setLibProperties(libscip "scip")
+if(MSVC)
+   # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
+   setLibProperties(libscip "libscip")
+else()
+   setLibProperties(libscip "scip")
+endif()
 
 target_link_libraries(libscip PRIVATE
     ${ZLIB_LIBRARIES}
