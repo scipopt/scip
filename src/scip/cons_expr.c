@@ -264,6 +264,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
    char                     branchviolsplit; /**< method used to split violation in expression onto variables */
+   SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -6387,17 +6388,17 @@ void scoreBranchingCandidates(
             SCIP_Real pscostdown;
             SCIP_Real pscostup;
 
-            /* - branch_relpscost deems pscosts as reliable, if the pseudo-count is at least between 1 and 4; I use 2 for now
+            /* - branch_relpscost deems pscosts as reliable, if the pseudo-count is at least between 1 and 4, param branchpscostreliable decides here
              *   alternatively, it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
              * - the pscostdown/up is from branch_pscost, assuming strategy == 's' (the default) (TODO: handle other strategies (d,l)
              * - TODO use dual-score if no reliable pseudo-cost (?)
              */
             brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
-            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= 2.0 )
+            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
                pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
             else
                pscostdown = SCIP_INVALID;
-            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= 2.0 )
+            if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
                pscostup   = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
             else
                pscostup   = SCIP_INVALID;
@@ -14569,6 +14570,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
          "method used to split violation in expression onto variables: 'e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
          &conshdlrdata->branchviolsplit, TRUE, 'm', "emdl", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
+         "minimum pseudo-cost update count required to consider pseudo-costs reliable",
+         &conshdlrdata->branchpscostreliable, TRUE, 2.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
