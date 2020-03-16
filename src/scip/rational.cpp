@@ -32,12 +32,16 @@
 #include <time.h>
 #include <stdlib.h>
 #include <numeric>
-#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <string.h>
+#include <ostream>
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #include <boost/multiprecision/gmp.hpp>
+#endif
 #include <boost/multiprecision/number.hpp>
+#else
 #endif
 
 extern "C"{
@@ -70,30 +74,47 @@ enum SCIP_fpexact
 /*
  * Creation methods
  */
-
+#ifdef SCIP_WITH_EXACTSOLVE
 static
-long Rnumerator(
+SCIP_Longint Rnumerator(
     SCIP_Rational*        rational
    )
 {
    long result;
 
    result = (boost::multiprecision::numerator(rational->val)).convert_to<long>();
-   
+
    return result;
 }
 
 static
-long Rdenominator(
+SCIP_Longint Rdenominator(
     SCIP_Rational*        rational
    )
 {
    long result;
 
     result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
-   
+
    return result;
 }
+#else
+static
+SCIP_Longint Rnumerator(
+    SCIP_Rational*        rational
+   )
+{
+   return rational->val.val;
+}
+
+static
+SCIP_Longint Rdenominator(
+    SCIP_Rational*        rational
+   )
+{
+   return 1.0;
+}
+#endif
 
 /** allocate and create a rational from nominator and denominator */
 SCIP_RETCODE RatCreate(
@@ -164,6 +185,23 @@ SCIP_RETCODE RatCreateString(
       (*rational)->isinf = FALSE;
    }
    (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
+   return SCIP_OKAY;
+}
+
+/** create an array of rationals */
+SCIP_RETCODE RatCreateArray(
+   SCIP_Rational***      rational,           /**< pointer to the array to create */
+   int                   size                /** the size of the array */
+   )
+{
+   BMSallocMemoryArray(rational, size);
+
+   for( int i = 0; i < size; ++i )
+   {
+      SCIP_CALL( RatCreate(&(*rational)[i]) );
+      (*rational)[i]->fpexact = SCIP_FPEXACT_TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -239,7 +277,7 @@ SCIP_RETCODE RatCopy(
    return SCIP_OKAY;
 }
 
-
+#ifdef SCIP_WITH_EXACTSOLVE
 /** cretae a rational from an mpq_t */
 #ifdef SCIP_WITH_GMP
 SCIP_RETCODE RatCreateGMP(
@@ -267,13 +305,11 @@ SCIP_RETCODE RatCreateGMP(
    if( rational->isinf )
    {
       /** @todo exip: get proper inf value in here */
-      RatSetReal(rational, 1e20 * rational->val.sign());
+      RatSetReal(rational, 1e100 * rational->val.sign());
+      rational->isinf = TRUE;
    }
-#ifdef SCIP_WITH_DEBUG_ADAPTOR
-   return &(rational->val.backend().value().data());
-#else
+
    return &(rational->val.backend().data());
-#endif
 }
 
 /** set value of a rational from gmp data */
@@ -329,39 +365,75 @@ void RatClearGMPArray(
    }
 }
 #endif
+#else
+   /** get the underlying mpq_t* */
+ mpq_t* RatGetGMP(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   return 0;
+}
+#endif
+
+/* transform rational into canonical form */
+/** @todo exip: this does not work with cpp_rational currently */
+void RatCanonicalize(
+   SCIP_Rational*        rational            /**< rational to put in canonical form */
+   )
+{
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+   mpq_canonicalize(rational->val.backend().data());
+#endif
+}
+
+/** free an array of rationals */
+void RatFreeArray(
+   SCIP_Rational***      ratarray,           /**< pointer to the array */
+   int                   size                /**< size of the array */
+   )
+{
+   assert(ratarray != NULL);
+
+   for( int i = 0; i < size; ++i )
+   {
+      RatFree(&((*ratarray)[i]));
+   }
+
+   BMSfreeMemoryArrayNull(ratarray);
+}
 
 /** free an array of rationals */
 void RatFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      ratbufarray,           /**< pointer to the array */
-   int                   size                /**< size of the array */
-   )
-{
-   assert(ratbufarray != NULL);
-
-   for( int i = 0; i < size; ++i )
-   {
-      RatFreeBlock(mem, &((*ratbufarray)[i]));
-   }
-
-   BMSfreeBlockMemoryArrayNull(mem, ratbufarray, size);
-}
-
-/** free an array of rationals */
-void RatFreeBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational***      ratblockarray,           /**< pointer to the array */
+   SCIP_Rational***      ratblockarray,      /**< pointer to the array */
    int                   size                /**< size of the array */
    )
 {
    assert(ratblockarray != NULL);
 
-   for( int i = size - 1; i >= 0; --i )
+   for( int i = 0; i < size; ++i )
    {
-      RatFreeBuffer(mem, &((*ratblockarray)[i]));
+      RatFreeBlock(mem, &((*ratblockarray)[i]));
    }
 
-   BMSfreeBufferMemoryArrayNull(mem, ratblockarray);
+   BMSfreeBlockMemoryArrayNull(mem, ratblockarray, size);
+}
+
+/** free an array of rationals */
+void RatFreeBufferArray(
+   BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational***      ratbufarray,        /**< pointer to the array */
+   int                   size                /**< size of the array */
+   )
+{
+   assert(ratbufarray != NULL);
+
+   for( int i = size - 1; i >= 0; --i )
+   {
+      RatFreeBuffer(mem, &((*ratbufarray)[i]));
+   }
+
+   BMSfreeBufferMemoryArrayNull(mem, ratbufarray);
 }
 
 /** delete a rational and free the allocated memory */
@@ -415,15 +487,22 @@ void RatSet(
 /** set a rational to a nom/denom value */
 void RatSetInt(
    SCIP_Rational*        res,                /**< the result */
-   int                   nom,                /**< the nominator */
-   int                   denom               /**< the denominator */
+   SCIP_Longint          nom,                /**< the nominator */
+   SCIP_Longint          denom               /**< the denominator */
    )
 {
    char buf[SCIP_MAXSTRLEN];
+
    assert(res != NULL);
    assert(denom != 0);
 
-   SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%d/%d", nom, denom);
+   if( denom < 0 )
+   {
+      nom *= -1;
+      denom *= -1;
+   }
+
+   SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%lld/%lld", nom, denom);
    res->val = Rational(buf);
    res->isinf = FALSE;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -450,8 +529,33 @@ void RatSetString(
    }
    else
    {
-      res->val = Rational(desc);
-      res->isinf = FALSE;
+      std::string s(desc);
+      /* case 1: string is given in nom/den format */
+      if( s.find('.') == std::string::npos )
+      {
+         res->val = Rational(desc);
+         res->isinf = FALSE;
+      }
+      /* case 2: string is given as base-10 decimal number */
+      else
+      {
+         // std::cout << s << std::endl;
+         if( s[0] == '.' )
+            s.insert(0, "0");
+         size_t pos = s.find('.');
+         size_t exp = s.length() - 1 - pos;
+         std::string den("1");
+         for( int i = 0; i < exp; ++i )
+            den.append("0");
+
+         s.erase(pos, 1);
+         assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
+         s.append("/");
+         s.append(den);
+         res->val = Rational(s);
+         res->isinf = FALSE;
+         // RatPrint(res);
+      }
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -472,14 +576,6 @@ void RatSetReal(
 /*
  * Computing methods
  */
-
-/* transform rational into canonical form */
-void RatCanonicalize(
-   SCIP_Rational*        rational            /**< rational to put in canonical form */
-   )
-{
-   mpq_canonicalize(rational->val.backend().data());
-}
 
 /** add two rationals and save the result in res*/
 void RatAdd(
@@ -587,7 +683,7 @@ void RatRelDiff(
    absval1 = abs(val1->val);
    absval2 = abs(val2->val);
    quot = max(absval1, absval2);
-   if( 1.0 > quot )
+   if( quot < 1.0 )
       quot = 1.0;
 
    res->val = ((val1->val)-(val2->val))/quot;
@@ -609,10 +705,11 @@ void RatMult(
       {
          res->val = 0;
          res->isinf = FALSE;
+         res->fpexact = TRUE;
       }
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         // SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
       }
@@ -657,6 +754,7 @@ void RatMultReal(
 
 
 /** divide two rationals and save the result in res*/
+/** @todo exip: should we allow infinity here? */
 void RatDiv(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -867,6 +965,9 @@ SCIP_Bool RatIsEqual(
    if( rat1->val == rat2->val )
       return (rat1->isinf == rat2->isinf);
 
+   if( rat1->isinf && rat2->isinf )
+      return (rat1->val.sign() == rat2->val.sign());
+
    return FALSE;
 }
 
@@ -880,6 +981,8 @@ SCIP_Bool RatIsAbsEqual(
 
    if( abs(rat1->val) == abs(rat2->val) )
       return rat1->isinf == rat2->isinf;
+   if( rat1->isinf && rat2->isinf )
+      return TRUE;
 
    return FALSE;
 }
@@ -977,26 +1080,10 @@ SCIP_Bool RatIsGE(
 {
    assert(rat1 != NULL && rat2 != NULL);
 
-   if( rat1->isinf )
-   {
-      if( rat1->val > 0 )
-         return TRUE;
-      else if( rat2->isinf && (rat2->val) < 0 )
-         return TRUE;
-      else
-         return FALSE;
-   }
-   else if( rat2->isinf )
-   {
-      if( rat2->val < 0 )
-         return TRUE;
-      else
-         return FALSE;
-   }
+   if( RatIsEqual(rat1, rat2) )
+      return TRUE;
    else
-   {
-      return rat1->val >= rat2->val;
-   }
+      return RatIsGT(rat1, rat2);
 }
 
 /** check if the first rational is less or equal than the second*/
@@ -1018,6 +1105,7 @@ SCIP_Bool RatIsZero(
    )
 {
    assert(rational != NULL);
+   assert(rational->isinf == FALSE);
 
    return rational->val.is_zero();
 }
@@ -1079,12 +1167,17 @@ SCIP_Bool RatIsIntegral(
    )
 {
    assert(rational != NULL);
-
-#ifdef SCIP_WITH_DEBUG_ADAPTOR
-   return !(rational->isinf) && (mpz_cmp_ui(&rational->val.backend().value().data()->_mp_den, 1) == 0);
-#else
-   return !(rational->isinf) && (mpz_cmp_ui(&rational->val.backend().data()->_mp_den, 1) == 0);
-#endif
+   if( rational->isinf )
+      return FALSE;
+   else if( denominator(rational->val) == 1 )
+      return TRUE;
+   else if( numerator(rational->val) < denominator(rational->val) )
+      return FALSE;
+   else
+   {
+      RatCanonicalize(rational);
+      return (denominator(rational->val) == 1);
+   }
 }
 
 /** check if rational is exactly representable as double */
@@ -1129,7 +1222,7 @@ int RatToString(
 
    if( rational->isinf )
    {
-      if( rational->val > 0 )
+      if( rational->val.sign() > 0 )
          ret = SCIPstrncpy(str, "inf", strlen);
       else
          ret = SCIPstrncpy(str, "-inf", strlen);
@@ -1148,6 +1241,30 @@ int RatToString(
    return ret;
 }
 
+/** returns legnth of string representation of rational */
+int RatStrLen(
+   SCIP_Rational*        rational             /**< rational to get length of */
+   )
+{
+   int ret = 0;
+   assert(rational != NULL);
+
+   if( rational->isinf )
+   {
+      if( rational->val.sign() > 0 )
+         ret = 3;
+      else
+         ret = 4;
+   }
+   else
+   {
+      std::string s = rational->val.str();
+      ret = (int) s.size();
+   }
+
+   return ret;
+}
+
 /* allocates and returns a null-terminated string-representation of the rational
    warning! have to free this yourself, does not check infinity! only for debugging. */
 const char* RatGetString(
@@ -1155,7 +1272,15 @@ const char* RatGetString(
    )
 {
    assert(rational != NULL);
+#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_WITH_GMP
    return mpq_get_str(0, 10, rational->val.backend().data());
+#else
+   return rational->r.str();
+#endif
+#else
+   return NULL;
+#endif
 }
 
 /** return the strlen of a rational number */
@@ -1173,18 +1298,6 @@ SCIP_Longint RatStrlen(
    }
    else
       return (SCIP_Longint) rational->val.str().length();
-}
-
-/** print a rational to command line (for debugging) */
-void RatPrint(
-   SCIP_Rational*        rational            /**< the rational to print */
-   )
-{
-   assert(rational != NULL);
-   if( rational->isinf )
-      std::cout << rational->val << "inf" << std::endl;
-   else
-      std::cout << rational->val << std::endl;
 }
 
 /** print rational to file using message handler */
@@ -1205,14 +1318,57 @@ void RatMessage(
    SCIPmessageFPrintInfo(msg, file, "%s", buf);
 }
 
+/** print a rational to command line (for debugging) */
+void RatPrint(
+   SCIP_Rational*        rational            /**< the rational to print */
+   )
+{
+   assert(rational != NULL);
+   if( rational->isinf )
+      std::cout << rational->val.sign() << "inf" << std::endl;
+   else
+      std::cout << rational->val << std::endl;
+}
+
+std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
+   if( r.isinf )
+      std::cout << r.val.sign() << "inf" << std::endl;
+   else
+      std::cout << r.val << std::endl;
+}
+
+#if 0
+void RatPrintf(const char *format, ...)
+{
+   va_list arguments;
+   va_start(arguments, format);
+
+   while( *format != '\0' )
+   {
+      if( *fmt != '\%' )
+         std::cout << *fmt;
+      else
+      {
+         *fmt++;
+         if( *fmt == 'R' )
+            std::cout << *va_arg(arguments, SCIP_Rational*);
+         else( )
+      }
+      ++fmt;
+   }
+
+}
+#endif
+
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
+/** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
 SCIP_Real RatRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
 {
    SCIP_Real realapprox;
-   SCIP_Real nom, denom;
+   SCIP_Longint nom, denom;
    SCIP_ROUNDMODE current;
 
    assert(rational != NULL);
@@ -1228,31 +1384,34 @@ SCIP_Real RatRoundReal(
       return realapprox;
    }
 
-
-/* #ifdef SCIP_WITH_MPFR
+#ifdef FALSE
    {
       mpfr_t valmpfr;
       mpq_t* val;
 
-      val = RgetGMP(r);
+      // RatCanonicalize(rational);
+
+      val = RatGetGMP(rational);
       switch(roundmode)
       {
          case SCIP_ROUND_DOWNWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
+            realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDD);
             break;
          case SCIP_ROUND_UPWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
+            realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDU);
             break;
          case SCIP_ROUND_NEAREST:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
+            realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
          default:
             break;
       }
-      realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
       mpfr_clear(valmpfr);
    }
-#else */
+#else
 
    current = SCIPintervalGetRoundingMode();
    if( current != roundmode )
@@ -1276,61 +1435,77 @@ SCIP_Real RatRoundReal(
    nom = Rnumerator(rational);
    denom = Rdenominator(rational);
 
-   SCIPdebugMessage("computing %f/%f \n", nom, denom);
+   SCIPdebugMessage("computing %lld/%lld \n", nom, denom);
 
-   realapprox = nom/denom;
+   realapprox = ((double) nom) / denom;
    //realapprox = RgetRealApprox(r);
 
    if( current != roundmode )
       SCIPintervalSetRoundingMode(current);
-/* #endif
- */
+  #endif
+
    SCIPdebugMessage("%.*e , Roundmode %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode );
 
    return realapprox;
 }
 
+/** round a rational to the nearest integer and save it as a rational */
 void RatRound(
    SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
 {
+#ifdef SCIP_WITH_EXACTSOLVE
    Integer roundint, rest;
 
    assert(src != NULL);
    assert(res != NULL);
 
-   divide_qr(numerator(src->val),denominator(src->val), roundint, rest);
-   switch (roundmode)
+   if( src->isinf )
+      RatSet(res, src);
+   else
    {
-   case SCIP_ROUND_DOWNWARDS:
-      roundint = src->val.sign() > 0 ? roundint : roundint - 1;
-      break;
-   case SCIP_ROUND_UPWARDS:
-      roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
-      break;
-   case SCIP_ROUND_NEAREST:
-   default:
-      SCIPerrorMessage("roundmode not supported for integer-rounding \n");
-      SCIPABORT();
-      break;
+      roundint = 0;
+      rest = 0;
+      divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
+      switch (roundmode)
+      {
+      case SCIP_ROUND_DOWNWARDS:
+         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
+         break;
+      case SCIP_ROUND_UPWARDS:
+         roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
+         break;
+      case SCIP_ROUND_NEAREST:
+         roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
+         break;
+      default:
+         SCIPerrorMessage("roundmode not supported for integer-rounding \n");
+         SCIPABORT();
+         break;
+      }
+      res->val = roundint;
    }
-   res->val = roundint;
+#endif
 }
 
-/** round rational to next integer in direction of roundmode */
+/** round rational to next integer in direction of roundmode, return FALSE 
+ * if rational outside of long-range
+ */
 SCIP_Bool RatRoundInteger(
-   long int*             res,                /**< the resulting rounded long int */
+   SCIP_Longint*         res,                /**< the resulting rounded long int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
 {
    SCIP_Bool success = FALSE;
-      Integer roundint, rest;
+#ifdef SCIP_WITH_EXACTSOLVE
+   Integer roundint, rest;
 
    assert(src != NULL);
    assert(res != NULL);
+   assert(!src->isinf);
 
    divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
    switch (roundmode)
@@ -1342,14 +1517,17 @@ SCIP_Bool RatRoundInteger(
       roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
       break;
    case SCIP_ROUND_NEAREST:
+      roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
+      break;
    default:
       SCIPerrorMessage("roundmode not supported for integer-rounding \n");
       SCIPABORT();
       break;
    }
-   *res = roundint.convert_to<long int>();
+   *res = roundint.convert_to<SCIP_Longint>();
    if( *res == roundint )
       success = TRUE;
+#endif
    return success;
 }
 
@@ -1359,21 +1537,23 @@ SCIP_Real RatApproxReal(
    )
 {
    SCIP_Real retval;
+#ifdef SCIP_WITH_EXACTSOLVE
    assert(rational != NULL);
 
    if( rational->isinf )
       return (rational->val.sign() * SCIP_DEFAULT_INFINITY);
 
    retval = rational->val.convert_to<SCIP_Real>();
+#endif
    return retval;
 }
 
 /*
- * Vector arithmetic (to shorten code and provide benefits due to 
+ * Vector arithmetic (to shorten code and provide benefits due to
  * usage of expression Templates)
  */
 void RatScalarProduct(
-   SCIP_Rational*        result,             /**< the resulting rational */          
+   SCIP_Rational*        result,             /**< the resulting rational */
    SCIP_Rational**       array1,             /**< the first array */
    SCIP_Rational**       array2,             /**< the second array */
    int                   len                 /**< length of the arrays */
@@ -1391,7 +1571,6 @@ void RatScalarProduct(
       rat += array1[i]->val * array2[i]->val;
    }
 }
-
 
 /*
  * Dynamic Arrays

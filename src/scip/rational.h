@@ -68,6 +68,13 @@ SCIP_RETCODE RatCreateString(
 
 /** create an array of rationals */
 SCIP_EXPORT
+SCIP_RETCODE RatCreateArray(
+   SCIP_Rational***      rational,           /**< pointer to the array to create */
+   int                   size                /**< the size of the array */
+   );
+
+/** create an array of rationals */
+SCIP_EXPORT
 SCIP_RETCODE RatCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
@@ -176,6 +183,13 @@ void RatFreeBuffer(
 
 /** delete an array of rationals and free the allocated memory */
 SCIP_EXPORT
+void RatFreeArray(
+   SCIP_Rational***      array,              /**< address of rational array */
+   int                   size                /**< size of the array */
+   );
+
+/** delete an array of rationals and free the allocated memory */
+SCIP_EXPORT
 void RatFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      array,              /**< address of rational array */
@@ -201,8 +215,8 @@ void RatSet(
 SCIP_EXPORT
 void RatSetInt(
    SCIP_Rational*        res,                /**< the result */
-   int                   nom,                /**< the nominator */
-   int                   denom               /**< the denominator */
+   SCIP_Longint          nom,                /**< the nominator */
+   SCIP_Longint          denom               /**< the denominator */
    );
 
 /** set a rational to the value described by a string */
@@ -531,7 +545,7 @@ void RatRound(
 /** round rational to next integer in direction of roundmode */
 SCIP_EXPORT
 SCIP_Bool RatRoundInteger(
-   long int*                 retval,             /**< the resulting rounded lon int */
+   SCIP_Longint*         retval,             /**< the resulting rounded lon int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    );
@@ -547,7 +561,7 @@ SCIP_RETCODE SCIPrationalarrayCreate(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** creates a dynamic array of real values */
+/** resizes a dynamic array of real values */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayResize(
    SCIP_RATIONALARRAY*   rationalarray,      /**< pointer to store the real array */
