@@ -6637,6 +6637,9 @@ SCIP_RETCODE branching(
       /* if more than one candidate, then compute scores and select */
       int* perm;
       int c;
+      int left;
+      int right;
+      SCIP_Real threshold;
 
       /* computed additional scores on branching candidates and weighted score */
       scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol, soltag);
@@ -6649,19 +6652,30 @@ SCIP_RETCODE branching(
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[0]].expr)), cands[perm[0]].weighted,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands-1]].expr)), cands[perm[ncands-1]].weighted); )
 
-      /* find how many candidates have a weighted score close to the maximum
-       * (TODO could do a binary search as array is sorted by score)
-       * TODO should we choose random from all candidates, using the score's as probability distribution?
-       */
-      for( c = 1; c < ncands; ++c )
+      /* binary search for first candidate which score is below branchhighscorefactor * maximal-score */
+      left = 0;
+      right = ncands-1;
+      threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
+      while( left < right )
       {
-         assert(cands[perm[c-1]].expr != cands[perm[c]].expr);  /* we should have no duplicates */
-
-         /* stop if score is below threshold */
-         if( cands[perm[c]].weighted < conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted )
+         int mid = (left + right)/2;
+         if( cands[perm[mid]].weighted >= threshold )
+            left = mid+1;
+         else
+            right = mid;
+      }
+      assert(left <= ncands);
+      if( left < ncands )
+      {
+         if( cands[perm[left]].weighted >= threshold )
          {
-            ncands = c;
-            break;
+            assert(left+1 == ncands || cands[perm[left+1]].weighted < threshold);
+            ncands = left+1;
+         }
+         else
+         {
+            assert(cands[perm[left]].weighted < threshold);
+            ncands = left;
          }
       }
       assert(ncands > 0);
