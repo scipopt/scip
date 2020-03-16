@@ -1900,11 +1900,13 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
+#ifdef SCIP_WITH_EXACTSOLVE
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
          &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
          NULL, NULL) );
+#endif
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve_old",
          "should the problem be solved exactly (with proven dual bounds)?",

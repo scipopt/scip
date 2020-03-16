@@ -52,6 +52,8 @@
 #define PSWARMSTARTAUXPROB         TRUE
 #define PSPOSTPROCESSDUALSOL       TRUE
 
+
+#ifdef SCIP_WITH_EXACTSOLVE
 static
 SCIP_Bool fpLPisIntFeasible(
    SCIP_LP*              lp,
@@ -3248,6 +3250,7 @@ SCIP_RETCODE basisVerification(
 {
    return SCIP_OKAY;
 }
+#endif
 
 SCIP_RETCODE SCIPlpexComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
@@ -3271,6 +3274,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
+#ifdef SCIP_WITH_EXACTSOLVE
    assert(set->misc_exactsolve);
    assert(!lp->hasprovedbound);
 
@@ -3336,6 +3340,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
       SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas, safebound) );
    }
+#endif
 
    /* choose which bounding method should be calles and return a safe objective bound */
    return SCIP_OKAY;
