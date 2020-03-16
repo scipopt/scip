@@ -179,18 +179,31 @@ using namespace soplex;
 
 /* Set the value of a SCIP_Rational* from a SoPlex Rational */
 static void RsetSpxR(
+      SCIP_LPIEX*    lpi,
       SCIP_Rational* r,
       Rational       spxr
    )
 {
-#ifdef SOPLEX_WITH_GMP
-   RatSetGMP(r, spxr.getMpqRef());
+   if( SCIPlpiexIsInfinity(lpi, double(spxr)) )
+   {
+      RatSetString(r, "inf");
+   }
+   else if( SCIPlpiexIsInfinity(lpi, -double(spxr)) )
+   {
+      RatSetString(r, "-inf");
+   }
+   else
+   {
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+      RatSetGMP(r, spxr.getMpqRef());
 #else
-   RatSetReal(r, spxr);
+      RatSetReal(r, spxr);
 #endif
+   }
 }
 
 static void RsetSpxVector(
+   SCIP_LPIEX*     lpi,
    SCIP_Rational** r,
    VectorRational  src
    )
@@ -199,20 +212,32 @@ static void RsetSpxVector(
    {
       assert(r[i] != NULL);
 
-      RsetSpxR(r[i], src[i]);
+      RsetSpxR(lpi, r[i], src[i]);
    }
 }
 
+/** @todo exip: there seems to be something wrong with the = of spx rational */
 static void SpxRSetRat(
+   SCIP_LPIEX*       lpi,
    Rational          spxr,
    SCIP_Rational*    src
 )
 {
-#ifdef SOPLEX_WITH_GMP
-   spxr = *RatGetGMP(src);
+   if( RatIsAbsInfinity(src) )
+   {
+      if( RatIsPositive(src) )
+         spxr = SCIPlpiexInfinity(lpi);
+      else
+         spxr = -SCIPlpiexInfinity(lpi);
+   }
+   else
+   {
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+      spxr = *RatGetGMP(src);
 #else
-   spxr = RatApproxReal(src);
+      spxr = RatApproxReal(src);
 #endif
+   }
 }
 
 
@@ -797,8 +822,6 @@ SCIP_Bool SCIPlpiexHasBarrierSolve(
 /**@} */
 
 
-
-
 /*
  * LPI Creation and Destruction Methods
  */
@@ -880,8 +903,6 @@ SCIP_RETCODE SCIPlpiexFree(
 /**@} */
 
 
-
-
 /*
  * Modification Methods
  */
@@ -953,6 +974,8 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
       {
          Rational spxlhs(*RatGetGMP(lhs[i]));
          Rational spxrhs(*RatGetGMP(rhs[i]));
+         SpxRSetRat(lpi, spxlhs, lhs[i]);
+         SpxRSetRat(lpi, spxlhs, rhs[i]);
          rows.add(spxlhs, emptyVector, spxrhs);
       }
       spx->addRowsRational(rows);
@@ -1705,7 +1728,6 @@ SCIP_RETCODE SCIPlpiexGetNNonz(
    return SCIP_OKAY;
 }
 
-#if 0
 /** gets columns from LP problem object; the arrays have to be large enough to store all values
  *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
  *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
@@ -1735,39 +1757,28 @@ SCIP_RETCODE SCIPlpiexGetCols(
 
    if( lb != NULL )
    {
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      /** @todo exip: what about scaling? */
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lbvec(lpi->spx->numColsRational());
-         DVector ubvec(lpi->spx->numColsRational());
-         lpi->spx->getLowerReal(lbvec);
-         lpi->spx->getUpperReal(ubvec);
+         const VectorRational& lbvec = lpi->spx->lowerRational();
+         const VectorRational& ubvec = lpi->spx->upperRational();
+
          for( i = firstcol; i <= lastcol; ++i )
          {
-            lb[i-firstcol] = lbvec[i];
-            ub[i-firstcol] = ubvec[i];
+            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
+            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
          }
       }
       else
       {
-         const Vector& lbvec = lpi->spx->lowerRealInternal();
-         const Vector& ubvec = lpi->spx->upperRealInternal();
+         const VectorRational& lbvec = lpi->spx->lowerRational();
+         const VectorRational& ubvec = lpi->spx->upperRational();
          for( i = firstcol; i <= lastcol; ++i )
          {
-            lb[i-firstcol] = lbvec[i];
-            ub[i-firstcol] = ubvec[i];
+            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
+            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
          }
       }
-#else
-      const Vector& lbvec = lpi->spx->lowerReal();
-      const Vector& ubvec = lpi->spx->upperReal();
-
-      for( i = firstcol; i <= lastcol; ++i )
-      {
-         lb[i-firstcol] = lbvec[i];
-         ub[i-firstcol] = ubvec[i];
-      }
-#endif
    }
 
    if( nnonz != NULL )
@@ -1777,37 +1788,20 @@ SCIP_RETCODE SCIPlpiexGetCols(
       {
          beg[i-firstcol] = *nnonz;
 
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+         /** @todo exip: what about scaling? */
+         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) && FALSE )
          {
-            DSVector cvec;
-            lpi->spx->getcolVectorRational(i, cvec);
-            for( j = 0; j < cvec.size(); ++j )
-            {
-               ind[*nnonz] = cvec.index(j);
-               val[*nnonz] = cvec.value(j);
-               (*nnonz)++;
-            }
          }
          else
          {
-            const SVector& cvec = lpi->spx->colVectorRationalInternal(i);
+            const SVectorRational& cvec = lpi->spx->colVectorRational(i);
             for( j = 0; j < cvec.size(); ++j )
             {
                ind[*nnonz] = cvec.index(j);
-               val[*nnonz] = cvec.value(j);
+               RsetSpxR(lpi, val[*nnonz], cvec.value(j));
                (*nnonz)++;
             }
          }
-#else
-         const SVector& cvec = lpi->spx->colVectorRational(i);
-         for( j = 0; j < cvec.size(); ++j )
-         {
-            ind[*nnonz] = cvec.index(j);
-            val[*nnonz] = cvec.value(j);
-            (*nnonz)++;
-         }
-#endif
       }
    }
 
@@ -1843,38 +1837,20 @@ SCIP_RETCODE SCIPlpiexGetRows(
 
    if( lhs != NULL )
    {
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+      /** @todo exip: what about scaling? */
+      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) && FALSE )
       {
-         DVector lhsvec(lpi->spx->numRowsRational());
-         DVector rhsvec(lpi->spx->numRowsRational());
-         lpi->spx->getLhsReal(lhsvec);
-         lpi->spx->getRhsReal(rhsvec);
-         for( i = firstrow; i <= lastrow; ++i )
-         {
-            lhs[i-firstrow] = lhsvec[i];
-            rhs[i-firstrow] = rhsvec[i];
-         }
       }
       else
       {
-         const Vector& lhsvec = lpi->spx->lhsRealInternal();
-         const Vector& rhsvec = lpi->spx->rhsRealInternal();
+         const VectorRational& lhsvec = lpi->spx->lhsRational();
+         const VectorRational& rhsvec = lpi->spx->rhsRational();
          for( i = firstrow; i <= lastrow; ++i )
          {
-            lhs[i-firstrow] = lhsvec[i];
-            rhs[i-firstrow] = rhsvec[i];
+            RsetSpxR(lpi, lhs[i-firstrow], lhsvec[i]);
+            RsetSpxR(lpi, rhs[i-firstrow], rhsvec[i]);
          }
       }
-#else
-      const Vector& lhsvec = lpi->spx->lhsReal();
-      const Vector& rhsvec = lpi->spx->rhsReal();
-      for( i = firstrow; i <= lastrow; ++i )
-      {
-         lhs[i-firstrow] = lhsvec[i];
-         rhs[i-firstrow] = rhsvec[i];
-      }
-#endif
    }
 
    if( nnonz != NULL )
@@ -1884,43 +1860,25 @@ SCIP_RETCODE SCIPlpiexGetRows(
       {
          beg[i-firstrow] = *nnonz;
 
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         /** @todo exip: what to do about scaling? */
          if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
          {
-            DSVector rvec;
-            lpi->spx->getrowVectorRational(i, rvec);
-            for( j = 0; j < rvec.size(); ++j )
-            {
-               ind[*nnonz] = rvec.index(j);
-               val[*nnonz] = rvec.value(j);
-               (*nnonz)++;
-            }
          }
          else
          {
-            const SVector& rvec = lpi->spx->rowVectorRationalInternal(i);
+            const SVectorRational& rvec = lpi->spx->rowVectorRational(i);
             for( j = 0; j < rvec.size(); ++j )
             {
                ind[*nnonz] = rvec.index(j);
-               val[*nnonz] = rvec.value(j);
+               RsetSpxR(lpi, val[*nnonz], rvec.value(j));
                (*nnonz)++;
             }
          }
-#else
-         const SVector& rvec = lpi->spx->rowVectorRational(i);
-         for( j = 0; j < rvec.size(); ++j )
-         {
-            ind[*nnonz] = rvec.index(j);
-            val[*nnonz] = rvec.value(j);
-            (*nnonz)++;
-         }
-#endif
       }
    }
 
    return SCIP_OKAY;
 }
-#endif
 
 /** gets column names */
 SCIP_RETCODE SCIPlpiexGetColNames(
@@ -2011,7 +1969,7 @@ SCIP_RETCODE SCIPlpiexGetObj(
    for( i = firstcol; i <= lastcol; ++i )
    {
       assert(vals[i-firstcol] != NULL);
-      RsetSpxR(vals[i-firstcol], lpi->spx->objRational(i));
+      RsetSpxR(lpi, vals[i-firstcol], lpi->spx->objRational(i));
    }
 
    return SCIP_OKAY;
@@ -2039,12 +1997,12 @@ SCIP_RETCODE SCIPlpiexGetBounds(
       if( lbs != NULL )
       {
          assert(lbs[i-firstcol] != NULL);
-         RsetSpxR(lbs[i-firstcol], lpi->spx->lowerRational(i));
+         RsetSpxR(lpi, lbs[i-firstcol], lpi->spx->lowerRational(i));
       }
       if( ubs != NULL )
       {
          assert(ubs[i-firstcol] != NULL);
-         RsetSpxR(ubs[i-firstcol], lpi->spx->upperRational(i));
+         RsetSpxR(lpi, ubs[i-firstcol], lpi->spx->upperRational(i));
       }
    }
 
@@ -2073,12 +2031,12 @@ SCIP_RETCODE SCIPlpiexGetSides(
       if( lhss != NULL )
       {
          assert(lhss[i-firstrow] != NULL);
-         RsetSpxR(lhss[i-firstrow], lpi->spx->lhsRational(i));
+         RsetSpxR(lpi, lhss[i-firstrow], lpi->spx->lhsRational(i));
       }
       if( rhss != NULL )
       {
          assert(rhss[i-firstrow] != NULL);
-         RsetSpxR(rhss[i-firstrow], lpi->spx->rhsReal(i));
+         RsetSpxR(lpi, rhss[i-firstrow], lpi->spx->rhsReal(i));
       }
    }
 
@@ -2101,7 +2059,7 @@ SCIP_RETCODE SCIPlpiexGetCoef(
    assert(0 <= row && row < lpi->spx->numRowsRational());
    assert(val != NULL);
 
-   RsetSpxR(val, lpi->spx->colVectorRational(col)[row]);
+   RsetSpxR(lpi, val, lpi->spx->colVectorRational(col)[row]);
 
    return SCIP_OKAY;
 }
@@ -3032,7 +2990,7 @@ SCIP_RETCODE SCIPlpiexGetObjval(
    assert(lpi->spx != NULL);
    assert(objval != NULL);
 
-   RsetSpxR(objval, lpi->spx->objValueRational());
+   RsetSpxR(lpi, objval, lpi->spx->objValueRational());
 
    return SCIP_OKAY;
 }
@@ -3062,7 +3020,7 @@ SCIP_RETCODE SCIPlpiexGetSol(
    tmpvec->clear();
 
    if( objval != NULL )
-      RsetSpxR(objval, lpi->spx->objValueRational());
+      RsetSpxR(lpi, objval, lpi->spx->objValueRational());
 
    try
    {
@@ -3070,25 +3028,25 @@ SCIP_RETCODE SCIPlpiexGetSol(
       {
          VectorRational tmp(lpi->spx->numColsRational(), tmpvec->get_ptr());
          (void)lpi->spx->getPrimalRational(tmp);
-         RsetSpxVector(primsol, tmp);
+         RsetSpxVector(lpi, primsol, tmp);
       }
       if( dualsol != NULL )
       {
          VectorRational tmp(lpi->spx->numRowsRational(), tmpvec->get_ptr());
          (void)lpi->spx->getDualRational(tmp);
-         RsetSpxVector(dualsol, tmp);
+         RsetSpxVector(lpi, dualsol, tmp);
       }
       if( activity != NULL )
       {
          VectorRational tmp(lpi->spx->numRowsRational(), tmpvec->get_ptr());
          (void)lpi->spx->getSlacksRational(tmp);  /* in SoPlex, the activities are called "slacks" */
-         RsetSpxVector(activity, tmp);
+         RsetSpxVector(lpi, activity, tmp);
       }
       if( redcost != NULL )
       {
          VectorRational tmp(lpi->spx->numColsRational(), tmpvec->get_ptr());
          (void)lpi->spx->getRedCostRational(tmp);
-         RsetSpxVector(redcost, tmp);
+         RsetSpxVector(lpi, redcost, tmp);
       }
 
       delete tmpvec;
@@ -3129,7 +3087,7 @@ SCIP_RETCODE SCIPlpiexGetPrimalRay(
    {
       VectorRational tmp(lpi->spx->numColsRational(), tmpvec->get_ptr());
       (void)lpi->spx->getPrimalRayRational(tmp);
-      RsetSpxVector(ray, tmp);
+      RsetSpxVector(lpi, ray, tmp);
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3142,6 +3100,8 @@ SCIP_RETCODE SCIPlpiexGetPrimalRay(
 #endif
       return SCIP_LPERROR;
    }
+
+   delete tmpvec;
 
    return SCIP_OKAY;
 }
@@ -3166,7 +3126,7 @@ SCIP_RETCODE SCIPlpiexGetDualfarkas(
    {
       VectorRational tmp(lpi->spx->numRowsRational(), tmpvec->get_ptr());
       (void)lpi->spx->getDualFarkasRational(tmp);
-      RsetSpxVector(dualfarkas, tmp);
+      RsetSpxVector(lpi, dualfarkas, tmp);
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3450,7 +3410,6 @@ SCIP_RETCODE SCIPlpiexGetBasisInd(
    return SCIP_OKAY;
 }
 
-#if 0
 /** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
@@ -3466,6 +3425,8 @@ SCIP_RETCODE SCIPlpiexGetBInvRow(
                                               *   (-1: if we do not store sparsity information) */
    )
 {
+   int i;
+   SSVectorBase<Rational> tmpvec(0);
    SCIPdebugMessage("calling SCIPlpiexGetBInvRow()\n");
 
    assert(lpi != NULL);
@@ -3476,8 +3437,16 @@ SCIP_RETCODE SCIPlpiexGetBInvRow(
    assert(r >= 0);
    assert(r < lpi->spx->numRowsRational());
 
-   if( ! lpi->spx->getBasisInverseRowReal(r, coef, inds, ninds) )
+   if( !lpi->spx->getBasisInverseRowRational(r, tmpvec) )
       return SCIP_LPERROR;
+
+   for( i = 0; i < tmpvec.size(); ++i )
+   {
+      inds[i] = tmpvec.index(i);
+      RsetSpxR(lpi, coef[i], tmpvec.value(i));
+   }
+
+   *ninds = tmpvec.size();
 
    return SCIP_OKAY;
 }
@@ -3501,6 +3470,9 @@ SCIP_RETCODE SCIPlpiexGetBInvCol(
                                               *   (-1: if we do not store sparsity information) */
    )
 {
+   int i;
+   SSVectorRational tmpvec(0);
+
    SCIPdebugMessage("calling SCIPlpiexGetBInvCol()\n");
 
    assert( lpi != NULL );
@@ -3508,12 +3480,22 @@ SCIP_RETCODE SCIPlpiexGetBInvCol(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    assert(coef != NULL);
 
-   if( ! lpi->spx->getBasisInverseColReal(c, coef, inds, ninds) )
+   if( ! lpi->spx->getBasisInverseColRational(c, tmpvec) )
       return SCIP_LPERROR;
+
+   for( i = 0; i < tmpvec.size(); ++i )
+   {
+      inds[i] = tmpvec.index(i);
+      RsetSpxR(lpi, coef[i], tmpvec.value(i));
+   }
+
+   *ninds = tmpvec.size();
+
 
    return SCIP_OKAY;
 }
 
+#if 0
 /** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
@@ -3530,8 +3512,8 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
                                               *   (-1: if we do not store sparsity information) */
    )
 {
-   SCIP_Real* buf;
-   SCIP_Real* binv;
+   SCIP_Rational** buf;
+   SCIP_Rational** binv;
    int nrows;
    int ncols;
    int c;
@@ -3550,12 +3532,12 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&buf, nrows) );
+      RatCreateArray(&buf, nrows);
       SCIP_CALL( SCIPlpiexGetBInvRow(lpi, r, buf, inds, ninds) );
       binv = buf;
    }
    else
-      binv = const_cast<SCIP_Real*>(binvrow);
+      binv = const_cast<SCIP_Rational**>(binvrow);
 
    assert(binv != NULL);
 
@@ -3565,25 +3547,16 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
 
    // @todo exploit sparsity in binv by looping over nrows
    /* calculate the scalar product of the row in B^-1 and A */
-   Vector binvvec(nrows, binv);
-
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-   /* temporary unscaled column of A */
-   DSVector acol;
-#endif
 
    for( c = 0; c < ncols; ++c )
    {
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-      lpi->spx->getcolVectorRational(c, acol);
-      coef[c] = binvvec * acol;  /* scalar product */ /*lint !e1702*/
-#else
-      coef[c] = binvvec * lpi->spx->colVectorRational(c);  /* scalar product */ /*lint !e1702*/
-#endif
+      Rational tmp;
+      SpxRSetRat(tmp, binv[c]);
+      RsetSpxR(lpi, coef[c], tmp * lpi->spx->colVectorRational(c));  /* scalar product */ /*lint !e1702*/
    }
 
    /* free memory if it was temporarily allocated */
-   BMSfreeMemoryArrayNull(&buf);
+   RatFreeArray(&buf, nrows);
 
    return SCIP_OKAY;
 }
@@ -3604,11 +3577,11 @@ SCIP_RETCODE SCIPlpiexGetBInvACol(
    )
 {  /*lint --e{715}*/
    /* create a new uninitialized full vector */
-   DVector col(lpi->spx->numRowsRational());
+   DVectorRational col(lpi->spx->numRowsRational());
 
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
    /* temporary sparse vector used for unscaling (memory is automatically enlarged) */
-   DSVector colsparse;
+   DSVectorRational colsparse;
 #endif
 
    SCIPdebugMessage("calling SCIPlpiexGetBInvACol()\n");
@@ -3630,16 +3603,10 @@ SCIP_RETCODE SCIPlpiexGetBInvACol(
    /* col needs to be cleared because copying colVectorRational only regards nonzeros */
    col.clear();
 
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-   lpi->spx->getcolVectorRational(c, colsparse);
-   /* the copy is necessary to transform the sparse column into a dense vector */
-   col = colsparse;
-#else
    col = lpi->spx->colVectorRational(c);
-#endif
 
    /* solve */
-   if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
+   if( ! lpi->spx->getBasisInverseTimesVecRational(col.get_ptr(), coef) )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
