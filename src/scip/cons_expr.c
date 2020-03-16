@@ -1159,9 +1159,9 @@ SCIP_RETCODE forwardPropExpr(
                /* if already empty, then don't try to compute even better activity
                 * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
                 */
-               assert(infeasible == NULL || *infeasible);
-               /* if( infeasible != NULL )
-                  *infeasible = TRUE; */
+               /* assert(infeasible == NULL || *infeasible); */
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
                break;
             }
 

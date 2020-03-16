@@ -967,11 +967,6 @@ SCIP_RETCODE propSemicont(
              */
             auxvar = SCIPgetConsExprExprAuxVar(curexpr);
 
-            if( strcmp(SCIPvarGetName(auxvar), "auxvar_pow_59") == 0 )
-            {
-               SCIPinfoMessage(scip, NULL, "\nauxvar59");
-            }
-
             SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, curexpr, sol, 0) );
 
             scvdata = (SCVARDATA*) SCIPhashmapGetImage(hdlrdata->scvars, (void*)auxvar);
@@ -1199,7 +1194,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIP_CALL( nlhdlr2->evalaux(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, sol) );
 
          /* ask the handler for an estimator */
-         SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, auxvalue,
+         SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
                overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success, FALSE, &addedbranchscores2) );
 
          if( success )
