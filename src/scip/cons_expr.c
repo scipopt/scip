@@ -14607,7 +14607,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branching/external",
          "whether to use external branching candidates and branching rules for branching",
-         &conshdlrdata->branchexternal, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->branchexternal, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highviolfactor",
          "consider a constraint highly violated if at least this factor times the maximal violation",
@@ -14627,7 +14627,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostweight",
          "weight by how much to consider the pseudo cost of a variable for its branching score",
-         &conshdlrdata->branchpscostweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchpscostweight, TRUE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/domainweight",
          "weight by how much to consider the domain width in branching score",
