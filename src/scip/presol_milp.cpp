@@ -344,8 +344,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
 
    /* set tolerances */
-   presolve.setEpsilon(SCIPepsilon(scip));
-   presolve.setFeasTol(SCIPfeastol(scip));
+   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
 
    /* adjust output settings of presolve libary */
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
