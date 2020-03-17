@@ -3318,7 +3318,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
                                               *   in cardinality constraint, or NULL if new indicator variables should be
                                               *   introduced automatically */
    SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be
-                                                  ordered in the same way they were added to the constraint */
+                                              *   ordered in the same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?

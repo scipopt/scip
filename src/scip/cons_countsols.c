@@ -22,7 +22,7 @@
  * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
  * more details about using SCIP for counting feasible solutions.
  *
- * @todo In the last round of presolving we should check if variables exist, which have up and down lock one. In that
+ * @todo In the last round of presolving we should check if variables exist, which have up and down lock one. In this
  *       case we know that these locks are coming from this constraint handler. Therefore, they are totally free and can
  *       be ignored in the branch and bound process. To get this result we have to store these variables in the
  *       constraint handler data structure (to remember this free dimensions) and fix them to any feasible value.
@@ -63,7 +63,7 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-/* depending if the GMP library is available we use a GMP data type or a SCIP_Longint */
+/* depending on whether the GMP library is available we use a GMP data type or a SCIP_Longint */
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 typedef mpz_t                Int;
@@ -104,8 +104,7 @@ typedef SCIP_Longint         Int;
 #define DISP_CUTS_POSITION         110000
 #define DISP_CUTS_STRIPLINE        TRUE
 
-/** creates and adds a constraint which cuts off the solution from the feasibility
- *  region
+/** creates and adds a constraint which cuts off the solution from the feasibility region
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -123,19 +122,19 @@ struct SCIP_ConshdlrData
    int                   nsolutions;         /**< number of solution stored */
    int                   ssolutions;         /**< size of the solution array */
    int                   feasST;             /**< number of non trivial feasible subtrees */
-   int                   nDiscardSols;       /**< number of discard solutions */
+   int                   nDiscardSols;       /**< number of discarded solutions */
    int                   nNonSparseSols;     /**< number of non sparse solutions */
    Int                   nsols;              /**< number of solutions */
    CUTOFF_CONSTRAINT((*cutoffSolution));     /**< method for cutting of a solution */
 
    /* constraint handler parameters */
-   SCIP_Longint          sollimit;           /**< counting stops, if the given number of solutions were found (-1: no limit) */
+   SCIP_Longint          sollimit;           /**< counting stops, if the given number of solutions have been found (-1: no limit) */
    SCIP_Bool             active;             /**< constraint handler active */
    SCIP_Bool             discardsols;        /**< allow to discard solutions */
    SCIP_Bool             sparsetest;         /**< allow to check for sparse solutions */
    SCIP_Bool             collect;            /**< should the solutions be collected */
 
-   SCIP_Bool             warning;            /**< was the warning messages already posted? */
+   SCIP_Bool             warning;            /**< has the warning message already been posted? */
 
    /* specific problem data */
    SCIP_HASHMAP*         hashmap;            /**< hashmap to store position of active transformed problem variable in our vars array */
@@ -379,7 +378,7 @@ void checkSolutionOrig(
 #define checkSolutionOrig(scip, sol, conshdlrdata) /**/
 #endif
 
-/** check if the current parameter setting is correct for a save counting process */
+/** check if the current parameter setting is correct for a safe counting process */
 static
 SCIP_RETCODE checkParameters(
    SCIP*                 scip                /**< SCIP data structure */
@@ -387,10 +386,8 @@ SCIP_RETCODE checkParameters(
 {
    SCIP_HEUR** heuristics;
    int nheuristics;
-
    int h;
    int intvalue;
-
    SCIP_Bool valid;
 
    assert( scip != NULL );
@@ -410,17 +407,17 @@ SCIP_RETCODE checkParameters(
    if( valid )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "At least one heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
+         "At least one heuristic is not turned off! Heuristic solutions are currently not accepted while couting.\n");
    }
 
    /* check if restart is turned off */
    SCIP_CALL( SCIPgetIntParam(scip,  "presolving/maxrestarts", &intvalue) );
    if( intvalue != 0 )
    {
-      /* need to disabled restarts, since collecting solutions won't work but also the captures for variables are not
+      /* need to disable restarts, since collecting solutions won't work, but also the capturing for variables is not
        * correctly handled
        */
-      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0\n");
+      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0.\n");
       if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
@@ -433,9 +430,8 @@ SCIP_RETCODE checkParameters(
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &intvalue) );
    if ( intvalue != 0 )
    {
-      /* need to disabled symmetry handling since counting is not support if symmetry handling is enabled
-       */
-      SCIPwarningMessage(scip, "counting forces parameter <misc/usesymmetry> to 0\n");
+      /* need to disable symmetry handling, since counting is not supported if symmetry handling is enabled */
+      SCIPwarningMessage(scip, "counting forces parameter <misc/usesymmetry> to 0.\n");
       if( SCIPisParamFixed(scip, "misc/usesymmetry") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "misc/usesymmetry") );
@@ -454,11 +450,9 @@ static
 CUTOFF_CONSTRAINT(addBinaryCons)
 {
    int v;
-
    SCIP_VAR** consvars;
    SCIP_VAR** vars;
    int nvars;
-
    SCIP_Real value;
    SCIP_VAR* var;
    SCIP_CONS* cons;
@@ -514,7 +508,6 @@ static
 CUTOFF_CONSTRAINT(addIntegerCons)
 {
    int v;
-
    SCIP_VAR** consvars;
    SCIP_VAR** vars;
    SCIP_Real* bounds;
@@ -524,7 +517,6 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    int nconsvars;
    SCIP_VAR* var;
    SCIP_Real value;
-
    SCIP_CONS* cons;
 
    assert( scip != NULL );
@@ -606,7 +598,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       ++nconsvars;
    }
 
-   /* check if only binary variables appear in the constraint; if this is the case we
+   /* check if only binary variables appear in the constraint; if this is the case, we
     * create a set covering constraint instead of a bound disjunction constraint
     */
    if( nvars == nbinvars )
@@ -658,8 +650,8 @@ SCIP_RETCODE collectSolution(
 
    /* ensure size of solution array
     *
-    * we use normal memory instead of block memory because this plugin is rarely used and the size of 'solutions'
-    * can be arbitrary large and the change that the other blocks can be used is quite small
+    * we use normal memory instead of block memory because this plugin is rarely used, the size of 'solutions'
+    * can be arbitrary large, and the change that the other blocks can be used is quite small
     */
    if( conshdlrdata->nsolutions == conshdlrdata->ssolutions )
    {
@@ -735,7 +727,7 @@ SCIP_RETCODE countSparseSol(
    assert( conshdlrdata != NULL );
    assert( result != NULL );
 
-   /* the result should be infeasible since we reject any solution; however, if the solution passes the sparse test the
+   /* the result should be infeasible since we reject any solution; however, if the solution passes the sparse test, the
     * result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
     */
    assert(*result == SCIP_INFEASIBLE);
@@ -743,12 +735,9 @@ SCIP_RETCODE countSparseSol(
    if( feasible )
    {
       int v;
-
       Int newsols;
-
       SCIP_VAR** vars;
       int nvars;
-
       SCIP_VAR* var;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -756,7 +745,7 @@ SCIP_RETCODE countSparseSol(
       SCIPdebugMsg(scip, "counts number of solutions represented through the given one\n");
 
       /**@note aggregations and multi aggregations: we do not have to care about these things
-       *       since we count solution from the transformed problem and therefore, SCIP does
+       *       since we count solutions from the transformed problem and therefore, SCIP does
        *       it for us
        */
       assert( SCIPgetNPseudoBranchCands(scip) != 0 );
@@ -787,6 +776,7 @@ SCIP_RETCODE countSparseSol(
          {
             var = vars[v];
             origvar = var;
+
             /* get original variable to decide if we will count the domain; continuous variables aren't counted */
             SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
@@ -803,7 +793,7 @@ SCIP_RETCODE countSparseSol(
                assert( SCIPisFeasIntegral(scip, ub - lb) );
                assert( SCIPisFeasLT(scip, lb, ub) );
 
-               /* the number of integers laying in the interval [lb,ub] is (ub - lb + 1); to make everything integral we
+               /* the number of integers lying in the interval [lb,ub] is (ub - lb + 1); to make everything integral we
                 * add another 0.5 and cut the fractional part off
                 */
                multInt(&newsols, (SCIP_Longint)(ub - lb + 1.5) );  /*lint !e545*/
@@ -977,7 +967,7 @@ SCIP_RETCODE checkKnapsack(
 
          if( !varIsUnfixedLocal(vars[v]) )
          {
-            /* variables is fixed locally; therefore, subtract fixed variable value multiplied by
+            /* variable is fixed locally; therefore, subtract fixed variable value multiplied by
              * the weight;
              */
             capa -= weights[v] * SCIPvarGetLbLocal(vars[v]);
@@ -1282,7 +1272,7 @@ SCIP_RETCODE checkSolution(
    assert( conshdlrdata != NULL );
    assert( result != NULL );
 
-   /* the solution should not be found through a heuristic since in this case the informations of SCIP are not valid for
+   /* the solution should not be found through a heuristic since in this case the information of SCIP is not valid for
     * this solution
     */
 
@@ -1296,7 +1286,7 @@ SCIP_RETCODE checkSolution(
    assert( SCIPsolGetHeur(sol) == NULL);
 
    /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test or is
-    * completely fixed the result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
+    * completely fixed, the result is set to SCIP_CUTOFF which cuts off the subtree initialized through the current node
     */
    *result = SCIP_INFEASIBLE;
 
@@ -1336,14 +1326,14 @@ SCIP_RETCODE checkSolution(
       }
 
       /* in case of continuous variables are present we explicitly cutoff the integer assignment since in case of
-       * nonlinear constraint we want to avoid the count that integer assignment again
+       * nonlinear constraint we want to avoid to count that integer assignment again
        */
       if( conshdlrdata->continuous )
       {
          SCIP_CALL( conshdlrdata->cutoffSolution(scip, sol, conshdlrdata) );
       }
 
-      /* since all integer are fixed we cut off the subtree */
+      /* since all integer are fixed, we cut off the subtree */
       *result = SCIP_CUTOFF;
    }
    else if( conshdlrdata->sparsetest )
@@ -1387,7 +1377,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* in case the count constraint handler is active we avoid copying to ensure a safe count */
+   /* in case the countsols constraint handler is active we avoid copying to ensure a safe count */
    if( conshdlrdata->active )
       *valid = FALSE;
    else
@@ -1811,7 +1801,7 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
    {
       if( !conshdlrdata->warning )
       {
-         SCIPwarningMessage(scip, "a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+         SCIPwarningMessage(scip, "a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored.\n");
          conshdlrdata->warning = TRUE;
       }
 
@@ -1949,10 +1939,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    if( nrestarts != 0 )
    {
-      /* need to disabled restarts, since collecting solutions won't work but also the captures for variables are not
+      /* need to disable restarts, since collecting solutions won't work, but also the capturing for variables is not
        * correctly handled
        */
-      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0\n");
+      SCIPwarningMessage(scip, "counting forces parameter <presolving/maxrestarts> to 0.\n");
       if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
@@ -2427,7 +2417,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                {
 #ifndef NDEBUG
                   {
-                     /* check if the original variable fits to the transform variable the constraint handler has */
+                     /* check if the original variable fits to the transformed variable the constraint handler has stored */
                      SCIP_VAR* transvar;
                      SCIP_CALL( SCIPgetTransformedVar(scip, origvars[v], &transvar) );
                      assert(transvar != NULL);
@@ -2813,7 +2803,7 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *
  *  @note You get the pointer to the sparse solutions stored in the constraint handler (not a copy).
  *
- *  @note The sparse solutions are stored w.r.t. the active variables. This are the variables which got not removed
+ *  @note The sparse solutions are stored w.r.t. the active variables. There are the variables which have not been removed
  *        during presolving. For none active variables the value has to be computed depending on their aggregation
  *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */

@@ -259,7 +259,7 @@ void SCIPgetDecomps(
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPaddDecomp", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDecomps", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( decomps != NULL )
       *decomps = original ? SCIPdecompstoreGetOrigDecomps(scip->decompstore) : SCIPdecompstoreGetDecomps(scip->decompstore);
@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPcomputeDecompVarsLabels(
             varbufsize, &nconsvars, &requiredsize, &success) );
       SCIP_CALL( ensureCondition(success) );
 
-      /** each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
+      /* each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
       for( v = 0; v < nconsvars; ++v )
       {
          SCIP_VAR* var = varbuffer[v];
@@ -705,7 +705,6 @@ SCIP_RETCODE computeModularity(
    getDecompVarsConssData(scip, decomp, NULL, &conss, NULL, &nconss);
    varbufsize = getVarbufSize(scip);
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, varbufsize) );
@@ -848,7 +847,7 @@ SCIP_RETCODE buildBlockGraph(
    SCIP_DIGRAPH* blockgraph = NULL;
    int* varlabels;
    int* conslabels;
-   SCIP_CONS** consscopy; /**< working copy of the constraints */
+   SCIP_CONS** consscopy; /* working copy of the constraints */
    int* linkvaridx;
    int* succnodesblk;
    int* succnodesvar;
@@ -1069,7 +1068,6 @@ SCIP_RETCODE buildBlockGraph(
 
           ++nblockgraphedges;
       }
-
 
       /* clean up the adjacent array and free it */
       for( i = 0; i < nadjacentblks; ++i )

@@ -2130,9 +2130,7 @@ SCIP_RETCODE displayRelevantStats(
                SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
             if( scip->primal->nsolsfound > 0 )
             {
-               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e",
-                  SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
-
+               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e", SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
             }
             SCIPmessagePrintInfo(scip->messagehdlr, ")\n");
          }

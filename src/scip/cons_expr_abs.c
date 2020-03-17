@@ -465,7 +465,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    SCIPintervalUnify(&childbounds, left, right);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbounds, force, reversepropqueue, infeasible,
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbounds, force, reversepropqueue, infeasible,
          nreductions) );
 
    return SCIP_OKAY;
