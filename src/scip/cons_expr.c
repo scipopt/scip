@@ -5693,13 +5693,12 @@ SCIP_Real getViolSplitWeight(
       case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
       {
          SCIP_Real weight;
-         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)); /*lint !e666*/
          return MAX(0.05, weight);
       }
 
       case 'd' :  /* domain width */
          return SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
-         break;
 
       case 'l' :  /* logarithmic domain width: log-scale if width below 0.1 and 10, otherwise actual width */
       {
@@ -6309,8 +6308,7 @@ void scoreBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
-   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag              /**< tag of solution */
+   SCIP_SOL*             sol                 /**< solution to enforce (NULL for the LP solution) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6417,16 +6415,16 @@ void scoreBranchingCandidates(
                      pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
                      break;
                   case 'l' :
-                     if( SCIPisInfinity(scip, SCIPgetSolVal(scip, NULL, var)) )
+                     if( SCIPisInfinity(scip, SCIPgetSolVal(scip, sol, var)) )
                         pscostdown = SCIP_INVALID;
-                     else if( SCIPgetSolVal(scip, NULL, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
+                     else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
                         pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
                      else
                         pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, NULL, var) - SCIPadjustedVarUb(scip, var, brpoint)));
                      break;
                   default :
-                     SCIPerrorMessage("branching strategy %c unknown\n", strategy);
-                     SCIPABORT();
+                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                     pscostdown = SCIP_INVALID;
                }
             }
             else
@@ -6443,7 +6441,7 @@ void scoreBranchingCandidates(
                      pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
                      break;
                   case 'l' :
-                     if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, NULL, var)) )
+                     if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
                         pscostup = SCIP_INVALID;
                      else if( SCIPgetSolVal(scip, NULL, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
                         pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
@@ -6451,24 +6449,24 @@ void scoreBranchingCandidates(
                         pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, NULL, var) );
                      break;
                   default :
-                     SCIPerrorMessage("branching strategy %c unknown\n", strategy);
-                     SCIPABORT();
+                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                     pscostup = SCIP_INVALID;
                }
             }
             else
                pscostup = SCIP_INVALID;
 
-            if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
+            if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )  /*lint !e777*/
                cands[c].pscost = SCIP_INVALID;
-            else if( pscostdown == SCIP_INVALID )
+            else if( pscostdown == SCIP_INVALID )  /*lint !e777*/
                cands[c].pscost = pscostup;
-            else if( pscostup == SCIP_INVALID )
+            else if( pscostup == SCIP_INVALID )  /*lint !e777*/
                cands[c].pscost = pscostdown;
             else
                cands[c].pscost = SCIPgetBranchScore(scip, NULL, pscostdown, pscostup);  /* pass NULL for var to avoid multiplication with branch-factor */
          }
 
-         if( cands[c].pscost != SCIP_INVALID )
+         if( cands[c].pscost != SCIP_INVALID )  /*lint !e777*/
             maxscore.pscost = MAX(cands[c].pscost, maxscore.pscost);
       }
 
@@ -6541,7 +6539,7 @@ void scoreBranchingCandidates(
       /* use pseudo-costs, if we have some for at least half the candidates */
       if( maxscore.pscost > 0.0 )
       {
-         if( cands[c].pscost != SCIP_INVALID )
+         if( cands[c].pscost != SCIP_INVALID )  /*lint !e777*/
          {
             cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
             weightsum += conshdlrdata->branchpscostweight;
@@ -6578,7 +6576,7 @@ SCIP_DECL_SORTINDCOMP(branchcandCompare)
 {
    BRANCHCAND* cands = (BRANCHCAND*)dataptr;
 
-   if( cands[ind1].weighted != cands[ind2].weighted )
+   if( cands[ind1].weighted != cands[ind2].weighted )  /*lint !e777*/
       return cands[ind1].weighted < cands[ind2].weighted ? -1 : 1;
    else
       return SCIPvarGetIndex(SCIPgetConsExprExprAuxVar(cands[ind1].expr)) - SCIPvarGetIndex(SCIPgetConsExprExprAuxVar(cands[ind2].expr));
@@ -6642,7 +6640,7 @@ SCIP_RETCODE branching(
       SCIP_Real threshold;
 
       /* computed additional scores on branching candidates and weighted score */
-      scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol, soltag);
+      scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol);
 
       /* sort candidates by weighted score */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
@@ -9724,7 +9722,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       SCIP_CALL( SCIPgetCharParam(scip, "branching/lpgainnormalize", &(conshdlrdata->branchpscostupdatestrategy)) );
       if( strchr("lds", conshdlrdata->branchpscostupdatestrategy) == NULL )
       {
-         SCIPerrorMessage("branching strategy %c unknown\n", conshdlrdata->branchpscostupdatestrategy);
+         SCIPerrorMessage("branching/lpgainnormalize strategy %c unknown\n", conshdlrdata->branchpscostupdatestrategy);
          SCIPABORT();
          return SCIP_INVALIDDATA;
       }
