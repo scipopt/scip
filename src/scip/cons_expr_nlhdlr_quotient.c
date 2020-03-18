@@ -16,6 +16,7 @@
 /**@file   cons_expr_nlhdlr_quotient.h
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
+ * @author Fabian Wegscheider
  *
  * @todo implement INITSEPA
  */
@@ -372,6 +373,7 @@ SCIP_RETCODE detectExpr(
 /** helper method to compute interval for (a x + b) / (c x + d) + e */
 static
 SCIP_INTERVAL intEval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTERVAL         bnds,               /**< bounds on x */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
@@ -384,6 +386,8 @@ SCIP_INTERVAL intEval(
    SCIP_INTERVAL denominterval;
    SCIP_Real infeval;
    SCIP_Real supeval;
+
+   assert(scip != NULL);
 
    /* return empty interval if the domain of x is empty */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
@@ -403,8 +407,17 @@ SCIP_INTERVAL intEval(
       return result;
    }
 
-   infeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
-   supeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
+   assert(!SCIPisZero(scip, c));
+
+   if( SCIPisInfinity(scip, -bnds.inf) )
+      infeval = a / c;
+   else
+      infeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
+
+   if( SCIPisInfinity(scip, bnds.sup) )
+      supeval = a / c;
+   else
+      supeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
 
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
@@ -460,10 +473,12 @@ SCIP_INTERVAL revpropEval(
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
    {
+      assert(infpropval <= suppropval);
       SCIPintervalSetBounds(&result, infpropval, suppropval);
    }
    else if( a*d - b*c < 0.0 ) /* monotone decreasing */
    {
+      assert(suppropval <= infpropval);
       SCIPintervalSetBounds(&result, suppropval, infpropval);
    }
 
@@ -505,11 +520,12 @@ SCIP_RETCODE assembleRowprep(
    return SCIP_OKAY;
 }
 
+/** helper method to compute cut in the univariate case */
 static
-SCIP_RETCODE sepaEqualVars(
+SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_SOL*             sol,                /**< solution point */
+   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution */
    SCIP_VAR*             x,                  /**< argument variable */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
@@ -535,21 +551,20 @@ SCIP_RETCODE sepaEqualVars(
    assert(success != NULL);
    assert(cut != NULL);
    assert(x != NULL);
+   assert(c != 0.0);
+
+   *success = FALSE;
+   *cut = NULL;
 
    bnds.inf = SCIPvarGetLbLocal(x);
    bnds.sup = SCIPvarGetUbLocal(x);
    singularity = -d / c;
 
    /* if 0 is in the denom interval, estimation is not possible */
-   if( bnds.inf < singularity && bnds.sup > singularity )
-   {
-      *success = FALSE;
-      *cut = NULL;
-
+   if( SCIPisLT(scip, bnds.inf, singularity) && SCIPisGT(scip, bnds.sup, singularity) )
       return SCIP_OKAY;
-   }
 
-   isinleftpart = bnds.sup < singularity;
+   isinleftpart = (bnds.sup < singularity);
    monincreasing = (a * b - c * d > 0.0);
 
    /* There are 8 cases, in 4 we need a secant and in the other 4 a tangent:
@@ -595,6 +610,10 @@ SCIP_RETCODE sepaEqualVars(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_tangent", expr);
    }
+
+   /* avoid huge values in the cut */
+   if( SCIPisHugeValue(scip, ABS(lincoef)) || SCIPisHugeValue(scip, ABS(linconst)) )
+      return SCIP_OKAY;
 
    SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, linconst,
          lincoef, x, SCIPgetConsExprExprAuxVar(expr)) );
@@ -739,10 +758,17 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
    result = revpropEval(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
-   if( SCIPisLT(scip, varlb , result.inf) || SCIPisGT(scip, varub, result.sup) )
+   if( SCIPisLT(scip, varlb, result.inf) || SCIPisGT(scip, varub, result.sup) )
    {
       SCIP_INTERVAL varbnds;
       SCIP_Bool tightened;
+
+      /* if force=TRUE, take the bound strengthening tolerance into account */
+      if( !force && !SCIPisLbBetter(scip, result.inf, varlb, varub)
+         && !SCIPisUbBetter(scip, result.sup, varub, varlb) )
+      {
+         return SCIP_OKAY;
+      }
 
       SCIPintervalSetBounds(&varbnds, varlb, varub);
       SCIPintervalIntersect(&result, result, varbnds);

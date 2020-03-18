@@ -16,6 +16,7 @@
 /**@file   cons_expr_nlhdlr_quotient.h
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
+ * @author Fabian Wegscheider
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,4 +41,4 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_DEFAULT_H__ */
+#endif /* __SCIP_CONS_EXPR_NLHDLR_QUOTIENT_H__ */

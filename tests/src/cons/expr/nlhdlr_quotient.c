@@ -98,16 +98,17 @@ void teardown(void)
 /* test suite */
 TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
 
+/** checks whether the values in nlhdlrexprdata are as expected */
 static
 void checkData(
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_VAR*             nomvar,
-   SCIP_Real             nomcoef,
-   SCIP_Real             nomconst,
-   SCIP_VAR*             denomvar,
-   SCIP_Real             denomcoef,
-   SCIP_Real             denomconst,
-   SCIP_Real             constant
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< the nlhdlr expression data */
+   SCIP_VAR*             nomvar,             /**< expected nominator variable */
+   SCIP_Real             nomcoef,            /**< expected nominator coefficient */
+   SCIP_Real             nomconst,           /**< expected nominator constant */
+   SCIP_VAR*             denomvar,           /**< expected denominator variable */
+   SCIP_Real             denomcoef,          /**< expected denominator coefficient */
+   SCIP_Real             denomconst,         /**< expected denominator constant */
+   SCIP_Real             constant            /**< expected constant */
    )
 {
    cr_expect_not_null(nlhdlrexprdata->nomvar);
@@ -119,13 +120,14 @@ void checkData(
    cr_expect(SCIPisEQ(scip, constant, nlhdlrexprdata->constant));
 }
 
+/* checks whether the values of the cut are as expected */
 static
 void checkCut(
-   SCIP_ROW*             cut,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   SCIP_Real             rhs,
-   int                   nvars
+   SCIP_ROW*             cut,                /**< the cut to check */
+   SCIP_VAR**            vars,               /**< array of expected variables */
+   SCIP_Real*            vals,               /**< array of expected coefficients */
+   SCIP_Real             rhs,                /**< expected rhs value */
+   int                   nvars               /**< expected number of variables */
    )
 {
    int i;
