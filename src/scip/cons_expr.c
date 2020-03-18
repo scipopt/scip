@@ -6372,7 +6372,7 @@ void scoreBranchingCandidates(
          maxscore.dual = MAX(cands[c].dual, maxscore.dual);
       }
 
-      if( conshdlrdata->branchpscostweight > 0.0 )
+      if( conshdlrdata->branchpscostweight > 0.0 && SCIPgetNObjVars(scip) > 0 )
       {
          SCIP_VAR* var;
 
