@@ -503,15 +503,11 @@ SCIP_RETCODE assembleRowprep(
    assert(childvar != NULL);
    assert(auxvar != NULL);
 
-   /* for overestimators, mirror back */
-   if( overestimate )
-      linconst *= -1.0;
-
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
    (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%lld", name,
       SCIPvarGetName(childvar), SCIPgetNLPs(scip));
 
-   SCIPaddRowprepConstant(*rowprep, linconst);
+   SCIPaddRowprepSide(*rowprep, -linconst);
 
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, 2) );
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
@@ -525,7 +521,7 @@ static
 SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution */
+   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_VAR*             x,                  /**< argument variable */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
@@ -537,7 +533,7 @@ SCIP_RETCODE sepaUnivariate(
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
-   char* name;
+   char name[SCIP_MAXSTRLEN];
    SCIP_INTERVAL bnds;
    SCIP_Real singularity;
    SCIP_Real linconst;
@@ -561,7 +557,7 @@ SCIP_RETCODE sepaUnivariate(
    singularity = -d / c;
 
    /* if 0 is in the denom interval, estimation is not possible */
-   if( SCIPisLT(scip, bnds.inf, singularity) && SCIPisGT(scip, bnds.sup, singularity) )
+   if( SCIPisLE(scip, bnds.inf, singularity) && SCIPisGE(scip, bnds.sup, singularity) )
       return SCIP_OKAY;
 
    isinleftpart = (bnds.sup < singularity);
@@ -605,7 +601,7 @@ SCIP_RETCODE sepaUnivariate(
       soleval = (a * solvarval + b) / (c * solvarval + d) + e;
 
       /* compute coefficient and constant of linear estimator */
-      lincoef = SQR((a * d - b * c) / (d + c * solvarval));
+      lincoef = (a * d - b * c) / SQR(d + c * solvarval);
       linconst = soleval - lincoef * solvarval;
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_tangent", expr);
@@ -723,7 +719,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->nomvar),
       SCIPvarGetUbLocal(nlhdlrexprdata->nomvar));
 
-   tmp = intEval(varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+   tmp = intEval(scip, varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    /* intersect intervals if we have learned a tighter interval */

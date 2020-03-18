@@ -35,10 +35,6 @@
 static SCIP* scip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
-static SCIP_VAR* w;
-static SCIP_VAR* z;
-static SCIP_VAR* u;
-
 static SCIP_CONSEXPR_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
@@ -67,25 +63,16 @@ void setup(void)
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 1.0, 5.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 2.0, 3.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -4.0, -1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &u, "u", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 1.5, 5.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -4.0, 0.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
-   SCIP_CALL( SCIPaddVar(scip, u) );
 }
 
 /* releases variables, frees scip */
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseVar(scip, &u) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
@@ -96,7 +83,7 @@ void teardown(void)
 }
 
 /* test suite */
-TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
+TestSuite(nlhdlrquotient, .init = setup, .fini = teardown);
 
 /** checks whether the values in nlhdlrexprdata are as expected */
 static
@@ -126,6 +113,7 @@ void checkCut(
    SCIP_ROW*             cut,                /**< the cut to check */
    SCIP_VAR**            vars,               /**< array of expected variables */
    SCIP_Real*            vals,               /**< array of expected coefficients */
+   SCIP_Real             lhs,                /**< expected lhs value */
    SCIP_Real             rhs,                /**< expected rhs value */
    int                   nvars               /**< expected number of variables */
    )
@@ -136,8 +124,9 @@ void checkCut(
    cr_assert_not_null(vars);
    cr_assert_not_null(vals);
 
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d vars in cut, but got %d\n",
+   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d variable(s) in cut, but got %d\n",
       nvars, SCIProwGetNNonz(cut));
+   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs), "expected lhs = %f, but got %f\n", lhs, SCIProwGetLhs(cut));
    cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwGetRhs(cut));
 
    for( i = 0; i < nvars; ++i )
@@ -150,7 +139,7 @@ void checkCut(
 }
 
 /* detects x / y */
-Test(nlhdlrsoc, detectandfree1, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -189,7 +178,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple quotient expressi
 }
 
 /* detects (4x + 1) / (-3x - 3) */
-Test(nlhdlrsoc, detectandfree2, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -228,7 +217,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple quotient expressi
 }
 
 /* detects log((4x + 3) / (x + 1)) */
-Test(nlhdlrsoc, detectandfree3, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -267,7 +256,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects simple quotient expressi
 }
 
 /* detects that (4x + 2y + 3) / (x + 1)) is invalid */
-Test(nlhdlrsoc, detectandfree4, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -303,7 +292,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quotient expressi
 }
 
 /* detects log(x) / log(y)) */
-Test(nlhdlrsoc, detectandfree5, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -315,7 +304,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects simple quotient expressi
    int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: log(<x>) / log(<y>) <= 10",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: log(<x>) / abs(<y>) <= 10",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -347,7 +336,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects simple quotient expressi
 }
 
 /* detects (4x + 1) / (-3x + 3) + 2 after simplification */
-Test(nlhdlrsoc, detectandfree6, .description = "detects simple quotient expression")
+Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -389,7 +378,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects simple quotient expressi
 }
 
 /* tests interval evaluation for ((+/-)4x + 1) / (-3x + 3) - 2*/
-Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quotient expression")
+Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simple quotient expression")
 {
    SCIP_INTERVAL varbnds;
    SCIP_INTERVAL result;
@@ -399,7 +388,7 @@ Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quo
    varbnds.inf = 0.0;
    varbnds.sup = 2.0;
 
-   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, result));
 
@@ -408,7 +397,7 @@ Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quo
    varbnds.inf = 2.0;
    varbnds.sup = 9.0;
 
-   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, -5.0));
    cr_expect(SCIPisEQ(scip, result.sup, -37.0 / 24.0 - 2.0), "expected %f, but got %f\n",
@@ -419,7 +408,7 @@ Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quo
    varbnds.inf = -1.0;
    varbnds.sup = 0.0;
 
-   result = intEval(varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, -2.5));
    cr_expect(SCIPisEQ(scip, result.sup, 1.0 / 3.0 - 2.0));
@@ -430,7 +419,7 @@ Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quo
    varbnds.inf = 2.0;
    varbnds.sup = 9.0;
 
-   result = intEval(varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEval(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, 35.0 / 24.0 - 2.0));
    cr_expect(SCIPisEQ(scip, result.sup, 7.0 / 3.0 - 2.0));
@@ -440,9 +429,170 @@ Test(nlhdlrsoc, inteval, .description = "tests interval evaluation of simple quo
    varbnds.inf = -1.0;
    varbnds.sup = 0.0;
 
-   result = intEval(varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEval(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, 1.0 / 3.0 - 2.0));
    cr_expect(SCIPisEQ(scip, result.sup, 5.0 / 6.0 - 2.0));
+}
 
+/* separates x = 2 for (4x + 1) / (-3x + 3) + 2 */
+Test(nlhdlrquotient, separation1, .description = "separates simple quotient expression")
+{
+   SCIP_ROWPREP* cutprep;
+   SCIP_ROW* cut;
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_SOL* sol;
+   SCIP_VAR* cutvars[2];
+   SCIP_Real cutcoefs[2];
+   SCIP_Real tmpinf;
+   SCIP_Real tmpsup;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: ((4*<x> + 1) / (-3*<x> + 3) - 2) <= 3",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* create auxvar for expression */
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[0])) );
+   cutcoefs[0] = -1.0;
+
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
+
+   /**
+    *  test overestimation
+    */
+
+   SCIP_CALL( sepaUnivariate(scip, expr, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, &cutprep, &success) );
+
+   cr_assert(success);
+   cr_assert_not_null(cutprep);
+
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
+
+   cutvars[1] = x;
+   cutcoefs[1] = 5.0 / 3.0;
+
+   checkCut(cut, cutvars, cutcoefs, 5.0 + cutcoefs[1] * 2.0, SCIPinfinity(scip), 2);
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIPfreeRowprep(scip, &cutprep);
+
+   /**
+    *  test underestimation
+    */
+
+   SCIP_CALL( sepaUnivariate(scip, expr, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, &cutprep, &success) );
+
+   cr_assert(success);
+   cr_assert_not_null(cutprep);
+
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
+
+   tmpinf = -7.0 / 1.5 - 2.0;
+   tmpsup = -21.0 / 12.0 - 2.0;
+   cutvars[1] = x;
+   cutcoefs[1] = (tmpsup - tmpinf) / 3.5;
+   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), -tmpsup + cutcoefs[1] * 5.0, 2);
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIPfreeRowprep(scip, &cutprep);
+
+   /* free the rest */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(cutvars[1])) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* separates y = -1 for (4y + 1) / (-3y + 3) + 2 */
+Test(nlhdlrquotient, separation2, .description = "separates simple quotient expression")
+{
+   SCIP_ROWPREP* cutprep;
+   SCIP_ROW* cut;
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_SOL* sol;
+   SCIP_VAR* cutvars[2];
+   SCIP_Real cutcoefs[2];
+   SCIP_Real tmpinf;
+   SCIP_Real tmpsup;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: ((4*<y> + 1) / (-3*<y> + 3) - 2) <= 3",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* create auxvar for expression */
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[0])) );
+   cutcoefs[0] = -1.0;
+
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -1.0) );
+
+   /**
+    *  test overestimation
+    */
+
+   SCIP_CALL( sepaUnivariate(scip, expr, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, &cutprep, &success) );
+
+   cr_assert(success);
+   cr_assert_not_null(cutprep);
+
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
+
+   tmpinf = -3.0;
+   tmpsup = 1.0 / 3.0 - 2.0;
+   cutvars[1] = y;
+   cutcoefs[1] = (tmpsup - tmpinf) / 4.0;
+
+   checkCut(cut, cutvars, cutcoefs, -tmpsup, SCIPinfinity(scip), 2);
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIPfreeRowprep(scip, &cutprep);
+
+   /**
+    *  test underestimation
+    */
+
+   SCIP_CALL( sepaUnivariate(scip, expr, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, &cutprep, &success) );
+
+   cr_assert(success);
+   cr_assert_not_null(cutprep);
+
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
+
+   cutvars[1] = y;
+   cutcoefs[1] = 5.0 / 12.0;
+   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 2.5 - cutcoefs[1], 2);
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIPfreeRowprep(scip, &cutprep);
+
+   /* free the rest */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(cutvars[1])) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
