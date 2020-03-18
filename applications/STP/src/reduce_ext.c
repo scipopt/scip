@@ -859,7 +859,6 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
    SCIP_Real             cutoff,             /**< cutoff value */
    const int*            outedges,           /**< two outgoing edge */
    int                   inedge,             /**< incoming edge */
-   int*                  edgestack,          /**< array of size nodes for internal computations */
    SCIP_Real*            treebound,          /**< to store a lower bound for the tree */
    SCIP_Bool*            ruleout,             /**< could tree be ruled out? */
    unsigned int*         eqstack,            /**< stores edges that were used for equality comparison */
@@ -867,6 +866,7 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
    SCIP_Bool*            eqmark              /**< marks edges that were used for equality comparison */
 )
 {
+   int* edgestack;
 #ifndef NDEBUG
    const SCIP_Real orgtreebound = *treebound;
 #endif
@@ -880,6 +880,8 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
    assert(outedges != NULL);
    assert(inedge >= 0 && outedges[0] >= 0 && outedges[1] >= 0);
    assert(inedge < graph->edges && outedges[0] < graph->edges && outedges[1] < graph->edges);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgestack, graph->knots) );
 
    /* trivial rule-out? */
    if( SCIPisGT(scip, *treebound, cutoff) )
@@ -1153,6 +1155,8 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
       SCIPfreeCleanBufferArray(scip, &nodepos);
    }
 
+   SCIPfreeBufferArray(scip, &edgestack);
+
    return SCIP_OKAY;
 }
 
@@ -1166,11 +1170,11 @@ int reduce_extendedEdge(
    const int*            result,             /**< sol int array */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int                   root,               /**< the root */
-   int*                  nodearr,            /**< for internal stuff */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
    SCIP_Bool             markdirected        /**< try to also mark edge if anti-parallel is not marked */
 )
 {
+   int* nodearr;
    unsigned int* eqstack;
    SCIP_Bool* eqmark;
    int nfixed = 0;
@@ -1187,6 +1191,7 @@ int reduce_extendedEdge(
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr, nnodes) );
 
    if( !pcmw )
       for( int k = 0; k < nnodes; k++ )
@@ -1247,6 +1252,7 @@ int reduce_extendedEdge(
       }
    }
 
+   SCIPfreeBufferArray(scip, &nodearr);
    SCIPfreeBufferArray(scip, &eqstack);
    SCIPfreeCleanBufferArray(scip, &eqmark);
 

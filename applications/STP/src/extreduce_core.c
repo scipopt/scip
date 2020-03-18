@@ -1564,6 +1564,7 @@ SCIP_RETCODE extreduce_checkComponent(
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
 
+   assert(!(*compIsDeletable));
    assert(extreduce_extCompFullIsPromising(graph, extpermanent, extcomp) || (extcomp->ncompedges > 1));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
@@ -1615,7 +1616,8 @@ SCIP_RETCODE extreduce_checkComponent(
       extreduce_extdataCleanArraysDbg(graph, &extdata);
 #endif
 
-      extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
+      if( extreduce_extCompIsPromising(graph, extpermanent, extcomp) )
+         extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
 
       /* also try the other way? */
       if( !(*compIsDeletable) && extcomp->allowReversion )

@@ -385,7 +385,8 @@ SCIP_Real extSdGetProper(
  */
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern SCIP_RETCODE    extreduce_pseudodeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, SCIP_Real*, int*);
+extern SCIP_RETCODE    extreduce_pseudoDeleteNodes(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, SCIP_Real*, int*);
+extern SCIP_RETCODE    extreduce_updatePseudoDeletableNodes(SCIP*, const REDCOST*, const int*, SCIP_Bool*, GRAPH*, STP_Bool*);
 extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);

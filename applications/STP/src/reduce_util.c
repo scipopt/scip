@@ -231,14 +231,150 @@ SCIP_Real dcmstGetWeightFromStore(
       assert(LE(dmst->edgestore[i].cost, FARAWAY));
 #endif
 
-  //    printf("v1->v2: %d->%d: %f \n", v1, v2, edgestore[i].cost);
-
       weight += edgestore[i].cost;
    }
 
    return weight;
 }
 
+/** apply pseudo eliminations provided */
+SCIP_RETCODE reduce_applyPseudoDeletions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
+   const SCIP_Bool*      pseudoDelNodes,     /**< node with pseudo deletable nodes */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_Real*            offsetp,            /**< offset pointer (for PC) */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   int adjvert[STP_DELPSEUDO_MAXGRAD];
+   SCIP_Real cutoffs[STP_DELPSEUDO_MAXNEDGES];
+   SCIP_Real cutoffsrev[STP_DELPSEUDO_MAXNEDGES];
+   const PATH* nodeTo3TermsPaths = redcostdata->nodeTo3TermsPaths;
+   const SCIP_Real* rootToNodeDist = redcostdata->rootToNodeDist;
+   const SCIP_Real* redcost = redcostdata->redEdgeCost;
+   const SCIP_Real cutoffbound = redcostdata->cutoff;
+   int* nodetouchcount;
+   const int nnodes = graph_get_nNodes(graph);
+   SCIP_Bool success;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+   const SCIP_Bool isExtendedOrg = graph->extended;
+
+   assert(GE(cutoffbound, 0.0));
+   assert(nodeTo3TermsPaths && rootToNodeDist && redcost);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodetouchcount, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      nodetouchcount[k] = 0;
+
+   if( isPc )
+      graph_pc_2orgcheck(scip, graph);
+
+   *nelims = 0;
+
+   for( int degree = 3; degree <= STP_DELPSEUDO_MAXGRAD; degree++ )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         SCIP_Real prize = -1.0;
+         int edgecount = 0;
+         SCIP_Bool rpc3term = FALSE;
+
+         if( !pseudoDelNodes[k] || nodetouchcount[k] > 0 )
+            continue;
+
+         if( isPc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
+         {
+            rpc3term = TRUE;
+         }
+         else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )
+         {
+            continue;
+         }
+
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            nodetouchcount[graph->head[e]]++;
+
+         if( rpc3term )
+         {
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               const int head = graph->head[e];
+               if( !graph_pc_knotIsDummyTerm(graph, head) )
+                  adjvert[edgecount++] = head;
+            }
+         }
+         else
+         {
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               adjvert[edgecount++] = graph->head[e];
+         }
+
+         assert(edgecount == degree);
+
+         edgecount = 0;
+         for( int i = 0; i < degree - 1; i++ )
+         {
+            const int vert = adjvert[i];
+            for( int i2 = i + 1; i2 < degree; i2++ )
+            {
+               const int vert2 = adjvert[i2];
+
+               assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
+
+               cutoffs[edgecount] = cutoffbound - (rootToNodeDist[vert] + nodeTo3TermsPaths[vert2].dist);
+               cutoffsrev[edgecount] = cutoffbound - (rootToNodeDist[vert2] + nodeTo3TermsPaths[vert].dist);
+
+               edgecount++;
+            }
+         }
+
+         assert(edgecount > 0);
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("try pseudo-deletion of ");
+         graph_knot_printInfo(graph, k);
+#endif
+
+         /* now try to eliminate */
+         SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, &success) );
+
+         if( success )
+         {
+            (*nelims)++;
+            graph->mark[k] = FALSE;
+
+            SCIPdebugMessage("deletion successful! \n");
+
+            if( rpc3term )
+            {
+               assert(isPc);
+               assert(offsetp);
+               *offsetp += prize;
+            }
+         }
+         else
+         {
+            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               nodetouchcount[graph->head[e]]--;
+               assert(nodetouchcount[graph->head[e]] >= 0);
+            }
+         }
+      }
+   }
+
+   assert(graph_valid(scip, graph));
+
+   if( isPc && isExtendedOrg != graph->extended )
+      graph_pc_2trans(scip, graph);
+
+
+   SCIPfreeBufferArray(scip, &nodetouchcount);
+
+   return SCIP_OKAY;
+}
 
 /** initializes dynamic MST structure */
 SCIP_RETCODE reduce_dcmstInit(

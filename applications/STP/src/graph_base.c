@@ -1216,7 +1216,7 @@ SCIP_RETCODE graph_knot_replaceDeg2(
 }
 
 
-/** pseudo delete node, i.e. reconnect neighbors; maximum degree of 4! */
+/** pseudo delete node, i.e. reconnect neighbors; maximum degree of STP_DELPSEUDO_MAXGRAD! */
 SCIP_RETCODE graph_knot_delPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */

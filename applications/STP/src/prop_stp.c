@@ -1218,7 +1218,6 @@ SCIP_RETCODE fixVarsExtendedRed(
    SCIP_Real* redcost = NULL;
    SCIP_Real* pathdist = NULL;
    STP_Bool* arcdeleted = NULL;
-   int* nodearr = NULL;
    int* vbase = NULL;
    int* state = NULL;
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
@@ -1243,7 +1242,6 @@ SCIP_RETCODE fixVarsExtendedRed(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &arcdeleted, nedges) );
 
    graph_mark(propgraph);
@@ -1269,7 +1267,7 @@ SCIP_RETCODE fixVarsExtendedRed(
 #else
    /* reduce graph and mark arcs todo try other reduction2 instead */
    nfixededges = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source,
-         nodearr, arcdeleted, TRUE);
+        arcdeleted, TRUE);
 #endif
    if( pcmw )
       graph_pc_2trans(scip, propgraph);
@@ -1292,7 +1290,6 @@ SCIP_RETCODE fixVarsExtendedRed(
    SCIPdebugMessage("extended-reduction number of fixed variables: %d \n", *nfixedvars);
 
    SCIPfreeBufferArray(scip, &arcdeleted);
-   SCIPfreeBufferArray(scip, &nodearr);
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathdist);

@@ -1073,7 +1073,7 @@ SCIP_RETCODE reduceSap(
          ub = -1.0;
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, edgearrint, vbase, state,
-               heap, nodearrint, nodearrchar, &danelims, randnumgen) );
+               heap, nodearrchar, &danelims, randnumgen) );
 
          if( danelims <= 2 * redbound )
             da = FALSE;
@@ -1115,7 +1115,6 @@ SCIP_RETCODE reduceNw(
    int*    heap;
    int*    state;
    int*    vbase;
-   int*    nodearrint;
    int*    edgearrint;
    int*    nodearrint2;
    int     nnodes;
@@ -1142,7 +1141,6 @@ SCIP_RETCODE reduceNw(
    SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
@@ -1156,7 +1154,7 @@ SCIP_RETCODE reduceNw(
 
       ub = -1.0;
 
-      SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
+      SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap,
             nodearrchar, &danelims, randnumgen) );
 
       if( danelims <= 2 * redbound )
@@ -1165,7 +1163,6 @@ SCIP_RETCODE reduceNw(
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &nodearrint2);
-   SCIPfreeBufferArray(scip, &nodearrint);
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &nodearrreal);
    SCIPfreeBufferArray(scip, &state);
@@ -1598,7 +1595,7 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_Real ub = -1.0;
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrchar, &danelims, randnumgen) );
+                  nodearrchar, &danelims, randnumgen) );
          }
          else
             SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, heap,
@@ -1630,7 +1627,7 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_Real ub = -1.0;
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrchar, &danelims, randnumgen) );
+                  nodearrchar, &danelims, randnumgen) );
          }
          else
          {
@@ -1787,7 +1784,7 @@ SCIP_RETCODE redLoopStp(
          {
            const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
            int extendedelims = 0;
-           SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint, nodearrchar, &extendedelims, randnumgen) );
+           SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrchar, &extendedelims, randnumgen) );
            printf("debug extendedelims=%d \n", extendedelims);
          }
 #endif
@@ -1875,7 +1872,7 @@ SCIP_RETCODE redLoopStp(
          {
             const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = FALSE, .nodereplacing = nodereplacing};
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase,
-                  state, heap, nodearrint, nodearrchar, &danelims, randnumgen));
+                  state, heap, nodearrchar, &danelims, randnumgen));
 
             if( danelims <= STP_RED_EXFACTOR * reductbound )
                da = FALSE;
@@ -1941,7 +1938,7 @@ SCIP_RETCODE redLoopStp(
 
          assert(!rerun);
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
+         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                      nodearrchar, &extendedelims, randnumgen) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
