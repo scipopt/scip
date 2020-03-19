@@ -680,8 +680,6 @@ SCIP_RETCODE exprIsSemicontinuous(
       SCIPreallocBlockMemoryArray(scip, &indicators, nbnds0, nindicators);
    }
 
-   SCIPsortPtr((void**) indicators, SCIPvarComp, nindicators);
-
    nlhdlrexprdata->indicators = indicators;
    nlhdlrexprdata->nindicators = nindicators;
    *res = TRUE;
