@@ -650,10 +650,9 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    /* look for common binary variables for all variables of the expression */
    scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
-   nbnds0 = scvdata->nbnds;
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &indicators, scvdata->bvars, scvdata->nbnds) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &indicators, nbnds0) );
-   BMScopyMemoryArray(indicators, scvdata->bvars, nbnds0);
+   nbnds0 = scvdata->nbnds;
    nindicators = nbnds0;
 
    SCIPdebugMsg(scip, "\nArray intersection for vars %s, *nbvars = %d", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), nindicators);
