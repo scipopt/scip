@@ -670,6 +670,7 @@ Fixed bugs
 - additional checks in some presolvers for time limit being exceeded
 - fixed bug in presolving of cons_varbound with multi-aggregated variables
 - improve numerics in conflict analysis by using double-double arithmetic
+- fixed bound acceptance condition to avoid inconsistencies
 
 Miscellaneous
 -------------
