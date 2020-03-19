@@ -45,6 +45,7 @@ typedef struct reduce_costs_data
    PATH*                 nodeTo3TermsPaths;  /**< paths to three nearest terminals */
    int*                  nodeTo3TermsBases;  /**< three nearest terminals */
    SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
+   SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
    int                   redCostRoot;        /**< graph root for reduced cost calculation */
 #ifndef NDEBUG
    int                   nnodes;             /**< number of nodes */

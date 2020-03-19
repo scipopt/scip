@@ -233,7 +233,6 @@ SCIP_RETCODE graph_transPc2Spg(
    {
       if( graph->prize[i] > 0.0 &&  SCIPisLT(scip, graph->prize[i], FARAWAY) )
       {
-         printf("%d : %f \n", i,graph->prize[i] );
          prizesum += graph->prize[i];
       }
    }
@@ -496,8 +495,6 @@ SCIP_RETCODE graph_transRpc2FixedProper(
    {
       if( graph->prize[i] > 0.0 &&  SCIPisLT(scip, graph->prize[i], FARAWAY) )
       {
-         printf("%d : %f \n", i,graph->prize[i] );
-
          prizesum += graph->prize[i];
       }
    }

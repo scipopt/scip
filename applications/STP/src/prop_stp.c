@@ -1257,7 +1257,7 @@ SCIP_RETCODE fixVarsExtendedRed(
 #if 0
    {
       REDCOST redcostdata = { .redEdgeCost = redcost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
-         .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = graph->source};
+         .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .dualBound = -1.0, .redCostRoot = graph->source};
 
       /* reduce graph and mark deletable arcs
        * Note that all in-root arcs will be set to 0! (w.r.t redCostRoot) */
