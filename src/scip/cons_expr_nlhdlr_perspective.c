@@ -640,7 +640,6 @@ SCIP_RETCODE exprIsSemicontinuous(
    }
 
    /* all variables of an on/off term should be semicontinuous */
-   /* TODO propagate auxiliary variables? */
    for( v = 0; v < nvarexprs; ++v )
    {
       var = SCIPgetConsExprExprVarVar(varexprs[v]);
@@ -649,7 +648,7 @@ SCIP_RETCODE exprIsSemicontinuous(
          return SCIP_OKAY;
    }
 
-   /* find common binary variables for all variables of children[c] */
+   /* look for common binary variables for all variables of the expression */
    scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
    nbnds0 = scvdata->nbnds;
 
@@ -942,7 +941,6 @@ SCIP_RETCODE propSemicont(
 
    for( i = 0; i < exprdata->nindicators; ++i )
    {
-      /* TODO save solutions somewhere? */
       /* set sol to the off value of all expr vars for this indicator */
       for( v = 0; v < exprdata->nvarexprs; ++v )
       {
