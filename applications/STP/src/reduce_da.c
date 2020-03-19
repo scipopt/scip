@@ -2267,14 +2267,15 @@ SCIP_RETCODE reduce_da(
 
          if( extended )
          {
-            int todo;
-        //    SCIP_CALL( extreduce_updatePseudoDeletableNodes(scip, &redcostdata, (havenewsol ? result : NULL), pseudoDelNodes,
-        //          graph, marked) );
+            const SCIP_Bool havenewsol = graph_solIsUnreduced(scip, graph, result);
+            assert(!havenewsol || graph_solIsValid(scip, graph, result));
+
+            SCIP_CALL( extreduce_updatePseudoDeletableNodes(scip, &redcostdata, (havenewsol ? result : NULL), pseudoDelNodes,
+                  graph, arcsdeleted) );
          }
 
          SCIP_CALL( reduce_applyPseudoDeletions(scip, &redcostdata, pseudoDelNodes, graph, offsetp, &nreplacings) );
-     //    printf("nreplacings=%d \n", nreplacings);
-
+        // printf("nreplacings=%d \n", nreplacings);
          ndeletions += nreplacings;
 
          if( nreplacings > 0 && userec )
