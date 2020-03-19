@@ -36,6 +36,9 @@
 /** lightweight minimum spanning tree structure that allows to add vertices to given MST on complete graph (in CSR format) */
 typedef struct dynamic_complete_minimum_spanning_tree DCMST;
 
+/** auxiliary data structure for ruling out all 1-hop stars of a given node */
+typedef struct node_one_hop_star STAR;
+
 
 /** reduced cost result data */
 typedef struct reduce_costs_data
@@ -173,6 +176,14 @@ extern SCIP_Real       reduce_dcmstGetExtWeight(SCIP*, const CSR*, const SCIP_Re
 extern SCIP_Real       reduce_dcmstGetWeight(SCIP*, const CSR*);
 extern int             reduce_dcmstGetMaxnnodes(const DCMST*);
 extern SCIP_Real*      reduce_dcmstGetAdjcostBuffer(const DCMST*);
+extern SCIP_RETCODE    reduce_starInit(SCIP*, int, STAR**);
+extern void            reduce_starFree(SCIP*, STAR**);
+extern void            reduce_starReset(const GRAPH*, int, STAR*);
+extern const int*      reduce_starGetNext(STAR*, int*);
+extern const int*      reduce_starGetRuledOutEdges(STAR*, int*);
+extern void            reduce_starSetRuledOut(STAR*);
+extern void            reduce_starSetFailed(STAR*);
+extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 

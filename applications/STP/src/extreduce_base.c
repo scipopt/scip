@@ -162,13 +162,16 @@ SCIP_RETCODE pseudodeleteExecute(
    DISTDATA distdata;
    EXTPERMA extpermanent;
    const SCIP_Bool markPseudoDeletion = (pseudoDelNodes != NULL);
+   const SCIP_Bool isExtendedOrg = graph->extended;
 
-   assert(scip && redcostdata);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
    assert(graph_isMarked(graph));
 
    if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
+
+   if( graph_pc_isPc(graph) )
+      graph_pc_2orgcheck(scip, graph);
 
    SCIP_CALL( extInit(scip, graph, edgedeletable, &distdata, &extpermanent) );
    if( !markPseudoDeletion )
@@ -218,10 +221,11 @@ SCIP_RETCODE pseudodeleteExecute(
 
    assert(graphmarkIsClean(redcostdata, graph));
 
+   if( graph_pc_isPc(graph) && isExtendedOrg != graph->extended )
+      graph_pc_2trans(scip, graph);
+
    return SCIP_OKAY;
 }
-
-
 
 
 /** deletes an edge and makes corresponding adaptations */
@@ -426,6 +430,7 @@ SCIP_RETCODE extreduce_updatePseudoDeletableNodes(
    STP_Bool*             edgedeletable       /**< edge array to mark which (directed) edge can be removed (in/out) */
 )
 {
+
    assert(scip && redcostdata && result && graph);
 
    SCIP_CALL( pseudodeleteExecute(scip, redcostdata, result, graph, pseudoDelNodes, edgedeletable, NULL, NULL) );

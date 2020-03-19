@@ -49,6 +49,19 @@ struct dynamic_complete_minimum_spanning_tree
 };
 
 
+/** see reduce.h */
+struct node_one_hop_star
+{
+   int*                  edgeId;            /**< IDs for each adjacent edge of current node (of size maxNodeDegree) */
+   int*                  edgesSelected;     /**< list of currently selected edges (of size maxNodeDegree) */
+   int*                  edgesSelectedPos;  /**< list of position of currently selected edges w.r.t. edgeId (of size maxNodeDegree) */
+   int                   nodeDegree;        /**< degree of current node */
+   int                   starDegree;        /**< degree of current star */
+   int                   maxNodeDegree;     /**< maximum allowed node degree */
+   SCIP_Bool             allStarsChecked;   /**< have all stars been checked? */
+};
+
+
 /** recursive method for adding node to MST */
 static
 void dcmstInsert(
@@ -236,6 +249,100 @@ SCIP_Real dcmstGetWeightFromStore(
 
    return weight;
 }
+
+
+/** sets star position array to initial setting for current star degree */
+static inline
+void starSelectedPositionsReset(
+   STAR*                 star                /**< the star */
+)
+{
+   int* const edgesSelectedPos =  star->edgesSelectedPos;
+   const int starDegree = star->starDegree;
+
+   for( int i = 0; i < starDegree; i++ )
+   {
+      edgesSelectedPos[i] = i;
+   }
+}
+
+
+/** fills array star->edgesSelected by using the current positions */
+static inline
+void starSelectedEdgesUpdate(
+   STAR*                 star                /**< the star (in/out) */
+)
+{
+   int* const edgesSelected = star->edgesSelected;
+   const int* const edgesSelectedPos = star->edgesSelectedPos;
+   const int* const edgeId = star->edgeId;
+   const int starDegree = star->starDegree;
+
+   assert(starDegree >= 3);
+
+   for( int i = 0; i < starDegree; i++ )
+   {
+      const int pos = edgesSelectedPos[i];
+      edgesSelected[i] = edgeId[pos];
+   }
+}
+
+
+/** moves to next star */
+static inline
+void starSelectedPositionsSetNext(
+   STAR*                 star                /**< the star (in/out) */
+)
+{
+   int pos;
+   const int starDegree = star->starDegree;
+   int* const edgesSelectedPos = star->edgesSelectedPos;
+
+   assert(3 <= starDegree && starDegree <= star->nodeDegree);
+
+   /* all current positions are stored in edgesSelectedPos[0,...,starDegree-1] */
+
+   /* check for each position, bottom-up, whether it can be increased without it hitting the border */
+   for( pos = starDegree - 1; pos >= 0; pos-- )
+   {
+      const SCIP_Bool isLastPos = (pos == (starDegree - 1));
+      const int border = isLastPos ? starDegree : edgesSelectedPos[pos + 1];
+
+      /* still space? */
+      if( pos < border - 1 )
+      {
+         break;
+      }
+   }
+
+   if( pos >= 0 )
+   {
+      edgesSelectedPos[pos]++;
+   }
+   else
+   {
+      assert(pos == -1);
+      star->starDegree--;
+      starSelectedPositionsReset(star);
+   }
+}
+
+
+/** have we just move past the last star? */
+static inline
+SCIP_Bool starIsDeg2(
+   const STAR*           star                /**< the star (in/out) */
+)
+{
+   if( star->starDegree <= 2 )
+   {
+      assert(star->starDegree == 2);
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
 
 /** apply pseudo eliminations provided */
 SCIP_RETCODE reduce_applyPseudoDeletions(
@@ -713,6 +820,155 @@ SCIP_Bool reduce_dcmstMstIsValid(
    SCIPfreeMemoryArray(scip, &visited);
 
    return isValid;
+}
+
+
+/** initializes STAR structure */
+SCIP_RETCODE reduce_starInit(
+   SCIP*                 scip,               /**< SCIP */
+   int                   maxdegree,          /**< maximum node degree that can be handled*/
+   STAR**                star                /**< the star */
+)
+{
+   STAR* s;
+
+   assert(scip && star);
+   assert(maxdegree >= 3);
+
+   SCIP_CALL( SCIPallocMemory(scip, star) );
+
+   s = *star;
+
+   s->nodeDegree = -1;
+   s->starDegree = -1;
+   s->maxNodeDegree = maxdegree;
+   s->allStarsChecked = FALSE;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgeId), maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelected), maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelectedPos), maxdegree) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees STAR structure */
+void reduce_starFree(
+   SCIP*                 scip,               /**< SCIP */
+   STAR**                star                /**< the star */
+)
+{
+   STAR* s;
+   assert(scip && star);
+
+   s = *star;
+   assert(s);
+
+   SCIPfreeMemoryArray(scip, &(s->edgesSelectedPos));
+   SCIPfreeMemoryArray(scip, &(s->edgesSelected));
+   SCIPfreeMemoryArray(scip, &(s->edgeId));
+
+   SCIPfreeMemory(scip, star);
+}
+
+
+/** resets star data structure with new node data */
+void reduce_starReset(
+   const GRAPH*          g,                  /**< graph */
+   int                   node,               /**< the node (degree <= STP_DELPSEUDO_MAXGRAD) */
+   STAR*                 star                /**< the star */
+)
+{
+   assert(g && star);
+   assert(0 <= node && node < g->knots);
+   assert(g->grad[node] <= star->maxNodeDegree);
+
+   star->nodeDegree = g->grad[node];
+   star->starDegree = star->nodeDegree;
+   star->allStarsChecked = FALSE;
+
+   for( int e = g->outbeg[node], i = 0; e != EAT_LAST; e = g->oeat[e], i++ )
+   {
+      assert(i < star->nodeDegree);
+      star->edgeId[i] = e;
+   }
+
+   /* initially, select the entire star */
+   starSelectedPositionsReset(star);
+}
+
+
+/** gets next star */
+const int* reduce_starGetNext(
+   STAR*                 star,               /**< the star (in/out) */
+   int*                  nedges              /**< number of edges of next star (out) */
+)
+{
+   assert(star && nedges);
+   assert(!reduce_starAllAreChecked(star));
+
+   *nedges = star->starDegree;
+   starSelectedEdgesUpdate(star);
+   starSelectedPositionsSetNext(star);
+
+   /* just finished? */
+   if( starIsDeg2(star) )
+      star->allStarsChecked = TRUE;
+
+   assert(3 <= *nedges && *nedges <= star->maxNodeDegree);
+
+   return star->edgesSelected;
+}
+
+
+/** gets ruled out edges after termination */
+const int* reduce_starGetRuledOutEdges(
+   STAR*                 star,               /**< the star */
+   int*                  nedges              /**< number of edges of next star (out) */
+)
+{
+   assert(star);
+   assert(reduce_starAllAreChecked(star));
+
+   // todo fill later
+   // todo also add a method to abort early if no ruled-out edges can be found anymore
+
+   return NULL;
+}
+
+
+/** sets current star to ruled-out */
+void reduce_starSetRuledOut(
+   STAR*                 star                /**< the star */
+)
+{
+   assert(star);
+   assert(!reduce_starAllAreChecked(star));
+
+
+   // todo fill later for edge rule out
+}
+
+
+/** sets current star to failed */
+void reduce_starSetFailed(
+   STAR*                 star                /**< the star */
+)
+{
+   assert(star);
+   assert(!reduce_starAllAreChecked(star));
+
+   // todo fill later for edge rule out
+}
+
+
+/** have all stars been checked? */
+SCIP_Bool reduce_starAllAreChecked(
+   const STAR*           star                /**< the star */
+)
+{
+   assert(star);
+
+   return star->allStarsChecked;
 }
 
 
