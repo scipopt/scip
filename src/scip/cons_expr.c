@@ -14609,31 +14609,31 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highviolfactor",
          "consider a constraint highly violated if at least this factor times the maximal violation",
-         &conshdlrdata->branchhighviolfactor, TRUE, 0.0, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->branchhighviolfactor, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highscorefactor",
          "consider a variable branching score high if at least this factor times the maximal branching score",
-         &conshdlrdata->branchhighscorefactor, TRUE, 0.9, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->branchhighscorefactor, FALSE, 0.9, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/violweight",
          "weight by how much to consider the violation assigned to a variable for its branching score",
-         &conshdlrdata->branchviolweight, TRUE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchviolweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/dualweight",
          "weight by how much to consider the dual values of rows that contain a variable for its branching score",
-         &conshdlrdata->branchdualweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchdualweight, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostweight",
          "weight by how much to consider the pseudo cost of a variable for its branching score",
-         &conshdlrdata->branchpscostweight, TRUE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchpscostweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/domainweight",
          "weight by how much to consider the domain width in branching score",
-         &conshdlrdata->branchdomainweight, TRUE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchdomainweight, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/vartypeweight",
          "weight by how much to consider variable type (continuous: 0, binary: 1, integer: 0.1, impl-integer: 0.01) in branching score",
-         &conshdlrdata->branchvartypeweight, TRUE, 0.5, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchvartypeweight, FALSE, 0.5, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
@@ -14645,7 +14645,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
-         &conshdlrdata->branchpscostreliable, TRUE, 2.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &conshdlrdata->branchpscostreliable, FALSE, 2.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
