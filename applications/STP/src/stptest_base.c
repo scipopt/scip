@@ -37,8 +37,8 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
+   SCIP_CALL( stptest_reduceStar(scip) );
    SCIP_CALL( stptest_testHeurTm(scip) );
-
    SCIP_CALL( stptest_testSolPrune(scip) );
    SCIP_CALL( stptest_csrdepo(scip) );
    SCIP_CALL( stptest_completegraph(scip) );
@@ -47,7 +47,7 @@ SCIP_RETCODE stptest_testAll(
    SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_extmldists(scip) );
    SCIP_CALL( stptest_dheap(scip) );
-   SCIP_CALL( stptest_reduce_sdpcmw(scip) );
+   SCIP_CALL( stptest_reduceSdPcmw(scip) );
    SCIP_CALL( stptest_dcmst(scip) );
 
    printf("all unit tests passed! \n");

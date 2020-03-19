@@ -90,7 +90,9 @@ extern SCIP_RETCODE    stptest_extmldists(SCIP*);
 /* stptest_reduce.c
  */
 extern SCIP_RETCODE    stptest_dcmst(SCIP*);
-extern SCIP_RETCODE    stptest_reduce_sdpcmw(SCIP*);
+extern SCIP_RETCODE    stptest_reduceSdPcmw(SCIP*);
+extern SCIP_RETCODE    stptest_reduceStar(SCIP*);
+
 
 /* stptest_misc.c
  */

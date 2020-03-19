@@ -295,10 +295,11 @@ void starSelectedPositionsSetNext(
 )
 {
    int pos;
+   const int nodeDegree = star->nodeDegree;
    const int starDegree = star->starDegree;
    int* const edgesSelectedPos = star->edgesSelectedPos;
 
-   assert(3 <= starDegree && starDegree <= star->nodeDegree);
+   assert(3 <= starDegree && starDegree <= nodeDegree);
 
    /* all current positions are stored in edgesSelectedPos[0,...,starDegree-1] */
 
@@ -306,10 +307,10 @@ void starSelectedPositionsSetNext(
    for( pos = starDegree - 1; pos >= 0; pos-- )
    {
       const SCIP_Bool isLastPos = (pos == (starDegree - 1));
-      const int border = isLastPos ? starDegree : edgesSelectedPos[pos + 1];
+      const int border = isLastPos ? nodeDegree : edgesSelectedPos[pos + 1];
 
       /* still space? */
-      if( pos < border - 1 )
+      if( edgesSelectedPos[pos] < border - 1 )
       {
          break;
       }
@@ -318,6 +319,12 @@ void starSelectedPositionsSetNext(
    if( pos >= 0 )
    {
       edgesSelectedPos[pos]++;
+
+      /* adapt all following positions */
+      for( int i = pos + 1; i < starDegree; i++ )
+      {
+         edgesSelectedPos[i] = edgesSelectedPos[i - 1] + 1;
+      }
    }
    else
    {
