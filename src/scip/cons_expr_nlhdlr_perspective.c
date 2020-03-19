@@ -869,11 +869,7 @@ SCIP_RETCODE computeOffValues(
    /* loop through indicator variables */
    for( i = 0; i < nlexprdata->nindicators; ++i )
    {
-      SCIP_Real exprval0;
-
       assert(nlexprdata->indicators[i] != NULL);
-
-      exprval0 = 0.0;
 
       /* get x0 */
       for( j = 0; j < nlexprdata->nvarexprs; ++j )
@@ -888,10 +884,7 @@ SCIP_RETCODE computeOffValues(
 
       /* evaluate the expression */
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol0, 0) );
-      exprval0 = SCIPgetConsExprExprValue(expr);
-
-      /* save exprval0 */
-      nlexprdata->exprvals0[i] = exprval0;
+      nlexprdata->exprvals0[i] = SCIPgetConsExprExprValue(expr);
    }
 
    SCIPfreeBufferArray(scip, &vars);
