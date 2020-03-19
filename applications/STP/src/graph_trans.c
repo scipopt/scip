@@ -205,6 +205,123 @@ SCIP_RETCODE graph_transPc(
 }
 
 
+/** alters the graph for prize collecting problems and transforms it to an SPG */
+SCIP_RETCODE graph_transPc2Spg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PRESOL*               presol,             /**< presolving struct */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   SCIP_Real baseprize = FARAWAY;
+   int root;
+   int baseterm = -1;
+   int termscount;
+   const int nnodes_org = graph->knots;
+   SCIP_Real prizesum;
+   int naddedarcs;
+   int naddednodes;
+   const int nterms_org = graph->terms;
+
+   assert(graph && graph->prize);
+   assert(graph->edges == graph->esize);
+   assert(graph->knots == graph->ksize);
+   assert(!graph->extended);
+   assert(nterms_org > 0);
+
+   prizesum = 1.0;
+   for( int i = 0; i < nnodes_org; i++ )
+   {
+      if( graph->prize[i] > 0.0 &&  SCIPisLT(scip, graph->prize[i], FARAWAY) )
+      {
+         printf("%d : %f \n", i,graph->prize[i] );
+         prizesum += graph->prize[i];
+      }
+   }
+
+   printf("prizesum=%f \n", prizesum);
+   assert(prizesum < BLOCKED);
+
+   presol->fixed -= prizesum * (nterms_org + 1);
+
+   printf("fixed=%f \n", prizesum * (nterms_org + 1));
+
+   naddednodes = nterms_org + 1;
+   naddedarcs = 4 * nterms_org + 4 * (nterms_org - 1);
+
+   SCIP_CALL( graph_resize(scip, graph, (graph->ksize + naddednodes), (graph->esize + naddedarcs) , -1) );
+
+   /* create new nodes corresponding to potential terminals */
+   for( int k = 0; k < nterms_org; ++k )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   /* add new root */
+   root = graph->knots;
+   graph_knot_add(graph, STP_TERM);
+
+   graph->source = root;
+
+   /* select the base term */
+   termscount = 0;
+   for( int k = 0; k < nnodes_org; ++k )
+   {
+      if( Is_term(graph->term[k]) )
+      {
+         if( graph->prize[k] < baseprize )
+         {
+            baseterm = nnodes_org + termscount;
+            baseprize = graph->prize[k];
+         }
+
+         termscount++;
+      }
+   }
+   assert(termscount == nterms_org);
+   assert(baseterm >= 0);
+
+   termscount = 0;
+   for( int k = 0; k < nnodes_org; ++k )
+   {
+      /* is the kth node a potential terminal? */
+      if( Is_term(graph->term[k])  )
+      {
+         /* the future terminal */
+         const int newterm = nnodes_org + termscount;
+         termscount++;
+
+         assert(k != root && newterm != root);
+         assert(!Is_term(graph->term[newterm]));
+
+         if( baseterm == newterm )
+         {
+            assert(EQ(graph->prize[k], baseprize));
+         }
+         else
+         {
+            graph_edge_addBi(scip, graph, k, baseterm, prizesum + baseprize);
+            graph_edge_addBi(scip, graph, newterm, baseterm, prizesum + graph->prize[k]);
+         }
+
+         /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
+         graph_edge_addBi(scip, graph, root, k, prizesum);
+         graph_edge_addBi(scip, graph, k, newterm, prizesum);
+
+         /* switch the terminal property, mark k as former terminal */
+         graph_knot_chg(graph, k, STP_TERM_NONE);
+         graph_knot_chg(graph, newterm, STP_TERM);
+         assert(SCIPisGE(scip, graph->prize[k], 0.0));
+      }
+   }
+
+   SCIPfreeMemoryArrayNull(scip, &(graph->prize));
+   SCIPfreeMemoryArrayNull(scip, &(graph->term2edge));
+
+   assert(termscount == nterms_org);
+   graph->stp_type = STP_SPG;
+   graph->extended = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** alters the graph for rooted prize collecting problems */
 SCIP_RETCODE graph_transRpc(
    SCIP*                 scip,               /**< SCIP data structure */

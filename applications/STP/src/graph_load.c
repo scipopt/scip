@@ -1300,7 +1300,13 @@ SCIP_RETCODE graph_load(
                      }
                      else if( stp_type == STP_PCSPG )
                      {
+//#define STP_PC_2SPG
+#ifdef STP_PC_2SPG
+                        SCIP_CALL( graph_transPc2Spg(scip, presol, g) );
+#else
                         SCIP_CALL( graph_transPc(scip, g) );
+
+#endif
                      }
                      else if( stp_type == STP_RPCSPG )
                      {
