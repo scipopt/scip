@@ -22,8 +22,6 @@
 
 #include <string.h>
 
-#define SCIP_DEBUG
-
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_perspective.c"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
