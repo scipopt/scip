@@ -2312,6 +2312,7 @@ SCIP_RETCODE reduce_da(
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &arcsdeleted);
    SCIPfreeBufferArray(scip, &result);
+   SCIPfreeBufferArray(scip, &(redcostdata.redEdgeCost));
    SCIPfreeBufferArray(scip, &pseudoDelNodes);
 
    assert(graph_valid(scip, graph));
