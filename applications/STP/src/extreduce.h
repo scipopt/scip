@@ -401,7 +401,7 @@ extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, STAR*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 
 
 /* extreduce_util.c

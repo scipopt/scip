@@ -97,6 +97,82 @@ void extFree(
 }
 
 
+/** initializes new star */
+static inline
+SCIP_RETCODE pseudodeleteInitStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure  */
+   int                   node,               /**< node */
+   STAR*                 stardata,           /**< star */
+   int**                 compedges,          /**< to be allocated */
+   int**                 extleaves           /**< to be allocated */
+)
+{
+   const int degree = g->grad[node];
+
+   reduce_starReset(g, node, stardata);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, compedges, degree) );
+   SCIP_CALL( SCIPallocBufferArray(scip, extleaves, degree - 1) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees new star */
+static inline
+void pseudodeleteFreeStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int**                 compedges,          /**< to be freed */
+   int**                 extleaves           /**< to be freed */
+)
+{
+   SCIPfreeBufferArray(scip, extleaves);
+   SCIPfreeBufferArray(scip, compedges);
+}
+
+
+/** gets next star */
+static inline
+void pseudodeleteGetNextStar(
+   const GRAPH*          g,                  /**< graph data structure  */
+   STAR*                 stardata,           /**< star */
+   EXTCOMP*              extcomp             /**< to be filled */
+)
+{
+   int nstaredges;
+   int* const compedges = extcomp->compedges;
+   int* const extleaves = extcomp->extleaves;
+   const int* staredges = reduce_starGetNext(stardata, &(nstaredges));
+
+   extcomp->ncompedges = nstaredges;
+   extcomp->nextleaves = nstaredges - 1;
+   compedges[0] = flipedge(staredges[0]);
+   extcomp->comproot = g->head[staredges[0]];
+
+   for( int i = 1; i < nstaredges; i++ )
+   {
+      const int outedge = staredges[i];
+      compedges[i] = outedge;
+      extleaves[i - 1] = g->head[outedge];
+   }
+
+   assert(extcomp->ncompedges >= 3);
+   assert(extcomp->comproot >= 0);
+}
+
+
+/** frees new star */
+static inline
+SCIP_Bool pseudodeleteAllStarsChecked(
+   const STAR*           stardata            /**< star */
+
+)
+{
+   return reduce_starAllAreChecked(stardata);
+}
+
+
 /** is node a good candidate for pseudo deletion? */
 static inline
 SCIP_Bool pseudodeleteNodeIsPromising(
@@ -134,11 +210,6 @@ SCIP_Bool pseudodeleteNodeIsPromising(
    if( degree < EXT_PSEUDO_DEGREE_MIN || degree > EXT_PSEUDO_DEGREE_MAX  )
       return FALSE;
 
-
-   // todo
-   if( degree != 3 )
-      return FALSE;
-
    return TRUE;
 }
 
@@ -159,6 +230,7 @@ SCIP_RETCODE pseudodeleteExecute(
 {
    const int nnodes = graph_get_nNodes(graph);
    SCIP_Bool* pseudoDeletable = NULL;
+   STAR* stardata;
    DISTDATA distdata;
    EXTPERMA extpermanent;
    const SCIP_Bool markPseudoDeletion = (pseudoDelNodes != NULL);
@@ -179,6 +251,8 @@ SCIP_RETCODE pseudodeleteExecute(
       SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDeletable, nnodes) );
    }
 
+   SCIP_CALL( reduce_starInit(scip, EXT_PSEUDO_DEGREE_MAX, &stardata) );
+
    /* pseudo-elimination loop */
    for( int i = 0; i < nnodes; ++i )
    {
@@ -192,8 +266,11 @@ SCIP_RETCODE pseudodeleteExecute(
       {
          extpermanent.redcostEqualAllow = (result && !graph_solContainsNode(graph, result, i));
 
-         SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, &distdata, &extpermanent, &nodeisDeletable) );
+         SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
       }
+
+    //  if( nodeisDeletable )
+    //  printf("mark %d deg=%d \n", i, graph->grad[i]);
 
       if( markPseudoDeletion && nodeisDeletable )
          pseudoDelNodes[i] = TRUE;
@@ -216,6 +293,7 @@ SCIP_RETCODE pseudodeleteExecute(
       SCIP_CALL( reduce_applyPseudoDeletions(scip, redcostdata, pseudoDeletable, graph, offsetp, nelims) );
    }
 
+   reduce_starFree(scip, &stardata);
    SCIPfreeBufferArrayNull(scip, &pseudoDeletable);
    extFree(scip, graph, &distdata, &extpermanent);
 
@@ -567,68 +645,45 @@ SCIP_RETCODE extreduce_checkNode(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
-   int                   node,               /**< node to be checked */
+   int                   node,               /**< the node */
+   STAR*                 stardata,           /**< star */
    DISTDATA*             distdata,           /**< data for distance computations */
    EXTPERMA*             extpermanent,       /**< extension data */
    SCIP_Bool*            isPseudoDeletable   /**< is node pseudo-deletable? */
 )
 {
-   int degree;
-   int degree_count;
-   int comproot = -1;
    int* compedges;
    int* extleaves;
 
    assert(scip && graph && redcostdata && distdata && extpermanent && isPseudoDeletable);
    assert(node >= 0 && node < graph->knots);
 
-   degree = graph->grad[node];
-   assert(degree >= 3);
+   *isPseudoDeletable = TRUE;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &compedges, degree) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &extleaves, degree - 1) );
+   SCIP_CALL( pseudodeleteInitStar(scip, graph, node, stardata, &compedges, &extleaves) );
 
-   degree_count = 0;
-
-   // todo extra method
-   for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
-   {
-      if( 0 == degree_count )
-      {
-         compedges[degree_count] = flipedge(e);
-         comproot = graph->head[e];
-      }
-      else
-      {
-         compedges[degree_count] = e;
-         extleaves[degree_count - 1] = graph->head[e];
-      }
-
-      degree_count++;
-   }
-
-   assert(degree_count == degree);
-   assert(comproot >= 0);
-
+   /* check all stars of degree >= 3, as long as they can be ruled-out */
+   while ( *isPseudoDeletable )
    {
       EXTCOMP extcomp = { .compedges = compedges, .extleaves = extleaves,
-                          .nextleaves = degree - 1, .ncompedges = degree,
-                          .comproot = comproot, .allowReversion = TRUE };
+                          .nextleaves = -1, .ncompedges = -1,
+                          .comproot = -1, .allowReversion = TRUE };
+
+      pseudodeleteGetNextStar(graph, stardata, &extcomp);
 
       *isPseudoDeletable = FALSE;
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isPseudoDeletable) );
+
+      if( pseudodeleteAllStarsChecked(stardata) )
+         break;
    }
 
-   // todo: if not successfull, try with root as only ext leaf!
+
+   // todo check pseudo-deletable edges!
 
 
-   // todo: this function (or subfunction) should put one MST after the other on the stack, in order to be able to find
-   // pseudo-deletable edges!
+   pseudodeleteFreeStar(scip, &compedges, &extleaves);
 
-
-
-   SCIPfreeBufferArray(scip, &extleaves);
-   SCIPfreeBufferArray(scip, &compedges);
 
    return SCIP_OKAY;
 }

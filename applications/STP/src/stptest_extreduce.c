@@ -123,19 +123,22 @@ SCIP_RETCODE extCheckNode(
    SCIP_Bool             allowEquality
 )
 {
+   STAR* star;
    DISTDATA distdata;
    EXTPERMA extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, &distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
+   SCIP_CALL( reduce_starInit(scip, graph->grad[node], &star) );
 
    extpermanent.redcostEqualAllow = allowEquality;
 
    /* actual test */
-   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, node, &distdata, &extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, node, star, &distdata, &extpermanent, deletable) );
 
    /* clean up */
+   reduce_starFree(scip, &star);
    extreduce_extPermaFreeMembers(scip, &extpermanent);
    extreduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);

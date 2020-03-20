@@ -58,6 +58,7 @@ struct node_one_hop_star
    int                   nodeDegree;        /**< degree of current node */
    int                   starDegree;        /**< degree of current star */
    int                   maxNodeDegree;     /**< maximum allowed node degree */
+   int                   starcenter;        /**< node for which the star is created */
    SCIP_Bool             allStarsChecked;   /**< have all stars been checked? */
 };
 
@@ -833,7 +834,7 @@ SCIP_Bool reduce_dcmstMstIsValid(
 /** initializes STAR structure */
 SCIP_RETCODE reduce_starInit(
    SCIP*                 scip,               /**< SCIP */
-   int                   maxdegree,          /**< maximum node degree that can be handled*/
+   int                   maxdegree,          /**< maximum node degree that can be handled */
    STAR**                star                /**< the star */
 )
 {
@@ -846,6 +847,7 @@ SCIP_RETCODE reduce_starInit(
 
    s = *star;
 
+   s->starcenter = -1;
    s->nodeDegree = -1;
    s->starDegree = -1;
    s->maxNodeDegree = maxdegree;
@@ -892,6 +894,7 @@ void reduce_starReset(
    star->nodeDegree = g->grad[node];
    star->starDegree = star->nodeDegree;
    star->allStarsChecked = FALSE;
+   star->starcenter = node;
 
    for( int e = g->outbeg[node], i = 0; e != EAT_LAST; e = g->oeat[e], i++ )
    {
@@ -903,6 +906,16 @@ void reduce_starReset(
    starSelectedPositionsReset(star);
 }
 
+
+/** gets center */
+int reduce_starGetCenter(
+   const STAR*           star                /**< the star (in/out) */
+)
+{
+   assert(star);
+
+   return star->starcenter;
+}
 
 /** gets next star */
 const int* reduce_starGetNext(
