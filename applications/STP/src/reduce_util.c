@@ -402,6 +402,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
          if( isPc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
          {
             rpc3term = TRUE;
+            prize = graph->prize[k];
          }
          else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )
          {
@@ -466,6 +467,8 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
             {
                assert(isPc);
                assert(offsetp);
+               assert(GE(prize, 0.0));
+
                *offsetp += prize;
             }
          }
