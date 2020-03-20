@@ -965,10 +965,16 @@ SCIP_RETCODE propSemicont(
                SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->vals0, exprdata->nindicators) );
                scvdata->bndssize = exprdata->nindicators;
                SCIP_CALL( SCIPhashmapInsert(hdlrdata->scvars, auxvar, scvdata) );
-            }
 
-            /* has the indicator already been added? */
-            exists = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)exprdata->indicators[i], scvdata->nbnds, &pos);
+               /* the indicator will need to be added at position 0 */
+               exists = FALSE;
+               pos = 0;
+            }
+            else
+            {
+               /* has the indicator already been added? */
+               exists = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)exprdata->indicators[i], scvdata->nbnds, &pos);
+            }
 
             if( !exists )
             {
