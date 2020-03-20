@@ -8767,9 +8767,6 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
          /* check for a linear variable that can be increase or decreased without harming feasibility */
          consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
 
-         /* call curvature detection of expression handlers; TODO do we really need this? */
-         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
-
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
