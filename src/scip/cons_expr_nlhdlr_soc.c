@@ -481,6 +481,7 @@ SCIP_RETCODE generateCutSol(
    int ncutvars;
    int nterms;
    int i;
+   SCIP_Bool success;
 
    assert(expr != NULL);
    assert(cons != NULL);
@@ -521,7 +522,7 @@ SCIP_RETCODE generateCutSol(
    fvalue = denominator - rhsval - disvarval;
 
    /* if the soc is not violated don't compute cut */
-   if( SCIPisFeasLE(scip, fvalue, 0.0) )
+   if( !SCIPisPositive(scip, fvalue) )
    {
       SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below feastol\n", disaggidx, fvalue);
       return SCIP_OKAY;
@@ -588,6 +589,9 @@ SCIP_RETCODE generateCutSol(
 
    /* add side */
    SCIPaddRowprepSide(rowprep, constant - fvalue);
+
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE,
+         SCIPinfinity(scip), NULL) );
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
@@ -2003,10 +2007,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         SCIPdebugMsg(scip, "generated row for aggregation %d, efficacy=%g, minefficacy=%g\n", k, cutefficacy, nlhdlrdata->mincutefficacy);
+         SCIPdebugMsg(scip, "generated row for aggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+            k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */
-         if( SCIPisCutApplicable(scip, row) && cutefficacy >= nlhdlrdata->mincutefficacy )
+         if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
             SCIPdebugMsg(scip, "added cut with efficacy %g\n", cutefficacy);
