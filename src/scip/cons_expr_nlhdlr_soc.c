@@ -481,7 +481,6 @@ SCIP_RETCODE generateCutSol(
    int ncutvars;
    int nterms;
    int i;
-   SCIP_Bool success;
 
    assert(expr != NULL);
    assert(cons != NULL);
