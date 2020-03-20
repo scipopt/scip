@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#include <nlpi/nlpi_ipopt.h>
 
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_perspective.c"
@@ -422,11 +423,14 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    int nbndchgs;
    SCIP_SOL* sol;
    SCIP_RESULT result;
-   int ncuts;
    SCIP_ROW** cuts;
    SCIP_VAR** cutvars;
    SCIP_Real* cutvals;
    SCIP_VAR* auxvar;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* create expression and constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, &expr) );
