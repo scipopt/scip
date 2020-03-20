@@ -54,9 +54,9 @@ typedef struct SCVarData SCVARDATA;
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
+#ifdef SCIP_DISABLED_CODE
    SCIP_EXPRCURV         curvature;          /**< curvature of the expression */
 
-#ifdef SCIP_DISABLED_CODE
    SCIP_CONSEXPR_EXPR**  onoffterms;         /**< on/off terms for which we apply perspective cuts */
    SCIP_Real*            onoffcoefs;         /**< coefficients of onoffterms */
    int                   nonoffterms;        /**< number of on/off expressions */
@@ -938,9 +938,10 @@ SCIP_RETCODE propSemicont(
          assert(var_is_sc);
       }
       SCIPsetSolVals(scip, sol, exprdata->nvarexprs, vars, vals0);
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
 
       /* iterate through the expression and create scvdata for all aux vars */
-      SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
       curexpr = SCIPexpriteratorGetCurrent(it);
 
       while( !SCIPexpriteratorIsEnd(it) )
@@ -954,8 +955,6 @@ SCIP_RETCODE propSemicont(
              * - add the indicator and off value to scvdata
              */
             auxvar = SCIPgetConsExprExprAuxVar(curexpr);
-
-            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, curexpr, sol, 0) );
 
             scvdata = (SCVARDATA*) SCIPhashmapGetImage(hdlrdata->scvars, (void*)auxvar);
             if( scvdata == NULL )
@@ -978,7 +977,7 @@ SCIP_RETCODE propSemicont(
 
             if( !exists )
             {
-               SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(expr), pos) );
+               SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr), pos) );
             }
          }
 
@@ -1024,11 +1023,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
-   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPdebugMsgPrint(scip, "\n");
-#endif
+   if( SCIPgetNBinVars(scip) == 0 )
+   {
+      SCIPdebugMsg(scip, "\nproblem has no binary variables, not running perspective detection");
+      return SCIP_OKAY;
+   }
 
    /* some other nonlinear handler should be able to separate */
    if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
@@ -1036,6 +1035,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIPdebugMsg(scip, "\nno enforcement method, exiting detect");
       return SCIP_OKAY;
    }
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPdebugMsgPrint(scip, "\n");
+#endif
 
    /* allocate memory */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -1062,16 +1067,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       /* save off values */
       SCIP_CALL( computeOffValues(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
 
+#ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\ndetected an on/off expr: ");
       SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+#endif
 
       /* if we get here, enforcemethods should have already been set by other handler(s) */
       assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
          || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
-
-      /* save curvature */
-      (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
-      SCIPdebugMsg(scip, "expr %p is %s\n", expr, (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX ? "convex" : "concave");
 
       assert(*nlhdlrexprdata != NULL);
    }
@@ -1177,7 +1180,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       {
          nlhdlr2 = expr->enfos[j]->nlhdlr;
 
-         if( nlhdlr2->estimate == NULL )
+         if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
             continue;
 
          SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -1185,10 +1188,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPdebugMsg(scip, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
          /* evaluate auxiliary before calling estimate */
-         SCIP_CALL( nlhdlr2->evalaux(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, sol) );
+         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, sol) );
 
          /* ask the handler for an estimator */
-         SCIP_CALL( nlhdlr2->estimate(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
+         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
                overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success, FALSE, &addedbranchscores2) );
 
          if( success )
