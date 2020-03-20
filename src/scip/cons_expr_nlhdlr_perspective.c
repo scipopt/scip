@@ -677,7 +677,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    if( nindicators < nbnds0 )
    {
-      SCIPreallocBlockMemoryArray(scip, &indicators, nbnds0, nindicators);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &indicators, nbnds0, nindicators) );
    }
 
    nlhdlrexprdata->indicators = indicators;
@@ -836,67 +836,30 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 }
 #endif
 
-/** find the 'off' value of the expression for each indicator var */
+/* remove an indicator from nonlinear expression data */
 static
-SCIP_RETCODE computeOffValues(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nonlinear expression data */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-)
+void removeExprIndicator(
+  SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata,  /**< nonlinear expression data */
+  int                    pos                 /**< position of the indicator */
+  )
 {
-   SCIP_SOL* sol0;
-   SCIP_Real* vals0;
    int i;
-   int j;
-   SCIP_VAR** vars;
-   SCIP_Bool var_is_sc;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlexprdata->exprvals0), nlexprdata->nindicators) );
+   assert(pos >= 0 && pos < nlexprdata->nindicators);
 
-   /* allocate memory for the solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals0, nlexprdata->nvarexprs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlexprdata->nvarexprs) );
-
-   /* get vars from varexprs */
-   for( j = 0; j < nlexprdata->nvarexprs; ++j )
+   for( i = pos; i < nlexprdata->nindicators - 1; ++i )
    {
-      vars[j] = SCIPgetConsExprExprVarVar(nlexprdata->varexprs[j]);
+      nlexprdata->indicators[i] = nlexprdata->indicators[i+1];
    }
 
-   /* loop through indicator variables */
-   for( i = 0; i < nlexprdata->nindicators; ++i )
-   {
-      assert(nlexprdata->indicators[i] != NULL);
-
-      /* get x0 */
-      for( j = 0; j < nlexprdata->nvarexprs; ++j )
-      {
-         /* get the off value of the variable */
-         SCIP_CALL( varIsSemicontinuous(scip, vars[j], nlhdlrdata->scvars, nlexprdata->indicators[i], &vals0[j], &var_is_sc) );
-         assert(var_is_sc);
-      }
-
-      /* set x to x0 in sol0 */
-      SCIP_CALL( SCIPsetSolVals(scip, sol0, nlexprdata->nvarexprs, vars, vals0) );
-
-      /* evaluate the expression */
-      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol0, 0) );
-      nlexprdata->exprvals0[i] = SCIPgetConsExprExprValue(expr);
-   }
-
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &vals0);
-   SCIP_CALL( SCIPfreeSol(scip, &sol0) );
-
-   return SCIP_OKAY;
+   --nlexprdata->nindicators;
 }
 
-/** identifies all semicontinuous auxiliary variables in an expression */
+/** computes the 'off' value of the expression and the 'off' values of
+  * semicontinuous auxiliary variables for each indicator variable
+  */
 static
-SCIP_RETCODE propSemicont(
+SCIP_RETCODE computeOffValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_NLHDLRDATA* hdlrdata,       /**< nonlinear handler data */
@@ -919,6 +882,8 @@ SCIP_RETCODE propSemicont(
 
    assert(expr != NULL);
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(exprdata->exprvals0), exprdata->nindicators) );
+
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, exprdata->nvarexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals0, exprdata->nvarexprs) );
@@ -939,6 +904,15 @@ SCIP_RETCODE propSemicont(
       }
       SCIPsetSolVals(scip, sol, exprdata->nvarexprs, vars, vals0);
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
+
+      if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
+      {
+         SCIPdebugMsg(scip, "expression evaluation failed for %p, removing the indicator\n", (void*)expr);
+         removeExprIndicator(exprdata, i);
+         continue;
+      }
+
+      exprdata->exprvals0[i] = SCIPgetConsExprExprValue(expr);
 
       /* iterate through the expression and create scvdata for all aux vars */
       SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -1059,13 +1033,30 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( *success )
    {
-      assert((*nlhdlrexprdata)->nindicators > 0);
+      int sindicators;
 
-      /* propagate semicontinuity */
-      SCIP_CALL( propSemicont(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
+      sindicators = (*nlhdlrexprdata)->nindicators;
 
-      /* save off values */
+      /* compute 'off' values and propagate semicontinuity */
       SCIP_CALL( computeOffValues(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
+
+      /* some indicator variables might have been removed if evaluation failed, check how many remain */
+      if( (*nlhdlrexprdata)->nindicators == 0 )
+      {
+         *success = FALSE;
+      }
+      else if( (*nlhdlrexprdata)->nindicators < sindicators )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->indicators, sindicators,
+               (*nlhdlrexprdata)->nindicators) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprvals0, sindicators,
+                                                (*nlhdlrexprdata)->nindicators) );
+      }
+   }
+
+   if( *success )
+   {
+      assert((*nlhdlrexprdata)->nindicators > 0);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\ndetected an on/off expr: ");

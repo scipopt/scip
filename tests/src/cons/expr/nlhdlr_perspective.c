@@ -69,7 +69,6 @@ void setup(void)
    /* get perspective nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      SCIPinfoMessage(scip, NULL, "\nnlhdlr = %s", SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]));
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "perspective") == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
@@ -81,7 +80,6 @@ void setup(void)
    /* get quadratic nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      SCIPinfoMessage(scip, NULL, "\nnlhdlr = %s", SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]));
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
       {
          nlhdlr_quad = conshdlrdata->nlhdlrs[h];
@@ -363,7 +361,7 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    int nbndchgs;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x1>+<x2>)", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x1>+<x2>+1.0)", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
