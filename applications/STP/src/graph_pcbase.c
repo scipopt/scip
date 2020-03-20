@@ -1013,6 +1013,35 @@ SCIP_Bool graph_pc_knotIsPropPotTerm(
 }
 
 
+/** is there no vertex of higher prize? */
+SCIP_Bool graph_pc_knotHasMaxPrize(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   i                   /**< the node to be checked */
+   )
+{
+   SCIP_Real maxprize = -1.0;
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Real* const prize = g->prize;
+
+   assert(i >= 0 && i < nnodes);
+   assert(graph_pc_isPc(g));
+   assert(!graph_pc_knotIsDummyTerm(g, i));
+
+   if( g->stp_type == STP_RPCSPG )
+   {
+      return (graph_pc_knotIsFixedTerm(g, i));
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( prize[k] > maxprize && LT(prize[k], FARAWAY) )
+         maxprize = prize[k];
+   }
+
+   return (EQ(g->prize[i], maxprize));
+}
+
+
 /** check whether node is a dummy (pseudo) terminal */
 SCIP_Bool graph_pc_knotIsDummyTerm(
    const GRAPH*          g,                  /**< the graph */

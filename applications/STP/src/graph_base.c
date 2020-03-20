@@ -1263,6 +1263,13 @@ SCIP_RETCODE graph_knot_delPseudo(
    {
       assert(graph_pc_isPcMw(g));
 
+      if( graph_pc_knotHasMaxPrize(g, vertex) )
+      {
+         assert(0 && "ever happens?");
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       vertexprize = g->prize[vertex];
       ancestorsnode = vertex;
 

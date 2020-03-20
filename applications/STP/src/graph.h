@@ -523,6 +523,7 @@ extern SCIP_Bool graph_pc_costsEqualOrgCosts(SCIP*, const GRAPH*, const SCIP_Rea
 extern SCIP_Bool graph_pc_edgeIsExtended(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsFixedTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsPropPotTerm(const GRAPH*, int);
+extern SCIP_Bool graph_pc_knotHasMaxPrize(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsDummyTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_termIsNonLeafTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsNonLeafTerm(const GRAPH*, int);
