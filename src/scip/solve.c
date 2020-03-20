@@ -21,7 +21,6 @@
  * @author Marc Pfetsch
  * @author Gerald Gamrath
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <assert.h>
 
@@ -2872,8 +2871,7 @@ SCIP_RETCODE applyBounding(
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
       /** exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
-       * certificate and we assume that the lp gets solved anyways so we do not print the pseudoobj bound in the 
-       * root node */
+        * certificate so we print the root psval after calling initconslp fot the first time */
       if( pseudoobjval > SCIPnodeGetLowerbound(focusnode) && (focusnode->parent !=  NULL) )
       {
          SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
@@ -3919,6 +3917,12 @@ SCIP_RETCODE propAndSolve(
       SCIP_CALL( solveNodeLP(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore,
             sepastore, cutpool, delayedcutpool, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable,
             initiallpsolved, fullseparation, newinitconss, propagateagain, solverelaxagain, cutoff, unbounded, lperror, pricingaborted) );
+
+      if( set->misc_exactsolve && focusnode->parent == NULL )
+      {
+         SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
+            transprob, SCIPlpGetPseudoObjval(lp, set, transprob));
+      }
 
       *lpsolved = TRUE;
       *solvelpagain = FALSE;

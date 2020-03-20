@@ -1105,9 +1105,14 @@ SCIP_Bool RatIsZero(
    )
 {
    assert(rational != NULL);
-   assert(rational->isinf == FALSE);
 
-   return rational->val.is_zero();
+   if( rational->val.is_zero() )
+   {
+      assert(!rational->isinf);
+      return TRUE;
+   }
+   else
+      return FALSE;
 }
 
 /** check if the rational is positive */

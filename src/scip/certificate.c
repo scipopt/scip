@@ -696,6 +696,8 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
       buffpos += printlen;
    }
 
+   SCIPcertificatePrintProblemMessage(certificate, "%s ", obj); 
+
    for( i = 0; i < nvars; i++ )
    {
       if( !RatIsZero(coefs[i]) )
@@ -705,7 +707,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
       }
    }
 
-   SCIPcertificatePrintProblemMessage(certificate, "%s \n", obj); 
+   SCIPcertificatePrintProblemMessage(certificate, "\n"); 
 
    return SCIP_OKAY;
 }
@@ -1315,6 +1317,9 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
          ind[len] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
 
+         SCIPdebugMessage("Column %d for var %s has index %lld and farkas coef ", col->index, col->var->name, ind[len]);
+         SCIPdebug(RatPrint(val));
+
          /* update farkasrhs */
          if( usefarkas )
          {
@@ -1349,6 +1354,10 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( !RatIsEqual(row->lhs, row->rhs) && !RatIsAbsInfinity(row->lhs) && RatIsNegative(val) )
              ind[len] += 1;
 
+         SCIPdebugMessage("Row (index %d, %s has index %lld and farkas coef ", row->index, row->fprow->name, ind[len]);
+         SCIPdebug(RatPrint(val));
+         SCIPdebug(SCIProwexPrint(row, set->scip->messagehdlr, NULL) );
+
          /* update farkasrhs */
          if( usefarkas )
          {
@@ -1366,7 +1375,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       RatSetString(lowerbound, "-inf");
       /* Scale proof to have RHS = 1 */
       for( i = 0; i < len; ++i)
-            RatDiv(vals[i], vals[i], farkasrhs);
+         RatDiv(vals[i], vals[i], farkasrhs);
    }
    else
       RatSet(lowerbound, lpex->lpobjval);

@@ -2378,7 +2378,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    if( SCIPcertificateIsActive(stat->certificate) && lpobjval > node->lowerbound )
    {
       SCIP_Bool usefarkas;
-      usefarkas = SCIPsetIsInfinity(set, lpobjval);
+      usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
       SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, node, transprob, usefarkas) );
    }
 

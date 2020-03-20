@@ -15494,7 +15494,6 @@ SCIP_RETCODE printCertificateConsLinear(
    SCIP_Rational* lhs;
    SCIP_Rational* rhs;
    SCIP_Rational* quotient;
-   SCIP_Rational* bound;
    SCIP_Bool isupper;
    int* varsindex;
    int i;
@@ -15532,7 +15531,6 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? FALSE : TRUE;
             RatDiv(quotient, lhs, vals[0]);
-            bound = isupper ? SCIPvarGetUbGlobalExact(var) : SCIPvarGetLbGlobalExact(var);
             SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
          }
 
@@ -15541,7 +15539,6 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? TRUE : FALSE;
             RatDiv(quotient, rhs, vals[0]);
-            bound = isupper ? SCIPvarGetUbGlobalExact(var) : SCIPvarGetLbGlobalExact(var);
             SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
          }
 
@@ -15560,7 +15557,7 @@ SCIP_RETCODE printCertificateConsLinear(
          }
          else
          {
-            SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, row, (void*)(size_t)certificate->conscounter) );
+            SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, row, (void*)(size_t)certificate->indexcounter) );
             assert(SCIPhashmapExists(certificate->rowdatahash, row));
          }
 
@@ -15611,7 +15608,6 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
       {
          SCIP_CALL( printCertificateConsLinear(scip, conshdlr, conss[c]) );
       }
-
    }
 
    SCIPgetIntParam(scip, "constraints/exactlp/interleavedbfreq", &freq);

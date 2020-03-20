@@ -63,6 +63,7 @@ SCIP_Bool fpLPisIntFeasible(
 {
    SCIP_Real primsol;
    SCIP_Bool feasible;
+   SCIP_Real frac;
    int nfracs;
    int i;
 
@@ -75,9 +76,15 @@ SCIP_Bool fpLPisIntFeasible(
       col = lp->cols[i];
       if( SCIPvarGetType(SCIPcolGetVar(col)) == SCIP_VARTYPE_CONTINUOUS )
          continue;
+
+      // we can't use SCIPsetIsIntegral since we have to chech here in the same way as in SCIPcalcBranchCands
       primsol = SCIPcolGetPrimsol(col);
-      if( !SCIPsetIsIntegral(set, primsol) )
+      frac = SCIPsetFeasFrac(set, primsol);
+      if( !SCIPsetIsFeasFracIntegral(set, frac) )
+      {
          feasible = FALSE;
+         break;
+      }
    }
 
    return feasible;
