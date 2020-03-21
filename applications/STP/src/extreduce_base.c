@@ -184,6 +184,7 @@ SCIP_Bool pseudodeleteNodeIsPromising(
    int degree = -1;
 
    assert(node >= 0);
+   assert(!g->extended);
 
    if( pc )
    {
@@ -196,6 +197,9 @@ SCIP_Bool pseudodeleteNodeIsPromising(
          return FALSE;
 
       degree = graph_pc_realDegree(g, node, FALSE);
+
+      if( Is_term(g->term[node]) && degree != 3 )
+         return FALSE;
    }
    else
    {
