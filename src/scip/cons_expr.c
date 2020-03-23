@@ -1279,12 +1279,20 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               /* if already empty, then don't try to compute even better activity
-                * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
+               /* If already empty, then don't try to compute even better activity.
+                * If cons_expr were alone, then we should have noted that we are infeasible
+                * so an assert(infeasible == NULL || *infeasible) should work here.
+                * However, after reporing a cutoff due expr->activity being empty,
+                * SCIP may wander to a different node and call propagation again.
+                * If no bounds in an expr-constraint has been relaxed when switching nodes
+                * (so expr->activitytag >= conshdlrdata->lastboundrelax), then
+                * we will still have expr->activity being empty, but will have forgotten
+                * then we found infeasibility here before (!2221#note_134120).
+                * Therefore we just set *infeasibility=TRUE here and stop.
                 */
-               /* assert(infeasible == NULL || *infeasible); */
                if( infeasible != NULL )
                   *infeasible = TRUE;
+               SCIPdebugMsg(scip, "expr %p already has empty activity -> cutoff\n", (void*)expr);
                break;
             }
 
