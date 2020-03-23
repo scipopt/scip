@@ -100,7 +100,7 @@ check/% : $(SCIPDIR)/check/%
 	@-(cd check && ln -fs ../$^);
 
 .PHONY: test
-test: $(MAINFILE) check/evalcheck.sh check/check.awk check/getlastprob.awk
+test: $(MAINFILE) check/evalcheck.sh check/evaluate.sh check/check.awk check/getlastprob.awk
 	cd check; \
 	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 
