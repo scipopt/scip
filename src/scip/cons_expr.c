@@ -8201,6 +8201,145 @@ SCIP_RETCODE bilinearTermsFree(
 }
 
 
+/** returns whether a quadratic variable domain can be reduced to its lower or upper bound; this is the case if the
+ *  quadratic variable is in just one single quadratic constraint and (sqrcoef > 0 and LHS = -infinity), or
+ *  (sqrcoef < 0 and RHS = +infinity) hold
+ */
+static
+SCIP_Bool hasQuadvarHpProperty(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   quadvarexpr,        /**< variable expression of the quadratic term */
+   SCIP_Real             quadcoef,           /**< coefficient of the quadratic term */
+   SCIP_Real             lhs,                /**< left-hand side of expression constraint */
+   SCIP_Real             rhs                 /**< right-hand side of expression constraint */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Bool haslhs;
+   SCIP_Bool hasrhs;
+   int nlocksdownexpr;
+   int nlocksupexpr;
+   int nlocksdown;
+   int nlocksup;
+
+   assert(scip != NULL);
+   assert(quadvarexpr != NULL);
+   assert(quadcoef != 0.0);
+
+   /* ignore quadratic variables that are contained in more than one expression constraints */
+   if( SCIPgetConsExprExprVarNConss(quadvarexpr) != 1 )
+      return FALSE;
+
+   /* get expression locks */
+   nlocksdownexpr = SCIPgetConsExprExprNLocksNeg(quadvarexpr);
+   nlocksupexpr = SCIPgetConsExprExprNLocksPos(quadvarexpr);
+
+   /* get variable and variable locks */
+   var = SCIPgetConsExprExprVarVar(quadvarexpr);
+   nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
+   nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
+
+   haslhs = !SCIPisInfinity(scip, -lhs);
+   hasrhs = !SCIPisInfinity(scip, rhs);
+
+   return nlocksdown == nlocksdownexpr && nlocksup == nlocksupexpr && SCIPisZero(scip, SCIPvarGetObj(var))
+      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
+}
+
+/* fix quadratic variables with proper square coefficients contained in a single quadratic expression constraint to
+ * their upper or lower bounds
+ */
+static
+SCIP_RETCODE presolSingleLockedQuadVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   int*                  nchgvartypes,       /**< pointer to store the total number of changed variable types */
+   int*                  naddedconss         /**< pointer to store the total number of added constraints */
+   )
+{
+   SCIP_VAR** quadvars;
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONSEXPR_EXPRHDLR* prodhdlr;
+   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   SCIP_CONSDATA* consdata;
+   int nquadvars = 0;
+   int nchildren;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(nchgvartypes != NULL);
+   assert(naddedconss != NULL);
+
+   *nchgvartypes = 0;
+   *naddedconss = 0;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* only consider constraints with one finite side */
+   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+      return SCIP_OKAY;
+
+   /* only consider sum expressions */
+   if( consdata->expr == NULL || SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return SCIP_OKAY;
+
+   /* get product and power handler */
+   prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
+   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
+   nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+   children = SCIPgetConsExprExprChildren(consdata->expr);
+
+   /* allocate memory to store quadratic expressions that satify HP property, see hasQuadvarHpProperty() */
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nchildren) );
+
+   /* check whether constraint is purely quadratic */
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CONSEXPR_EXPR** exprchildren;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Real coef;
+
+      expr = children[i];
+      assert(expr != NULL);
+      exprchildren = SCIPgetConsExprExprChildren(expr);
+      coef = SCIPgetConsExprExprSumCoefs(expr)[i];
+
+      if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2
+         && SCIPisConsExprExprVar(exprchildren[0]) )
+      {
+         if( hasQuadvarHpProperty(scip, exprchildren[0], coef, consdata->lhs, consdata->rhs) )
+         {
+            quadvars[++nquadvars] = SCIPgetConsExprExprVarVar(exprchildren[0]);
+         }
+      }
+      else if( SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
+         && SCIPisConsExprExprVar(exprchildren[0]) && SCIPisConsExprExprVar(exprchildren[1]) )
+      {
+
+      }
+      else
+      {
+         /* constraint is not quadratic -> presolving technique is not applicable */
+         nquadvars = 0;
+         break;
+      }
+   }
+
+   if( nquadvars > 0 )
+   {
+      /* TODO change variable types or add disjunction constraints */
+   }
+
+   /* release memory */
+   SCIPfreeBufferArray(scip, &quadvars);
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
