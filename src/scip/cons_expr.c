@@ -13390,6 +13390,7 @@ void SCIPaddConsExprExprViolScore(
       expr->violscoremax = violscore;
       expr->nviolscores = 1;
       expr->violscoretag = conshdlrdata->enforound;
+      return;
    }
 
    /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
