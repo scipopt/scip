@@ -404,7 +404,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
 
 /** returns whether we are ok to branch on auxiliary variables
  *
- * Currently returns value of constraints/expr/branching/aux parameter.
+ * Currently returns whether depth of node in b&B tree is at least value of constraints/expr/branching/aux parameter.
  */
 SCIP_EXPORT
 SCIP_Bool SCIPgetConsExprBranchAux(

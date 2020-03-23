@@ -263,9 +263,8 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
-   char                     branchviolsplit; /**< method used to split violation in expression onto variables */
+   char                     branchviolsplit; /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
-   char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -287,7 +286,9 @@ struct SCIP_ConshdlrData
    int                      nbilinterms;     /**< total number of bilinear terms */
    int                      bilintermssize;  /**< size of bilinterms array */
 
+   /* branching */
    SCIP_RANDNUMGEN*         branchrandnumgen;/**< randum number generated used in branching variable selection */
+   char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -318,7 +319,7 @@ typedef struct
    SCIP_Real               dual;             /**< dual score of candidate */
    SCIP_Real               pscost;           /**< pseudo-cost score of candidate */
    SCIP_Real               vartype;          /**< variable type score of candidate */
-   SCIP_Real               weighted;         /**< weighted variable score */
+   SCIP_Real               weighted;         /**< weighted sum of other scores, see scoreBranchingCandidates() */
 } BRANCHCAND;
 
 /*
@@ -5957,7 +5958,7 @@ SCIP_RETCODE registerBranchingCandidates(
       {
          int i;
 
-         /* if not branching on auxvars, then branching() will have propagated branching scores to original variables,
+         /* if not branching on auxvars, then violation-branching scores will have been added to original variables only,
           * so we can loop over variable expressions
           */
          for( i = 0; i < consdata->nvarexprs; ++i )
@@ -5969,9 +5970,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
             violscore = SCIPgetConsExprExprViolScore(conshdlr, consdata->varexprs[i]);
 
-            /* skip variable expressions that do not have a valid violation score,
-             * which is indicated by a violation score of 0.0
-             */
+            /* skip variable expressions that do not have a violation score */
             if( violscore == 0.0 )
                continue;
 
@@ -5981,7 +5980,7 @@ SCIP_RETCODE registerBranchingCandidates(
             lb = SCIPvarGetLbLocal(var);
             ub = SCIPvarGetUbLocal(var);
 
-            /* introduce variable if it has not been fixed yet */
+            /* consider variable for branching if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
@@ -5994,7 +5993,7 @@ SCIP_RETCODE registerBranchingCandidates(
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g]\n", SCIPvarGetName(var), lb, ub); )
             }
 
-            /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+            /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints several times as external branching candidate */
             consdata->varexprs[i]->violscoretag = 0;
          }
       }
@@ -6083,13 +6082,10 @@ SCIP_RETCODE collectBranchingCandidates(
    if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-
       SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      /* SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR); */
    }
 
    *ncands = 0;
-
    for( attempt = 0; attempt < 2; ++attempt )
    {
       /* collect branching candidates from violated constraints
@@ -6121,9 +6117,9 @@ SCIP_RETCODE collectBranchingCandidates(
          {
             int i;
 
-            /* if not branching on auxvars, then branching() will have propagated branching scores to original variables,
+            /* if not branching on auxvars, then violation-branching scores will be available for original variables only,
              * so we can loop over variable expressions
-             * unfortunately, we don't know anymore whether the branching score in the variable was created due to a violation
+             * unfortunately, we don't know anymore whether the violation-branching score in the variable was created due to a violation
              * in this constraint or another one where the variable also appears
              */
             for( i = 0; i < consdata->nvarexprs; ++i )
@@ -6734,10 +6730,10 @@ SCIP_RETCODE branching(
    return SCIP_OKAY;
 }
 
-/** call separation or estimator callback of nonlinear handler
+/** call enforcement or estimate callback of nonlinear handler
  *
  * Calls the enforcement callback, if available.
- * Otherwise, calls the estimator callback, if available, and constructs a cut from the estimator.
+ * Otherwise, calls the estimate callback, if available, and constructs a cut from the estimator.
  *
  * If cut is weak, but estimator is not tight, tries to add branching candidates.
  */
@@ -11612,7 +11608,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
 
 /** returns whether we are ok to branch on auxiliary variables
  *
- * Currently returns value of constraints/expr/branching/aux parameter.
+ * Currently returns whether depth of node in b&B tree is at least value of constraints/expr/branching/aux parameter.
  */
 SCIP_Bool SCIPgetConsExprBranchAux(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13369,7 +13365,7 @@ void SCIPaddConsExprExprViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
-   SCIP_Real               branchscore       /**< branching score to add to expression */
+   SCIP_Real               violscore         /**< violation score to add to expression */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -13377,7 +13373,7 @@ void SCIPaddConsExprExprViolScore(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(expr != NULL);
-   assert(branchscore >= 0.0);
+   assert(violscore >= 0.0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -13390,8 +13386,8 @@ void SCIPaddConsExprExprViolScore(
    /* reset branching score if we are in a different enfo round */
    if( expr->violscoretag != conshdlrdata->enforound )
    {
-      expr->violscoresum = branchscore;
-      expr->violscoremax = branchscore;
+      expr->violscoresum = violscore;
+      expr->violscoremax = violscore;
       expr->nviolscores = 1;
       expr->violscoretag = conshdlrdata->enforound;
    }
@@ -13399,9 +13395,9 @@ void SCIPaddConsExprExprViolScore(
    /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
    SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
 
-   expr->violscoresum += branchscore;
-   if( branchscore > expr->violscoremax )
-      expr->violscoremax = branchscore;
+   expr->violscoresum += violscore;
+   if( violscore > expr->violscoremax )
+      expr->violscoremax = violscore;
    ++(expr->nviolscores);
 }
 
