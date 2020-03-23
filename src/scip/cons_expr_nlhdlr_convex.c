@@ -1756,6 +1756,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       }
       assert(violation >= 0.0);
 
+      /* add violation as branching-score to expressions; the core will take care distributing this onto variables */
       if( nlhdlrexprdata->nleafs == 1 )
       {
          SCIP_CONSEXPR_EXPR* e;

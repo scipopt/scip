@@ -262,7 +262,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                branchpscostweight;/**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
-   char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression */
+   char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
    char                     branchviolsplit; /**< method used to split violation in expression onto variables */
    SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
@@ -5700,7 +5700,7 @@ SCIP_Real getViolSplitWeight(
       case 'd' :  /* domain width */
          return SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
 
-      case 'l' :  /* logarithmic domain width: log-scale if width below 0.1 and 10, otherwise actual width */
+      case 'l' :  /* logarithmic domain width: log-scale if width is below 0.1 or above 10, otherwise actual width */
       {
          SCIP_Real width = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
          assert(width > 0.0);
@@ -5937,9 +5937,7 @@ SCIP_RETCODE registerBranchingCandidates(
    if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-
       SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      /* SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR); */
    }
 
    /* register external branching candidates */
@@ -6267,6 +6265,8 @@ SCIP_Real getDualBranchscore(
 
    /* aggregate duals from all local rows from consexpr in basis, i.e., non-zero dual
     * taking only local rows, as these are probably cuts that may be replaced by tighter ones after branching
+    * TODO: this is a quick-and-dirty implementation, and not used by default
+    *   in the long run, this should be either removed or replaced by a proper implementation
     */
    dualscore = 0.0;
    for( r = 0; r < nrows; ++r )
@@ -6301,7 +6301,24 @@ SCIP_Real getDualBranchscore(
    return dualscore;
 }
 
-/** computes branching scores (incl weighted score) for a set of candidates */
+/** computes branching scores (incl weighted score) for a set of candidates
+ *
+ * For each candidate in the array, compute and store the various branching scores (violation, pseudo-costs, vartype, domainwidth).
+ * For pseudo-costs, it's possible that are score is not available, in which case cands[c].pscost will be set to SCIP_INVALID.
+ *
+ * For each score, compute the maximum over all candidates.
+ *
+ * Then compute for each candidate a "weighted" score using the weights as specified by parameters
+ * and the scores as previously computed, but scale each score to be in [0,1].
+ * Further divide by the sum of all weights where a score was available (even if it was 0).
+ *
+ * For example:
+ * - Let variable x have violation-score 10.0 and pseudo-cost-score 5.0.
+ * - Let variable y have violation-score 12.0 but no pseudo-cost-score (because it hasn't yet been branched on sufficiently often).
+ * - Assuming violation is weighted by 2.0 and pseudo-costs are weighted by 3.0.
+ * - Then the weighted scores for x will be (2.0 * 10.0/12.0 + 3.0 * 5.0/5.0) / (2.0 + 3.0) = 0.9333.
+ *   The weighted score for y will be (2.0 * 12.0/12.0) / 2.0 = 1.0.
+ */
 static
 void scoreBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
