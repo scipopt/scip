@@ -1647,6 +1647,8 @@ CLEANUP:
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
@@ -1655,23 +1657,15 @@ SCIP_RETCODE detectSOC(
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
    assert(auxvar != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
+   assert(conshdlr != NULL);
 
-   /* no expression constraint handler -> skip */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   if( conshdlr == NULL )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(SCIPfindConsExprNlhdlr(conshdlr, NLHDLR_NAME));
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    /* check whether expression is given as norm */
@@ -1786,7 +1780,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsExpr(scip, cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsExpr(scip, cons));
 
-   SCIP_CALL( detectSOC(scip, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
+   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
    if( *success )
    {
