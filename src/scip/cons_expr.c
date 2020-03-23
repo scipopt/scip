@@ -5807,7 +5807,7 @@ SCIP_RETCODE addConsExprExprBranchScoresAuxVars(
    SCIP_Real               branchscore,      /**< branching score to add to expression */
    SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
    int                     nauxvars,         /**< number of auxiliary variables */
-   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_SOL*               sol,              /**< current solution (NULL for the LP solution) */
    SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
    )
 {
