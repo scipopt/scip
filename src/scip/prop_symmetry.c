@@ -150,7 +150,7 @@
 #define DEFAULT_DOUBLEEQUATIONS      FALSE   /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
-#define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Whether all non-binary variables shall be fixed by symmetries if OF is active? */
+#define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Whether all non-binary variables shall be not affected symmetries if OF is active? */
 
 /* default parameters for symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -229,7 +229,7 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
-   SCIP_Bool             symfixnonbinaryvars; /**< Whether all non-binary variables shall be fixed by symmetries if OF is active? */
+   SCIP_Bool             symfixnonbinaryvars; /**< Whether all non-binary variables shall be not affected by symmetries if OF is active? */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -3962,7 +3962,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/symfixnonbinaryvars",
-         "Whether all non-binary variables shall be fixed by symmetries if OF is active?",
+         "Whether all non-binary variables shall be not affected by symmetries if OF is active?",
          &propdata->symfixnonbinaryvars, TRUE, DEFAULT_SYMFIXNONBINARYVARS, NULL, NULL) );
 
    /* possibly add description */
