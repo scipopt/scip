@@ -287,7 +287,7 @@ struct SCIP_ConshdlrData
    int                      nbilinterms;     /**< total number of bilinear terms */
    int                      bilintermssize;  /**< size of bilinterms array */
 
-   SCIP_RANDNUMGEN*         branch_randnumgen;/**< randum number generated used in branching variable selection */
+   SCIP_RANDNUMGEN*         branchrandnumgen;/**< randum number generated used in branching variable selection */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -6702,11 +6702,11 @@ SCIP_RETCODE branching(
       if( ncands > 1 )
       {
          /* choose at random from candidates 0..ncands-1 */
-         if( conshdlrdata->branch_randnumgen == NULL )
+         if( conshdlrdata->branchrandnumgen == NULL )
          {
-            SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branch_randnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
+            SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
          }
-         c = SCIPrandomGetInt(conshdlrdata->branch_randnumgen, 0, ncands-1);
+         c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands-1);
          var = SCIPgetConsExprExprAuxVar(cands[perm[c]].expr);
       }
       else
@@ -9476,7 +9476,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       assert(conshdlrdata->vp_lp[i] == NULL);
 #endif
 
-   assert(conshdlrdata->branch_randnumgen == NULL);
+   assert(conshdlrdata->branchrandnumgen == NULL);
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -9618,8 +9618,8 @@ SCIP_DECL_CONSEXIT(consExitExpr)
       }
    }
 
-   if( conshdlrdata->branch_randnumgen != NULL )
-      SCIPfreeRandom(scip, &conshdlrdata->branch_randnumgen);
+   if( conshdlrdata->branchrandnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->branchrandnumgen);
 
    ENFOLOG(
       if( enfologfile != NULL )
