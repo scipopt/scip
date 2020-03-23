@@ -286,7 +286,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       {
          if( branchcand[0] )
          {
-            SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr), 1, violation, sol, addedbranchscores) );
+            SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr), 1, violation, sol, addedbranchscores) );
          }
       }
       else
@@ -301,7 +301,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
             if( branchcand[c] )
                exprs[nexprs++] = SCIPgetConsExprExprChildren(expr)[c];
 
-         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
+         SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
 
          SCIPfreeBufferArray(scip, &exprs);
       }

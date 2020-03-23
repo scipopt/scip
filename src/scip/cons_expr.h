@@ -857,63 +857,40 @@ void SCIPincrementConsExprCurBoundsTag(
    SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
 
-/** adds branching score to an expression
+/** adds violation-branching score to an expression
  *
- * Adds a score to the expression-specific branching score, thereby marking it as branching candidate.
+ * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
- * In case of doubt, use SCIPaddConsExprExprsBranchScore().
+ * In case of doubt, use SCIPaddConsExprExprsViolScore().
  */
 SCIP_EXPORT
-void SCIPaddConsExprExprBranchScore(
+void SCIPaddConsExprExprViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
-   SCIP_Real               branchscore       /**< branching score to add to expression */
+   SCIP_Real               violscore         /**< violation score to add to expression */
    );
 
-/** adds branching score to a set of expressions, thereby distributing the score
+/** adds violation-branching score to a set of expressions, thereby distributing the score
  *
  * Each expression must either be a variable expression or have an aux-variable.
  * If branching on aux-variables is disabled, then finds original variables first.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
+SCIP_RETCODE SCIPaddConsExprExprsViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
    int                     nexprs,           /**< number of expressions */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_Real               violscore,        /**< violation score to add to expression */
    SCIP_SOL*               sol,              /**< current solution */
-   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
    );
 
-/** adds branching score to children of expression for given auxiliary variables
- *
- * Iterates over the successors of expr for expressions that are associated with one of the given auxiliary variables
- * and adds a given branching score.
- * The branchscoretag argument is used to identify whether the score in the found expression needs to be reset
- * before adding a new score.
- *
- * @note This method may modify the given auxvars array by means of sorting.
- */
+/** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
-   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
-   int                     nauxvars,         /**< number of auxiliary variables */
-   int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
-   );
-
-/** gives branching score stored in expression, or 0.0 if no valid score has been stored
- *
- * TODO rename this and all that relates to it from branchscore to violscore
- */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprBranchScore(
+SCIP_Real SCIPgetConsExprExprViolScore(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );

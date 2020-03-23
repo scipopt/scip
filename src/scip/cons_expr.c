@@ -5718,7 +5718,7 @@ SCIP_Real getViolSplitWeight(
    }
 }
 
-/** adds branching score to a set of expressions, thereby distributing the score
+/** adds violation-branching score to a set of expressions, thereby distributing the score
  *
  * Each expression must either be a variable expression or have an aux-variable.
  *
@@ -5726,14 +5726,14 @@ SCIP_Real getViolSplitWeight(
  * If no unbounded variables, then parameter constraints/expr/branching/violsplit decides weight for each var.
  */
 static
-void addConsExprExprsBranchScore(
+void addConsExprExprsViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
    int                     nexprs,           /**< number of expressions */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_Real               violscore,        /**< violation-branching score to add to expression */
    SCIP_SOL*               sol,              /**< current solution */
-   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
    )
 {
    SCIP_VAR* var;
@@ -5748,7 +5748,7 @@ void addConsExprExprsBranchScore(
 
    if( nexprs == 1 )
    {
-      SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[0], branchscore);
+      SCIPaddConsExprExprViolScore(scip, conshdlr, exprs[0], violscore);
       *success = TRUE;
       return;
    }
@@ -5774,7 +5774,7 @@ void addConsExprExprsBranchScore(
       {
          if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[i], branchscore / nunbounded);
+            SCIPaddConsExprExprViolScore(scip, conshdlr, exprs[i], violscore / nunbounded);
             *success = TRUE;
          }
       }
@@ -5783,32 +5783,32 @@ void addConsExprExprsBranchScore(
          assert(weightsum > 0.0);
 
          weight = getViolSplitWeight(scip, conshdlr, var, sol);
-         SCIPaddConsExprExprBranchScore(scip, conshdlr, exprs[i], branchscore * weight / weightsum);
-         SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", branchscore * weight / weightsum,
-            100*weight / weightsum, branchscore,
+         SCIPaddConsExprExprViolScore(scip, conshdlr, exprs[i], violscore * weight / weightsum);
+         SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violscore * weight / weightsum,
+            100*weight / weightsum, violscore,
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          *success = TRUE;
       }
    }
 }
 
-/** adds branching score to children of expression for given auxiliary variables
+/** adds violation-branching score to children of expression for given auxiliary variables
  *
  * Iterates over the successors of expr to find expressions that are associated with one of the given auxiliary variables.
- * Adds branching scores to all found exprs by means of addConsExprExprsBranchScore().
+ * Adds violatoin-branching scores to all found exprs by means of addConsExprExprsViolScore().
  *
  * @note This method may modify the given auxvars array by means of sorting.
  */
 static
-SCIP_RETCODE addConsExprExprBranchScoresAuxVars(
+SCIP_RETCODE addConsExprExprViolScoresAuxVars(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_Real               violscore,        /**< violation score to add to expression */
    SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
    int                     nauxvars,         /**< number of auxiliary variables */
    SCIP_SOL*               sol,              /**< current solution (NULL for the LP solution) */
-   SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
@@ -5855,7 +5855,7 @@ SCIP_RETCODE addConsExprExprBranchScoresAuxVars(
 
    if( nexprs > 0 )
    {
-      SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success) );
+      SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violscore, sol, success) );
    }
    else
       *success = FALSE;
@@ -5962,17 +5962,17 @@ SCIP_RETCODE registerBranchingCandidates(
           */
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
-            SCIP_Real brscore;
+            SCIP_Real violscore;
             SCIP_Real lb;
             SCIP_Real ub;
             SCIP_VAR* var;
 
-            brscore = SCIPgetConsExprExprBranchScore(conshdlr, consdata->varexprs[i]);
+            violscore = SCIPgetConsExprExprViolScore(conshdlr, consdata->varexprs[i]);
 
-            /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint)
-             * which is indicated by a branching score of 0.0
+            /* skip variable expressions that do not have a valid violation score,
+             * which is indicated by a violation score of 0.0
              */
-            if( brscore == 0.0 )
+            if( violscore == 0.0 )
                continue;
 
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
@@ -5984,9 +5984,9 @@ SCIP_RETCODE registerBranchingCandidates(
             /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
 
-               SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
             }
             else
@@ -5994,8 +5994,8 @@ SCIP_RETCODE registerBranchingCandidates(
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g]\n", SCIPvarGetName(var), lb, ub); )
             }
 
-            /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
-            consdata->varexprs[i]->brscoretag = 0;
+            /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+            consdata->varexprs[i]->violscoretag = 0;
          }
       }
       else
@@ -6004,12 +6004,12 @@ SCIP_RETCODE registerBranchingCandidates(
          SCIP_VAR* var;
          SCIP_Real lb;
          SCIP_Real ub;
-         SCIP_Real brscore;
+         SCIP_Real violscore;
 
          for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
-            brscore = SCIPgetConsExprExprBranchScore(conshdlr, expr);
-            if( brscore == 0.0 )
+            violscore = SCIPgetConsExprExprViolScore(conshdlr, expr);
+            if( violscore == 0.0 )
                continue;
 
             /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
@@ -6024,9 +6024,9 @@ SCIP_RETCODE registerBranchingCandidates(
             /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
 
-               SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
             }
             else
@@ -6131,8 +6131,8 @@ SCIP_RETCODE collectBranchingCandidates(
                SCIP_Real lb;
                SCIP_Real ub;
 
-               /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
-               if( conshdlrdata->enforound != consdata->varexprs[i]->brscoretag )
+               /* skip variable expressions that do not have a valid violation score */
+               if( conshdlrdata->enforound != consdata->varexprs[i]->violscoretag )
                   continue;
 
                var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
@@ -6150,11 +6150,11 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = consdata->varexprs[i];
-               cands[*ncands].auxviol = SCIPgetConsExprExprBranchScore(conshdlr, consdata->varexprs[i]);
+               cands[*ncands].auxviol = SCIPgetConsExprExprViolScore(conshdlr, consdata->varexprs[i]);
                ++(*ncands);
 
-               /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
-               consdata->varexprs[i]->brscoretag = 0;
+               /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+               consdata->varexprs[i]->violscoretag = 0;
             }
          }
          else
@@ -6165,7 +6165,7 @@ SCIP_RETCODE collectBranchingCandidates(
 
             for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
             {
-               if( expr->brscoretag != conshdlrdata->enforound )
+               if( expr->violscoretag != conshdlrdata->enforound )
                   continue;
 
                /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
@@ -6186,7 +6186,7 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = expr;
-               cands[*ncands].auxviol = SCIPgetConsExprExprBranchScore(conshdlr, expr);
+               cands[*ncands].auxviol = SCIPgetConsExprExprViolScore(conshdlr, expr);
                ++(*ncands);
             }
          }
@@ -6927,14 +6927,14 @@ SCIP_RETCODE enforceExprNlhdlr(
             /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
             if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
             {
-               SCIP_Real brscore;
+               SCIP_Real violscore;
 
 #ifdef BRSCORE_ABSVIOL
-               brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
+               violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
 #else
-               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &brscore, NULL, NULL) );
+               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL, NULL) );
 #endif
-               SCIP_CALL( addConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, sol, &branchscoresuccess) );
+               SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars, rowprep->nmodifiedvars, sol, &branchscoresuccess) );
 
                /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
                 * I don't think it makes sense to branch on that one (would it?)
@@ -13358,14 +13358,14 @@ void SCIPincrementConsExprCurBoundsTag(
       conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 }
 
-/** adds branching score to an expression
+/** adds violation-branching score to an expression
  *
- * Adds a score to the expression-specific branching score, thereby marking it as branching candidate.
+ * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
- * In case of doubt, use SCIPaddConsExprExprsBranchScore().
+ * In case of doubt, use SCIPaddConsExprExprsViolScore().
  */
-void SCIPaddConsExprExprBranchScore(
+void SCIPaddConsExprExprViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
@@ -13388,34 +13388,34 @@ void SCIPaddConsExprExprBranchScore(
    assert(!SCIPgetConsExprBranchAux(scip, conshdlr) || (expr->exprhdlr == conshdlrdata->exprvarhdlr || expr->auxvar != NULL));
 
    /* reset branching score if we are in a different enfo round */
-   if( expr->brscoretag != conshdlrdata->enforound )
+   if( expr->violscoretag != conshdlrdata->enforound )
    {
-      expr->brscoresum = branchscore;
-      expr->brscoremax = branchscore;
-      expr->nbrscores = 1;
-      expr->brscoretag = conshdlrdata->enforound;
+      expr->violscoresum = branchscore;
+      expr->violscoremax = branchscore;
+      expr->nviolscores = 1;
+      expr->violscoretag = conshdlrdata->enforound;
    }
 
    /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
    SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
 
-   expr->brscoresum += branchscore;
-   if( branchscore > expr->brscoremax )
-      expr->brscoremax = branchscore;
-   ++(expr->nbrscores);
+   expr->violscoresum += branchscore;
+   if( branchscore > expr->violscoremax )
+      expr->violscoremax = branchscore;
+   ++(expr->nviolscores);
 }
 
-/** adds branching score to a set of expressions, thereby distributing the score
+/** adds violation-branching score to a set of expressions, thereby distributing the score
  *
  * Each expression must either be a variable expression or have an aux-variable.
  * If branching on aux-variables is disabled, then finds original variables first.
  */
-SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
+SCIP_RETCODE SCIPaddConsExprExprsViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
    int                     nexprs,           /**< number of expressions */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_Real               violscore,        /**< violation-branching score to add to expression */
    SCIP_SOL*               sol,              /**< current solution */
    SCIP_Bool*              success           /**< buffer to store whether at least one branchscore was added */
    )
@@ -13437,10 +13437,10 @@ SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
       return SCIP_OKAY;
    }
 
-   /* if allowing to branch on auxiliary variables, then can call internal addConsExprExprsBranchScore immediately */
+   /* if allowing to branch on auxiliary variables, then can call internal addConsExprExprsViolScore immediately */
    if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
-      addConsExprExprsBranchScore(scip, conshdlr, exprs, nexprs, branchscore, sol, success);
+      addConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violscore, sol, success);
       return SCIP_OKAY;
    }
 
@@ -13475,15 +13475,15 @@ SCIP_RETCODE SCIPaddConsExprExprsBranchScore(
 
    SCIPexpriteratorFree(&it);
 
-   addConsExprExprsBranchScore(scip, conshdlr, varexprs, nvars, branchscore, sol, success);
+   addConsExprExprsViolScore(scip, conshdlr, varexprs, nvars, violscore, sol, success);
 
    SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }
 
-/** gives branching score stored in expression, or 0.0 if no valid score has been stored */
-SCIP_Real SCIPgetConsExprExprBranchScore(
+/** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_Real SCIPgetConsExprExprViolScore(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
@@ -13496,25 +13496,25 @@ SCIP_Real SCIPgetConsExprExprBranchScore(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->enforound != expr->brscoretag )
+   if( conshdlrdata->enforound != expr->violscoretag )
       return 0.0;
 
-   if( expr->nbrscores == 0 )
+   if( expr->nviolscores == 0 )
       return 0.0;
 
    switch( conshdlrdata->branchscoreagg )
    {
       case 'a' :
          /* average */
-         return expr->brscoresum / expr->nbrscores;
+         return expr->violscoresum / expr->nviolscores;
 
       case 'm' :
          /* maximum */
-         return expr->brscoremax;
+         return expr->violscoremax;
 
       case 's' :
          /* sum */
-         return expr->brscoresum;
+         return expr->violscoresum;
 
       default:
          SCIPerrorMessage("Invalid value %c for branchscoreagg parameter\n", conshdlrdata->branchscoreagg);

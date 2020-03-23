@@ -1761,7 +1761,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       {
          SCIP_CONSEXPR_EXPR* e;
          e = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[0]);
-         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, &e, 1, violation, sol, addedbranchscores) );
+         SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, &e, 1, violation, sol, addedbranchscores) );
       }
       else
       {
@@ -1775,7 +1775,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
          for( c = 0; c < nlhdlrexprdata->nleafs; ++c )
                exprs[c] = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, nlhdlrexprdata->leafexprs[c]);
 
-         SCIP_CALL( SCIPaddConsExprExprsBranchScore(scip, conshdlr, exprs, nlhdlrexprdata->nleafs, violation, sol, addedbranchscores) );
+         SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nlhdlrexprdata->nleafs, violation, sol, addedbranchscores) );
 
          SCIPfreeBufferArray(scip, &exprs);
       }
