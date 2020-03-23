@@ -91,6 +91,7 @@
  *           nterms = 4
  *           ntranscoefs = 6
  */
+// if i am reading the code correctly in detectSocNorm you would store SQRT(7) and not 7 in transcoefs, right?
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_VAR**            vars;               /**< variables appearing on both sides (x) */
@@ -342,6 +343,7 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(termbegins != NULL);
    assert(nnonzeroes != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(constant >= 0.0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, vars, nvars) );
@@ -616,7 +618,8 @@ SCIP_RETCODE generateCutSol(
 }
 
 
-/** helper method to detect SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar */
+/** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar */
+// why not interpert binary variables as quadratic here?
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -655,6 +658,8 @@ SCIP_RETCODE detectSocNorm(
    if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
       return SCIP_OKAY;
 
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
@@ -684,7 +689,12 @@ SCIP_RETCODE detectSocNorm(
 
    nvars = 0;
 
-   /* check if all children are squares or linear terms with matching square term */
+   /* check if all children are squares or linear terms with matching square term:
+    * if the i-th child is (pow, expr, 2) we store the association <|expr -> i|> in expr2idx and if expr was in
+    * linexprs, we remove it from there.
+    * if the i-th child is expr' (different from (pow, expr, 2)) and expr' is not a key of expr2idx, we add it linexprs.
+    * if at the end there is any expr in linexpr -> we do not have a separable quadratic function.
+    */
    for( i = 0; i < nchildren; ++i )
    {
       if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
@@ -711,6 +721,7 @@ SCIP_RETCODE detectSocNorm(
       }
    }
 
+   /* there are linear terms without quadratic terms */
    if( SCIPhashsetGetNElements(linexprs) > 0 )
    {
       SCIPfreeBufferArray(scip, &transcoefs);
@@ -721,13 +732,14 @@ SCIP_RETCODE detectSocNorm(
 
    ++nvars;
 
-   /* allocate temporary memory for data to collect */
+   /* allocate temporary memory to collect data */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nvars) );
 
+   /* initialize arrays */
    for( i = 0; i < nvars; ++i )
    {
       transcoefsidx[i] = i;
@@ -744,6 +756,11 @@ SCIP_RETCODE detectSocNorm(
    constant = SCIPgetConsExprExprSumConstant(child);
 
    /* found SOC structure -> create required auxiliary variables */
+   // this is not true!!! SQRT(x^2 -4x + 1) = SQRT((x -
+   // 2)^2 - 3) and is not a SOC! You should add a test and this shouldn't be detected! Even if the domain of x forces
+   // the argument to be non-negative, the function is not convex. Basically, constant can become negative bellow
+   // btw you might have numericall issues here so oyu might wanna check if SCIPisZero(scip, constant) and set it to a
+   // hard 0.0
    for( i = 0; i < nchildren; ++i )
    {
       SCIP_VAR* argauxvar;
@@ -773,11 +790,11 @@ SCIP_RETCODE detectSocNorm(
          assert(argauxvar != NULL);
 
          offsets[auxvarpos] = 0.5 * childcoefs[i] / transcoefs[auxvarpos];
-         constant -= SQR(offsets[auxvarpos]);
+         constant -= SQR(offsets[auxvarpos]); //here you are substracting -> can become negative
       }
    }
 
-   assert(nextentry == nvars-1);
+   assert(nextentry == nvars - 1);
 
    *success = TRUE;
 
@@ -788,8 +805,8 @@ SCIP_RETCODE detectSocNorm(
 #endif
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, constant, nvars, nvars, nvars, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes, constant,
+            nvars, nvars, nvars, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
    /* free memory */
@@ -805,9 +822,10 @@ SCIP_RETCODE detectSocNorm(
    return SCIP_OKAY;
 }
 
-/** Helper method to detect c + sum_i coef_i expr_i^2 <= coef_k expr_k^2.
- *  Binary linear variables are interpreted as quadratic terms.
+/** helper method to detect c + sum_i coef_i expr_i^2 <= coef_k expr_k^2.
+ *  binary linear variables are interpreted as quadratic terms.
  */
+// improve documentation: apparently you also handle the hyperbolic case
 static
 SCIP_RETCODE detectSocQuadraticSimple(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -853,9 +871,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 2 quadratic children */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(expr) < 2 )
+   /* check whether expression is a sum with at least 2 children */
+   // what about x^2 - y^2 <= 0 ?
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
    /* get children of the sum */
@@ -879,8 +897,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* check if all children are quadratic or binary linear and count number of positive and negative terms */
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
-         && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
+            SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -893,8 +911,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
             rhsidx = i;
          }
       }
-      else if( SCIPisConsExprExprVar(children[i])
-         && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -907,8 +924,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
             rhsidx = i;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr)
-         && SCIPgetConsExprExprNChildren(children[i]) == 2 )
+      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+            SCIPgetConsExprExprNChildren(children[i]) == 2 )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -926,15 +943,19 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
       }
 
+      /* more than one positive eigenvalies and more than one negative eigenvalue -> can't be convex */
       if( nposquadterms > 1 && nnegquadterms > 1 )
          goto CLEANUP;
 
+      /* more than one bilinear term -> can't be convex */
       if( nposbilinterms + nnegbilinterms > 1 )
          goto CLEANUP;
 
+      // what's the logic here?
       if( nposbilinterms > 0 && nposquadterms > 0 )
          goto CLEANUP;
 
+      // what's the logic here?
       if( nnegbilinterms > 0 && nnegquadterms > 0 )
          goto CLEANUP;
    }
@@ -953,10 +974,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* detect case and store lhs/rhs information */
    if( (ishyperbolic && nnegbilinterms > 0) || (!ishyperbolic && nnegquadterms < 2) )
    {
+      /* we have -x*y + z^2 ... -> we want to write  z^2 ... <= x*y;
+       * or we have -x^2 + y^2  ... -> we want to write y^2 ... <= x^2;
+       * in any case, we need a finite rhs
+       */
       assert(nnegbilinterms == 1 || nnegquadterms == 1);
       assert(rhsidx != -1);
 
       /* if rhs is infinity, it can't be soc */
+      // why don't you check rhs is infinity?
       if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
          goto CLEANUP;
 
@@ -968,6 +994,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(lhsidx != -1);
 
       /* if lhs is infinity, it can't be soc */
+      // why don't you check lhs is -infinity?
       if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
          goto CLEANUP;
 
@@ -982,6 +1009,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( ishyperbolic )
    {
       /* one of the expressions in the bilinear term is not non-negative -> no SOC */
+      // what if the sum is always nonnegative ? For example x^2  -y*z <= 0 with y in 1,2 and z in -1,1 should be a soc;
+      // can you add a test?
       if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0
          || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]).inf < 0.0 )
       {
@@ -999,10 +1028,13 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    if( SCIPisNegative(scip, lhsconstant) )
       goto CLEANUP;
+   // maybe here you have to set lhsconstant to 0 if lhsconstant < 0
 
-   /**
+   /*
     *  we have found an soc-representable expression
     */
+   // documentation? what is going to happen here?
+   // this function is quite long, maybe you wanna split it?
 
    nterms = ishyperbolic ? nchildren + 1 : nchildren;
    ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
@@ -1026,7 +1058,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       termbegins[i] = i;
       nnonzeroes[i] = 1;
 
-      /* variable and coef for rhs has to be set to the last entry */
+      /* variable and coef for rhs have to be set to the last entry */
       if( i == specialtermidx )
          continue;
 
@@ -1040,10 +1072,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
          assert(SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr));
 
          /* create the necessary auxiliary variable, if not existent yet */
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-               SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[i])[0],
+                  &vars[nextentry]) );
       }
 
+      // documentation to explain the 4 and the minus; or add documentation above
       if( ishyperbolic )
       {
          assert(-4.0 * childcoefs[i] / childcoefs[specialtermidx] > 0.0);
@@ -1060,43 +1093,44 @@ SCIP_RETCODE detectSocQuadraticSimple(
       ++nextentry;
    }
 
-   assert(nextentry == nchildren-1);
+   assert(nextentry == nchildren - 1);
 
    if( !ishyperbolic )
    {
       /* add data for the rhs variable */
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[specialtermidx])[0], &vars[nchildren-1]) );
-      assert(vars[nchildren-1] != NULL);
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0],
+               &vars[nchildren - 1]) );
+      assert(vars[nchildren - 1] != NULL);
 
       assert(childcoefs[specialtermidx] < 0.0);
-      transcoefs[nchildren-1] = SQRT(-childcoefs[specialtermidx]);
+      transcoefs[nchildren - 1] = SQRT(-childcoefs[specialtermidx]);
    }
    else
    {
+      // documentation!!!
       /* add data for variables coming from bilinear term */
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[specialtermidx])[0], &vars[nchildren-1]) );
-      assert(vars[nchildren-1] != NULL);
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0],
+               &vars[nchildren - 1]) );
+      assert(vars[nchildren - 1] != NULL);
 
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[specialtermidx])[1], &vars[nchildren]) );
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1],
+               &vars[nchildren]) );
       assert(vars[nchildren] != NULL);
 
-      termbegins[nterms-1] = ntranscoefs-2;
+      termbegins[nterms - 1] = ntranscoefs - 2;
 
-      nnonzeroes[nterms-2] = 2;
-      nnonzeroes[nterms-1] = 2;
+      nnonzeroes[nterms - 2] = 2;
+      nnonzeroes[nterms - 1] = 2;
 
-      transcoefsidx[ntranscoefs-4] = nchildren-1;
-      transcoefsidx[ntranscoefs-3] = nchildren;
-      transcoefsidx[ntranscoefs-2] = nchildren-1;
-      transcoefsidx[ntranscoefs-1] = nchildren;
+      transcoefsidx[ntranscoefs - 4] = nchildren - 1;
+      transcoefsidx[ntranscoefs - 3] = nchildren;
+      transcoefsidx[ntranscoefs - 2] = nchildren - 1;
+      transcoefsidx[ntranscoefs - 1] = nchildren;
 
-      transcoefs[ntranscoefs-4] = 1.0;
-      transcoefs[ntranscoefs-3] = -1.0;
-      transcoefs[ntranscoefs-2] = 1.0;
-      transcoefs[ntranscoefs-1] = 1.0;
+      transcoefs[ntranscoefs - 4] = 1.0;
+      transcoefs[ntranscoefs - 3] = -1.0;
+      transcoefs[ntranscoefs - 2] = 1.0;
+      transcoefs[ntranscoefs - 1] = 1.0;
    }
 
 #ifdef SCIP_DEBUG
@@ -1106,8 +1140,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
 #endif
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, lhsconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes, lhsconstant,
+            nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 CLEANUP:
@@ -1123,7 +1157,7 @@ CLEANUP:
 }
 
 /** Helper method to detect quadratic expressions that can be represented by soc constraints.
- *  This is sdone by computing and analyzing the Eigenvalue decomposition.
+ *  This is done by computing and analyzing the eigenvalue decomposition.
  *  Binary linear variables are interpreted as quadratic terms.
  *
  * @todo: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by soc, Currently, the
@@ -1134,6 +1168,15 @@ CLEANUP:
  * structured cannot be detected (see e.g. instances bearing or wager). There is currently no obvious way
  * to handle this.
  */
+// expand documentation. So what do you do here? you take a quadratic build the matrix? the extended matrix? and then?
+// this function has 500 lines. split it in smaller functions please
+
+// you are creating the auxiliary variable before knowing that you can handle this expression. I am not sure what the
+// status is currently, but originally, this was a bad idea. The problem is that creating an auxiliary variable forces a
+// run of detect on the expression with aux var. So if you can't handle it, but somebody else can, then you anyway
+// created all this auxiliary variables that are not needed in principle... We talked about anyway creating auxiliary
+// variables for everybody, but I am not sure what happened there.
+// I guess this also happens in the other detects...
 static
 SCIP_RETCODE detectSocQuadraticComplex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1183,9 +1226,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 2 quadratic children */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(expr) < 2 )
+   /* check whether expression is a sum with at least 2 children */
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
    {
       return SCIP_OKAY;
    }
@@ -1213,18 +1255,19 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* iterate over children once to collect variables that appear in quadratic/bilinear terms */
    for( i = 0; i < nchildren; ++i )
    {
+      SCIP_CONSEXPR_EXPR* child;
       SCIP_VAR* argvar;
 
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) )
+      child = children[i];
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
-         if( SCIPgetConsExprExprPowExponent(children[i]) != 2.0 )
+         if( SCIPgetConsExprExprPowExponent(child) != 2.0 )
          {
             SCIPhashmapFree(&var2idx);
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-               SCIPgetConsExprExprChildren(children[i])[0], &argvar) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &argvar));
          assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
@@ -1233,10 +1276,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
             ++nvars;
          }
       }
-      else if( SCIPisConsExprExprVar(children[i])
-         && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisConsExprExprVar(child) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(child)) )
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], &argvar) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, child, &argvar) );
          assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
@@ -1245,16 +1287,15 @@ SCIP_RETCODE detectSocQuadraticComplex(
             ++nvars;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
       {
-         if( SCIPgetConsExprExprNChildren(children[i]) != 2 )
+         if( SCIPgetConsExprExprNChildren(child) != 2 )
          {
             SCIPhashmapFree(&var2idx);
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-               SCIPgetConsExprExprChildren(children[i])[0], &argvar) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &argvar) );
          assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
@@ -1263,8 +1304,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
             ++nvars;
          }
 
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-               SCIPgetConsExprExprChildren(children[i])[1], &argvar) );
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(child)[1], &argvar) );
          assert(argvar != NULL);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
@@ -1276,15 +1316,19 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
 
    /* iterate over children a second time to check whether 'linear' terms also appear quadratically */
+   // TODO I think that simplify ensure that if x^2 and x appear in an sum, then x always appears first than x^2
    for( i = 0; i < nchildren; ++i )
    {
+      SCIP_CONSEXPR_EXPR* child;
       SCIP_VAR* termauxvar;
 
+      child = children[i];
+
       /* skip the already handled children */
-      if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPower(conshdlr)
-         && SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) &&
+            SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       {
-         termauxvar = SCIPgetConsExprExprAuxVar(children[i]);
+         termauxvar = SCIPgetConsExprExprAuxVar(child);
          assert(termauxvar != NULL);
 
          /* if the auxiliary variable was not found in any quadratic term, it is not soc-representable  */
@@ -1674,15 +1718,13 @@ SCIP_RETCODE detectSOC(
    if( !(*success) )
    {
       /* check whether expression is a simple soc-respresentable quadratic expression */
-      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs,
-            nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
    }
 
    if( !(*success) && nlhdlrdata->compeigenvalues )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression */
-      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs,
-            nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
    }
 
    return SCIP_OKAY;
