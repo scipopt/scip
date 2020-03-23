@@ -486,6 +486,7 @@ Interface changes
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
   - new parameter "propagating/symmetry/disableofrestart"
+  - new parameter "propagating/symmetry/symfixnonbinaryvars"
 
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
