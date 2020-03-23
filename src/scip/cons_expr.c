@@ -5978,8 +5978,8 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            lb = SCIPcomputeVarLbLocal(scip, var);
-            ub = SCIPcomputeVarUbLocal(scip, var);
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
 
             /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
@@ -6018,8 +6018,8 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprAuxVar(expr);
             assert(var != NULL);
 
-            lb = SCIPcomputeVarLbLocal(scip, var);
-            ub = SCIPcomputeVarUbLocal(scip, var);
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
 
             /* introduce variable if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
@@ -6138,8 +6138,8 @@ SCIP_RETCODE collectBranchingCandidates(
                var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
                assert(var != NULL);
 
-               lb = SCIPcomputeVarLbLocal(scip, var);
-               ub = SCIPcomputeVarUbLocal(scip, var);
+               lb = SCIPvarGetLbLocal(var);
+               ub = SCIPvarGetUbLocal(var);
 
                /* skip already fixed variable */
                if( SCIPisEQ(scip, lb, ub) )
@@ -6174,8 +6174,8 @@ SCIP_RETCODE collectBranchingCandidates(
                var = SCIPgetConsExprExprAuxVar(expr);
                assert(var != NULL);
 
-               lb = SCIPcomputeVarLbLocal(scip, var);
-               ub = SCIPcomputeVarUbLocal(scip, var);
+               lb = SCIPvarGetLbLocal(var);
+               ub = SCIPvarGetUbLocal(var);
 
                /* skip already fixed variable */
                if( SCIPisEQ(scip, lb, ub) )
