@@ -6640,7 +6640,10 @@ SCIP_RETCODE branching(
    SCIP_CALL( SCIPallocBufferArray(scip, &cands, SCIPgetNVars(scip)) );
    SCIP_CALL( collectBranchingCandidates(scip, conshdlr, conss, nconss, maxrelconsviol, sol, soltag, cands, &ncands) );
 
-   if( ncands == 0 )  /* no unfixed branching candidate in all violated constraint - that's bad :-( */
+   /* if no unfixed branching candidate in all violated constraint, then it's probably numerics that prevented us to separate or decide a cutoff
+    * we will return here and let the fallbacks in consEnfo() decide how to proceed
+    */
+   if( ncands == 0 )
       goto TERMINATE;
 
    if( ncands > 1 )
