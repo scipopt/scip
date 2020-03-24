@@ -9350,10 +9350,10 @@ SCIP_RETCODE presolSingleLockedQuadVars(
 
             SCIPdebugMsg(scip, "add bound disjunction constraint for %s\n", SCIPvarGetName(var));
 
+            /* create, add, and release bound disjunction constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
             SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
                TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
             ++(*naddconss);
