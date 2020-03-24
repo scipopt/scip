@@ -9313,7 +9313,7 @@ SCIP_RETCODE presolSingleLockedQuadVars(
 
    if( nquadvars > 0 )
    {
-      SCIP_CONS* cons;
+      SCIP_CONS* newcons;
       SCIP_VAR* vars[2];
       SCIP_BOUNDTYPE boundtypes[2];
       SCIP_Real bounds[2];
@@ -9352,10 +9352,10 @@ SCIP_RETCODE presolSingleLockedQuadVars(
 
             /* create, add, and release bound disjunction constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
-            SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
+            SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &newcons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
                TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             ++(*naddconss);
          }
       }
@@ -10388,7 +10388,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    {
       for( c = 0; c < nconss; ++c )
       {
-         SCIP_Bool infeasible = FALSE;
          int tmpnchgvartypes = 0;
          int tmpnaddconss = 0;
 
