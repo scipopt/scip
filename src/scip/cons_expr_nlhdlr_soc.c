@@ -1359,8 +1359,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(argvar != NULL);
 
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
-         assert(varpos >= 0);
-         assert(varpos < nvars);
+         assert(0 <= varpos && varpos < nvars);
 
          vars[varpos] = argvar;
          eigvecmatrix[varpos * nvars + varpos] = childcoefs[i];
@@ -1371,8 +1370,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(argvar != NULL);
 
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
-         assert(varpos >= 0);
-         assert(varpos < nvars);
+         assert(0 <= varpos && varpos < nvars);
 
          vars[varpos] = argvar;
          eigvecmatrix[varpos * nvars + varpos] = childcoefs[i];
@@ -1387,8 +1385,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(argvar != NULL);
 
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
-         assert(varpos >= 0);
-         assert(varpos < nvars);
+         assert(0 <= varpos && varpos < nvars);
 
          vars[varpos] = argvar;
 
@@ -1396,8 +1393,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(argvar != NULL);
 
          varpos2 = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
-         assert(varpos2 >= 0);
-         assert(varpos2 < nvars);
+         assert(0 <= varpos2 && varpos2 < nvars);
          assert(varpos != varpos2);
 
          vars[varpos2] = argvar;
@@ -1409,8 +1405,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(argvar != NULL);
 
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
-         assert(varpos >= 0);
-         assert(varpos < nvars);
+         assert(0 <= varpos && varpos < nvars);
 
          lincoefs[varpos] = childcoefs[i];
       }
@@ -1419,6 +1414,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* compute eigenvalues and vectors, A = PDP^t
     * note: eigvecmatrix stores P^t
     */
+   // it stores it by row or column? the first nvars entries are the first row or the first column of P^t?
    if( LapackDsyev(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
@@ -1509,7 +1505,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
       if( SCIPisZero(scip, eigvals[i]) )
          continue;
-
 
       if( eigvals[i] > 0.0 )
       {
@@ -1619,7 +1614,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
          /* check whether rhsvar changes sign */
          if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )
          {
-            SCIP_Real transcoef;
             SCIP_Real signfactor;
 
             signfactor = SCIPisLE(scip, rhsvarub, 0.0) ? -1.0 : 1.0;
@@ -1634,9 +1628,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
             {
                if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
                {
-                  transcoef = sqrteigval * eigvecmatrix[i * nvars + j] * signfactor;
-
-                  transcoefs[ntranscoefs - nrhstranscoefs - 1] = transcoef;
+                  transcoefs[ntranscoefs - nrhstranscoefs - 1] = signfactor * sqrteigval * eigvecmatrix[i * nvars + j];
                   transcoefsidx[ntranscoefs - nrhstranscoefs - 1] = j;
                   ++nnonzeroes[npos + nneg - 1];
 
@@ -1654,7 +1646,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    assert(nextlhsterm == npos + nneg - 1);
    assert(nexttranscoef == ntranscoefs - nrhstranscoefs);
 
-   /* if the lhs constant is negative, it is non an soc */
+   /* if the lhs constant is negative, it is not an soc */
    if( SCIPisNegative(scip, lhsconstant) )
       goto CLEANUP;
 
@@ -1803,6 +1795,9 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitSoc)
 
 
 /** callback to detect structure in expression tree */
+// I think here there should be a more complete documentation.
+// What do you understand by simple quadratic, what type of norm is detected, and how is the auxiliary varible is
+// handled when the expression is not the root of a constraint.
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 { /*lint --e{715}*/
