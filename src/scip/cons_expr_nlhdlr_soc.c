@@ -113,7 +113,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */ // nowhere used!
+   SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */
    int                   nenfocalls;         /**< number of enforcement calls for the previous node */
    SCIP_Real             mincutefficacy;     /**< minimum efficacy a cut need to be added */
    int                   enfofreq;           /**< frequency of enforcement rounds (every x levels of depth) */
@@ -219,6 +219,9 @@ SCIP_RETCODE createDisaggr(
    nrhsvars = nlhdlrexprdata->nnonzeroes[nterms-1];
 
    /* check whether constant has a separate entry */
+   // SQRT(x^2 + y^2) <= z does not need to be dissagregated
+   // so I guess you should check if size > 2 before doing all this. probably you can add the check outside this
+   // function and an assert here.
    size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
    nvars = 0;
 
@@ -420,8 +423,7 @@ SCIP_Real evalSingleTerm(
 
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(k >= 0);
-   assert(k < nlhdlrexprdata->nterms);
+   assert(0 <= k && k < nlhdlrexprdata->nterms);
 
    termstart = nlhdlrexprdata->termbegins[k];
    result = nlhdlrexprdata->offsets[k];
@@ -456,7 +458,7 @@ SCIP_Real evalSingleTerm(
  *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_{n+1}^T x -\beta_{n+1}}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2}} - 1
  *  \f}
  *
- *  and the gradient cut is then \f$f(x^*, y^*) + grad_f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
+ *  and the gradient cut is then \f$f(x^*, y^*) + \nabla f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
  *  For the \f$\gamma\f$-cone the formula is similar.
  */
 static
@@ -464,7 +466,7 @@ SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
-   SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
+   SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
    int                   disaggidx,          /**< index of disaggregation to separate */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
@@ -506,13 +508,13 @@ SCIP_RETCODE generateCutSol(
    nterms = nlhdlrexprdata->nterms;
 
    /* nterms is equal to n+1 in the description and disaggidx is in {0,...,n}
-    * if disaggidx = n, this corresponds to the disaggregation of gamma
+    * disaggidx = n corresponds to the disaggregation of gamma
     */
 
    *cut = NULL;
 
    disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms - 1); // you could evaluate this outside and then just pass the value
 
    if( disaggidx < nterms - 1 )
    {
@@ -535,21 +537,25 @@ SCIP_RETCODE generateCutSol(
       return SCIP_OKAY;
    }
 
+   /* if the denominator is 0 -> the constraint can't be violated */
    assert(!SCIPisZero(scip, denominator));
 
    /* compute maximum number of variables in cut */
+   // why 2? shouldn't it be something like # of vars in rhs + dissagregation var + # of vars in term, i.e.,
+   // ncutvars = nnonzeroes[nterms-1] + 1 + (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] : 0);
    ncutvars = (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] + nnonzeroes[nterms-1] + 1 : 2);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
 
-   /* constant will be grad_f(x*,y*) * (x*, y*) */
+   /* constant will be grad_f(x*,y*)^T  (x*, y*) */
    constant = 0.0;
 
    /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
 
-   /* add terms for v_{disaggidx+1} */
+   /* add terms for v_{disaggidx+1} */ // why the + 1 here?
+   // it should also hold that if lhsval is 0 then the constraint can't be violated, can't you assert that lhsval is not zero?
    if( disaggidx < nterms - 1 && !SCIPisZero(scip, lhsval) )
    {
       for( i = 0; i < nnonzeroes[disaggidx]; ++i )
@@ -569,11 +575,11 @@ SCIP_RETCODE generateCutSol(
    }
 
    /* add terms for v_{n+1} */
-   for( i = 0; i < nnonzeroes[nterms-1]; ++i )
+   for( i = 0; i < nnonzeroes[nterms - 1]; ++i )
    {
       int idx;
 
-      idx = termbegins[nterms-1] + i;
+      idx = termbegins[nterms - 1] + i;
       cutvar = vars[transcoefsidx[idx]];
 
       /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
@@ -597,17 +603,17 @@ SCIP_RETCODE generateCutSol(
    /* add side */
    SCIPaddRowprepSide(rowprep, constant - fvalue);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE,
-         SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, disaggidx);
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, disaggidx); // you might wanna add the LP number to the cut name to make it unique
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
    {
-      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation);
+      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol,
+               NULL), mincutviolation);
       /* SCIPprintRowprep(scip, rowprep, NULL); */
    }
 
@@ -1947,6 +1953,9 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    /* otherwise, just evaluate the original quadratic expression */
    else
    {
+      // so according to Stefan, this would only be correct if you actually didn't really introduced any auxiliary
+      // variable. If some auxiliary variable is used, then you would need to compute the value of the quadratic w.r.t
+      // to the aux variables.
       assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
 
       *auxvalue = SCIPgetConsExprExprValue(expr);
@@ -1991,7 +2000,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
    *result = SCIP_DIDNOTFIND;
 
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(SCIPfindConsExprNlhdlr(conshdlr, NLHDLR_NAME));
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    if( SCIPgetCurrentNode(scip) != nlhdlrdata->prevnode )
@@ -2007,18 +2016,23 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       || (nlhdlrdata->enfofreq == 0 && depth != 0)
       || (nlhdlrdata->enfofreq > 0 && depth % nlhdlrdata->enfofreq != 0) )
    {
-      SCIPdebugMsg(scip, "not running at depth=%d and nenfocalls=%d due to timing parameters (maxenforoundsroot=%d, maxenforounds=%d, enfofreq=%d)\n",
-         depth, nlhdlrdata->nenfocalls, nlhdlrdata->maxenforoundsroot, nlhdlrdata->maxenforounds, nlhdlrdata->enfofreq);
+      SCIPdebugMsg(scip, "not running at depth=%d and nenfocalls=%d due to timing parameters (maxenforoundsroot=%d,\
+         maxenforounds=%d, enfofreq=%d)\n", depth, nlhdlrdata->nenfocalls, nlhdlrdata->maxenforoundsroot,
+            nlhdlrdata->maxenforounds, nlhdlrdata->enfofreq);
       return SCIP_OKAY;
    }
 
    ++nlhdlrdata->nenfocalls;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
+   // here you should assert that naggr > 2
 
-   /* check whether aggregation row is in the LP */
-   if( !SCIProwIsInLP(nlhdlrexprdata->disrow)
-      && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol), SCIPgetLPFeastol(scip) ) )
+   /* check whether the aggregation row is in the LP */
+   // mmmh you might wanna anyway want to separate the other constraints. look at the pdf i put in mattermost in the
+   // consexpr channel. It might be worth separating at the point where the disaggregation variable is equal to the
+   // expression it is representing. Such an assignment will make the dirow violated.
+   if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
+               sol), SCIPgetLPFeastol(scip) ) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
       SCIPdebugMsg(scip, "added aggregation row to LP, cutoff=%d\n", infeasible);
