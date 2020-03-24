@@ -9289,7 +9289,7 @@ SCIP_RETCODE presolSingleLockedQuadVars(
          {
             SCIP_VAR* var = SCIPgetConsExprExprVarVar(exprchildren[0]);
             SCIPdebugMsg(scip, "found single locked quadratic variable %s that satisfies HP property\n", SCIPvarGetName(var));
-            quadvars[++nquadvars] = var;
+            quadvars[nquadvars++] = var;
          }
       }
       else if( SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
