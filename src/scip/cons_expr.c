@@ -9167,6 +9167,255 @@ SCIP_RETCODE bilinearTermsFree(
    return SCIP_OKAY;
 }
 
+/** returns whether the variable of a given variable expression is only locked by one expression constraint */
+static
+SCIP_Bool isSingleLocked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
+   )
+{
+   SCIP_VAR* var;
+
+   assert(SCIPisConsExprExprVar(expr));
+
+   var = SCIPgetConsExprExprVarVar(expr);
+   assert(var != NULL);
+
+   return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPgetConsExprExprNLocksNeg(expr)
+      && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPgetConsExprExprNLocksPos(expr)
+      && SCIPgetConsExprExprVarNConss(expr) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
+      && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
+      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY;
+}
+
+/** invalidates all variable expression in a given expression by removing the variable expression from a given hash map */
+static
+SCIP_RETCODE removeSingleLockedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
+   SCIP_HASHMAP*         expr2idx            /**< map to hash variable expressions */
+   )
+{
+   SCIP_CONSEXPR_EXPR* e;
+
+   for( e = SCIPexpriteratorRestartDFS(it, expr); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      if( SCIPisConsExprExprVar(e) && SCIPhashmapExists(expr2idx, (void*)e) )
+      {
+         SCIP_CALL( SCIPhashmapRemove(expr2idx, (void*)e) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolving method to fix variables to one of their bounds if they are only contained in a single expression
+ *  constraint; only variables that appear in product and power expressions can be fixed to one of their bounds;
+ *  if a continuous variable has bounds [0,1], then the variable is changed to a binary variable; otherwise a
+ *  bound disjunction constraint is added
+ */
+static
+SCIP_RETCODE presolSingleLockedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   int*                  nchgvartypes,       /**< pointer to store the total number of changed variable types */
+   int*                  naddconss,          /**< pointer to store the total number of added constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   )
+{
+   SCIP_CONSEXPR_EXPR** singlelocked;
+   SCIP_CONSEXPR_EXPRHDLR* prodhdlr;
+   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_HASHMAP* expr2idx;
+   SCIP_Bool haslhs;
+   SCIP_Bool hasrhs;
+   int nsinglelocked = 0;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(nchgvartypes != NULL);
+   assert(naddconss != NULL);
+   assert(infeasible != NULL);
+
+   *nchgvartypes = 0;
+   *naddconss = 0;
+   *infeasible = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* only consider constraints with one finite side */
+   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+      return SCIP_OKAY;
+
+   /* only consider sum expressions */
+   if( consdata->expr == NULL || SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return SCIP_OKAY;
+
+   /* remember which constraint is finite */
+   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+
+   /* get sum, product, and power handler */
+   prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
+   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
+   /* allocate memory */
+   SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), consdata->nvarexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &singlelocked, consdata->nvarexprs) );
+
+   /* check all variable expressions for single locked variables */
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      assert(consdata->varexprs[i] != NULL);
+
+      if( isSingleLocked(scip, consdata->varexprs[i]) )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void*)consdata->varexprs[i], nsinglelocked) );
+         singlelocked[nsinglelocked++] = consdata->varexprs[i];
+      }
+   }
+   SCIPdebugMsg(scip, "found %d single locked variables for constraint %s\n", nsinglelocked, SCIPconsGetName(cons));
+
+   if( nsinglelocked > 0 )
+   {
+      SCIP_CONSEXPR_EXPR** children;
+      SCIP_CONSEXPR_ITERATOR* it;
+      int nchildren;
+
+      children = SCIPgetConsExprExprChildren(consdata->expr);
+      nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+      /* create expression iterator */
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CONSEXPR_EXPR* child;
+         SCIP_Real coef;
+
+         child = children[i];
+         assert(child != NULL);
+         coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
+
+         /* ignore linear terms */
+         if( SCIPisConsExprExprVar(child) )
+            continue;
+
+         /* consider products prod_j f_j(x); ignore f_j(x) if it is a single variable, otherwise iterate through the
+          * expression that represents f_j and mark each variable expression, so that it will not be considered later
+          */
+         else if( SCIPgetConsExprExprHdlr(child) == prodhdlr )
+         {
+            int j;
+
+            for( j = 0; j < SCIPgetConsExprExprNChildren(child); ++j )
+            {
+               SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[j];
+
+               if( !SCIPisConsExprExprVar(childchild) )
+               {
+                  /* mark all variable expressions that are contained in the expression */
+                  SCIP_CALL( removeSingleLockedVars(scip, childchild, it, expr2idx) );
+               }
+            }
+         }
+
+         /* fixing a variable x to one of its bounds is only valid for ... +x^2 >= lhs or ... -x^2 <= rhs */
+         else if( SCIPgetConsExprExprHdlr(child) == powhdlr )
+         {
+            SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[0];
+            SCIP_Real exponent = SCIPgetConsExprExprPowExponent(child);
+
+            /* TODO all even integral exponents can be handled */
+            if( exponent != 2.0 || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
+            {
+               /* mark all variable expressions that are contained in the expression */
+               SCIP_CALL( removeSingleLockedVars(scip, childchild, it, expr2idx) );
+            }
+         }
+
+         /* all other cases cannot be handled */
+         else
+         {
+            /* mark all variable expressions that are contained in the expression */
+            SCIP_CALL( removeSingleLockedVars(scip, child, it, expr2idx) );
+         }
+      }
+
+      /* free expression iterator */
+      SCIPexpriteratorFree(&it);
+   }
+
+   /* fix variable to one of their bounds by either changing their variable types or adding a disjunction constraint */
+   for( i = 0; i < nsinglelocked; ++i )
+   {
+      /* only consider expressions that are still contained in the hash map */
+      if( SCIPhashmapExists(expr2idx, (void*)singlelocked[i]) )
+      {
+         SCIP_CONS* newcons;
+         SCIP_VAR* vars[2];
+         SCIP_BOUNDTYPE boundtypes[2];
+         SCIP_Real bounds[2];
+         char name[SCIP_MAXSTRLEN];
+         SCIP_VAR* var;
+
+         var = SCIPgetConsExprExprVarVar(singlelocked[i]);
+         assert(var != NULL);
+         SCIPdebugMsg(scip, "found single locked variable %s in [%g,%g] that can be fixed to one of its bounds\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+
+         /* try to change the variable type to binary */
+         if( conshdlrdata->checkquadvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
+         {
+            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            ++(*nchgvartypes);
+
+            if( *infeasible )
+            {
+               SCIPdebugMsg(scip, "detect infeasibility after changing variable <%s> to binary type\n", SCIPvarGetName(var));
+               return SCIP_OKAY;
+            }
+         }
+         /* add bound disjunction constraint if bounds of variable are finite */
+         else if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            vars[0] = var;
+            vars[1] = var;
+            boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
+            boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
+            bounds[0] = SCIPvarGetUbGlobal(var);
+            bounds[1] = SCIPvarGetLbGlobal(var);
+
+            SCIPdebugMsg(scip, "add bound disjunction constraint for %s\n", SCIPvarGetName(var));
+
+            /* create, add, and release bound disjunction constraint */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
+            SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &newcons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
+               TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            ++(*naddconss);
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &singlelocked);
+   SCIPhashmapFree(&expr2idx);
+
+   return SCIP_OKAY;
+}
 
 /** returns whether a quadratic variable domain can be reduced to its lower or upper bound; this is the case if the
  *  quadratic variable is in just one single quadratic constraint and (sqrcoef > 0 and LHS = -infinity), or
@@ -9211,160 +9460,6 @@ SCIP_Bool hasQuadvarHpProperty(
 
    return nlocksdown == nlocksdownexpr && nlocksup == nlocksupexpr && SCIPisZero(scip, SCIPvarGetObj(var))
       && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
-}
-
-/* fix quadratic variables with proper square coefficients contained in a single quadratic expression constraint to
- * their upper or lower bounds
- */
-static
-SCIP_RETCODE presolSingleLockedQuadVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons,               /**< expression constraint */
-   int*                  nchgvartypes,       /**< pointer to store the total number of changed variable types */
-   int*                  naddconss,          /**< pointer to store the total number of added constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
-   )
-{
-   SCIP_VAR** quadvars;
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_CONSEXPR_EXPRHDLR* prodhdlr;
-   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   int nquadvars = 0;
-   int nchildren;
-   int i;
-
-   assert(conshdlr != NULL);
-   assert(cons != NULL);
-   assert(nchgvartypes != NULL);
-   assert(naddconss != NULL);
-   assert(infeasible != NULL);
-
-   *nchgvartypes = 0;
-   *naddconss = 0;
-   *infeasible = FALSE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   /* only consider constraints with one finite side */
-   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
-      return SCIP_OKAY;
-
-   /* only consider sum expressions */
-   if( consdata->expr == NULL || SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
-      return SCIP_OKAY;
-
-   /* get product and power handler */
-   prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
-   powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
-
-   nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
-   children = SCIPgetConsExprExprChildren(consdata->expr);
-
-   /* allocate memory to store quadratic expressions that satify HP property, see hasQuadvarHpProperty() */
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nchildren) );
-
-   /* check whether constraint is purely quadratic */
-   for( i = 0; i < nchildren; ++i )
-   {
-      SCIP_CONSEXPR_EXPR** exprchildren;
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_Bool isbilin;
-      SCIP_Bool isquad;
-      SCIP_Real coef;
-
-      expr = children[i];
-      assert(expr != NULL);
-      exprchildren = SCIPgetConsExprExprChildren(expr);
-      coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
-
-      /* is expr a quadratic term? */
-      isquad = SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2
-         && SCIPisConsExprExprVar(exprchildren[0]);
-
-      /* is expr a biliner term? */
-      isbilin = SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
-         && SCIPisConsExprExprVar(exprchildren[0]) && SCIPisConsExprExprVar(exprchildren[1]);
-
-      if( isquad )
-      {
-         if( hasQuadvarHpProperty(scip, exprchildren[0], coef, consdata->lhs, consdata->rhs) )
-         {
-            SCIP_VAR* var = SCIPgetConsExprExprVarVar(exprchildren[0]);
-            SCIPdebugMsg(scip, "found single locked quadratic variable %s that satisfies HP property\n", SCIPvarGetName(var));
-            quadvars[nquadvars++] = var;
-         }
-      }
-      /* check whether expr is not linear and not bilinear */
-      else if( !SCIPisConsExprExprVar(expr) && !isbilin )
-      {
-         /* constraint is not quadratic -> presolving technique is not applicable */
-         SCIPdebugMsg(scip, "constraint %s is not quadratic -> stop\n", SCIPconsGetName(cons));
-         nquadvars = 0;
-         break;
-      }
-   }
-
-   if( nquadvars > 0 )
-   {
-      SCIP_CONS* newcons;
-      SCIP_VAR* vars[2];
-      SCIP_BOUNDTYPE boundtypes[2];
-      SCIP_Real bounds[2];
-      char name[SCIP_MAXSTRLEN];
-
-      /* change variable types or add disjunction constraints */
-      for( i = 0; i < nquadvars; ++i )
-      {
-         SCIP_VAR* var = quadvars[i];
-         assert(var != NULL);
-
-         /* try to change the variable type to binary */
-         if( conshdlrdata->checkquadvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
-         {
-            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
-            ++(*nchgvartypes);
-
-            if( *infeasible )
-            {
-               SCIPdebugMsg(scip, "detect infeasibility after changing variable <%s> to binary type\n", SCIPvarGetName(var));
-               return SCIP_OKAY;
-            }
-         }
-         /* add bound disjunction constraint if bounds of variable are finite */
-         else if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
-         {
-            vars[0] = var;
-            vars[1] = var;
-            boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-            boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-            bounds[0] = SCIPvarGetUbGlobal(var);
-            bounds[1] = SCIPvarGetLbGlobal(var);
-
-            SCIPdebugMsg(scip, "add bound disjunction constraint for %s\n", SCIPvarGetName(var));
-
-            /* create, add, and release bound disjunction constraint */
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
-            SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &newcons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
-               TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-            ++(*naddconss);
-         }
-      }
-   }
-
-   /* release memory */
-   SCIPfreeBufferArray(scip, &quadvars);
-
-   return SCIP_OKAY;
 }
 
 /** @} */
@@ -10391,13 +10486,13 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
          int tmpnchgvartypes = 0;
          int tmpnaddconss = 0;
 
-         SCIP_CALL( presolSingleLockedQuadVars(scip, conshdlr, conss[c], &tmpnchgvartypes, &tmpnaddconss, &infeasible) );
-         SCIPdebugMsg(scip, "presolSingleLockedQuadVars() for %s: nchgvartypes=%d naddconss=%d infeas=%u\n",
+         SCIP_CALL( presolSingleLockedVars(scip, conshdlr, conss[c], &tmpnchgvartypes, &tmpnaddconss, &infeasible) );
+         SCIPdebugMsg(scip, "presolSingleLockedVars() for %s: nchgvartypes=%d naddconss=%d infeas=%u\n",
             SCIPconsGetName(conss[c]), tmpnchgvartypes, tmpnaddconss, infeasible);
 
          if( infeasible )
          {
-            SCIPdebugMsg(scip, "presolSingleLockedQuadVars() detected infeasibility\n");
+            SCIPdebugMsg(scip, "presolSingleLockedVars() detected infeasibility\n");
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
