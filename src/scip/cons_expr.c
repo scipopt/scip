@@ -42,6 +42,7 @@
 
 #include "scip/cons_expr.h"
 #include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
 #include "scip/struct_cons_expr.h"
@@ -251,6 +252,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
+   char                     checkquadvarlocks;/**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -8255,13 +8257,15 @@ SCIP_RETCODE presolSingleLockedQuadVars(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS*            cons,               /**< expression constraint */
    int*                  nchgvartypes,       /**< pointer to store the total number of changed variable types */
-   int*                  naddedconss         /**< pointer to store the total number of added constraints */
+   int*                  naddconss,          /**< pointer to store the total number of added constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
    )
 {
    SCIP_VAR** quadvars;
    SCIP_CONSEXPR_EXPR** children;
    SCIP_CONSEXPR_EXPRHDLR* prodhdlr;
    SCIP_CONSEXPR_EXPRHDLR* powhdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int nquadvars = 0;
    int nchildren;
@@ -8270,10 +8274,15 @@ SCIP_RETCODE presolSingleLockedQuadVars(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(nchgvartypes != NULL);
-   assert(naddedconss != NULL);
+   assert(naddconss != NULL);
+   assert(infeasible != NULL);
 
    *nchgvartypes = 0;
-   *naddedconss = 0;
+   *naddconss = 0;
+   *infeasible = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8313,7 +8322,9 @@ SCIP_RETCODE presolSingleLockedQuadVars(
       {
          if( hasQuadvarHpProperty(scip, exprchildren[0], coef, consdata->lhs, consdata->rhs) )
          {
-            quadvars[++nquadvars] = SCIPgetConsExprExprVarVar(exprchildren[0]);
+            SCIP_VAR* var = SCIPgetConsExprExprVarVar(exprchildren[0]);
+            SCIPdebugMsg(scip, "found single locked quadratic variable %s that satisfies HP property\n", SCIPvarGetName(var));
+            quadvars[++nquadvars] = var;
          }
       }
       else if( SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
@@ -8321,9 +8332,14 @@ SCIP_RETCODE presolSingleLockedQuadVars(
       {
 
       }
+      else if( SCIPisConsExprExprVar(expr) )
+      {
+
+      }
       else
       {
          /* constraint is not quadratic -> presolving technique is not applicable */
+         SCIPdebugMsg(scip, "constraint %s is not quadratic -> stop\n", SCIPconsGetName(cons));
          nquadvars = 0;
          break;
       }
@@ -8331,7 +8347,52 @@ SCIP_RETCODE presolSingleLockedQuadVars(
 
    if( nquadvars > 0 )
    {
-      /* TODO change variable types or add disjunction constraints */
+      SCIP_CONS* cons;
+      SCIP_VAR* vars[2];
+      SCIP_BOUNDTYPE boundtypes[2];
+      SCIP_Real bounds[2];
+      char name[SCIP_MAXSTRLEN];
+
+      /* change variable types or add disjunction constraints */
+      for( i = 0; i < nquadvars; ++i )
+      {
+         SCIP_VAR* var = quadvars[i];
+         assert(var != NULL);
+
+         /* try to change the variable type to binary */
+         if( conshdlrdata->checkquadvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
+         {
+            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            ++(*nchgvartypes);
+
+            if( *infeasible )
+            {
+               SCIPdebugMsg(scip, "detect infeasibility after changing variable <%s> to binary type\n", SCIPvarGetName(var));
+               return SCIP_OKAY;
+            }
+         }
+         /* add bound disjunction constraint if bounds of variable are finite */
+         else if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            vars[0] = var;
+            vars[1] = var;
+            boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
+            boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
+            bounds[0] = SCIPvarGetUbGlobal(var);
+            bounds[1] = SCIPvarGetLbGlobal(var);
+
+            SCIPdebugMsg(scip, "add bound disjunction constraint for %s\n", SCIPvarGetName(var));
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
+            SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
+               TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            ++(*naddconss);
+         }
+      }
    }
 
    /* release memory */
@@ -9284,6 +9345,7 @@ SCIP_DECL_CONSPROP(consPropExpr)
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
    int c;
 
@@ -9294,6 +9356,9 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* simplify constraints and replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs) );
@@ -9338,7 +9403,32 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
+   /* fix quadratic variables with square coefficients contained in a single constraint to their upper or lower bounds */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && conshdlrdata->checkquadvarlocks != 'd' && SCIPisPresolveFinished(scip) )
+   {
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_Bool infeasible = FALSE;
+         int tmpnchgvartypes = 0;
+         int tmpnaddconss = 0;
+
+         SCIP_CALL( presolSingleLockedQuadVars(scip, conshdlr, conss[c], &tmpnchgvartypes, &tmpnaddconss, &infeasible) );
+         SCIPdebugMsg(scip, "presolSingleLockedQuadVars() for %s: nchgvartypes=%d naddconss=%d infeas=%u\n",
+            SCIPconsGetName(conss[c]), tmpnchgvartypes, tmpnaddconss, infeasible);
+
+         if( infeasible )
+         {
+            SCIPdebugMsg(scip, "presolSingleLockedQuadVars() detected infeasibility\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         (*nchgvartypes) += tmpnchgvartypes;
+         (*naddconss) += tmpnaddconss;
+      }
+   }
+
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 || *nchgvartypes > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
@@ -13684,6 +13774,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
          "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
          &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/checkquadvarlocks",
+         "whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)",
+         &conshdlrdata->checkquadvarlocks, TRUE, 't', "bdt", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
