@@ -9280,7 +9280,7 @@ SCIP_RETCODE presolSingleLockedQuadVars(
       expr = children[i];
       assert(expr != NULL);
       exprchildren = SCIPgetConsExprExprChildren(expr);
-      coef = SCIPgetConsExprExprSumCoefs(expr)[i];
+      coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
 
       if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2
          && SCIPisConsExprExprVar(exprchildren[0]) )
