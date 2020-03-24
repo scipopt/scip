@@ -9275,6 +9275,8 @@ SCIP_RETCODE presolSingleLockedQuadVars(
    {
       SCIP_CONSEXPR_EXPR** exprchildren;
       SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Bool isbilin;
+      SCIP_Bool isquad;
       SCIP_Real coef;
 
       expr = children[i];
@@ -9282,8 +9284,15 @@ SCIP_RETCODE presolSingleLockedQuadVars(
       exprchildren = SCIPgetConsExprExprChildren(expr);
       coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
 
-      if( SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2
-         && SCIPisConsExprExprVar(exprchildren[0]) )
+      /* is expr a quadratic term? */
+      isquad = SCIPgetConsExprExprHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2
+         && SCIPisConsExprExprVar(exprchildren[0]);
+
+      /* is expr a biliner term? */
+      isbilin = SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
+         && SCIPisConsExprExprVar(exprchildren[0]) && SCIPisConsExprExprVar(exprchildren[1]);
+
+      if( isquad )
       {
          if( hasQuadvarHpProperty(scip, exprchildren[0], coef, consdata->lhs, consdata->rhs) )
          {
@@ -9292,16 +9301,8 @@ SCIP_RETCODE presolSingleLockedQuadVars(
             quadvars[nquadvars++] = var;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(expr) == prodhdlr && SCIPgetConsExprExprNChildren(expr) == 2
-         && SCIPisConsExprExprVar(exprchildren[0]) && SCIPisConsExprExprVar(exprchildren[1]) )
-      {
-
-      }
-      else if( SCIPisConsExprExprVar(expr) )
-      {
-
-      }
-      else
+      /* check whether expr is not linear and not bilinear */
+      else if( !SCIPisConsExprExprVar(expr) && !isbilin )
       {
          /* constraint is not quadratic -> presolving technique is not applicable */
          SCIPdebugMsg(scip, "constraint %s is not quadratic -> stop\n", SCIPconsGetName(cons));
