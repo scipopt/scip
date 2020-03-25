@@ -180,7 +180,6 @@ Test(presolve, singlelockedvars3)
 {
    /* include bound disjunction constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
-   SCIP_CALL( SCIPincludeReaderCip(scip) );
 
    /* change bounds of z */
    SCIP_CALL( SCIPchgVarLbGlobal(scip, z, -1.0) );
@@ -191,7 +190,6 @@ Test(presolve, singlelockedvars3)
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
-   SCIPwriteTransProblem(scip, "trans.cip", NULL, FALSE);
    cr_expect(SCIPgetNConss(scip) == 2);
 
    /* check variable types */
