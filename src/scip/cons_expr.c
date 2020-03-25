@@ -254,7 +254,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
-   char                     checkquadvarlocks;/**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
+   char                     checkvarlocks;   /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
@@ -9379,7 +9379,7 @@ SCIP_RETCODE presolSingleLockedVars(
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 
          /* try to change the variable type to binary */
-         if( conshdlrdata->checkquadvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
+         if( conshdlrdata->checkvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
          {
             assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
@@ -10482,8 +10482,8 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   /* fix quadratic variables with square coefficients contained in a single constraint to their upper or lower bounds */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && conshdlrdata->checkquadvarlocks != 'd' && SCIPisPresolveFinished(scip) )
+   /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && conshdlrdata->checkvarlocks != 'd' && SCIPisPresolveFinished(scip) )
    {
       for( c = 0; c < nconss; ++c )
       {
@@ -14944,9 +14944,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
          &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/checkquadvarlocks",
-         "whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)",
-         &conshdlrdata->checkquadvarlocks, TRUE, 't', "bdt", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/checkvarlocks",
+         "whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)",
+         &conshdlrdata->checkvarlocks, TRUE, 't', "bdt", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/branching/aux",
          "from which depth on in the tree to allow branching on auxiliary variables (variables added for extended formulation)",
