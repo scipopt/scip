@@ -9231,6 +9231,7 @@ SCIP_RETCODE presolSingleLockedVars(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_HASHMAP* exprcands;
+   SCIP_Bool hasbounddisj;
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
    int nsinglelocked = 0;
@@ -9356,6 +9357,9 @@ SCIP_RETCODE presolSingleLockedVars(
       SCIPexpriteratorFree(&it);
    }
 
+   /* check whether the bound disjunction constraint handler is available */
+   hasbounddisj = SCIPfindConshdlr(scip, "bounddisjunction") != NULL;
+
    /* fix variable to one of their bounds by either changing their variable types or adding a disjunction constraint */
    for( i = 0; i < nsinglelocked; ++i )
    {
@@ -9388,7 +9392,7 @@ SCIP_RETCODE presolSingleLockedVars(
             }
          }
          /* add bound disjunction constraint if bounds of variable are finite */
-         else if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+         else if( hasbounddisj && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
          {
             vars[0] = var;
             vars[1] = var;
