@@ -149,8 +149,8 @@ void checkTypes(
 /* test for presolSingleLockedVars() */
 Test(presolve, singlelockedvars1)
 {
-   /* -x^2 + y^2 -z^2 >= 0 implies that x and z are at their bounds */
-   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^2 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
+   /* -x^2 + y^2 -z^6 >= 0 implies that x and z are at their bounds */
+   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
@@ -164,7 +164,7 @@ Test(presolve, singlelockedvars1)
 Test(presolve, singlelockedvars2)
 {
    /* same example as singlelockedvars1 but there is another constraint that contains x and y => only z can be at its bounds */
-   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^2 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
+   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
    SCIP_CALL( addCons("<x> * <y> + cos(<x>)", -0.5, 0.5) );
 
    /* apply presolving */
@@ -186,7 +186,7 @@ Test(presolve, singlelockedvars3)
    SCIP_CALL( SCIPchgVarUbGlobal(scip, z, 2.0) );
 
    /* same example as singlelockedvars1; x should be binary and there should be one disjunction constraint for z */
-   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^2 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
+   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );

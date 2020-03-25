@@ -9337,9 +9337,12 @@ SCIP_RETCODE presolSingleLockedVars(
          {
             SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[0];
             SCIP_Real exponent = SCIPgetConsExprExprPowExponent(child);
+            SCIP_Bool valid;
 
-            /* TODO all even integral exponents can be handled */
-            if( exponent != 2.0 || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
+            /* all even integral exponents can be handled */
+            valid = exponent > 1.0 && fmod(exponent, 2.0) == 0.0;
+
+            if( !valid || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
             {
                /* mark all variable expressions that are contained in the expression */
                SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
