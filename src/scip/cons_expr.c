@@ -9230,7 +9230,7 @@ SCIP_RETCODE presolSingleLockedVars(
    SCIP_CONSEXPR_EXPRHDLR* powhdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* expr2idx;
+   SCIP_HASHMAP* exprcands;
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
    int nsinglelocked = 0;
@@ -9268,7 +9268,7 @@ SCIP_RETCODE presolSingleLockedVars(
    powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), consdata->nvarexprs) );
+   SCIP_CALL( SCIPhashmapCreate(&exprcands, SCIPblkmem(scip), consdata->nvarexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &singlelocked, consdata->nvarexprs) );
 
    /* check all variable expressions for single locked variables */
@@ -9278,7 +9278,7 @@ SCIP_RETCODE presolSingleLockedVars(
 
       if( isSingleLocked(scip, consdata->varexprs[i]) )
       {
-         SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void*)consdata->varexprs[i], nsinglelocked) );
+         SCIP_CALL( SCIPhashmapInsert(exprcands, (void*)consdata->varexprs[i], NULL) );
          singlelocked[nsinglelocked++] = consdata->varexprs[i];
       }
    }
@@ -9325,7 +9325,7 @@ SCIP_RETCODE presolSingleLockedVars(
                if( !SCIPisConsExprExprVar(childchild) )
                {
                   /* mark all variable expressions that are contained in the expression */
-                  SCIP_CALL( removeSingleLockedVars(scip, childchild, it, expr2idx) );
+                  SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
                }
             }
          }
@@ -9340,7 +9340,7 @@ SCIP_RETCODE presolSingleLockedVars(
             if( exponent != 2.0 || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
             {
                /* mark all variable expressions that are contained in the expression */
-               SCIP_CALL( removeSingleLockedVars(scip, childchild, it, expr2idx) );
+               SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
             }
          }
 
@@ -9348,7 +9348,7 @@ SCIP_RETCODE presolSingleLockedVars(
          else
          {
             /* mark all variable expressions that are contained in the expression */
-            SCIP_CALL( removeSingleLockedVars(scip, child, it, expr2idx) );
+            SCIP_CALL( removeSingleLockedVars(scip, child, it, exprcands) );
          }
       }
 
@@ -9360,7 +9360,7 @@ SCIP_RETCODE presolSingleLockedVars(
    for( i = 0; i < nsinglelocked; ++i )
    {
       /* only consider expressions that are still contained in the hash map */
-      if( SCIPhashmapExists(expr2idx, (void*)singlelocked[i]) )
+      if( SCIPhashmapExists(exprcands, (void*)singlelocked[i]) )
       {
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
@@ -9412,7 +9412,7 @@ SCIP_RETCODE presolSingleLockedVars(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &singlelocked);
-   SCIPhashmapFree(&expr2idx);
+   SCIPhashmapFree(&exprcands);
 
    return SCIP_OKAY;
 }
