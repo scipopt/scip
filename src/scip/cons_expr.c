@@ -9425,51 +9425,6 @@ SCIP_RETCODE presolSingleLockedVars(
    return SCIP_OKAY;
 }
 
-/** returns whether a quadratic variable domain can be reduced to its lower or upper bound; this is the case if the
- *  quadratic variable is in just one single quadratic constraint and (sqrcoef > 0 and LHS = -infinity), or
- *  (sqrcoef < 0 and RHS = +infinity) hold
- */
-static
-SCIP_Bool hasQuadvarHpProperty(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   quadvarexpr,        /**< variable expression of the quadratic term */
-   SCIP_Real             quadcoef,           /**< coefficient of the quadratic term */
-   SCIP_Real             lhs,                /**< left-hand side of expression constraint */
-   SCIP_Real             rhs                 /**< right-hand side of expression constraint */
-   )
-{
-   SCIP_VAR* var;
-   SCIP_Bool haslhs;
-   SCIP_Bool hasrhs;
-   int nlocksdownexpr;
-   int nlocksupexpr;
-   int nlocksdown;
-   int nlocksup;
-
-   assert(scip != NULL);
-   assert(quadvarexpr != NULL);
-   assert(quadcoef != 0.0);
-
-   /* ignore quadratic variables that are contained in more than one expression constraints */
-   if( SCIPgetConsExprExprVarNConss(quadvarexpr) != 1 )
-      return FALSE;
-
-   /* get expression locks */
-   nlocksdownexpr = SCIPgetConsExprExprNLocksNeg(quadvarexpr);
-   nlocksupexpr = SCIPgetConsExprExprNLocksPos(quadvarexpr);
-
-   /* get variable and variable locks */
-   var = SCIPgetConsExprExprVarVar(quadvarexpr);
-   nlocksup = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
-   nlocksdown = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
-
-   haslhs = !SCIPisInfinity(scip, -lhs);
-   hasrhs = !SCIPisInfinity(scip, rhs);
-
-   return nlocksdown == nlocksdownexpr && nlocksup == nlocksupexpr && SCIPisZero(scip, SCIPvarGetObj(var))
-      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
-}
-
 /** @} */
 
 /*
