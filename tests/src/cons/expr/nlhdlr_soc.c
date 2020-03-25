@@ -75,7 +75,7 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -0.9, 0.7, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &u, "u", 0.9, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &u, "u", 0.91, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, w) );
@@ -807,6 +807,47 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+
+/* detects x^2 + y^2 - z*u <= -2 with z not nonnegative but z*u nonnegative */
+Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic constraint")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[expr] <test>: <x>^2 + <y>^2 - <z> * <u> <= -2",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 
 /* disaggregates SQRT( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")

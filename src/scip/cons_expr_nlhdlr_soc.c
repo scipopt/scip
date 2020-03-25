@@ -861,10 +861,11 @@ SCIP_RETCODE detectSocNorm(
    return SCIP_OKAY;
 }
 
-/** helper method to detect c + sum_i coef_i expr_i^2 <= coef_k expr_k^2.
+/** helper method to detect c + sum_i coef_i expr_i^2 - coef_k expr_k^2 <= 0
+ *  and c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0
+ *
  *  binary linear variables are interpreted as quadratic terms.
  */
-// improve documentation: apparently you also handle the hyperbolic case
 static
 SCIP_RETCODE detectSocQuadraticSimple(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -982,19 +983,19 @@ SCIP_RETCODE detectSocQuadraticSimple(
          goto CLEANUP;
       }
 
-      /* more than one positive eigenvalies and more than one negative eigenvalue -> can't be convex */
+      /* more than one positive eigenvalue and more than one negative eigenvalue -> can't be convex */
       if( nposquadterms > 1 && nnegquadterms > 1 )
          goto CLEANUP;
 
-      /* more than one bilinear term -> can't be convex */
+      /* more than one bilinear term -> can't be convex */ // FW: I don't think this is correct, it can still be convex, we just can't detect it in this method
       if( nposbilinterms + nnegbilinterms > 1 )
          goto CLEANUP;
 
-      // what's the logic here?
+      /* one positive bilinear term and also at least one positive quadratic term -> not a simple SOC */ // FW: Is this comment ok?
       if( nposbilinterms > 0 && nposquadterms > 0 )
          goto CLEANUP;
 
-      // what's the logic here?
+      /* one negative bilinear term and also at least one negative quadratic term -> not a simple SOC */
       if( nnegbilinterms > 0 && nnegquadterms > 0 )
          goto CLEANUP;
    }
@@ -1021,8 +1022,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(rhsidx != -1);
 
       /* if rhs is infinity, it can't be soc */
-      // why don't you check rhs is infinity?
-      if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+      if( SCIPisInfinity(scip, rhs) )
          goto CLEANUP;
 
       specialtermidx = rhsidx;
@@ -1033,8 +1033,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(lhsidx != -1);
 
       /* if lhs is infinity, it can't be soc */
-      // why don't you check lhs is -infinity?
-      if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
+      if( SCIPisInfinity(scip, -lhs) )
          goto CLEANUP;
 
       specialtermidx = lhsidx;
@@ -1047,14 +1046,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    if( ishyperbolic )
    {
-      /* one of the expressions in the bilinear term is not non-negative -> no SOC */
-      // what if the sum is always nonnegative ? For example x^2  -y*z <= 0 with y in 1,2 and z in -1,1 should be a soc;
-      // can you add a test?
-      if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0
-         || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]).inf < 0.0 )
-      {
+      SCIP_INTERVAL yactivity;
+      SCIP_INTERVAL zactivity;
+
+      yactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
+      zactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]);
+
+      /* the sum of the expressions in the bilinear term is not non-negative -> no SOC */
+      if( SCIPisNegative(scip, yactivity.inf + zactivity.inf) )
          goto CLEANUP;
-      }
 
       lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
@@ -1067,13 +1067,19 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    if( SCIPisNegative(scip, lhsconstant) )
       goto CLEANUP;
-   // maybe here you have to set lhsconstant to 0 if lhsconstant < 0
+
+   if( SCIPisZero(scip, lhsconstant) )
+      lhsconstant = 0.0;
 
    /*
-    *  we have found an soc-representable expression
+    * we have found an soc-representable expression. Now build the nlhdlrexprdata
+    *
+    * in the non-hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k^2 <= 0 is transformed to
+    * SQRT( c + sum_i coef_i expr_i^2 ) <= coef_k expr_k
+    *
+    * in the hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0 is transformed to
+    * SQRT( 4(c + sum_i coef_i expr_i^2) + (expr_k - expr_l)^2 ) <= expr_k + expr_l
     */
-   // documentation? what is going to happen here?
-   // this function is quite long, maybe you wanna split it?
 
    nterms = ishyperbolic ? nchildren + 1 : nchildren;
    ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
@@ -1115,11 +1121,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
                   &vars[nextentry]) );
       }
 
-      // documentation to explain the 4 and the minus; or add documentation above
       if( ishyperbolic )
       {
-         assert(-4.0 * childcoefs[i] / childcoefs[specialtermidx] > 0.0);
-         transcoefs[nextentry] = SQRT(-4.0 * childcoefs[i] / childcoefs[specialtermidx]);
+         /* we eliminate the coefficient of the bilinear term to arrive at standard form */
+         assert(4.0 * childcoefs[i] / -childcoefs[specialtermidx] > 0.0);
+         transcoefs[nextentry] = SQRT(4.0 * childcoefs[i] / -childcoefs[specialtermidx]);
       }
       else
       {
@@ -1146,7 +1152,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
    else
    {
-      // documentation!!!
       /* add data for variables coming from bilinear term */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0],
                &vars[nchildren - 1]) );
@@ -1155,6 +1160,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1],
                &vars[nchildren]) );
       assert(vars[nchildren] != NULL);
+
+      /* on the lhs we have the term (expr_k - expr_l)^2 and the rhs we have expr_k + expr_l
+       * at this point, vars[nchildren-1] = auxvar(expr_k) and vars[nchildren] = auxvar(expr_l)
+       */
 
       termbegins[nterms - 1] = ntranscoefs - 2;
 
