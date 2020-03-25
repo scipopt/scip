@@ -768,6 +768,46 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+/* detects that SQRT(x^2 -4x + 1) <= 2 as soc expression */
+Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic constraint")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[expr] <test>: (<x>^2 - 4*<x> + 1)^0.5 <= 1",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_null(nlhdlrexprdata);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 /* disaggregates SQRT( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
 {
@@ -803,6 +843,10 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
          nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
+
+   /* create disrow */
+   SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
+   cr_assert_not_null(nlhdlrexprdata->disrow);
 
    /* check disvars */
    cr_expect_not_null(nlhdlrexprdata->disvars[0]);
@@ -849,13 +893,11 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 1.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-
-   /* detect */
-   SCIP_CALL( SCIPinitlpCons(scip, cons, &infeasible) );
-   cr_assert(!infeasible);
-
-   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
    SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
 
    /* find the nlhdlr expr data */
    for( i = 0; i < expr->nenfos; ++i )
@@ -881,12 +923,12 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, &cut) );
 
    cutvars[0] = nlhdlrexprdata->disvars[0];
-   cutvars[1] = auxvar;
-   cutvars[2] = x;
+   cutvars[1] = x;
+   cutvars[2] = auxvar;
    cutvals[0] = -2.0 / SQRT(8.0) - 1.0;
-   cutvals[1] = 2.0 / SQRT(8.0) - 1.0;
-   cutvals[2] = 4.0 / SQRT(8.0);
-   rhs = cutvals[1] * 2.0 + cutvals[2] - SQRT(8.0) + 2.0;
+   cutvals[1] = 4.0 / SQRT(8.0);
+   cutvals[2] = 2.0 / SQRT(8.0) - 1.0;
+   rhs = cutvals[1] + cutvals[2] * 2.0 - SQRT(8.0) + 2.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPreleaseRow(scip, &cut);
@@ -894,13 +936,13 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    /* check cut w.r.t. y */
    SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 1, 0.0, &cut) );
 
-   cutvars[0] = nlhdlrexprdata->disvars[1];
-   cutvars[1] = auxvar;
-   cutvars[2] = y;
-   cutvals[0] = -1.0 / SQRT(17.0) - 1.0;
-   cutvals[1] = 1.0 / SQRT(17.0) - 1.0;
-   cutvals[2] = 8.0 / SQRT(17.0);
-   rhs = cutvals[0] * 1.0 + cutvals[1] * 2.0 + cutvals[2] * 2.0 - SQRT(17.0) + 3.0;
+   cutvars[0] = auxvar;
+   cutvars[1] = y;
+   cutvars[2] = nlhdlrexprdata->disvars[1];
+   cutvals[0] = 1.0 / SQRT(17.0) - 1.0;
+   cutvals[1] = 8.0 / SQRT(17.0);
+   cutvals[2] = -1.0 / SQRT(17.0) - 1.0;
+   rhs =  cutvals[0] * 2.0 + cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPreleaseRow(scip, &cut);
@@ -908,13 +950,13 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    /* check cut w.r.t. z */
    SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 2, 0.0, &cut) );
 
-   cutvars[0] = nlhdlrexprdata->disvars[2];
-   cutvars[1] = auxvar;
-   cutvars[2] = z;
-   cutvals[0] = -1.0 / SQRT(17.0) - 1.0;
-   cutvals[1] = 1.0 / SQRT(17.0) - 1.0;
-   cutvals[2] = -8.0 / SQRT(17.0);
-   rhs = cutvals[0] * 1.0 + cutvals[1] * 2.0 - cutvals[2] * 2.0 - SQRT(17.0) +    3.0;
+   cutvars[0] = auxvar;
+   cutvars[1] = z;
+   cutvars[2] = nlhdlrexprdata->disvars[2];
+   cutvals[0] = 1.0 / SQRT(17.0) - 1.0;
+   cutvals[1] = -8.0 / SQRT(17.0);
+   cutvals[2] = -1.0 / SQRT(17.0) - 1.0;
+   rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPreleaseRow(scip, &cut);

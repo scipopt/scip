@@ -216,7 +216,8 @@ SCIP_RETCODE createDisaggrVars(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars) );
 
    /* create disaggregation variables representing the epigraph of (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1}) */
-   for( i = 0; i < ndisvars - 1; ++i )
+   for( i = 0; i < nterms - 1; ++i ) // shouldn't this be size - 1? FW: no, the first nterm-1 slots are always filled
+                                     // the same way and then there might be one more slot depending on constant
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0,
@@ -224,7 +225,7 @@ SCIP_RETCODE createDisaggrVars(
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
 
       SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[i]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 0) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, 1, 0) );
    }
 
    /* create disaggregation variable representing the epigraph of gamma / (v_{n+1}^T x + beta_{n+1}) */
@@ -260,7 +261,7 @@ SCIP_RETCODE freeDisaggr(
    /* release variables */
    for( i = 0; i < size; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, -1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, 0) );
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
@@ -284,7 +285,6 @@ SCIP_RETCODE createDisaggrRow(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
-   SCIP_ROW* disrow;
    SCIP_Real disrowrhs;
    char name[SCIP_MAXSTRLEN];
    int nvars;
@@ -300,7 +300,6 @@ SCIP_RETCODE createDisaggrRow(
 
    nterms = nlhdlrexprdata->nterms;
    nrhsvars = nlhdlrexprdata->nnonzeroes[nterms-1];
-   disrow = nlhdlrexprdata->disrow;
    disrowrhs = nlhdlrexprdata->offsets[nterms - 1];
 
    /* check whether constant has a separate entry */
@@ -314,14 +313,19 @@ SCIP_RETCODE createDisaggrRow(
    /* add disvars to row */
    for( i = 0; i < ndisvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, disrow, nlhdlrexprdata->disvars[i], 1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, nlhdlrexprdata->disrow, nlhdlrexprdata->disvars[i], 1.0) );
    }
 
    /* add rhs vars to row */
    for( i = nlhdlrexprdata->ntranscoefs - nrhsvars; i < nlhdlrexprdata->ntranscoefs; ++i )
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, disrow, nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]],
-            -nlhdlrexprdata->transcoefs[i]) );
+      SCIP_VAR* var;
+      SCIP_Real coef;
+
+      var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]];
+      coef = -nlhdlrexprdata->transcoefs[i];
+
+      SCIP_CALL( SCIPaddVarToRow(scip, nlhdlrexprdata->disrow, var, coef) );
    }
 
    return SCIP_OKAY;
@@ -522,6 +526,7 @@ SCIP_RETCODE generateCutSol(
 
    disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms - 1); // you could evaluate this outside and then just pass the value
+                                                                   // FW: whats the advantage of that?
 
    if( disaggidx < nterms - 1 )
    {
@@ -733,7 +738,7 @@ SCIP_RETCODE detectSocNorm(
       }
    }
 
-   /* there are linear terms without quadratic terms */
+   /* there are linear terms without corresponding quadratic terms */
    if( SCIPhashsetGetNElements(linexprs) > 0 )
    {
       SCIPfreeBufferArray(scip, &transcoefs);
@@ -742,7 +747,39 @@ SCIP_RETCODE detectSocNorm(
       return SCIP_OKAY;
    }
 
+   /* add one to variable counter for auxvar */
    ++nvars;
+
+   constant = SCIPgetConsExprExprSumConstant(child);
+
+   /* compute constant of possible soc expression to check its sign */
+   for( i = 0; i < nchildren; ++i )
+   {
+      if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPower(conshdlr)
+         || SCIPgetConsExprExprPowExponent(children[i]) != 2.0 )
+      {
+         int auxvarpos;
+
+         assert(SCIPhashmapExists(expr2idx, (void*) children[i]) );
+         auxvarpos = SCIPhashmapGetImageInt(expr2idx, (void*) children[i]);
+
+         constant -= SQR(0.5 * childcoefs[i] / transcoefs[auxvarpos]);
+      }
+   }
+
+   /* if the constant is negative -> no SOC */
+   if( SCIPisNegative(scip, constant) )
+   {
+      SCIPfreeBufferArray(scip, &transcoefs);
+      SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
+      SCIPhashmapFree(&expr2idx);
+      return SCIP_OKAY;
+   }
+   else if( SCIPisZero(scip, constant) )
+      constant = 0.0;
+
+   /* at this point, we have found an SOC structure */
+   *success = TRUE;
 
    /* allocate temporary memory to collect data */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
@@ -764,15 +801,9 @@ SCIP_RETCODE detectSocNorm(
    vars[nvars-1] = auxvar;
    transcoefs[nvars-1] = 1.0;
 
-   nextentry = 0;
-   constant = SCIPgetConsExprExprSumConstant(child);
 
-   /* found SOC structure -> create required auxiliary variables */
-   // this is not true!!! SQRT(x^2 -4x + 1) = SQRT((x -
-   // 2)^2 - 3) and is not a SOC! You should add a test and this shouldn't be detected! Even if the domain of x forces
-   // the argument to be non-negative, the function is not convex. Basically, constant can become negative bellow
-   // btw you might have numericall issues here so oyu might wanna check if SCIPisZero(scip, constant) and set it to a
-   // hard 0.0
+   /* create required auxiliary variables and fill offsets array */
+   nextentry = 0;
    for( i = 0; i < nchildren; ++i )
    {
       SCIP_VAR* argauxvar;
@@ -802,13 +833,9 @@ SCIP_RETCODE detectSocNorm(
          assert(argauxvar != NULL);
 
          offsets[auxvarpos] = 0.5 * childcoefs[i] / transcoefs[auxvarpos];
-         constant -= SQR(offsets[auxvarpos]); //here you are substracting -> can become negative
       }
    }
-
    assert(nextentry == nvars - 1);
-
-   *success = TRUE;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
@@ -1834,7 +1861,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    if( *success )
    {
       /* create variables for cone disaggregation */
-      SCIP_CALL( createDisaggrVars(scip, conshdlr, expr, (*nlhdlrexprdata)) );
+      SCIP_CALL( createDisaggrVars(scip, expr, (*nlhdlrexprdata)) );
 
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
