@@ -7882,6 +7882,8 @@ SCIP_RETCODE bilinearTermsInsert(
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   SCIP_CONSEXPR_AUXEXPR* auxexprs,          /**< array of auxiliary expressions (might be NULL) */
+   int                   nauxexprs,          /**< number of auxiliary expressions (must be 0 for existing products) */
    int                   nlockspos,          /**< number of positive expression locks */
    int                   nlocksneg           /**< number of negative expression locks */
    )
@@ -7909,9 +7911,22 @@ SCIP_RETCODE bilinearTermsInsert(
    assert(term != NULL);
    term->x = x;
    term->y = y;
-   term->auxvar = auxvar;
    term->nlockspos = nlockspos;
    term->nlocksneg = nlocksneg;
+   term->nauxexprs = nauxexprs;
+
+   if( nauxexprs == 0 )
+   {
+      assert(auxexprs == NULL);
+      term->auxvar = auxvar;
+   }
+   else
+   {
+      assert(nauxexprs > 0);
+      assert(auxvar == NULL);
+      assert(auxexprs != NULL);
+      term->auxexprs = auxexprs;
+   }
 
    /* capture variable */
    SCIP_CALL( SCIPcaptureVar(scip, x) );
@@ -7919,6 +7934,15 @@ SCIP_RETCODE bilinearTermsInsert(
    if( auxvar != NULL )
    {
       SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   }
+   else if( auxexprs != NULL )
+   {
+      int i;
+
+      for( i = 0; i < nauxexprs; ++i )
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, auxexprs[i].auxvar) );
+      }
    }
 
    /* increase the total number of bilinear terms */
@@ -7998,8 +8022,8 @@ SCIP_RETCODE bilinearTermsInsertAll(
          /* add variables to the hash table */
          if( x != NULL && y != NULL )
          {
-            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr),
-               SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr)) );
+            SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, SCIPgetConsExprExprAuxVar(expr), NULL,
+               0, SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr)) );
          }
       }
    }
