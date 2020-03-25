@@ -6259,8 +6259,7 @@ SCIP_Real getDualBranchscore(
 
    /* SCIPinfoMessage(scip, enfologfile, " dualscoring <%s>\n", SCIPvarGetName(var)); */
 
-   /* aggregate duals from all local rows from consexpr in basis, i.e., non-zero dual
-    * taking only local rows, as these are probably cuts that may be replaced by tighter ones after branching
+   /* aggregate duals from all rows from consexpr in basis, i.e., non-zero dual
     * TODO: this is a quick-and-dirty implementation, and not used by default
     *   in the long run, this should be either removed or replaced by a proper implementation
     */
@@ -6270,8 +6269,12 @@ SCIP_Real getDualBranchscore(
       SCIP_Real estimategap;
       const char* estimategapstr;
 
+      /* rows from cuts that may be replaced by tighter ones after branching are the interesting ones
+       * these would typically be local, unless they are created at the root node
+       * so not check for local now, but trust that estimators that do not improve after branching will have an estimategap of 0
       if( !SCIProwIsLocal(rows[r]) )
          continue;
+       */
       if( SCIProwGetOriginConshdlr(rows[r]) != conshdlr )
          continue;
       if( SCIPisZero(scip, SCIProwGetDualsol(rows[r])) )
