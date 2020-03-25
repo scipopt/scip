@@ -255,6 +255,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    char                     checkvarlocks;   /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
+   SCIP_Bool                checkedvarlocks; /**< whether variables contained in a single constraint have been already considered */
    int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
@@ -10114,6 +10115,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    /* free hash table for bilinear terms */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
 
+   /* reset flag to allow another call of presolSingleLockedVars() after a restart */
+   conshdlrdata->checkedvarlocks = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -10483,8 +10487,14 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && conshdlrdata->checkvarlocks != 'd' && SCIPisPresolveFinished(scip) )
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip)
+      && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd' )
    {
+      /* run this presolving technique only once because we don't want to generate identical bound disjunction
+       * constraints multiple times
+       */
+      conshdlrdata->checkedvarlocks = TRUE;
+
       for( c = 0; c < nconss; ++c )
       {
          int tmpnchgvartypes = 0;
