@@ -82,7 +82,7 @@
  *
  *           vars = {x, y, z}
  *           offsets = {2, 0, 0, -1}
- *           transcoefs = {3, -4, 1, 7, 5, -1}
+ *           transcoefs = {3, -4, 1, SQRT(7), 5, -1}
  *           transcoefsidx = {0, 1, 1, 2, 0, 1}
  *           termbegins = {0, 2, 3, 4}
  *           nnonzeroes = {2, 1, 1, 2}
@@ -91,7 +91,6 @@
  *           nterms = 4
  *           ntranscoefs = 6
  */
-// if i am reading the code correctly in detectSocNorm you would store SQRT(7) and not 7 in transcoefs, right?
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_VAR**            vars;               /**< variables appearing on both sides (x) */
@@ -188,27 +187,16 @@ void printNlhdlrExprData(
 }
 #endif
 
-// So in this function you are not only creating the dissagregation variables but also creating the row
-// sum disvars <= rhsterm.
-// I don't like that.
-// Why don't you add the row in initsepa?
-// Also, you don't need to create an array collecting all variables. You could just add all the variables in nlhdlr
-// nlhdlrexprdata->disvars[i] and then add the rhs-variables one by one.
 /** helper method to create variables for the cone disaggregation */
 static
-SCIP_RETCODE createDisaggr(
+SCIP_RETCODE createDisaggrVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_Real* coefs;
-   SCIP_Real disrowrhs;
    char name[SCIP_MAXSTRLEN];
-   int nvars;
-   int size;
+   int ndisvars;
    int nrhsvars;
    int nterms;
    int i;
@@ -222,67 +210,34 @@ SCIP_RETCODE createDisaggr(
    // SQRT(x^2 + y^2) <= z does not need to be dissagregated
    // so I guess you should check if size > 2 before doing all this. probably you can add the check outside this
    // function and an assert here.
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
-   nvars = 0;
+   ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, size) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size + nrhsvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + nrhsvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars) );
 
    /* create disaggregation variables representing the epigraph of (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1}) */
-   for( i = 0; i < nterms - 1; ++i ) // shouldn't this be size - 1?
+   for( i = 0; i < ndisvars - 1; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
 
-      vars[nvars] = nlhdlrexprdata->disvars[i];
-      coefs[nvars] = 1.0;
-
-      SCIPvarMarkRelaxationOnly(vars[nvars]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1) ); // it should only be down-locked!
-
-      ++nvars;
+      SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[i]);
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 0) );
    }
 
    /* create disaggregation variable representing the epigraph of gamma / (v_{n+1}^T x + beta_{n+1}) */
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_const", (void*) expr);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[ndisvars - 1], name, 0.0, SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_CONTINUOUS) );
-      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
+      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[ndisvars - 1]) );
 
-      vars[nvars] = nlhdlrexprdata->disvars[size - 1];
-      coefs[nvars] = 1.0;
-
-      SCIPvarMarkRelaxationOnly(vars[nvars]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, vars[nvars], SCIP_LOCKTYPE_MODEL, 1, 1) ); // it should only be down-locked!
-
-      ++nvars;
+      SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[ndisvars - 1]);
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 0) );
    }
-
-   /* consider RHS variables */
-   for( i = nlhdlrexprdata->ntranscoefs - nrhsvars; i < nlhdlrexprdata->ntranscoefs; ++i )
-   {
-      vars[nvars] = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]];
-      coefs[nvars] = -nlhdlrexprdata->transcoefs[i];
-      ++nvars;
-   }
-
-   disrowrhs = nlhdlrexprdata->offsets[nterms - 1];
-
-   /* create row */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->disrow, conshdlr, name,
-         -SCIPinfinity(scip), disrowrhs, FALSE, FALSE, TRUE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->disrow, nvars, vars, coefs) );
-
-   /* free memory */
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -316,6 +271,58 @@ SCIP_RETCODE freeDisaggr(
 
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, size);
+
+   return SCIP_OKAY;
+}
+
+/** helper method to create the disaggregation row */
+static
+SCIP_RETCODE createDisaggrRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   )
+{
+   SCIP_ROW* disrow;
+   SCIP_Real disrowrhs;
+   char name[SCIP_MAXSTRLEN];
+   int nvars;
+   int ndisvars;
+   int nrhsvars;
+   int nterms;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->disrow == NULL);
+
+   nterms = nlhdlrexprdata->nterms;
+   nrhsvars = nlhdlrexprdata->nnonzeroes[nterms-1];
+   disrow = nlhdlrexprdata->disrow;
+   disrowrhs = nlhdlrexprdata->offsets[nterms - 1];
+
+   /* check whether constant has a separate entry */
+   ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
+
+   /* create row */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->disrow, conshdlr, name,
+         -SCIPinfinity(scip), disrowrhs, FALSE, FALSE, TRUE) );
+
+   /* add disvars to row */
+   for( i = 0; i < ndisvars; ++i )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, disrow, nlhdlrexprdata->disvars[i], 1.0) );
+   }
+
+   /* add rhs vars to row */
+   for( i = nlhdlrexprdata->ntranscoefs - nrhsvars; i < nlhdlrexprdata->ntranscoefs; ++i )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, disrow, nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]],
+            -nlhdlrexprdata->transcoefs[i]) );
+   }
 
    return SCIP_OKAY;
 }
@@ -539,11 +546,10 @@ SCIP_RETCODE generateCutSol(
 
    /* if the denominator is 0 -> the constraint can't be violated */
    assert(!SCIPisZero(scip, denominator));
+   assert(!SCIPisZero(scip, lhsval));
 
    /* compute maximum number of variables in cut */
-   // why 2? shouldn't it be something like # of vars in rhs + dissagregation var + # of vars in term, i.e.,
-   // ncutvars = nnonzeroes[nterms-1] + 1 + (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] : 0);
-   ncutvars = (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] + nnonzeroes[nterms-1] + 1 : 2);
+   ncutvars = nnonzeroes[nterms - 1] + 1 + (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] : 0);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -554,9 +560,8 @@ SCIP_RETCODE generateCutSol(
 
    /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
 
-   /* add terms for v_{disaggidx+1} */ // why the + 1 here?
-   // it should also hold that if lhsval is 0 then the constraint can't be violated, can't you assert that lhsval is not zero?
-   if( disaggidx < nterms - 1 && !SCIPisZero(scip, lhsval) )
+   /* add terms for v_{disaggidx+1} */ // why the + 1 here? FW: just because the indices start at 1 in the description
+   if( disaggidx < nterms - 1 )
    {
       for( i = 0; i < nnonzeroes[disaggidx]; ++i )
       {
@@ -607,7 +612,7 @@ SCIP_RETCODE generateCutSol(
 
    if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, disaggidx); // you might wanna add the LP number to the cut name to make it unique
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
@@ -698,7 +703,8 @@ SCIP_RETCODE detectSocNorm(
    /* check if all children are squares or linear terms with matching square term:
     * if the i-th child is (pow, expr, 2) we store the association <|expr -> i|> in expr2idx and if expr was in
     * linexprs, we remove it from there.
-    * if the i-th child is expr' (different from (pow, expr, 2)) and expr' is not a key of expr2idx, we add it linexprs.
+    * if the i-th child is expr' (different from (pow, expr, 2)) and expr' is not a key of expr2idx, we add it
+    * to linexprs.
     * if at the end there is any expr in linexpr -> we do not have a separable quadratic function.
     */
    for( i = 0; i < nchildren; ++i )
@@ -1828,7 +1834,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    if( *success )
    {
       /* create variables for cone disaggregation */
-      SCIP_CALL( createDisaggr(scip, conshdlr, expr, (*nlhdlrexprdata)) );
+      SCIP_CALL( createDisaggrVars(scip, conshdlr, expr, (*nlhdlrexprdata)) );
 
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
@@ -1969,7 +1975,12 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+
+   /* create the disaggregation row and store it in nlhdlrexprdata */
+   SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
