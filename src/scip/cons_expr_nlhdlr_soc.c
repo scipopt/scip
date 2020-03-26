@@ -1029,7 +1029,6 @@ void tryFillNlhdlrExprDataQuad(
 }
 
 /** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar */
-// why not interpert binary variables as quadratic here?
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
