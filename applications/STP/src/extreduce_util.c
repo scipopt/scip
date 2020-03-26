@@ -1054,6 +1054,12 @@ SCIP_Bool extreduce_extCompIsPromising(
 
    assert(extcomp->ncompedges == 1 || extcomp->ncompedges >= 3);
 
+   /* we want to at least check each star! */
+   if( extcomp->ncompedges >= 3 )
+   {
+      return TRUE;
+   }
+
    /* go over all possible extensions and see whether any of them are promising */
    for( int i = 0; i < nextleaves; ++i )
    {

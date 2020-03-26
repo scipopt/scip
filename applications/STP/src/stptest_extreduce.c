@@ -932,7 +932,7 @@ SCIP_RETCODE testEdgeNotDeleted1(
 
 /** tests that edge can be deleted by reduced costs argument */
 static
-SCIP_RETCODE testNodePseudoDeletedByRedCosts1(
+SCIP_RETCODE testNode3PseudoDeletedByRedCosts1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -992,7 +992,7 @@ SCIP_RETCODE testNodePseudoDeletedByRedCosts1(
 
 /** tests that node can be deleted */
 static
-SCIP_RETCODE testNodePseudoDeletedBySd1(
+SCIP_RETCODE testNode3PseudoDeletedBySd1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1045,7 +1045,7 @@ SCIP_RETCODE testNodePseudoDeletedBySd1(
 
 /** tests that node can be deleted */
 static
-SCIP_RETCODE testNodePseudoDeletedBySd2(
+SCIP_RETCODE testNode3PseudoDeletedBySd2(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1096,7 +1096,7 @@ SCIP_RETCODE testNodePseudoDeletedBySd2(
 
 /** tests that node can be deleted */
 static
-SCIP_RETCODE testNodePseudoDeletedBySd3(
+SCIP_RETCODE testNode3PseudoDeletedBySd3(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1150,6 +1150,117 @@ SCIP_RETCODE testNodePseudoDeletedBySd3(
    return SCIP_OKAY;
 }
 
+
+
+/** tests that node can be deleted */
+static
+SCIP_RETCODE testNode4PseudoDeletedBySd1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 7;
+   const int nedges = 18;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testnode = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.5);
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+   graph_edge_addBi(scip, graph, 0, 4, 2.0);
+   graph_edge_addBi(scip, graph, 2, 5, 2.0);
+   graph_edge_addBi(scip, graph, 2, 6, 2.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 5, 6, 1.0);
+   graph_edge_addBi(scip, graph, 6, 3, 1.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   SCIP_CALL( extCheckNode(scip, graph, &redcostdata, edgedeleted, testnode, &deletable, FALSE) );
+
+   STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** tests that node cannot be deleted */
+static
+SCIP_RETCODE testNode4PseudoNotDeletedBySd1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 7;
+   const int nedges = 16;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testnode = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.5);
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+   graph_edge_addBi(scip, graph, 0, 4, 2.0);
+   graph_edge_addBi(scip, graph, 2, 5, 2.0);
+   graph_edge_addBi(scip, graph, 2, 6, 2.0);
+   graph_edge_addBi(scip, graph, 5, 6, 1.0);
+   graph_edge_addBi(scip, graph, 6, 3, 1.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   SCIP_CALL( extCheckNode(scip, graph, &redcostdata, edgedeleted, testnode, &deletable, FALSE) );
+
+   STPTEST_ASSERT_MSG(!deletable, "node was marked as deleteable! \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
 
 /** tests that edge can be deleted by using SD MST argument */
 static
@@ -1282,7 +1393,7 @@ SCIP_RETCODE testPcEdgeNotDeleted(
 
 /** tests that node can be deleted */
 static
-SCIP_RETCODE testPcNodePseudoDeletedBySd1(
+SCIP_RETCODE testPcNode3PseudoDeletedBySd1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1341,6 +1452,70 @@ SCIP_RETCODE testPcNodePseudoDeletedBySd1(
 }
 
 
+/** tests that node can be deleted */
+static
+SCIP_RETCODE testPcNode4PseudoDeletedBySd1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 7;
+   const int nedges = 18;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testnode = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, 3 * nnodes, 4 * nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.5);
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+   graph_edge_addBi(scip, graph, 0, 4, 2.0);
+   graph_edge_addBi(scip, graph, 2, 5, 2.0);
+   graph_edge_addBi(scip, graph, 2, 6, 2.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 5, 6, 1.0);
+   graph_edge_addBi(scip, graph, 6, 3, 2.0);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 100.0;
+
+   graph->prize[0] = 0.0;
+   graph->prize[2] = 1.0;
+   graph->prize[3] = 0.6;
+
+   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+
+   extInitRedCostArraysPc(graph, &redcostdata);
+
+   SCIP_CALL( extCheckNode(scip, graph, &redcostdata, edgedeleted, testnode, &deletable, FALSE) );
+
+   STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
 
 /** tests correctness of pseudo deletion of all nodes */
 static
@@ -1407,7 +1582,7 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 
 /** tests that node can be deleted */
 static
-SCIP_RETCODE testPcNodeNotPseudoDeletedBySd1(
+SCIP_RETCODE testPcNode3NotPseudoDeletedBySd1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1490,14 +1665,19 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-   SCIP_CALL( testNodePseudoDeletedByRedCosts1(scip) );
+   SCIP_CALL( testPcNode4PseudoDeletedBySd1(scip) );
+
+   SCIP_CALL( testNode4PseudoDeletedBySd1(scip) );
+   SCIP_CALL( testNode4PseudoNotDeletedBySd1(scip) );
+
+   SCIP_CALL( testNode3PseudoDeletedByRedCosts1(scip) );
 
    SCIP_CALL( testPcNodesPseudoDeletedBySd1(scip) );
-   SCIP_CALL( testPcNodePseudoDeletedBySd1(scip) );
-   SCIP_CALL( testPcNodeNotPseudoDeletedBySd1(scip) );
-   SCIP_CALL( testNodePseudoDeletedBySd1(scip) );
-   SCIP_CALL( testNodePseudoDeletedBySd2(scip) );
-   SCIP_CALL( testNodePseudoDeletedBySd3(scip) );
+   SCIP_CALL( testPcNode3PseudoDeletedBySd1(scip) );
+   SCIP_CALL( testPcNode3NotPseudoDeletedBySd1(scip) );
+   SCIP_CALL( testNode3PseudoDeletedBySd1(scip) );
+   SCIP_CALL( testNode3PseudoDeletedBySd2(scip) );
+   SCIP_CALL( testNode3PseudoDeletedBySd3(scip) );
 
    SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
    SCIP_CALL( testPcEdgeNotDeleted(scip) );

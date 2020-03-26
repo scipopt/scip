@@ -188,8 +188,6 @@ SCIP_Bool pseudodeleteNodeIsPromising(
 
    if( pc )
    {
-      assert(!g->extended);
-
       if( !g->mark[node] || graph_pc_knotIsFixedTerm(g, node) )
          return FALSE;
 
