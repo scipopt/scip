@@ -404,7 +404,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
 
 /** returns whether we are ok to branch on auxiliary variables
  *
- * Currently returns whether depth of node in b&B tree is at least value of constraints/expr/branching/aux parameter.
+ * Currently returns whether depth of node in B&B tree is at least value of constraints/expr/branching/aux parameter.
  */
 SCIP_EXPORT
 SCIP_Bool SCIPgetConsExprBranchAux(
@@ -862,7 +862,10 @@ void SCIPincrementConsExprCurBoundsTag(
  * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
- * In case of doubt, use SCIPaddConsExprExprsViolScore().
+ * In case of doubt, use SCIPaddConsExprExprsViolScore(). Roughly, the difference between these functions is that the current
+ * function adds the violscore to the expression directly, while SCIPaddConsExprExprsViolScore() will split the
+ * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
+ * SCIPaddConsExprExprsViolScore() for more details.
  */
 SCIP_EXPORT
 void SCIPaddConsExprExprViolScore(
@@ -872,10 +875,11 @@ void SCIPaddConsExprExprViolScore(
    SCIP_Real               violscore         /**< violation score to add to expression */
    );
 
-/** adds violation-branching score to a set of expressions, thereby distributing the score
+/** adds violation-branching score to a set of expressions, distributing the score among all the expressions.
  *
  * Each expression must either be a variable expression or have an aux-variable.
- * If branching on aux-variables is disabled, then finds original variables first.
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
+ * variables present in exprs
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsExprExprsViolScore(

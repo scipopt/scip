@@ -255,14 +255,14 @@ struct SCIP_ConshdlrData
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
-   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
-   SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if at least this factor times the maximal branching score */
+   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints */
+   SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables */
    SCIP_Real                branchviolweight;/**< weight by how much to consider the violation assigned to a variable for its branching score */
    SCIP_Real                branchdualweight;/**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
    SCIP_Real                branchpscostweight;/**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
-   char                     branchscoreagg;  /**< how to aggregate branching scores several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
+   char                     branchscoreagg;  /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
    char                     branchviolsplit; /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
 
@@ -5958,8 +5958,8 @@ SCIP_RETCODE registerBranchingCandidates(
       {
          int i;
 
-         /* if not branching on auxvars, then violation-branching scores will have been added to original variables only,
-          * so we can loop over variable expressions
+         /* if not branching on auxvars, then violation-branching scores will have been added to original variables
+          * only, so we can loop over variable expressions
           */
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
@@ -5983,7 +5983,8 @@ SCIP_RETCODE registerBranchingCandidates(
             /* consider variable for branching if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate "\
+                        "with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
 
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
@@ -5993,7 +5994,9 @@ SCIP_RETCODE registerBranchingCandidates(
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g]\n", SCIPvarGetName(var), lb, ub); )
             }
 
-            /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints several times as external branching candidate */
+            /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
+             * several times as external branching candidate, see SCIPgetConsExprExprViolScore()
+             */
             consdata->varexprs[i]->violscoretag = 0;
          }
       }
@@ -6011,8 +6014,8 @@ SCIP_RETCODE registerBranchingCandidates(
             if( violscore == 0.0 )
                continue;
 
-            /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
-             * so this expression should either be an original variable or have an auxiliary variable
+            /* if some nlhdlr added a branching score for this expression, then it considered this expression as a
+             * variable, so this expression should either be an original variable or have an auxiliary variable
              */
             var = SCIPgetConsExprExprAuxVar(expr);
             assert(var != NULL);
@@ -6020,10 +6023,11 @@ SCIP_RETCODE registerBranchingCandidates(
             lb = SCIPvarGetLbLocal(var);
             ub = SCIPvarGetUbLocal(var);
 
-            /* introduce variable if it has not been fixed yet */
+            /* consider variable for branching if it has not been fixed yet */
             if( !SCIPisEQ(scip, lb, ub) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate "\
+                        "with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
 
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
@@ -6045,11 +6049,11 @@ SCIP_RETCODE registerBranchingCandidates(
 /** collect branching candidates from violated constraints
  *
  * Fills array with expressions that serve as branching candidates.
- * Collects those expressions that have a branching score assigned and
- * stores the score in the auxviol field of the branching candidate.
+ * Collects those expressions that have a branching score assigned and stores the score in the auxviol field of the
+ * branching candidate.
  *
- * If branching on aux-variables is allowed, then iterate through expressions
- * of violated constraints, otherwise iterate through variable-expressions only.
+ * If branching on aux-variables is allowed, then iterate through expressions of violated constraints, otherwise iterate
+ * through variable-expressions only.
  */
 static
 SCIP_RETCODE collectBranchingCandidates(
@@ -6117,10 +6121,10 @@ SCIP_RETCODE collectBranchingCandidates(
          {
             int i;
 
-            /* if not branching on auxvars, then violation-branching scores will be available for original variables only,
-             * so we can loop over variable expressions
-             * unfortunately, we don't know anymore whether the violation-branching score in the variable was created due to a violation
-             * in this constraint or another one where the variable also appears
+            /* if not branching on auxvars, then violation-branching scores will be available for original variables
+             * only, so we can loop over variable expressions
+             * unfortunately, we don't know anymore which constraint contributed the violation-branching score to the
+             * variable, therefore we invalidate the score of a variable after processing it.
              */
             for( i = 0; i < consdata->nvarexprs; ++i )
             {
@@ -6149,7 +6153,8 @@ SCIP_RETCODE collectBranchingCandidates(
                cands[*ncands].auxviol = SCIPgetConsExprExprViolScore(conshdlr, consdata->varexprs[i]);
                ++(*ncands);
 
-               /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+               /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
+                * several times as external branching candidate */
                consdata->varexprs[i]->violscoretag = 0;
             }
          }
@@ -6164,8 +6169,8 @@ SCIP_RETCODE collectBranchingCandidates(
                if( expr->violscoretag != conshdlrdata->enforound )
                   continue;
 
-               /* if some nlhdlr added a branching score for this expression, then because it considered this expression as variables,
-                * so this expression should either be an original variable or have an auxiliary variable
+               /* if some nlhdlr added a branching score for this expression, then it considered this expression as
+                * variables, so this expression should either be an original variable or have an auxiliary variable
                 */
                var = SCIPgetConsExprExprAuxVar(expr);
                assert(var != NULL);
@@ -6199,14 +6204,15 @@ SCIP_RETCODE collectBranchingCandidates(
    return SCIP_OKAY;
 }
 
-/** computes a branching score for a variable that reflects how important branching on this variable would be for improving the dual bound from the LP relaxation
+/** computes a branching score for a variable that reflects how important branching on this variable would be for
+ * improving the dual bound from the LP relaxation
  *
  * Assume the Lagrangian for the current LP is something of the form
  *   L(x,z,lambda) = c'x + sum_i lambda_i (a_i'x - z_i + b_i) + ...
  * where x are the original variables, z the auxiliary variables,
  * and a_i'x - z_i + b_i <= 0 are the rows of the LP.
  *
- * Assume that a_i'x + b_i <= z_i was derived from some nonlinear f(x) <= z and drop index i.
+ * Assume that a_i'x + b_i <= z_i was derived from some nonlinear constraint f(x) <= z and drop index i.
  * If we could have used not only an estimator, but the actual function f(x), then this would
  * have contributed lambda*(f(x) - z) to the Lagrangian function (though the value of z would be different).
  * Using a lot of handwaving, we claim that
@@ -6241,10 +6247,11 @@ SCIP_Real getDualBranchscore(
    assert(conshdlr != NULL);
    assert(var != NULL);
 
-   /* if LP not solved, then return original branching score */
+   /* if LP not solved, then the dual branching score is not available */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return 0.0;
 
+   /* if var is not in the LP, then the dual branching score is not available */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return 0.0;
 
@@ -6259,7 +6266,7 @@ SCIP_Real getDualBranchscore(
 
    /* SCIPinfoMessage(scip, enfologfile, " dualscoring <%s>\n", SCIPvarGetName(var)); */
 
-   /* aggregate duals from all rows from consexpr in basis, i.e., non-zero dual
+   /* aggregate duals from all rows from consexpr with non-zero dual
     * TODO: this is a quick-and-dirty implementation, and not used by default
     *   in the long run, this should be either removed or replaced by a proper implementation
     */
@@ -6300,16 +6307,17 @@ SCIP_Real getDualBranchscore(
    return dualscore;
 }
 
-/** computes branching scores (incl weighted score) for a set of candidates
+/** computes branching scores (including weighted score) for a set of candidates
  *
  * For each candidate in the array, compute and store the various branching scores (violation, pseudo-costs, vartype, domainwidth).
- * For pseudo-costs, it's possible that are score is not available, in which case cands[c].pscost will be set to SCIP_INVALID.
+ * For pseudo-costs, it's possible that the score is not available, in which case cands[c].pscost will be set to SCIP_INVALID.
  *
  * For each score, compute the maximum over all candidates.
  *
  * Then compute for each candidate a "weighted" score using the weights as specified by parameters
- * and the scores as previously computed, but scale each score to be in [0,1].
- * Further divide by the sum of all weights where a score was available (even if it was 0).
+ * and the scores as previously computed, but scale each score to be in [0,1], i.e., divide each score by the maximum
+ * score all candidate.
+ * Further divide by the sum of all weights where a score was available (even if the score was 0).
  *
  * For example:
  * - Let variable x have violation-score 10.0 and pseudo-cost-score 5.0.
@@ -6361,17 +6369,15 @@ void scoreBranchingCandidates(
          /* get domain width, taking infinity at 1e20 on purpose */
          domainwidth = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
 
-         /* first make domain score large (up to 20=log(2*infinity)) for huge and tiny domains (up to 9=log(1/epsilon))
-          * and small (minimum 0=log(1)) for a domain width around 1
+         /* domain-score is going to be log(2*infinity / domainwidth) if domain width >= 1
+          * and log(2 * infinity *  MAX(epsilon, domainwidth)) for domain width < 1
+          * the idea is to penalize very large and very small domains
           */
          if( domainwidth >= 1.0 )
-            cands[c].domain = log10(domainwidth);
+            cands[c].domain = log10(2 * SCIPinfinity(scip) / domainwidth);
          else
-            cands[c].domain = log10(1.0/MAX(SCIPepsilon(scip), domainwidth));  /*lint !e666*/
-         /* now subtract from log(2*infinity) to be large (up to log(2*infinity)) for domain width around 1
-          * and small for huge or tiny domains, thus give higher score to domain widths around 1
-          */
-         cands[c].domain = log10(2*SCIPinfinity(scip))-cands[c].domain;
+            cands[c].domain = log10(2 * SCIPinfinity(scip) * MAX(SCIPepsilon(scip), domainwidth));  /*lint !e666*/
+
          maxscore.domain = MAX(cands[c].domain, maxscore.domain);
       }
       else
@@ -6651,14 +6657,14 @@ SCIP_RETCODE branching(
 
    if( ncands > 1 )
    {
-      /* if more than one candidate, then compute scores and select */
+      /* if there are more than one candidate, then compute scores and select */
       int* perm;
       int c;
       int left;
       int right;
       SCIP_Real threshold;
 
-      /* computed additional scores on branching candidates and weighted score */
+      /* compute additional scores on branching candidates and weighted score */
       scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol);
 
       /* sort candidates by weighted score */
@@ -6667,27 +6673,28 @@ SCIP_RETCODE branching(
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands-1]].expr)), cands[perm[ncands-1]].weighted); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
 
-      /* binary search for first candidate which score is below branchhighscorefactor * maximal-score */
+      /* binary search to find first low-scored (score below branchhighscorefactor * maximal-score)  candidate */
       left = 0;
-      right = ncands-1;
+      right = ncands - 1;
       threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
       while( left < right )
       {
-         int mid = (left + right)/2;
+         int mid = (left + right) / 2;
          if( cands[perm[mid]].weighted >= threshold )
-            left = mid+1;
+            left = mid + 1;
          else
             right = mid;
       }
       assert(left <= ncands);
+
       if( left < ncands )
       {
          if( cands[perm[left]].weighted >= threshold )
          {
-            assert(left+1 == ncands || cands[perm[left+1]].weighted < threshold);
-            ncands = left+1;
+            assert(left + 1 == ncands || cands[perm[left + 1]].weighted < threshold);
+            ncands = left + 1;
          }
          else
          {
@@ -6699,7 +6706,7 @@ SCIP_RETCODE branching(
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
          SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands-1]].expr)), cands[perm[ncands-1]].weighted); )
+         SCIPvarGetName(SCIPgetConsExprExprAuxVar(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
 
       if( ncands > 1 )
       {
@@ -6708,7 +6715,7 @@ SCIP_RETCODE branching(
          {
             SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
          }
-         c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands-1);
+         c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands - 1);
          var = SCIPgetConsExprExprAuxVar(cands[perm[c]].expr);
       }
       else
@@ -6722,8 +6729,11 @@ SCIP_RETCODE branching(
    }
    assert(var != NULL);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
-   SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPgetBranchingPoint(scip, var, SCIP_INVALID), &downchild, &eqchild, &upchild) );
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(var),
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
+
+   SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPgetBranchingPoint(scip, var, SCIP_INVALID), &downchild, &eqchild,
+            &upchild) );
    if( downchild != NULL || eqchild != NULL || upchild != NULL )
       *result = SCIP_BRANCHED;
    else
@@ -6776,12 +6786,13 @@ SCIP_RETCODE enforceExprNlhdlr(
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPenfoConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-      allowweakcuts, separated, inenforcement, result) );
+            allowweakcuts, separated, inenforcement, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n",
+               SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
 
@@ -6803,7 +6814,8 @@ SCIP_RETCODE enforceExprNlhdlr(
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+               SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
 
       if( sepasuccess )
       {
@@ -6821,8 +6833,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
                 * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
                 * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
-                * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then let's call this a weak cut
-                * that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
+                * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then
+                * let's call this a weak cut that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
                 *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
                 *
                 * if we are overestimating, we have z >= c'x-b >= f(x)
@@ -6835,8 +6847,10 @@ SCIP_RETCODE enforceExprNlhdlr(
                if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
                {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too "\
+                           "weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                           SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                           auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
                   sepasuccess = FALSE;
                }
             }
@@ -6847,20 +6861,23 @@ SCIP_RETCODE enforceExprNlhdlr(
          else
          {
             sepasuccess = FALSE;
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not "\
+                     "separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
          }
       }
       else
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n",
+                  SCIPgetConsExprNlhdlrName(nlhdlr)); )
       }
 
       /* clean up estimator */
       if( sepasuccess )
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n    ",
-            SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-         SCIPprintRowprep(scip, rowprep, enfologfile); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval "\
+                  "%g auxvalue %g (over %d)\n    ", SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                  auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+                  SCIPprintRowprep(scip, rowprep, enfologfile); )
 
          /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
           * instead, may even scale them down, that is, scale so that max coef is close to 1
@@ -6876,7 +6893,8 @@ SCIP_RETCODE enforceExprNlhdlr(
             else
             {
                cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min "\
+                        "requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
                if( sepasuccess )
                   sepasuccess = cutviol > mincutviolation;
             }
@@ -6884,12 +6902,13 @@ SCIP_RETCODE enforceExprNlhdlr(
             if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
             {
                /* check whether cut is weak now
-                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
+                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
+                * reconstructing estimateval from cutviol (TODO improve or remove?)
                 */
                SCIP_Real auxvarcoef = 0.0;
                int i;
 
-               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than it should be... */
+               /* get absolute value of coef of auxvar in row; this makes the check more expensive than it should be */
                for( i = 0; i < rowprep->nvars; ++i )
                {
                   if( rowprep->vars[i] == auxvar )
@@ -6903,8 +6922,9 @@ SCIP_RETCODE enforceExprNlhdlr(
                    (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
                {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g" \
+                           "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
+                           auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
                   sepasuccess = FALSE;
                }
             }
@@ -6913,8 +6933,8 @@ SCIP_RETCODE enforceExprNlhdlr(
          {
             /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
 
-            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which the following cleanup
-             * changes coefficients (we had/have this in cons_expr_sum this way)
+            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which
+             * the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
              */
             if( !branchscoresuccess )
                rowprep->recordmodifications = TRUE;
@@ -6923,7 +6943,8 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( !sepasuccess )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n", rowprep->nmodifiedvars, cutviol); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n",
+                        rowprep->nmodifiedvars, cutviol); )
             }
 
             /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
@@ -6934,11 +6955,14 @@ SCIP_RETCODE enforceExprNlhdlr(
 #ifdef BRSCORE_ABSVIOL
                violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
 #else
-               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL, NULL) );
+               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL,
+                        NULL) );
 #endif
-               SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars, rowprep->nmodifiedvars, sol, &branchscoresuccess) );
+               SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
+                        rowprep->nmodifiedvars, sol, &branchscoresuccess) );
 
-               /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
+               /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
+                * expr's auxvar
                 * I don't think it makes sense to branch on that one (would it?)
                 * it can also fail if everything is fixed
                 */
@@ -7001,12 +7025,19 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
       else if( branchscoresuccess )
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-         *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching" \
+                  "candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+
+         /* well, not branched, but addConsExprExprViolScoresAuxVars() added scores to (aux)variables and that makes the
+          * expressions eligible for branching candidate, see enforceConstraints() and branching()
+          */
+         *result = SCIP_BRANCHED;
       }
       else
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ? " (!)" : ""); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no " \
+                  "branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ?
+                  " (!)" : ""); )
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -7076,7 +7107,9 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar), expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s>" \
+            "auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar),
+            expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
 
       /* TODO if expr is root of constraint (consdata->expr == expr),
@@ -7093,7 +7126,10 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
       if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with" \
+                  "auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr,
+                  expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate); )
+
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
@@ -7101,12 +7137,17 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is small (below feastol) and we look only for strong cuts, then it's unlikely to give a strong cut, so skip it */
       if( !allowweakcuts && auxviol < SCIPfeastol(scip) )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, underestimate, overestimate); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny " \
+                  "auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol,
+                  underestimate, overestimate); )
+
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
 
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate, allowweakcuts); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation " \
+               "%g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name,
+               auxviol, origviol, underestimate, overestimate, allowweakcuts); )
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
       if( overestimate && auxoverestimate )  /*lint !e777*/
@@ -7358,7 +7399,8 @@ SCIP_RETCODE enforceConstraints(
          {
             SCIP_VAR* var;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
-            SCIPinfoMessage(scip, enfologfile, "  %-10s = %15g bounds: [%15g,%15g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPinfoMessage(scip, enfologfile, "  %-10s = %15g bounds: [%15g,%15g]\n", SCIPvarGetName(var),
+                  SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
       })
 
@@ -7374,7 +7416,8 @@ SCIP_RETCODE enforceConstraints(
          SCIP_CALL( getConsRelViolation(scip, conss[c], &viol, sol, soltag) );
          if( viol > conshdlrdata->weakcutminviolfactor * maxrelconsviol )
          {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak "\
+                     "cuts allowed\n", SCIPconsGetName(conss[c])); )
 
             SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
 
@@ -7394,8 +7437,8 @@ SCIP_RETCODE enforceConstraints(
    /* if having branching scores, then propagate them from expressions with children to variable expressions */
    if( *result == SCIP_BRANCHED )
    {
-      /* having result set to branched here means only that we have branching candidates,
-       * we still need to do the actual branching
+      /* having result set to branched here means only that we have branching candidates, we still need to do the actual
+       * branching
        */
       SCIP_CALL( branching(scip, conshdlr, conss, nconss, maxrelconsviol, sol, soltag, result) );
 
@@ -7625,14 +7668,18 @@ SCIP_RETCODE consEnfo(
 
    if( *result == SCIP_FEASIBLE )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: all expr-constraints feasible, skip enforcing\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: all expr-constraints feasible, skip enforcing\n",
+               SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol, &minauxviol, &maxauxviol, &maxvarboundviol) );
+   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
+            &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), auxviolations in %g..%g, variable bounds violated by at most %g\n",
-      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol, maxvarboundviol); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
+            "auxviolations in %g..%g, variable bounds violated by at most %g\n",
+            SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol,
+            maxvarboundviol); )
 
    assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
 
@@ -7652,36 +7699,49 @@ SCIP_RETCODE consEnfo(
       }
    }
 
-   /* tighten the LP tolerance if violation in variables bounds is larger than aux-violation (max |expr - auxvar| over all violated expr/auxvar in violated constraints) */
-   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
+   /* tighten the LP tolerance if violation in variables bounds is larger than aux-violation (max |expr - auxvar| over
+    * all violated expr/auxvar in violated constraints)
+    */
+   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) &&
+         sol == NULL )
    {
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));  /*lint !e666*/
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, "\
+               "reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
+
       return SCIP_OKAY;
    }
 
    SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxrelconsviol, result) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED || *result == SCIP_INFEASIBLE )
+   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED ||
+         *result == SCIP_INFEASIBLE )
       return SCIP_OKAY;
+
    assert(*result == SCIP_DIDNOTFIND);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxabsconsviol, SCIPgetLPFeastol(scip)); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, "\
+            "becoming desperate now...\n", maxabsconsviol, SCIPgetLPFeastol(scip)); )
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));  /*lint !e666*/
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bounds are violated by more than eps, reduced LP "\
+               "feasibility tolerance to %g\n", SCIPgetLPFeastol(scip)); )
+
       return SCIP_OKAY;
    }
 
-   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxauxviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxauxviol) && SCIPisPositive(scip,
+            SCIPgetLPFeastol(scip)) && sol == NULL )
    {
       /* try whether tighten the LP feasibility tolerance could help
        * maybe it is just some cut that hasn't been taken into account sufficiently
@@ -7690,10 +7750,12 @@ SCIP_RETCODE consEnfo(
        * until the LP feastol reaches epsilon
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));  /*lint !e666*/
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ndesperatetightenlp;
 
       *result = SCIP_SOLVELP;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip)); )
+
       return SCIP_OKAY;
    }
 
@@ -7729,14 +7791,16 @@ SCIP_RETCODE consEnfo(
    }
 
    /* if everything is fixed in violated constraints, then let's cut off the node
-    * - bound tightening with all vars fixed should prove cutoff, but interval arithmetic overestimates and
-    *   so the result may not be conclusive (when constraint violations are small)
-    * - if tightenlpfeastol=FALSE, then the LP solution that we try to enforce here may just not be within bounds sufficiently (see st_e40)
-    * - but if the LP solution is really within bounds and since variables are fixed, cutting off the node is
-    *   actually not "desperate", but a pretty obvious thing to do
+    * - bound tightening with all vars fixed should prove cutoff, but interval arithmetic overestimates and so the
+    *   result may not be conclusive (when constraint violations are small)
+    * - if tightenlpfeastol=FALSE, then the LP solution that we try to enforce here may just not be within bounds
+    *   sufficiently (see st_e40)
+    * - but if the LP solution is really within bounds and since variables are fixed, cutting off the node is actually
+    *   not "desperate", but a pretty obvious thing to do
     */
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " enforcement with max. violation %g failed; cutting off node\n", maxabsconsviol); )
    *result = SCIP_CUTOFF;
+
    /* it's only "desperate" if the LP solution does not coincide with variable fixings (should we use something tighter than epsilon here?) */
    if( !SCIPisZero(scip, maxvarboundviol) )
       ++conshdlrdata->ndesperatecutoff;
@@ -11614,7 +11678,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
 
 /** returns whether we are ok to branch on auxiliary variables
  *
- * Currently returns whether depth of node in b&B tree is at least value of constraints/expr/branching/aux parameter.
+ * Currently returns whether depth of node in B&B tree is at least value of constraints/expr/branching/aux parameter.
  */
 SCIP_Bool SCIPgetConsExprBranchAux(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13365,7 +13429,10 @@ void SCIPincrementConsExprCurBoundsTag(
  * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
- * In case of doubt, use SCIPaddConsExprExprsViolScore().
+ * In case of doubt, use SCIPaddConsExprExprsViolScore(). Roughly, the difference between these functions is that the current
+ * function adds the violscore to the expression directly, while SCIPaddConsExprExprsViolScore() will split the
+ * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
+ * SCIPaddConsExprExprsViolScore() for more details.
  */
 void SCIPaddConsExprExprViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13399,19 +13466,17 @@ void SCIPaddConsExprExprViolScore(
       return;
    }
 
-   /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
-   SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
-
    expr->violscoresum += violscore;
    if( violscore > expr->violscoremax )
       expr->violscoremax = violscore;
    ++(expr->nviolscores);
 }
 
-/** adds violation-branching score to a set of expressions, thereby distributing the score
+/** adds violation-branching score to a set of expressions, distributing the score among all the expressions.
  *
  * Each expression must either be a variable expression or have an aux-variable.
- * If branching on aux-variables is disabled, then finds original variables first.
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
+ * variables present in exprs
  */
 SCIP_RETCODE SCIPaddConsExprExprsViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13440,14 +13505,14 @@ SCIP_RETCODE SCIPaddConsExprExprsViolScore(
       return SCIP_OKAY;
    }
 
-   /* if allowing to branch on auxiliary variables, then can call internal addConsExprExprsViolScore immediately */
+   /* if allowing to branch on auxiliary variables, then call internal addConsExprExprsViolScore immediately */
    if( SCIPgetConsExprBranchAux(scip, conshdlr) )
    {
       addConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violscore, sol, success);
       return SCIP_OKAY;
    }
 
-   /* if not allowing to branch on auxiliary variables, then create new array that contains all variable expressions that exprs depend on */
+   /* if not allowing to branch on aux vars, then create new array containing var expressions that exprs depend on */
    nvars = 0;
    varssize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
@@ -13466,7 +13531,7 @@ SCIP_RETCODE SCIPaddConsExprExprsViolScore(
             /* add variable expression to vars array */
             if( varssize == nvars )
             {
-               varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+               varssize = SCIPcalcMemGrowSize(scip, nvars + 1);
                SCIP_CALL( SCIPreallocBufferArray(scip, &varexprs, varssize) );
             }
             assert(varssize > nvars);
@@ -14628,11 +14693,11 @@ SCIP_RETCODE includeConshdlrExprBasic(
          &conshdlrdata->branchexternal, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highviolfactor",
-         "consider a constraint highly violated if at least this factor times the maximal violation",
+         "consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints",
          &conshdlrdata->branchhighviolfactor, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/highscorefactor",
-         "consider a variable branching score high if at least this factor times the maximal branching score",
+         "consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables",
          &conshdlrdata->branchhighscorefactor, FALSE, 0.9, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/violweight",
