@@ -289,7 +289,7 @@ struct SCIP_ConshdlrData
    int                      bilintermssize;  /**< size of bilinterms array */
 
    /* branching */
-   SCIP_RANDNUMGEN*         branchrandnumgen;/**< randum number generated used in branching variable selection */
+   SCIP_RANDNUMGEN*         branchrandnumgen;/**< random number generated used in branching variable selection */
    char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
 
    /* misc */
@@ -9219,6 +9219,8 @@ SCIP_RETCODE removeSingleLockedVars(
 /** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
  *  expression contraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
  *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
+ *
+ *  @todo the same reduction can be applied if g(x) is not concave, but monotone in x_i for g(x) <= rhs
  */
 static
 SCIP_RETCODE presolSingleLockedVars(
@@ -9326,12 +9328,12 @@ SCIP_RETCODE presolSingleLockedVars(
 
             for( j = 0; j < SCIPgetConsExprExprNChildren(child); ++j )
             {
-               SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[j];
+               SCIP_CONSEXPR_EXPR* grandchild = SCIPgetConsExprExprChildren(child)[j];
 
-               if( !SCIPisConsExprExprVar(childchild) )
+               if( !SCIPisConsExprExprVar(grandchild) )
                {
                   /* mark all variable expressions that are contained in the expression */
-                  SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
+                  SCIP_CALL( removeSingleLockedVars(scip, grandchild, it, exprcands) );
                }
             }
          }
@@ -9340,17 +9342,17 @@ SCIP_RETCODE presolSingleLockedVars(
           */
          else if( SCIPgetConsExprExprHdlr(child) == powhdlr )
          {
-            SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[0];
+            SCIP_CONSEXPR_EXPR* grandchild = SCIPgetConsExprExprChildren(child)[0];
             SCIP_Real exponent = SCIPgetConsExprExprPowExponent(child);
             SCIP_Bool valid;
 
             /* check for even integral exponent */
             valid = exponent > 1.0 && fmod(exponent, 2.0) == 0.0;
 
-            if( !valid || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
+            if( !valid || !SCIPisConsExprExprVar(grandchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
             {
                /* mark all variable expressions that are contained in the expression */
-               SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
+               SCIP_CALL( removeSingleLockedVars(scip, grandchild, it, exprcands) );
             }
          }
          /* all other cases cannot be handled */
