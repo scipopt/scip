@@ -255,7 +255,6 @@ struct SCIP_ConshdlrData
    SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
    char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
    char                     checkvarlocks;   /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
-   SCIP_Bool                checkedvarlocks; /**< whether variables contained in a single constraint have been already considered */
    int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
    SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if at least this factor times the maximal violation */
@@ -292,6 +291,9 @@ struct SCIP_ConshdlrData
    /* branching */
    SCIP_RANDNUMGEN*         branchrandnumgen;/**< randum number generated used in branching variable selection */
    char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
+
+   /* misc */
+   SCIP_Bool                checkedvarlocks; /**< whether variables contained in a single constraint have been already considered */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
