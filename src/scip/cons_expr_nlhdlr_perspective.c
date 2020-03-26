@@ -1120,7 +1120,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 #endif
 
 
-/** nonlinear handler enforcement callback
+/** nonlinear handler estimation callback
  *
  * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
  * If g(x) = g0 if indicator z = 0, and a cut is given by sum aixi + c <= aux, where xi = xi0 if z = 0 for all i,
@@ -1128,19 +1128,17 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
  * the new cut is equivalent to the given cut, and at z = 0 it reduces to g0 <= aux.
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
 { /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* auxvar;
    int i;
    int j;
-   SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Real cst0;
    SCIP_VAR* indicator;
    SCIP_PTRARRAY* rowpreps2;
-
-   *result = SCIP_DIDNOTFIND;
+   int nrowpreps;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1154,11 +1152,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(expr != NULL);
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(result != NULL);
+   assert(rowpreps != NULL);
    assert(nlhdlrdata != NULL);
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
+
+   nrowpreps = 0;
+   *success = FALSE;
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps2) );
 
@@ -1175,10 +1176,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          int minidx;
          int maxidx;
          int r;
+         int success2;
 
          nlhdlr2 = expr->enfos[j]->nlhdlr;
 
-         if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
+         if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) || nlhdlr2 == nlhdlr )
             continue;
 
          SCIPdebugMsg(scip, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
@@ -1188,12 +1190,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          /* ask the handler for an estimator */
          SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
-               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowpreps2, &success, FALSE, &addedbranchscores2) );
+               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowpreps2, &success2, FALSE, &addedbranchscores2) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
 
-         assert((success && minidx <= maxidx) || (!success && minidx > maxidx));
+         assert((success2 && minidx <= maxidx) || (!success2 && minidx > maxidx));
 
          for( r = minidx; r <= maxidx; ++r )
          {
@@ -1216,7 +1218,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
             cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
 
-            for( v = 0; v < rowprep->nvars; ++v ) {
+            for( v = 0; v < rowprep->nvars; ++v )
+            {
                SCIP_Real val0;
 
                var = rowprep->vars[v];
@@ -1240,8 +1243,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-            SCIP_CALL(addCut(scip, cons, rowprep, sol, result));
-            SCIPfreeRowprep(scip, &rowprep);
+            *success = TRUE;
+            SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, nrowpreps, rowprep) );
+            ++nrowpreps;
          }
 
          SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
@@ -1252,19 +1256,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    return SCIP_OKAY;
 }
-
-
-/** nonlinear handler under/overestimation callback */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
 
 
 /** nonlinear handler interval evaluation callback */
@@ -1342,7 +1333,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimatePerspective, NULL);
 
    return SCIP_OKAY;
 }
