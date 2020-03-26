@@ -768,7 +768,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects that SQRT(x^2 -4x + 1) <= 2 as soc expression */
+/* detects that SQRT(x^2 -4x + 1) <= 2 is not a soc expression */
 Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;

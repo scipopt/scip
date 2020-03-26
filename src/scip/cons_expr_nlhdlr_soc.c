@@ -214,8 +214,7 @@ SCIP_RETCODE createDisaggrVars(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars) );
 
    /* create disaggregation variables representing the epigraph of (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1}) */
-   for( i = 0; i < nterms - 1; ++i ) // shouldn't this be size - 1? FW: no, the first nterm-1 slots are always filled
-                                     // the same way and then there might be one more slot depending on constant
+   for( i = 0; i < nterms - 1; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0,
@@ -522,8 +521,7 @@ SCIP_RETCODE generateCutSol(
    *cut = NULL;
 
    disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms - 1); // you could evaluate this outside and then just pass the value
-                                                                   // FW: whats the advantage of that?
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms - 1);
 
    if( disaggidx < nterms - 1 )
    {
@@ -562,7 +560,7 @@ SCIP_RETCODE generateCutSol(
 
    /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
 
-   /* add terms for v_{disaggidx+1} */ // why the + 1 here? FW: just because the indices start at 1 in the description
+   /* add terms for v_{disaggidx+1} (disaggidx corresponds to v_{disaggidx+1} in the description) */
    if( disaggidx < nterms - 1 )
    {
       for( i = 0; i < nnonzeroes[disaggidx]; ++i )
@@ -630,11 +628,12 @@ SCIP_RETCODE generateCutSol(
    return SCIP_OKAY;
 }
 
-/* helper method to check if an expression is quadratic and to collectall occurring expressions
+/** checks if an expression is quadratic and to collectall occurring expressions
  *
  * @pre @param expr2idx and @param occurringexprs need to be initialized with capacity 2 * nchildren
  *
- * NOTE: We assume that a linear term always appears before its corresponding quadratic term in quadexpr
+ * @note: We assume that a linear term always appears before its corresponding
+ * quadratic term in quadexpr; this should be ensured by canonicalize
  */
 static
 SCIP_RETCODE checkAndCollectQuadratic(
@@ -750,7 +749,7 @@ SCIP_RETCODE checkAndCollectQuadratic(
    return SCIP_OKAY;
 }
 
-/* helper method to build the constraint defining matrix and vector of a quadratic expression
+/* builds the constraint defining matrix and vector of a quadratic expression
  *
  * @pre @param quadmatrix and @param linvector need to be initialized with size @param nexprs^2 or @param nexprs, resp.
  */
@@ -782,7 +781,7 @@ void buildQuadExprMatrix(
    nchildren = SCIPgetConsExprExprNChildren(quadexpr);
    childcoefs = SCIPgetConsExprExprSumCoefs(quadexpr);
 
-   /* iterate over children again to build the constraint defining matrix and vector */
+   /* iterate over children to build the constraint defining matrix and vector */
    for( i = 0; i < nchildren; ++i )
    {
       int varpos;
@@ -834,7 +833,7 @@ void buildQuadExprMatrix(
    }
 }
 
-/* Helper method to try to fill the nlhdlrexprdata for a potential quadratic SOC expression.
+/* tries to fill the nlhdlrexprdata for a potential quadratic SOC expression.
  * We say try because the expression might still turn out not to be an SOC at this point.
  */
 static
@@ -1186,6 +1185,7 @@ SCIP_RETCODE detectSocNorm(
    }
    else if( SCIPisZero(scip, constant) )
       constant = 0.0;
+   assert(constant >= 0.0);
 
    /* at this point, we have found an SOC structure */
    *success = TRUE;
@@ -1207,8 +1207,8 @@ SCIP_RETCODE detectSocNorm(
    }
 
    /* add data for the auxiliary variable (RHS) */
-   vars[nvars-1] = auxvar;
-   transcoefs[nvars-1] = 1.0;
+   vars[nvars - 1] = auxvar;
+   transcoefs[nvars - 1] = 1.0;
 
 
    /* create required auxiliary variables and fill offsets array */
@@ -1396,11 +1396,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
       if( nposquadterms > 1 && nnegquadterms > 1 )
          goto CLEANUP;
 
-      /* more than one bilinear term -> can't be convex */ // FW: I don't think this is correct, it can still be convex, we just can't detect it in this method
+      /* more than one bilinear term -> can't be handled by this method */
       if( nposbilinterms + nnegbilinterms > 1 )
          goto CLEANUP;
 
-      /* one positive bilinear term and also at least one positive quadratic term -> not a simple SOC */ // FW: Is this comment ok?
+      /* one positive bilinear term and also at least one positive quadratic term -> not a simple SOC */
       if( nposbilinterms > 0 && nposquadterms > 0 )
          goto CLEANUP;
 
@@ -1613,13 +1613,16 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** Helper method to detect complex quadratic expressions that can be represented by soc constraints.
- *  These are quadratic expressions with either exactly one positive or exactly one negative Eigenvalue,
- *  in addition to some extra conditions, which are described in detail in:
+/** detects complex quadratic expressions that can be represented by soc constraints.
+ *  These are quadratic expressions with either exactly one positive or exactly one negative eigenvalue,
+ *  in addition to some extra conditions. One needs to write the quadratic as
+ *  sum eigval_i (eigvec_i . x)^2 + c <= -eigval_k (eigvec_k . x)^2, where eigval_k is the negative eigenvalue,
+ *  and c must be positive and (eigvec_k . x) must not change sign.
+ *  This is described in more details in:
  *
  *  Mahajan, Ashutosh & Munson, Todd. (2010). Exploiting Second-Order Cone Structure for Global Optimization.
  *
- *  The Eigen-decomposition is computed using Lapack. Binary linear variables are interpreted as quadratic terms.
+ *  The eigen-decomposition is computed using Lapack. Binary linear variables are interpreted as quadratic terms.
  *
  * @todo: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by soc, Currently, the
  * datastructure can only handle one soc. If this should appear more often, it could be worth to extend it,
@@ -1629,13 +1632,6 @@ CLEANUP:
  * structures cannot be detected, (see e.g. instances bearing or wager). There is currently no obvious way
  * to handle this.
  */
-// you are creating the auxiliary variable before knowing that you can handle this expression. I am not sure what the
-// status is currently, but originally, this was a bad idea. The problem is that creating an auxiliary variable forces a
-// run of detect on the expression with aux var. So if you can't handle it, but somebody else can, then you anyway
-// created all this auxiliary variables that are not needed in principle... We talked about anyway creating auxiliary
-// variables for everybody, but I am not sure what happened there.
-// I guess this also happens in the other detects...
-// FW: yes good point, I missed that! In the other detects it was fine though. I refactored the whole method
 static
 SCIP_RETCODE detectSocQuadraticComplex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1860,27 +1856,27 @@ CLEANUP:
 
 /** helper method to detect SOC structures. The dection runs in 3 steps:
  *
- *  1. check if expression is a norm of the form SQRT((sum_i coef_i expr_i^2) + (sum_j coef_j expr_j) + c)
- *  which can be transformed to the form SQRT((sum_i (coef_i expr_i + const_i)^2) + c*) with c* >= 0.
+ *  1. check if expression is a norm of the form SQRT(sum_i (sqrcoef_i expr_i^2 + lincoef_i expr_i) + c)
+ *  which can be transformed to the form SQRT(sum_i (coef_i expr_i + const_i)^2 + c*) with c* >= 0.
  *    -> this results in the SOC     expr <= auxvar(expr)
  *
  *  2. check if expression represents a quadratic function of one of the following forms (all coefs > 0)
- *     (sum_i coef_i expr_i^2) - coef_k expr_k^2      <= RHS  or  (sum_i -coef_i expr_i^2) + coef_k expr_k^2      >= LHS
- *  or (sum_i coef_i expr_i^2) - coef_k expr_k expr_l <= RHS  or  (sum_i -coef_i expr_i^2) + coef_k expr_k expr_l >= LHS
+ *     (sum_i coef_i expr_i^2) - coef_k expr_k^2      <= RHS or (sum_i - coef_i expr_i^2) + coef_k expr_k^2      >= LHS
+ *  or (sum_i coef_i expr_i^2) - coef_k expr_k expr_l <= RHS or (sum_i - coef_i expr_i^2) + coef_k expr_k expr_l >= LHS
  *  where RHS >=0 or LHS <= 0, respectively. For LHS and RHS we use either the constraint sides if it is a root expr
- *  or the bounds of the auxiliary variable, otherwise. The cases in the second line above are called hyperbolic.
+ *  or the bounds of the auxiliary variable, otherwise.
+ *  The cases in the second line above are called hyperbolic or rotated second order cone.
  *    -> this results in the SOC     SQRT((sum_i coef_i expr_i^2) - RHS) <= SQRT(coef_k) expr_k
  *                            or     SQRT(4*(sum_i coef_i expr_i^2) - 4*RHS + (expr_k - expr_l)^2) <= expr_k + expr_l
- *                            (or analogously for the LHS cases)
+ *                            (analogously for the LHS cases)
  *
  *  3. check if expression represents a quadratic inequality of the form f(x) = x^TAx + b^Tx + c <= 0 such that f(x)
- *  has exactly one negative Eigenvalue plus some extra conditions. The details as well as the transformation to a SOC
- *  is described in:
- *    Mahajan, Ashutosh & Munson, Todd. (2010). Exploiting Second-Order Cone Structure for Global Optimization.
+ *  has exactly one negative eigenvalue plus some extra conditions, see detectSocQuadraticComplex()
  *
  *  Note that step 3 is only performed if paramter compeigenvalues is set to TRUE.
  */
 // FW: I would appreciate if you could have another look whether this is fine.
+// FS: done, looks good
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2148,7 +2144,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
       SCIP_CONSEXPR_EXPR** children;
       SCIP_Real* childcoefs;
       int nchildren;
-      int i;
 
       assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
 
@@ -2272,10 +2267,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    // here you should assert that naggr > 2
 
    /* check whether the aggregation row is in the LP */
-   // mmmh you might wanna anyway want to separate the other constraints. look at the pdf i put in mattermost in the
-   // consexpr channel. It might be worth separating at the point where the disaggregation variable is equal to the
-   // expression it is representing. Such an assignment will make the dirow violated.
-   // FW: I don't understant this. What are "the other constraints"?
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
                sol), SCIPgetLPFeastol(scip) ) )
    {
