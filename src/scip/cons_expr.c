@@ -9168,9 +9168,12 @@ SCIP_RETCODE bilinearTermsFree(
    return SCIP_OKAY;
 }
 
-/** returns whether the variable of a given variable expression is only locked by one expression constraint */
+/** returns whether the variable of a given variable expression is a candidate for presolSingleLockedVars(), i.e.,
+ *  the variable is only contained in a single expression constraint, has no objective coefficient, has finite
+ *  variable bounds, and is not binary
+ */
 static
-SCIP_Bool isSingleLocked(
+SCIP_Bool isSingleLockedCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    )
@@ -9189,32 +9192,31 @@ SCIP_Bool isSingleLocked(
       && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY;
 }
 
-/** invalidates all variable expression in a given expression by removing the variable expression from a given hash map */
+/** removes all variable expressions that are contained in a given expression from a hash map */
 static
 SCIP_RETCODE removeSingleLockedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
-   SCIP_HASHMAP*         expr2idx            /**< map to hash variable expressions */
+   SCIP_HASHMAP*         exprcands           /**< map to hash variable expressions */
    )
 {
    SCIP_CONSEXPR_EXPR* e;
 
    for( e = SCIPexpriteratorRestartDFS(it, expr); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      if( SCIPisConsExprExprVar(e) && SCIPhashmapExists(expr2idx, (void*)e) )
+      if( SCIPisConsExprExprVar(e) && SCIPhashmapExists(exprcands, (void*)e) )
       {
-         SCIP_CALL( SCIPhashmapRemove(expr2idx, (void*)e) );
+         SCIP_CALL( SCIPhashmapRemove(exprcands, (void*)e) );
       }
    }
 
    return SCIP_OKAY;
 }
 
-/** presolving method to fix variables to one of their bounds if they are only contained in a single expression
- *  constraint; only variables that appear in product and power expressions can be fixed to one of their bounds;
- *  if a continuous variable has bounds [0,1], then the variable is changed to a binary variable; otherwise a
- *  bound disjunction constraint is added
+/** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
+ *  expression contraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
+ *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
  */
 static
 SCIP_RETCODE presolSingleLockedVars(
@@ -9261,11 +9263,11 @@ SCIP_RETCODE presolSingleLockedVars(
    if( consdata->expr == NULL || SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
       return SCIP_OKAY;
 
-   /* remember which constraint is finite */
+   /* remember which side is finite */
    haslhs = !SCIPisInfinity(scip, -consdata->lhs);
    hasrhs = !SCIPisInfinity(scip, consdata->rhs);
 
-   /* get sum, product, and power handler */
+   /* get sum, product, and power handlers */
    prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
    powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
 
@@ -9278,7 +9280,7 @@ SCIP_RETCODE presolSingleLockedVars(
    {
       assert(consdata->varexprs[i] != NULL);
 
-      if( isSingleLocked(scip, consdata->varexprs[i]) )
+      if( isSingleLockedCand(scip, consdata->varexprs[i]) )
       {
          SCIP_CALL( SCIPhashmapInsert(exprcands, (void*)consdata->varexprs[i], NULL) );
          singlelocked[nsinglelocked++] = consdata->varexprs[i];
@@ -9295,7 +9297,7 @@ SCIP_RETCODE presolSingleLockedVars(
       children = SCIPgetConsExprExprChildren(consdata->expr);
       nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
 
-      /* create expression iterator */
+      /* create iterator */
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
       SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
       SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
@@ -9314,7 +9316,7 @@ SCIP_RETCODE presolSingleLockedVars(
             continue;
 
          /* consider products prod_j f_j(x); ignore f_j(x) if it is a single variable, otherwise iterate through the
-          * expression that represents f_j and mark each variable expression, so that it will not be considered later
+          * expression that represents f_j and remove each variable expression from exprcands
           */
          else if( SCIPgetConsExprExprHdlr(child) == prodhdlr )
          {
@@ -9331,15 +9333,16 @@ SCIP_RETCODE presolSingleLockedVars(
                }
             }
          }
-
-         /* fixing a variable x to one of its bounds is only valid for ... +x^2 >= lhs or ... -x^2 <= rhs */
+         /* fixing a variable x to one of its bounds is only valid for ... +x^p >= lhs or ... -x^p <= rhs if p = 2k
+          * for an integer k > 1
+          */
          else if( SCIPgetConsExprExprHdlr(child) == powhdlr )
          {
             SCIP_CONSEXPR_EXPR* childchild = SCIPgetConsExprExprChildren(child)[0];
             SCIP_Real exponent = SCIPgetConsExprExprPowExponent(child);
             SCIP_Bool valid;
 
-            /* all even integral exponents can be handled */
+            /* check for even integral exponent */
             valid = exponent > 1.0 && fmod(exponent, 2.0) == 0.0;
 
             if( !valid || !SCIPisConsExprExprVar(childchild) || (hasrhs && coef > 0.0) || (haslhs && coef < 0.0) )
@@ -9348,7 +9351,6 @@ SCIP_RETCODE presolSingleLockedVars(
                SCIP_CALL( removeSingleLockedVars(scip, childchild, it, exprcands) );
             }
          }
-
          /* all other cases cannot be handled */
          else
          {
@@ -9364,10 +9366,10 @@ SCIP_RETCODE presolSingleLockedVars(
    /* check whether the bound disjunction constraint handler is available */
    hasbounddisj = SCIPfindConshdlr(scip, "bounddisjunction") != NULL;
 
-   /* fix variable to one of their bounds by either changing their variable types or adding a disjunction constraint */
+   /* fix variable to one of its bounds by either changing its variable type or adding a disjunction constraint */
    for( i = 0; i < nsinglelocked; ++i )
    {
-      /* only consider expressions that are still contained in the hash map */
+      /* only consider expressions that are still contained in the exprcands map */
       if( SCIPhashmapExists(exprcands, (void*)singlelocked[i]) )
       {
          SCIP_CONS* newcons;
@@ -9391,11 +9393,11 @@ SCIP_RETCODE presolSingleLockedVars(
 
             if( *infeasible )
             {
-               SCIPdebugMsg(scip, "detect infeasibility after changing variable <%s> to binary type\n", SCIPvarGetName(var));
+               SCIPdebugMsg(scip, "detect infeasibility after changing variable type of <%s>\n", SCIPvarGetName(var));
                return SCIP_OKAY;
             }
          }
-         /* add bound disjunction constraint if bounds of variable are finite */
+         /* add bound disjunction constraint if bounds of the variable are finite */
          else if( hasbounddisj && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
          {
             vars[0] = var;
