@@ -686,6 +686,7 @@ Miscellaneous
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
 - changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
+- SCIP_EXPORT is now defined as __attribute__((__visibility__("default"))) if GCC and no SCIP config header is used
 
 Known bugs
 ----------
