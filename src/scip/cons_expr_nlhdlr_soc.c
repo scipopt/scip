@@ -491,7 +491,6 @@ SCIP_RETCODE generateCutSol(
    SCIP_Real cutcoef;
    SCIP_Real fvalue;
    SCIP_Real disvarval;
-   SCIP_Real rhsval;
    SCIP_Real lhsval;
    SCIP_Real constant;
    SCIP_Real denominator;
