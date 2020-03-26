@@ -1843,7 +1843,29 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** helper method to detect SOC structures */
+/** helper method to detect SOC structures. The dection runs in 3 steps:
+ *
+ *  1. check if expression is a norm of the form SQRT((sum_i coef_i expr_i^2) + (sum_j coef_j expr_j) + c)
+ *  which can be transformed to the form SQRT((sum_i (coef_i expr_i + const_i)^2) + c*) with c* >= 0.
+ *    -> this results in the SOC     expr <= auxvar(expr)
+ *
+ *  2. check if expression represents a quadratic function of one of the following forms (all coefs > 0)
+ *     (sum_i coef_i expr_i^2) - coef_k expr_k^2      <= RHS  or  (sum_i -coef_i expr_i^2) + coef_k expr_k^2      >= LHS
+ *  or (sum_i coef_i expr_i^2) - coef_k expr_k expr_l <= RHS  or  (sum_i -coef_i expr_i^2) + coef_k expr_k expr_l >= LHS
+ *  where RHS >=0 or LHS <= 0, respectively. For LHS and RHS we use either the constraint sides if it is a root expr
+ *  or the bounds of the auxiliary variable, otherwise. The cases in the second line above are called hyperbolic.
+ *    -> this results in the SOC     SQRT((sum_i coef_i expr_i^2) - RHS) <= SQRT(coef_k) expr_k
+ *                            or     SQRT(4*(sum_i coef_i expr_i^2) - 4*RHS + (expr_k - expr_l)^2) <= expr_k + expr_l
+ *                            (or analogously for the LHS cases)
+ *
+ *  3. check if expression represents a quadratic inequality of the form f(x) = x^TAx + b^Tx + c <= 0 such that f(x)
+ *  has exactly one negative Eigenvalue plus some extra conditions. The details as well as the transformation to a SOC
+ *  is described in:
+ *    Mahajan, Ashutosh & Munson, Todd. (2010). Exploiting Second-Order Cone Structure for Global Optimization.
+ *
+ *  Note that step 3 is only performed if paramter compeigenvalues is set to TRUE.
+ */
+// FW: I would appreciate if you could have another look whether this is fine.
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1868,18 +1890,18 @@ SCIP_RETCODE detectSOC(
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   /* check whether expression is given as norm */
+   /* check whether expression is given as norm as described in case 1 above */
    SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
 
    if( !(*success) )
    {
-      /* check whether expression is a simple soc-respresentable quadratic expression */
+      /* check whether expression is a simple soc-respresentable quadratic expression as described in case 2 above */
       SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
    }
 
    if( !(*success) && nlhdlrdata->compeigenvalues )
    {
-      /* check whether expression is a more complex soc-respresentable quadratic expression */
+      /* check whether expression is a more complex soc-respresentable quadratic expression as described in case 3 */
       SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
    }
 
@@ -1959,9 +1981,6 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitSoc)
 
 
 /** callback to detect structure in expression tree */
-// I think here there should be a more complete documentation.
-// What do you understand by simple quadratic, what type of norm is detected, and how is the auxiliary varible is
-// handled when the expression is not the root of a constraint.
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 { /*lint --e{715}*/
@@ -2108,15 +2127,62 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
       /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
       *auxvalue = SQRT(*auxvalue);
    }
-   /* otherwise, just evaluate the original quadratic expression */
+   /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
    else
    {
-      // so according to Stefan, this would only be correct if you actually didn't really introduced any auxiliary
-      // variable. If some auxiliary variable is used, then you would need to compute the value of the quadratic w.r.t
-      // to the aux variables.
+      SCIP_CONSEXPR_EXPR** children;
+      SCIP_Real* childcoefs;
+      int nchildren;
+      int i;
+
       assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
 
-      *auxvalue = SCIPgetConsExprExprValue(expr);
+      children = SCIPgetConsExprExprChildren(expr);
+      childcoefs = SCIPgetConsExprExprSumCoefs(expr);
+      nchildren = SCIPgetConsExprExprNChildren(expr);
+
+      *auxvalue = SCIPgetConsExprExprSumConstant(expr);
+
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+         exprhdlr = SCIPgetConsExprExprHdlr(children[i]);
+         if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) )
+         {
+            SCIP_VAR* argauxvar;
+
+            assert(SCIPgetConsExprExprPowExponent(expr) == 2.0);
+
+            argauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+            assert(argauxvar != NULL);
+
+            *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
+         }
+         else if( exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+         {
+            SCIP_VAR* argauxvar1;
+            SCIP_VAR* argauxvar2;
+
+            assert(SCIPgetConsExprExprNChildren(children[i]) == 2);
+
+            argauxvar1 = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+            argauxvar2 = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[1]);
+            assert(argauxvar1 != NULL);
+            assert(argauxvar2 != NULL);
+
+            *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar1) * SCIPgetSolVal(scip, sol, argauxvar2);
+         }
+         else
+         {
+            SCIP_VAR* argauxvar;
+
+            argauxvar = SCIPgetConsExprExprAuxVar(children[i]);
+            assert(argauxvar != NULL);
+
+            *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
+         }
+      }
    }
 
    return SCIP_OKAY;
