@@ -2921,7 +2921,13 @@ SCIP_RETCODE graph_copy_data(
       SCIPfreeMemoryArrayNull(scip, &(g_copy->cost_org_pc));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->prize), g_copy->knots));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->term2edge), g_copy->knots));
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->cost_org_pc), g_copy->edges));
+
+      if( graph_pc_isPc(g_org) )
+      {
+         assert(g_org->cost_org_pc != NULL);
+         SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->cost_org_pc), g_copy->edges));
+         BMScopyMemoryArray(g_copy->cost_org_pc, g_org->cost_org_pc, g_copy->edges);
+      }
 
       for( int k = 0; k < g_copy->knots; k++ )
          g_copy->prize[k] = g_org->prize[k];
@@ -2934,9 +2940,6 @@ SCIP_RETCODE graph_copy_data(
 
       assert(g_org->term2edge != NULL);
       BMScopyMemoryArray(g_copy->term2edge, g_org->term2edge, g_copy->knots);
-
-      assert(g_org->cost_org_pc != NULL);
-      BMScopyMemoryArray(g_copy->cost_org_pc, g_org->cost_org_pc, g_copy->edges);
    }
    else if( g_copy->stp_type == STP_DCSTP )
    {

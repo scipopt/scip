@@ -231,6 +231,8 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    int                   term4offset         /**< terminal to add offset to */
 )
 {
+   const SCIP_Bool isMw = graph_pc_isMw(g);
+
    assert(ets >= 0);
    assert(g->tail[ets] == t && g->head[ets] == s);
    assert(Is_term(g->term[term4offset]));
@@ -252,10 +254,10 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    {
       if( !graph_pc_knotIsFixedTerm(g, term4offset) )
       {
-         if( g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-            graph_pc_subtractPrize(scip, g, g->cost[ets], term4offset);
-         else
+         if( isMw )
             graph_pc_subtractPrize(scip, g, -(g->prize[s]), term4offset);
+         else
+            graph_pc_subtractPrize(scip, g, g->cost[ets], term4offset);
       }
 
       if( Is_term(g->term[s]) )
@@ -264,6 +266,11 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
 
    /* contract s into t */
    SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
+
+   if( isMw )
+   {
+      return SCIP_OKAY;
+   }
 
    if( Is_term(g->term[t]) )
    {
@@ -1373,15 +1380,16 @@ void graph_pc_updateSubgraphEdge(
    if( orggraph->term2edge[orghead] < 0 )
       subgraph->term2edge[newhead] = orggraph->term2edge[orghead];
 
-
-   /* now save the original costs */
-
    assert(subgraph->edges + 1 < subgraph->esize);
    assert(subgraph->edges + 1 < orggraph->edges);
-   assert(subgraph->cost_org_pc);
 
-   subgraph->cost_org_pc[subgraph->edges] = orggraph->cost_org_pc[orgedge];
-   subgraph->cost_org_pc[subgraph->edges + 1] = orggraph->cost_org_pc[flipedge(orgedge)];
+   /* now save the original costs */
+   if( graph_pc_isPc(orggraph) )
+   {
+      assert(subgraph->cost_org_pc);
+      subgraph->cost_org_pc[subgraph->edges] = orggraph->cost_org_pc[orgedge];
+      subgraph->cost_org_pc[subgraph->edges + 1] = orggraph->cost_org_pc[flipedge(orgedge)];
+   }
 }
 
 
@@ -1641,24 +1649,25 @@ int graph_pc_realDegree(
 )
 {
    const int ggrad = g->grad[i];
-   const SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
+   const SCIP_Bool isMw = graph_pc_isMw(g);
    int newgrad;
 
    assert(g != NULL);
+   assert(graph_pc_isPcMw(g));
    assert(!g->extended);
    assert(!Is_pseudoTerm(g->term[i]));
    assert(i != g->source);
-   assert(rpc || g->stp_type == STP_PCSPG);
 
    if( !Is_term(g->term[i]) || fixedterm )
    {
       newgrad = ggrad;
    }
-   else if( graph_pc_knotIsNonLeafTerm(g, i) )
+   else if( !isMw && graph_pc_knotIsNonLeafTerm(g, i) )
    {
       newgrad = ggrad;
    }
-   else if( rpc )
+   else if( isRooted )
    {
       assert(Is_term(g->term[i]));
       newgrad = ggrad - 1;
@@ -2293,7 +2302,7 @@ SCIP_RETCODE graph_pc_contractEdge(
    assert(g->grad[s] == 0);
    assert(TERM2EDGE_NOTERM == g->term2edge[s]);
    assert(!Is_anyTerm(g->term[s]));
-   assert(SCIPisEQ(scip, g->prize[s], 0.0));
+   assert(SCIPisEQ(scip, g->prize[s], 0.0) || graph_pc_isMw(g));
 
    SCIPdebugMessage("PcMw contraction: %d into %d, saved in %d \n", s, t, term4offset);
 

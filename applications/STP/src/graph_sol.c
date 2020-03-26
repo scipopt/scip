@@ -819,7 +819,7 @@ SCIP_RETCODE graph_solPruneFromTmHeur(
 {
    const int nedges = graph_get_nEdges(g);
 
-   assert(scip && cost && result && connected);
+   assert(scip && result && connected);
 
    if( g->stp_type != STP_DHCSTP )
    {
@@ -831,6 +831,7 @@ SCIP_RETCODE graph_solPruneFromTmHeur(
    {
       if( graph_pc_isPc(g) )
       {
+         assert(cost);
          assert(graph_pc_costsEqualOrgCosts(scip, g, cost));
          SCIP_CALL( pruneSteinerTreePc(scip, g, cost, result, connected) );
       }
