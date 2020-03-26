@@ -17,7 +17,7 @@
 # Arguments | defaultvalue                             | possibilities
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, v60-bugfix, consexpr
-# TESTMODE  | ""                                       | mip, minlp, short
+# TESTMODE  | ""                                       | mip, minlp, short, minlplib
 # QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
@@ -57,6 +57,9 @@ elif [ "${TESTMODE}" == "minlp" ]; then
     echo "Testing minlp continue"
     TESTMODE=continue_minlp
   fi
+elif [ "${TESTMODE}" == "minlplib" ]; then
+  echo "Testing minlplib"
+  TESTMODE=quick_minlplib
 else
   echo "Nothing to do, please check your triggerphrase: '${gitlabTriggerPhrase}'. Exiting."
   exit 1
@@ -111,6 +114,8 @@ elif [ "${TESTMODE}" == "quick_mip" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=1"
 elif [ "${TESTMODE}" == "quick_minlp" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=1"
+elif [ "${TESTMODE}" == "quick_minlplib" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=MINLP_minlplib TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest"
 elif [ "${TESTMODE}" == "continue_mip" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=2 GLBSEEDSHIFT=2"
 elif [ "${TESTMODE}" == "continue_minlp" ]; then

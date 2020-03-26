@@ -402,6 +402,16 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
    );
 
+/** returns whether we are ok to branch on auxiliary variables
+ *
+ * Currently returns whether depth of node in b&B tree is at least value of constraints/expr/branching/aux parameter.
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
+
 /** @} */
 
 /**@name Expression Methods */
@@ -446,6 +456,16 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   );
+
+/** remove all children of expr
+ *
+ * only use if you really know what you are doing
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPremoveConsExprExprChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** overwrites/replaces a child of an expressions
@@ -794,19 +814,19 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
-/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
- *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+/** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
  *
- *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
+ *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               force,            /**< force tightening of variable bound and add to reversepropqueue even if tightening is below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
@@ -837,38 +857,42 @@ void SCIPincrementConsExprCurBoundsTag(
    SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
 
-/** adds branching score to an expression
+/** adds violation-branching score to an expression
  *
- * Adds a score to the expression-specific branching score.
- * In an expression with children, the scores are distributed to its children.
- * In an expression that is a variable, the score may be used to identify a variable for branching.
+ * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
+ * The expression must either be a variable expression or have an aux-variable.
+ * In the latter case, branching on auxiliary variables must have been enabled.
+ * In case of doubt, use SCIPaddConsExprExprsViolScore().
  */
 SCIP_EXPORT
-void SCIPaddConsExprExprBranchScore(
+void SCIPaddConsExprExprViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
-   SCIP_Real               branchscore       /**< branching score to add to expression */
+   SCIP_Real               violscore         /**< violation score to add to expression */
    );
 
-/** adds branching score to children of expression for given auxiliary variables
+/** adds violation-branching score to a set of expressions, thereby distributing the score
  *
- * Iterates over the successors of expr for expressions that are associated with one of the given auxiliary variables
- * and adds a given branching score.
- * The branchscoretag argument is used to identify whether the score in the found expression needs to be reset
- * before adding a new score.
- *
- * @note This method may modify the given auxvars array by means of sorting.
+ * Each expression must either be a variable expression or have an aux-variable.
+ * If branching on aux-variables is disabled, then finds original variables first.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
+SCIP_RETCODE SCIPaddConsExprExprsViolScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
-   SCIP_Real               branchscore,      /**< branching score to add to expression */
-   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
-   int                     nauxvars,         /**< number of auxiliary variables */
-   int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
+   SCIP_CONSEXPR_EXPR**    exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
+   SCIP_Real               violscore,        /**< violation score to add to expression */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   );
+
+/** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprViolScore(
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** returns the hash value of an expression */
@@ -1006,7 +1030,7 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
    );
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * to be at least of size the number of unique variables in the expression which is given by SCIPgetConsExprExprNVars()
  * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions

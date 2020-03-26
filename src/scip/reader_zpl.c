@@ -1602,9 +1602,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
-{
-   assert(scip != NULL);
-
+{ /*lint --e{715}*/
 #ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;

@@ -17,6 +17,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    endif()
 endif()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+endif()
+
 set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
@@ -245,7 +249,7 @@ endif()
 
 # look for presolvelib
 if(PAPILO)
-   find_package(PAPILO)
+   find_package(PAPILO CONFIG)
 endif()
 if(PAPILO_FOUND)
    set(SCIP_WITH_PAPILO on)

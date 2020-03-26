@@ -4395,7 +4395,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -6019,7 +6018,9 @@ SCIP_RETCODE SCIPvarChgType(
 
    if( var->negatedvar != NULL )
    {
-      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype);
+      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype
+            || SCIPvarIsBinary(var) == SCIPvarIsBinary(var->negatedvar));
+
 
       var->negatedvar->vartype = vartype; /*lint !e641*/
 

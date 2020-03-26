@@ -5859,7 +5859,7 @@ SCIP_RETCODE sortAllBilinTerms(
    int                   nbilinterms,        /**< total number of bilinear terms */
    SCIP_CONS**           bilinconss,         /**< array for mapping each term to its constraint */
    int*                  bilinposs           /**< array for mapping each term to its position in the corresponding
-                                               *  bilinconss constraint */
+                                              *   bilinconss constraint */
    )
 {
    int* perm;
@@ -12306,7 +12306,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+         {
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         }
       }
 
       /* setup sepaquadvars and sepabilinvar2pos */
@@ -12416,8 +12419,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* free nonlinear row representation */
-      if( consdata->nlrow != NULL )
+      /* free nonlinear row representation, if not called from consDisableQuadratic */
+      if( consdata->nlrow != NULL && SCIPgetStage(scip) == SCIP_STAGE_EXITSOLVE )
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
@@ -14190,7 +14193,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/empathy4and",
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
-         &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
+         &conshdlrdata->empathy4and, FALSE, 2, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",

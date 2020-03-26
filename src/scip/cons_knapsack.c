@@ -1164,7 +1164,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( j = 0; j < nmyitems && intprofits; ++j )
       intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
 
-
    /* if no item is left then goto end */
    if( nmyitems == 0 )
    {
@@ -6921,7 +6920,6 @@ SCIP_RETCODE checkParallelObjective(
          SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
             SCIPconsGetName(cons), cutoffbound);
 
-
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted
           */
@@ -11585,6 +11583,10 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* sort the constraint */
    sortItems(consdata0);
 
+   /* see #2970 */
+   if( consdata0->capacity == 0 )
+      return SCIP_OKAY;
+
    /* check constraint against all prior constraints */
    for( c = (consdata0->presolvedtiming == SCIP_PRESOLTIMING_EXHAUSTIVE ? firstchange : 0); c < chkind; ++c )
    {
@@ -11614,6 +11616,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       /* sort the constraint */
       sortItems(consdata1);
+
+      /* see #2970 */
+      if( consdata1->capacity == 0 )
+         continue;
 
       quotient = ((SCIP_Real) consdata0->capacity) / ((SCIP_Real) consdata1->capacity);
 
@@ -11667,8 +11673,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
 
          assert(v == v0 || v == v1);
-	 assert(v0 >= 0);
-	 assert(v1 >= 0);
+         assert(v0 >= 0);
+         assert(v1 >= 0);
 
          /* both variables are the same */
          if( consdata0->vars[v0] == consdata1->vars[v1] )

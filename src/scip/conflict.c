@@ -2711,7 +2711,6 @@ SCIP_Real aggrRowGetMinActivity(
          *infdelta = TRUE;
          goto TERMINATE;
       }
-
    }
 
   TERMINATE:
@@ -3401,6 +3400,9 @@ SCIP_RETCODE conflictAddConflictCons(
       int oldnbdchginfos = conflictset->nbdchginfos;
 #endif
       assert(conflictset->validdepth == 0);
+
+      /* check conflict set on debugging solution */
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->root, conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) );
 
       SCIPclockStart(conflict->dIBclock, set);
 

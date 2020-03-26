@@ -905,8 +905,14 @@ SCIP_RETCODE removeFixedVariables(
             *redundant = TRUE;
             break;
          }
+         if( isLiteralViolated(scip, consdata, v) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            continue;
+         }
 
          ++v;
+
          continue;
       }
 
