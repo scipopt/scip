@@ -9269,7 +9269,7 @@ SCIP_RETCODE presolSingleLockedVars(
    haslhs = !SCIPisInfinity(scip, -consdata->lhs);
    hasrhs = !SCIPisInfinity(scip, consdata->rhs);
 
-   /* get sum, product, and power handlers */
+   /* get product and power handlers */
    prodhdlr = SCIPgetConsExprExprHdlrProduct(conshdlr);
    powhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
 
