@@ -9221,6 +9221,9 @@ SCIP_RETCODE removeSingleLockedVars(
  *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
  *
  *  @todo the same reduction can be applied if g(x) is not concave, but monotone in x_i for g(x) <= rhs
+ *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
+ *    g(x) to sum_i [a_i,b_i] x^{p_i} for a single variable x and try to conclude montonicity or convexity/concavity
+ *    on this (probably have one or two flags per variable and update this whenever another x^{p_i} is found)
  */
 static
 SCIP_RETCODE presolSingleLockedVars(
