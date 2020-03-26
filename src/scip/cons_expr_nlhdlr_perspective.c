@@ -1136,10 +1136,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    int j;
    SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_CONSEXPR_NLHDLR* nlhdlr2;
    SCIP_Real cst0;
    SCIP_VAR* indicator;
-   SCIP_Bool addedbranchscores2;
+   SCIP_PTRARRAY* rowpreps2;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1161,6 +1160,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps2) );
+
    /* build cuts for every indicator variable */
    for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
    {
@@ -1169,12 +1170,16 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       /* use cuts from every suitable nlhdlr */
       for( j = 0; j < expr->nenfos; ++j )
       {
+         SCIP_Bool addedbranchscores2;
+         SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+         int minidx;
+         int maxidx;
+         int r;
+
          nlhdlr2 = expr->enfos[j]->nlhdlr;
 
          if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
             continue;
-
-         SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
 
          SCIPdebugMsg(scip, "\nasking handler %s to %sestimate", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
@@ -1183,13 +1188,22 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          /* ask the handler for an estimator */
          SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
-               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success, FALSE, &addedbranchscores2) );
+               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowpreps2, &success, FALSE, &addedbranchscores2) );
 
-         if( success )
+         minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
+         maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
+
+         assert((success && minidx <= maxidx) || (!success && minidx > maxidx));
+
+         for( r = minidx; r <= maxidx; ++r )
          {
             int v;
             SCIP_VAR *var;
             SCIP_Bool var_is_sc;
+
+            rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
+
+            assert(rowprep != NULL);
 
             SCIPdebugMsg(scip, "\nrowprep before perspectivy is: ");
 #ifdef SCIP_DEBUG
@@ -1227,11 +1241,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 #endif
 
             SCIP_CALL(addCut(scip, cons, rowprep, sol, result));
+            SCIPfreeRowprep(scip, &rowprep);
          }
 
-         SCIPfreeRowprep(scip, &rowprep);
+         SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
       }
    }
+
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps2) );
 
    return SCIP_OKAY;
 }

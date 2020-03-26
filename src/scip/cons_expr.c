@@ -5787,22 +5787,41 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
    {
-      SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
       SCIP_Real auxvarvalue;
       SCIP_Real cutviol;
       SCIP_Bool sepasuccess = FALSE;
       SCIP_Bool branchscoresuccess = FALSE;
+      SCIP_PTRARRAY* rowpreps;
+      int minidx;
+      int maxidx;
+      int r;
+      SCIP_ROWPREP* rowprep;
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+            SCIPgetSolVal(scip, sol, auxvar), rowpreps, &sepasuccess, inenforcement, &branchscoresuccess) );
 
-      if( sepasuccess )
+      minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
+      maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
+
+      assert((sepasuccess && minidx <= maxidx) || (!sepasuccess && minidx > maxidx));
+
+      if( !sepasuccess )
       {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+      }
+
+      for( r = minidx; r <= maxidx; ++r )
+      {
+         rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
+
+         assert(rowprep != NULL);
+
          /* complete estimator to cut */
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
@@ -5833,10 +5852,10 @@ SCIP_RETCODE enforceExprNlhdlr(
                 * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
                 */
                if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
+                     ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
                {
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
+                  SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
                   sepasuccess = FALSE;
                }
             }
@@ -5846,149 +5865,147 @@ SCIP_RETCODE enforceExprNlhdlr(
             sepasuccess = FALSE;
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
          }
-      }
-      else
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-      }
 
-      /* clean up estimator */
-      if( sepasuccess )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n    ",
-            SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-         SCIPprintRowprep(scip, rowprep, enfologfile); )
-
-         /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
-          * instead, may even scale them down, that is, scale so that max coef is close to 1
-          */
-         if( !allowweakcuts )
+         /* clean up estimator */
+         if( sepasuccess )
          {
-            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n    ",
+            SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+            SCIPprintRowprep(scip, rowprep, enfologfile); )
 
-            if( !sepasuccess )
+            /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
+             * instead, may even scale them down, that is, scale so that max coef is close to 1
+             */
+            if( !allowweakcuts )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
-            }
-            else
-            {
-               cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
-               if( sepasuccess )
-                  sepasuccess = cutviol > mincutviolation;
-            }
+               SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
 
-            if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
-            {
-               /* check whether cut is weak now
-                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
-                */
-               SCIP_Real auxvarcoef = 0.0;
-               int i;
-
-               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than it should be... */
-               for( i = 0; i < rowprep->nvars; ++i )
+               if( !sepasuccess )
                {
-                  if( rowprep->vars[i] == auxvar )
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
+               }
+               else
+               {
+                  cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
+                  if( sepasuccess )
+                     sepasuccess = cutviol > mincutviolation;
+               }
+
+               if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
+               {
+                  /* check whether cut is weak now
+                   * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
+                   */
+                  SCIP_Real auxvarcoef = 0.0;
+                  int i;
+
+                  /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than it should be... */
+                  for( i = 0; i < rowprep->nvars; ++i )
                   {
-                     auxvarcoef = REALABS(rowprep->coefs[i]);
-                     break;
+                     if( rowprep->vars[i] == auxvar )
+                     {
+                        auxvarcoef = REALABS(rowprep->coefs[i]);
+                        break;
+                     }
+                  }
+
+                  if( auxvarcoef == 0.0 ||
+                        (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+                        ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
+                  {
+                     ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                           auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
+                     sepasuccess = FALSE;
                   }
                }
-
-               if( auxvarcoef == 0.0 ||
-                   (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
-               {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
-                  sepasuccess = FALSE;
-               }
-            }
-         }
-         else
-         {
-            /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
-
-            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which the following cleanup
-             * changes coefficients (we had/have this in cons_expr_sum this way)
-             */
-            if( !branchscoresuccess )
-               rowprep->recordmodifications = TRUE;
-
-            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
-
-            if( !sepasuccess )
-            {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n", rowprep->nmodifiedvars, cutviol); )
-            }
-
-            /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
-            if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
-            {
-               SCIP_Real brscore;
-               int nbradded = 0;
-
-               brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
-               SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
-
-               branchscoresuccess = nbradded > 0;
-               /* SCIPaddConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
-                * I don't think it makes sense to branch on that one (would it?)
-                */
-               assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
-            }
-         }
-      }
-
-      /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
-      if( sepasuccess )
-      {
-         SCIP_ROW* row;
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-         if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
-         {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
-               SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
-         }
-         else
-         {
-            SCIP_Bool infeasible;
-
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
-            SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
-
-            /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
-             */
-            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
-
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               ++nlhdlr->ncutoffs;
             }
             else
             {
-               *result = SCIP_SEPARATED;
-               ++nlhdlr->nseparated;
+               /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
+
+               /* if estimate didn't report branchscores explicitly, then consider branching on those children for which the following cleanup
+                * changes coefficients (we had/have this in cons_expr_sum this way)
+                */
+               if( !branchscoresuccess )
+                  rowprep->recordmodifications = TRUE;
+
+               SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+
+               if( !sepasuccess )
+               {
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n", rowprep->nmodifiedvars, cutviol); )
+               }
+
+               /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
+               if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
+               {
+                  SCIP_Real brscore;
+                  int nbradded = 0;
+
+                  brscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
+                  SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
+
+                  branchscoresuccess = nbradded > 0;
+                  /* SCIPaddConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
+                   * I don't think it makes sense to branch on that one (would it?)
+                   */
+                  assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
+               }
             }
          }
 
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      }
-      else if( branchscoresuccess )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-         *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
-      }
-      else
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ? " (!)" : ""); )
+         /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
+         if( sepasuccess )
+         {
+            SCIP_ROW* row;
+
+            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+            if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
+               SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
+            }
+            else
+            {
+               SCIP_Bool infeasible;
+
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
+               SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
+
+               /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
+                */
+               SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
+
+               if( infeasible )
+               {
+                  *result = SCIP_CUTOFF;
+                  ++nlhdlr->ncutoffs;
+               }
+               else
+               {
+                  *result = SCIP_SEPARATED;
+                  ++nlhdlr->nseparated;
+               }
+            }
+
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         }
+         else if( branchscoresuccess )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+            *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
+         }
+         else
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ? " (!)" : ""); )
+         }
+
+         SCIPfreeRowprep(scip, &rowprep);
       }
 
-      SCIPfreeRowprep(scip, &rowprep);
+      SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    }
 
    return SCIP_OKAY;
@@ -14681,7 +14698,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success, addbranchscores, addedbranchscores) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue,
+         rowpreps, success, addbranchscores, addedbranchscores) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */

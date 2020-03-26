@@ -896,13 +896,14 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    SCIP_Real coef;
    SCIP_Real coef2;
    int j;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(conshdlr != NULL);
    assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
    assert(nlhdlrexprdata != NULL);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -924,6 +925,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
       SCIPdebugMsg(scip, "not estimating on nonconvex side (overestimate=%d, curv=%s)\n", overestimate, SCIPexprcurvGetName(nlhdlrexprdata->curvature));
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    /*
     * compute estimator: quadfun(sol) + \nabla quadfun(sol) (x - sol)
@@ -956,7 +959,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
       SCIPaddSquareLinearization(scip, nlhdlrexprdata->quadexprterms[j].sqrcoef, SCIPgetSolVal(scip, sol, var),
          nlhdlrexprdata->quadexprterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef, &constant, success);
       if( !*success )
+      {
+         SCIPfreeRowprep(scip, &rowprep);
          return SCIP_OKAY;
+      }
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
       SCIPaddRowprepConstant(rowprep, constant);
@@ -981,7 +987,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
          SCIPaddBilinLinearization(scip, bilinexprterm->coef, SCIPgetSolVal(scip, sol, var), SCIPgetSolVal(scip, sol,
                   var2), &coef, &coef2, &constant, success);
          if( !*success )
+         {
+            SCIPfreeRowprep(scip, &rowprep);
             return SCIP_OKAY;
+         }
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var2, coef2) );
@@ -993,6 +1002,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    SCIPmergeRowprepTerms(scip, rowprep);
 
    rowprep->local = FALSE;
+
+   SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_quadratic%p_%s%d",
       overestimate ? "over" : "under",

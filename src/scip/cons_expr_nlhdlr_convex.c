@@ -1364,6 +1364,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
    int i;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1372,7 +1373,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
    assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -1405,6 +1406,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       return SCIP_OKAY;
    }
 
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
    /* add gradient underestimator to rowprep: first contribution of each variable, (x - sol) \nabla f(sol) */
    *success = TRUE;
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
@@ -1436,6 +1439,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* next add f(sol) */
    SCIPaddRowprepConstant(rowprep, auxvalue);
    rowprep->local = FALSE;
+   SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
       overestimate ? "over" : "under",
@@ -1708,10 +1712,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -1728,7 +1734,18 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
        (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
    SCIP_CALL( estimateVertexPolyhedral(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, FALSE, overestimate, targetvalue, rowprep, success) );
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
+   }
 
    if( addbranchscores )
    {
