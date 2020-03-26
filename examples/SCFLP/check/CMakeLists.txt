@@ -1,4 +1,4 @@
-    include(CTest)
+include(CTest)
 
 #
 # instances of varying size in the CAP data set.
