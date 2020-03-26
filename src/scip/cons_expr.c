@@ -9398,7 +9398,7 @@ SCIP_RETCODE presolSingleLockedVars(
             if( *infeasible )
             {
                SCIPdebugMsg(scip, "detect infeasibility after changing variable type of <%s>\n", SCIPvarGetName(var));
-               return SCIP_OKAY;
+               break;
             }
          }
          /* add bound disjunction constraint if bounds of the variable are finite */
