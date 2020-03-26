@@ -24,6 +24,8 @@
  * \f$\sqrt{\gamma + \sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
  * where \f$\gamma \geq 0\f$ and \f$v_{n+1}^T x +\beta_{n+1} \geq 0\f$.
+ *
+ * @TODO: Don't disaggregate if n = 1. This requires a separate separation method for this case.
  */
 
 #include <string.h>
@@ -205,9 +207,6 @@ SCIP_RETCODE createDisaggrVars(
    nterms = nlhdlrexprdata->nterms;
 
    /* check whether constant has a separate entry */
-   // SQRT(x^2 + y^2) <= z does not need to be dissagregated
-   // so I guess you should check if size > 2 before doing all this. probably you can add the check outside this
-   // function and an assert here.
    ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
 
    /* allocate memory */
@@ -477,6 +476,7 @@ SCIP_RETCODE generateCutSol(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
    int                   disaggidx,          /**< index of disaggregation to separate */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
+   SCIP_Real             rhsval,             /**< value of the rhs term */
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
@@ -521,7 +521,6 @@ SCIP_RETCODE generateCutSol(
    *cut = NULL;
 
    disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms - 1);
 
    if( disaggidx < nterms - 1 )
    {
@@ -1299,6 +1298,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real lhsconstant;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Real rhssign;
    int nposquadterms;
    int nnegquadterms;
    int nposbilinterms;
@@ -1321,7 +1321,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    *success = FALSE;
 
    /* check whether expression is a sum with at least 2 children */
-   // what about x^2 - y^2 <= 0 ?
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
@@ -1461,17 +1460,35 @@ SCIP_RETCODE detectSocQuadraticSimple(
       yactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
       zactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]);
 
-      /* the sum of the expressions in the bilinear term is not non-negative -> no SOC */
       if( SCIPisNegative(scip, yactivity.inf + zactivity.inf) )
-         goto CLEANUP;
+      {
+         /* the sum of the expressions in the bilinear term changes sign -> no SOC */
+         if( SCIPisPositive(scip, yactivity.sup + zactivity.sup) )
+            goto CLEANUP;
+
+         rhssign = -1.0;
+      }
+      else
+         rhssign = 1.0;
 
       lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
    else
    {
-      /* rhs variable is not non-negative -> no SOC */
-      if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0 )
-         goto CLEANUP;
+      SCIP_INTERVAL rhsactivity;
+
+      rhsactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
+
+      if( rhsactivity.inf < 0.0 )
+      {
+         /* rhs variable changes sign -> no SOC */
+         if( rhsactivity.sup > 0.0 )
+            goto CLEANUP;
+
+         rhssign = -1.0;
+      }
+      else
+         rhssign = 1.0;
    }
 
    if( SCIPisNegative(scip, lhsconstant) )
@@ -1557,7 +1574,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(vars[nchildren - 1] != NULL);
 
       assert(childcoefs[specialtermidx] < 0.0);
-      transcoefs[nchildren - 1] = SQRT(-childcoefs[specialtermidx]);
+      transcoefs[nchildren - 1] = rhssign * SQRT(-childcoefs[specialtermidx]);
    }
    else
    {
@@ -1570,7 +1587,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
                &vars[nchildren]) );
       assert(vars[nchildren] != NULL);
 
-      /* on the lhs we have the term (expr_k - expr_l)^2 and the rhs we have expr_k + expr_l
+      /* on the lhs we have the term (expr_k - expr_l)^2 and the rhs we have +/-(expr_k + expr_l)
        * at this point, vars[nchildren-1] = auxvar(expr_k) and vars[nchildren] = auxvar(expr_l)
        */
 
@@ -1586,8 +1603,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       transcoefs[ntranscoefs - 4] = 1.0;
       transcoefs[ntranscoefs - 3] = -1.0;
-      transcoefs[ntranscoefs - 2] = 1.0;
-      transcoefs[ntranscoefs - 1] = 1.0;
+      transcoefs[ntranscoefs - 2] = rhssign;
+      transcoefs[ntranscoefs - 1] = rhssign;
    }
 
 #ifdef SCIP_DEBUG
@@ -1875,8 +1892,6 @@ CLEANUP:
  *
  *  Note that step 3 is only performed if paramter compeigenvalues is set to TRUE.
  */
-// FW: I would appreciate if you could have another look whether this is fine.
-// FS: done, looks good
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2015,7 +2030,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    if( *success )
    {
-      /* create variables for cone disaggregation */
+      /* create variables for cone disaggregation. @TODO: don't do this if nvars = 2 */
       SCIP_CALL( createDisaggrVars(scip, expr, (*nlhdlrexprdata)) );
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -2229,6 +2244,7 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_Real rhsval;
    int depth;
    int naggrs;
    int k;
@@ -2264,7 +2280,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    ++nlhdlrdata->nenfocalls;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
-   // here you should assert that naggr > 2
 
    /* check whether the aggregation row is in the LP */
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
@@ -2282,12 +2297,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       *result = SCIP_SEPARATED;
    }
 
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
+
    for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_ROW* row;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), &row) );
+      SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), rhsval, &row) );
 
       if( row != NULL )
       {
