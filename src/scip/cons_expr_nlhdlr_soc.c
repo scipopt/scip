@@ -1108,8 +1108,12 @@ SCIP_RETCODE detectSocNorm(
     */
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
-         && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+      exprhdlr = SCIPgetConsExprExprHdlr(children[i]);
+
+      /* handle quadratic expressions children */
+      if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          SCIP_CONSEXPR_EXPR* squarearg = SCIPgetConsExprExprChildren(children[i])[0];
 
@@ -1121,6 +1125,18 @@ SCIP_RETCODE detectSocNorm(
          transcoefs[nvars] = SQRT(childcoefs[i]);
 
          SCIP_CALL( SCIPhashsetRemove(linexprs, (void*) squarearg) );
+         ++nvars;
+      }
+      /* handle binary variable children */
+      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      {
+         assert(!SCIPhashmapExists(expr2idx, (void*) children[i]));
+         assert(!SCIPhashsetExists(linexprs, (void*) children[i]));
+
+         SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) children[i], nvars) );
+
+         transcoefs[nvars] = SQRT(childcoefs[i]);
+
          ++nvars;
       }
       else
@@ -2260,6 +2276,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    // mmmh you might wanna anyway want to separate the other constraints. look at the pdf i put in mattermost in the
    // consexpr channel. It might be worth separating at the point where the disaggregation variable is equal to the
    // expression it is representing. Such an assignment will make the dirow violated.
+   // FW: I don't understant this. What are "the other constraints"?
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
                sol), SCIPgetLPFeastol(scip) ) )
    {
