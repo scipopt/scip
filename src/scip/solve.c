@@ -2780,7 +2780,7 @@ SCIP_RETCODE priceAndCutLoop(
    }
 
    /* update lower bound w.r.t. the LP solution */
-   if( *cutoff )
+   if( *cutoff && tree->focusnodehaslp )
    {
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE);
@@ -2871,8 +2871,9 @@ SCIP_RETCODE applyBounding(
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
       /** exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
-        * certificate so we print the root psval after calling initconslp fot the first time */
-      if( pseudoobjval > SCIPnodeGetLowerbound(focusnode) && (focusnode->parent !=  NULL) )
+        * certificate so we print the root psval after calling initconslp fot the first time 
+        * @todo exip do we need the cutoffboundex here? cutoffbound is safe, but might not be hard*/
+      if( pseudoobjval > primal->cutoffbound && (focusnode->parent !=  NULL) )
       {
          SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
             transprob, pseudoobjval) );
@@ -3920,8 +3921,8 @@ SCIP_RETCODE propAndSolve(
 
       if( set->misc_exactsolve && focusnode->parent == NULL )
       {
-         SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
-            transprob, SCIPlpGetPseudoObjval(lp, set, transprob));
+         SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
+            transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );
       }
 
       *lpsolved = TRUE;
@@ -4684,9 +4685,9 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
 
       /** @todo exip: these ifs are temporary */
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
-      else
+      else if( focusnodehaslp )
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */

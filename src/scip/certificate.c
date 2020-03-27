@@ -241,6 +241,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       return SCIP_OKAY;
 
    assert(scip != NULL);
+   assert(SCIPisExactSol(scip, sol));
 
    if( sol == NULL )
    {
@@ -256,7 +257,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    nnonz = 0;
    for( i = 0; i < nvars; i++)
    {
-      RatSetReal(vals[i], SCIPsolGetVal(sol, scip->set, scip->stat, vars[i]));
+      SCIPsolexGetVal(vals[i], sol, scip->set, scip->stat, vars[i]);
       if( !RatIsZero(vals[i]) )
          nnonz++;
    }
@@ -738,7 +739,10 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    if( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL )
    {
       bestsol = SCIPgetBestSol(scip);
-      RatSetReal(primalbound, SCIPsolGetObj(bestsol, set, scip->transprob, scip->origprob));
+
+      assert(SCIPisExactSol(scip, bestsol));
+
+      RatSet(primalbound, SCIPsolexGetObj(bestsol, set, scip->transprob, scip->origprob));
       assert(!RatIsAbsInfinity(primalbound));
 
       /* print RTP range (same when optimal solution found) */
@@ -1294,7 +1298,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          else
             RatSet(vals[len], val);
 
-         if( !RatIsPositive(vals[len]) )
+         if( RatIsNegative(vals[len]) )
          {
             certificate->workbound->isupper = TRUE;
             RatSet(certificate->workbound->boundval, SCIPcolexGetUb(col));
@@ -1419,59 +1423,57 @@ SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
    if( !SCIPcertificateIsActive(certificate) )
       return SCIP_OKAY;
 
-   if( psval > SCIPnodeGetLowerbound(node) )
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjval) );
+
+   RatSetReal(pseudoobjval, psval);
+   duallen = SCIPprobGetNObjVars(prob, set);
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &bounds, duallen) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, duallen) );
+   /* computes pseudo objective value (with bound change if necessary) */
+   /*lint --e{838}*/
+
+   nnonzeros = 0;
+   for( i = 0; i < nvars; i++ )
    {
-      vars = SCIPprobGetVars(prob);
-      nvars = SCIPprobGetNVars(prob);
-      SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjval) );
-
-      RatSetReal(pseudoobjval, psval);
-      duallen = SCIPprobGetNObjVars(prob, set);
-      SCIP_CALL( RatCreateBufferArray(set->buffer, &bounds, duallen) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, duallen) );
-      /* computes pseudo objective value (with bound change if necessary) */
-      /*lint --e{838}*/
-
-      nnonzeros = 0;
-      for( i = 0; i < nvars; i++ )
+      SCIP_Rational* obj = SCIPvarGetObjExact(vars[i]);
+      if( !RatIsZero(obj) )
       {
-         SCIP_Rational* obj = SCIPvarGetObjExact(vars[i]);
-         if( !RatIsZero(obj) )
+         RatSet(bounds[nnonzeros], obj);
+
+         assert(!RatIsAbsInfinity(bounds[nnonzeros]));
+
+         /* retrieve the line in the certificate of the bound */
+         RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
+         certificate->workbound->varindex = SCIPvarGetIndex(vars[i])  - SCIPprobGetNVars(prob);
+         certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
+
+         image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
+
+         if( image != NULL )
+            dualind[nnonzeros] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
+         else
          {
-            RatSet(bounds[nnonzeros], obj);
-
-            assert(!RatIsAbsInfinity(bounds[nnonzeros]));
-
-            /* retrieve the line in the certificate of the bound */
-            RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
-            certificate->workbound->varindex = SCIPvarGetIndex(vars[i])  - SCIPprobGetNVars(prob);
-            certificate->workbound->isupper = RatIsEqual(certificate->workbound->boundval, SCIPvarGetUbLocalExact(vars[i]));
-
-            image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-
-            if( image != NULL )
-               dualind[nnonzeros] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
-            else
-            {
-               SCIPerrorMessage("Bound should be present in certificate \n");
-               SCIPABORT();
-               return SCIP_ERROR;
-            }
-            nnonzeros++;
+            SCIPerrorMessage("Bound should be present in certificate \n");
+            SCIPABORT();
+            return SCIP_ERROR;
          }
+         nnonzeros++;
       }
-      assert(nnonzeros == duallen);
-      /* print pseudo solution into certificate file */
-      SCIPcertificatePrintDualbound(certificate, NULL, pseudoobjval, duallen,
-         dualind, bounds);
-
-      SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
-         pseudoobjval) );
-
-      SCIPsetFreeBufferArray(set, &dualind);
-      RatFreeBufferArray(set->buffer, &bounds, nnonzeros);
-      RatFreeBuffer(set->buffer, &pseudoobjval);
    }
+   assert(nnonzeros == duallen);
+   /* print pseudo solution into certificate file */
+   SCIPcertificatePrintDualbound(certificate, NULL, pseudoobjval, duallen,
+      dualind, bounds);
+
+   SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
+      pseudoobjval) );
+
+   SCIPsetFreeBufferArray(set, &dualind);
+   RatFreeBufferArray(set->buffer, &bounds, nnonzeros);
+   RatFreeBuffer(set->buffer, &pseudoobjval);
+
 
    return SCIP_OKAY;
 }

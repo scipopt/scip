@@ -188,6 +188,8 @@ SCIP_RETCODE solveLpExact(
    int* rstat;
    SCIP_LPALGO lpalgo = SCIP_LPALGO_DUALSIMPLEX;
    SCIP_RETCODE retcode;
+   SCIP_Bool primalfeasible = FALSE;
+   SCIP_Bool dualfeasible = FALSE;
    int niterations = 0;
 
    assert(lp != NULL);
@@ -243,7 +245,10 @@ SCIP_RETCODE solveLpExact(
    if( SCIPlpiexIsOptimal(lpex->lpiex) )
    {
       /* evaluate solution status and set safe bound correctly */
-      SCIP_CALL( SCIPlpexGetSol(lpex, set, stat, NULL, NULL) );
+      SCIP_CALL( SCIPlpexGetSol(lpex, set, stat, &primalfeasible, &dualfeasible) );
+
+      assert(primalfeasible && dualfeasible);
+
       SCIP_CALL( SCIPlpiexGetObjval(lpex->lpiex, lpex->lpobjval) );
       SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
             RatRoundReal(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
@@ -3287,6 +3292,11 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
 
    /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat) )
+      lpex->forceexactsolve = TRUE;
+
+   /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result 
+      @todo exip maybe it makes more sense to just disable objlimit alltogether? */
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
       lpex->forceexactsolve = TRUE;
 
    /* choose which bounding method to use. only needed if automatic is enabled. */
