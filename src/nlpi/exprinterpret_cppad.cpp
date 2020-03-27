@@ -130,15 +130,16 @@ size_t thread_num(void)
    return threadnum;
 }
 
-#ifdef __GNUC__
-__attribute__((constructor))
-#endif
 /** sets up CppAD's datastructures for running in multithreading mode
  *
  *  It must be called once before multithreading is started.
+ *  For GCC-compatible compilers, this will happen automatically.
  */
-static
-char init_parallel(void)
+extern "C" SCIP_EXPORT char SCIPexprintCppADInitParallel(void);
+#ifdef __GNUC__
+__attribute__((constructor))
+#endif
+char SCIPexprintCppADInitParallel(void)
 {
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
@@ -152,7 +153,7 @@ char init_parallel(void)
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
-static char init_parallel_return = init_parallel();
+static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
 
 #endif // NPARASCIP
