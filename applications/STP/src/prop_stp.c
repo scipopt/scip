@@ -1322,6 +1322,7 @@ SCIP_RETCODE fixVarsRedbased(
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool error;
 
+   int todo;
    assert(graph->stp_type != STP_MWCSP);
    assert(graph->stp_type != STP_RMWCSP); // todo implement! especially reduction techniques for rooted
 
@@ -1543,7 +1544,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    callreduce = FALSE;
 
-   if( graph_typeIsSpgLike(graph) || graph_pc_isPcMw(graph) )
+   if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_RMWCSP ) )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
 
