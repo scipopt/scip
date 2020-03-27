@@ -433,7 +433,7 @@ SCIP_RETCODE graph_transRpc(
       }
       else
       {
-         assert(graph->prize[k] == 0.0);
+         assert(EQ(graph->prize[k], 0.0));
       }
    }
 
@@ -656,7 +656,7 @@ SCIP_RETCODE graph_transRmw(
       }
       else if( SCIPisGT(scip, maxweights[i], 0.0) )
       {
-         graph_knot_chg(graph, i, 0);
+         graph_knot_chg(graph, i, STP_TERM);
          npterms++;
       }
    }
@@ -705,6 +705,15 @@ SCIP_RETCODE graph_transRmw(
 
          assert(graph->head[graph->term2edge[k]] == node);
          assert(graph->head[graph->term2edge[node]] == k);
+      }
+      else if( Is_term(graph->term[k]) )
+      {
+         assert(EQ(graph->prize[k], FARAWAY));
+         graph_pc_knotToFixedTermProperty(graph, k);
+      }
+      else
+      {
+         assert(LE(graph->prize[k], 0.0));
       }
    }
 
