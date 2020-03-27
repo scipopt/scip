@@ -138,7 +138,7 @@ void teardown(void)
 }
 
 static
-void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_Real lhs, SCIP_Real rhs)
+void checkCut(SCIP_ROWPREP* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_SIDETYPE sidetype, SCIP_Real side)
 {
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -147,14 +147,14 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int j;
 
    cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars);
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
+   cr_expect_eq(cut->nvars, nvars);
+   cr_expect(SCIPisEQ(scip, cut->sidetype, sidetype));
+   cr_expect(SCIPisEQ(scip, cut->side, side));
 
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
+   for( i = 0; i < cut->nvars; ++i )
    {
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
+      var = cut->vars[i];
+      coef = cut->coefs[i];
       found = FALSE;
 
       for( j = 0; j < nvars; ++j )
@@ -166,8 +166,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
          }
       }
 
-      if( !found )
-         cr_expect(FALSE, "found an unknown variable");
+      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(vars[j]));
    }
 }
 
@@ -420,11 +419,13 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CONS* cons;
    int nbndchgs;
    SCIP_SOL* sol;
-   SCIP_RESULT result;
    SCIP_ROW** cuts;
    SCIP_VAR** cutvars;
    SCIP_Real* cutvals;
    SCIP_VAR* auxvar;
+   SCIP_PTRARRAY* rowpreps;
+   SCIP_Bool addedbranchscores;
+   SCIP_ROWPREP* rowprep;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
@@ -497,25 +498,31 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPsetSolVal(scip, sol, z_1, 0.5);
    SCIPsetSolVal(scip, sol, z_2, 0.5);
 
-   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, TRUE, FALSE, FALSE, &result) );
-   cr_assert(result == SCIP_SEPARATED);
-   cuts = SCIPgetCuts(scip);
-   cr_expect_eq(SCIPgetNCuts(scip), 2, "expecting 2 cuts, got %d\n", SCIPgetNCuts(scip));
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
+
+   SCIP_CALL( nlhdlrEstimatePerspective(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, 4.0,
+         rowpreps, &success, FALSE, &addedbranchscores) );
+   cr_assert(success);
+   cr_assert(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
+   cr_assert(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 1);
 
    /* check the cuts */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    cutvars = (SCIP_VAR*[4]) {z_1, x_2, x_1, auxvar};
    cutvals = (SCIP_Real[4]) {-13.0, 8.0, 4.0, -1.0};
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
 
-   checkCut(cuts[0], cutvars, cutvals, 4, -SCIPinfinity(scip), 3.0);
+   checkCut(rowprep, cutvars, cutvals, 4, SCIP_SIDETYPE_RIGHT, 3.0);
 
    cutvars = (SCIP_VAR*[4]) {x_2, x_1, auxvar, z_2};
    cutvals = (SCIP_Real[4]) {8.0, 4.0, -1.0, -16.0};
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 1);
 
-   checkCut(cuts[1], cutvars, cutvals, 4, -SCIPinfinity(scip), 0.0);
+   checkCut(rowprep, cutvars, cutvals, 4, SCIP_SIDETYPE_RIGHT, 0.0);
 
    /* free memory */
    SCIP_CALL( SCIPclearCuts(scip) );
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIPfreeSol(scip, &sol);
    SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
