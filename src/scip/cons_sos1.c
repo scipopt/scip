@@ -9224,14 +9224,10 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnchgbds;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldnchgbds = *nchgbds; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
+   SCIPdebug( int oldnupgdconss = *nupgdconss; )
    int nremovedvars;
 
    assert( scip != NULL );
@@ -9246,10 +9242,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldnchgbds = *nchgbds; )
-   SCIPdebug( oldndelconss = *ndelconss; )
-   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9339,8 +9331,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }

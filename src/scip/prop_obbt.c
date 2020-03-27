@@ -1568,7 +1568,7 @@ SCIP_RETCODE applySeparation(
 
    for( i = 0; i <= propdata->sepamaxiter; ++i )
    {
-      SCIP_Longint nlpiter;
+      SCIPdebug( SCIP_Longint nlpiter; )
       SCIP_Real oldval;
       SCIP_Bool cutoff;
       SCIP_Bool delayed;
@@ -1592,7 +1592,7 @@ SCIP_RETCODE applySeparation(
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
-      SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
+      SCIPdebug( SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter); )
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
       /* leave if we did not solve the LP to optimality or an error occured */
