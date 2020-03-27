@@ -130,6 +130,9 @@ size_t thread_num(void)
    return threadnum;
 }
 
+#ifdef __GNUC__
+__attribute__((constructor))
+#endif
 /** sets up CppAD's datastructures for running in multithreading mode
  *
  *  It must be called once before multithreading is started.
@@ -144,14 +147,13 @@ char init_parallel(void)
    return 0;
 }
 
+#if !defined(__GNUC__)
 /** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
-#if !defined(_MSC_VER)
-__attribute__ ((unused))
-#endif
 static char init_parallel_return = init_parallel();
+#endif
 
 #endif // NPARASCIP
 
