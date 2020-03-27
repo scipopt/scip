@@ -7748,12 +7748,10 @@ SCIP_RETCODE propagateCons(
       {
          int nfixedvars;
          int naddconss;
-         /* cppcheck-suppress unassignedVariable */
-         int oldnchgbds;
+         SCIPdebug( int oldnchgbds = *nchgbds; )
 
          nfixedvars = 0;
          naddconss = 0;
-         SCIPdebug( oldnchgbds = *nchgbds; )
 
          SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, &naddconss) );
 
@@ -7763,7 +7761,7 @@ SCIP_RETCODE propagateCons(
          }
          else
          {
-            SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes and %d fixings\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars);
+            SCIPdebug( SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes and %d fixings\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars); )
          }
 
          if( nfixedvars > 0 )
@@ -14345,11 +14343,9 @@ SCIP_RETCODE presolStuffing(
       int bestdownlocks = 1;
       int downlocks;
       int uplocks;
-      int oldnfixedvars;
-      int oldnchgbds;
+      SCIPdebug( int oldnfixedvars = *nfixedvars; )
+      SCIPdebug( int oldnchgbds = *nchgbds; )
 
-      SCIPdebug( oldnfixedvars = *nfixedvars; )
-      SCIPdebug( oldnchgbds = *nchgbds; )
       /* loop over all variables to identify the best and second-best ratio */
       for( v = 0; v < nvars; ++v )
       {
@@ -14564,7 +14560,7 @@ SCIP_RETCODE presolStuffing(
                if( tightened )
                   ++(*nfixedvars);
             }
-            SCIPdebugMsg(scip, "### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebug( SCIPdebugMsg(scip, "### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds); )
          }
       }
    }
