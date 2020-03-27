@@ -1170,10 +1170,9 @@ SCIP_RETCODE extensionOperatorSOS1(
 #ifdef SCIP_DEBUG
    for (i = 0; i < nexts; ++i)
    {
-      int vertex = workingset[i];
       for (j = nexts; j < nworkingset; ++j)
       {
-         assert( isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) );
+         assert( isConnectedSOS1(adjacencymatrix, NULL, workingset[i], workingset[j]) );
       }
    }
 #endif
