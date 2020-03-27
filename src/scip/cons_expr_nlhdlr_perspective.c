@@ -45,6 +45,8 @@
 struct SCVarData
 {
    SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
+   SCIP_Real*            lbs1;               /**< lower bounds of the variable when the corresponding bvars[i] = 0 */
+   SCIP_Real*            ubs1;               /**< upper bounds of the variable when the corresponding bvars[i] = 0 */
    SCIP_VAR**            bvars;              /**< the binary variables on which the variable domain depends */
    int                   nbnds;              /**< number of suitable on/off bounds the var has */
    int                   bndssize;           /**< size of the arrays */
@@ -98,15 +100,17 @@ SCIP_RETCODE addSCVarIndicator(
    SCVARDATA*            scvdata,            /**< semicontinuous variable data */
    SCIP_VAR*             indicator,          /**< indicator to be added */
    SCIP_Real             val0,               /**< value of the variable when indicator = 0 */
-   int                   pos                 /**< position where to insert the new indicator */
+   SCIP_Real             lb1,                /**< lower bound of the variable when indicator = 1 */
+   SCIP_Real             ub1                 /**< upper bound of the variable when indicator = 1 */
    )
 {
    int newsize;
    int i;
+   SCIP_Bool found;
+   int pos;
 
    assert(scvdata != NULL);
    assert(indicator != NULL);
-   assert(pos >= 0 && pos <= scvdata->nbnds);
 
    /* ensure sizes */
    if( scvdata->nbnds + 1 > scvdata->bndssize )
@@ -114,19 +118,31 @@ SCIP_RETCODE addSCVarIndicator(
       newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->lbs1, scvdata->bndssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->ubs1, scvdata->bndssize, newsize) );
       scvdata->bndssize = newsize;
    }
    assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+
+   /* find the position where to insert */
+   found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+
+   if( found )
+      return SCIP_OKAY;
 
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
    {
       scvdata->bvars[i] = scvdata->bvars[i-1];
       scvdata->vals0[i] = scvdata->vals0[i-1];
+      scvdata->lbs1[i] = scvdata->lbs1[i-1];
+      scvdata->ubs1[i] = scvdata->ubs1[i-1];
    }
 
    scvdata->bvars[pos] = indicator;
    scvdata->vals0[pos] = val0;
+   scvdata->lbs1[pos] = lb1;
+   scvdata->ubs1[pos] = ub1;
    ++scvdata->nbnds;
 
    return SCIP_OKAY;
@@ -156,7 +172,6 @@ SCIP_RETCODE varIsSemicontinuous(
    SCIP_Bool exists;
    int c;
    int pos;
-   int newsize;
    SCIP_VAR** vlbvars;
    SCIP_VAR** vubvars;
    SCIP_Real* vlbcoefs;
@@ -226,7 +241,7 @@ SCIP_RETCODE varIsSemicontinuous(
       else
          exists = FALSE;
       if( exists )
-      {/*lint --e{644}*/
+      { /*lint --e{644}*/
          SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]); /*lint !e613*/
 
          /* save the upper bounds */
@@ -249,7 +264,7 @@ SCIP_RETCODE varIsSemicontinuous(
             SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
          }
 
-         addSCVarIndicator(scip, scvdata, bvar, lb0, scvdata->nbnds);
+         addSCVarIndicator(scip, scvdata, bvar, lb0, lb1, ub1);
       }
    }
 
@@ -283,19 +298,19 @@ SCIP_RETCODE varIsSemicontinuous(
             SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
          }
 
-         addSCVarIndicator(scip, scvdata, bvar, lb0, scvdata->nbnds);
+         addSCVarIndicator(scip, scvdata, bvar, lb0, lb1, ub1);
       }
    }
 
    if( scvdata != NULL )
    {
-      /* sort bvars and vals0 */
-      SCIPsortPtrReal((void**)scvdata->bvars, scvdata->vals0, SCIPvarComp, scvdata->nbnds);
+#ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "var <%s> has global bounds [%f, %f] and the following on/off bounds:\n", SCIPvarGetName(var), glb, gub);
       for( c = 0; c < scvdata->nbnds; ++c )
       {
          SCIPdebugMsg(scip, " c = %d, bvar <%s>: val0 = %f\n", c, SCIPvarGetName(scvdata->bvars[c]), scvdata->vals0[c]);
       }
+#endif
       SCIP_CALL( SCIPhashmapInsert(scvars, var, scvdata) );
       *result = TRUE;
    }
@@ -792,6 +807,8 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
          if( entry != NULL )
          {
             data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            SCIPfreeBlockMemoryArray(scip, &data->ubs1, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->lbs1, data->bndssize);
             SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
             SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
             SCIPfreeBlockMemory(scip, &data);
@@ -877,8 +894,6 @@ SCIP_RETCODE computeOffValues(
    SCVARDATA* scvdata;
    SCIP_VAR* auxvar;
    SCIP_CONSEXPR_EXPR* curexpr;
-   SCIP_Bool exists;
-   int pos;
 
    assert(expr != NULL);
 
@@ -936,23 +951,14 @@ SCIP_RETCODE computeOffValues(
                SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
                SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->bvars,  exprdata->nindicators) );
                SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->vals0, exprdata->nindicators) );
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->lbs1, exprdata->nindicators) );
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->ubs1, exprdata->nindicators) );
                scvdata->bndssize = exprdata->nindicators;
                SCIP_CALL( SCIPhashmapInsert(hdlrdata->scvars, auxvar, scvdata) );
-
-               /* the indicator will need to be added at position 0 */
-               exists = FALSE;
-               pos = 0;
-            }
-            else
-            {
-               /* has the indicator already been added? */
-               exists = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)exprdata->indicators[i], scvdata->nbnds, &pos);
             }
 
-            if( !exists )
-            {
-               SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr), pos) );
-            }
+            SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr),
+                     SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar)) );
          }
 
          curexpr = SCIPexpriteratorGetNext(it);

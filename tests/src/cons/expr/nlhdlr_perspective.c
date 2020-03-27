@@ -215,6 +215,8 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
       if( entry != NULL )
       {
          scvdata = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->ubs1, scvdata->bndssize);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->lbs1, scvdata->bndssize);
          SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
          SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
          SCIPfreeBlockMemory(scip, &scvdata);
