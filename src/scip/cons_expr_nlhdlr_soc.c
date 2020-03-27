@@ -241,7 +241,7 @@ SCIP_RETCODE createDisaggrVars(
 
 /** helper method to free variables for the cone disaggregation */
 static
-SCIP_RETCODE freeDisaggr(
+SCIP_RETCODE freeDisaggrVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
@@ -259,11 +259,6 @@ SCIP_RETCODE freeDisaggr(
    {
       SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, 0) );
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
-   }
-
-   if( nlhdlrexprdata->disrow != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->disrow) );
    }
 
    /* free memory */
@@ -374,6 +369,9 @@ SCIP_RETCODE createNlhdlrExprData(
       SCIP_CALL( SCIPcaptureVar(scip, vars[i]) );
    }
 
+   (*nlhdlrexprdata)->disrow = NULL;
+   (*nlhdlrexprdata)->disvars = NULL;
+
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
       printNlhdlrExprData(scip, *nlhdlrexprdata);
@@ -395,7 +393,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    assert(*nlhdlrexprdata != NULL);
 
    /* free variables and row for cone disaggregation */
-   SCIP_CALL( freeDisaggr(scip, *nlhdlrexprdata) );
+   SCIP_CALL( freeDisaggrVars(scip, *nlhdlrexprdata) );
 
    /* release LHS variables */
    for( i = 0; i < (*nlhdlrexprdata)->nvars; ++i )
@@ -544,7 +542,6 @@ SCIP_RETCODE generateCutSol(
 
    /* if the denominator is 0 -> the constraint can't be violated */
    assert(!SCIPisZero(scip, denominator));
-   assert(!SCIPisZero(scip, lhsval));
 
    /* compute maximum number of variables in cut */
    ncutvars = nnonzeroes[nterms - 1] + 1 + (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] : 0);
@@ -559,7 +556,7 @@ SCIP_RETCODE generateCutSol(
    /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
 
    /* add terms for v_{disaggidx+1} (disaggidx corresponds to v_{disaggidx+1} in the description) */
-   if( disaggidx < nterms - 1 )
+   if( disaggidx < nterms - 1 && !SCIPisZero(scip, lhsval) )
    {
       for( i = 0; i < nnonzeroes[disaggidx]; ++i )
       {
@@ -960,12 +957,12 @@ void tryFillNlhdlrExprDataQuad(
 
             if( eigvecmatrix[i * nvars + j] > 0.0 )
             {
-               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
+               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
                assert(!SCIPisInfinity(scip, -aux));
             }
             else
             {
-               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
+               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
                assert(!SCIPisInfinity(scip, aux));
             }
 
@@ -2176,7 +2173,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
          {
             SCIP_VAR* argauxvar;
 
-            assert(SCIPgetConsExprExprPowExponent(expr) == 2.0);
+            assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
 
             argauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
             assert(argauxvar != NULL);
@@ -2233,6 +2230,12 @@ static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
+
+   /* free disaggreagation row */
+   if( nlhdlrexprdata->disrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->disrow) );
+   }
 
    return SCIP_OKAY;
 }
