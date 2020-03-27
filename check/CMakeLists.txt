@@ -2,6 +2,7 @@ include(CTest)
 
 #
 # add a custom SCIP check target 'scip_check'
+
 #
 add_custom_target(scip_check
                 COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
@@ -473,7 +474,7 @@ add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
-add_instancetests(instances_MIPEX settings_MIPEX "MIPEX")
+#add_instancetests(instances_MIPEX settings_MIPEX "MIPEX")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
@@ -832,4 +833,39 @@ if (UNIX)
                             #
                             )
 endif (UNIX)
+endif()
+
+if(TEST_MIPEX)
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${settings_MIPEX})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME MIPEX-${setting}-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set certificate filename ${basename}.${setting}.vipr
+                        set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o validatesolve ${optval} ${optval} q"
+                    )
+            set_tests_properties(MIPEX-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+
+            add_test(NAME MIPEX-${setting}-${basename}-vipr
+                    COMMAND viprchk ${basename}.${setting}.vipr)
+            set_tests_properties(MIPEX-${setting}-${basename}-vipr
+                                PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Successfully verified"
+                                FAIL_REGULAR_EXPRESSION "Error"
+                                FAIL_REGULAR_EXPRESSION "Failed")
+        endforeach(setting)
+    endforeach(instance ${instances_MIPEX})
 endif()
