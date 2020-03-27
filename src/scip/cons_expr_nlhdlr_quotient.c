@@ -492,37 +492,46 @@ SCIP_RETCODE assembleRowprep(
    SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
    const char*           name,               /**< name of type of cut */
    SCIP_Bool             overestimate,       /**< whether overestimating */
+   SCIP_VAR**            linvars,            /**< variables in the cut (apart from auxvar) */
+   SCIP_Real*            lincoefs,           /**< coefficients of linvars */
    SCIP_Real             linconst,           /**< constant term */
-   SCIP_Real             lincoef,            /**< coefficient of childvar */
-   SCIP_VAR*             childvar,           /**< child var */
+   int                   nlinvars,           /**< number of variables in the cut (-1 for auxvar) */
    SCIP_VAR*             auxvar              /**< auxiliary variable */
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(rowprep != NULL);
-   assert(childvar != NULL);
+   assert(lincoefs != NULL);
+   assert(linvars != NULL);
    assert(auxvar != NULL);
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%lld", name,
-      SCIPvarGetName(childvar), SCIPgetNLPs(scip));
+
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, name);
 
    SCIPaddRowprepSide(*rowprep, -linconst);
 
-   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, 2) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, nlinvars + 1) );
+
+   for( i = 0; i < nlinvars; ++i )
+   {
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, linvars[i], lincoefs[i]) );
+   }
+
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, childvar, lincoef) );
 
    return SCIP_OKAY;
 }
 
-/** helper method to compute cut in the univariate case */
+/** separates a given point in the univariate case */
 static
 SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_VAR*             x,                  /**< argument variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
    SCIP_Real             c,                  /**< coefficient in denominator */
@@ -542,7 +551,6 @@ SCIP_RETCODE sepaUnivariate(
    SCIP_Bool isinleftpart;
 
    assert(scip != NULL);
-   assert(expr != NULL);
    assert(sol != NULL);
    assert(success != NULL);
    assert(cut != NULL);
@@ -589,8 +597,6 @@ SCIP_RETCODE sepaUnivariate(
       /* compute coefficient and constant of linear estimator */
       lincoef = (ubeval - lbeval) / (bnds.sup - bnds.inf);
       linconst = ubeval - lincoef * bnds.sup;
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_secant", expr);
    }
    else
    {
@@ -603,16 +609,192 @@ SCIP_RETCODE sepaUnivariate(
       /* compute coefficient and constant of linear estimator */
       lincoef = (a * d - b * c) / SQR(d + c * solvarval);
       linconst = soleval - lincoef * solvarval;
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%x_tangent", expr);
    }
 
    /* avoid huge values in the cut */
    if( SCIPisHugeValue(scip, ABS(lincoef)) || SCIPisHugeValue(scip, ABS(linconst)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, linconst,
-         lincoef, x, SCIPgetConsExprExprAuxVar(expr)) );
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
+
+   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, &x, &lincoef, linconst, 1, auxvar) );
+
+   assert(*cut != NULL);
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** separates a given point in the bivariate case */
+static
+SCIP_RETCODE sepaBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
+   SCIP_VAR*             x,                  /**< nominator variable */
+   SCIP_VAR*             y,                  /**< denominator variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
+   SCIP_ROWPREP**        cut,                /**< pointer to store the resulting cut */
+   SCIP_Bool*            success             /**< buffer to store whether separation was successful */
+   )
+{
+   SCIP_VAR* linvars[2];
+   SCIP_Real lincoefs[2];
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real lby;
+   SCIP_Real uby;
+   SCIP_Real solx;
+   SCIP_Real soly;
+   SCIP_Real linconst;
+   SCIP_Bool xisnonnegative;
+   SCIP_Bool yispositive;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(cut != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *cut = NULL;
+
+   lbx = SCIPvarGetLbLocal(x);
+   ubx = SCIPvarGetUbLocal(x);
+   lby = SCIPvarGetLbLocal(y);
+   uby = SCIPvarGetUbLocal(x);
+
+   /* if 0 is in the interior of [lby,uby], no cut is possible */
+   if( SCIPisLT(scip, lby, 0.0) && SCIPisGT(scip, uby, 0.0) )
+      return SCIP_OKAY;
+
+   solx = SCIPgetSolVal(scip, sol, x);
+   soly = SCIPgetSolVal(scip, sol, y);
+
+   yispositive = SCIPisGT(scip, lby, 0.0);
+
+   /* if y is not postive, swap and negate its bounds */
+   if( !yispositive )
+   {
+      SCIP_Real tmp;
+
+      tmp = uby;
+      uby = -lby;
+      lby = -tmp;
+   }
+
+   /* case 1: 0 is not in the interior of [lbx,ubx] */
+   if( SCIPisGE(scip, lbx, 0.0) || SCIPisLE(scip, ubx, 0.0) )
+   {
+      xisnonnegative = SCIPisGE(scip, lbx, 0.0);
+
+      /* if x is not non-negative, swap and negate its bounds */
+      if( !xisnonnegative )
+      {
+         SCIP_Real tmp;
+
+         tmp = ubx;
+         ubx = -lbx;
+         lbx = -tmp;
+      }
+
+      assert(SCIPisGE(scip, lbx, 0.0));
+      assert(SCIPisGT(scip, lby, 0.0));
+
+      /* case 1a: undererstimating or overestimating the negated expression */
+      if( overestimate != (xisnonnegative == yispositive) )
+      {
+         SCIP_Real sqrtlbx;
+         SCIP_Real sqrtubx;
+         SCIP_Real fnom;
+         SCIP_Real fdenom;
+
+         sqrtlbx = SQRT(lbx);
+         sqrtubx = SQRT(ubx);
+
+         assert(!SCIPisZero(scip, soly));
+         assert(!SCIPisZero(scip, sqrtlbx + sqrtubx));
+
+         fnom = solx + sqrtlbx * sqrtubx;
+         fdenom = SQR(sqrtlbx + sqrtubx) * soly;
+
+         assert(!SCIPisZero(scip, fdenom));
+
+         lincoefs[0] = 2.0 * fnom / fdenom;
+         lincoefs[1] = SQRT(fnom) / (fdenom * soly);
+
+         linconst = fnom / fdenom + lincoefs[0] * solx + lincoefs[1] * soly;
+      }
+      /* case 1b: overestimating or underestimating the negated expression */
+      else
+      {
+         SCIP_Real fdenom;
+
+         fdenom = -lby * uby;
+         assert(!SCIPisZero(scip, fdenom));
+
+         if( uby * solx - lbx * soly + lbx * lby <= lby * solx - ubx * soly + ubx * uby )
+         {
+            lincoefs[0] = uby / fdenom;
+            lincoefs[1] = -lbx / fdenom;
+            linconst = lbx * lby / fdenom;
+         }
+         else
+         {
+            lincoefs[0] = lby / fdenom;
+            lincoefs[1] = -ubx / fdenom;
+            linconst = ubx * uby / fdenom;
+         }
+      }
+
+      /* avoid huge values in the cut */
+      if( SCIPisHugeValue(scip, ABS(lincoefs[0])) || SCIPisHugeValue(scip, ABS(lincoefs[1]))
+         || SCIPisHugeValue(scip, ABS(linconst)) )
+      {
+         return SCIP_OKAY;
+      }
+
+      /* we computed underestimators in both cases, so negate if underestimating */
+      if( overestimate )
+      {
+         lincoefs[0] = -lincoefs[0];
+         lincoefs[1] = -lincoefs[1];
+         linconst = -linconst;
+      }
+   }
+   /* case 2: 0 is in the interior of [lbx,ubx] */
+   else
+   {
+      SCIP_Real mccoefy = 0.0;
+      SCIP_Real mccoefaux = 0.0;
+
+      linconst = 0.0;
+
+      SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
+         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
+         &mccoefaux, &mccoefy, &linconst, success);
+
+      /* the mccormick coefficients of auxvar is always lby or uby, so it has to be >=0 */
+      assert(SCIPisGT(scip, mccoefaux, 0.0));
+
+      if( !(*success) )
+         return SCIP_OKAY;
+
+      lincoefs[0] = 1 / mccoefaux;
+      lincoefs[1] = -mccoefy / mccoefaux;
+      linconst = -linconst / mccoefaux;
+   }
+
+   linvars[0] = x;
+   linvars[1] = y;
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
+      SCIPgetNLPs(scip));
+
+   /* build cut */
+   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, linvars, lincoefs, linconst, 2, auxvar) );
 
    assert(*cut != NULL);
    *success = TRUE;
@@ -694,8 +876,11 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of quotient nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   assert(conshdlr != NULL);
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
 
    return SCIP_OKAY;
 }
