@@ -227,6 +227,7 @@ if [ "${TRS_CONFIG}" != "custom" ]; then
   elif [ "${GITBRANCH}" == "consexpr" ]; then
     # running on saturday
     #JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+    echo ""
 
   else # on bugfix
     # running on saturday
