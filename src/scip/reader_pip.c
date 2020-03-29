@@ -1374,11 +1374,11 @@ SCIP_RETCODE readObjective(
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
-            rhs = -constant;
+            rhs = 0.0;
          }
          else
          {
-            lhs = -constant;
+            lhs = 0.0;
             rhs = SCIPinfinity(scip);
          }
 
