@@ -3947,6 +3947,7 @@ SCIP_RETCODE getBinaryProductExprDo(
 {
    SCIP_VAR** vars;
    SCIP_CONS* cons;
+   SCIP_Real* coefs;
    SCIP_VAR* w;
    char name[SCIP_MAXSTRLEN];
    int nchildren;
@@ -3959,7 +3960,22 @@ SCIP_RETCODE getBinaryProductExprDo(
    nchildren = SCIPgetConsExprExprNChildren(prodexpr);
    assert(nchildren >= 2);
 
-   /* create variable */
+   /* memory to store the variables of the variable expressions (+1 for w) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren + 1) );
+
+   /* prepare the names of the variable and the constraints */
+   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+   for( i = 0; i < nchildren; ++i )
+   {
+      vars[i] = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[i]);
+      coefs[i] = 1.0;
+      assert(vars[i] != NULL);
+      (void) strcat(name, "_");
+      (void) strcat(name, SCIPvarGetName(vars[i]));
+   }
+
+   /* create and add variable */
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
@@ -3967,19 +3983,12 @@ SCIP_RETCODE getBinaryProductExprDo(
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
    {
-      SCIP_VAR* vars[3];
-      SCIP_Real coefs[3];
-      SCIP_VAR* x;
-      SCIP_VAR* y;
+      SCIP_VAR* x = vars[0];
+      SCIP_VAR* y = vars[1];
 
-      /* get variables from the product expression */
-      x = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[0]);
       assert(x != NULL);
-      y = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[1]);
       assert(y != NULL);
       assert(x != y);
-
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPvarGetName(x), SCIPvarGetName(y));
 
       /* create and add x - w >= 0 */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
@@ -3994,10 +4003,6 @@ SCIP_RETCODE getBinaryProductExprDo(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
       /* create and add x + y - w <= 1 */
-      vars[0] = x;
-      coefs[0] = 1.0;
-      vars[1] = y;
-      coefs[1] = 1.0;
       vars[2] = w;
       coefs[2] = -1.0;
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPvarGetName(x), SCIPvarGetName(y));
@@ -4011,17 +4016,6 @@ SCIP_RETCODE getBinaryProductExprDo(
    }
    else
    {
-      /* create AND constraint */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
-      for( i = 0; i < nchildren; ++i )
-      {
-         vars[i] = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[i]);
-         assert(vars[i] != NULL);
-         (void) strcat(name, "_");
-         (void) strcat(name, SCIPvarGetName(vars[i]));
-      }
-
       /* create, add, and release AND constraint */
       SCIP_CALL( SCIPcreateConsBasicAnd(scip, &cons, name, w, nchildren, vars) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4031,9 +4025,6 @@ SCIP_RETCODE getBinaryProductExprDo(
       /* update number of added constraints */
       if( naddconss != NULL )
          *naddconss += 1;
-
-      /* free memory */
-      SCIPfreeBufferArray(scip, &vars);
    }
 
    /* create variable expression */
@@ -4041,6 +4032,10 @@ SCIP_RETCODE getBinaryProductExprDo(
 
    /* release created variable */
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
