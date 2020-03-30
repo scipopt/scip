@@ -379,10 +379,6 @@ Interface changes
 
 - new event type SCIP_EVENTTYPE_NODEDELETE to react on nodes that are about to be deleted from the tree
 
-### Command line interface
-
-### Interfaces to external software
-
 ### Changed parameters
 
 - renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../symmetry/recomputerestart"
@@ -579,9 +575,6 @@ Interface changes
   to handle compilation dependencies is to additionally use $(DFLAGS) when compiling the object files (.o) and
   to include the generated .d files in the Makefile, see also "Build system / Makefile" below.
 
-Deleted files
--------------
-
 Unit tests
 ----------
  - new unit test for treemodel.
@@ -687,9 +680,6 @@ Miscellaneous
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
 - changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
 - SCIP_EXPORT is now defined as __attribute__((__visibility__("default"))) if GCC and no SCIP config header is used
-
-Known bugs
-----------
 
 @page RN60 Release notes for SCIP 6.0
 
