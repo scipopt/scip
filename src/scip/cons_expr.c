@@ -4080,17 +4080,15 @@ SCIP_RETCODE getBinaryProductExpr(
    }
    else
    {
-      char name[SCIP_MAXSTRLEN];
-
       SCIPdebugMsg(scip, "  product expression %p has been considered for the first time\n", (void*)prodexpr);
 
       if( nchildren == 2 )
       {
+         SCIP_CLIQUE** xcliques;
          SCIP_VAR* x;
          SCIP_VAR* y;
-         int c;
-         SCIP_CLIQUE** xcliques;
          SCIP_Bool found_clique = FALSE;
+         int c;
 
          /* get variables from the product expression */
          x = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[0]);
