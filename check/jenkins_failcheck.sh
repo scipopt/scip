@@ -219,7 +219,7 @@ while [ $PERM -le $PERMUTE ]; do
   fi
 
   EMAILFROM="adm_timo <timo-admin@zib.de>"
-  EMAILTO="adm_timo <timo-admin@zib.de>"
+  EMAILTO="<timo-admin@zib.de>"
 
   #################
   # FIND evalfile #
