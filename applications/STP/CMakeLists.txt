@@ -48,6 +48,7 @@ add_executable(scipstp
     src/reduce_bnd.c
     src/reduce_da.c
     src/reduce_ext.c
+    src/reduce_pcsimple.c
     src/reduce_simple.c
     src/reduce_util.c
     src/stptest_base.c
@@ -57,7 +58,8 @@ add_executable(scipstp
     src/stptest_heurlocal.c
     src/stptest_heurtm.c
     src/stptest_misc.c
-    src/stptest_reduce.c
+    src/stptest_pcreduce.c
+    src/stptest_reduceutils.c
     src/solpool.c
     src/validate.c
 )

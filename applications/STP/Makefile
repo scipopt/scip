@@ -99,6 +99,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_bnd.o \
 			reduce_da.o \
 			reduce_ext.o \
+			reduce_pcsimple.o \
 			reduce_simple.o \
 			reduce_util.o \
 			solpool.o \
@@ -109,7 +110,8 @@ CMAINOBJ	=	cmain.o \
 			stptest_heurlocal.o \
 			stptest_heurtm.o \
 			stptest_misc.o \
-			stptest_reduce.o \
+			stptest_pcreduce.o \
+			stptest_reduceutils.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o
