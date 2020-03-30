@@ -45,8 +45,8 @@
 struct SCVarData
 {
    SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
-   SCIP_Real*            lbs1;               /**< lower bounds of the variable when the corresponding bvars[i] = 0 */
-   SCIP_Real*            ubs1;               /**< upper bounds of the variable when the corresponding bvars[i] = 0 */
+   SCIP_Real*            lbs1;               /**< lower bounds of the variable when the corresponding bvars[i] = 1 */
+   SCIP_Real*            ubs1;               /**< upper bounds of the variable when the corresponding bvars[i] = 1 */
    SCIP_VAR**            bvars;              /**< the binary variables on which the variable domain depends */
    int                   nbnds;              /**< number of suitable on/off bounds the var has */
    int                   bndssize;           /**< size of the arrays */
