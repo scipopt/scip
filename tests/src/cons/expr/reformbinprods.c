@@ -57,6 +57,9 @@ void setup(void)
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
+
+   /* change reformbinprodsand parameter */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/reformbinprodsand", FALSE) );
 }
 
 static
