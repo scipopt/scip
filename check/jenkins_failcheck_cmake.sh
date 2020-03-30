@@ -270,7 +270,7 @@ while [ "${SEED}" -le "${SEEDSBND}" ]; do
     fi
 
     EMAILFROM="adm_timo <timo-admin@zib.de>"
-    EMAILTO="adm_timo <timo-admin@zib.de>"
+    EMAILTO="<timo-admin@zib.de>"
 
     if [ "${gitlabUserEmail}" != "" ]; then
       EMAILTO="${gitlabUserEmail}"
