@@ -489,7 +489,7 @@ extern void   graph_pc_enforceNonLeafTerm(SCIP*, GRAPH*, int);
 extern SCIP_Bool graph_pc_nonLeafTermIsEnforced(SCIP*, const GRAPH*, int);
 extern void   graph_pc_enforceNode(SCIP*, GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
-extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
+extern void   graph_pc_knotChgPrize(GRAPH*, SCIP_Real, int);
 extern void   graph_pc_2org(SCIP*, GRAPH*);
 extern void   graph_pc_2trans(SCIP*, GRAPH*);
 extern void   graph_pc_2orgcheck(SCIP*, GRAPH*);

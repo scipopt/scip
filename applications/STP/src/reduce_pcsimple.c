@@ -25,6 +25,9 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+//#define SCIP_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,10 +60,66 @@ SCIP_Bool hasAdjacentTerminals(
 #endif
 
 
+/** is there no vertex of higher prize? */
+static
+SCIP_Bool isMaxprizeTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   i,                  /**< the terminal to be checked */
+   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
+   )
+{
+   int t = -1;
+   SCIP_Real max;
+   const int nnodes = graph_get_nNodes(g);
+   const int root = g->source;
+
+   assert(i >= 0 && i < nnodes);
+   assert(Is_term(g->term[i]) && g->prize[i] > 0.0);
+
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      return (i == root);
+   }
+
+   max = *maxprize;
+
+   if( max > g->prize[i] )
+      return FALSE;
+
+   max = -1.0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && k != root )
+      {
+         assert(g->mark[k]);
+
+         if( g->prize[k] > max )
+         {
+            max = g->prize[k];
+            t = k;
+         }
+         else if( t == i && g->prize[k] >= max )
+         {
+            t = k;
+         }
+      }
+   }
+
+   *maxprize = max;
+
+   assert(t >= 0);
+
+   SCIPdebugMessage("maxprize: %f (from %d) \n", g->prize[t], t );
+
+   return (t == i);
+}
+
 
 /** count numbers of chains */
 static inline
-int nChains(
+int mwGetNchains(
    const GRAPH*          g                   /**< graph data structure */
    )
 {
@@ -86,7 +145,7 @@ int nChains(
 
 /** traverse one side of a chain (MWCSP) */
 static
-SCIP_RETCODE traverseChain(
+SCIP_RETCODE mwTraverseChain(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  length,             /**< pointer to store length of chain */
@@ -181,61 +240,388 @@ SCIP_RETCODE traverseChain(
 }
 
 
-/** is there no vertex of higher prize? */
+/** contracts non-positive chains (path of degree 2 vertices) for (R)MWCS */
 static
-SCIP_Bool isMaxprizeTerm(
+SCIP_RETCODE mwContractNonPositiveChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   int                   i,                  /**< the terminal to be checked */
-   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
+   int                   i,                  /**< the start node */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   int t = -1;
-   SCIP_Real max;
-   const int nnodes = graph_get_nNodes(g);
-   const int root = g->source;
+   int f1 = -1;
+   int f2 = -1;
+   int length = 0;
 
-   assert(i >= 0 && i < nnodes);
-   assert(Is_term(g->term[i]) && g->prize[i] > 0.0);
+   const int e1 = g->outbeg[i];
+   const int e2 = g->oeat[e1];
+   const int i1 = g->head[e1];
+   const int i2 = g->head[e2];
 
-   if( g->stp_type == STP_RPCSPG )
+   assert(e1 >= 0);
+   assert(e2 >= 0);
+   assert(i1 != i2);
+   assert(g->mark[i1]);
+   assert(g->mark[i2]);
+   assert(graph_pc_isMw(g));
+
+   SCIP_CALL( mwTraverseChain(scip, g, &length, &f1, i, i1, i2, e1) );
+   SCIP_CALL( mwTraverseChain(scip, g, &length, &f2, i, i2, i1, e2) );
+
+   if( f1 == f2 )
    {
-      return (i == root);
+      while( g->outbeg[i] != EAT_LAST )
+         graph_edge_del(scip, g, g->outbeg[i], TRUE);
+
+      SCIPdebugMessage("deleting chain from vertex %d \n", i);
+
+      *nelims += 1;
+   }
+   else if( length > 0 )
+   {
+      assert(g->grad[i] <= 2);
+
+      for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+         g->cost[e] = -g->prize[i];
+
+      SCIPdebugMessage("deleting chain from vertex %d \n", i);
+
+      *nelims += length;
    }
 
-   max = *maxprize;
+   return SCIP_OKAY;
+}
 
-   if( max > g->prize[i] )
-      return FALSE;
+/** contract 0-weight vertices for the MWCS problem */
+static
+SCIP_RETCODE mwContract0WeightVertices(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
+   int*                  nelims              /**< pointer to number of reductions */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nfixed_local = 0;
 
-   max = -1.0;
+   assert(graph_pc_isMw(g));
 
-   for( int k = 0; k < nnodes; k++ )
+   for( int i = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[k]) && k != root )
-      {
-         assert(g->mark[k]);
+      if( !(g->mark[i]) || !SCIPisZero(scip, g->prize[i]) )
+         continue;
 
-         if( g->prize[k] > max )
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int i2 = g->head[e];
+
+         if( g->mark[i2] && SCIPisGE(scip, g->prize[i2], 0.0) )
          {
-            max = g->prize[k];
-            t = k;
-         }
-         else if( t == i && g->prize[k] >= max )
-         {
-            t = k;
+            if( Is_term(g->term[i2]) )
+            {
+               SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i2, i, i2));
+            }
+            else
+            {
+               SCIP_CALL( graph_pc_contractNodeAncestors(scip, g, i2, i, flipedge_Uint(e)) );
+               SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
+            }
+
+            SCIPdebugMessage("contracted 0->positive %d->%d \n", i, i2);
+
+            assert(g->grad[i] == 0);
+            g->mark[i] = FALSE;
+
+            nfixed_local++;
+            break;
          }
       }
    }
 
-   *maxprize = max;
+   *nelims += nfixed_local;
 
-   assert(t >= 0);
-
-   SCIPdebugMessage("maxprize: %f (from %d) \n", g->prize[t], t );
-
-   return (t == i);
+   return SCIP_OKAY;
 }
+
+
+/** contract positive vertices for the MWCS problem */
+static
+SCIP_RETCODE mwContractTerminalsChainWise(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offset,             /**< pointer to store the offset */
+   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
+   int*                  nelims              /**< pointer to number of reductions */
+   )
+{
+   const int* const gTerm = g->term;
+   const int* const gOutbeg = g->outbeg;
+   const int* const gOeat = g->oeat;
+   const int* const gHead = g->head;
+   const int nnodes = graph_get_nNodes(g);
+   int nfixed_local = 0;
+   SCIP_Bool contracted = TRUE;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
+
+   assert(graph_pc_isMw(g));
+
+   while( contracted )
+   {
+      contracted = FALSE;
+
+      /* contract adjacent positive vertices */
+      for( int i = 0; i < nnodes; i++ )
+      {
+         int i1 = -1;
+         int grad;
+         SCIP_Bool hit;
+
+         if( !Is_term(gTerm[i]) || !(g->mark[i]) )
+         {
+            assert(LE(g->prize[i], 0.0) || graph_pc_knotIsDummyTerm(g, i));
+            continue;
+         }
+
+         if( isRooted && graph_pc_knotIsFixedTerm(g, i) )
+            continue;
+
+         grad = g->grad[i];
+         hit = FALSE;
+
+         for( int e = gOutbeg[i]; e >= 0; e = gOeat[e] )
+         {
+            const int head = gHead[e];
+
+            if( Is_term(gTerm[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+            {
+               assert(g->mark[head]);
+               assert(head != g->source);
+
+               if( (g->grad[head] <= grad) )
+               {
+                  grad = g->grad[head];
+                  i1 = head;
+               }
+               else if( head < i )
+               {
+                  hit = TRUE;
+               }
+            }
+         }
+
+         while( i1 >= 0 )
+         {
+            int i2 = -1;
+
+            assert(g->mark[i1]);
+            assert(g->grad[i1] > 0);
+            assert(Is_term(gTerm[i1]));
+
+            grad = g->grad[i];
+            hit = FALSE;
+            for( int e = gOutbeg[i1]; e >= 0; e = gOeat[e] )
+            {
+               const int head = gHead[e];
+               if( Is_term(gTerm[head]) && head != i && !graph_pc_knotIsFixedTerm(g, head) )
+               {
+                  assert(g->mark[head]);
+                  assert(head != g->source);
+
+                  if( (g->grad[head] <= grad) )
+                  {
+                     i2 = head;
+                     grad = g->grad[head];
+                  }
+                  else if( head < i )
+                  {
+                     hit = TRUE;
+                  }
+               }
+            }
+
+            if( isRooted && graph_pc_knotIsFixedTerm(g, i) )
+            {
+               assert(!graph_pc_knotIsFixedTerm(g, i1));
+               *offset += g->prize[i1];
+            }
+
+            SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i));
+
+            SCIPdebugMessage("contracted positive->positive %d->%d \n", i1, i);
+
+            assert(g->grad[i1] == 0);
+            g->mark[i1] = FALSE;
+            i1 = i2;
+
+            nfixed_local++;
+         }
+         if( hit )
+            contracted = TRUE;
+      }
+   }
+
+   *nelims += nfixed_local;
+
+   return SCIP_OKAY;
+}
+
+
+/** contract positive vertices for the MWCS problem */
+static
+SCIP_RETCODE mwContractTerminalsSimple(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offset,             /**< pointer to store the offset */
+   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
+   int*                  nelims              /**< pointer to number of reductions */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nfixed_local = 0;
+   SCIP_Bool contracted = TRUE;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
+
+   /* contract adjacent positive vertices */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int i1;
+
+      if( !(g->mark[i]) || !Is_term(g->term[i]) )
+         continue;
+
+      i1 = i;
+
+      do
+      {
+         assert(g->mark[i1]);
+         assert(g->grad[i1] > 0 || (i1 == g->source) );
+         assert(Is_term(g->term[i1]));
+
+         contracted = FALSE;
+
+         for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int i2 = g->head[e];
+            if( g->mark[i2] && Is_term(g->term[i2]) && i2 != g->source )
+            {
+               if( isRooted && graph_pc_knotIsFixedTerm(g, i1) && !graph_pc_knotIsFixedTerm(g, i2) )
+               {
+                  *offset += g->prize[i2];
+               }
+
+               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i2, i1) );
+
+               SCIPdebugMessage("contracted simple positive->positive %d->%d \n", i2, i1);
+
+               assert(g->grad[i2] == 0);
+               g->mark[i2] = FALSE;
+               nfixed_local++;
+               contracted = TRUE;
+               break;
+            }
+         }
+      }
+      while( contracted );
+   }
+
+   *nelims += nfixed_local;
+
+   return SCIP_OKAY;
+}
+
+
+/** try to eliminate a terminal of degree one */
+static
+SCIP_RETCODE mwReduceTermDeg1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offset,             /**< pointer to store the offset */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int*                  nelims,             /**< pointer storing number of eliminated edges */
+   int                   i,                  /**< the terminal to be checked */
+   int                   iout,               /**< outgoing arc */
+   SCIP_Bool*            rerun,              /**< further eliminations possible? */
+   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
+   )
+{
+   assert(scip && g && nelims);
+   assert(Is_term(g->term[i]));
+   assert(g->tail[iout] == i);
+
+   if( isMaxprizeTerm(scip, g, i, maxprize) )
+      return SCIP_OKAY;
+
+   /* can we contract? */
+   if( edgestate == NULL || edgestate[iout] != EDGE_BLOCKED )
+   {
+      const int i1 = g->head[iout];
+#ifndef NDEBUG
+      const SCIP_Real newprize = g->prize[i] + g->prize[i1];
+#endif
+
+      (*rerun) = TRUE;
+      assert(SCIPisGT(scip, g->prize[i], 0.0 ));
+      assert(!Is_term(g->term[i1]));
+
+      if( graph_pc_knotIsFixedTerm(g, i) )
+      {
+         int fixme; // might be wrong!
+         *offset += g->prize[i1];
+      }
+      else
+      {
+         if( SCIPisLE(scip, g->prize[i], -g->prize[i1]) )
+            *offset += g->prize[i];
+         else
+            *offset -= g->prize[i1];
+      }
+
+      SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i, i1, i));
+      assert(g->grad[i1] == 0);
+      assert(EQ(g->prize[i1], 0.0));
+
+      SCIPdebugMessage("degree-1 contraction: %d->%d new weight of %d: %f  \n", i1, i, i, g->prize[i]);
+
+#ifndef NDEBUG
+      assert(EQ(g->prize[i], newprize) || graph_pc_knotIsFixedTerm(g, i));
+
+      for( int e = g->inpbeg[i]; e >= 0; e = g->ieat[e] )
+      {
+         const int tail = g->tail[e];
+         if( g->mark[tail] )
+         {
+            assert(EQ(g->cost[e], MAX(-newprize, 0.0)));
+         }
+      }
+
+      /* we also need to adapt the outgoing arcs because the contraction might have destroyed something  */
+      for( int e = g->outbeg[i]; e >= 0; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         assert((!graph_pc_knotIsDummyTerm(g, head)) == g->mark[head]);
+
+         if( g->mark[head] )
+         {
+            if( !Is_term(g->term[head]) )
+            {
+               assert(SCIPisLE(scip, g->prize[head], 0.0));
+               assert(EQ(g->cost[e], -g->prize[head]));
+            }
+            else
+            {
+               assert(SCIPisGE(scip, g->prize[head], 0.0));
+               assert(EQ(g->cost[e], 0.0));
+            }
+         }
+      }
+#endif
+
+      (*nelims) += 1;
+   }
+   return SCIP_OKAY;
+}
+
 
 #if 1
 /** tries to reduce full graph for a rooted PC problem */
@@ -267,9 +653,9 @@ void rpcTryFullReduce(
 }
 #endif
 
-/** reduces non-terminal of degree 1 for a (rooted) PC problem */
+/** reduces non-terminal of degree 1 for a (rooted) PC/MW problem */
 static
-void pcReduceKnotDeg1(
+void pcmwReduceKnotDeg1(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int                   i,                  /**< index of the terminal */
@@ -284,6 +670,7 @@ void pcReduceKnotDeg1(
    assert(e1 == Edge_anti(g->outbeg[i]));
    assert(g->ieat[e1] == EAT_LAST);
    assert(g->oeat[g->outbeg[i]] == EAT_LAST);
+   assert(SCIPisLE(scip, g->prize[i], 0.0));
 
    graph_edge_del(scip, g, e1, TRUE);
    SCIPdebugMessage("delete non-terminal of degree 1 %d\n ",  i);
@@ -382,33 +769,30 @@ void pcmwReduceTerm0Prize(
 
 /** try to eliminate a terminal of degree one */
 static
-SCIP_RETCODE pcmwReduceTermDeg1(
+SCIP_RETCODE pcReduceTermDeg1(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            offset,             /**< pointer to store the offset */
    int*                  solnode,            /**< solution nodes or NULL */
-   int*                  count,              /**< pointer storing number of eliminated edges */
+   int*                  nelims,             /**< pointer storing number of eliminated edges */
    int                   i,                  /**< the terminal to be checked */
    int                   iout,               /**< outgoing arc */
    SCIP_Bool*            rerun,              /**< further eliminations possible? */
    SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
    )
 {
-   int i1;
-   int degsum;
-
-   assert(scip && g && count);
+   assert(scip && g && nelims && offset);
    assert(Is_term(g->term[i]));
+   assert(g->tail[iout] == i);
 
    if( isMaxprizeTerm(scip, g, i, maxprize) )
       return SCIP_OKAY;
 
-   i1 = g->head[iout];
-
-   if( SCIPisLE(scip, g->prize[i], g->cost[iout]) && g->stp_type != STP_MWCSP )
+   /* can we just delete the terminal? */
+   if( SCIPisLE(scip, g->prize[i], g->cost[iout]) )
    {
-      /* delete terminal */
+      const int i1 = g->head[iout];
 
       assert(!graph_pc_knotIsFixedTerm(g, i));
 
@@ -417,28 +801,18 @@ SCIP_RETCODE pcmwReduceTermDeg1(
 
       SCIPdebugMessage("Delete (degree 1) terminal %d \n", i);
 
-      (*count) += graph_pc_deleteTerm(scip, g, i, offset);
+      (*nelims) += graph_pc_deleteTerm(scip, g, i, offset);
    }
+   /* cannot be deleted, so contract terminal if not blocked */
    else if( edgestate == NULL || edgestate[iout] != EDGE_BLOCKED )
    {
-      /* contract terminal */
+      const int i1 = g->head[iout];
+      int degsum = g->grad[i] + g->grad[i1];
 
       (*rerun) = TRUE;
       assert(SCIPisGT(scip, g->prize[i], 0.0 ));
 
-      if( g->stp_type == STP_MWCSP )
-      {
-         if( SCIPisLE(scip, g->prize[i], -g->prize[i1]) )
-            *offset += g->prize[i];
-         else
-            *offset -= g->prize[i1];
-      }
-      else
-      {
-         *offset += g->cost[iout];
-      }
-
-      degsum = g->grad[i] + g->grad[i1];
+      *offset += g->cost[iout];
 
       if( Is_term(g->term[i1]) && !graph_pc_termIsNonLeafTerm(g, i1) )
       {
@@ -453,100 +827,7 @@ SCIP_RETCODE pcmwReduceTermDeg1(
 
       assert(degsum >= 1);
 
-      if( g->stp_type == STP_MWCSP )
-      {
-         int e;
-         int t = UNKNOWN;
-         int e2 = UNKNOWN;
-         if( SCIPisLE(scip, g->prize[i], 0.0) )
-         {
-            for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
-            {
-               i1 = g->head[e];
-               if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
-                  t = i1;
-               else if( g->source == i1 )
-                  e2 = e;
-            }
-
-            assert(t != UNKNOWN);
-            assert(e2 != UNKNOWN);
-
-            /* delete artificial terminal */
-            graph_pc_knotToNonTermProperty(g, t);
-            while (g->outbeg[t] != EAT_LAST)
-            {
-               e = g->outbeg[t];
-               g->cost[e] = 0.0;
-               g->cost[flipedge(e)] = 0.0;
-               graph_edge_del(scip, g, e, TRUE);
-               (*count)++;
-            }
-
-            assert(g->grad[t] == 0);
-
-            /* i is not a terminal anymore */
-            graph_pc_knotToNonTermProperty(g, i);
-            graph_edge_del(scip, g, e2, TRUE);
-
-            for (e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
-               if( g->mark[g->tail[e]] )
-                  g->cost[e] = -g->prize[i];
-
-            for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
-            {
-               i1 = g->head[e];
-               if( g->mark[i1] )
-               {
-                  if( !Is_term(g->term[i1]) )
-                  {
-                     g->cost[e] = -g->prize[i1];
-                  }
-                  else
-                  {
-                     g->cost[e] = 0.0;
-                  }
-               }
-            }
-         }
-         else
-         {
-            for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-               if( g->mark[g->tail[e]] )
-                  g->cost[e] = 0.0;
-
-            for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               i1 = g->head[e];
-               if( g->mark[i1] )
-               {
-                  if( !Is_term(g->term[i1]) )
-                  {
-                     assert(SCIPisLE(scip, g->prize[i1], 0.0));
-                     g->cost[e] = -g->prize[i1];
-                  }
-                  else
-                  {
-                     assert(SCIPisGE(scip, g->prize[i1], 0.0));
-                     g->cost[e] = 0.0;
-                  }
-               }
-               else if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
-               {
-                  t = i1;
-               }
-
-            }
-            assert(t != UNKNOWN);
-
-            for (e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e])
-               if( g->tail[e] == g->source )
-                  break;
-            assert(e != EAT_LAST);
-            g->cost[e] = g->prize[i];
-         }
-      }
-      (*count) += degsum;
+      (*nelims) += degsum;
    }
    return SCIP_OKAY;
 }
@@ -558,136 +839,36 @@ SCIP_RETCODE reduce_simple_mw(
    GRAPH*                g,                  /**< graph data structure */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
    SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  count               /**< pointer to number of reductions */
+   int*                  nelims              /**< pointer to number of reductions */
    )
 {
    SCIP_Real maxprize = -1.0;
-   const int nnodes = g->knots;
-   int localcount = 0;
-
+   const int nnodes = graph_get_nNodes(g);
+   int nelims_local = 0;
    SCIP_Bool rerun;
-   SCIP_Bool contracted;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
 
+   assert(scip   != NULL);
    assert(g      != NULL);
    assert(fixed  != NULL);
-   assert(count != NULL);
-   assert(g->stp_type == STP_MWCSP);
+   assert(nelims != NULL);
+   assert(g->stp_type == STP_MWCSP || g->stp_type == STP_RMWCSP);
 
    SCIPdebugMessage("MW degree test: \n");
 
-   contracted = TRUE;
-   while( contracted )
-   {
-      contracted = FALSE;
+   graph_mark(g);
 
-      /* contract adjacent positive vertices */
-      for( int i = 0; i < nnodes; i++ )
-      {
-         int i1 = -1;
-         int grad;
-         SCIP_Bool hit;
+   SCIP_CALL( mwContractTerminalsChainWise(scip, g, fixed, solnode, &nelims_local) );
+   SCIP_CALL( mwContract0WeightVertices(scip, g, solnode, &nelims_local) );
 
-         if( !Is_term(g->term[i]) || !(g->mark[i]) )
-            continue;
-
-         grad = g->grad[i];
-         hit = FALSE;
-
-         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            const int head = g->head[e];
-
-            if( Is_term(g->term[head]) && head != g->source )
-            {
-               assert(g->mark[head]);
-
-               if( (g->grad[head] <= grad) )
-               {
-                  grad = g->grad[head];
-                  i1 = head;
-               }
-               else if( head < i )
-               {
-                  hit = TRUE;
-               }
-            }
-         }
-
-         while( i1 >= 0 )
-         {
-            int i2 = -1;
-
-            assert(g->mark[i1]);
-            assert(g->grad[i1] > 0);
-            assert(Is_term(g->term[i1]));
-
-            grad = g->grad[i];
-            hit = FALSE;
-            for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               const int head = g->head[e];
-               if( Is_term(g->term[head]) && head != i && head != g->source )
-               {
-                  assert(g->mark[head]);
-
-                  if( (g->grad[head] <= grad) )
-                  {
-                     i2 = head;
-                     grad = g->grad[head];
-                  }
-                  else if( head < i )
-                  {
-                     hit = TRUE;
-                  }
-               }
-            }
-
-            SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i));
-
-            localcount++;
-
-            i1 = i2;
-         }
-         if( hit )
-            contracted = TRUE;
-      }
-   }
-
-   /* contract adjacent 0 vertices */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( !(g->mark[i]) || !SCIPisZero(scip, g->prize[i]) )
-         continue;
-
-      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         const int i2 = g->head[e];
-
-         if( g->mark[i2] && SCIPisGE(scip, g->prize[i2], 0.0) )
-         {
-            if( Is_term(g->term[i2]) )
-            {
-               SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i2, i, i2));
-            }
-            else
-            {
-               SCIP_CALL( graph_pc_contractNodeAncestors(scip, g, i2, i, flipedge_Uint(e)) );
-               SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
-            }
-
-            localcount++;
-            break;
-         }
-      }
-   }
-
-   SCIPdebugMessage("chains before: %d \n", nChains(g));
+  // SCIPdebugMessage("chains before: %d \n", mwGetNchains(g));
 
    rerun = TRUE;
 
    /* main loop */
    while( rerun )
    {
+      SCIP_Bool fixedterm;
       rerun = FALSE;
 
       /* main loop for remaining tests */
@@ -702,90 +883,47 @@ SCIP_RETCODE reduce_simple_mw(
          /* non-positive vertex? */
          if( !Is_term(g->term[i]) )
          {
+            assert(LE(g->prize[i], 0.0));
+
             if( g->grad[i] == 1 )
             {
-               const int e1 = g->inpbeg[i];
-               const int i1 = g->tail[e1];
-
-               assert(e1 >= 0);
-               assert(e1 == Edge_anti(g->outbeg[i]));
-               assert(g->ieat[e1] == EAT_LAST);
-               assert(g->oeat[g->outbeg[i]] == EAT_LAST);
-               assert(SCIPisLE(scip, g->prize[i], 0.0));
-
-               graph_edge_del(scip, g, e1, TRUE);
-               SCIPdebugMessage("delete negative vertex of degree 1 (%d)\n ",  i);
-               assert(g->grad[i] == 0);
-
-               if( (i1 < i) && (g->grad[i1] < 3 || (g->grad[i1] == 3 && Is_term(g->term[i1]))) )
-                  rerun = TRUE;
-
-               localcount++;
-               continue;
+               pcmwReduceKnotDeg1(scip, g, i, &rerun);
+               nelims_local++;
             }
-
-            /* contract non-positive chains */
-            if( g->grad[i] == 2 )
+            else if( g->grad[i] == 2 )
             {
-               int f1 = -1;
-               int f2 = -1;
-               int length = 0;
-
-               const int e1 = g->outbeg[i];
-               const int e2 = g->oeat[e1];
-               const int i1 = g->head[e1];
-               const int i2 = g->head[e2];
-
-               assert(e1 >= 0);
-               assert(e2 >= 0);
-               assert(i1 != i2);
-               assert(g->mark[i1]);
-               assert(g->mark[i2]);
-
-               SCIP_CALL( traverseChain(scip, g, &length, &f1, i, i1, i2, e1) );
-               SCIP_CALL( traverseChain(scip, g, &length, &f2, i, i2, i1, e2) );
-
-               if( f1 == f2 )
-               {
-                  while( g->outbeg[i] != EAT_LAST )
-                     graph_edge_del(scip, g, g->outbeg[i], TRUE);
-               }
-               else if( length > 0 )
-               {
-                  assert(g->grad[i] <= 2);
-
-                  for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-                     g->cost[e] = -g->prize[i];
-
-                  localcount += length;
-               }
+               SCIP_CALL( mwContractNonPositiveChain(scip, i, g, &nelims_local) );
             }
             continue;
          }
 
          /* node i is of positive weight (terminal): */
 
+         assert(GE(g->prize[i], 0.0));
+
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) )
          {
             pcmwReduceTerm0Prize(scip, g, i);
-            localcount += 2;
+            nelims_local += 2;
             continue;
          }
 
+         fixedterm = (isRooted && graph_pc_knotIsFixedTerm(g, i));
+
          /* terminal of (real) degree 0? */
-         if( g->grad[i] == 2 )
+         if( graph_pc_realDegree(g, i, fixedterm) == 0 )
          {
             /* if terminal node i is not the one with the highest prize, delete */
             if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
-               SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
+               SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], nelims_local);
 
-               localcount += graph_pc_deleteTerm(scip, g, i, fixed);
+               nelims_local += graph_pc_deleteTerm(scip, g, i, fixed);
             }
          }
          /* terminal of (real) degree 1? */
-         else if( g->grad[i] == 3 )
+         else if( graph_pc_realDegree(g, i, fixedterm) == 1 )
          {
             int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -793,57 +931,24 @@ SCIP_RETCODE reduce_simple_mw(
                   break;
 
             assert(e != EAT_LAST);
-            assert(g->head[e] != g->source);
+            assert(!graph_pc_knotIsDummyTerm(g, g->head[e]));
 
             if( !Is_term(g->term[g->head[e]]) )
             {
-               SCIP_CALL( pcmwReduceTermDeg1(scip, NULL, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
+               SCIP_CALL( mwReduceTermDeg1(scip, NULL, g, fixed, NULL, nelims, i, e, &rerun, &maxprize) );
                continue;
             }
          }
       } /* i = 1 ... nnodes */
    } /* main loop */
 
-   /* contract adjacent positive vertices */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      int i1;
+   SCIP_CALL( mwContractTerminalsSimple(scip, g, fixed, solnode, &nelims_local) );
 
-      if( !(g->mark[i]) || !Is_term(g->term[i]) )
-         continue;
+   (*nelims) += nelims_local;
+   SCIPdebugMessage("MW basic reduction package has done %d eliminations \n", *nelims);
+//   SCIPdebugMessage("chains after: %d \n", mwGetNchains(g));
 
-      i1 = i;
-
-      do
-      {
-         assert(g->mark[i1]);
-         assert(g->grad[i1] > 0);
-         assert(Is_term(g->term[i1]));
-
-         contracted = FALSE;
-
-         for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            const int i2 = g->head[e];
-            if( g->mark[i2] && Is_term(g->term[i2]) )
-            {
-               SCIPdebugMessage("contract tt after (local) main loop %d->%d\n ", i1, i2);
-               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i2, i1) );
-               localcount++;
-               contracted = TRUE;
-               break;
-            }
-         }
-      }
-      while( contracted );
-   }
-
-   (*count) += localcount;
-   SCIPdebugMessage("MW basic reduction package has deleted %d edges\n", *count);
-
-   SCIPdebugMessage("chains after: %d \n", nChains(g));
    assert(!hasAdjacentTerminals(g));
-
    assert(graph_valid(scip, g));
 
    SCIP_CALL( reduceLevel0(scip, g) );
@@ -906,7 +1011,7 @@ SCIP_RETCODE reduce_simple_pc(
 
             if( g->grad[i] == 1 )
             {
-               pcReduceKnotDeg1(scip, g, i, &rerun);
+               pcmwReduceKnotDeg1(scip, g, i, &rerun);
                (*countnew)++;
 
                continue;
@@ -961,7 +1066,7 @@ SCIP_RETCODE reduce_simple_pc(
             assert(e != EAT_LAST);
             assert(g->head[e] != g->source || !isUnrooted);
 
-            SCIP_CALL( pcmwReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
+            SCIP_CALL( pcReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 2 )

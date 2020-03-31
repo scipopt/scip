@@ -763,7 +763,7 @@ void propgraphMarkFixedTermsPcMw(
       {
          if( nodestate[k] == BRANCH_STP_VERTEX_TERM && graph_pc_knotIsPropPotTerm(propgraph, k) )
          {
-            graph_pc_chgPrize(scip, propgraph, BLOCKED_MINOR, k);
+            graph_pc_knotChgPrize(propgraph, BLOCKED_MINOR, k);
             *hasFixedTerms = TRUE;
          }
       }

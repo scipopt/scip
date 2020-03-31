@@ -773,7 +773,6 @@ SCIP_RETCODE reduceMw(
    GNODE** gnodearr;
    SCIP_Real* nodearrreal;
    SCIP_Real* edgearrreal;
-   SCIP_Real* edgearrreal2;
    int* state;
    int* vbase;
    int* nodearrint;
@@ -828,21 +827,18 @@ SCIP_RETCODE reduceMw(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 2) );
       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, extnedges) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, extnedges) );
    }
    else
    {
       nodearrreal = NULL;
       edgearrreal = NULL;
-      edgearrreal2 = NULL;
    }
 
    /* reduction loop */
-   SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, state,
+   SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, state,
          vbase, nodearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
-   SCIPfreeBufferArrayNull(scip, &edgearrreal2);
    SCIPfreeBufferArrayNull(scip, &edgearrreal);
    SCIPfreeBufferArrayNull(scip, &nodearrreal);
    SCIPfreeBufferArray(scip, &path);
@@ -1185,7 +1181,6 @@ SCIP_RETCODE redLoopMw(
    GNODE**               gnodearr,           /**< nodes-sized array  */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
    SCIP_Real*            edgearrreal,        /**< edges-sized array  */
-   SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< voronoi base array  */
    int*                  nodearrint,         /**< nodes-sized array  */
@@ -1237,9 +1232,20 @@ SCIP_RETCODE redLoopMw(
    graph_pc_2org(scip, g);
 
    degelims = 0;
-
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
    assert(graph_pc_term2edgeIsConsistent(scip, g));
+
+   // todo deleteme
+   if( graph_pc_isRootedPcMw(g) )
+   {
+        graph_pc_2trans(scip, g);
+
+        SCIP_CALL( reduceLevel0(scip, g) );
+
+        SCIPfreeRandom(scip, &randnumgen);
+
+        return SCIP_OKAY;
+   }
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
 
@@ -1356,7 +1362,7 @@ SCIP_RETCODE redLoopMw(
 
       if( bred )
       {
-         SCIP_CALL( reduce_boundMw(scip, g, vnoi, path, edgearrreal, nodearrreal, edgearrreal2, fixed, nodearrint, state, vbase, NULL, &bredelims) );
+         SCIP_CALL( reduce_boundMw(scip, g, vnoi, path, edgearrreal, nodearrreal, fixed, nodearrint, state, vbase, NULL, &bredelims) );
 
          if( bredelims <= redbound )
             bred = FALSE;
@@ -2013,7 +2019,7 @@ SCIP_RETCODE reduce(
       {
          SCIP_CALL( reducePc(scip, NULL, graph, offset, minelims, FALSE, FALSE, TRUE) );
       }
-      else if( stp_type == STP_MWCSP )
+      else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
          SCIP_CALL( reduceMw(scip, graph, offset, minelims, FALSE, FALSE) );
       }
@@ -2042,7 +2048,7 @@ SCIP_RETCODE reduce(
       {
          SCIP_CALL( reducePc(scip, NULL, graph, offset, minelims, TRUE, userec, TRUE) );
       }
-      else if( stp_type == STP_MWCSP )
+      else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
          SCIP_CALL( reduceMw(scip, graph, offset, minelims, TRUE, userec) );
       }

@@ -77,6 +77,8 @@ extern void            stptest_graphTearDown(SCIP*, GRAPH*);
 extern SCIP_RETCODE    stptest_graphSetUp(SCIP*, GRAPH*);
 extern SCIP_RETCODE    stptest_graphSetUpPcOrg(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    stptest_graphSetUpPcExtended(SCIP*, GRAPH*, int*, int*);
+extern SCIP_RETCODE    stptest_graphSetUpRmwOrg(SCIP*, GRAPH*, int*, int*);
+extern SCIP_RETCODE    stptest_graphSetUpRmwExtended(SCIP*, GRAPH*, int*, int*);
 
 /* stptest_extreduce.c
  */

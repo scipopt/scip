@@ -119,6 +119,175 @@ SCIP_RETCODE checkSdWalk(
 }
 
 
+/** test simple RMW test */
+static
+SCIP_RETCODE testRmwTerminalContraction(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Real offset = 0.0;
+   const int nnodes_org = 4;
+   const int nedges_org = 10;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 3, 1, 0.0); // 0,1
+   graph_edge_addBi(scip, graph, 3, 2, 0.0); // 2,3
+   graph_edge_addBi(scip, graph, 0, 3, 0.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.0);
+   graph_edge_addBi(scip, graph, 2, 3, 0.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = FARAWAY;
+   graph->prize[1] = -1.0;
+   graph->prize[2] = -5.0;
+   graph->prize[3] = 2.0;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[3] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** test simple RMW test */
+static
+SCIP_RETCODE testRmwTerminalDeg1Contraction1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Real offset = 0.0;
+   const int nnodes_org = 3;
+   const int nedges_org = 4;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.0);
+   graph_edge_addBi(scip, graph, 0, 2, 0.0);
+   graph->source = 2;
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = 1.5;
+   graph->prize[2] = FARAWAY;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
+
+   STPTEST_ASSERT(EQ(offset, 0.5));
+   STPTEST_ASSERT(graph->grad[graph->source] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+/** test simple RMW test */
+static
+SCIP_RETCODE testRmwTerminalDeg1Contraction2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Real offset = 0.0;
+   const int nnodes_org = 3;
+   const int nedges_org = 4;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.0);
+   graph_edge_addBi(scip, graph, 0, 2, 0.0);
+   graph->source = 2;
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = 0.5;
+   graph->prize[2] = FARAWAY;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
+
+   STPTEST_ASSERT(EQ(offset, 0.0));
+   STPTEST_ASSERT(graph->grad[graph->source] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** test simple RMW test */
+static
+SCIP_RETCODE testRmwTerminalDeg1Contraction3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Real offset = 0.0;
+   const int nnodes_org = 3;
+   const int nedges_org = 4;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.0);
+   graph_edge_addBi(scip, graph, 0, 2, 0.0);
+   graph->source = 2;
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = FARAWAY;
+   graph->prize[2] = FARAWAY;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
+
+   STPTEST_ASSERT(EQ(offset, -1.0));
+   STPTEST_ASSERT(graph->grad[graph->source] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 
 static
 SCIP_RETCODE testSdPcKillsEdge1(
@@ -156,7 +325,7 @@ SCIP_RETCODE testSdPcKillsEdge1(
 
    SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
-   assert(nelims == 1);
+   STPTEST_ASSERT(nelims == 1);
    assert(graph == NULL);
 
    return SCIP_OKAY;
@@ -201,7 +370,7 @@ SCIP_RETCODE testSdPcKillsEdge2(
 
    SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
-   assert(nelims == 1);
+   STPTEST_ASSERT(nelims == 1);
 
    assert(graph == NULL);
 
@@ -256,7 +425,7 @@ SCIP_RETCODE testSdPcKillsTwoEdges(
 
    SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
-   assert(nelims == 2);
+   STPTEST_ASSERT(nelims == 2);
 
    assert(graph == NULL);
 
@@ -323,12 +492,20 @@ SCIP_RETCODE stptest_pcreduce(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testRmwTerminalDeg1Contraction3(scip) );
+   SCIP_CALL( testRmwTerminalDeg1Contraction2(scip) );
+   SCIP_CALL( testRmwTerminalDeg1Contraction1(scip) );
+
+
+   SCIP_CALL( testRmwTerminalContraction(scip) );
+
+
    SCIP_CALL( testSdStarPcKillsEdge(scip) );
    SCIP_CALL( testSdPcKillsEdge1(scip) );
    SCIP_CALL( testSdPcKillsEdge2(scip) );
    SCIP_CALL( testSdPcKillsTwoEdges(scip) );
 
-   printf("sdpcmw test: all ok \n");
+   printf("PC/MW reduction test: all ok \n");
 
    return SCIP_OKAY;
 }

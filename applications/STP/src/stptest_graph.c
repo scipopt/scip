@@ -312,6 +312,47 @@ SCIP_RETCODE stptest_graphSetUpPcOrg(
    return SCIP_OKAY;
 }
 
+
+/** sets up graph for RMW */
+SCIP_RETCODE stptest_graphSetUpRmwOrg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   SCIP_CALL( stptest_graphSetUpRmwExtended(scip, graph, nnodes_new, nedges_new) );
+
+   graph_pc_2org(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** sets up graph for RMW */
+SCIP_RETCODE stptest_graphSetUpRmwExtended(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   graph->stp_type = STP_RMWCSP;
+
+   SCIP_CALL( graph_transRmw(scip, graph) );
+
+   stptest_graphSetUp(scip, graph);
+
+   if( nnodes_new )
+      *nnodes_new = graph->knots;
+
+   if( nedges_new )
+      *nedges_new = graph->edges;
+
+   return SCIP_OKAY;
+}
+
+
 /** sets up graph for (undirected) PC */
 SCIP_RETCODE stptest_graphSetUpPcExtended(
    SCIP*                 scip,               /**< SCIP data structure */

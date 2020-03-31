@@ -641,7 +641,7 @@ SCIP_RETCODE graph_transRmw(
       if( SCIPisLT(scip, maxweights[i], 0.0) )
       {
          for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
-            graph->cost[e] -= maxweights[i];
+            graph->cost[e] = -maxweights[i];
       }
       else if( SCIPisGE(scip, maxweights[i], FARAWAY) )
       {

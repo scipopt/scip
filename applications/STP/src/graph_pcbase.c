@@ -127,6 +127,10 @@ void termDeleteExtension(
    assert(g->source == g->tail[e]);
    assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 
+#ifndef NDEBUG
+   g->cost[e] = 0.0;
+#endif
+
    graph_edge_del(scip, g, e, TRUE);
 
    assert(g->inpbeg[dummyterm] == EAT_LAST && g->grad[dummyterm] == 0);
@@ -135,6 +139,9 @@ void termDeleteExtension(
    {
       const int edgeRoot2i = graph_pc_getRoot2PtermEdge(g, i);
 
+#ifndef NDEBUG
+   g->cost[edgeRoot2i] = 0.0;
+#endif
       assert(SCIPisEQ(scip, g->cost[edgeRoot2i], 0.0));
       graph_edge_del(scip, g, edgeRoot2i, TRUE);
    }
@@ -166,6 +173,30 @@ SCIP_Bool isLastTerm(
    }
 
    return FALSE;
+}
+
+
+
+/** changes incident edges after prize of node was changed */
+static inline
+void mwKnotUpdateIncEdges(
+   GRAPH*                g,                  /**< the graph */
+   int                   node                /**< the node */
+   )
+{
+   const SCIP_Real newprize = g->prize[node];
+   const SCIP_Real incost = (newprize > 0.0) ? 0.0 : -newprize;
+
+   assert(!graph_pc_knotIsDummyTerm(g, node));
+
+   for( int e = g->inpbeg[node]; e >= 0; e = g->ieat[e] )
+   {
+      const int tail = g->tail[e];
+      if( !graph_pc_knotIsDummyTerm(g, tail) )
+      {
+         g->cost[e] = incost;
+      }
+   }
 }
 
 
@@ -269,6 +300,9 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
 
    if( isMw )
    {
+      if( Is_term(g->term[term4offset]) && LE(g->prize[term4offset], 0.0) )
+         graph_pc_termToNonTerm(scip, g, t);
+
       return SCIP_OKAY;
    }
 
@@ -877,7 +911,7 @@ void graph_pc_knotTofixedTerm(
 
 
 /** Makes a non-fixed terminal a non-terminal.
- *  Also sets the prize to 0.0! */
+ *  Also sets the prize to 0.0 for (R)PC! */
 void graph_pc_termToNonTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -890,14 +924,19 @@ void graph_pc_termToNonTerm(
    assert(!g->extended);
    assert(Is_anyTerm(g->term[term]));
 
-   if( !graph_pc_termIsNonLeafTerm(g, term) )
+   if( graph_pc_isPc(g) )
+   {
+      if( !graph_pc_termIsNonLeafTerm(g, term) )
+         termDeleteExtension(scip, g, term, FALSE);
+
+      g->prize[term] = 0.0;
+   }
+   else
    {
       termDeleteExtension(scip, g, term, FALSE);
    }
 
    graph_pc_knotToNonTermProperty(g, term);
-
-   g->prize[term] = 0.0;
 
    assert(!Is_anyTerm(g->term[term]));
 }
@@ -1101,6 +1140,38 @@ SCIP_Bool graph_pc_knotIsNonLeafTerm(
       return FALSE;
 
    return graph_pc_termIsNonLeafTerm(g, node);
+}
+
+
+/** changes prize of a node */
+void graph_pc_knotChgPrize(
+   GRAPH*                g,                  /**< the graph */
+   SCIP_Real             newprize,           /**< new prize */
+   int                   node                /**< the node */
+   )
+{
+   const SCIP_Bool isMw = (g->stp_type == STP_MWCSP || g->stp_type == STP_RMWCSP);
+   assert(graph_pc_isPcMw(g));
+   assert(isMw || Is_term(g->term[node]));
+
+   if( Is_term(g->term[node]) )
+   {
+      const int twin = graph_pc_getTwinTerm(g, node);
+      const int root2edge = graph_pc_getRoot2PtermEdge(g, twin);
+
+      assert(GE(newprize, 0.0));
+      assert(graph_pc_knotIsPropPotTerm(g, node));
+      assert(EQ(g->prize[node], g->cost[root2edge]));
+
+      g->cost[root2edge] = newprize;
+   }
+
+   g->prize[node] = newprize;
+
+   if( isMw )
+   {
+      mwKnotUpdateIncEdges(g, node);
+   }
 }
 
 
@@ -1657,7 +1728,8 @@ int graph_pc_realDegree(
    assert(graph_pc_isPcMw(g));
    assert(!g->extended);
    assert(!Is_pseudoTerm(g->term[i]));
-   assert(i != g->source);
+   assert(i != g->source || graph_pc_isRootedPcMw(g));
+   assert(fixedterm == graph_pc_knotIsFixedTerm(g, i));
 
    if( !Is_term(g->term[i]) || fixedterm )
    {
@@ -1670,11 +1742,13 @@ int graph_pc_realDegree(
    else if( isRooted )
    {
       assert(Is_term(g->term[i]));
+
       newgrad = ggrad - 1;
    }
    else
    {
       assert(Is_term(g->term[i]));
+
       newgrad = ggrad - 2;
    }
 
@@ -2195,30 +2269,6 @@ void graph_pc_subtractPrize(
    }
 }
 
-/** change prize of a terminal */
-void graph_pc_chgPrize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< the graph */
-   SCIP_Real             newprize,           /**< new prize */
-   int                   pterm               /**< the terminal */
-   )
-{
-   const int twin = graph_pc_getTwinTerm(g, pterm);
-   const int root2edge = graph_pc_getRoot2PtermEdge(g, twin);
-
-   assert(scip);
-   assert(newprize > 0.0);
-   assert(graph_pc_isPcMw(g));
-   assert(graph_pc_knotIsPropPotTerm(g, pterm));
-   assert(SCIPisEQ(scip, g->prize[pterm], g->cost[root2edge]));
-
-   g->prize[pterm] = newprize;
-   g->cost[root2edge] = newprize;
-
-   assert(g->stp_type == STP_MWCSP  || g->stp_type == STP_RMWCSP || SCIPisGE(scip, g->prize[pterm], 0.0));
-   assert(SCIPisGE(scip, g->prize[pterm], 0.0) || g->stp_type == STP_MWCSP);
-}
-
 
 /** contract ancestors of an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem */
 SCIP_RETCODE graph_pc_contractNodeAncestors(
@@ -2303,6 +2353,12 @@ SCIP_RETCODE graph_pc_contractEdge(
    assert(TERM2EDGE_NOTERM == g->term2edge[s]);
    assert(!Is_anyTerm(g->term[s]));
    assert(SCIPisEQ(scip, g->prize[s], 0.0) || graph_pc_isMw(g));
+
+   if( graph_pc_isMw(g) )
+   {
+      g->prize[s] = 0.0;
+      mwKnotUpdateIncEdges(g, t);
+   }
 
    SCIPdebugMessage("PcMw contraction: %d into %d, saved in %d \n", s, t, term4offset);
 

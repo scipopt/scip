@@ -557,7 +557,6 @@ SCIP_RETCODE reduce_boundMw(
    PATH*                 path,               /**< shortest path data structure (size nnodes) */
    SCIP_Real*            cost,               /**< edge cost array                    */
    SCIP_Real*            radius,             /**< radius array                       */
-   SCIP_Real*            costrev,            /**< reversed edge cost array           */
    SCIP_Real*            offset,             /**< pointer to the offset              */
    int*                  heap,               /**< heap array */
    int*                  state,              /**< array to store state of a node during Voronoi computation*/
@@ -567,6 +566,7 @@ SCIP_RETCODE reduce_boundMw(
    )
 {
    PATH* mst;
+   SCIP_Real* costrev;
    SCIP_Real* prize;
    SCIP_Real  obj;
    SCIP_Real  bound;
@@ -585,7 +585,6 @@ SCIP_RETCODE reduce_boundMw(
    assert(path != NULL);
    assert(cost != NULL);
    assert(radius != NULL);
-   assert(costrev != NULL);
    assert(heap != NULL);
    assert(state != NULL);
    assert(vbase != NULL);
@@ -603,8 +602,9 @@ SCIP_RETCODE reduce_boundMw(
 
    /* not more than two nodes of positive weight? */
    if( nterms <= 2 )
-      /* return */
       return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
    /* initialize cost and costrev array */
    for( e = 0; e < nedges; e++ )
@@ -713,8 +713,8 @@ SCIP_RETCODE reduce_boundMw(
 
    SCIPdebugMessage("nelims (edges) in MWCSP bound reduce: %d,\n", *nelims);
 
-   /* free memory*/
    SCIPfreeBufferArrayNull(scip, &mst);
+   SCIPfreeBufferArray(scip, &costrev);
 
    return SCIP_OKAY;
 }
