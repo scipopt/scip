@@ -221,7 +221,7 @@ SCIP_RETCODE createDisaggrVars(
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
 
       SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[i]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, 1, 0) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    /* create disaggregation variable representing the epigraph of gamma / (v_{n+1}^T x + beta_{n+1}) */
@@ -233,7 +233,7 @@ SCIP_RETCODE createDisaggrVars(
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[ndisvars - 1]) );
 
       SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[ndisvars - 1]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 0) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    return SCIP_OKAY;
@@ -257,7 +257,7 @@ SCIP_RETCODE freeDisaggrVars(
    /* release variables */
    for( i = 0; i < size; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, 0) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
