@@ -930,7 +930,13 @@ SCIP_RETCODE reduce_simple_mw(
                if( g->mark[g->head[e]] )
                   break;
 
-            assert(e != EAT_LAST);
+            if( e == EAT_LAST )
+            {
+               assert(isRooted);
+               assert(i == g->source);
+               continue;
+            }
+
             assert(!graph_pc_knotIsDummyTerm(g, g->head[e]));
 
             if( !Is_term(g->term[g->head[e]]) )
