@@ -29,6 +29,9 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+//#define SCIP_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -538,51 +541,88 @@ void pcBiasCostsDCSR(
 
 
 /** ans subtest */
+static inline
+void ansDeleteVertex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int* RESTRICT         marked,             /**< nodes array */
+   int* RESTRICT         nelims,             /**< pointer to number of reductions */
+   int                   vertex              /**< vertex */
+)
+{
+   assert(vertex >= 0 && vertex < g->knots);
+   assert(!Is_term(g->term[vertex]));
+   assert(!graph_pc_knotIsDummyTerm(g, vertex));
+
+   SCIPdebugMessage("delete node with ANS: %d \n", vertex);
+
+   (*nelims) += g->grad[vertex];
+
+   graph_knot_del(scip, g, vertex, TRUE);
+   g->mark[vertex] = FALSE;
+   marked[vertex] = FALSE;
+}
+
+/** ANS subtest */
 static
 void ansProcessCandidate(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
-   int*                  count,              /**< pointer to number of reductions */
-   SCIP_Real             min,                /**< value to not surpass */
+   int* RESTRICT         marked,             /**< nodes array */
+   int* RESTRICT         nelims,             /**< pointer to number of reductions */
+   SCIP_Real             maxprize,           /**< value to not surpass */
    int                   candvertex          /**< candidate */
 )
 {
-   int e2;
    int bridgeedge = -1;
    unsigned misses = 0;
 
    assert(g->mark[candvertex]);
-   assert(candvertex != g->source);
    assert(!Is_pseudoTerm(g->term[candvertex]));
+   assert(!graph_pc_knotIsDummyTerm(g, candvertex));
+   assert(LE(maxprize, 0.0));
+   assert(!Is_term(g->term[candvertex]));
 
-   for( e2 = g->outbeg[candvertex]; e2 != EAT_LAST; e2 = g->oeat[e2] )
+   for( int e2 = g->outbeg[candvertex]; e2 >= 0; e2 = g->oeat[e2] )
    {
       if( !marked[g->head[e2]] )
       {
          misses++;
+
          if( misses >= 2 )
             break;
+
          bridgeedge = e2;
       }
    }
 
    /* neighbors of candvertex subset of those of k? */
-   if( misses == 0 && SCIPisLE(scip, g->prize[candvertex], min) )
+   if( misses == 0 && SCIPisLE(scip, g->prize[candvertex], maxprize) )
    {
-      (*count) += g->grad[candvertex];
-      while( g->outbeg[candvertex] != EAT_LAST )
-         graph_edge_del(scip, g, g->outbeg[candvertex], TRUE);
-
-      g->mark[candvertex] = FALSE;
-      marked[candvertex] = FALSE;
+      ansDeleteVertex(scip, g, marked, nelims, candvertex);
    }
    else if( misses == 1 )
    {
       int e3;
       const int neighbor = g->head[bridgeedge];
+      SCIP_Real setprize = g->prize[candvertex];
 
-      if( SCIPisGT(scip, g->prize[neighbor] + g->prize[candvertex], min) )
+      if( Is_term(g->term[neighbor]) )
+      {
+         assert(GE(g->prize[neighbor], 0.0));
+         assert(graph_pc_realDegree(g, neighbor, graph_pc_knotIsFixedTerm(g, neighbor)) >= 1);
+
+         /* if the degree is 1, we cannot delete the edge! */
+         if( graph_pc_realDegree(g, neighbor, graph_pc_knotIsFixedTerm(g, neighbor)) == 1 )
+            setprize = FARAWAY;
+      }
+      else
+      {
+         assert(LE(g->prize[neighbor], 0.0));
+         setprize += g->prize[neighbor];
+      }
+
+      if( SCIPisGT(scip, setprize, maxprize) )
          return;
 
       for( e3 = g->outbeg[neighbor]; e3 != EAT_LAST; e3 = g->oeat[e3] )
@@ -591,25 +631,34 @@ void ansProcessCandidate(
          if( !marked[head] )
             break;
       }
+
+      /* is {candvertex, neighbor} dominated? */
       if( e3 == EAT_LAST )
       {
-         // delete both vertices?
-         if( SCIPisLE(scip, g->prize[neighbor], min) && SCIPisLE(scip, g->prize[candvertex], min) )
-         {
-            (*count) += g->grad[candvertex] + g->grad[neighbor] - 1;
-            while( g->outbeg[candvertex] != EAT_LAST )
-               graph_edge_del(scip, g, g->outbeg[candvertex], TRUE);
-            while( g->outbeg[neighbor] != EAT_LAST )
-               graph_edge_del(scip, g, g->outbeg[neighbor], TRUE);
+         const SCIP_Bool candvertexIsSmall = SCIPisLE(scip, g->prize[candvertex], maxprize);
+         const SCIP_Bool neighborIsSmall = SCIPisLE(scip, g->prize[neighbor], maxprize);
 
-            g->mark[candvertex] = FALSE;
-            g->mark[neighbor] = FALSE;
-            marked[candvertex] = FALSE;
-            marked[neighbor] = FALSE;
+         /* delete both vertices? */
+         if( candvertexIsSmall && neighborIsSmall )
+         {
+            SCIPdebugMessage("delete nodes with ANS: %d %d \n", candvertex, neighbor);
+
+            ansDeleteVertex(scip, g, marked, nelims, candvertex);
+            ansDeleteVertex(scip, g, marked, nelims, neighbor);
          }
          else
          {
+            SCIPdebugMessage("delete edge with ANS: %d->%d\n", neighbor, candvertex);
+
             graph_edge_del(scip, g, bridgeedge, TRUE);
+
+            /* now both candvertex and neighbor are dominated */
+
+            if( candvertexIsSmall )
+               ansDeleteVertex(scip, g, marked, nelims, candvertex);
+
+            if( neighborIsSmall )
+               ansDeleteVertex(scip, g, marked, nelims, neighbor);
          }
       }
    }
@@ -5145,23 +5194,23 @@ void reduce_alt_dv(
 #endif
 
 /** adjacent neighbourhood reduction for the MWCSP */
-void reduce_ans(
+SCIP_RETCODE reduce_ans(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
-   int*                  count               /**< pointer to number of reductions */
+   int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   const int nnodes = g->knots;
+   int* marked;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
+   assert(nelims  != NULL);
+   assert(graph_pc_isMw(g));
    assert(graph_valid(scip, g));
 
-   *count = 0;
+   *nelims = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nnodes) );
 
    /* unmark all nodes */
    for( int k = 0; k < nnodes; k++ )
@@ -5175,7 +5224,10 @@ void reduce_ans(
       int neighborcount = 0;
 
       if( !g->mark[k] )
+      {
+         assert(graph_pc_knotIsDummyTerm(g, k) || 0 == g->grad[k]);
          continue;
+      }
 
       /* mark adjacent vertices and k*/
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
@@ -5188,6 +5240,8 @@ void reduce_ans(
       else
          min = 0.0;
 
+      SCIPdebugMessage("check ANS base node %d \n", k);
+
       /* check all neighbors of k */
       e = g->outbeg[k];
       while( e != EAT_LAST && neighborcount++ < STP_RED_ANSMAXNEIGHBORS )
@@ -5197,7 +5251,7 @@ void reduce_ans(
 
          /* valid candidate? */
          if( g->grad[j] <= g->grad[k] && !Is_term(g->term[j]) && g->mark[j] )
-            ansProcessCandidate(scip, g, marked, count, min, j);
+            ansProcessCandidate(scip, g, marked, nelims, min, j);
       }
 
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
@@ -5210,6 +5264,10 @@ void reduce_ans(
    }
 
    assert(graph_valid(scip, g));
+
+   SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
 }
 
 /** advanced adjacent neighbourhood reduction for the MWCSP */

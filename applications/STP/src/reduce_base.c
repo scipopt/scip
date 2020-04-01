@@ -1197,16 +1197,7 @@ SCIP_RETCODE redLoopMw(
    )
 {
    SCIP_Real timelimit;
-   int daelims;
-   int anselims;
-   int nnpelims;
    int degelims;
-   int npvelims;
-   int bredelims;
-   int ansadelims;
-   int ansad2elims;
-   int chain2elims;
-
    STP_Bool da = advanced;
    STP_Bool ans = TRUE;
    STP_Bool nnp = TRUE;
@@ -1251,22 +1242,22 @@ SCIP_RETCODE redLoopMw(
 
    for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
    {
-      daelims = 0;
-      anselims = 0;
-      nnpelims = 0;
+      int daelims = 0;
+      int anselims = 0;
+      int nnpelims = 0;
+      int npvelims = 0;
+      int bredelims = 0;
+      int ansadelims = 0;
+      int ansad2elims = 0;
+      int chain2elims = 0;
       degelims = 0;
-      npvelims = 0;
-      bredelims = 0;
-      ansadelims = 0;
-      ansad2elims = 0;
-      chain2elims = 0;
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
       if( ans || extensive )
       {
-         reduce_ans(scip, g, nodearrint2, &anselims);
+         SCIP_CALL( reduce_ans(scip, g, &anselims) );
 
          if( anselims <= redbound )
             ans = FALSE;
@@ -1283,6 +1274,44 @@ SCIP_RETCODE redLoopMw(
 
          SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
       }
+
+
+#define TESTXXX
+#ifdef TESTXXX
+      if( advanced && g->terms > 2 )
+      {
+         int cnsadvelims = 0;
+         const RPDA paramsda =
+            { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE,
+                  .nodereplacing = TRUE, .pcmw_solbasedda = TRUE,
+                  .pcmw_useMultRoots = (g->terms > STP_RED_MWTERMBOUND),
+                  .pcmw_markroots = tryrmw, .pcmw_fastDa = FALSE };
+
+         SCIP_CALL(reduce_simple_mw(scip, g, solnode, fixed, &degelims));
+
+         SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims,
+                     randnumgen, prizesum));
+
+         if( tryrmw && g->terms > 2 )
+         {
+
+            SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, TRUE) );
+         }
+
+         if( graph_pc_isRootedPcMw(g))
+         {
+            printf("RMW \n\n \n" );
+
+                     SCIP_CALL( reduce_ans(scip, g, &anselims) );
+
+         }
+
+         tryrmw = FALSE;
+         break;
+
+      }
+#endif
+
 
       if( ans || ansad || nnp || npv || extensive )
          SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );

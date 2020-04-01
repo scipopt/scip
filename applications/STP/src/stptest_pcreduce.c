@@ -119,6 +119,170 @@ SCIP_RETCODE checkSdWalk(
 }
 
 
+/** tests ANS RMW test */
+static
+SCIP_RETCODE testRmwAnsDeletesOneNode(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes_org = 5;
+   const int nedges_org = 12;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph->source = 3;
+
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 0.0); // 2,3
+   graph_edge_addBi(scip, graph, 0, 3, 0.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.0);
+   graph_edge_addBi(scip, graph, 1, 3, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = -1.0;
+   graph->prize[2] = -0.5;
+   graph->prize[3] = FARAWAY;
+   graph->prize[4] = 2.0;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_ans(scip, graph, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[1] == 0);
+   STPTEST_ASSERT(graph->grad[0] != 0);
+   STPTEST_ASSERT(graph->grad[2] != 0);
+   STPTEST_ASSERT(graph->grad[3] != 0);
+   STPTEST_ASSERT(graph->grad[4] != 0);
+
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** test ANS RMW test */
+static
+SCIP_RETCODE testRmwAnsDeletesOneEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes_org = 7;
+   const int nedges_org = 20;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph->source = 4;
+
+   graph_knot_chg(graph, 6, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 1, 5, 0.0); // edge to be deleted
+   graph_edge_addBi(scip, graph, 0, 1, 0.0);
+   graph_edge_addBi(scip, graph, 0, 2, 0.0);
+   graph_edge_addBi(scip, graph, 0, 3, 0.0);
+   graph_edge_addBi(scip, graph, 0, 6, 0.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.0);
+   graph_edge_addBi(scip, graph, 1, 3, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
+   graph_edge_addBi(scip, graph, 3, 4, 0.0);
+   graph_edge_addBi(scip, graph, 3, 5, 0.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = -0.6;
+   graph->prize[2] = -0.5;
+   graph->prize[3] = -2.0;
+   graph->prize[4] = FARAWAY;
+   graph->prize[5] = -0.4;
+   graph->prize[6] = 0.4;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_ans(scip, graph, &nelims) );
+
+   STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
+
+   for( int i = 0; i < nnodes_org; i++ )
+      STPTEST_ASSERT(graph->grad[i] != 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** test ANS RMW test */
+static
+SCIP_RETCODE testRmwAnsDeletesTwoNodes(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes_org = 7;
+   const int nedges_org = 20;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph->source = 4;
+
+   graph_knot_chg(graph, 6, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 1, 5, 0.0); // edge to be deleted
+   graph_edge_addBi(scip, graph, 0, 1, 0.0);
+   graph_edge_addBi(scip, graph, 0, 2, 0.0);
+   graph_edge_addBi(scip, graph, 0, 3, 0.0);
+   graph_edge_addBi(scip, graph, 0, 6, 0.0);
+   graph_edge_addBi(scip, graph, 1, 2, 0.0);
+   graph_edge_addBi(scip, graph, 1, 3, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
+   graph_edge_addBi(scip, graph, 3, 4, 0.0);
+   graph_edge_addBi(scip, graph, 3, 5, 0.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = -1.1;
+   graph->prize[2] = -0.5;
+   graph->prize[3] = -2.0;
+   graph->prize[4] = FARAWAY;
+   graph->prize[5] = -1.0;
+   graph->prize[6] = 0.4;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, NULL, NULL) );
+
+   SCIP_CALL( reduce_ans(scip, graph, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[1] == 0);
+   STPTEST_ASSERT(graph->grad[5] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** test simple RMW test */
 static
 SCIP_RETCODE testRmwTerminalContraction(
@@ -197,7 +361,6 @@ SCIP_RETCODE testRmwTerminalDeg1Contraction1(
 
    SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
 
-   STPTEST_ASSERT(EQ(offset, 0.5));
    STPTEST_ASSERT(graph->grad[graph->source] == 0);
 
    stptest_graphTearDown(scip, graph);
@@ -238,7 +401,7 @@ SCIP_RETCODE testRmwTerminalDeg1Contraction2(
 
    SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
 
-   STPTEST_ASSERT(EQ(offset, 0.0));
+   STPTEST_ASSERT(EQ(offset, 0.5));
    STPTEST_ASSERT(graph->grad[graph->source] == 0);
 
    stptest_graphTearDown(scip, graph);
@@ -280,7 +443,7 @@ SCIP_RETCODE testRmwTerminalDeg1Contraction3(
 
    SCIP_CALL( reduce_simple_mw(scip, graph, NULL, &offset, &nelims) );
 
-   STPTEST_ASSERT(EQ(offset, -1.0));
+   STPTEST_ASSERT(EQ(offset, 1.0));
    STPTEST_ASSERT(graph->grad[graph->source] == 0);
 
    stptest_graphTearDown(scip, graph);
@@ -492,11 +655,14 @@ SCIP_RETCODE stptest_pcreduce(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_CALL( testRmwTerminalDeg1Contraction3(scip) );
    SCIP_CALL( testRmwTerminalDeg1Contraction2(scip) );
+
+
+   SCIP_CALL( testRmwAnsDeletesTwoNodes(scip) );
+   SCIP_CALL( testRmwAnsDeletesOneEdge(scip) );
+   SCIP_CALL( testRmwAnsDeletesOneNode(scip) );
+   SCIP_CALL( testRmwTerminalDeg1Contraction3(scip) );
    SCIP_CALL( testRmwTerminalDeg1Contraction1(scip) );
-
-
    SCIP_CALL( testRmwTerminalContraction(scip) );
 
 
