@@ -223,7 +223,7 @@ void RatSetInt(
 SCIP_EXPORT
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
-    char*           desc                /**< the string describing the rational */
+   const char*           desc                /**< the string describing the rational */
    );
 
 /** set a rational to the value of another a real */
@@ -497,11 +497,6 @@ int RatToString(
    int                   strlen              /**< maximal length that can be copied to str */
    );
 
-SCIP_EXPORT
-const char* RatGetString(
-   SCIP_Rational*        r
-   );
-
 /** return the strlen of a rational number */
 SCIP_EXPORT
 SCIP_Longint RatStrlen(
@@ -513,6 +508,17 @@ SCIP_EXPORT
 void RatPrint(
    SCIP_Rational*        r                   /**< the rational to print */
    );
+
+/** printf extension for rationals (does not support all format options yet)*/
+SCIP_EXPORT
+void RatPrintf(const char *format, ...);
+
+/** ratinal extension for the SCIPdebugMsd */
+#ifdef SCIP_DEBUG
+#define RatDebugMessage           printf("[%s:%d] debug: ", __FILE__, __LINE__), RatPrintf
+#else
+#define RatDebugMessage           while( FALSE ) /*lint -e{530}*/ RatPrintf
+#endif
 
 /** print rational to file using message handler */
 SCIP_EXPORT

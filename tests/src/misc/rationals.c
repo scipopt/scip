@@ -103,7 +103,6 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 
    /* set to string rep */
    RatSetReal(r1, 0.1246912);
-   cr_log_info("Test printing 0.1246912 %s", RatGetString(r1));
    cr_log_info("%.17e \n", RatApproxReal(r1));
    cr_assert(RatIsFpRepresentable(r1), "fp number 0.124691234 not fp representable");
 
@@ -373,7 +372,6 @@ Test(rationals, arrays, .description = "tests rational array methods")
 
    RatAdd(r1, r1, r2);
    SCIPrationalarrayGetVal(ratar, 7, r2);
-   cr_log_info("Increased val is %s", RatGetString(r2));
    cr_assert(RatIsEqual(r1, r2));
 
    // test max/minidx

@@ -28,6 +28,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/intervalarith.h"
+#include "scip/set.h"
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
@@ -36,6 +37,7 @@
 #include <ostream>
 
 #ifdef SCIP_WITH_EXACTSOLVE
+#include <boost/format.hpp>
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #include <boost/multiprecision/gmp.hpp>
@@ -57,6 +59,11 @@ struct SCIP_RationalArray
    std::vector<SCIP_Rational> vals;
    int firstidx;
 };
+
+static const char posinf[4] = "inf";
+static const char neginf[5] = "-inf";
+static char stringbuf[SCIP_MAXSTRLEN]; 
+static SCIP_Rational buffer;
 
 //struct SCIP_RationalVector
 //{
@@ -512,7 +519,7 @@ void RatSetInt(
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
-   char*                 desc                /**< the String describing the rational */
+   const char*           desc                /**< the String describing the rational */
    )
 {
    assert(res != NULL);
@@ -1270,24 +1277,6 @@ int RatStrLen(
    return ret;
 }
 
-/* allocates and returns a null-terminated string-representation of the rational
-   warning! have to free this yourself, does not check infinity! only for debugging. */
-const char* RatGetString(
-   SCIP_Rational*        rational           /**< the rational to print */
-   )
-{
-   assert(rational != NULL);
-#ifdef SCIP_WITH_EXACTSOLVE
-#ifdef SCIP_WITH_GMP
-   return mpq_get_str(0, 10, rational->val.backend().data());
-#else
-   return rational->r.str();
-#endif
-#else
-   return NULL;
-#endif
-}
-
 /** return the strlen of a rational number */
 SCIP_Longint RatStrlen(
    SCIP_Rational*        rational           /** rational to consider */
@@ -1330,40 +1319,145 @@ void RatPrint(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      std::cout << rational->val.sign() << "inf" << std::endl;
+      std::cout << rational->val.sign() << "inf";
    else
-      std::cout << rational->val << std::endl;
+      std::cout << rational->val;
 }
+
 
 std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    if( r.isinf )
-      std::cout << r.val.sign() << "inf" << std::endl;
+      os << r.val.sign() << "inf";
    else
-      std::cout << r.val << std::endl;
+      os << r.val;
 }
 
-#if 0
-void RatPrintf(const char *format, ...)
+/* convert va_arg format string into std:string */
+static
+std::string RatString(const char *format, va_list arguments)
 {
-   va_list arguments;
-   va_start(arguments, format);
+   std::ostringstream stream;
+   SCIP_Rational* rat;
+   char* sval;
+   SCIP_Real dval;
+   int ival;
+   char cval;
 
    while( *format != '\0' )
    {
-      if( *fmt != '\%' )
-         std::cout << *fmt;
+      if(*format == '%' && *(format+1) != '%')
+      {
+         switch (*++format)
+         {
+         case 'q':
+            rat = va_arg(arguments, SCIP_Rational*);
+            stream << *rat;
+            break;
+         case 's':
+            for (sval = va_arg(arguments, char *); *sval; sval++)
+               stream << (*sval);
+            break;
+         case 'f':
+            dval = va_arg(arguments, SCIP_Real);
+            stream << boost::format("%f") % dval;
+         case 'g':
+            dval = va_arg(arguments, SCIP_Real);
+            stream << boost::format("%g") % dval;
+         case 'e':
+            dval = va_arg(arguments, SCIP_Real);
+            stream << boost::format("%e") % dval;
+            break;
+         case 'd':
+         case 'i':
+         case 'u':
+            ival = va_arg(arguments, int);
+            stream << ival;
+            break;
+         case 'c':
+            cval = (char) va_arg(arguments, int);
+            stream << cval;
+            break;
+         default:
+            stream << (*format);
+            break;
+         }
+      }
       else
       {
-         *fmt++;
-         if( *fmt == 'R' )
-            std::cout << *va_arg(arguments, SCIP_Rational*);
-         else( )
+         stream << (*format);
       }
-      ++fmt;
+      ++format;
    }
 
+   std::string ret = stream.str();
+   return ret;
 }
-#endif
+
+/* printf extension for rationals (not supporting all format options) */
+void RatPrintf(const char *format, ...)
+{
+   SCIP_Rational* rat;
+   char* sval;
+   SCIP_Real dval;
+   int ival;
+   char cval;
+
+   va_list arguments;
+   va_start(arguments, format);
+   while( *format != '\0' )
+   {
+      if(*format == '%' && *(format+1) != '%')
+      {
+         switch (*++format)
+         {
+         case 'q':
+            rat = va_arg(arguments, SCIP_Rational*);
+            RatPrint(rat);
+            break;
+         case 's':
+            for (sval = va_arg(arguments, char *); *sval; sval++)
+               putchar(*sval);
+            break;
+         case 'f':
+            dval = va_arg(arguments, SCIP_Real);
+            printf("%f", dval);
+            break;
+         case 'g':
+            dval = va_arg(arguments, SCIP_Real);
+            printf("%g", dval);
+            break;
+         case 'e':
+            dval = va_arg(arguments, SCIP_Real);
+            printf("%e", dval);
+            break;
+         case 'd':
+         case 'i':
+            ival = va_arg(arguments, int);
+            printf("%d", ival);
+            break;
+         case 'u':
+            ival = va_arg(arguments, int);
+            printf("%u", ival);
+            break;
+         case 'c':
+            cval = (char) va_arg(arguments, int);
+            printf("%c", cval);
+            break;
+         default:
+            putchar(*format);
+            break;
+         }
+      }
+      else
+      {
+         putchar(*format);
+      }
+      ++format;
+   }
+
+   va_end(arguments);
+}
+
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
 /** @todo exip: we might have to worry about incorrect results when huge coefficients occur */

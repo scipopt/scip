@@ -7112,8 +7112,8 @@ SCIP_RETCODE checkCons(
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
 
-   SCIPdebugMsg(scip, "  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
-      RatApproxReal(activity), RatApproxReal(consdata->lhs), RatApproxReal(consdata->rhs), (void*)consdata->row, checklprows,
+   RatDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
+      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 

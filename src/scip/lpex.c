@@ -27,9 +27,7 @@
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpexFlush().
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 
 #include "lpi/lpi.h"
 #include "lpi/lpiex.h"
@@ -1314,8 +1312,8 @@ SCIP_RETCODE colexAddCoef(
 
    coefChangedExact(row, col, lp);
 
-   SCIPsetDebugMsg(set, "added coefficient %g * <%s> at position %d (%d/%d) to column <%s> (nunlinked=%d)\n",
-      RatApproxReal(val), row->fprow->name, pos, col->nlprows, col->len,
+   RatDebugMessage("added coefficient %q * <%s> at position %d (%d/%d) to column <%s> (nunlinked=%d)\n",
+      val, row->fprow->name, pos, col->nlprows, col->len,
       SCIPvarGetName(col->var), col->nunlinked);
 
    return SCIP_OKAY;
@@ -1534,8 +1532,8 @@ SCIP_RETCODE rowexAddCoef(
 
    coefChangedExact(row, col, lp);
 
-   SCIPsetDebugMsg(set, "added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
-      RatApproxReal(val), SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->fprow->name, row->nunlinked);
+   RatDebugMessage("added coefficient %q * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
+      val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->fprow->name, row->nunlinked);
 
    /* issue row coefficient changed event */
    //SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, 0.0, val) );
@@ -2314,7 +2312,7 @@ SCIP_RETCODE lpexFlushAddRows(
       RatSet(row->flushedlhs, lhs[pos]);
       RatSet(row->flushedrhs, rhs[pos]);
 
-      SCIPsetDebugMsg(set, "flushing added row (SCIP_LPI): %+g <=", RatApproxReal(lhs[pos]));
+      RatDebugMessage("flushing added row (SCIP_LPI): %q <=", lhs[pos]);
       for( i = 0; i < row->nlpcols; ++i )
       {
          assert(row->cols[i] != NULL);
@@ -2323,13 +2321,13 @@ SCIP_RETCODE lpexFlushAddRows(
          {
             assert(lpipos < lp->ncols);
             assert(nnonz < naddcoefs);
-            SCIPsetDebugMsgPrint(set, " %+gx%d(<%s>)", RatApproxReal(row->vals[i]), lpipos+1, SCIPvarGetName(row->cols[i]->fpcol->var));
+            RatDebugMessage(" %q %d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->fpcol->var));
             ind[nnonz] = lpipos;
             RatSet(val[nnonz], row->vals[i]);
             nnonz++;
          }
       }
-      SCIPsetDebugMsgPrint(set, " <= %+g\n", RatApproxReal(rhs[pos]));
+      RatDebugMessage(" <= %q\n", rhs[pos]);
 #ifndef NDEBUG
       for( i = row->nlpcols; i < row->len; ++i )
       {
@@ -2947,7 +2945,7 @@ SCIP_RETCODE SCIPcolexChgObj(
    assert(SCIPvarGetColExact(col->var) == col);
    assert(lp != NULL);
 
-   SCIPsetDebugMsg(set, "changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
+   RatDebugMessage("changing objective value of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    /* only add actual changes */
    if( !RatIsEqual(col->obj, newobj) )
@@ -2994,7 +2992,7 @@ SCIP_RETCODE SCIPcolexChgLb(
    assert(SCIPvarGetColExact(col->var) == col);
    assert(lp != NULL);
 
-   SCIPsetDebugMsg(set, "changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
+   RatDebugMessage("changing lower bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->lb, newlb);
 
    /* only add actual changes */
    if( !RatIsEqual(col->lb, newlb) )
@@ -3043,7 +3041,7 @@ SCIP_RETCODE SCIPcolexChgUb(
    assert(SCIPvarGetColExact(col->var) == col);
    assert(lp != NULL);
 
-   SCIPsetDebugMsg(set, "changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
+   RatDebugMessage("changing upper bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->ub, newub);
 
    /* only add actual changes */
    if( !RatIsEqual(col->ub, newub) )
@@ -3533,13 +3531,10 @@ SCIP_RETCODE SCIPlpexAddCol(
 
    SCIPsetDebugMsg(set, "adding column <%s> to exact LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
-   /* {
-      int i;
-      SCIPsetDebugMsgPrint(set, "  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
-      for( i = 0; i < col->len; ++i )
-         SCIPsetDebugMsgPrint(set, " %+g<%s>", col->vals[i], col->rows[i]->name);
+      RatDebugMessage("(obj: %q) [%q,%q]", col->obj, col->lb, col->ub);
+      for( int i = 0; i < col->len; ++i )
+         RatDebugMessage(" %q<%s>", col->vals[i], col->rows[i]->fprow->name);
       SCIPsetDebugMsgPrint(set, "\n");
-   } */
 #endif
 
    SCIP_CALL( ensureColexsSize(lp, set, lp->ncols+1) );
@@ -3597,12 +3592,12 @@ SCIP_RETCODE SCIPlpexAddRow(
 #ifdef SCIP_DEBUG
    {
       int i;
-      SCIPsetDebugMsgPrint(set, "  %g <=", rowex->fprow->lhs);
-      for( i = 0; i < row->len; ++i )
-         SCIPsetDebugMsgPrint(set, " %+g<%s>", rowex->fprow->vals[i], SCIPvarGetName(rowex->fprow->cols[i]->var));
-      if( !RatIsZero(row->constant) )
-         SCIPsetDebugMsgPrint(set, " %+g", rowex->fprow->constant);
-      SCIPsetDebugMsgPrint(set, " <= %g\n", row->fprow->rhs);
+      RatDebugMessage("  %q <=", rowex->lhs);
+      for( i = 0; i < rowex->len; ++i )
+         RatDebugMessage(" %q<%s>", rowex->vals[i], SCIPvarGetName(rowex->cols[i]->var));
+      if( !RatIsZero(rowex->constant) )
+         RatDebugMessage(" %q", rowex->constant);
+      RatDebugMessage(" <= %q\n", rowex->rhs);
    }
 #endif
 
@@ -5301,7 +5296,7 @@ SCIP_RETCODE SCIPlpexGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, NULL, primsol, dualsol, activity, redcost) );
+   SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, lp->lpobjval, primsol, dualsol, activity, redcost) );
    if( lp->solisbasic )
    {
       SCIP_CALL( SCIPlpiexGetBase(lp->lpiex, cstat, rstat) );
@@ -5347,9 +5342,8 @@ SCIP_RETCODE SCIPlpexGetSol(
          && (RatIsInfinity(lpicols[c]->ub) || RatIsLT(lpicols[c]->primsol, lpicols[c]->ub)) )
          stilldualfeasible = !RatIsNegative(lpicols[c]->redcost);
 
-      SCIPsetDebugMsg(set, " col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
-         SCIPvarGetName(lpicols[c]->var), RatApproxReal(lpicols[c]->lb), RatApproxReal(lpicols[c]->ub),
-         RatApproxReal(lpicols[c]->primsol), RatApproxReal(lpicols[c]->redcost),
+         RatDebugMessage("col <%s> [%q,%q]: primsol=%q, redcost=%q, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
          RatIsGE(lpicols[c]->primsol, lpicols[c]->lb),
          RatIsLE(lpicols[c]->primsol, lpicols[c]->ub),
          primalfeasible != NULL ? stillprimalfeasible : TRUE,
@@ -5401,9 +5395,9 @@ SCIP_RETCODE SCIPlpexGetSol(
             (RatIsInfinity(lpirows[r]->rhs) || RatIsLT(lpirows[r]->activity, lpirows[r]->rhs)) )
          stilldualfeasible = !RatIsNegative(lpirows[r]->dualsol);
 
-      SCIPsetDebugMsg(set, " row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
-         lpirows[r]->fprow->name, RatApproxReal(lpirows[r]->lhs), RatApproxReal(lpirows[r]->rhs), 
-         RatApproxReal(lpirows[r]->constant), RatApproxReal(lpirows[r]->activity), RatApproxReal(lpirows[r]->dualsol),
+      RatDebugMessage("<%s> [%q,%q] + %q: activity=%q, dualsol=%q, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         lpirows[r]->fprow->name, lpirows[r]->lhs, lpirows[r]->rhs,
+         lpirows[r]->constant, lpirows[r]->activity, lpirows[r]->dualsol,
          RatIsGE(lpirows[r]->activity, lpirows[r]->lhs),
          RatIsLE(lpirows[r]->activity, lpirows[r]->rhs),
          primalfeasible != NULL ? stillprimalfeasible : TRUE,
@@ -5441,7 +5435,7 @@ SCIP_RETCODE SCIPlpexGetSol(
       && !(RatIsNegInfinity(primalbound) && RatIsNegInfinity(lp->lpobjval)) )
    {
       stillprimalfeasible = RatIsLE(primalbound, lp->lpobjval);
-      SCIPsetDebugMsg(set, " primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
+      RatDebugMessage(" primalbound=%q, lpbound=%q, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
          RatIsLE(primalbound, lp->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
    }
 
@@ -5453,7 +5447,7 @@ SCIP_RETCODE SCIPlpexGetSol(
       && !(RatIsNegInfinity(dualbound) && RatIsNegInfinity(lp->lpobjval)) )
    {
       stilldualfeasible =  RatIsGE(dualbound, lp->lpobjval);
-      SCIPsetDebugMsg(set, " dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", RatApproxReal(dualbound), RatApproxReal(lp->lpobjval),
+      RatDebugMessage(" dualbound=%q, lpbound=%q, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
          RatIsGE(dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
    }
 
@@ -5505,7 +5499,7 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
    assert(lp->flushed);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-   assert(RisNegInfinity(lp->lpobjval));
+   assert(RisNegInfinity(lp->lpobjval\);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -5857,7 +5851,7 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
    SCIPsetDebugMsg(set, "LP is infeasible:\n");
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->fprow->name, dualfarkas[r]);
+      RatDebugMessage(" row <%s>: dualfarkas=%q\n", lpirows[r]->fprow->name, dualfarkas[r]);
       RatSet(lpirows[r]->dualfarkas, dualfarkas[r]);
       RatSetString(lpirows[r]->dualsol, "inf");
       RatSetReal(lpirows[r]->activity, 0.0);
@@ -5876,9 +5870,9 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
          if( (RatIsPositive(dualfarkas[r]) && RatIsNegInfinity(lpirows[r]->lhs))
             || (RatIsNegative(dualfarkas[r]) && RatIsInfinity(lpirows[r]->rhs)) )
          {
-            SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
-               SCIProwGetName(lpirows[r]->fprow), RatApproxReal(lpirows[r]->lhs), RatApproxReal(lpirows[r]->rhs),
-               RatApproxReal(lpirows[r]->constant), RatApproxReal(dualfarkas[r]));
+               RatDebugMessage("farkas proof is invalid: row <%s>[lhs=%q,rhs=%q,c=%q] has multiplier %q\n",
+               SCIProwGetName(lpirows[r]->fprow), lpirows[r]->lhs, lpirows[r]->rhs,
+               lpirows[r]->constant, dualfarkas[r]);
 
             *valid = FALSE; /*lint !e613*/
 
@@ -5961,7 +5955,7 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
     */
    if( checkfarkas && (RatIsAbsInfinity(farkaslhs) || RatIsGE(maxactivity, farkaslhs)) )
    {
-      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
+      RatDebugMessage("farkas proof is invalid: maxactivity=%q, lhs=%q\n", maxactivity, farkaslhs);
 
       *valid = FALSE; /*lint !e613*/
    }
