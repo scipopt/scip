@@ -22,7 +22,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include <assert.h>
 
 #include "scip/def.h"
@@ -35,6 +34,7 @@
 #include "scip/lp.h"
 #include "scip/relax.h"
 #include "scip/var.h"
+#include "scip/pub_varex.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
@@ -1978,8 +1978,21 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       /* update the child's lower bound */
-      if( set->misc_exactsolve_old )
+      if( set->misc_exactsolve )
+      {
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+         if( newpseudoobjval > SCIPnodeGetLowerbound(node) )
+         {
+            /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
+             * @todo exip could this be done differently somewhere else? */
+            SCIP_Rational* bound;
+            bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
+            RatSetReal(bound, newbound);
+            SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex,
+               node, set, transprob, newpseudoobjval) );
+            RatSetReal(bound, oldbound);
+         }
+      }
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
@@ -5635,13 +5648,14 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPsetDebugMsg(set, " -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), downub, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
 
       if( downchild != NULL )
          *downchild = node;
@@ -5655,6 +5669,11 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPsetDebugMsg(set, " -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), fixval, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, downub) );
+
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
@@ -5667,10 +5686,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
       }
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, downub) );
 
       if( eqchild != NULL )
          *eqchild = node;
@@ -5687,13 +5702,14 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPsetDebugMsg(set, " -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
+
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       if( upchild != NULL )
          *upchild = node;

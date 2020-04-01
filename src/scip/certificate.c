@@ -1419,8 +1419,9 @@ SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
    assert(certificate != NULL);
    assert(prob != NULL);
    assert(set != NULL);
-   
-   if( !SCIPcertificateIsActive(certificate) )
+
+   /* only print if not -infinity and certificate is active */
+   if( !SCIPcertificateIsActive(certificate) || SCIPsetIsInfinity(set, -psval) )
       return SCIP_OKAY;
 
    vars = SCIPprobGetVars(prob);
