@@ -1302,14 +1302,6 @@ SCIP_RETCODE readObjective(
 
       nmonomials = SCIPexprGetNMonomials(expr);
 
-      if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
-      {
-         SCIP_VAR* objconst;
-         SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, SCIPexprGetPolynomialConstant(expr), SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(scip, objconst) );
-         SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
-      }
-
       assert(degree >= 0);
       if( degree == 1 )
       {
@@ -1319,6 +1311,14 @@ SCIP_RETCODE readObjective(
 
          assert(SCIPexprtreeGetVars(exprtree) != NULL);
          assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
+
+         if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
+         {
+            SCIP_VAR* objconst;
+            SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, SCIPexprGetPolynomialConstant(expr), SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPaddVar(scip, objconst) );
+            SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
+         }
 
          monomials  = SCIPexprGetMonomials(expr);
 
@@ -1374,11 +1374,11 @@ SCIP_RETCODE readObjective(
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
-            rhs = 0.0;
+            rhs = -constant;
          }
          else
          {
-            lhs = 0.0;
+            lhs = -constant;
             rhs = SCIPinfinity(scip);
          }
 
@@ -1420,11 +1420,11 @@ SCIP_RETCODE readObjective(
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
-            rhs = 0.0;
+            rhs = -SCIPexprGetPolynomialConstant(expr);
          }
          else
          {
-            lhs = 0.0;
+            lhs = -SCIPexprGetPolynomialConstant(expr);
             rhs = SCIPinfinity(scip);
          }
 
