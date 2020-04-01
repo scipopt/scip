@@ -439,12 +439,6 @@ SCIP_RETCODE mwContractTerminalsChainWise(
                }
             }
 
-            if( isRooted && graph_pc_knotIsFixedTerm(g, i) )
-            {
-               assert(!graph_pc_knotIsFixedTerm(g, i1));
-               *offset += g->prize[i1];
-            }
-
             SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i));
 
             SCIPdebugMessage("contracted positive->positive %d->%d \n", i1, i);
@@ -479,7 +473,6 @@ SCIP_RETCODE mwContractTerminalsSimple(
    const int nnodes = graph_get_nNodes(g);
    int nfixed_local = 0;
    SCIP_Bool contracted = TRUE;
-   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
 
    /* contract adjacent positive vertices */
    for( int i = 0; i < nnodes; i++ )
@@ -504,11 +497,6 @@ SCIP_RETCODE mwContractTerminalsSimple(
             const int i2 = g->head[e];
             if( g->mark[i2] && Is_term(g->term[i2]) && i2 != g->source )
             {
-               if( isRooted && graph_pc_knotIsFixedTerm(g, i1) && !graph_pc_knotIsFixedTerm(g, i2) )
-               {
-                  *offset += g->prize[i2];
-               }
-
                SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i2, i1) );
 
                SCIPdebugMessage("contracted simple positive->positive %d->%d \n", i2, i1);
