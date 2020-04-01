@@ -619,8 +619,10 @@ SCIP_RETCODE sepaUnivariate(
 
    SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, &x, &lincoef, linconst, 1, auxvar) );
 
-   assert(*cut != NULL);
+   assert(cut != NULL);
    *success = TRUE;
+
+   SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    return SCIP_OKAY;
 }
@@ -664,7 +666,7 @@ SCIP_RETCODE sepaBivariate(
    lbx = SCIPvarGetLbLocal(x);
    ubx = SCIPvarGetUbLocal(x);
    lby = SCIPvarGetLbLocal(y);
-   uby = SCIPvarGetUbLocal(x);
+   uby = SCIPvarGetUbLocal(y);
 
    /* if 0 is in the interior of [lby,uby], no cut is possible */
    if( SCIPisLT(scip, lby, 0.0) && SCIPisGT(scip, uby, 0.0) )
@@ -703,7 +705,7 @@ SCIP_RETCODE sepaBivariate(
       assert(SCIPisGE(scip, lbx, 0.0));
       assert(SCIPisGT(scip, lby, 0.0));
 
-      /* case 1a: undererstimating or overestimating the negated expression */
+      /* case 1a: undererstimating the original or overestimating the negated expression */
       if( overestimate != (xisnonnegative == yispositive) )
       {
          SCIP_Real sqrtlbx;
@@ -718,16 +720,16 @@ SCIP_RETCODE sepaBivariate(
          assert(!SCIPisZero(scip, sqrtlbx + sqrtubx));
 
          fnom = solx + sqrtlbx * sqrtubx;
-         fdenom = SQR(sqrtlbx + sqrtubx) * soly;
+         fdenom = (sqrtlbx + sqrtubx);
 
          assert(!SCIPisZero(scip, fdenom));
 
-         lincoefs[0] = 2.0 * fnom / fdenom;
-         lincoefs[1] = SQRT(fnom) / (fdenom * soly);
+         lincoefs[0] = 2.0 * fnom / (SQR(fdenom) * soly);
+         lincoefs[1] = -SQR(fnom / (fdenom * soly));
 
-         linconst = fnom / fdenom + lincoefs[0] * solx + lincoefs[1] * soly;
+         linconst = SQR(fnom) / (SQR(fdenom) * soly) + lincoefs[0] * solx + lincoefs[1] * soly;
       }
-      /* case 1b: overestimating or underestimating the negated expression */
+      /* case 1b: overestimating the original or underestimating the negated expression */
       else
       {
          SCIP_Real fdenom;
@@ -737,15 +739,15 @@ SCIP_RETCODE sepaBivariate(
 
          if( uby * solx - lbx * soly + lbx * lby <= lby * solx - ubx * soly + ubx * uby )
          {
-            lincoefs[0] = uby / fdenom;
+            lincoefs[0] = -lby;
             lincoefs[1] = -lbx / fdenom;
-            linconst = lbx * lby / fdenom;
+            linconst = (lbx * lby) / fdenom;
          }
          else
          {
-            lincoefs[0] = lby / fdenom;
+            lincoefs[0] = -uby;
             lincoefs[1] = -ubx / fdenom;
-            linconst = ubx * uby / fdenom;
+            linconst = (ubx * uby) / fdenom;
          }
       }
 
@@ -756,7 +758,7 @@ SCIP_RETCODE sepaBivariate(
          return SCIP_OKAY;
       }
 
-      /* we computed underestimators in both cases, so negate if underestimating */
+      /* we computed underestimators in both cases, so negate if overestimating */
       if( overestimate )
       {
          lincoefs[0] = -lincoefs[0];
@@ -798,6 +800,8 @@ SCIP_RETCODE sepaBivariate(
 
    assert(*cut != NULL);
    *success = TRUE;
+
+   SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    return SCIP_OKAY;
 }
