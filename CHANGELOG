@@ -1,5 +1,13 @@
 @page RN70 Release notes for SCIP 7.0
 
+@section RN701 SCIP 7.0.1
+*************************
+
+Fixed bugs
+----------
+
+- Fixed handling of constant term in quadratic objective of pip-reader.
+
 @section RN700 SCIP 7.0.0
 *************************
 
