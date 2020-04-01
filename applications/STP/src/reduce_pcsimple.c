@@ -566,8 +566,7 @@ SCIP_RETCODE mwReduceTermDeg1(
 
       if( graph_pc_knotIsFixedTerm(g, i) )
       {
-         int fixme; // might be wrong!
-         *offset += g->prize[i1];
+         *offset -= g->prize[i1];
       }
       else
       {
