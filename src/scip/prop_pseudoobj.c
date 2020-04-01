@@ -3736,7 +3736,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive non-binary variable propagations without a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -3746,7 +3746,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all non-binary variables if we are propagating the root node",
+         "whether to propagate all non-binary variables when we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3761,7 +3761,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxnewvars",
-         "number of variable added after the propgatore is reinitialized?",
+         "number of variables added after the propagator is reinitialized?",
          &propdata->maxnewvars, TRUE, DEFAULT_MAXNEWVARS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
