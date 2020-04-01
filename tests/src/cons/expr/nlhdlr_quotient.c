@@ -775,7 +775,7 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
    cutvars[2] = w;
    cutcoefs[1] = 1.0 / 7.5;
    cutcoefs[2] = -1.5;
-   checkCut(scip, cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.5 / 7.5, 3);
+   checkCut(scip, cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.0 / 5.0, 3);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);

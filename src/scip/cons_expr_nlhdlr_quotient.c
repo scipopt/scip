@@ -485,7 +485,10 @@ SCIP_INTERVAL revpropEval(
    return result;
 }
 
-/** sets up a rowprep from given data */
+/** sets up a rowprep from given data
+ *
+ *  the auxvar is always added with coefficient -1 and the constant is on the lhs/rhs
+ */
 static
 SCIP_RETCODE assembleRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -525,7 +528,24 @@ SCIP_RETCODE assembleRowprep(
    return SCIP_OKAY;
 }
 
-/** separates a given point in the univariate case */
+/** separates a given point in the univariate case (ax + b) / (cx + d) + e
+ *
+ *  Depending on the reference point, the estimator is a tangent or a secant on the graph.
+ *  It depends on whether we are under- or overestimating, whether we are on the left or 
+ *  on the right side of the singularity at -d/c, and whether it is the monotone increasing
+ *  (ab - cd > 0) or decreasing part (ab - cd < 0). Together, there are 8 cases:
+ *
+ *  mon. incr. + overestimate + left hand side  -->  secant
+ *  mon. incr. + overestimate + right hand side -->  tangent
+ *  mon. incr. + understimate + left hand side  -->  tangent
+ *  mon. incr. + understimate + right hand side -->  secant
+ *  mon. decr. + overestimate + left hand side  -->  tangent
+ *  mon. decr. + overestimate + right hand side -->  secant
+ *  mon. decr. + understimate + left hand side  -->  secant
+ *  mon. decr. + understimate + right hand side -->  tangent
+ *
+ * @TODO: check if this formular is correct
+ */
 static
 SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -571,17 +591,7 @@ SCIP_RETCODE sepaUnivariate(
    isinleftpart = (bnds.sup < singularity);
    monincreasing = (a * b - c * d > 0.0);
 
-   /* There are 8 cases, in 4 we need a secant and in the other 4 a tangent:
-    *
-    * mon. incr. + overestimate + left hand side  -->  secant
-    * mon. incr. + overestimate + right hand side -->  tangent
-    * mon. incr. + understimate + left hand side  -->  tangent
-    * mon. incr. + understimate + right hand side -->  secant
-    * mon. decr. + overestimate + left hand side  -->  tangent
-    * mon. decr. + overestimate + right hand side -->  secant
-    * mon. decr. + understimate + left hand side  -->  secant
-    * mon. decr. + understimate + right hand side -->  tangent
-    */
+   /* this encodes the 8 cases explained above */
    if( monincreasing == (overestimate == isinleftpart) )
    {
       SCIP_Real lbeval;
@@ -627,7 +637,26 @@ SCIP_RETCODE sepaUnivariate(
    return SCIP_OKAY;
 }
 
-/** separates a given point in the bivariate case */
+/** separates a given point in the bivariate case x/y <=/>= z (auxvar)
+ *
+ *  There are the following cases for y > 0:
+ *
+ *    1. lbx > 0 or ubx < 0
+ *       a) underestimation: use z >= x/y >= (1/y) * ( (x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)) )
+ *                           and build gradient cut
+ *       b) overestimation:  use z <= (1/lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
+ *                           and build gradient cut
+ *
+ *    2. lbx <=0 and ubx >= 0
+ *          use mccormick for x <=/>= y * z and transform resulting linear inequality
+ *          x <=/>= ay + bz + c to z >=/<= (x - ay - c) / b. The direction of the inequality
+ *          is preserved, since we assume y > 0.
+ *
+ *    If y < 0, swap and negate its bounds and compute the respective opposite estimator (and negate it).
+ *    If 0 is in the interval of y, nothing is possible.
+ *
+ *  @TODO: check if this formula is correct
+ */
 static
 SCIP_RETCODE sepaBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -876,15 +905,36 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 }
 
 
-/** nonlinear handler under/overestimation callback */
+/** nonlinear handler under/overestimation callback
+ *
+ * @TODO: which of the paramters did I not use, but have to be taken into consideration?
+*/
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 { /*lint --e{715}*/
-
    assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+
+   if( nlhdlrexprdata->nomvar == nlhdlrexprdata-> denomvar )
+   {
+      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar, SCIPgetConsExprExprAuxVar(expr),
+            nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef,
+            nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, &rowprep, success) );
+   }
+   else
+   {
+      assert(nlhdlrexprdata->nomcoef == 1.0);
+      assert(nlhdlrexprdata->nomconst == 0.0);
+      assert(nlhdlrexprdata->denomcoef == 1.0);
+      assert(nlhdlrexprdata->denomconst == 0.0);
+
+      SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->nomvar, nlhdlrexprdata->denomvar,
+            SCIPgetConsExprExprAuxVar(expr), overestimate, &rowprep, success) );
+   }
+
+   assert( !(*success) || rowprep != NULL );
 
    return SCIP_OKAY;
 }
