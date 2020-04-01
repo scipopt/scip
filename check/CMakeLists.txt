@@ -111,7 +111,7 @@ set(settings_MIPEX
     "exact-auto"
     "exactlp"
     "projshift"
-    "fpsolve")
+    )
 set(settings_MINLP
     "minlp"
     "undercover1"
@@ -841,6 +841,12 @@ if(TEST_MIPEX)
         #
         # loop over all settings
         #
+
+        add_test(NAME MIPEX-fpsolve-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/fpsolve.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o q"
+                    )
         foreach(setting ${settings_MIPEX})
             #
             # treat the instance as a tuple (list) of two values
