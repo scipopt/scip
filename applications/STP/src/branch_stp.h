@@ -55,6 +55,12 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    );
 
+/** is the branching rule active? */
+SCIP_EXPORT
+SCIP_Bool SCIPStpBranchruleIsActive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 SCIP_EXPORT
 void SCIPStpBranchruleInitNodeState(

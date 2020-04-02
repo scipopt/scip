@@ -1614,7 +1614,10 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    nterms = g->terms;
 #endif
 
-   chgterms = (!atrootnode && (graph_typeIsSpgLike(g) || graph_pc_isPcMw(g)));
+   {
+      const SCIP_Bool graphTypeIsValid = graph_typeIsSpgLike(g) || graph_pc_isPcMw(g);
+      chgterms = (!atrootnode && graphTypeIsValid && SCIPStpBranchruleIsActive(scip));
+   }
 
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 

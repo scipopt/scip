@@ -23,7 +23,7 @@
  *
 */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include "scip/cons_linear.h"
@@ -73,12 +73,16 @@ struct SCIP_BranchruleData
  */
 
 /** check whether branching-rule is compatible with given problem type */
-static
+static inline
 SCIP_Bool isProbCompatible(
-   int                   probtype            /**< the problem type */
+   const GRAPH*          graph               /**< graph */
 )
 {
-   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_RPCSPG || probtype == STP_PCSPG);
+   int todo; // activate
+   if( graph_pc_isMw(graph))
+      return FALSE;
+
+   return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));
 }
 
 
@@ -683,8 +687,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
-   if( !isProbCompatible(g->stp_type) )
+   if( !isProbCompatible(g) )
+   {
+      branchruledata->active = FALSE;
+
+#ifndef WITH_UG
+      printf("\n ---branching-rule data cannot be used for this problem class!--- \n \n");
+#endif
+
       return SCIP_OKAY;
+   }
 
    branchruletype = branchruledata->branchtype;
 
@@ -759,9 +771,16 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
-   if( !isProbCompatible(g->stp_type) )
-      return SCIP_OKAY;
+   if( !isProbCompatible(g) )
+   {
+      branchruledata->active = FALSE;
 
+#ifndef WITH_UG
+      printf("\n ---branching-rule data cannot be used for this problem class!--- \n \n");
+#endif
+
+      return SCIP_OKAY;
+   }
    branchvertex = UNKNOWN;
 
    if( branchruledata->branchtype != BRANCH_STP_ON_DEGREE )
@@ -924,6 +943,26 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
 
    return SCIP_OKAY;
 }
+
+
+/** is the branching rule active? */
+SCIP_Bool SCIPStpBranchruleIsActive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_BRANCHRULE* branchrule = NULL;
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   return branchruledata->active;
+}
+
 
 /** creates the stp branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleStp(

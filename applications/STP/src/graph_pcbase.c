@@ -574,7 +574,9 @@ SCIP_RETCODE graph_pc_initSubgraph(
 {
    int ksize;
    int esize;
+
    assert(scip && subgraph);
+   assert(graph_pc_isPcMw(subgraph));
 
    ksize = subgraph->ksize;
    esize = subgraph->esize;
@@ -586,7 +588,11 @@ SCIP_RETCODE graph_pc_initSubgraph(
    SCIP_CALL( graph_pc_initTerm2Edge(scip, subgraph, ksize) );
 
    assert(!subgraph->cost_org_pc);
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->cost_org_pc), esize) );
+
+   if( graph_pc_isPc(subgraph) )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->cost_org_pc), esize) );
+   }
 
    return SCIP_OKAY;
 }
@@ -603,9 +609,9 @@ SCIP_RETCODE graph_pc_finalizeSubgraph(
       assert(scip);
       assert(subgraph->term2edge && subgraph->prize);
       assert(subgraph->extended);
-      assert(subgraph->cost_org_pc);
       assert(subgraph->source >= 0);
       assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
+      assert((graph_pc_isPc(subgraph)) == (subgraph->cost_org_pc != NULL));
    }
 
    return SCIP_OKAY;
