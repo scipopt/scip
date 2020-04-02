@@ -53,6 +53,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/dbldblarith.h"
 #include <string.h>
 
 #define PROP_NAME              "pseudoobj"
@@ -2307,7 +2308,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    /* depending on the objective contribution we can try to tighten the lower or upper bound of the variable */
    if( objchg > 0.0 )
    {
-      newbd = lb + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is lb + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, lb);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
@@ -2334,7 +2341,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    }
    else
    {
-      newbd = ub + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is ub + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, ub);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
