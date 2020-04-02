@@ -604,6 +604,10 @@ SCIP_RETCODE reduce_boundMw(
    if( nterms <= 2 )
       return SCIP_OKAY;
 
+   /* not promising and does probably no work */
+   if( graph_pc_isRootedPcMw(graph) )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
    /* initialize cost and costrev array */

@@ -566,6 +566,51 @@ void ansDeleteVertex(
    marked[vertex] = FALSE;
 }
 
+/** un-marks */
+static inline
+void ansUnmark(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   basenode,           /**< base node */
+   const int*            neighbarr,          /**< array of neighbors */
+   int                   nNeigbors,          /**< nNeigbors */
+   int* RESTRICT         marked              /**< nodes array */
+)
+{
+   const int* const gHead = g->head;
+   const int* const gOeat = g->oeat;
+
+   assert(neighbarr || nNeigbors == 0);
+
+#ifndef NDEBUG
+   assert(marked[basenode]);
+
+   for( int x = 0; x < nNeigbors; x++ )
+   {
+      const int neighbor = neighbarr[x];
+      assert(neighbor >= 0 && neighbor < g->knots);
+      assert(marked[neighbor]);
+      assert(g->grad[neighbor] > 0);
+   }
+#endif
+
+   for( int e = g->outbeg[basenode]; e >= 0; e = gOeat[e] )
+      marked[gHead[e]] = FALSE;
+
+   for( int l = 0; l < nNeigbors; l++ )
+   {
+      const int neighbor = neighbarr[l];
+
+      for( int e = g->outbeg[neighbor]; e >= 0; e = gOeat[e] )
+         marked[gHead[e]] = FALSE;
+   }
+
+   marked[basenode] = FALSE;
+
+#ifndef NDEBUG
+      for( int k2 = 0; k2 < g->knots; k2++ )
+         assert(!marked[k2]);
+#endif
+}
 
 /** ANS submethod for the case that the candidate vertex has exactly one non-dominated neighbor
  *  and both vertices combined are dominated */
@@ -577,7 +622,7 @@ void ansProcessCandidateWithBridge(
    int* RESTRICT         nelims,             /**< pointer to number of reductions */
    SCIP_Real             maxprize,           /**< value to not surpass */
    int                   candvertex,         /**< candidate */
-   int                   bridgeedge
+   int                   bridgeedge          /**< edge to neighbor */
 )
 {
    /* NOTE: terminals can be leafs in an optimal solution! Thus we need to be careful with terminals. */
@@ -644,7 +689,6 @@ void ansProcessCandidate(
    unsigned misses = 0;
 
    assert(g->mark[candvertex]);
-   assert(!Is_pseudoTerm(g->term[candvertex]));
    assert(!graph_pc_knotIsDummyTerm(g, candvertex));
    assert(LE(maxprize, 0.0));
    assert(!Is_term(g->term[candvertex]));
@@ -665,6 +709,7 @@ void ansProcessCandidate(
    /* neighbors of candvertex subset of those of k? */
    if( misses == 0 && SCIPisLE(scip, g->prize[candvertex], maxprize) )
    {
+      SCIPdebugMessage("candvertex %d is fully dominated \n", candvertex);
       ansDeleteVertex(scip, g, marked, nelims, candvertex);
    }
    else if( misses == 1 )
@@ -5260,16 +5305,12 @@ SCIP_RETCODE reduce_ans(
 
          /* valid candidate? */
          if( g->grad[j] <= g->grad[k] && !Is_term(g->term[j]) && g->mark[j] )
+         {
             ansProcessCandidate(scip, g, marked, nelims, min, j);
+         }
       }
 
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         marked[g->head[e]] = FALSE;
-
-      marked[k] = FALSE;
-
-      for( int j = 0; j < nnodes; j++ )
-         assert(marked[j] == FALSE);
+      ansUnmark(g, k, NULL, 0, marked);
    }
 
    assert(graph_valid(scip, g));
@@ -5305,7 +5346,7 @@ SCIP_RETCODE reduce_ansAdv(
    for( int k = 0; k < nnodes; k++ )
       marked[k] = FALSE;
 
-   /* check neighborhood of all nodes */
+   /* check neighborhood of all non-terminals of degree >= 2 */
    for( int k = 0; k < nnodes; k++ )
    {
       SCIP_Real maxprize;
@@ -5325,7 +5366,12 @@ SCIP_RETCODE reduce_ansAdv(
          marked[j] = TRUE;
 
          if( SCIPisGT(scip, g->prize[j], 0.0) && nNeigbors < STP_RED_CNSNN )
+         {
+            assert(Is_term(g->term[j]));
+            assert(!graph_pc_knotIsDummyTerm(g, j));
+
             neighbarr[nNeigbors++] = j;
+         }
       }
 
       marked[k] = TRUE;
@@ -5356,8 +5402,10 @@ SCIP_RETCODE reduce_ansAdv(
          {
             const int neighbor = gHead[e];
 
-            if( g->grad[neighbor] <= maxgrad && g->mark[neighbor] && !Is_term(g->term[neighbor]) )
+            if( g->grad[neighbor] <= maxgrad && !Is_term(g->term[neighbor]) )
             {
+               assert(g->mark[neighbor]);
+
                candidates[nCands++] = neighbor;
                if( nCands >= STP_RED_ANSMAXCANDS )
                {
@@ -5373,22 +5421,7 @@ SCIP_RETCODE reduce_ansAdv(
          ansProcessCandidate(scip, g, marked, nelims, maxprize, candidates[l]);
 
       /* clean-up */
-
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = gOeat[e] )
-         marked[gHead[e]] = FALSE;
-
-      for( int l = 0; l < nNeigbors; l++ )
-      {
-         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = gOeat[e] )
-            marked[gHead[e]] = FALSE;
-      }
-
-      marked[k] = FALSE;
-
-#ifndef NDEBUG
-      for( int k2 = 0; k2 < nnodes; k2++ )
-         assert(marked[k2] == FALSE);
-#endif
+      ansUnmark(g, k, neighbarr, nNeigbors, marked);
    }
 
    assert(graph_valid(scip, g));
@@ -5400,129 +5433,139 @@ SCIP_RETCODE reduce_ansAdv(
 
 
 /** alternative advanced adjacent neighbourhood reduction for the MWCSP */
-void reduce_ansAdv2(
+SCIP_RETCODE reduce_ansAdv2(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
-   int*                  count               /**< pointer to number of reductions */
+   int*                  nelims              /**< pointer to number of reductions */
    )
 {
    int neighbarr[STP_RED_CNSNN + 1];
+   int* marked;
    SCIP_Real min;
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
+   assert(nelims  != NULL);
+   assert(graph_pc_isMw(g));
 
-   *count = 0;
+   *nelims = 0;
 
-   /* unmark all nodes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nnodes) );
+
    for( int k = 0; k < nnodes; k++ )
       marked[k] = FALSE;
 
-      /* check neighbourhood of all nodes */
+   /* check neighborhood of all non-terminals of degree >= 2 */
    for( int k = 0; k < nnodes; k++ )
    {
-      SCIP_Real maxprize;
-      int neighbor0;
+      SCIP_Real maxSpecialNeighborPrize;
+      int specialNeigborRound0;
 
       if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
          continue;
 
-      maxprize = g->prize[k];
-      neighbor0 = -1;
+      maxSpecialNeighborPrize = g->prize[k];
+      specialNeigborRound0 = -1;
 
       for( int run = 0; run < 2; run++ )
       {
          int e;
-         int nn = 0;
-         int k2 = UNKNOWN;
+         int nNeighbors = 0;
+         int specialNeighbor = UNKNOWN;
          int maxgrad = g->grad[k];
 
-         /* mark adjacent vertices and k */
+         /* mark (limited number of) adjacent vertices and k */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
-            const int j = g->head[e];
-            marked[j] = TRUE;
-            if( SCIPisGE(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN - 1 )
+            const int neighbor = g->head[e];
+            marked[neighbor] = TRUE;
+            if( SCIPisGE(scip, g->prize[neighbor], 0.0) && nNeighbors < STP_RED_CNSNN - 1 )
             {
-               neighbarr[nn++] = j;
+               assert(!graph_pc_knotIsDummyTerm(g, neighbor));
+
+               neighbarr[nNeighbors++] = neighbor;
             }
-            else if( SCIPisGT(scip, g->prize[j], maxprize) && g->mark[j] && j != neighbor0 )
+            else if( GT(g->prize[neighbor], maxSpecialNeighborPrize) && neighbor != specialNeigborRound0 )
             {
-               maxprize = g->prize[j];
-               k2 = j;
+               assert(g->mark[neighbor]);
+
+               maxSpecialNeighborPrize = g->prize[neighbor];
+               specialNeighbor = neighbor;
             }
          }
 
          marked[k] = TRUE;
 
-         if( run == 0 && k2 != UNKNOWN )
-            neighbarr[nn++] = k2;
+         /* we already take the special neighbor in round 1; it might still be updated in round 2 */
+         if( run == 0 && specialNeighbor != UNKNOWN )
+            neighbarr[nNeighbors++] = specialNeighbor;
 
-         for( int l = 0; l < nn; l++ )
+         /* find a neighbor of the neighbors to add to the neighbor set */
+         for( int l = 0; l < nNeighbors; l++ )
          {
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+            const int neighbor = neighbarr[l];
+            for( e = g->outbeg[neighbor]; e != EAT_LAST; e = g->oeat[e] )
             {
-               const int j = g->head[e];
-               if( run == 1 && g->mark[j] && !Is_term(g->term[j]) && SCIPisGT(scip, g->prize[j], maxprize) && j != neighbor0 )
+               const int neighborNeighbor = g->head[e];
+               if( run == 1 && g->mark[neighborNeighbor] && !Is_term(g->term[neighborNeighbor])
+                     && GT(g->prize[neighborNeighbor], maxSpecialNeighborPrize) && neighborNeighbor != specialNeigborRound0 )
                {
-                  maxprize = g->prize[j];
-                  k2 = j;
+                  maxSpecialNeighborPrize = g->prize[neighborNeighbor];
+                  specialNeighbor = neighborNeighbor;
                }
-               marked[j] = TRUE;
+               marked[neighborNeighbor] = TRUE;
             }
-            maxgrad += g->grad[neighbarr[l]];
+
+            marked[neighbor] = VERTEX_NEIGHBOR;
+            maxgrad += g->grad[neighbor];
          }
 
-         if( run == 1 && k2 != UNKNOWN )
+         if( run == 1 && specialNeighbor != UNKNOWN )
          {
-            maxgrad += g->grad[k2];
-            neighbarr[nn++] = k2;
+            maxgrad += g->grad[specialNeighbor];
+            neighbarr[nNeighbors++] = specialNeighbor;
 
-            for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
+            for( e = g->outbeg[specialNeighbor]; e != EAT_LAST; e = g->oeat[e] )
                marked[g->head[e]] = TRUE;
          }
 
          assert(SCIPisLE(scip, g->prize[k], 0.0));
 
          min = g->prize[k];
-         if( k2 != UNKNOWN )
+         if( specialNeighbor != UNKNOWN )
          {
-            neighbor0 = k2;
-            min += g->prize[k2];
+            marked[specialNeighbor] = VERTEX_NEIGHBOR;
+            specialNeigborRound0 = specialNeighbor;
+
+            if( LT(g->prize[specialNeighbor], 0.0) )
+               min += g->prize[specialNeighbor];
          }
 
-         /* check all neighbours of k */
+         /* check all neighbors of k */
          e = g->outbeg[k];
          while( e != EAT_LAST )
          {
-            const int j = g->head[e];
+            const int neighbor = g->head[e];
             e = g->oeat[e];
 
             /* valid candidate? */
-            if( g->grad[j] <= maxgrad && g->mark[j] && SCIPisLE(scip, g->prize[j], min) && k2 != j )
-               ansProcessCandidate(scip, g, marked, count, min, j);
+            if( g->grad[neighbor] <= maxgrad && !Is_term(g->term[neighbor]) && marked[neighbor] != VERTEX_NEIGHBOR )
+            {
+               assert(g->mark[neighbor]);
+
+               ansProcessCandidate(scip, g, marked, nelims, min, neighbor);
+            }
          }
 
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-            marked[g->head[e]] = FALSE;
-
-         for( int l = 0; l < nn; l++ )
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-               marked[g->head[e]] = FALSE;
-
-         marked[k] = FALSE;
-
-         for( k2 = 0; k2 < nnodes; k2++ )
-            assert(marked[k2] == FALSE);
+         ansUnmark(g, k, neighbarr, nNeighbors, marked);
       }
    }
 
    assert(graph_valid(scip, g));
+
+   SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
 }
 
 

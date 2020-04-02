@@ -1298,19 +1298,18 @@ SCIP_RETCODE redLoopMw(
 
          if( graph_pc_isRootedPcMw(g))
          {
-            printf("RMW \n\n \n" );
+            printf("RMW \n\n \n");
 
-                     SCIP_CALL( reduce_ans(scip, g, &anselims) );
+            SCIP_CALL(reduce_ans(scip, g, &anselims));
 
-                     ansadelims = 0;
-                     SCIP_CALL( reduce_ansAdv(scip, g, &ansadelims, FALSE) );
+            SCIP_CALL(reduce_ansAdv2(scip, g, &ansadelims));
 
+            int edges = 0;
+            graph_get_nVET(g, NULL, &edges, NULL);
 
-                      int edges = 0;
-                      graph_get_nVET(g, NULL, &edges, NULL);
+            printf("ansadelims2 deleted: %d edges=%d \n", ansadelims, edges);
 
-                      printf("ansadelims deleted: %d edges=%d \n", ansadelims, edges);
-
+            SCIP_CALL(reduce_ansAdv(scip, g, &ansadelims, FALSE));
 
          }
 
@@ -1387,7 +1386,7 @@ SCIP_RETCODE redLoopMw(
 
       if( ansad2 || extensive )
       {
-         reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
+         SCIP_CALL( reduce_ansAdv2(scip, g, &ansad2elims) );
 
          if( ansad2elims <= redbound )
             ansad2 = FALSE;
