@@ -92,7 +92,7 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int, SCIP_Bool);
 /* reduce_alt.c
  */
 extern SCIP_RETCODE    reduce_ans(SCIP*, GRAPH*, int*);
-extern void    reduce_ansAdv(SCIP*, GRAPH*, int*, int*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_ansAdv(SCIP*, GRAPH*, int*, SCIP_Bool);
 extern void    reduce_ansAdv2(SCIP*, GRAPH*, int*, int*);
 extern void    reduce_nnp(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);

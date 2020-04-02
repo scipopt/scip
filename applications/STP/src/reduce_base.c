@@ -1261,13 +1261,11 @@ SCIP_RETCODE redLoopMw(
 
          if( anselims <= redbound )
             ans = FALSE;
-
-         SCIPdebugMessage("ans deleted: %d \n", anselims);
       }
 
       if( ansad || extensive )
       {
-         reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
+         SCIP_CALL( reduce_ansAdv(scip, g, &ansadelims, FALSE) );
 
          if( ansadelims <= redbound )
             ansad = FALSE;
@@ -1303,6 +1301,16 @@ SCIP_RETCODE redLoopMw(
             printf("RMW \n\n \n" );
 
                      SCIP_CALL( reduce_ans(scip, g, &anselims) );
+
+                     ansadelims = 0;
+                     SCIP_CALL( reduce_ansAdv(scip, g, &ansadelims, FALSE) );
+
+
+                      int edges = 0;
+                      graph_get_nVET(g, NULL, &edges, NULL);
+
+                      printf("ansadelims deleted: %d edges=%d \n", ansadelims, edges);
+
 
          }
 

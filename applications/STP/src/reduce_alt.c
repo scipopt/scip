@@ -5280,68 +5280,71 @@ SCIP_RETCODE reduce_ans(
 }
 
 /** advanced adjacent neighbourhood reduction for the MWCSP */
-void reduce_ansAdv(
+SCIP_RETCODE reduce_ansAdv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
-   int*                  count,              /**< pointer to number of performed reductions */
+   int*                  nelims,             /**< pointer to number of performed reductions */
    SCIP_Bool             extneigbhood        /**< use extended neighbour hood */
    )
 {
+   int* marked;
    int candidates[MAX(STP_RED_ANSMAXCANDS, STP_RED_ANSEXMAXCANDS)];
    int neighbarr[STP_RED_CNSNN];
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
+   int* const RESTRICT gHead = g->head;
+   int* const RESTRICT gOeat = g->oeat;
 
    assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
+   assert(nelims  != NULL);
+   assert(graph_pc_isMw(g));
 
-   *count = 0;
+   *nelims = 0;
 
-   /* unmark all nodes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nnodes) );
+
    for( int k = 0; k < nnodes; k++ )
       marked[k] = FALSE;
 
    /* check neighborhood of all nodes */
    for( int k = 0; k < nnodes; k++ )
    {
-      SCIP_Real min;
-      int nn;
-      int ncands;
+      SCIP_Real maxprize;
+      int nNeigbors;
+      int nCands;
       int maxgrad;
 
       if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
          continue;
 
-      nn = 0;
+      nNeigbors = 0;
 
       /* mark adjacent vertices and k */
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
       {
-         const int j = g->head[e];
+         const int j = gHead[e];
          marked[j] = TRUE;
-         if( SCIPisGT(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN )
-            neighbarr[nn++] = j;
+
+         if( SCIPisGT(scip, g->prize[j], 0.0) && nNeigbors < STP_RED_CNSNN )
+            neighbarr[nNeigbors++] = j;
       }
 
       marked[k] = TRUE;
       maxgrad = g->grad[k];
-      ncands = 0;
+      nCands = 0;
 
-      for( int l = 0; l < nn; l++ )
+      /* mark neighbors of the neighbors */
+      for( int n = 0; n < nNeigbors; n++ )
       {
-         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[neighbarr[n]]; e >= 0; e = gOeat[e] )
          {
-            marked[g->head[e]] = TRUE;
+            marked[gHead[e]] = TRUE;
          }
-         maxgrad += g->grad[neighbarr[l]];
+         maxgrad += g->grad[neighbarr[n]];
       }
 
       assert(SCIPisLE(scip, g->prize[k], 0.0));
 
-      min = g->prize[k];
+      maxprize = g->prize[k];
 
       if( extneigbhood )
       {
@@ -5349,39 +5352,50 @@ void reduce_ansAdv(
       }
       else
       {
-         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = gOeat[e] )
          {
-            const int j = g->head[e];
-            if( g->grad[j] <= maxgrad && g->mark[j] && !Is_term(g->term[j]) )
+            const int neighbor = gHead[e];
+
+            if( g->grad[neighbor] <= maxgrad && g->mark[neighbor] && !Is_term(g->term[neighbor]) )
             {
-               candidates[ncands++] = j;
-               if( ncands >= STP_RED_ANSMAXCANDS )
+               candidates[nCands++] = neighbor;
+               if( nCands >= STP_RED_ANSMAXCANDS )
                {
-                  SCIPdebugMessage("REACHED ANS LIMIT %d \n", ncands);
+                  SCIPdebugMessage("REACHED ANS LIMIT %d \n", nCands);
                   break;
                }
             }
          }
       }
 
-      /* check all neighbors of k */
-      for( int l = 0; l < ncands; l++ )
-         ansProcessCandidate(scip, g, marked, count, min, candidates[l]);
+      /* now check all neighbors of k for elimination */
+      for( int l = 0; l < nCands; l++ )
+         ansProcessCandidate(scip, g, marked, nelims, maxprize, candidates[l]);
 
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         marked[g->head[e]] = FALSE;
+      /* clean-up */
 
-      for( int l = 0; l < nn; l++ )
-         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-            marked[g->head[e]] = FALSE;
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = gOeat[e] )
+         marked[gHead[e]] = FALSE;
+
+      for( int l = 0; l < nNeigbors; l++ )
+      {
+         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = gOeat[e] )
+            marked[gHead[e]] = FALSE;
+      }
 
       marked[k] = FALSE;
 
+#ifndef NDEBUG
       for( int k2 = 0; k2 < nnodes; k2++ )
          assert(marked[k2] == FALSE);
+#endif
    }
 
    assert(graph_valid(scip, g));
+
+   SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
 }
 
 
