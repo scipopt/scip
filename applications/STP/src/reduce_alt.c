@@ -554,13 +554,79 @@ void ansDeleteVertex(
    assert(!Is_term(g->term[vertex]));
    assert(!graph_pc_knotIsDummyTerm(g, vertex));
 
-   SCIPdebugMessage("delete node with ANS: %d \n", vertex);
+#ifdef SCIP_DEBUG
+   printf("delete node with ANS: ");
+   graph_knot_printInfo(g, vertex);
+#endif
 
    (*nelims) += g->grad[vertex];
 
    graph_knot_del(scip, g, vertex, TRUE);
    g->mark[vertex] = FALSE;
    marked[vertex] = FALSE;
+}
+
+
+/** ANS submethod for the case that the candidate vertex has exactly one non-dominated neighbor
+ *  and both vertices combined are dominated */
+static inline
+void ansProcessCandidateWithBridge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int* RESTRICT         marked,             /**< nodes array */
+   int* RESTRICT         nelims,             /**< pointer to number of reductions */
+   SCIP_Real             maxprize,           /**< value to not surpass */
+   int                   candvertex,         /**< candidate */
+   int                   bridgeedge
+)
+{
+   /* NOTE: terminals can be leafs in an optimal solution! Thus we need to be careful with terminals. */
+   int e3;
+   const int neighbor = g->head[bridgeedge];
+   const SCIP_Real setprize = g->prize[candvertex] + g->prize[neighbor];
+
+   assert(LE(maxprize, 0.0));
+
+   if( SCIPisGT(scip, setprize, maxprize) )
+      return;
+
+   for( e3 = g->outbeg[neighbor]; e3 >= 0; e3 = g->oeat[e3] )
+   {
+      const int head = g->head[e3];
+
+      if( !marked[head] )
+         break;
+   }
+
+   /* is {candvertex, neighbor} dominated? */
+   if( e3 == EAT_LAST )
+   {
+      const SCIP_Bool candvertexIsSmall = SCIPisLE(scip, g->prize[candvertex], maxprize);
+      const SCIP_Bool neighborIsSmall = SCIPisLE(scip, g->prize[neighbor], maxprize);
+
+      /* delete both vertices? */
+      if( candvertexIsSmall && neighborIsSmall )
+      {
+         SCIPdebugMessage("delete set of two nodes with ANS: %d %d \n", candvertex, neighbor);
+
+         ansDeleteVertex(scip, g, marked, nelims, candvertex);
+         ansDeleteVertex(scip, g, marked, nelims, neighbor);
+      }
+      else
+      {
+         SCIPdebugMessage("delete edge with ANS: %d->%d\n", neighbor, candvertex);
+
+         graph_edge_del(scip, g, bridgeedge, TRUE);
+
+         /* now both candvertex and neighbor are dominated */
+
+         if( candvertexIsSmall )
+            ansDeleteVertex(scip, g, marked, nelims, candvertex);
+
+         if( neighborIsSmall )
+            ansDeleteVertex(scip, g, marked, nelims, neighbor);
+      }
+   }
 }
 
 /** ANS subtest */
@@ -603,64 +669,7 @@ void ansProcessCandidate(
    }
    else if( misses == 1 )
    {
-      int e3;
-      const int neighbor = g->head[bridgeedge];
-      SCIP_Real setprize = g->prize[candvertex];
-
-      if( Is_term(g->term[neighbor]) )
-      {
-         assert(GE(g->prize[neighbor], 0.0));
-         assert(graph_pc_realDegree(g, neighbor, graph_pc_knotIsFixedTerm(g, neighbor)) >= 1);
-
-         /* if the degree is 1, we cannot delete the edge! */
-         if( graph_pc_realDegree(g, neighbor, graph_pc_knotIsFixedTerm(g, neighbor)) == 1 )
-            setprize = FARAWAY;
-      }
-      else
-      {
-         assert(LE(g->prize[neighbor], 0.0));
-         setprize += g->prize[neighbor];
-      }
-
-      if( SCIPisGT(scip, setprize, maxprize) )
-         return;
-
-      for( e3 = g->outbeg[neighbor]; e3 != EAT_LAST; e3 = g->oeat[e3] )
-      {
-         const int head = g->head[e3];
-         if( !marked[head] )
-            break;
-      }
-
-      /* is {candvertex, neighbor} dominated? */
-      if( e3 == EAT_LAST )
-      {
-         const SCIP_Bool candvertexIsSmall = SCIPisLE(scip, g->prize[candvertex], maxprize);
-         const SCIP_Bool neighborIsSmall = SCIPisLE(scip, g->prize[neighbor], maxprize);
-
-         /* delete both vertices? */
-         if( candvertexIsSmall && neighborIsSmall )
-         {
-            SCIPdebugMessage("delete nodes with ANS: %d %d \n", candvertex, neighbor);
-
-            ansDeleteVertex(scip, g, marked, nelims, candvertex);
-            ansDeleteVertex(scip, g, marked, nelims, neighbor);
-         }
-         else
-         {
-            SCIPdebugMessage("delete edge with ANS: %d->%d\n", neighbor, candvertex);
-
-            graph_edge_del(scip, g, bridgeedge, TRUE);
-
-            /* now both candvertex and neighbor are dominated */
-
-            if( candvertexIsSmall )
-               ansDeleteVertex(scip, g, marked, nelims, candvertex);
-
-            if( neighborIsSmall )
-               ansDeleteVertex(scip, g, marked, nelims, neighbor);
-         }
-      }
+      ansProcessCandidateWithBridge(scip, g, marked, nelims, maxprize, candvertex, bridgeedge);
    }
 }
 
