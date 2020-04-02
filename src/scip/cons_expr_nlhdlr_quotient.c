@@ -448,7 +448,7 @@ SCIP_INTERVAL revpropEval(
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e                   /**< constant */
    )
-{
+{ /*lint --e{715}*/
    SCIP_INTERVAL result;
    SCIP_Real infpropval;
    SCIP_Real suppropval;
@@ -461,7 +461,7 @@ SCIP_INTERVAL revpropEval(
    }
 
    /* if the expression is constant or the limit lies inside the domain, nothing can be propagated */
-   if( a*d - b*c == 0.0 || bnds.inf < a / c && bnds.sup > a / c )
+   if( a*d - b*c == 0.0 || (bnds.inf < a / c && bnds.sup > a / c) )
    {
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &result);
       return result;
@@ -482,7 +482,7 @@ SCIP_INTERVAL revpropEval(
       SCIPintervalSetBounds(&result, suppropval, infpropval);
    }
 
-   return result;
+   return result; /*lint !e644 */
 }
 
 /** sets up a rowprep from given data
@@ -988,7 +988,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
    varlb = SCIPvarGetLbLocal(nlhdlrexprdata->nomvar);
-   varlb = SCIPvarGetUbLocal(nlhdlrexprdata->nomvar);
+   varub = SCIPvarGetUbLocal(nlhdlrexprdata->nomvar);
 
    result = revpropEval(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
