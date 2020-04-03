@@ -402,7 +402,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* tests interval evaluation for ((+/-)4x + 1) / (-3x + 3) - 2*/
+/* tests interval evaluation for ((+/-)4x + 1) / (-3x + 3) - 2 */
 Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simple quotient expression")
 {
    SCIP_INTERVAL varbnds;
@@ -458,6 +458,36 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
 
    cr_expect(SCIPisEQ(scip, result.inf, 1.0 / 3.0 - 2.0));
    cr_expect(SCIPisEQ(scip, result.sup, 5.0 / 6.0 - 2.0));
+}
+
+/* tests reverse propagation for univariate quotients */
+Test(nlhdlrquotient, reverseprop, .description = "tests reverse propagation simple univariate quotient expressions")
+{
+   SCIP_INTERVAL bnds;
+   SCIP_INTERVAL result;
+
+   /* x / (x + 1) in [-3,-1] => x in [-0.75,0.5]*/
+   SCIPintervalSetBounds(&bnds, -3.0, -1.0);
+   result = reversepropQuotient(bnds, 1.0, 0.0, 1.0, 1.0, 0.0);
+   cr_expect(SCIPisEQ(scip, result.inf, -0.75));
+   cr_expect(SCIPisEQ(scip, result.sup, -0.5));
+
+   /* x / (x + 1) in [-2,1] => x in [-2/3,+inf]*/
+   SCIPintervalSetBounds(&bnds, -2.0, 1.0);
+   result = reversepropQuotient(bnds, 1.0, 0.0, 1.0, 1.0, 0.0);
+   cr_expect(SCIPisEQ(scip, result.inf, -2.0/3.0));
+   cr_expect(SCIPisInfinity(scip, result.sup));
+
+   /* (-5x + 2) / (3*x + 3) + 6 in [3,5] => x in [-inf,+inf]*/
+   SCIPintervalSetBounds(&bnds, 3.0, 5.0);
+   result = reversepropQuotient(bnds, -5.0, 2.0, 3.0, 3.0, 6.0);
+   cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, result));
+
+   /* (-5x + 2) / (3*x + 3) + 6 in [-2,-1] => x in [-23/16,-26/19]*/
+   SCIPintervalSetBounds(&bnds, -2.0, -1.0);
+   result = reversepropQuotient(bnds, -5.0, 2.0, 3.0, 3.0, 6.0);
+   cr_expect(SCIPisEQ(scip, result.inf, -23.0/16.0));
+   cr_expect(SCIPisEQ(scip, result.sup, -26.0/19.0));
 }
 
 /* separates x = 2 for (4x + 1) / (-3x + 3) + 2 */
