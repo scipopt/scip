@@ -413,7 +413,7 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
    varbnds.inf = 0.0;
    varbnds.sup = 2.0;
 
-   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEvalQuotient(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, result));
 
@@ -422,7 +422,7 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
    varbnds.inf = 2.0;
    varbnds.sup = 9.0;
 
-   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEvalQuotient(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, -5.0));
    cr_expect(SCIPisEQ(scip, result.sup, -37.0 / 24.0 - 2.0), "expected %f, but got %f\n",
@@ -433,7 +433,7 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
    varbnds.inf = -1.0;
    varbnds.sup = 0.0;
 
-   result = intEval(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEvalQuotient(scip, varbnds, 4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, -2.5));
    cr_expect(SCIPisEQ(scip, result.sup, 1.0 / 3.0 - 2.0));
@@ -444,7 +444,7 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
    varbnds.inf = 2.0;
    varbnds.sup = 9.0;
 
-   result = intEval(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEvalQuotient(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, 35.0 / 24.0 - 2.0));
    cr_expect(SCIPisEQ(scip, result.sup, 7.0 / 3.0 - 2.0));
@@ -454,7 +454,7 @@ Test(nlhdlrquotient, inteval, .description = "tests interval evaluation of simpl
    varbnds.inf = -1.0;
    varbnds.sup = 0.0;
 
-   result = intEval(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
+   result = intEvalQuotient(scip, varbnds, -4.0, 1.0, -3.0, 3.0, -2.0);
 
    cr_expect(SCIPisEQ(scip, result.inf, 1.0 / 3.0 - 2.0));
    cr_expect(SCIPisEQ(scip, result.sup, 5.0 / 6.0 - 2.0));

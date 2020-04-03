@@ -367,7 +367,7 @@ SCIP_RETCODE detectExpr(
 
 /** helper method to compute interval for (a x + b) / (c x + d) + e */
 static
-SCIP_INTERVAL intEval(
+SCIP_INTERVAL intEvalQuotient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTERVAL         bnds,               /**< bounds on x */
    SCIP_Real             a,                  /**< coefficient in nominator */
@@ -435,7 +435,7 @@ SCIP_INTERVAL intEval(
 
 /** helper method to compute reverse propagation for (a x + b) / (c x + d) + e */
 static
-SCIP_INTERVAL revpropEval(
+SCIP_INTERVAL reversepropQuotient(
    SCIP_INTERVAL         bnds,               /**< bounds on (a x + b) / (c x + d) + e */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
@@ -958,7 +958,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->nomvar),
       SCIPvarGetUbLocal(nlhdlrexprdata->nomvar));
 
-   tmp = intEval(scip, varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+   tmp = intEvalQuotient(scip, varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    /* intersect intervals if we have learned a tighter interval */
@@ -993,7 +993,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
       nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
       nlhdlrexprdata->constant, exprbounds.inf, exprbounds.sup);
 
-   result = revpropEval(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+   result = reversepropQuotient(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    if( SCIPisLT(scip, varlb, result.inf) || SCIPisGT(scip, varub, result.sup) )
