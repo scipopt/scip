@@ -318,7 +318,7 @@ Interface changes
   + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
   + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
     SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
-	and SCIPincludePropOrbitalfixing()
+    and SCIPincludePropOrbitalfixing()
   + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
@@ -2121,7 +2121,7 @@ Fixed bugs
   - fixed bug during coefficient tightening in varbound constraint handler
   - handle cutoffs in cons_indicator detected by infeasible inequalities
   - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
-  - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
+  - fixed initsol and exitsol of cons_indicator, if problem has already been solved
   - fixed bug in cons_indicator with changing type of slackvariable
 
 @section RN320 SCIP 3.2.0
