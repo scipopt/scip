@@ -498,7 +498,7 @@ SCIP_RETCODE createRowprep(
    SCIP_VAR**            vars,               /**< variables */
    SCIP_Real*            coefs,              /**< coefficients */
    SCIP_Real             constant,           /**< constant */
-   int                   nlinvars,           /**< number of variables in the cut (-1 for auxvar) */
+   int                   nlinvars,           /**< total number of variables (not consdering auxvar) */
    SCIP_VAR*             auxvar              /**< auxiliary variable */
    )
 {
