@@ -443,7 +443,7 @@ SCIP_INTERVAL revpropEval(
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e                   /**< constant */
    )
-{ /*lint --e{715}*/
+{
    SCIP_INTERVAL result;
    SCIP_Real infpropval;
    SCIP_Real suppropval;

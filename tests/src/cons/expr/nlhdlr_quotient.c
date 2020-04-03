@@ -351,7 +351,7 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    cr_assert_not_null(nlhdlrexprdata);
 
    auxvar1 = SCIPgetConsExprExprAuxVar(expr->children[0]);
-   auxvar1 = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
+   auxvar2 = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, auxvar1, 1.0, 0.0, auxvar2, 1.0, 0.0, 0.0);
