@@ -484,16 +484,15 @@ SCIP_INTERVAL reversepropQuotient(
    return result;
 }
 
-/** creates a rowprep from given data; the generate cut is always assumed to be local
+/** prepares a rowprep from given data; the generated estimator is always locally valid
  *
  *  @note the auxvar is always added with coefficient -1 and the constant is moved to the left- or right-hand side
  */
 static
 SCIP_RETCODE createRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
+   SCIP_ROWPREP *        rowprep,            /**< a rowprep where to store the estimator */
    const char*           name,               /**< name of type of cut */
-   SCIP_Bool             overestimate,       /**< whether overestimating */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_Real*            coefs,              /**< coefficients */
    SCIP_Real             constant,           /**< constant */
@@ -510,19 +509,18 @@ SCIP_RETCODE createRowprep(
    assert(auxvar != NULL);
 
    /* create rowprep */
-   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, name);
-   SCIPaddRowprepSide(*rowprep, -constant);
-   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, nlinvars + 1) );
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, name);
+   SCIPaddRowprepSide(rowprep, -constant);
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlinvars + 1) );
 
    /* add coefficients */
    for( i = 0; i < nlinvars; ++i )
    {
-      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, vars[i], coefs[i]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[i], coefs[i]) );
    }
 
    /* add auxiliary variable */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
    return SCIP_OKAY;
 }
@@ -557,7 +555,7 @@ SCIP_RETCODE sepaUnivariate(
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e,                  /**< constant */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
-   SCIP_ROWPREP**        cut,                /**< pointer to store the resulting cut */
+   SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -571,12 +569,11 @@ SCIP_RETCODE sepaUnivariate(
 
    assert(scip != NULL);
    assert(success != NULL);
-   assert(cut != NULL);
+   assert(rowprep != NULL);
    assert(x != NULL);
    assert(c != 0.0);
 
    *success = FALSE;
-   *cut = NULL;
 
    bnds.inf = SCIPvarGetLbLocal(x);
    bnds.sup = SCIPvarGetUbLocal(x);
@@ -625,14 +622,11 @@ SCIP_RETCODE sepaUnivariate(
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
 
-   /* create rowpred */
-   SCIP_CALL( createRowprep(scip, cut, name, overestimate, &x, &lincoef, linconst, 1, auxvar) );
-
-   assert(cut != NULL);
-   *success = TRUE;
+   /* create rowprep */
+   SCIP_CALL( createRowprep(scip, rowprep, name, &x, &lincoef, linconst, 1, auxvar) );
 
    /* clean up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
 
    return SCIP_OKAY;
 }
@@ -665,7 +659,7 @@ SCIP_RETCODE sepaBivariate(
    SCIP_VAR*             y,                  /**< denominator variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
-   SCIP_ROWPREP**        cut,                /**< pointer to store the resulting cut */
+   SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -685,18 +679,17 @@ SCIP_RETCODE sepaBivariate(
    assert(scip != NULL);
    assert(x != NULL);
    assert(y != NULL);
-   assert(cut != NULL);
+   assert(rowprep != NULL);
    assert(success != NULL);
 
    *success = FALSE;
-   *cut = NULL;
 
    lbx = SCIPvarGetLbLocal(x);
    ubx = SCIPvarGetUbLocal(x);
    lby = SCIPvarGetLbLocal(y);
    uby = SCIPvarGetUbLocal(y);
 
-   /* if 0 is in the interior of [lby,uby], no cut is possible */
+   /* if 0 is in the interior of [lby,uby], no estimator is possible */
    if( SCIPisLT(scip, lby, 0.0) && SCIPisGT(scip, uby, 0.0) )
       return SCIP_OKAY;
 
@@ -779,7 +772,7 @@ SCIP_RETCODE sepaBivariate(
          }
       }
 
-      /* avoid huge values in the cut */
+      /* avoid huge values in the estimator */
       if( SCIPisHugeValue(scip, ABS(lincoefs[0])) || SCIPisHugeValue(scip, ABS(lincoefs[1]))
          || SCIPisHugeValue(scip, ABS(linconst)) )
       {
@@ -824,13 +817,10 @@ SCIP_RETCODE sepaBivariate(
       SCIPgetNLPs(scip));
 
    /* create rowprep */
-   SCIP_CALL( createRowprep(scip, cut, name, overestimate, linvars, lincoefs, linconst, 2, auxvar) );
-
-   assert(*cut != NULL);
-   *success = TRUE;
+   SCIP_CALL( createRowprep(scip, rowprep, name, linvars, lincoefs, linconst, 2, auxvar) );
 
    /* clean up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
 
    return SCIP_OKAY;
 }
@@ -921,7 +911,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    {
       SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar, SCIPgetConsExprExprAuxVar(expr),
             nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef,
-            nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, &rowprep, success) );
+            nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep, success) );
    }
    else
    {
@@ -931,7 +921,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
       assert(nlhdlrexprdata->denomconst == 0.0);
 
       SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->nomvar, nlhdlrexprdata->denomvar,
-            SCIPgetConsExprExprAuxVar(expr), overestimate, &rowprep, success) );
+            SCIPgetConsExprExprAuxVar(expr), overestimate, rowprep, success) );
    }
 
    assert(!(*success) || rowprep != NULL);

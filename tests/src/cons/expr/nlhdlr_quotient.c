@@ -530,7 +530,8 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     *  test overestimation
     */
 
-   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -549,7 +550,8 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     *  test underestimation
     */
 
-   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -610,7 +612,8 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     *  test overestimation
     */
 
-   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -631,7 +634,8 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     *  test underestimation
     */
 
-   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -689,7 +693,8 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
     *  test overestimation
     */
 
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], TRUE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
+   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -709,7 +714,8 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
     *  test underestimation
     */
 
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], FALSE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -769,7 +775,8 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
     *  test overestimation
     */
 
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], TRUE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
+   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -789,7 +796,8 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
     *  test underestimation
     */
 
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], FALSE, &cutprep, &success) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
