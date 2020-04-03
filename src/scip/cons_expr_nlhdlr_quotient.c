@@ -999,11 +999,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
       SCIP_Bool tightened;
 
       /* if force=TRUE, take the bound strengthening tolerance into account */
-      if( !force && !SCIPisLbBetter(scip, result.inf, varlb, varub)
-         && !SCIPisUbBetter(scip, result.sup, varub, varlb) )
-      {
+      if( !force && !SCIPisLbBetter(scip, result.inf, varlb, varub) && !SCIPisUbBetter(scip, result.sup, varlb, varub) )
          return SCIP_OKAY;
-      }
 
       SCIPintervalSetBounds(&varbnds, varlb, varub);
       SCIPintervalIntersect(&result, result, varbnds);
