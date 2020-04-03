@@ -162,7 +162,7 @@ Features
 - Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
   symresacks even if the underlying permutation is not monotone.
 
-- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features:
+- New branching rule `vanillafullstrong`, mostly for scientific purpose, with the following features:
   1) no cutoff or domain reduction: only branching;
   2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls
      - basically, do not update any statistic;
