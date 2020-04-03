@@ -631,6 +631,22 @@ SCIP_RETCODE sepaUnivariate(
    return SCIP_OKAY;
 }
 
+/** helper method to evaluate h^c(x,y) for x >= 0 and y > 0 at a given point, see Tawarmalani and Sahinidis (2001) */
+static
+SCIP_Real hcEval(
+   SCIP_Real             lbx,                /**< lower bound of x */
+   SCIP_Real             ubx,                /**< upper bound of x */
+   SCIP_Real             solx,               /**< solution value of x */
+   SCIP_Real             soly                /**< solution value of y */
+   )
+{
+   assert(lbx >= 0.0);
+   assert(lbx <= ubx);
+   assert(soly > 0.0);
+
+   return (1.0 / soly) * ((solx + SQRT(lbx * ubx)) / (SQRT(lbx) + SQRT(ubx)));
+}
+
 /** separates a given point in the bivariate case x/y <=/>= z (auxvar)
  *
  *  There are the following cases for y > 0:
@@ -799,7 +815,7 @@ SCIP_RETCODE sepaBivariate(
          SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
          &mccoefaux, &mccoefy, &linconst, success);
 
-      /* the McCormick coefficients of auxvar is always lby or uby, so it has to be >=0 */
+      /* the McCormick coefficients of auxvar is always lby or uby, so it has to be > 0 */
       assert(SCIPisGT(scip, mccoefaux, 0.0));
 
       if( !(*success) )
