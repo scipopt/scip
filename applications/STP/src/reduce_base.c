@@ -776,8 +776,6 @@ SCIP_RETCODE reduceMw(
    int* state;
    int* vbase;
    int* nodearrint;
-   int* nodearrint2;
-   int* nodearrint3;
    int i;
    int nterms;
    int nnodes;
@@ -815,8 +813,6 @@ SCIP_RETCODE reduceMw(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint3, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
@@ -836,7 +832,7 @@ SCIP_RETCODE reduceMw(
 
    /* reduction loop */
    SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, state,
-         vbase, nodearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
+         vbase, nodearrint, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal);
@@ -846,8 +842,6 @@ SCIP_RETCODE reduceMw(
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &nodearrchar);
-   SCIPfreeBufferArray(scip, &nodearrint3);
-   SCIPfreeBufferArray(scip, &nodearrint2);
    SCIPfreeBufferArray(scip, &nodearrint);
 
    if( gnodearr != NULL )
@@ -1184,8 +1178,6 @@ SCIP_RETCODE redLoopMw(
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< voronoi base array  */
    int*                  nodearrint,         /**< nodes-sized array  */
-   int*                  nodearrint2,        /**< nodes-sized array  */
-   int*                  nodearrint3,        /**< nodes-sized array  */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
    STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
@@ -1300,6 +1292,8 @@ SCIP_RETCODE redLoopMw(
          {
             printf("RMW \n\n \n");
 
+            SCIP_CALL( reduce_nnp(scip, g, &nnpelims) );
+
             SCIP_CALL(reduce_ans(scip, g, &anselims));
 
             SCIP_CALL(reduce_ansAdv2(scip, g, &ansadelims));
@@ -1341,7 +1335,7 @@ SCIP_RETCODE redLoopMw(
 
       if( nnp )
       {
-         reduce_nnp(scip, g, nodearrint2, &nnpelims);
+         SCIP_CALL( reduce_nnp(scip, g, &nnpelims) );
 
          if( nnpelims <= redbound )
             nnp = FALSE;
@@ -1351,7 +1345,7 @@ SCIP_RETCODE redLoopMw(
 
       if( nnp || extensive )
       {
-         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500));
+         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, &chain2elims, 500));
 
          if( chain2elims <= redbound )
             chain2 = FALSE;
@@ -1364,7 +1358,7 @@ SCIP_RETCODE redLoopMw(
 
       if( npv || extensive )
       {
-         SCIP_CALL(reduce_npv(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400));
+         SCIP_CALL(reduce_npv(scip, g, vnoi, path, state, vbase, nodearrint, &npvelims, 400));
 
          if( npvelims <= redbound )
             npv = FALSE;
@@ -1374,7 +1368,7 @@ SCIP_RETCODE redLoopMw(
 
       if( chain2 || extensive )
       {
-         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300));
+         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, &chain2elims, 300));
 
          if( chain2elims <= redbound )
             chain2 = FALSE;

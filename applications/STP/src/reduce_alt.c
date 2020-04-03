@@ -5854,8 +5854,6 @@ SCIP_RETCODE reduce_npv(
    int*                  heap,
    int*                  statetail,
    int*                  statehead,
-   int*                  memlbltail,
-   int*                  memlblhead,
    int*                  nelims,
    int                   limit
    )
@@ -5863,26 +5861,27 @@ SCIP_RETCODE reduce_npv(
    GRAPH* auxg;
    PATH mst[5];
    int adjverts[5];
-
+   int* memlbltail;
+   int* memlblhead;
    SCIP_Real prize;
    SCIP_Real sdist0;
    SCIP_Real sdist1;
    SCIP_Real sdist2;
+   const int nnodes = graph_get_nNodes(g);
 
-   const int nnodes = g->knots;;
-
-   assert(g != NULL);
    assert(scip  != NULL);
    assert(pathtail != NULL);
    assert(pathhead != NULL);
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
-   assert(memlbltail != NULL);
-   assert(memlblhead != NULL);
    assert(nelims != NULL);
+   assert(limit > 0);
 
    *nelims = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &memlbltail, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &memlblhead, nnodes + 1) );
 
    /* initialize arrays */
    for( int i = 0; i < nnodes; i++ )
@@ -6184,6 +6183,9 @@ SCIP_RETCODE reduce_npv(
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
 
+   SCIPfreeBufferArray(scip, &memlblhead);
+   SCIPfreeBufferArray(scip, &memlbltail);
+
    return SCIP_OKAY;
 }
 
@@ -6197,36 +6199,29 @@ SCIP_RETCODE reduce_chain2(
    int*                  heap,
    int*                  statetail,
    int*                  statehead,
-   int*                  memlbltail,
-   int*                  memlblhead,
    int*                  nelims,
    int                   limit
    )
 {
-   SCIP_Real sdist;
-   int i;
-   int i1;
-   int i2;
-   int e1;
-   int e2;
-   int nnodes;
+   int* memlbltail;
+   int* memlblhead;
+   const int nnodes = graph_get_nNodes(g);
 
-   assert(g != NULL);
    assert(scip  != NULL);
    assert(pathtail != NULL);
    assert(pathhead != NULL);
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
-   assert(memlbltail != NULL);
-   assert(memlblhead != NULL);
    assert(nelims != NULL);
 
    *nelims = 0;
-   nnodes = g->knots;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &memlbltail, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &memlblhead, nnodes + 1) );
 
    /* initialize arrays */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       statetail[i]     = UNKNOWN;
       pathtail[i].dist = FARAWAY;
@@ -6236,10 +6231,16 @@ SCIP_RETCODE reduce_chain2(
       pathhead[i].edge = UNKNOWN;
    }
 
-   for( i = 0; i < nnodes; i++ )
+   /* main loop: try to eliminate non-positive vertices of degree two */
+   for( int i = 0; i < nnodes; i++ )
    {
-      assert(g->grad[i] >= 0);
-      if( !g->mark[i] || g->grad[i] == 0 || Is_term(g->term[i]) || g->grad[i] != 2 )
+      SCIP_Real sdist;
+      int i1;
+      int i2;
+      int e1;
+      int e2;
+
+      if( g->grad[i] != 2 || !g->mark[i] || Is_term(g->term[i]) )
          continue;
 
       /* non-positive chains */
@@ -6252,8 +6253,11 @@ SCIP_RETCODE reduce_chain2(
       assert(e2 >= 0);
       assert(g->mark[i1]);
       assert(g->mark[i2]);
+
       g->mark[i] = FALSE;
+
       SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist, -(g->prize[i]), heap, statetail, statehead, memlbltail, memlblhead, i1, i2, limit, FALSE, TRUE) );
+
       if( SCIPisGE(scip, -sdist, g->prize[i]) )
       {
          SCIPdebugMessage("delete : %d prize: %f sd: %f \n", i,  g->prize[i], -sdist );
@@ -6266,36 +6270,38 @@ SCIP_RETCODE reduce_chain2(
          g->mark[i] = TRUE;
       }
    }
+
+   SCIPfreeBufferArray(scip, &memlblhead);
+   SCIPfreeBufferArray(scip, &memlbltail);
+
    return SCIP_OKAY;
 }
 
 
-
 /** non-negative path reduction for the MWCSP */
-void reduce_nnp(
+SCIP_RETCODE reduce_nnp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
-   int*                  count               /**< pointer to number of reductions */
+   int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   int localcount = 0;
-   const int nnodes = g->knots;
+   int* marked;
+   int nelims_local = 0;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
+   assert(nelims  != NULL);
+   assert(graph_pc_isMw(g));
 
-   /* unmark all nodes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nnodes) );
+
    for( int k = 0; k < nnodes; k++ )
       marked[k] = FALSE;
 
    /* check neighborhood of terminals */
    for( int k = 0; k < nnodes; k++ )
    {
-      if( !g->mark[k] || g->prize[k] < 0.0 )
+      if( !g->mark[k] || LT(g->prize[k], 0.0) )
          continue;
 
       /* mark adjacent vertices of k */
@@ -6319,7 +6325,7 @@ void reduce_nnp(
                if( marked[g->head[candedge]] )
                {
                   graph_edge_del(scip, g, candedge, TRUE);
-                  localcount++;
+                  nelims_local++;
                }
             }
          }
@@ -6328,11 +6334,16 @@ void reduce_nnp(
       for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          marked[g->head[e]] = FALSE;
 
+#ifndef NDEBUG
       for( int j = 0; j < nnodes; j++ )
-         assert(marked[j] == FALSE);
+         assert(FALSE == marked[j]);
+#endif
    }
 
-   *count = localcount;
+   *nelims = nelims_local;
 
    assert(graph_valid(scip, g));
+   SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
 }
