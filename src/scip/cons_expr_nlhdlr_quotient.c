@@ -683,7 +683,6 @@ SCIP_RETCODE sepaBivariate(
    SCIP_Bool yispositive;
 
    assert(scip != NULL);
-   assert(sol != NULL);
    assert(x != NULL);
    assert(y != NULL);
    assert(cut != NULL);
