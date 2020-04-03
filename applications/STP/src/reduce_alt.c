@@ -1752,24 +1752,13 @@ SCIP_RETCODE reduce_getSd(
    nnodes = g->knots;
 
    /* start from tail */
-   graph_sdPaths(scip, g, pathtail, g->cost, distlimit, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+   graph_sdPaths(g, pathtail, g->cost, distlimit, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
 
    /* test whether edge e can be eliminated */
-   graph_sdPaths(scip, g, pathhead, g->cost, distlimit, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+   graph_sdPaths(g, pathhead, g->cost, distlimit, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
    sd = FARAWAY;
-#if 0
-   if( statetail[i2] != UNKNOWN )
-   {
-      sd = pathtail[i2].dist;
-      assert(SCIPisGT(scip, FARAWAY, sd));
-   }
-   if( statehead[i] != UNKNOWN && SCIPisGT(scip, sd, pathhead[i].dist) )
-   {
-      sd = pathhead[i].dist;
-      assert(SCIPisGT(scip, FARAWAY, sd));
-   }
-#endif
+
    /* get restore state and path of tail and head */
    for( k = 0; k < nlbltail; k++ )
    {
@@ -2121,10 +2110,10 @@ SCIP_RETCODE reduce_sdspSap(
          assert(g->mark[i2]);
 
          /* start limited dijkstra from i, marking all reached vertices */
-         graph_sdPaths(scip, g, pathtail, g->cost, g->cost[e], heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+         graph_sdPaths(g, pathtail, g->cost, g->cost[e], heap, statetail, memlbltail, &nlbltail, i, i2, limit);
 
          /* start limited dijkstra from i2, marking all reached vertices */
-         graph_sdPaths(scip, g, pathhead, costrev, g->cost[e], heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+         graph_sdPaths(g, pathhead, costrev, g->cost[e], heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
          sdist = FARAWAY;
 #if 0
@@ -3412,8 +3401,8 @@ SCIP_RETCODE reduce_sdsp(
          }
          else
          {
-            graph_sdPaths(scip, g, pathtail, g->cost, ecost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
-            graph_sdPaths(scip, g, pathhead, g->cost, ecost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+            graph_sdPaths(g, pathtail, g->cost, ecost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+            graph_sdPaths(g, pathhead, g->cost, ecost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
          }
 
          deletable = FALSE;
@@ -5850,7 +5839,6 @@ SCIP_RETCODE reduce_npv(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
-   PATH*                 pathhead,
    int*                  heap,
    int*                  statetail,
    int*                  statehead,
@@ -5860,18 +5848,15 @@ SCIP_RETCODE reduce_npv(
 {
    GRAPH* auxg;
    PATH mst[5];
+   PATH* pathhead;
    int adjverts[5];
    int* memlbltail;
    int* memlblhead;
    SCIP_Real prize;
-   SCIP_Real sdist0;
-   SCIP_Real sdist1;
-   SCIP_Real sdist2;
    const int nnodes = graph_get_nNodes(g);
 
    assert(scip  != NULL);
    assert(pathtail != NULL);
-   assert(pathhead != NULL);
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
@@ -5880,6 +5865,7 @@ SCIP_RETCODE reduce_npv(
 
    *nelims = 0;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathhead, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlbltail, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlblhead, nnodes + 1) );
 
@@ -5901,18 +5887,21 @@ SCIP_RETCODE reduce_npv(
    for( int i = 0; i < nnodes; i++ )
    {
       int k;
+      SCIP_Real sdist0;
+      SCIP_Real sdist1;
+      SCIP_Real sdist2;
 
       assert(g->grad[i] >= 0);
 
       /* only non-positive vertices of degree 3 */
-      if( !g->mark[i] || g->grad[i] != 3 || Is_term(g->term[i]) )
+      if( g->grad[i] != 3 || !g->mark[i] || Is_term(g->term[i]) )
          continue;
 
       k = 0;
       for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         assert(g->head[e] != g->source);
          assert(k < 3);
+         assert(g->mark[g->head[e]]);
 
          adjverts[k++] = g->head[e];
       }
@@ -5934,8 +5923,8 @@ SCIP_RETCODE reduce_npv(
       {
          SCIPdebugMessage("npv3Reduction delete: %d (prize: %f) \n", i,  g->prize[i]);
          (*nelims) +=  g->grad[i];
-         while( g->outbeg[i] != EAT_LAST )
-            graph_edge_del(scip, g, g->outbeg[i], TRUE);
+
+         graph_knot_del(scip, g, i, TRUE);
       }
       else
       {
@@ -5963,8 +5952,9 @@ SCIP_RETCODE reduce_npv(
       int k;
 
       /* only non-positive vertices of degree 4 */
-      if( !g->mark[i] || g->grad[i] != 4 || Is_term(g->term[i]) )
+      if( g->grad[i] != 4 || !g->mark[i] || Is_term(g->term[i]) )
          continue;
+
       k = 0;
 
       /* store neighbours */
@@ -5985,6 +5975,7 @@ SCIP_RETCODE reduce_npv(
             const int k2 = auxg->head[e];
             if( k2 > k )
             {
+               SCIP_Real sdist0;
                SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
@@ -6000,11 +5991,12 @@ SCIP_RETCODE reduce_npv(
       k = UNKNOWN;
       if( e == EAT_LAST )
       {
+         SCIP_Real sdist0 = 0.0;
+
          /* compute mst on all neighbours */
          graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
 
          /* calculate mst cost */
-         sdist0 = 0.0;
          for( int l = 1; l < 4; l++ )
             sdist0 += mst[l].dist;
 
@@ -6040,8 +6032,8 @@ SCIP_RETCODE reduce_npv(
       {
          SCIPdebugMessage("npv4Reduction delete: %d (prize: %f) \n", i,  g->prize[i]);
          (*nelims) += g->grad[i];
-         while( g->outbeg[i] != EAT_LAST )
-            graph_edge_del(scip, g, g->outbeg[i], TRUE);
+
+         graph_knot_del(scip, g, i, TRUE);
       }
       else
       {
@@ -6065,7 +6057,7 @@ SCIP_RETCODE reduce_npv(
       int k;
 
       /* only non-positive vertices of degree 5 */
-      if( !g->mark[i] || g->grad[i] != 5 || Is_term(g->term[i]) )
+      if( g->grad[i] != 5 || !g->mark[i] || Is_term(g->term[i]) )
          continue;
       k = 0;
 
@@ -6086,6 +6078,7 @@ SCIP_RETCODE reduce_npv(
             const int k2 = auxg->head[e];
             if( k2 > k )
             {
+               SCIP_Real sdist0;
                SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
@@ -6100,8 +6093,10 @@ SCIP_RETCODE reduce_npv(
       k = UNKNOWN;
       if( e == EAT_LAST )
       {
+         SCIP_Real sdist0 = 0.0;
+
          graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-         sdist0 = 0.0;
+
          for( int l = 1; l < 5; l++ )
             sdist0 += mst[l].dist;
 
@@ -6169,9 +6164,8 @@ SCIP_RETCODE reduce_npv(
       {
          SCIPdebugMessage(" \n npv5Reduction delete: %d (prize: %f) \n", i,  g->prize[i]);
          (*nelims) += g->grad[i];
-         while( g->outbeg[i] != EAT_LAST )
-            graph_edge_del(scip, g, g->outbeg[i], TRUE);
 
+         graph_knot_del(scip, g, i, TRUE);
       }
       else
       {
@@ -6185,6 +6179,7 @@ SCIP_RETCODE reduce_npv(
 
    SCIPfreeBufferArray(scip, &memlblhead);
    SCIPfreeBufferArray(scip, &memlbltail);
+   SCIPfreeBufferArray(scip, &pathhead);
 
    return SCIP_OKAY;
 }
@@ -6195,7 +6190,6 @@ SCIP_RETCODE reduce_chain2(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
-   PATH*                 pathhead,
    int*                  heap,
    int*                  statetail,
    int*                  statehead,
@@ -6203,13 +6197,13 @@ SCIP_RETCODE reduce_chain2(
    int                   limit
    )
 {
+   PATH* pathhead;
    int* memlbltail;
    int* memlblhead;
    const int nnodes = graph_get_nNodes(g);
 
    assert(scip  != NULL);
    assert(pathtail != NULL);
-   assert(pathhead != NULL);
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
@@ -6217,6 +6211,7 @@ SCIP_RETCODE reduce_chain2(
 
    *nelims = 0;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathhead, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlbltail, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlblhead, nnodes + 1) );
 
@@ -6273,6 +6268,7 @@ SCIP_RETCODE reduce_chain2(
 
    SCIPfreeBufferArray(scip, &memlblhead);
    SCIPfreeBufferArray(scip, &memlbltail);
+   SCIPfreeBufferArray(scip, &pathhead);
 
    return SCIP_OKAY;
 }

@@ -119,6 +119,145 @@ SCIP_RETCODE checkSdWalk(
 }
 
 
+
+
+
+/** tests chain2 RMW test */
+static
+SCIP_RETCODE testRmwChain2DeletesNode(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes_org = 6;
+   const int nedges_org = 12;
+   int nelims = 0;
+   int nnodes;
+   PATH* pathtail;
+   int* heap;
+   int* statetail;
+   int* statehead;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph->source = 5;
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 0.0); // 2,3
+   graph_edge_addBi(scip, graph, 1, 3, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
+   graph_edge_addBi(scip, graph, 3, 5, 0.0);
+   graph_edge_addBi(scip, graph, 4, 5, 0.0);
+
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.5;
+   graph->prize[1] = -12.5;
+   graph->prize[2] = -11.5;
+   graph->prize[3] = -1.5;
+   graph->prize[4] = -1.5;
+   graph->prize[5] = FARAWAY;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, &nnodes, NULL) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pathtail, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &heap, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &statetail, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &statehead, nnodes) );
+
+   SCIP_CALL( reduce_chain2(scip, graph, pathtail, heap, statetail, statehead, &nelims, 10) );
+
+   STPTEST_ASSERT(graph->grad[0] == 0);
+
+   for( int i = 1; i < nnodes_org; i++ )
+      STPTEST_ASSERT(graph->grad[i] != 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   SCIPfreeMemoryArray(scip, &pathtail);
+   SCIPfreeMemoryArray(scip, &heap);
+   SCIPfreeMemoryArray(scip, &statetail);
+   SCIPfreeMemoryArray(scip, &statehead);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests NPV RMW test */
+static
+SCIP_RETCODE testRmwNpv3DeletesNode(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes_org = 7;
+   const int nedges_org = 18;
+   int nelims = 0;
+   int nnodes;
+   PATH* pathtail;
+   int* heap;
+   int* statetail;
+   int* statehead;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph->source = 3;
+
+   // star
+   graph_edge_addBi(scip, graph, 0, 1, 0.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 0.0); // 2,3
+   graph_edge_addBi(scip, graph, 0, 3, 0.0);
+
+   // cycle
+   graph_edge_addBi(scip, graph, 1, 4, 0.0);
+   graph_edge_addBi(scip, graph, 1, 6, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
+   graph_edge_addBi(scip, graph, 2, 5, 0.0);
+   graph_edge_addBi(scip, graph, 3, 5, 0.0);
+   graph_edge_addBi(scip, graph, 3, 6, 0.0);
+
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = -1.0;
+   graph->prize[1] = -12.5;
+   graph->prize[2] = -11.5;
+   graph->prize[3] =  FARAWAY;
+   graph->prize[4] = -1.5;
+   graph->prize[5] = -0.6;
+   graph->prize[6] = -0.4;
+
+   SCIP_CALL( stptest_graphSetUpRmwOrg(scip, graph, &nnodes, NULL) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pathtail, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &heap, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &statetail, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &statehead, nnodes) );
+
+   SCIP_CALL( reduce_npv(scip, graph, pathtail, heap, statetail, statehead, &nelims, 10) );
+
+   STPTEST_ASSERT(graph->grad[0] == 0);
+
+
+   stptest_graphTearDown(scip, graph);
+
+   SCIPfreeMemoryArray(scip, &pathtail);
+   SCIPfreeMemoryArray(scip, &heap);
+   SCIPfreeMemoryArray(scip, &statetail);
+   SCIPfreeMemoryArray(scip, &statehead);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests ANS RMW test */
 static
 SCIP_RETCODE testRmwAnsDeletesOneNode(
@@ -655,9 +794,11 @@ SCIP_RETCODE stptest_pcreduce(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+
+   SCIP_CALL( testRmwNpv3DeletesNode(scip) );
+
+   SCIP_CALL( testRmwChain2DeletesNode(scip) );
    SCIP_CALL( testRmwTerminalDeg1Contraction2(scip) );
-
-
    SCIP_CALL( testRmwAnsDeletesTwoNodes(scip) );
    SCIP_CALL( testRmwAnsDeletesOneEdge(scip) );
    SCIP_CALL( testRmwAnsDeletesOneNode(scip) );

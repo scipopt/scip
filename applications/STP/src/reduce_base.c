@@ -769,7 +769,6 @@ SCIP_RETCODE reduceMw(
    )
 {
    PATH* vnoi;
-   PATH* path;
    GNODE** gnodearr;
    SCIP_Real* nodearrreal;
    SCIP_Real* edgearrreal;
@@ -817,7 +816,6 @@ SCIP_RETCODE reduceMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
 
    if( bred || advanced )
    {
@@ -831,13 +829,12 @@ SCIP_RETCODE reduceMw(
    }
 
    /* reduction loop */
-   SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, state,
+   SCIP_CALL( redLoopMw(scip, g, vnoi, gnodearr, nodearrreal, edgearrreal, state,
          vbase, nodearrint, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal);
    SCIPfreeBufferArrayNull(scip, &nodearrreal);
-   SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &state);
@@ -1171,7 +1168,6 @@ SCIP_RETCODE redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   PATH*                 path,               /**< path data structure */
    GNODE**               gnodearr,           /**< nodes-sized array  */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
    SCIP_Real*            edgearrreal,        /**< edges-sized array  */
@@ -1292,7 +1288,14 @@ SCIP_RETCODE redLoopMw(
          {
             printf("RMW \n\n \n");
 
+            SCIP_CALL(reduce_chain2(scip, g, vnoi, state, vbase, nodearrint, &chain2elims, 500));
+
+            SCIP_CALL(reduce_npv(scip, g, vnoi, state, vbase, nodearrint, &npvelims, 400));
+            printf("chain2elims=%d \n", chain2elims);
+
+
             SCIP_CALL( reduce_nnp(scip, g, &nnpelims) );
+
 
             SCIP_CALL(reduce_ans(scip, g, &anselims));
 
@@ -1345,7 +1348,7 @@ SCIP_RETCODE redLoopMw(
 
       if( nnp || extensive )
       {
-         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, &chain2elims, 500));
+         SCIP_CALL(reduce_chain2(scip, g, vnoi, state, vbase, nodearrint, &chain2elims, 500));
 
          if( chain2elims <= redbound )
             chain2 = FALSE;
@@ -1358,7 +1361,7 @@ SCIP_RETCODE redLoopMw(
 
       if( npv || extensive )
       {
-         SCIP_CALL(reduce_npv(scip, g, vnoi, path, state, vbase, nodearrint, &npvelims, 400));
+         SCIP_CALL(reduce_npv(scip, g, vnoi, state, vbase, nodearrint, &npvelims, 400));
 
          if( npvelims <= redbound )
             npv = FALSE;
@@ -1368,7 +1371,7 @@ SCIP_RETCODE redLoopMw(
 
       if( chain2 || extensive )
       {
-         SCIP_CALL(reduce_chain2(scip, g, vnoi, path, state, vbase, nodearrint, &chain2elims, 300));
+         SCIP_CALL(reduce_chain2(scip, g, vnoi, state, vbase, nodearrint, &chain2elims, 300));
 
          if( chain2elims <= redbound )
             chain2 = FALSE;
@@ -1392,7 +1395,7 @@ SCIP_RETCODE redLoopMw(
 
       if( bred )
       {
-         SCIP_CALL( reduce_boundMw(scip, g, vnoi, path, edgearrreal, nodearrreal, fixed, nodearrint, state, vbase, NULL, &bredelims) );
+         SCIP_CALL( reduce_boundMw(scip, g, vnoi, edgearrreal, nodearrreal, fixed, nodearrint, state, vbase, NULL, &bredelims) );
 
          if( bredelims <= redbound )
             bred = FALSE;

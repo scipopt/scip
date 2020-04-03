@@ -1068,7 +1068,6 @@ void graph_path_exec(
 
 /** limited Dijkstra, stopping at terminals */
 void graph_sdPaths(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    PATH*                 path,               /**< shortest paths data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -1107,16 +1106,17 @@ void graph_sdPaths(
    state[tail] = CONNECT;
    memlbl[(*nlbl)++] = tail;
 
-   if( g->stp_type != STP_MWCSP )
+   /* NOTE: for MW we do not consider the edge between tail and head */
+   if( !graph_pc_isMw(g) )
       g->mark[head] = FALSE;
 
-   for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+   for( int e = g->outbeg[tail]; e >= 0; e = g->oeat[e] )
    {
       const int m = g->head[e];
 
-      if( g->mark[m] && (distlimit >= cost[e]) )
+      if( g->mark[m] && (GE(distlimit, cost[e])) )
       {
-         assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
+         assert(GT(path[m].dist, path[tail].dist + cost[e]));
 
          /* m labelled the first time */
          memlbl[(*nlbl)++] = m;
@@ -1126,6 +1126,7 @@ void graph_sdPaths(
             break;
       }
    }
+
    g->mark[head] = TRUE;
 
    while( count > 0 && nchecks <= limit )
@@ -1137,7 +1138,7 @@ void graph_sdPaths(
       state[k] = CONNECT;
 
       /* distance limit reached? */
-      if( SCIPisGT(scip, path[k].dist, distlimit) )
+      if( GT(path[k].dist, distlimit) )
          break;
 
       /* stop at terminals */
@@ -1145,10 +1146,11 @@ void graph_sdPaths(
          continue;
 
       /* correct incident nodes */
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
       {
          const int m = g->head[e];
-         if( state[m] && g->mark[m] && (distlimit >= cost[e]) && (path[m].dist > path[k].dist + cost[e]) )
+
+         if( state[m] && g->mark[m] && GE(distlimit, cost[e]) && (path[m].dist > path[k].dist + cost[e]) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )

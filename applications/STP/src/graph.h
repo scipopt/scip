@@ -567,7 +567,7 @@ extern void   heap_add(const PATH*, int, int*, int*, int*);
 extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int* RESTRICT, UF* RESTRICT, PATH* RESTRICT);
 extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_Bool*, PATH*);
-extern void   graph_sdPaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
+extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_voronoiWithRadiusMw(SCIP*, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   graph_sdStar(SCIP*, const GRAPH*, SCIP_Bool, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);

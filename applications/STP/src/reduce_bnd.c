@@ -554,7 +554,6 @@ SCIP_RETCODE reduce_boundMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure (size 3 * nnodes) */
-   PATH*                 path,               /**< shortest path data structure (size nnodes) */
    SCIP_Real*            cost,               /**< edge cost array                    */
    SCIP_Real*            radius,             /**< radius array                       */
    SCIP_Real*            offset,             /**< pointer to the offset              */
@@ -565,6 +564,7 @@ SCIP_RETCODE reduce_boundMw(
    int*                  nelims              /**< pointer to store number of eliminated edges */
    )
 {
+   PATH* path;
    PATH* mst;
    SCIP_Real* costrev;
    SCIP_Real* prize;
@@ -582,7 +582,6 @@ SCIP_RETCODE reduce_boundMw(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(vnoi != NULL);
-   assert(path != NULL);
    assert(cost != NULL);
    assert(radius != NULL);
    assert(heap != NULL);
@@ -598,16 +597,18 @@ SCIP_RETCODE reduce_boundMw(
    nterms = graph->terms - 1;
    *nelims = 0;
 
+
    assert(prize != NULL);
 
    /* not more than two nodes of positive weight? */
    if( nterms <= 2 )
       return SCIP_OKAY;
 
-   /* not promising and does probably no work */
+   /* not promising and does probably not work without modifications of the code */
    if( graph_pc_isRootedPcMw(graph) )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
    /* initialize cost and costrev array */
@@ -719,6 +720,7 @@ SCIP_RETCODE reduce_boundMw(
 
    SCIPfreeBufferArrayNull(scip, &mst);
    SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &path);
 
    return SCIP_OKAY;
 }
