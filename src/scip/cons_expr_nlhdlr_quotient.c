@@ -173,8 +173,8 @@ SCIP_Bool isExprUnivariateLinear(
   * 1. prod(f(x), pow(g(y),-1))
   * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
   *
-  * @TODO: at the moment quotients like xy / z are not detected, because they are turned into a product expression
-  * with three children, i,e., x * y * (1 / z)
+  * @todo At the moment quotients like xy / z are not detected, because they are turned into a product expression
+  * with three children, i,e., x * y * (1 / z).
   */
 static
 SCIP_RETCODE detectExpr(
@@ -485,19 +485,19 @@ SCIP_INTERVAL revpropEval(
    return result; /*lint !e644 */
 }
 
-/** sets up a rowprep from given data
+/** creates a rowprep from given data; the generate cut is always assumed to be local
  *
- *  the auxvar is always added with coefficient -1 and the constant is on the lhs/rhs
+ *  @note the auxvar is always added with coefficient -1 and the constant is moved to the left- or right-hand side
  */
 static
-SCIP_RETCODE assembleRowprep(
+SCIP_RETCODE createRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
    const char*           name,               /**< name of type of cut */
    SCIP_Bool             overestimate,       /**< whether overestimating */
-   SCIP_VAR**            linvars,            /**< variables in the cut (apart from auxvar) */
-   SCIP_Real*            lincoefs,           /**< coefficients of linvars */
-   SCIP_Real             linconst,           /**< constant term */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real*            coefs,              /**< coefficients */
+   SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of variables in the cut (-1 for auxvar) */
    SCIP_VAR*             auxvar              /**< auxiliary variable */
    )
@@ -506,23 +506,23 @@ SCIP_RETCODE assembleRowprep(
 
    assert(scip != NULL);
    assert(rowprep != NULL);
-   assert(lincoefs != NULL);
-   assert(linvars != NULL);
+   assert(coefs != NULL);
+   assert(vars != NULL);
    assert(auxvar != NULL);
 
+   /* create rowprep */
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-
    (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, name);
-
-   SCIPaddRowprepSide(*rowprep, -linconst);
-
+   SCIPaddRowprepSide(*rowprep, -constant);
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, nlinvars + 1) );
 
+   /* add coefficients */
    for( i = 0; i < nlinvars; ++i )
    {
-      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, linvars[i], lincoefs[i]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, vars[i], coefs[i]) );
    }
 
+   /* add auxiliary variable */
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
 
    return SCIP_OKAY;
@@ -531,7 +531,7 @@ SCIP_RETCODE assembleRowprep(
 /** separates a given point in the univariate case (ax + b) / (cx + d) + e
  *
  *  Depending on the reference point, the estimator is a tangent or a secant on the graph.
- *  It depends on whether we are under- or overestimating, whether we are on the left or 
+ *  It depends on whether we are under- or overestimating, whether we are on the left or
  *  on the right side of the singularity at -d/c, and whether it is the monotone increasing
  *  (ab - cd > 0) or decreasing part (ab - cd < 0). Together, there are 8 cases:
  *
@@ -544,7 +544,7 @@ SCIP_RETCODE assembleRowprep(
  *  mon. decr. + understimate + left hand side  -->  secant
  *  mon. decr. + understimate + right hand side -->  tangent
  *
- * @TODO: check if this formular is correct
+ * @TODO: check whether the formula is correct
  */
 static
 SCIP_RETCODE sepaUnivariate(
@@ -627,11 +627,13 @@ SCIP_RETCODE sepaUnivariate(
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
 
-   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, &x, &lincoef, linconst, 1, auxvar) );
+   /* create rowpred */
+   SCIP_CALL( createRowprep(scip, cut, name, overestimate, &x, &lincoef, linconst, 1, auxvar) );
 
    assert(cut != NULL);
    *success = TRUE;
 
+   /* clean up rowprep */
    SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    return SCIP_OKAY;
@@ -647,15 +649,15 @@ SCIP_RETCODE sepaUnivariate(
  *       b) overestimation:  use z <= (1/lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
  *                           and build gradient cut
  *
- *    2. lbx <=0 and ubx >= 0
- *          use mccormick for x <=/>= y * z and transform resulting linear inequality
+ *    2. lbx <= 0 and ubx >= 0
+ *          use McCormick for x <=/>= y * z and transform resulting linear inequality
  *          x <=/>= ay + bz + c to z >=/<= (x - ay - c) / b. The direction of the inequality
  *          is preserved, since we assume y > 0.
  *
  *    If y < 0, swap and negate its bounds and compute the respective opposite estimator (and negate it).
  *    If 0 is in the interval of y, nothing is possible.
  *
- *  @TODO: check if this formula is correct
+ *  @todo check whether the formula is correct
  */
 static
 SCIP_RETCODE sepaBivariate(
@@ -706,7 +708,7 @@ SCIP_RETCODE sepaBivariate(
 
    yispositive = SCIPisGT(scip, lby, 0.0);
 
-   /* if y is not postive, swap and negate its bounds */
+   /* if y is not positive, swap and negate its bounds */
    if( !yispositive )
    {
       SCIP_Real tmp;
@@ -734,7 +736,7 @@ SCIP_RETCODE sepaBivariate(
       assert(SCIPisGE(scip, lbx, 0.0));
       assert(SCIPisGT(scip, lby, 0.0));
 
-      /* case 1a: undererstimating the original or overestimating the negated expression */
+      /* case 1a: underestimating the original or overestimating the negated expression */
       if( overestimate != (xisnonnegative == yispositive) )
       {
          SCIP_Real sqrtlbx;
@@ -807,7 +809,7 @@ SCIP_RETCODE sepaBivariate(
          SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
          &mccoefaux, &mccoefy, &linconst, success);
 
-      /* the mccormick coefficients of auxvar is always lby or uby, so it has to be >=0 */
+      /* the McCormick coefficients of auxvar is always lby or uby, so it has to be >=0 */
       assert(SCIPisGT(scip, mccoefaux, 0.0));
 
       if( !(*success) )
@@ -824,12 +826,13 @@ SCIP_RETCODE sepaBivariate(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
       SCIPgetNLPs(scip));
 
-   /* build cut */
-   SCIP_CALL( assembleRowprep(scip, cut, name, overestimate, linvars, lincoefs, linconst, 2, auxvar) );
+   /* create rowprep */
+   SCIP_CALL( createRowprep(scip, cut, name, overestimate, linvars, lincoefs, linconst, 2, auxvar) );
 
    assert(*cut != NULL);
    *success = TRUE;
 
+   /* clean up rowprep */
    SCIP_CALL( SCIPcleanupRowprep2(scip, *cut, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    return SCIP_OKAY;
@@ -907,7 +910,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 
 /** nonlinear handler under/overestimation callback
  *
- * @TODO: which of the paramters did I not use, but have to be taken into consideration?
+ * @todo which of the paramters did I not use, but have to be taken into consideration?
 */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
@@ -917,7 +920,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   if( nlhdlrexprdata->nomvar == nlhdlrexprdata-> denomvar )
+   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
    {
       SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar, SCIPgetConsExprExprAuxVar(expr),
             nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef,
@@ -934,7 +937,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
             SCIPgetConsExprExprAuxVar(expr), overestimate, &rowprep, success) );
    }
 
-   assert( !(*success) || rowprep != NULL );
+   assert(!(*success) || rowprep != NULL);
 
    return SCIP_OKAY;
 }
@@ -989,6 +992,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
    varlb = SCIPvarGetLbLocal(nlhdlrexprdata->nomvar);
    varub = SCIPvarGetUbLocal(nlhdlrexprdata->nomvar);
+   SCIPdebugMsg(scip, "call reverse propagation for expression (%g x + %g) / (%g y + %g) + %g bounds [%g,%g]\n",
+      nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
+      nlhdlrexprdata->constant, exprbounds.inf, exprbounds.sup);
 
    result = revpropEval(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);

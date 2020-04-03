@@ -375,7 +375,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   /* this also creates the locks */
+   /* adding a constraint also adds locks */
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
