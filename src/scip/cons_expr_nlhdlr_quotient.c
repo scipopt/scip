@@ -570,7 +570,6 @@ SCIP_RETCODE sepaUnivariate(
    SCIP_Bool isinleftpart;
 
    assert(scip != NULL);
-   assert(sol != NULL);
    assert(success != NULL);
    assert(cut != NULL);
    assert(x != NULL);
