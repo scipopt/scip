@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,7 @@
 
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "default"
@@ -274,20 +275,35 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    {
       SCIP_Real violation;
 
-#ifdef BRSCORE_RELVIOL
+#ifndef BRSCORE_ABSVIOL
       SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
 #else
       SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
 #endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
-      for( c = 0; c < nchildren; ++c )
+      if( nchildren == 1 )
       {
-         if( branchcand[c] )
+         if( branchcand[0] )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation);
-            *addedbranchscores = TRUE;
+            SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr), 1, violation, sol, addedbranchscores) );
          }
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR** exprs;
+         int nexprs = 0;
+
+         /* get list of those children that have the branchcand-flag set */
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
+
+         for( c = 0; c < nchildren; ++c )
+            if( branchcand[c] )
+               exprs[nexprs++] = SCIPgetConsExprExprChildren(expr)[c];
+
+         SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
+
+         SCIPfreeBufferArray(scip, &exprs);
       }
 
       if( *addedbranchscores )

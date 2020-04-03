@@ -154,6 +154,7 @@
 #define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
+#define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Whether all non-binary variables shall be not affected by symmetries if OF is active? */
 #define DEFAULT_ONLYBINARYSYMMETRY   TRUE    /**< Is only symmetry on binary variables used? */
 
 /* default parameters for linear symmetry constraints */
@@ -234,6 +235,7 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
+   SCIP_Bool             symfixnonbinaryvars; /**< Whether all non-binary variables shall be not affected by symmetries if OF is active? */
    SCIP_Bool             onlybinarysymmetry; /**< Whether only symmetry on binary variables is used */
 
    /* for symmetry constraints */
@@ -3141,7 +3143,23 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->symconsenabled );
 
    /* possibly compute symmetry */
-   SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   if ( propdata->ofenabled )
+   {
+      /* in the nonlinear case, all non-binary variables hav to be fixed */
+      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+   }
+   else
+   {
+      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   }
+   assert( propdata->binvaraffected || ! propdata->ofenabled );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -3488,8 +3506,15 @@ SCIP_RETCODE propagateOrbitalFixing(
    *nprop = 0;
 
    /* possibly compute symmetry */
-   SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   assert( !propdata->islinearproblem || propdata->binvaraffected || ! propdata->ofenabled );
+   if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+   {
+      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+   }
+   else
+   {
+      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+   }
+   assert( ! propdata->islinearproblem || propdata->binvaraffected || ! propdata->ofenabled );
 
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
@@ -3876,7 +3901,14 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == 1 )
    {
       /* otherwise compute symmetry if timing requests it */
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
       assert( propdata->binvaraffected || ! propdata->ofenabled );
    }
 
@@ -4211,6 +4243,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/disableofrestart",
          "Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?",
          &propdata->disableofrestart, TRUE, DEFAULT_DISABLEOFRESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/symfixnonbinaryvars",
+         "Whether all non-binary variables shall be not affected by symmetries if OF is active?",
+         &propdata->symfixnonbinaryvars, TRUE, DEFAULT_SYMFIXNONBINARYVARS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/onlybinarysymmetry",

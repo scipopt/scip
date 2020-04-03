@@ -539,6 +539,7 @@ Interface changes
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
   - new parameter "propagating/symmetry/disableofrestart"
+  - new parameter "propagating/symmetry/symfixnonbinaryvars"
 
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
@@ -723,6 +724,7 @@ Fixed bugs
 - additional checks in some presolvers for time limit being exceeded
 - fixed bug in presolving of cons_varbound with multi-aggregated variables
 - improve numerics in conflict analysis by using double-double arithmetic
+- fixed bound acceptance condition to avoid inconsistencies
 
 Miscellaneous
 -------------
@@ -736,6 +738,7 @@ Miscellaneous
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
+- changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
 
 Known bugs
 ----------
