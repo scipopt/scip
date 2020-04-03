@@ -455,6 +455,9 @@ SCIP_INTERVAL revpropEval(
       return result;
    }
 
+   /* substract constrant from bounds of the expression */
+   SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &bnds, bnds, e);
+
    /* if the expression is constant or the limit lies inside the domain, nothing can be propagated */
    if( a*d - b*c == 0.0 || (bnds.inf < a / c && bnds.sup > a / c) )
    {
@@ -462,8 +465,8 @@ SCIP_INTERVAL revpropEval(
       return result;
    }
 
-   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf) + e;
-   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup) + e;
+   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf);
+   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup);
 
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
