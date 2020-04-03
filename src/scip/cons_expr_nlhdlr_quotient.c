@@ -462,8 +462,8 @@ SCIP_INTERVAL revpropEval(
       return result;
    }
 
-   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf);
-   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup);
+   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf) + e;
+   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup) + e;
 
    /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
    if( a*d - b*c > 0.0 ) /* monotone increasing */
@@ -471,13 +471,14 @@ SCIP_INTERVAL revpropEval(
       assert(infpropval <= suppropval);
       SCIPintervalSetBounds(&result, infpropval, suppropval);
    }
-   else if( a*d - b*c < 0.0 ) /* monotone decreasing */
+   else /* monotone decreasing */
    {
+      assert(a*d - b*c < 0.0);
       assert(suppropval <= infpropval);
       SCIPintervalSetBounds(&result, suppropval, infpropval);
    }
 
-   return result; /*lint !e644 */
+   return result;
 }
 
 /** creates a rowprep from given data; the generate cut is always assumed to be local
