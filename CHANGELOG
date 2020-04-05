@@ -215,7 +215,7 @@ Features
 - Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
   symresacks even if the underlying permutation is not monotone.
 
-- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features:
+- New branching rule `vanillafullstrong`, mostly for scientific purpose, with the following features:
   1) no cutoff or domain reduction: only branching;
   2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls
      - basically, do not update any statistic;
@@ -371,7 +371,7 @@ Interface changes
   + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
   + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
     SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
-	and SCIPincludePropOrbitalfixing()
+    and SCIPincludePropOrbitalfixing()
   + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
@@ -514,16 +514,18 @@ Interface changes
 - deleted parameter "propagating/orbitalfixing/symcomptiming"
 - deleted parameter "propagating/orbitalfixing/performpresolving"
 - deleted parameter "propagating/orbitalfixing/recomputerestart"
-- changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
-- changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
-- changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
+- changed default value of "heuristics/coefdiving/freq" (old: 10, new: -1)
+- changed default value of "heuristics/conflictdiving/freq" (old: -1, new: 10)
+- changed default value of "heuristics/conflictdiving/lockweight" (old: 1.0, new: 0.75)
 - replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
   tolerance to initialize the primal feasibility tolerance of the LP solver
 - enabling aggressive presolving now activates all available presolving plugins,
   and decreases the presolving/restartfac parameter correctly with respect to default.
-- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+- changed default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
   the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
   of the RINS heuristic.
+- changed default value of "constraints/quadratic/empathy4and" (old: 0, new: 2)
+- changed default value of "propagating/redcost/useimplics" (old: TRUE, new: FALSE)
 
 ### New parameters
 
@@ -2174,7 +2176,7 @@ Fixed bugs
   - fixed bug during coefficient tightening in varbound constraint handler
   - handle cutoffs in cons_indicator detected by infeasible inequalities
   - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
-  - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
+  - fixed initsol and exitsol of cons_indicator, if problem has already been solved
   - fixed bug in cons_indicator with changing type of slackvariable
 
 @section RN320 SCIP 3.2.0
@@ -2496,7 +2498,7 @@ Interface changes
 - `constraints/SOS1/strthenboundcuts` to define whether to strengthen bound (clique) cuts in case bound variables are available
 - `constraints/SOS1/updateconflpresol` to update the conflict graph during the presolving procedure
 - `display/allviols` to print all violated constraints of the best solution during checksol in the scip shell
-- `heur/indicator/improvesols` that turns on the improvement of external solutions by one-opt
+- `heuristics/indicator/improvesols` that turns on the improvement of external solutions by one-opt
 - `heuristics/*diving/lpresolvedomchgquot` to determine the percentage of changed domains since previous LP to trigger
   an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
 - `heuristics/*diving/lpsolvefreq` to determine the frequency for resolving LP's during the execution of
