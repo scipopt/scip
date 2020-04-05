@@ -7879,6 +7879,10 @@
  * @brief methods for reoptimization related tasks
  */
 
+/**@defgroup PublicSymmetryMethods Symmetry
+ * @ingroup PublicSolveMethods
+ * @brief methods for symmetry handling
+ */
 
 /** @defgroup DataStructures Data Structures
  *  @ingroup PUBLICCOREAPI
