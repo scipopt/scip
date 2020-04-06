@@ -653,13 +653,13 @@ void hcGradCut(
    assert(coefy != NULL);
    assert(constant != NULL);
 
-   tmp1 = Sqrt(lbx * ubx) + solx;
-   tmp2 = Sqr(Sqrt(lbx) + Sqrt(ubx)) * soly;
+   tmp1 = SQRT(lbx * ubx) + solx;
+   tmp2 = SQR(SQRT(lbx) + SQRT(ubx)) * soly;
    assert(tmp2 > 0.0);
 
    *coefx = 2.0 * tmp1 / tmp2;
-   *coefy = -Sqr(tmp1) / (tmp2 * soly);
-   *constant = 2.0 * Sqrt(lbx * ubx) * tmp1 / tmp2;
+   *coefy = -SQR(tmp1) / (tmp2 * soly);
+   *constant = 2.0 * SQRT(lbx * ubx) * tmp1 / tmp2;
 }
 
 /** separates a given point in the bivariate case x/y <=/>= z (auxvar)
@@ -669,8 +669,7 @@ void hcGradCut(
  *    1. lbx > 0 or ubx < 0
  *       a) underestimation: use z >= x/y >= (1/y) * ( (x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)) )
  *                           and build gradient cut
- *       b) overestimation:  use z <= (1/lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
- *                           and build gradient cut
+ *       b) overestimation:  use z <= 1/(lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
  *
  *    2. lbx <= 0 and ubx >= 0
  *          use McCormick for x <=/>= y * z and transform resulting linear inequality
@@ -784,22 +783,17 @@ SCIP_RETCODE sepaBivariate(
       /* case 1b: overestimating the original or underestimating the negated expression */
       else
       {
-         SCIP_Real fdenom;
-
-         fdenom = -lby * uby;
-         assert(!SCIPisZero(scip, fdenom));
-
          if( uby * solx - lbx * soly + lbx * lby <= lby * solx - ubx * soly + ubx * uby )
          {
-            lincoefs[0] = -lby;
-            lincoefs[1] = -lbx / fdenom;
-            linconst = (lbx * lby) / fdenom;
+            lincoefs[0] = 1.0 / lby;
+            lincoefs[1] = -lbx / (lby * uby);
+            linconst = lbx / uby;
          }
          else
          {
-            lincoefs[0] = -uby;
-            lincoefs[1] = -ubx / fdenom;
-            linconst = (ubx * uby) / fdenom;
+            lincoefs[0] = 1.0 / uby;
+            lincoefs[1] = -ubx / (lby * uby);
+            linconst = ubx / lby;
          }
       }
 
