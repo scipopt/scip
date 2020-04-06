@@ -105,12 +105,12 @@ echo -----------------------------  >> $OUTFILE
 echo Building vipr file ... >> $OUTFILE
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 #VIPRDERFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_der
-VIPRTMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprtmp
-VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
-cat $VIPRFILE  > $VIPRTMPFILE
+#VIPRTMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprtmp
+#VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
+#cat $VIPRFILE  > $VIPRTMPFILE
 #rm -f $VIPRDERFILE
-mv $VIPRTMPFILE $VIPRFILE
-cp $VIPRFILE $VIPRRAWFILE
+#mv $VIPRTMPFILE $VIPRFILE
+#cp $VIPRFILE $VIPRRAWFILE
 
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
@@ -118,13 +118,13 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 
 # run vipr tightening
-echo "viprfile raw:       " `ls -lisa $VIPRRAWFILE` >> $OUTFILE
-echo Compressing vipr file ... >> $OUTFILE
+#echo "viprfile raw:       " `ls -lisa $VIPRRAWFILE` >> $OUTFILE
+#echo Compressing vipr file ... >> $OUTFILE
 #bash -c "$VIPRCOMPRESSNAME -t $VIPRFILE $TIMELIMIT 2>>$ERRFILE"  | tee -a $OUTFILE
 #mv $VIPRFILE.trimmed $VIPRFILE
-bash -c "$VIPRCOMPRESSNAME $VIPRFILE $TIMELIMIT 2>>$ERRFILE"  | tee -a $OUTFILE
-mv $VIPRFILE.opt $VIPRFILE
-echo "viprfile tightened: " `ls -lisa $VIPRFILE` >> $OUTFILE
+#bash -c "$VIPRCOMPRESSNAME $VIPRFILE $TIMELIMIT 2>>$ERRFILE"  | tee -a $OUTFILE
+#mv $VIPRFILE.opt $VIPRFILE
+#echo "viprfile tightened: " `ls -lisa $VIPRFILE` >> $OUTFILE
 
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
@@ -146,9 +146,9 @@ bash -c "gzip $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
 echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 
 # compress untightened vipr file
-echo Gzipping untightened vipr file ... >> $OUTFILE
-bash -c "gzip $VIPRRAWFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
+#echo Gzipping untightened vipr file ... >> $OUTFILE
+#bash -c "gzip $VIPRRAWFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+#echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
 
 if test -e $SOLFILE
 then
