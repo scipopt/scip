@@ -543,7 +543,6 @@ SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_VAR*             x,                  /**< argument variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             a,                  /**< coefficient in nominator */
    SCIP_Real             b,                  /**< constant in nominator */
    SCIP_Real             c,                  /**< coefficient in denominator */
@@ -649,7 +648,7 @@ void hcGradCut(
    assert(constant != NULL);
 
    tmp1 = SQRT(lbx * ubx) + solx;
-   tmp2 = SQR(SQRT(lbx) + SQRT(ubx)) * soly;
+   tmp2 = SQR(SQRT(lbx) + SQRT(ubx)) * soly; /*lint !e666*/
    assert(tmp2 > 0.0);
 
    *coefx = 2.0 * tmp1 / tmp2;
@@ -788,7 +787,7 @@ SCIP_RETCODE sepaBivariate(
       /* case 2b */
       else
       {
-         (void) hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
+         hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
       }
    }
 
@@ -908,7 +907,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 
    if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
    {
-      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar, SCIPgetConsExprExprAuxVar(expr),
+      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar,
             nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef,
             nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep, success) );
    }

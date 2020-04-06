@@ -532,7 +532,7 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -552,7 +552,7 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -614,7 +614,7 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -636,7 +636,7 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
