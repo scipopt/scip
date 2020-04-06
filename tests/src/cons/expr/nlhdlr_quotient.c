@@ -786,9 +786,9 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
 
    cutvars[0] = x;
    cutvars[1] = w;
-   cutcoefs[0] = 1.0 / 36.0;
-   cutcoefs[1] = 1.0 / 9.0;
-   checkCut(cut, cutvars, cutcoefs, 1.0 / 3.0, SCIPinfinity(scip), 2);
+   cutcoefs[0] = 25.0 / 36.0;
+   cutcoefs[1] = 5.0 / 9.0;
+   checkCut(cut, cutvars, cutcoefs, 10.0 / 9.0, SCIPinfinity(scip), 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -808,7 +808,7 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
    cutvars[0] = x;
    cutvars[1] = w;
    cutcoefs[0] = 1.0 / 7.5;
-   cutcoefs[1] = -1.5;
+   cutcoefs[1] = 2.0 / 3.0;
    checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.0 / 5.0, 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );

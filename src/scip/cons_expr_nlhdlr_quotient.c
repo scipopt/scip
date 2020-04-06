@@ -661,15 +661,15 @@ void hcGradCut(
  *
  *  There are the following cases for y > 0:
  *
- *    1. lbx > 0 or ubx < 0
- *       a) underestimation: use z >= x/y >= (1/y) * ( (x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)) )
- *                           and build gradient cut
- *       b) overestimation:  use z <= 1/(lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
- *
- *    2. lbx <= 0 and ubx >= 0
+ *    1. lbx < 0 < ubx
  *          use McCormick for x <=/>= y * z and transform resulting linear inequality
  *          x <=/>= ay + bz + c to z >=/<= (x - ay - c) / b. The direction of the inequality
  *          is preserved, since we assume y > 0.
+ *
+ *    2. lbx >= 0 or ubx <= 0
+ *       a) overestimation:  use z <= 1/(lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
+ *       b) underestimation: use z >= x/y >= (1/y) * ( (x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)) )
+ *                           and build gradient cut
  *
  *    If y < 0, swap and negate its bounds and compute the respective opposite estimator (and negate it).
  *    If 0 is in the interval of y, nothing is possible.
@@ -686,18 +686,18 @@ SCIP_RETCODE sepaBivariate(
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
-   SCIP_VAR* linvars[2];
-   SCIP_Real lincoefs[2];
+   SCIP_VAR* linvars[2] = {x, y};
+   SCIP_Real lincoefs[2] = {0.0, 0.0};
    char name[SCIP_MAXSTRLEN];
+   SCIP_Real linconst = 0.0;
    SCIP_Real lbx;
    SCIP_Real ubx;
    SCIP_Real lby;
    SCIP_Real uby;
    SCIP_Real solx;
    SCIP_Real soly;
-   SCIP_Real linconst;
-   SCIP_Bool xisnonnegative;
-   SCIP_Bool yispositive;
+   SCIP_Bool negatedy = FALSE;
+   SCIP_Bool negatedx = FALSE;
 
    assert(scip != NULL);
    assert(x != NULL);
@@ -714,53 +714,64 @@ SCIP_RETCODE sepaBivariate(
 
    /* if 0 is in the interior of [lby,uby], no estimator is possible */
    if( SCIPisLT(scip, lby, 0.0) && SCIPisGT(scip, uby, 0.0) )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
 
+   /* get reference point */
    solx = SCIPgetSolVal(scip, sol, x);
    soly = SCIPgetSolVal(scip, sol, y);
 
-   yispositive = SCIPisGT(scip, lby, 0.0);
-
-   /* if y is not positive, swap and negate its bounds */
-   if( !yispositive )
+   /* negate bounds of y if it is not positive */
+   if( !SCIPisGT(scip, lby, 0.0) )
    {
-      SCIP_Real tmp;
+      SCIP_Real tmp = uby;
 
-      tmp = uby;
       uby = -lby;
       lby = -tmp;
       soly = -soly;
+      negatedy = TRUE;
+      overestimate = !overestimate;
    }
 
-   /* case 1: 0 is not in the interior of [lbx,ubx] */
-   if( SCIPisGE(scip, lbx, 0.0) || SCIPisLE(scip, ubx, 0.0) )
+   /* case 1: 0 is in the interior of [lbx,ubx] */
+   if( lbx < 0.0 && 0.0 < ubx )
    {
-      xisnonnegative = SCIPisGE(scip, lbx, 0.0);
+      SCIP_Real mccoefy = 0.0;
+      SCIP_Real mccoefaux = 0.0;
+      SCIP_Real mcconst = 0.0;
 
-      /* if x is not non-negative, swap and negate its bounds */
-      if( !xisnonnegative )
+      SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
+         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
+         &mccoefaux, &mccoefy, &mcconst, success);
+
+      if( !(*success) )
+         return SCIP_OKAY;
+
+      lincoefs[0] = 1.0 / mccoefaux;
+      lincoefs[1] = -mccoefy / mccoefaux;
+      linconst = -mcconst / mccoefaux;
+   }
+   /* case 2: 0 is not in the interior of [lbx,ubx] */
+   else
+   {
+      /* negate bounds of x if it is not positive */
+      if( !SCIPisGE(scip, lbx, 0.0) )
       {
-         SCIP_Real tmp;
+         SCIP_Real tmp = ubx;
 
-         tmp = ubx;
          ubx = -lbx;
          lbx = -tmp;
          solx = -solx;
+         negatedx = TRUE;
+         overestimate = !overestimate;
       }
 
-      assert(SCIPisGE(scip, lbx, 0.0));
-      assert(SCIPisGT(scip, lby, 0.0));
-      assert(SCIPisLE(scip, lbx, solx) && SCIPisLE(scip, solx, ubx));
-      assert(SCIPisLE(scip, lby, soly) && SCIPisLE(scip, soly, uby));
-
-      /* case 1a: underestimating the original or overestimating the negated expression */
-      if( overestimate != (xisnonnegative == yispositive) )
+      /* case 2a */
+      if( overestimate )
       {
-         (void) hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
-      }
-      /* case 1b: overestimating the original or underestimating the negated expression */
-      else
-      {
+         /* check where the minimum is attained */
          if( uby * solx - lbx * soly + lbx * lby <= lby * solx - ubx * soly + ubx * uby )
          {
             lincoefs[0] = 1.0 / lby;
@@ -774,52 +785,37 @@ SCIP_RETCODE sepaBivariate(
             linconst = ubx / lby;
          }
       }
-
-      /* avoid huge values in the estimator */
-      if( SCIPisHugeValue(scip, ABS(lincoefs[0])) || SCIPisHugeValue(scip, ABS(lincoefs[1]))
-         || SCIPisHugeValue(scip, ABS(linconst)) )
+      /* case 2b */
+      else
       {
-         return SCIP_OKAY;
-      }
-
-      /* negate coefficients when considering the negated expression */
-      if( xisnonnegative != yispositive )
-      {
-         lincoefs[0] = -lincoefs[0];
-         lincoefs[1] = -lincoefs[1];
-         linconst = -linconst;
+         (void) hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
       }
    }
-   /* case 2: 0 is in the interior of [lbx,ubx] */
-   else
+
+   /* reverse negations of x and y in the resulting estimator */
+   if( negatedx )
+      lincoefs[0] = -lincoefs[0];
+   if( negatedy )
+      lincoefs[1] = -lincoefs[1];
+
+   /* if exactly one variable has been negated, then we have computed an underestimate/overestimate for the negated
+    * expression, which results in an overestimate/underestimate for the original expression
+    */
+   if( negatedx != negatedy )
    {
-      SCIP_Real mccoefy = 0.0;
-      SCIP_Real mccoefaux = 0.0;
-
-      linconst = 0.0;
-
-      SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
-         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
-         &mccoefaux, &mccoefy, &linconst, success);
-
-      /* the McCormick coefficients of auxvar is always lby or uby, so it has to be > 0 */
-      assert(SCIPisGT(scip, mccoefaux, 0.0));
-
-      if( !(*success) )
-         return SCIP_OKAY;
-
-      lincoefs[0] = 1.0 / mccoefaux;
-      lincoefs[1] = -mccoefy / mccoefaux;
-      linconst = -linconst / mccoefaux;
+      lincoefs[0] = -lincoefs[0];
+      lincoefs[1] = -lincoefs[1];
+      linconst = - linconst;
    }
 
-   linvars[0] = x;
-   linvars[1] = y;
-
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
-      SCIPgetNLPs(scip));
+   /* avoid huge values in the estimator */
+   if( SCIPisHugeValue(scip, ABS(lincoefs[0])) || SCIPisHugeValue(scip, ABS(lincoefs[1]))
+      || SCIPisHugeValue(scip, ABS(linconst)) )
+      return SCIP_OKAY;
 
    /* create rowprep */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
+      SCIPgetNLPs(scip));
    SCIP_CALL( createRowprep(scip, rowprep, name, linvars, lincoefs, linconst, 2) );
 
    /* clean up rowprep */
