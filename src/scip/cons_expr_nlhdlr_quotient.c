@@ -705,7 +705,7 @@ SCIP_RETCODE sepaBivariate(
    assert(rowprep != NULL);
    assert(success != NULL);
 
-   *success = FALSE;
+   *success = TRUE;
 
    lbx = SCIPvarGetLbLocal(x);
    ubx = SCIPvarGetUbLocal(x);
