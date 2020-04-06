@@ -86,7 +86,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   //BMScheckEmptyMemory();
+   BMScheckEmptyMemory();
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
@@ -135,6 +135,7 @@ void checkCut(
    cr_assert_not_null(vars);
    cr_assert_not_null(vals);
 
+   (void) SCIPprintRow(scip, cut, NULL);
    cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d variable(s) in cut, but got %d\n",
       nvars, SCIProwGetNNonz(cut));
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs), "expected lhs = %f, but got %f\n", lhs, SCIProwGetLhs(cut));
@@ -498,8 +499,9 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
    SCIP_CONS* cons;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_VAR* cutvars[2];
-   SCIP_Real cutcoefs[2];
+   SCIP_VAR* auxvar;
+   SCIP_VAR* cutvar;
+   SCIP_Real cutcoef;
    SCIP_Real tmpinf;
    SCIP_Real tmpsup;
    SCIP_Bool infeasible;
@@ -519,8 +521,7 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
    expr = SCIPgetExprConsExpr(scip, cons);
 
    /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[1])) );
-   cutcoefs[1] = -1.0;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -531,17 +532,17 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[0] = x;
-   cutcoefs[0] = 5.0 / 3.0;
+   cutvar = x;
+   cutcoef = 5.0 / 3.0;
 
-   checkCut(cut, cutvars, cutcoefs, 5.0 + cutcoefs[0] * 2.0, SCIPinfinity(scip), 2);
+   checkCut(cut, &cutvar, &cutcoef, 5.0 + cutcoef * 2.0, SCIPinfinity(scip), 1);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -551,7 +552,7 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, cutvars[1], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, x, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -560,9 +561,9 @@ Test(nlhdlrquotient, separation1, .description = "separates simple univariate qu
 
    tmpinf = -7.0 / 1.5 - 2.0;
    tmpsup = -21.0 / 12.0 - 2.0;
-   cutvars[0] = x;
-   cutcoefs[0] = (tmpsup - tmpinf) / 3.5;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), -tmpsup + cutcoefs[0] * 5.0, 2);
+   cutvar = x;
+   cutcoef = (tmpsup - tmpinf) / 3.5;
+   checkCut(cut, &cutvar, &cutcoef, -SCIPinfinity(scip), -tmpsup + cutcoef * 5.0, 1);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -580,8 +581,9 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
    SCIP_CONS* cons;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_VAR* cutvars[2];
-   SCIP_Real cutcoefs[2];
+   SCIP_VAR* auxvar;
+   SCIP_VAR* cutvar;
+   SCIP_Real cutcoef;
    SCIP_Real tmpinf;
    SCIP_Real tmpsup;
    SCIP_Bool infeasible;
@@ -601,8 +603,7 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
    expr = SCIPgetExprConsExpr(scip, cons);
 
    /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[0])) );
-   cutcoefs[0] = -1.0;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -613,7 +614,7 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
@@ -622,10 +623,10 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
 
    tmpinf = -3.0;
    tmpsup = 1.0 / 3.0 - 2.0;
-   cutvars[1] = y;
-   cutcoefs[1] = (tmpsup - tmpinf) / 4.0;
+   cutvar = y;
+   cutcoef = (tmpsup - tmpinf) / 4.0;
 
-   checkCut(cut, cutvars, cutcoefs, -tmpsup, SCIPinfinity(scip), 2);
+   checkCut(cut, &cutvar, &cutcoef, -tmpsup, SCIPinfinity(scip), 1);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -635,16 +636,16 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, cutvars[0], 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
+   SCIP_CALL( sepaUnivariate(scip, sol, y, auxvar, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[1] = y;
-   cutcoefs[1] = 5.0 / 12.0;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 2.5 - cutcoefs[1], 2);
+   cutvar = y;
+   cutcoef = 5.0 / 12.0;
+   checkCut(cut, &cutvar, &cutcoef, -SCIPinfinity(scip), 2.5 - cutcoef, 1);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -662,8 +663,9 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
    SCIP_CONS* cons;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_VAR* cutvars[3];
-   SCIP_Real cutcoefs[3];
+   SCIP_VAR* auxvar;
+   SCIP_VAR* cutvars[2];
+   SCIP_Real cutcoefs[2];
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
@@ -681,8 +683,7 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
    expr = SCIPgetExprConsExpr(scip, cons);
 
    /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[0])) );
-   cutcoefs[0] = -1.0;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -694,18 +695,18 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], TRUE, cutprep, &success) );
+   SCIP_CALL( sepaBivariate(scip, sol, z, x, auxvar, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[1] = x;
-   cutvars[2] = z;
-   cutcoefs[1] = -1.0 / 7.5;
-   cutcoefs[2] = 1.5;
-   checkCut(cut, cutvars, cutcoefs, -1.5 / 7.5, SCIPinfinity(scip), 3);
+   cutvars[0] = x;
+   cutvars[1] = z;
+   cutcoefs[0] = -1.0 / 7.5;
+   cutcoefs[1] = 2.0 / 3.0;
+   checkCut(cut, cutvars, cutcoefs, -1.5 / 7.5, SCIPinfinity(scip), 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -715,18 +716,18 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, cutvars[0], FALSE, cutprep, &success) );
+   SCIP_CALL( sepaBivariate(scip, sol, z, x, auxvar, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[1] = x;
-   cutvars[2] = z;
-   cutcoefs[1] = -25.0 / 36.0;
-   cutcoefs[2] = 5.0 / 9.0;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), -5.0 / 3.0, 3);
+   cutvars[0] = x;
+   cutvars[1] = z;
+   cutcoefs[0] = -25.0 / 36.0;
+   cutcoefs[1] = 5.0 / 9.0;
+   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), -10.0 / 9.0, 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -744,6 +745,7 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
    SCIP_CONS* cons;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
+   SCIP_VAR* auxvar;
    SCIP_VAR* cutvars[3];
    SCIP_Real cutcoefs[3];
    SCIP_Bool infeasible;
@@ -763,8 +765,7 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
    expr = SCIPgetExprConsExpr(scip, cons);
 
    /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &(cutvars[0])) );
-   cutcoefs[0] = -1.0;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -776,18 +777,18 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], TRUE, cutprep, &success) );
+   SCIP_CALL( sepaBivariate(scip, sol, w, x, auxvar, TRUE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[1] = x;
-   cutvars[2] = w;
-   cutcoefs[1] = 1.0 / 36.0;
-   cutcoefs[2] = 1.0 / 9.0;
-   checkCut(cut, cutvars, cutcoefs, 1.0 / 3.0, SCIPinfinity(scip), 3);
+   cutvars[0] = x;
+   cutvars[1] = w;
+   cutcoefs[0] = 1.0 / 36.0;
+   cutcoefs[1] = 1.0 / 9.0;
+   checkCut(cut, cutvars, cutcoefs, 1.0 / 3.0, SCIPinfinity(scip), 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
@@ -797,18 +798,18 @@ Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quo
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, cutvars[0], FALSE, cutprep, &success) );
+   SCIP_CALL( sepaBivariate(scip, sol, w, x, auxvar, FALSE, cutprep, &success) );
 
    cr_assert(success);
    cr_assert_not_null(cutprep);
 
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
 
-   cutvars[1] = x;
-   cutvars[2] = w;
-   cutcoefs[1] = 1.0 / 7.5;
-   cutcoefs[2] = -1.5;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.0 / 5.0, 3);
+   cutvars[0] = x;
+   cutvars[1] = w;
+   cutcoefs[0] = 1.0 / 7.5;
+   cutcoefs[1] = -1.5;
+   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.0 / 5.0, 2);
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    SCIPfreeRowprep(scip, &cutprep);
