@@ -2290,7 +2290,7 @@ void graph_get_csr(
    for( int k = 0; k < nnodes; k++ )
    {
       start[k] = i;
-      for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+      for( int e = g->inpbeg[k]; e >= 0; e = g->ieat[e] )
       {
          edgearr[i] = e;
          tailarr[i++] = g->tail[e] + 1;
@@ -2886,7 +2886,6 @@ SCIP_RETCODE graph_copy_data(
    g_copy->extended = g_org->extended;
    g_copy->budget = g_org->budget;
    g_copy->is_packed = g_org->is_packed;
-   g_copy->cost_org_pc = NULL;
 
    BMScopyMemoryArray(g_copy->term, g_org->term, ksize);
    BMScopyMemoryArray(g_copy->mark, g_org->mark, ksize);
@@ -2929,14 +2928,20 @@ SCIP_RETCODE graph_copy_data(
          SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->cost_org_pc), g_copy->edges));
          BMScopyMemoryArray(g_copy->cost_org_pc, g_org->cost_org_pc, g_copy->edges);
       }
+      else
+      {
+         g_copy->cost_org_pc = NULL;
+      }
 
-      for( int k = 0; k < g_copy->knots; k++ )
-         g_copy->prize[k] = g_org->prize[k];
+      assert(g_org->prize != NULL);
+      BMScopyMemoryArray(g_copy->prize, g_org->prize, g_copy->knots);
 
 #ifndef NDEBUG
       for( int k = 0; k < g_copy->knots; k++ )
+      {
          if( Is_term(g_org->term[k]) && (!graph_pc_isRootedPcMw(g_copy) || !graph_pc_knotIsFixedTerm(g_org, k)) )
-            assert(g_copy->prize[k] == 0.0);
+            assert(EQ(g_copy->prize[k], 0.0));
+      }
 #endif
 
       assert(g_org->term2edge != NULL);

@@ -5850,6 +5850,7 @@ SCIP_RETCODE reduce_npv(
    PATH mst[5];
    PATH* pathhead;
    int adjverts[5];
+   int incedges[5];
    int* memlbltail;
    int* memlblhead;
    SCIP_Real prize;
@@ -5903,6 +5904,7 @@ SCIP_RETCODE reduce_npv(
          assert(k < 3);
          assert(g->mark[g->head[e]]);
 
+         incedges[k] = e;
          adjverts[k++] = g->head[e];
       }
 
@@ -5928,7 +5930,27 @@ SCIP_RETCODE reduce_npv(
       }
       else
       {
+         if( SCIPisGE(scip, -sdist0 - sdist1, prize) )
+         {
+            SCIPdebugMessage("npv3Reduction delete edge: %d \n", incedges[1]);
+            graph_edge_del(scip, g, incedges[1], TRUE);
+            (*nelims) += 1;
+         }
+         else if( SCIPisGE(scip, -sdist1 - sdist2, prize) )
+         {
+            SCIPdebugMessage("npv3Reduction delete edge: %d \n", incedges[2]);
+            graph_edge_del(scip, g, incedges[2], TRUE);
+            (*nelims) += 1;
+         }
+         else if( SCIPisGE(scip, -sdist2 - sdist0, prize) )
+         {
+            SCIPdebugMessage("npv3Reduction delete edge: %d \n", incedges[0]);
+            graph_edge_del(scip, g, incedges[0], TRUE);
+            (*nelims) += 1;
+         }
+
          g->mark[i] = TRUE;
+         assert(g->grad[i] >= 2);
       }
    }
 

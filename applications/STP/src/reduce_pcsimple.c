@@ -755,7 +755,7 @@ void pcmwReduceTerm0Prize(
 
 
 /** try to eliminate a terminal of degree one */
-static
+static inline
 SCIP_RETCODE pcReduceTermDeg1(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */
@@ -764,17 +764,26 @@ SCIP_RETCODE pcReduceTermDeg1(
    int*                  solnode,            /**< solution nodes or NULL */
    int*                  nelims,             /**< pointer storing number of eliminated edges */
    int                   i,                  /**< the terminal to be checked */
-   int                   iout,               /**< outgoing arc */
    SCIP_Bool*            rerun,              /**< further eliminations possible? */
    SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
    )
 {
-   assert(scip && g && nelims && offset);
+   const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
+   int iout;
+
+   assert(scip && nelims && offset);
    assert(Is_term(g->term[i]));
-   assert(g->tail[iout] == i);
 
    if( isMaxprizeTerm(scip, g, i, maxprize) )
       return SCIP_OKAY;
+
+   for( iout = g->outbeg[i]; iout != EAT_LAST; iout = g->oeat[iout] )
+      if( g->mark[g->head[iout]] || (!isUnrooted && g->head[iout] == g->source) )
+         break;
+
+   assert(iout != EAT_LAST);
+   assert(g->head[iout] != g->source || !isUnrooted);
+   assert(g->tail[iout] == i);
 
    /* can we just delete the terminal? */
    if( SCIPisLE(scip, g->prize[i], g->cost[iout]) )
@@ -798,7 +807,6 @@ SCIP_RETCODE pcReduceTermDeg1(
 
       (*rerun) = TRUE;
       assert(SCIPisGT(scip, g->prize[i], 0.0 ));
-
       *offset += g->cost[iout];
 
       if( Is_term(g->term[i1]) && !graph_pc_termIsNonLeafTerm(g, i1) )
@@ -816,6 +824,178 @@ SCIP_RETCODE pcReduceTermDeg1(
 
       (*nelims) += degsum;
    }
+   return SCIP_OKAY;
+}
+
+
+/* try to eliminate a terminal of degree 2 */
+static inline
+SCIP_RETCODE pcReduceTermDeg2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offset,             /**< pointer to store the offset */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int*                  nelims,             /**< pointer storing number of eliminated edges */
+   int                   i,                  /**< the terminal to be checked */
+   SCIP_Bool*            rerun,              /**< further eliminations possible? */
+   SCIP_Real*            maxprize            /**< stores incumbent prize (can be updated) */
+)
+{
+   assert(SCIPisGT(scip, g->prize[i], 0.0));
+
+   if( !isMaxprizeTerm(scip, g, i, maxprize) )
+   {
+      int edges2[2];
+      int edgecount = 0;
+      const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int i1 = g->head[e];
+         if( g->mark[i1] || (!isUnrooted && i1 == g->source) )
+         {
+            assert(edgecount < 2);
+            edges2[edgecount++] = e;
+         }
+      }
+
+      assert(edgecount == 2);
+
+      /* is i a non-proper potential terminal? */
+      if( SCIPisLE(scip, g->prize[i], g->cost[edges2[0]]) && SCIPisLE(scip, g->prize[i], g->cost[edges2[1]]) )
+      {
+         SINGLETONANS ancestors0;
+         SINGLETONANS ancestors1;
+         int newedge;
+         const int e0 = edges2[0];
+         const int e1 = edges2[1];
+         const int i0 = g->head[e0];
+         const int i1 = g->head[e1];
+         SCIP_Bool conflict;
+
+         SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );
+         SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
+
+         assert(!graph_pc_knotIsFixedTerm(g, i));
+
+         SCIPdebugMessage("delete degree 2 terminal %d\n ", i);
+
+         SCIP_CALL( graph_edge_reinsert(scip, g, e0, i1, i0, g->cost[e0] + g->cost[e1] - g->prize[i],
+               i, &ancestors1, &ancestors0, &newedge, &conflict) );
+
+         (*nelims) += graph_pc_deleteTerm(scip, g, i, offset);
+
+         graph_singletonAncestors_freeMembers(scip, &(ancestors0));
+         graph_singletonAncestors_freeMembers(scip, &(ancestors1));
+
+         if( conflict )
+         {
+            assert(newedge >= 0);
+            graph_edge_del(scip, g, newedge, TRUE);
+            (*nelims)++;
+         }
+      }
+      else if( SCIPisLE(scip, g->prize[i], g->cost[edges2[0]]) || SCIPisLE(scip, g->prize[i], g->cost[edges2[1]]) )
+      {
+         /* i is semi-proper! */
+
+         const int smalledge = (g->cost[edges2[0]] < g->cost[edges2[1]]) ? edges2[0] : edges2[1];
+
+         assert(SCIPisGE(scip, g->prize[i], g->cost[smalledge]));
+
+         if( edgestate == NULL || edgestate[smalledge] != EDGE_BLOCKED )
+         {
+            const int i1 = g->head[smalledge];
+            SCIPdebugMessage("contract semi-proper degree 2 terminal %d with node %d \n", i, i1);
+
+            (*rerun) = TRUE;
+            *offset += g->cost[smalledge];
+
+            if( Is_term(g->term[i1]) && !graph_pc_termIsNonLeafTerm(g, i1) )
+            {
+               SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i1, i, i1));
+            }
+            else
+            {
+               SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i, i1, i));
+            }
+
+            (*nelims) += 1;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** try to contract terminal with adjacent one */
+static inline
+SCIP_RETCODE pcContractWithAdjacentTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offset,             /**< pointer to store the offset */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int*                  nelims,             /**< pointer storing number of eliminated edges */
+   int                   i,                  /**< the terminal to be checked */
+   SCIP_Bool*            rerun               /**< further eliminations possible? */
+)
+{
+   SCIP_Real mincost = FARAWAY;
+   int edge_i2t = UNKNOWN;
+   const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
+
+   for( int e1 = g->outbeg[i]; e1 >= 0; e1 = g->oeat[e1] )
+   {
+      const int i1 = g->head[e1];
+
+      if( !g->mark[i1] && (isUnrooted || i1 != g->source) )
+         continue;
+
+      /* do we have to update edge_i2t? */
+      if( SCIPisLT(scip, g->cost[e1], mincost) )
+      {
+         mincost = g->cost[e1];
+         if( Is_term(g->term[i1]) )
+            edge_i2t = e1;
+      }
+      else if( SCIPisLE(scip, g->cost[e1], mincost) )
+      {
+         /* we don't have to, but would it make sense to update edge_i2t? */
+         if( Is_term(g->term[i1]) && SCIPisLE(scip, g->cost[e1], g->prize[i1])
+                                  && SCIPisLE(scip, g->cost[e1], g->prize[i]) )
+         {
+            assert(SCIPisLT(scip, g->cost[e1], FARAWAY));
+            assert(SCIPisEQ(scip, g->cost[e1], mincost));
+            edge_i2t = e1;
+         }
+      }
+   }
+
+   if( edge_i2t != UNKNOWN && SCIPisLE(scip, g->cost[edge_i2t], mincost)
+                           && SCIPisLE(scip, g->cost[edge_i2t], g->prize[i])
+                           && SCIPisLE(scip, g->cost[edge_i2t], g->prize[g->head[edge_i2t]]) )
+   {
+      const int i1 = g->head[edge_i2t];
+      const SCIP_Bool checkstate = (edgestate != NULL);
+
+      if( checkstate && edgestate[edge_i2t] == EDGE_BLOCKED )
+         return SCIP_OKAY;
+
+      SCIPdebugMessage("contract tt %d->%d\n ", i, i1);
+      assert(Is_term(g->term[i1]));
+      assert(SCIPisLT(scip, mincost, FARAWAY));
+
+      *offset += g->cost[edge_i2t];
+      (*nelims)++;
+
+      SCIP_CALL( graph_pc_contractEdgeUnordered(scip, g, solnode, i, i1) );
+
+      *rerun = TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -961,12 +1141,9 @@ SCIP_RETCODE reduce_simple_pc(
    int*                  solnode             /**< solution nodes */
    )
 {
-   int edges2[2];
-   int nodes2[2];
    SCIP_Real maxprize = -1.0;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
-   const SCIP_Bool checkstate = (edgestate != NULL);
    SCIP_Bool rerun = TRUE;
 
    assert(scip && fixed && countnew);
@@ -1051,115 +1228,22 @@ SCIP_RETCODE reduce_simple_pc(
          /* terminal of (real) degree 1? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 1 )
          {
-            int e;
-            for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               if( g->mark[g->head[e]] || (!isUnrooted && g->head[e] == g->source) )
-                  break;
-
-            assert(e != EAT_LAST);
-            assert(g->head[e] != g->source || !isUnrooted);
-
-            SCIP_CALL( pcReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
+            SCIP_CALL( pcReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 2 )
          {
-            if( !isMaxprizeTerm(scip, g, i, &maxprize) )
-            {
-               int edgecount = 0;
-               for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               {
-                  const int i1 = g->head[e];
-                  if( g->mark[i1] || (!isUnrooted && i1 == g->source) )
-                  {
-                     assert(edgecount < 2);
-
-                     edges2[edgecount] = e;
-                     nodes2[edgecount++] = i1;
-                  }
-               }
-
-               assert(edgecount >= 2);
-               if( SCIPisLE(scip, g->prize[i], g->cost[edges2[0]]) && SCIPisLE(scip, g->prize[i], g->cost[edges2[1]]) )
-               {
-                  SINGLETONANS ancestors0;
-                  SINGLETONANS ancestors1;
-                  int newedge;
-                  const int e0 = edges2[0];
-                  const int e1 = edges2[1];
-                  SCIP_Bool conflict;
-
-                  SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );
-                  SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
-
-                  assert(!fixedterm);
-
-                  SCIPdebugMessage("delete - term - %d\n ", i);
-
-                  SCIP_CALL( graph_edge_reinsert(scip, g, e0, nodes2[1], nodes2[0], g->cost[e0] + g->cost[e1] - g->prize[i],
-                        i, &ancestors1, &ancestors0, &newedge, &conflict) );
-
-                  (*countnew) += graph_pc_deleteTerm(scip, g, i, fixed);
-
-                  graph_singletonAncestors_freeMembers(scip, &(ancestors0));
-                  graph_singletonAncestors_freeMembers(scip, &(ancestors1));
-
-                  if( conflict )
-                  {
-                     assert(newedge >= 0);
-                     graph_edge_del(scip, g, newedge, TRUE);
-                     (*countnew)++;
-                  }
-               }
-            }
+            SCIP_CALL( pcReduceTermDeg2(scip, edgestate, g, fixed, solnode, countnew, i, &rerun, &maxprize) );
          }
 
          /* try to contract adjacent terminals */
          if( g->grad[i] > 0 )
          {
-            SCIP_Real mincost = FARAWAY;
-            int ett = UNKNOWN;
+            SCIP_CALL( pcContractWithAdjacentTerm(scip, edgestate, g, fixed, solnode, countnew, i, &rerun) );
+         }
 
-            for( int e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
-            {
-               const int i1 = g->head[e1];
-
-               if( !g->mark[i1] && (isUnrooted || i1 != g->source) )
-                  continue;
-
-               if( SCIPisLT(scip, g->cost[e1], mincost) )
-               {
-                  mincost = g->cost[e1];
-                  if( Is_term(g->term[i1]) )
-                     ett = e1;
-               }
-               else if( Is_term(g->term[i1]) && SCIPisLE(scip, g->cost[e1], mincost) )
-               {
-                  assert(SCIPisLT(scip, g->cost[e1], FARAWAY));
-                  assert(SCIPisEQ(scip, g->cost[e1], mincost));
-                  ett = e1;
-               }
-            }
-
-            if( ett != UNKNOWN && SCIPisLE(scip, g->cost[ett], mincost) && SCIPisLE(scip, g->cost[ett], g->prize[i])
-               && SCIPisLE(scip, g->cost[ett], g->prize[g->head[ett]]) )
-            {
-               const int i1 = g->head[ett];
-               if( checkstate && edgestate[ett] == EDGE_BLOCKED )
-                  continue;
-
-               SCIPdebugMessage("contract tt %d->%d\n ", i, i1);
-               assert(SCIPisLT(scip, mincost, FARAWAY));
-               *fixed += g->cost[ett];
-               (*countnew)++;
-
-               SCIP_CALL( graph_pc_contractEdgeUnordered(scip, g, solnode, i, i1) );
-
-               rerun = TRUE;
-            }
-         } /* contract adjacent terminals */
       } /* for i = 1, ..., nnodes */
-   } /* main loops */
+   } /* main loop */
 
    if( !isUnrooted )
       g->mark[g->source] = TRUE;
