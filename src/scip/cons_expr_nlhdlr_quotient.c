@@ -644,7 +644,7 @@ SCIP_Real hcEval(
    assert(lbx <= ubx);
    assert(soly > 0.0);
 
-   return (1.0 / soly) * ((solx + SQRT(lbx * ubx)) / (SQRT(lbx) + SQRT(ubx)));
+   return (1.0 / soly) * SQR((solx + SQRT(lbx * ubx)) / (SQRT(lbx) + SQRT(ubx)));
 }
 
 /** separates a given point in the bivariate case x/y <=/>= z (auxvar)
