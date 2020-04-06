@@ -631,20 +631,35 @@ SCIP_RETCODE sepaUnivariate(
    return SCIP_OKAY;
 }
 
-/** helper method to evaluate h^c(x,y) for x >= 0 and y > 0 at a given point, see Tawarmalani and Sahinidis (2001) */
+/** helper method to compute a gradient cut for h^c(x,y) at a given reference point */
 static
-SCIP_Real hcEval(
+void hcGradCut(
    SCIP_Real             lbx,                /**< lower bound of x */
    SCIP_Real             ubx,                /**< upper bound of x */
    SCIP_Real             solx,               /**< solution value of x */
-   SCIP_Real             soly                /**< solution value of y */
+   SCIP_Real             soly,               /**< solution value of y */
+   SCIP_Real*            coefx,              /**< pointer to store the coefficient of x */
+   SCIP_Real*            coefy,              /**< pointer to store the coefficient of y */
+   SCIP_Real*            constant            /**< pointer to store the constant */
    )
 {
+   SCIP_Real tmp1;
+   SCIP_Real tmp2;
+
    assert(lbx >= 0.0);
    assert(lbx <= ubx);
    assert(soly > 0.0);
+   assert(coefx != NULL);
+   assert(coefy != NULL);
+   assert(constant != NULL);
 
-   return (1.0 / soly) * SQR((solx + SQRT(lbx * ubx)) / (SQRT(lbx) + SQRT(ubx)));
+   tmp1 = Sqrt(lbx * ubx) + solx;
+   tmp2 = Sqr(Sqrt(lbx) + Sqrt(ubx)) * soly;
+   assert(tmp2 > 0.0);
+
+   *coefx = 2.0 * tmp1 / tmp2;
+   *coefy = -Sqr(tmp1) / (tmp2 * soly);
+   *constant = 2.0 * Sqrt(lbx * ubx) * tmp1 / tmp2;
 }
 
 /** separates a given point in the bivariate case x/y <=/>= z (auxvar)
