@@ -486,7 +486,7 @@ SCIP_INTERVAL reversepropQuotient(
 
 /** prepares a rowprep from given data; the generated estimator is always locally valid
  *
- *  @note the auxvar is always added with coefficient -1 and the constant is moved to the left- or right-hand side
+ *  @note the constant is moved to the left- or right-hand side
  */
 static
 SCIP_RETCODE createRowprep(
@@ -496,8 +496,7 @@ SCIP_RETCODE createRowprep(
    SCIP_VAR**            vars,               /**< variables */
    SCIP_Real*            coefs,              /**< coefficients */
    SCIP_Real             constant,           /**< constant */
-   int                   nlinvars,           /**< total number of variables (not consdering auxvar) */
-   SCIP_VAR*             auxvar              /**< auxiliary variable */
+   int                   nlinvars            /**< total number of variables */
    )
 {
    int i;
@@ -506,7 +505,6 @@ SCIP_RETCODE createRowprep(
    assert(rowprep != NULL);
    assert(coefs != NULL);
    assert(vars != NULL);
-   assert(auxvar != NULL);
 
    /* create rowprep */
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, name);
@@ -518,9 +516,6 @@ SCIP_RETCODE createRowprep(
    {
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[i], coefs[i]) );
    }
-
-   /* add auxiliary variable */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
    return SCIP_OKAY;
 }
@@ -623,7 +618,7 @@ SCIP_RETCODE sepaUnivariate(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
 
    /* create rowprep */
-   SCIP_CALL( createRowprep(scip, rowprep, name, &x, &lincoef, linconst, 1, auxvar) );
+   SCIP_CALL( createRowprep(scip, rowprep, name, &x, &lincoef, linconst, 1) );
 
    /* clean up rowprep */
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
@@ -678,8 +673,6 @@ void hcGradCut(
  *
  *    If y < 0, swap and negate its bounds and compute the respective opposite estimator (and negate it).
  *    If 0 is in the interval of y, nothing is possible.
- *
- *  @todo check whether the formula is correct
  */
 static
 SCIP_RETCODE sepaBivariate(
@@ -736,6 +729,7 @@ SCIP_RETCODE sepaBivariate(
       tmp = uby;
       uby = -lby;
       lby = -tmp;
+      soly = -soly;
    }
 
    /* case 1: 0 is not in the interior of [lbx,ubx] */
@@ -751,34 +745,18 @@ SCIP_RETCODE sepaBivariate(
          tmp = ubx;
          ubx = -lbx;
          lbx = -tmp;
+         solx = -solx;
       }
 
       assert(SCIPisGE(scip, lbx, 0.0));
       assert(SCIPisGT(scip, lby, 0.0));
+      assert(SCIPisLE(scip, lbx, solx) && SCIPisLE(scip, solx, ubx));
+      assert(SCIPisLE(scip, lby, soly) && SCIPisLE(scip, soly, uby));
 
       /* case 1a: underestimating the original or overestimating the negated expression */
       if( overestimate != (xisnonnegative == yispositive) )
       {
-         SCIP_Real sqrtlbx;
-         SCIP_Real sqrtubx;
-         SCIP_Real fnom;
-         SCIP_Real fdenom;
-
-         sqrtlbx = SQRT(lbx);
-         sqrtubx = SQRT(ubx);
-
-         assert(!SCIPisZero(scip, soly));
-         assert(!SCIPisZero(scip, sqrtlbx + sqrtubx));
-
-         fnom = solx + sqrtlbx * sqrtubx;
-         fdenom = (sqrtlbx + sqrtubx);
-
-         assert(!SCIPisZero(scip, fdenom));
-
-         lincoefs[0] = 2.0 * fnom / (SQR(fdenom) * soly);
-         lincoefs[1] = -SQR(fnom / (fdenom * soly));
-
-         linconst = SQR(fnom) / (SQR(fdenom) * soly) + lincoefs[0] * solx + lincoefs[1] * soly;
+         (void) hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
       }
       /* case 1b: overestimating the original or underestimating the negated expression */
       else
@@ -804,8 +782,8 @@ SCIP_RETCODE sepaBivariate(
          return SCIP_OKAY;
       }
 
-      /* we computed underestimators in both cases, so negate if overestimating */
-      if( overestimate )
+      /* negate coefficients when considering the negated expression */
+      if( xisnonnegative != yispositive )
       {
          lincoefs[0] = -lincoefs[0];
          lincoefs[1] = -lincoefs[1];
@@ -830,7 +808,7 @@ SCIP_RETCODE sepaBivariate(
       if( !(*success) )
          return SCIP_OKAY;
 
-      lincoefs[0] = 1 / mccoefaux;
+      lincoefs[0] = 1.0 / mccoefaux;
       lincoefs[1] = -mccoefy / mccoefaux;
       linconst = -linconst / mccoefaux;
    }
@@ -842,7 +820,7 @@ SCIP_RETCODE sepaBivariate(
       SCIPgetNLPs(scip));
 
    /* create rowprep */
-   SCIP_CALL( createRowprep(scip, rowprep, name, linvars, lincoefs, linconst, 2, auxvar) );
+   SCIP_CALL( createRowprep(scip, rowprep, name, linvars, lincoefs, linconst, 2) );
 
    /* clean up rowprep */
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
@@ -946,7 +924,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
       assert(nlhdlrexprdata->denomconst == 0.0);
 
       SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->nomvar, nlhdlrexprdata->denomvar,
-            SCIPgetConsExprExprAuxVar(expr), overestimate, rowprep, success) );
+         SCIPgetConsExprExprAuxVar(expr), overestimate, rowprep, success) );
    }
 
    assert(!(*success) || rowprep != NULL);
