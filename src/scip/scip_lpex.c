@@ -258,7 +258,6 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
    SCIP_Rational**       vals                /**< values of coefficients */
    )
 {
-   SCIP_Real* realvals;
    int v;
 
    assert(nvars == 0 || vars != NULL);
@@ -266,20 +265,14 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   //SCIP_CALL( SCIPallocBufferArray(scip, &realvals, nvars) );
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwexEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
-
-   /** @todo exip: do we need the sorting? */
-   /* delay the row sorting */
-   //SCIProwDelaySort(row);
 
    /* add the variables to the row */
    for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPvarAddToRowExact(vars[v], scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpex,
             row, vals[v]) );
-      //realvals[v] = RgetRealApprox(vals[v]);
    }
    SCIPdebug(SCIProwPrint(row->fprow, SCIPgetMessagehdlr(scip), NULL));
    SCIPdebug(SCIProwexPrint(row, SCIPgetMessagehdlr(scip), NULL));

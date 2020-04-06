@@ -2870,15 +2870,7 @@ SCIP_RETCODE applyBounding(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
-      /** exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
-        * certificate so we print the root psval after calling initconslp fot the first time 
-        * @todo exip do we need the cutoffboundex here? cutoffbound is safe, but might not be hard*/
-      if( pseudoobjval > primal->cutoffbound && (focusnode->parent !=  NULL) )
-      {
-         SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
-            transprob, pseudoobjval) );
-      }
-
+      /** exip: we don't print the pseudoobj here, since we have to print it immediatly when branching anyway */
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjval);
       SCIPsetDebugMsg(set, " -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(transprob, origprob, set, SCIPnodeGetLowerbound(focusnode)) + SCIPgetOrigObjoffset(set->scip),
@@ -2886,7 +2878,6 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      /** @todo exip: this is sort of hacky, maybe add exact lowerbound to nodes? or similar */
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
       {
          if( set->misc_exactsolve )
@@ -2906,6 +2897,7 @@ SCIP_RETCODE applyBounding(
             }
             RatFreeBuffer(set->buffer, &bound);
          }
+
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
          SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));

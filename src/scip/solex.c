@@ -1088,7 +1088,6 @@ void SCIPsolexGetVal(
    int i;
 
    assert(sol != NULL);
-   /** @todo exip: maybe add check if lpsol */
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
@@ -1665,7 +1664,7 @@ SCIP_RETCODE SCIPsolexRetransform(
       SCIPsolexGetVal(transsolvals[v], sol, set, stat, transvars[v]);
    }
 
-   /** @todo exip: once we have exact presolving, we need to do here what we do in the fp case */
+   /** @todo exip: presolving extension (once we have exact presolving, we need to do here what we do in the fp case */)
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solexClearArrays(sol) );

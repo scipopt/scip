@@ -1915,7 +1915,8 @@ SCIP_RETCODE SCIPsolRetransform(
    *hasinfval = FALSE;
 
    /* transform exact values first (needs unchanged solorigin) */
-   /** @todo exip: this works only now because we do not presolve, and so solvals do not change. might need to be more sophisticated later */
+   /** @todo exip: presolving extension this works only now because we do not presolve, and so solvals do not change. 
+    * might need to be more sophisticated later */
    if( set->misc_exactsolve && SCIPsolIsExactSol(sol) )
    {
       SCIP_CALL( SCIPsolexRetransform(sol, set, stat, origprob, transprob, hasinfval) );
