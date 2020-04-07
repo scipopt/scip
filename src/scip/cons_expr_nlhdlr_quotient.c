@@ -525,7 +525,7 @@ SCIP_RETCODE createRowprep(
  *  Depending on the reference point, the estimator is a tangent or a secant on the graph.
  *  It depends on whether we are under- or overestimating, whether we are on the left or
  *  on the right side of the singularity at -d/c, and whether it is the monotone increasing
- *  (ab - cd > 0) or decreasing part (ab - cd < 0). Together, there are 8 cases:
+ *  (ad - bc > 0) or decreasing part (ad - bc < 0). Together, there are 8 cases:
  *
  *  mon. incr. + overestimate + left hand side  -->  secant
  *  mon. incr. + overestimate + right hand side -->  tangent
@@ -578,7 +578,7 @@ SCIP_RETCODE sepaUnivariate(
       return SCIP_OKAY;
 
    isinleftpart = (bnds.sup < singularity);
-   monincreasing = (a * b - c * d > 0.0);
+   monincreasing = (a * d - b * c > 0.0);
 
    /* this encodes the 8 cases explained above */
    if( monincreasing == (overestimate == isinleftpart) )
