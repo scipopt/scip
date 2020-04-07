@@ -82,10 +82,10 @@ void setup(void)
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 1.49, 1.51, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -0.9, 0.7, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, w) );
@@ -657,6 +657,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_Real matinf = -40.474214;
    SCIP_Real matsup = 36.508894;
 
+   /* set bounds: is important to do it here so that interval evaluations work */
+   SCIPchgVarLb(scip, x, -1.01); SCIPchgVarUb(scip, x, 1.01);
+   SCIPchgVarLb(scip, y,  0.07); SCIPchgVarUb(scip, y, 0.09);
+   SCIPchgVarLb(scip, z,  -0.9); SCIPchgVarUb(scip, z,  0.7);
+   SCIPchgVarLb(scip, w,  1.49); SCIPchgVarUb(scip, w, 1.51);
+
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 1.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
@@ -727,6 +733,119 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIPqueueFree(&queue);
    }
 
+
+   /* register enforcer info in expr and free */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
+   expr->enfos[0]->nlhdlr = nlhdlr;
+   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
+   expr->nenfos = 1;
+   expr->enfos[0]->issepainit = FALSE;
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* test propagation of x*y + z + z^2; this is interesting to see how reverse propagation handles the term x*y.
+ *
+ * x in [1,5], y in [1, +inf], and z in [4, 5].
+ *
+ * Backward propagation:
+ *
+Ix = Interval[{1, 5}]; Iy = Interval[{1, 5}]; Iz = Interval[{4, 5}];
+cons = x*y + z - z^2 == 10;
+xmax = MaxValue[{x, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+xmin = MinValue[{x, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+ymax = MaxValue[{y, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+ymin = MinValue[{y, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+zmax = MaxValue[{z, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+zmin = MinValue[{z, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
+ *
+ */
+Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
+   SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
+   SCIP_INTERVAL interval;
+
+   /* set bounds: is important to do it here so that interval evaluations work */
+   SCIPchgVarLb(scip, x, 1.0); SCIPchgVarUb(scip, x, 5.0);
+   SCIPchgVarLb(scip, y, 1.0);
+   SCIPchgVarLb(scip, z, 4.0); SCIPchgVarUb(scip, z, 5.0);
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<y>*<x> + <z> - <z>^2", NULL, &expr) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
+   cr_expect(changed);
+   cr_expect_not(infeasible);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
+   cr_assert(!enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(success);
+   cr_expect_not_null(nlhdlrexprdata);
+
+   /* no auxiliary variables should have been created */
+   cr_expect_eq(4, SCIPgetNVars(scip), "got %d\n", SCIPgetNVars(scip));
+
+   /* interval evaluate */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   //SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+   //SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
+
+   //cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
+   //cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);
+
+   /* test reverse propagation */
+   {
+      SCIP_QUEUE* queue;
+      int nreductions = 0;
+      infeasible = FALSE;
+      SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
+      SCIPintervalSet(&expr->activity, 10);
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      cr_expect_eq(nreductions, 2);
+      cr_expect_not(infeasible);
+      SCIPqueueFree(&queue);
+   }
+
+   /* check result */
+   {
+      int i;
+      SCIP_Real expectedlowerbounds[] = {1.0, 4.4, 4.0};
+      SCIP_Real expectedupperbounds[] = {5.0, 30.0, 5.0};
+      SCIP_VAR* vars[] = {x, y, z};
+
+      for( i = 0; i < (int)(sizeof(vars)/sizeof(SCIP_VAR*)); ++i )
+      {
+         cr_expect_float_eq(SCIPvarGetLbLocal(vars[i]), expectedlowerbounds[i], 1e-7, "var %s expecting %g, got %g\n",
+               SCIPvarGetName(vars[i]), expectedlowerbounds[i], SCIPvarGetLbLocal(vars[i]));
+         cr_expect_float_eq(SCIPvarGetUbLocal(vars[i]), expectedupperbounds[i], 1e-7, "var %s expecting %g, got %g\n",
+               SCIPvarGetName(vars[i]), expectedupperbounds[i], SCIPvarGetUbLocal(vars[i]));
+      }
+   }
 
    /* register enforcer info in expr and free */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
