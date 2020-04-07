@@ -2158,9 +2158,19 @@ void graph_printInfo(
 
    assert(g != NULL);
    if( graph_pc_isPcMw(g) )
+   {
       printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s, isExtended=%d\n", g->knots, g->edges, g->terms, g->source, type, g->extended);
+      if( graph_pc_isPc(g) )
+      {
+         printf("non-leaf terminals=%d, ", graph_pc_nNonLeafTerms(g));
+         printf("fixed terminals=%d, ", graph_pc_nFixedTerms(g));
+         printf("proper terminals=%d \n", graph_pc_nProperPotentialTerms(g));
+      }
+   }
    else
+   {
       printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s \n", g->knots, g->edges, g->terms, g->source, type);
+   }
 
    if( g->stp_type == STP_BRMWCSP )
       printf("budget=%f \n", g->budget);
