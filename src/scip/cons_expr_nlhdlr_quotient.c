@@ -42,9 +42,9 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
-   SCIP_VAR*             nomvar;             /**< variable of the nominator */
-   SCIP_Real             nomcoef;            /**< coefficient of the nominator */
-   SCIP_Real             nomconst;           /**< constant of the nominator */
+   SCIP_VAR*             numvar;             /**< variable of the numerator */
+   SCIP_Real             numcoef;            /**< coefficient of the numerator */
+   SCIP_Real             numconst;           /**< constant of the numerator */
    SCIP_VAR*             denomvar;           /**< variable of the denominator */
    SCIP_Real             denomcoef;          /**< coefficient of the denominator */
    SCIP_Real             denomconst;         /**< constant of the denominator */
@@ -60,9 +60,9 @@ static
 SCIP_RETCODE exprdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< nonlinear handler expression data */
-   SCIP_VAR*             nomvar,             /**< variable of the nominator */
-   SCIP_Real             nomcoef,            /**< coefficient of the nominator */
-   SCIP_Real             nomconst,           /**< constant of the nominator */
+   SCIP_VAR*             numvar,             /**< variable of the numerator */
+   SCIP_Real             numcoef,            /**< coefficient of the numerator */
+   SCIP_Real             numconst,           /**< constant of the numerator */
    SCIP_VAR*             denomvar,           /**< variable of the denominator */
    SCIP_Real             denomcoef,          /**< coefficient of the denominator */
    SCIP_Real             denomconst,         /**< constant of the denominator */
@@ -70,25 +70,25 @@ SCIP_RETCODE exprdataCreate(
    )
 {
    assert(nlhdlrexprdata != NULL);
-   assert(nomvar != NULL);
+   assert(numvar != NULL);
    assert(denomvar != NULL);
-   assert(!SCIPisZero(scip, nomcoef));
+   assert(!SCIPisZero(scip, numcoef));
    assert(!SCIPisZero(scip, denomcoef));
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
 
    /* store values */
-   (*nlhdlrexprdata)->nomvar = nomvar;
-   (*nlhdlrexprdata)->nomcoef = nomcoef;
-   (*nlhdlrexprdata)->nomconst = nomconst;
+   (*nlhdlrexprdata)->numvar = numvar;
+   (*nlhdlrexprdata)->numcoef = numcoef;
+   (*nlhdlrexprdata)->numconst = numconst;
    (*nlhdlrexprdata)->denomvar = denomvar;
    (*nlhdlrexprdata)->denomcoef = denomcoef;
    (*nlhdlrexprdata)->denomconst = denomconst;
    (*nlhdlrexprdata)->constant = constant;
 
    /* capture variables */
-   SCIP_CALL( SCIPcaptureVar(scip, nomvar) );
+   SCIP_CALL( SCIPcaptureVar(scip, numvar) );
    SCIP_CALL( SCIPcaptureVar(scip, denomvar) );
 
    return SCIP_OKAY;
@@ -103,12 +103,12 @@ SCIP_RETCODE exprdataFree(
 {
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
-   assert((*nlhdlrexprdata)->nomvar != NULL);
+   assert((*nlhdlrexprdata)->numvar != NULL);
    assert((*nlhdlrexprdata)->denomvar != NULL);
 
    /* release variables */
    SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->denomvar) );
-   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->nomvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->numvar) );
 
    /* free expression data of nonlinear handler */
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
@@ -190,7 +190,7 @@ SCIP_RETCODE detectExpr(
    SCIP_VAR* y = NULL;
    SCIP_Real a, b, c, d, e;
    SCIP_Real nomfac = 1.0;
-   SCIP_Real nomconst = 0.0;
+   SCIP_Real numconst = 0.0;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -233,7 +233,7 @@ SCIP_RETCODE detectExpr(
          nomexpr = children[0];
       }
 
-      /* remember to scale the nominator by the coefficient stored in the product expression */
+      /* remember to scale the numerator by the coefficient stored in the product expression */
       nomfac = SCIPgetConsExprExprProductCoef(expr);
    }
    /* case: sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1)) */
@@ -261,9 +261,9 @@ SCIP_RETCODE detectExpr(
             nomexpr = SCIPgetConsExprExprChildren(children[1])[0];
          }
 
-         /* remember scalar and constant for nominator */
+         /* remember scalar and constant for numerator */
          nomfac = sumcoefs[1] * prodcoef;
-         nomconst = sumcoefs[0];
+         numconst = sumcoefs[0];
       }
       /* children[1] is 1/g(y) and children[0] is a product of f(x) and 1/g(y) */
       else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1
@@ -282,9 +282,9 @@ SCIP_RETCODE detectExpr(
             nomexpr = SCIPgetConsExprExprChildren(children[0])[0];
          }
 
-         /* remember scalar and constant for nominator */
+         /* remember scalar and constant for numerator */
          nomfac = sumcoefs[0] * prodcoef;
-         nomconst = sumcoefs[1];
+         numconst = sumcoefs[1];
       }
 
       /* remember the constant of the sum expression */
@@ -293,11 +293,13 @@ SCIP_RETCODE detectExpr(
 
    if( denomexpr != NULL && nomexpr != NULL )
    {
-      /* nominator and denominator are univariate linear functions -> no auxiliary variables are needed */
+      /* numerator and denominator are univariate linear functions -> no auxiliary variables are needed */
       if( isExprUnivariateLinear(nomexpr, conshdlr, &x, &a, &b)
          && isExprUnivariateLinear(denomexpr, conshdlr, &y, &c, &d) )
       {
-         SCIPdebugMsg(scip, "detected nominator (%g * %s + %g) and denominator (%g * %s + %g) to be univariate and linear\n",
+         assert(x != NULL && y != NULL);
+
+         SCIPdebugMsg(scip, "detected numerator (%g * %s + %g) and denominator (%g * %s + %g) to be univariate and linear\n",
             a, SCIPvarGetName(x), b, c, SCIPvarGetName(y), d);
 
          /* during presolving, it only makes sense to detect the quotient if both variables are the same */
@@ -318,15 +320,12 @@ SCIP_RETCODE detectExpr(
       /* create auxiliary variables if we are in the solving stage */
       else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         assert(x == NULL);
-         assert(y == NULL);
-
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nomexpr, &x) );
          a = 1.0;
          b = 0.0;
 
 #ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "Expression for nominator: ");
+         SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
          SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, nomexpr, NULL) );
          SCIPinfoMessage(scip, NULL, " is not univariate and linear -> add auxiliary variable %s\n", SCIPvarGetName(x));
 #endif
@@ -353,7 +352,7 @@ SCIP_RETCODE detectExpr(
       assert(c != 0.0);
 
       a = nomfac * a;
-      b = nomfac * b + nomconst;
+      b = nomfac * b + numconst;
 
       SCIPdebug( SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) ); )
       SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
@@ -370,8 +369,8 @@ static
 SCIP_INTERVAL intEvalQuotient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTERVAL         bnds,               /**< bounds on x */
-   SCIP_Real             a,                  /**< coefficient in nominator */
-   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             a,                  /**< coefficient in numerator */
+   SCIP_Real             b,                  /**< constant in numerator */
    SCIP_Real             c,                  /**< coefficient in denominator */
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e                   /**< constant */
@@ -437,8 +436,8 @@ SCIP_INTERVAL intEvalQuotient(
 static
 SCIP_INTERVAL reversepropQuotient(
    SCIP_INTERVAL         bnds,               /**< bounds on (a x + b) / (c x + d) + e */
-   SCIP_Real             a,                  /**< coefficient in nominator */
-   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             a,                  /**< coefficient in numerator */
+   SCIP_Real             b,                  /**< constant in numerator */
    SCIP_Real             c,                  /**< coefficient in denominator */
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e                   /**< constant */
@@ -543,8 +542,8 @@ SCIP_RETCODE sepaUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_VAR*             x,                  /**< argument variable */
-   SCIP_Real             a,                  /**< coefficient in nominator */
-   SCIP_Real             b,                  /**< constant in nominator */
+   SCIP_Real             a,                  /**< coefficient in numerator */
+   SCIP_Real             b,                  /**< constant in numerator */
    SCIP_Real             c,                  /**< coefficient in denominator */
    SCIP_Real             d,                  /**< constant in denominator */
    SCIP_Real             e,                  /**< constant */
@@ -677,7 +676,7 @@ static
 SCIP_RETCODE sepaBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
-   SCIP_VAR*             x,                  /**< nominator variable */
+   SCIP_VAR*             x,                  /**< numerator variable */
    SCIP_VAR*             y,                  /**< denominator variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
@@ -881,9 +880,9 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
-   solvalx = SCIPgetSolVal(scip, sol, nlhdlrexprdata->nomvar);
+   solvalx = SCIPgetSolVal(scip, sol, nlhdlrexprdata->numvar);
    solvaly = SCIPgetSolVal(scip, sol, nlhdlrexprdata->denomvar);
-   nomval = nlhdlrexprdata->nomcoef *  solvalx + nlhdlrexprdata->nomconst;
+   nomval = nlhdlrexprdata->numcoef *  solvalx + nlhdlrexprdata->numconst;
    denomval = nlhdlrexprdata->denomcoef *  solvaly + nlhdlrexprdata->denomconst;
 
    /* return SCIP_INVALID if the denominator evaluates to zero */
@@ -905,21 +904,56 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   if( nlhdlrexprdata->nomvar == nlhdlrexprdata->denomvar )
+   *success = FALSE;
+
+   if( nlhdlrexprdata->numvar == nlhdlrexprdata->denomvar )
    {
-      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->nomvar,
-            nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef,
+      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->numvar,
+            nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef,
             nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep, success) );
    }
-   else
+   /* TODO right now, the code in sepaBivariate() can only handle x/y; once the code has been extended, test it on the
+    * instance `contvar`, which contains expressions of the form: a / g(x) + b f(x) / g(x)
+    */
+   else if( nlhdlrexprdata->numcoef == 1.0 && nlhdlrexprdata->numconst == 0.0 && nlhdlrexprdata->denomcoef == 1.0
+      && nlhdlrexprdata->denomconst == 0.0 && nlhdlrexprdata->constant == 0.0 )
    {
-      assert(nlhdlrexprdata->nomcoef == 1.0);
-      assert(nlhdlrexprdata->nomconst == 0.0);
-      assert(nlhdlrexprdata->denomcoef == 1.0);
-      assert(nlhdlrexprdata->denomconst == 0.0);
+      SCIP_Real lbx;
+      SCIP_Real ubx;
+      SCIP_Real lby;
+      SCIP_Real uby;
 
-      SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->nomvar, nlhdlrexprdata->denomvar,
+      /* compute activity of x' = ax + b */
+      if( nlhdlrexprdata->numcoef >= 0.0 )
+      {
+         lbx = nlhdlrexprdata->numcoef * SCIPvarGetLbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
+         ubx = nlhdlrexprdata->numcoef * SCIPvarGetUbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
+      }
+      else
+      {
+         lbx = nlhdlrexprdata->numcoef * SCIPvarGetUbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
+         ubx = nlhdlrexprdata->numcoef * SCIPvarGetLbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
+      }
+      assert(lbx <= ubx);
+
+      /* compute activity of y' = cy + d */
+      if( nlhdlrexprdata->denomcoef >= 0.0 )
+      {
+         lby = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
+         uby = nlhdlrexprdata->denomcoef * SCIPvarGetUbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
+      }
+      else
+      {
+         lby = nlhdlrexprdata->denomcoef * SCIPvarGetUbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
+         ubx = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
+      }
+      assert(lby <= uby);
+
+      /* compute estimator for x' / y' */
+      SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->numvar, nlhdlrexprdata->denomvar,
          SCIPgetConsExprExprAuxVar(expr), overestimate, rowprep, success) );
+
+      /* TODO transform estimator for x' / y' to an estimator for (ax + b) / (cy + d) + e */
    }
 
    assert(!(*success) || rowprep != NULL);
@@ -936,17 +970,17 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    SCIP_INTERVAL tmp;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nomvar != NULL);
+   assert(nlhdlrexprdata->numvar != NULL);
    assert(nlhdlrexprdata->denomvar != NULL);
 
    /* it is not possible to compute tighter intervals if both variables are different */
-   if( nlhdlrexprdata->nomvar != nlhdlrexprdata->denomvar )
+   if( nlhdlrexprdata->numvar != nlhdlrexprdata->denomvar )
       return SCIP_OKAY;
 
-   SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->nomvar),
-      SCIPvarGetUbLocal(nlhdlrexprdata->nomvar));
+   SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(nlhdlrexprdata->numvar),
+      SCIPvarGetUbLocal(nlhdlrexprdata->numvar));
 
-   tmp = intEvalQuotient(scip, varbnds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+   tmp = intEvalQuotient(scip, varbnds, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    /* intersect intervals if we have learned a tighter interval */
@@ -967,24 +1001,25 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
    SCIP_Real varub;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nomvar != NULL);
+   assert(nlhdlrexprdata->numvar != NULL);
    assert(nlhdlrexprdata->denomvar != NULL);
 
    /* it is not possible to compute tighter intervals if both variables are different */
-   if( nlhdlrexprdata->nomvar != nlhdlrexprdata->denomvar )
+   if( nlhdlrexprdata->numvar != nlhdlrexprdata->denomvar )
       return SCIP_OKAY;
 
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
-   varlb = SCIPvarGetLbLocal(nlhdlrexprdata->nomvar);
-   varub = SCIPvarGetUbLocal(nlhdlrexprdata->nomvar);
+   varlb = SCIPvarGetLbLocal(nlhdlrexprdata->numvar);
+   varub = SCIPvarGetUbLocal(nlhdlrexprdata->numvar);
    SCIPdebugMsg(scip, "call reverse propagation for expression (%g x + %g) / (%g y + %g) + %g bounds [%g,%g]\n",
-      nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
+      nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
       nlhdlrexprdata->constant, exprbounds.inf, exprbounds.sup);
 
-   result = reversepropQuotient(exprbounds, nlhdlrexprdata->nomcoef, nlhdlrexprdata->nomconst,
+   result = reversepropQuotient(exprbounds, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
-   if( SCIPisLT(scip, varlb, result.inf) || SCIPisGT(scip, varub, result.sup) )
+   if( (!SCIPisInfinity(scip, -result.inf) && SCIPisLT(scip, varlb, result.inf))
+      || (!SCIPisInfinity(scip, result.sup) && SCIPisGT(scip, varub, result.sup)) )
    {
       SCIP_INTERVAL varbnds;
       SCIP_Bool tightened;
@@ -998,9 +1033,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 
       /* tighten bounds of x */
       SCIPdebugMsg(scip, "try to tighten bounds of %s: [%g,%g] -> [%g,%g]\n",
-         SCIPvarGetName(nlhdlrexprdata->nomvar), varlb, varub, result.inf, result.sup);
+         SCIPvarGetName(nlhdlrexprdata->numvar), varlb, varub, result.inf, result.sup);
 
-      SCIP_CALL( SCIPtightenVarLb(scip, nlhdlrexprdata->nomvar, result.inf, force,
+      SCIP_CALL( SCIPtightenVarLb(scip, nlhdlrexprdata->numvar, result.inf, force,
          infeasible, &tightened) );
 
       if( tightened )
@@ -1008,7 +1043,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 
       if( !(*infeasible) )
       {
-         SCIP_CALL( SCIPtightenVarUb(scip, nlhdlrexprdata->nomvar, result.sup, force,
+         SCIP_CALL( SCIPtightenVarUb(scip, nlhdlrexprdata->numvar, result.sup, force,
             infeasible, &tightened) );
 
          if( tightened )

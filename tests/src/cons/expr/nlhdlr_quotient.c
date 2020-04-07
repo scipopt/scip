@@ -97,19 +97,19 @@ TestSuite(nlhdlrquotient, .init = setup, .fini = teardown);
 static
 void checkData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< the nlhdlr expression data */
-   SCIP_VAR*             nomvar,             /**< expected nominator variable */
-   SCIP_Real             nomcoef,            /**< expected nominator coefficient */
-   SCIP_Real             nomconst,           /**< expected nominator constant */
+   SCIP_VAR*             numvar,             /**< expected numerator variable */
+   SCIP_Real             numcoef,            /**< expected numerator coefficient */
+   SCIP_Real             numconst,           /**< expected numerator constant */
    SCIP_VAR*             denomvar,           /**< expected denominator variable */
    SCIP_Real             denomcoef,          /**< expected denominator coefficient */
    SCIP_Real             denomconst,         /**< expected denominator constant */
    SCIP_Real             constant            /**< expected constant */
    )
 {
-   cr_expect_not_null(nlhdlrexprdata->nomvar);
+   cr_expect_not_null(nlhdlrexprdata->numvar);
    cr_expect_not_null(nlhdlrexprdata->denomvar);
-   cr_expect(SCIPisEQ(scip, nomcoef, nlhdlrexprdata->nomcoef));
-   cr_expect(SCIPisEQ(scip, nomconst, nlhdlrexprdata->nomconst));
+   cr_expect(SCIPisEQ(scip, numcoef, nlhdlrexprdata->numcoef));
+   cr_expect(SCIPisEQ(scip, numconst, nlhdlrexprdata->numconst));
    cr_expect(SCIPisEQ(scip, denomcoef, nlhdlrexprdata->denomcoef));
    cr_expect(SCIPisEQ(scip, denomconst, nlhdlrexprdata->denomconst));
    cr_expect(SCIPisEQ(scip, constant, nlhdlrexprdata->constant));
