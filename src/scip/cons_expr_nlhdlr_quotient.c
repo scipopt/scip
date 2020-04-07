@@ -710,8 +710,8 @@ SCIP_RETCODE sepaBivariate(
    lby = SCIPvarGetLbLocal(y);
    uby = SCIPvarGetUbLocal(y);
 
-   /* if 0 is in the interior of [lby,uby], no estimator is possible */
-   if( SCIPisLT(scip, lby, 0.0) && SCIPisGT(scip, uby, 0.0) )
+   /* if 0 is in [lby,uby], then it is not possible to compute an estimator */
+   if( SCIPisLE(scip, lby, 0.0) && SCIPisGE(scip, uby, 0.0) )
    {
       *success = FALSE;
       return SCIP_OKAY;
