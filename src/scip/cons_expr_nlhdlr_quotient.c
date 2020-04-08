@@ -660,9 +660,11 @@ void hcGradCut(
  *  There are the following cases for y > 0:
  *
  *    1. lbx < 0 < ubx
- *          use McCormick for x <=/>= y * z and transform resulting linear inequality
- *          x <=/>= ay + bz + c to z >=/<= (x - ay - c) / b. The direction of the inequality
- *          is preserved, since we assume y > 0.
+ *          Rewrite x / y = z as x = y * z and use McCormick to compute a valid inequality of the form
+ *          x = y * z <= a * y +  b * z + c. Note that b > 0 because of y > 0. The inequality is then transformed
+ *          to x / b - a/b * y - c/b <= z, which results in a valid underestimator for x / y over the set
+ *          {(x,y) | lbz <= x / y <= ubz}. Note that overestimating/underestimating the bilinear term with McCormick
+ *          results in an underestimator/overestimator for x / y.
  *
  *    2. lbx >= 0 or ubx <= 0
  *       a) overestimation:  use z <= 1/(lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
@@ -744,6 +746,9 @@ SCIP_RETCODE sepaBivariate(
       SCIP_Real mccoefaux = 0.0;
       SCIP_Real mcconst = 0.0;
 
+      /* as explained above, overestimating/underestimating the bilinear term results in an
+       * underestimator/overestimator for x / y
+       */
       SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
          SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, !overestimate,
          &mccoefaux, &mccoefy, &mcconst, success);
