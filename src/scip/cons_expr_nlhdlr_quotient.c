@@ -519,7 +519,7 @@ SCIP_RETCODE createRowprep(
    return SCIP_OKAY;
 }
 
-/** separates a given point in the univariate case (ax + b) / (cx + d) + e
+/** computes an estimator at a given point for the univariate case (ax + b) / (cx + d) + e
  *
  *  Depending on the reference point, the estimator is a tangent or a secant on the graph.
  *  It depends on whether we are under- or overestimating, whether we are on the left or
@@ -534,11 +534,85 @@ SCIP_RETCODE createRowprep(
  *  mon. decr. + overestimate + right hand side -->  secant
  *  mon. decr. + understimate + left hand side  -->  secant
  *  mon. decr. + understimate + right hand side -->  tangent
- *
- * @TODO: check whether the formula is correct
  */
 static
-SCIP_RETCODE sepaUnivariate(
+SCIP_RETCODE estimateUnivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lbx,                /**< lower bound of x */
+   SCIP_Real             ubx,                /**< upper bound of x */
+   SCIP_Real             solx,               /**< solution value of x */
+   SCIP_Real             a,                  /**< coefficient in numerator */
+   SCIP_Real             b,                  /**< constant in numerator */
+   SCIP_Real             c,                  /**< coefficient in denominator */
+   SCIP_Real             d,                  /**< constant in denominator */
+   SCIP_Real             e,                  /**< constant */
+   SCIP_Real*            coef,               /**< pointer to store the coefficient */
+   SCIP_Real*            constant,           /**< pointer to store the constant */
+   SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
+   SCIP_Bool*            success             /**< buffer to store whether separation was successful */
+   )
+{
+   SCIP_Real singularity;
+   SCIP_Bool isinleftpart;
+   SCIP_Bool monincreasing;
+
+   assert(lbx <= solx && solx <= ubx);
+   assert(coef != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *coef = 0.0;
+   *constant = 0.0;
+   singularity = -d / c;
+
+   /* if 0 is in the denom interval, estimation is not possible */
+   if( SCIPisLE(scip, lbx, singularity) && SCIPisGE(scip, ubx, singularity) )
+      return SCIP_OKAY;
+
+   isinleftpart = (ubx < singularity);
+   monincreasing = (a * d - b * c > 0.0);
+
+   /* this encodes the 8 cases explained above */
+   if( monincreasing == (overestimate == isinleftpart) )
+   {
+      SCIP_Real lbeval;
+      SCIP_Real ubeval;
+
+      /* if one of the bounds is infinite, secant cannot be computed */
+      if( SCIPisInfinity(scip, -lbx) || SCIPisInfinity(scip, ubx) )
+         return SCIP_OKAY;
+
+      lbeval = (a * lbx + b) / (c * lbx + d) + e;
+      ubeval = (a * ubx + b) / (c * ubx + d) + e;
+
+      /* compute coefficient and constant of linear estimator */
+      *coef = (ubeval - lbeval) / (ubx - lbx);
+      *constant = ubeval - (*coef) * ubx;
+   }
+   else
+   {
+      SCIP_Real soleval;
+
+      soleval = (a * solx + b) / (c * solx + d) + e;
+
+      /* compute coefficient and constant of linear estimator */
+      *coef = (a * d - b * c) / SQR(d + c * solx);
+      *constant = soleval - (*coef) * solx;
+   }
+
+   /* avoid huge values in the cut */
+   if( SCIPisHugeValue(scip, REALABS(*coef)) || SCIPisHugeValue(scip, REALABS(*constant)) )
+      return SCIP_OKAY;
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** helper method to compute estimator for the univariate case; the estimator is stored in a given rowprep */
+static
+SCIP_RETCODE estimateUnivariateQuotient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_VAR*             x,                  /**< argument variable */
@@ -552,74 +626,34 @@ SCIP_RETCODE sepaUnivariate(
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
-   char name[SCIP_MAXSTRLEN];
-   SCIP_INTERVAL bnds;
-   SCIP_Real singularity;
-   SCIP_Real linconst;
-   SCIP_Real lincoef;
-   SCIP_Bool monincreasing;
-   SCIP_Bool isinleftpart;
+   SCIP_Real constant;
+   SCIP_Real coef;
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real solx;
 
-   assert(scip != NULL);
-   assert(success != NULL);
-   assert(rowprep != NULL);
-   assert(x != NULL);
-   assert(c != 0.0);
+   /* get variable bounds */
+   lbx = SCIPvarGetLbLocal(x);
+   ubx = SCIPvarGetUbLocal(x);
 
-   *success = FALSE;
+   /* get and adjust solution value */
+   solx = SCIPgetSolVal(scip, sol, x);
+   solx = MIN(MAX(solx, lbx), ubx);
 
-   bnds.inf = SCIPvarGetLbLocal(x);
-   bnds.sup = SCIPvarGetUbLocal(x);
-   singularity = -d / c;
+   /* compute an estimator */
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, solx, a, b, c, d, e, &coef, &constant, overestimate, success) );
 
-   /* if 0 is in the denom interval, estimation is not possible */
-   if( SCIPisLE(scip, bnds.inf, singularity) && SCIPisGE(scip, bnds.sup, singularity) )
-      return SCIP_OKAY;
-
-   isinleftpart = (bnds.sup < singularity);
-   monincreasing = (a * d - b * c > 0.0);
-
-   /* this encodes the 8 cases explained above */
-   if( monincreasing == (overestimate == isinleftpart) )
+   /* create rowprep if estimation was successful */
+   if( *success )
    {
-      SCIP_Real lbeval;
-      SCIP_Real ubeval;
+      char name[SCIP_MAXSTRLEN];
 
-      /* if one of the bounds is infinite, secant cannot be computed */
-      if( SCIPisInfinity(scip, -bnds.inf) || SCIPisInfinity(scip, bnds.sup) )
-         return SCIP_OKAY;
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
+      SCIP_CALL( createRowprep(scip, rowprep, name, &x, &coef, constant, 1) );
 
-      lbeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
-      ubeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
-
-      /* compute coefficient and constant of linear estimator */
-      lincoef = (ubeval - lbeval) / (bnds.sup - bnds.inf);
-      linconst = ubeval - lincoef * bnds.sup;
+      /* clean up rowprep */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
    }
-   else
-   {
-      SCIP_Real solvarval;
-      SCIP_Real soleval;
-
-      solvarval = SCIPgetSolVal(scip, sol, x);
-      soleval = (a * solvarval + b) / (c * solvarval + d) + e;
-
-      /* compute coefficient and constant of linear estimator */
-      lincoef = (a * d - b * c) / SQR(d + c * solvarval);
-      linconst = soleval - lincoef * solvarval;
-   }
-
-   /* avoid huge values in the cut */
-   if( SCIPisHugeValue(scip, ABS(lincoef)) || SCIPisHugeValue(scip, ABS(linconst)) )
-      return SCIP_OKAY;
-
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
-
-   /* create rowprep */
-   SCIP_CALL( createRowprep(scip, rowprep, name, &x, &lincoef, linconst, 1) );
-
-   /* clean up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
 
    return SCIP_OKAY;
 }
@@ -853,6 +887,7 @@ SCIP_RETCODE estimateBivariateQuotient(
 
    assert(x != NULL);
    assert(y != NULL);
+   assert(x != y);
    assert(auxvar != NULL);
    assert(rowprep != NULL);
    assert(success != NULL);
@@ -988,7 +1023,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 
    if( nlhdlrexprdata->numvar == nlhdlrexprdata->denomvar )
    {
-      SCIP_CALL( sepaUnivariate(scip, sol, nlhdlrexprdata->numvar,
+      SCIP_CALL( estimateUnivariateQuotient(scip, sol, nlhdlrexprdata->numvar,
             nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef,
             nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep, success) );
    }

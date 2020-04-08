@@ -115,55 +115,6 @@ void checkData(
    cr_expect(SCIPisEQ(scip, constant, nlhdlrexprdata->constant));
 }
 
-/* checks whether the values of the cut are as expected */
-static
-void checkCut(
-   SCIP_ROW*             cut,                /**< the cut to check */
-   SCIP_VAR**            vars,               /**< array of expected variables */
-   SCIP_Real*            vals,               /**< array of expected coefficients */
-   SCIP_Real             lhs,                /**< expected lhs value */
-   SCIP_Real             rhs,                /**< expected rhs value */
-   int                   nvars               /**< expected number of variables */
-   )
-{
-   SCIP_Bool* foundvar;
-   int i;
-   int j;
-
-
-   cr_assert_not_null(cut);
-   cr_assert_not_null(vars);
-   cr_assert_not_null(vals);
-
-   (void) SCIPprintRow(scip, cut, NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d variable(s) in cut, but got %d\n",
-      nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs), "expected lhs = %f, but got %f\n", lhs, SCIProwGetLhs(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwGetRhs(cut));
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &foundvar, nvars) );
-
-   for( i = 0; i < nvars; ++i )
-   {
-      for( j = 0; j < nvars; ++j )
-      {
-         if( SCIPcolGetVar(SCIProwGetCols(cut)[j]) == vars[i] )
-         {
-            foundvar[i] = TRUE;
-
-            cr_expect(SCIPisEQ(scip, SCIProwGetVals(cut)[j], vals[i]), "expected coef of %s to be %f, but got %f\n",
-               SCIPvarGetName(vars[i]), vals[i], SCIProwGetVals(cut)[j]);
-
-            break;
-         }
-      }
-
-      cr_expect(foundvar[i], "did not find variable %s in the cut", SCIPvarGetName(vars[i]));
-   }
-
-   SCIPfreeBufferArray(scip, &foundvar);
-}
-
 /* detects x / y */
 Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient expression")
 {
@@ -491,172 +442,56 @@ Test(nlhdlrquotient, reverseprop, .description = "tests reverse propagation simp
    cr_expect(SCIPisEQ(scip, result.sup, -26.0/19.0));
 }
 
-/* separates x = 2 for (4x + 1) / (-3x + 3) + 2 */
-Test(nlhdlrquotient, separation1, .description = "separates simple univariate quotient expression")
+/* estimates x = 2 for (4x + 1) / (-3x + 3) - 2 and x in [1.5,5] */
+Test(nlhdlrquotient, estimation1, .description = "estimates simple univariate quotient expression")
 {
-   SCIP_ROWPREP* cutprep;
-   SCIP_ROW* cut;
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_SOL* sol;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* cutvar;
-   SCIP_Real cutcoef;
-   SCIP_Real tmpinf;
-   SCIP_Real tmpsup;
-   SCIP_Bool infeasible;
+   SCIP_Real constant;
+   SCIP_Real coef;
    SCIP_Bool success;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: ((4*<x> + 1) / (-3*<x> + 3) - 2) <= 3",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-
-   /* this also creates the locks */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-
-   /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
-
-   /**
-    *  test overestimation
+   /*
+    * tests overestimation
     */
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvar = x;
-   cutcoef = 5.0 / 3.0;
-
-   checkCut(cut, &cutvar, &cutcoef, 5.0 + cutcoef * 2.0, SCIPinfinity(scip), 1);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
+   SCIP_CALL( estimateUnivariate(scip, 1.5, 5.0, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, coef, 5.0 / 3.0), "got %g expected %g", coef, 5.0 / 3.0);
+   cr_expect(SCIPisEQ(scip, constant, -25.0 / 3.0), "got %g expected %g", constant, -25.0 / 3.0);
 
    /*
-    *  test underestimation
+    * tests underestimation
     */
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, x, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   tmpinf = -7.0 / 1.5 - 2.0;
-   tmpsup = -21.0 / 12.0 - 2.0;
-   cutvar = x;
-   cutcoef = (tmpsup - tmpinf) / 3.5;
-   checkCut(cut, &cutvar, &cutcoef, -SCIPinfinity(scip), -tmpsup + cutcoef * 5.0, 1);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
-
-   /* free the rest */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( estimateUnivariate(scip, 1.5, 5.0, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, coef, 5.0 / 6.0), "got %g expected %g", coef, 5.0 / 6.0);
+   cr_expect(SCIPisEQ(scip, constant, -95.0 / 12.0), "got %g expected %g", constant, -95.0 / 12.0);
 }
 
-/* separates y = -1 for (4y + 1) / (-3y + 3) + 2 */
-Test(nlhdlrquotient, separation2, .description = "separates simple univariate quotient expression")
+/* estimates x = -1 for (4x + 1) / (-3x + 3) - 2 and y in [-4,0] */
+Test(nlhdlrquotient, estimation2, .description = "estimates simple univariate quotient expression")
 {
-   SCIP_ROWPREP* cutprep;
-   SCIP_ROW* cut;
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_SOL* sol;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* cutvar;
-   SCIP_Real cutcoef;
-   SCIP_Real tmpinf;
-   SCIP_Real tmpsup;
-   SCIP_Bool infeasible;
+   SCIP_Real constant;
+   SCIP_Real coef;
    SCIP_Bool success;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: ((4*<y> + 1) / (-3*<y> + 3) - 2) <= 3",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-
-   /* this also creates the locks */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-
-   /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -1.0) );
+   /*
+    * tests overestimation
+    */
+   SCIP_CALL( estimateUnivariate(scip, -4.0, 0.0, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, coef, 1.0 / 3.0), "got %g expected %g", coef, 1.0 / 3.0);
+   cr_expect(SCIPisEQ(scip, constant, -5.0 / 3.0), "got %g expected %g", constant, -5.0 / 3.0);
 
    /*
-    *  test overestimation
+    * tests underestimation
     */
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, TRUE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   tmpinf = -3.0;
-   tmpsup = 1.0 / 3.0 - 2.0;
-   cutvar = y;
-   cutcoef = (tmpsup - tmpinf) / 4.0;
-
-   checkCut(cut, &cutvar, &cutcoef, -tmpsup, SCIPinfinity(scip), 1);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
-
-   /*
-    *  test underestimation
-    */
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaUnivariate(scip, sol, y, 4.0, 1.0, -3.0, 3.0, -2.0, FALSE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvar = y;
-   cutcoef = 5.0 / 12.0;
-   checkCut(cut, &cutvar, &cutcoef, -SCIPinfinity(scip), 2.5 - cutcoef, 1);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
-
-   /* free the rest */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( estimateUnivariate(scip, -4.0, 0.0, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, coef, 5.0 / 12.0), "got %g expected %g", coef, 5.0 / 12.0);
+   cr_expect(SCIPisEQ(scip, constant, -25.0 / 12.0), "got %g expected %g", constant, -25.0 / 12.0);
 }
 
-/* separates (x,y) = (3,2) for x/y for x in [1,4] and z in [1.5,5] */
-Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quotient expression")
+/* estimates (x,y) = (3,2) for x/y for x in [1,4] and y in [1.5,5] */
+Test(nlhdlrquotient, estimation3, .description = "estimates simple bivariate quotient expression")
 {
    SCIP_Real vals[3];
    SCIP_Bool success;
@@ -684,8 +519,8 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
    cr_expect(SCIPisEQ(scip, vals[2], 10.0 / 9.0), "got %g expected %g", vals[2], 10.0 / 9.0);
 }
 
-/* separates (x,y) = (-3,2) for x/y for x in [-4,-1] and y in [1.5,5] */
-Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quotient expression")
+/* estimates (x,y) = (-3,2) for x/y for x in [-4,-1] and y in [1.5,5] */
+Test(nlhdlrquotient, estimation4, .description = "estimates simple bivariate quotient expression")
 {
    SCIP_Real vals[3];
    SCIP_Bool success;
