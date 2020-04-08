@@ -685,7 +685,7 @@ Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quo
 }
 
 /* separates (x,y) = (-3,2) for x/y for x in [-4,-1] and y in [1.5,5] */
-Test(nlhdlrquotient, separation4_fix, .description = "separates simple bivariate quotient expression")
+Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quotient expression")
 {
    SCIP_Real vals[3];
    SCIP_Bool success;
@@ -712,3 +712,5 @@ Test(nlhdlrquotient, separation4_fix, .description = "separates simple bivariate
    cr_expect(SCIPisEQ(scip, vals[1], 2.0 / 15.0), "got %g expected %g", vals[1], 2.0 / 15.0);
    cr_expect(SCIPisEQ(scip, vals[2], -1.0 / 5.0), "got %g expected %g", vals[2], -1.0 / 5.0);
 }
+
+/* TODO add a test for the case that 0 is in the domain of the numerator */
