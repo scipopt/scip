@@ -75,7 +75,7 @@
 #define DEFAULT_INITCAND         100         /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5           /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
-#define DEFAULT_MAXPROPROUNDS    0           /**< maximum number of propagation rounds to be performed during strong branching
+#define DEFAULT_MAXPROPROUNDS    -2          /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
@@ -2123,7 +2123,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+         &branchruledata->maxproprounds, TRUE, SCIPisExactSolve(scip) ? 0 : DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/relpscost/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
