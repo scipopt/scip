@@ -655,7 +655,7 @@ void hcGradCut(
    *constant = 2.0 * SQRT(lbx * ubx) * tmp1 / tmp2;
 }
 
-/** separates a given point in the bivariate case x/y <=/>= z (auxvar)
+/** computes an over- or underestimator at a given point for the bivariate case x/y <=/>= z
  *
  *  There are the following cases for y > 0:
  *
@@ -675,42 +675,39 @@ void hcGradCut(
  *    If 0 is in the interval of y, nothing is possible.
  */
 static
-SCIP_RETCODE sepaBivariate(
+SCIP_RETCODE estimateBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
-   SCIP_VAR*             x,                  /**< numerator variable */
-   SCIP_VAR*             y,                  /**< denominator variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             lbx,                /**< lower bound of x */
+   SCIP_Real             ubx,                /**< upper bound of x */
+   SCIP_Real             lby,                /**< lower bound of y */
+   SCIP_Real             uby,                /**< upper bound of y */
+   SCIP_Real             lbz,                /**< lower bound of z */
+   SCIP_Real             ubz,                /**< lower bound of z */
+   SCIP_Real             solx,               /**< reference point for x */
+   SCIP_Real             soly,               /**< reference point for y */
+   SCIP_Real             solz,               /**< reference point for z */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
-   SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
-   SCIP_Bool*            success             /**< buffer to store whether separation was successful */
+   SCIP_Real*            coefx,              /**< pointer to store the x coefficient */
+   SCIP_Real*            coefy,              /**< pointer to store the y coefficient */
+   SCIP_Real*            constant,           /**< pointer to store the constant */
+   SCIP_Bool*            success             /**< buffer to store whether computing the estimator was successful */
    )
 {
-   SCIP_VAR* linvars[2] = {x, y};
-   SCIP_Real lincoefs[2] = {0.0, 0.0};
-   char name[SCIP_MAXSTRLEN];
-   SCIP_Real linconst = 0.0;
-   SCIP_Real lbx;
-   SCIP_Real ubx;
-   SCIP_Real lby;
-   SCIP_Real uby;
-   SCIP_Real solx;
-   SCIP_Real soly;
-   SCIP_Bool negatedy = FALSE;
    SCIP_Bool negatedx = FALSE;
+   SCIP_Bool negatedy = FALSE;
 
-   assert(scip != NULL);
-   assert(x != NULL);
-   assert(y != NULL);
-   assert(rowprep != NULL);
+   assert(lbx <= solx && solx <= ubx);
+   assert(lby <= soly && soly <= uby);
+   assert(lbz <= solz && solz <= ubz);
+   assert(coefx != NULL);
+   assert(coefy != NULL);
+   assert(constant != NULL);
    assert(success != NULL);
 
    *success = TRUE;
-
-   lbx = SCIPvarGetLbLocal(x);
-   ubx = SCIPvarGetUbLocal(x);
-   lby = SCIPvarGetLbLocal(y);
-   uby = SCIPvarGetUbLocal(y);
+   *coefx = 0.0;
+   *coefy = 0.0;
+   *constant = 0.0;
 
    /* if 0 is in [lby,uby], then it is not possible to compute an estimator */
    if( SCIPisLE(scip, lby, 0.0) && SCIPisGE(scip, uby, 0.0) )
@@ -718,14 +715,6 @@ SCIP_RETCODE sepaBivariate(
       *success = FALSE;
       return SCIP_OKAY;
    }
-
-   /* get reference point */
-   solx = SCIPgetSolVal(scip, sol, x);
-   soly = SCIPgetSolVal(scip, sol, y);
-
-   /* project reference point to the rectangular domain */
-   solx = MIN(MAX(solx, lbx), ubx);
-   soly = MIN(MAX(soly, lby), uby);
 
    /* negate bounds of y if it is not positive */
    if( uby < 0.0 )
@@ -746,20 +735,20 @@ SCIP_RETCODE sepaBivariate(
       SCIP_Real mccoefaux = 0.0;
       SCIP_Real mcconst = 0.0;
 
-      /* as explained above, overestimating/underestimating the bilinear term results in an
+      /* as explained in the description of this method, overestimating/underestimating the bilinear term results in an
        * underestimator/overestimator for x / y
        */
-      SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
-         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, !overestimate,
-         &mccoefaux, &mccoefy, &mcconst, success);
+      SCIPaddBilinMcCormick(scip, 1.0, lbz, ubz, solz, lby, uby, soly, !overestimate, &mccoefaux, &mccoefy, &mcconst,
+         success);
       assert(mccoefaux >= 0.0);
 
       if( !(*success) )
          return SCIP_OKAY;
 
-      lincoefs[0] = 1.0 / mccoefaux;
-      lincoefs[1] = -mccoefy / mccoefaux;
-      linconst = -mcconst / mccoefaux;
+      /* resulting estimator is x/b - a/b * y - c/b, where a*y +  b*z + c is the estimator for y*z */
+      *coefx = 1.0 / mccoefaux;
+      *coefy = -mccoefy / mccoefaux;
+      *constant = -mcconst / mccoefaux;
    }
    /* case 2: 0 is not in the interior of [lbx,ubx] */
    else
@@ -782,52 +771,133 @@ SCIP_RETCODE sepaBivariate(
          /* check where the minimum is attained */
          if( uby * solx - lbx * soly + lbx * lby <= lby * solx - ubx * soly + ubx * uby )
          {
-            lincoefs[0] = 1.0 / lby;
-            lincoefs[1] = -lbx / (lby * uby);
-            linconst = lbx / uby;
+            *coefx = 1.0 / lby;
+            *coefy = -lbx / (lby * uby);
+            *constant = lbx / uby;
          }
          else
          {
-            lincoefs[0] = 1.0 / uby;
-            lincoefs[1] = -ubx / (lby * uby);
-            linconst = ubx / lby;
+            *coefx = 1.0 / uby;
+            *coefy = -ubx / (lby * uby);
+            *constant = ubx / lby;
          }
       }
       /* case 2b */
       else
       {
-         hcGradCut(lbx, ubx, solx, soly, &lincoefs[0], &lincoefs[1], &linconst);
+         /* compute gradient cut for h^c(x,y) at (solx,soly) */
+         hcGradCut(lbx, ubx, solx, soly, coefx, coefy, constant);
       }
    }
 
    /* reverse negations of x and y in the resulting estimator */
    if( negatedx )
-      lincoefs[0] = -lincoefs[0];
+      *coefx = -(*coefx);
    if( negatedy )
-      lincoefs[1] = -lincoefs[1];
+      *coefy = -(*coefy);
 
    /* if exactly one variable has been negated, then we have computed an underestimate/overestimate for the negated
     * expression, which results in an overestimate/underestimate for the original expression
     */
    if( negatedx != negatedy )
    {
-      lincoefs[0] = -lincoefs[0];
-      lincoefs[1] = -lincoefs[1];
-      linconst = - linconst;
+      *coefx = -(*coefx);
+      *coefy = -(*coefy);
+      *constant = -(*constant);
    }
 
    /* avoid huge values in the estimator */
-   if( SCIPisHugeValue(scip, ABS(lincoefs[0])) || SCIPisHugeValue(scip, ABS(lincoefs[1]))
-      || SCIPisHugeValue(scip, ABS(linconst)) )
+   if( SCIPisHugeValue(scip, REALABS(*coefx)) || SCIPisHugeValue(scip, REALABS(*coefy))
+      || SCIPisHugeValue(scip, REALABS(*constant)) )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
 
-   /* create rowprep */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
-      SCIPgetNLPs(scip));
-   SCIP_CALL( createRowprep(scip, rowprep, name, linvars, lincoefs, linconst, 2) );
+   return SCIP_OKAY;
+}
 
-   /* clean up rowprep */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
+/** method to construct an estimator for a quotient expression of the form (ax + b) / (cy + d) + e; the
+ *  resulting estimator is stored in a rowprep; the method first computes an estimator for x' / y' with
+ *  x := ax + b and y := cy + d and then transforms this estimator to one for the quotient (ax + b) / (cy + d) + e
+ */
+static
+SCIP_RETCODE estimateBivariateQuotient(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< numerator variable */
+   SCIP_VAR*             y,                  /**< denominator variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
+   SCIP_Real             a,                  /**< coefficient of numerator */
+   SCIP_Real             b,                  /**< constant of numerator */
+   SCIP_Real             c,                  /**< coefficient of denominator */
+   SCIP_Real             d,                  /**< constant of denominator */
+   SCIP_Real             e,                  /**< constant term */
+   SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
+   SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
+   SCIP_Bool*            success             /**< buffer to store whether separation was successful */
+   )
+{
+   SCIP_VAR* vars[2] = {x, y};
+   SCIP_Real coefs[2] = {0.0, 0.0};
+   SCIP_Real constant = 0.0;
+   SCIP_Real solx;
+   SCIP_Real soly;
+   SCIP_Real solz;
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real lby;
+   SCIP_Real uby;
+   SCIP_Real lbz;
+   SCIP_Real ubz;
+
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(auxvar != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   /* get variable bounds */
+   lbx = SCIPvarGetLbLocal(x);
+   ubx = SCIPvarGetUbLocal(x);
+   lby = SCIPvarGetLbLocal(y);
+   uby = SCIPvarGetUbLocal(y);
+   lbz = SCIPvarGetLbLocal(auxvar);
+   ubz = SCIPvarGetUbLocal(auxvar);
+
+   /* get and adjust solution values */
+   solx = SCIPgetSolVal(scip, sol, x);
+   soly = SCIPgetSolVal(scip, sol, y);
+   solz = SCIPgetSolVal(scip, sol, auxvar);
+   solx = MIN(MAX(solx, lbx), ubx);
+   soly = MIN(MAX(soly, lby), uby);
+   solz = MIN(MAX(solz, lbz), ubz);
+
+   /* compute an estimator */
+   SCIP_CALL( estimateBivariate(scip,
+      MIN(a*lbx + b, a * ubx + b), MAX(a*lbx + b, a * ubx + b), /* bounds of x' */
+      MIN(c*lby + d, c * uby + d), MAX(c*lby + d, c * uby + d), /* bounds of y' */
+      lbz, ubz, a * solx + b, c * soly + d, solz, overestimate, &coefs[0], &coefs[1], &constant, success) );
+
+   /* create rowprep if estimation was successful */
+   if( *success )
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      /* transform estimator Ax' + By'+ C = A(ax + b) + B (cy + d) + C = (Aa) x + (Bc) y + (C + Ab + Bd);
+       * add the constant e separately
+       */
+      constant += coefs[0] * b + coefs[1] * d + e;
+      coefs[0] *= a;
+      coefs[1] *= c;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
+         SCIPgetNLPs(scip));
+      SCIP_CALL( createRowprep(scip, rowprep, name, vars, coefs, constant, 2) );
+
+      /* clean up rowprep */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
+   }
 
    return SCIP_OKAY;
 }
@@ -922,48 +992,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
             nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef,
             nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep, success) );
    }
-   /* TODO right now, the code in sepaBivariate() can only handle x/y; once the code has been extended, test it on the
-    * instance `contvar`, which contains expressions of the form: a / g(x) + b f(x) / g(x)
-    */
-   else if( nlhdlrexprdata->numcoef == 1.0 && nlhdlrexprdata->numconst == 0.0 && nlhdlrexprdata->denomcoef == 1.0
-      && nlhdlrexprdata->denomconst == 0.0 && nlhdlrexprdata->constant == 0.0 )
+   else
    {
-      SCIP_Real lbx;
-      SCIP_Real ubx;
-      SCIP_Real lby;
-      SCIP_Real uby;
-
-      /* compute activity of x' = ax + b */
-      if( nlhdlrexprdata->numcoef >= 0.0 )
-      {
-         lbx = nlhdlrexprdata->numcoef * SCIPvarGetLbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
-         ubx = nlhdlrexprdata->numcoef * SCIPvarGetUbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
-      }
-      else
-      {
-         lbx = nlhdlrexprdata->numcoef * SCIPvarGetUbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
-         ubx = nlhdlrexprdata->numcoef * SCIPvarGetLbLocal(nlhdlrexprdata->numvar) + nlhdlrexprdata->numconst;
-      }
-      assert(lbx <= ubx);
-
-      /* compute activity of y' = cy + d */
-      if( nlhdlrexprdata->denomcoef >= 0.0 )
-      {
-         lby = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
-         uby = nlhdlrexprdata->denomcoef * SCIPvarGetUbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
-      }
-      else
-      {
-         lby = nlhdlrexprdata->denomcoef * SCIPvarGetUbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
-         uby = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
-      }
-      assert(lby <= uby);
-
-      /* compute estimator for x' / y' */
-      SCIP_CALL( sepaBivariate(scip, sol, nlhdlrexprdata->numvar, nlhdlrexprdata->denomvar,
-         SCIPgetConsExprExprAuxVar(expr), overestimate, rowprep, success) );
-
-      /* TODO transform estimator for x' / y' to an estimator for (ax + b) / (cy + d) + e */
+      SCIP_CALL( estimateBivariateQuotient(scip, nlhdlrexprdata->numvar, nlhdlrexprdata->denomvar,
+         SCIPgetConsExprExprAuxVar(expr), sol, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
+         nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate,
+         rowprep, success) );
    }
 
    assert(!(*success) || rowprep != NULL);

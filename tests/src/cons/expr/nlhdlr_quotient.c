@@ -655,166 +655,60 @@ Test(nlhdlrquotient, separation2, .description = "separates simple univariate qu
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* separates (x,z) = (2,3) for z/x */
+/* separates (x,y) = (3,2) for x/y for x in [1,4] and z in [1.5,5] */
 Test(nlhdlrquotient, separation3, .description = "separates simple bivariate quotient expression")
 {
-   SCIP_ROWPREP* cutprep;
-   SCIP_ROW* cut;
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_SOL* sol;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* cutvars[2];
-   SCIP_Real cutcoefs[2];
-   SCIP_Bool infeasible;
+   SCIP_Real vals[3];
    SCIP_Bool success;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: <z> / <x> <= 3",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-
-   /* this also creates the locks */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-
-   /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 3.0) );
-
    /*
-    *  test overestimation
+    * test overestimation
     */
 
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, auxvar, TRUE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvars[0] = x;
-   cutvars[1] = z;
-   cutcoefs[0] = -1.0 / 7.5;
-   cutcoefs[1] = 2.0 / 3.0;
-   checkCut(cut, cutvars, cutcoefs, -1.5 / 7.5, SCIPinfinity(scip), 2);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
+   SCIP_CALL( estimateBivariate(scip, 1.0, 4.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), 3.0, 2.0, 0.0, TRUE,
+      &vals[0], &vals[1], &vals[2], &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, vals[0], 2.0 / 3.0), "got %g expected %g", vals[0], 2.0 / 3.0);
+   cr_expect(SCIPisEQ(scip, vals[1], -1.0 / 7.5), "got %g expected %g", vals[1], -1.0 / 7.5);
+   cr_expect(SCIPisEQ(scip, vals[2], 1.0 / 5.0), "got %g expected %g", vals[2], 1.0 / 5.0);
 
    /*
-    *  test underestimation
+    * test underestimation
     */
 
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, z, x, auxvar, FALSE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvars[0] = x;
-   cutvars[1] = z;
-   cutcoefs[0] = -25.0 / 36.0;
-   cutcoefs[1] = 5.0 / 9.0;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), -10.0 / 9.0, 2);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
-
-   /* free the rest */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( estimateBivariate(scip, 1.0, 4.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), 3.0, 2.0, 0.0, FALSE,
+      &vals[0], &vals[1], &vals[2], &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, vals[0], 5.0 / 9.0), "got %g expected %g", vals[0], 5.0 / 9.0);
+   cr_expect(SCIPisEQ(scip, vals[1], -25.0 / 36.0), "got %g expected %g", vals[1], -25.0 / 36.0);
+   cr_expect(SCIPisEQ(scip, vals[2], 10.0 / 9.0), "got %g expected %g", vals[2], 10.0 / 9.0);
 }
 
-/* separates (x,w) = (2,-3) for w/x */
-Test(nlhdlrquotient, separation4, .description = "separates simple bivariate quotient expression")
+/* separates (x,y) = (-3,2) for x/y for x in [-4,-1] and y in [1.5,5] */
+Test(nlhdlrquotient, separation4_fix, .description = "separates simple bivariate quotient expression")
 {
-   SCIP_ROWPREP* cutprep;
-   SCIP_ROW* cut;
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_SOL* sol;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* cutvars[3];
-   SCIP_Real cutcoefs[3];
-   SCIP_Bool infeasible;
+   SCIP_Real vals[3];
    SCIP_Bool success;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: <w> / <x> <= 3",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-
-   /* this also creates the locks */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-
-   /* create auxvar for expression */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, w, -3.0) );
-
    /*
-    *  test overestimation
+    * test overestimation
     */
 
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, auxvar, TRUE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvars[0] = x;
-   cutvars[1] = w;
-   cutcoefs[0] = 25.0 / 36.0;
-   cutcoefs[1] = 5.0 / 9.0;
-   checkCut(cut, cutvars, cutcoefs, 10.0 / 9.0, SCIPinfinity(scip), 2);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
+   SCIP_CALL( estimateBivariate(scip, -4.0, -1.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), -3.0, 2.0, 0.0, TRUE,
+      &vals[0], &vals[1], &vals[2], &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, vals[0], 5.0 / 9.0), "got %g expected %g", vals[0], 5.0 / 9.0);
+   cr_expect(SCIPisEQ(scip, vals[1], 25.0 / 36.0), "got %g expected %g", vals[1], 25.0 / 36.0);
+   cr_expect(SCIPisEQ(scip, vals[2], -10.0 / 9.0), "got %g expected %g", vals[2], -10.0 / 9.0);
 
    /*
-    *  test underestimation
+    * test underestimation
     */
 
-   SCIP_CALL( SCIPcreateRowprep(scip, &cutprep, SCIP_SIDETYPE_RIGHT, TRUE) );
-   SCIP_CALL( sepaBivariate(scip, sol, w, x, auxvar, FALSE, cutprep, &success) );
-
-   cr_assert(success);
-   cr_assert_not_null(cutprep);
-
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, cutprep, cons) );
-
-   cutvars[0] = x;
-   cutvars[1] = w;
-   cutcoefs[0] = 1.0 / 7.5;
-   cutcoefs[1] = 2.0 / 3.0;
-   checkCut(cut, cutvars, cutcoefs, -SCIPinfinity(scip), 1.0 / 5.0, 2);
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeRowprep(scip, &cutprep);
-
-   /* free the rest */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( estimateBivariate(scip, -4.0, -1.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), -3.0, 2.0, 0.0, FALSE,
+      &vals[0], &vals[1], &vals[2], &success) );
+   cr_expect(success);
+   cr_expect(SCIPisEQ(scip, vals[0], 2.0 / 3.0), "got %g expected %g", vals[0], 2.0 / 3.0);
+   cr_expect(SCIPisEQ(scip, vals[1], 2.0 / 15.0), "got %g expected %g", vals[1], 2.0 / 15.0);
+   cr_expect(SCIPisEQ(scip, vals[2], -1.0 / 5.0), "got %g expected %g", vals[2], -1.0 / 5.0);
 }
