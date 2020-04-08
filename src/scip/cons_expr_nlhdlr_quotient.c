@@ -745,8 +745,9 @@ SCIP_RETCODE sepaBivariate(
       SCIP_Real mcconst = 0.0;
 
       SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar),
-         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, overestimate,
+         SCIPgetSolVal(scip, sol, auxvar), lby, uby, soly, !overestimate,
          &mccoefaux, &mccoefy, &mcconst, success);
+      assert(mccoefaux >= 0.0);
 
       if( !(*success) )
          return SCIP_OKAY;
