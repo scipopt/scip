@@ -955,7 +955,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
       else
       {
          lby = nlhdlrexprdata->denomcoef * SCIPvarGetUbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
-         ubx = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
+         uby = nlhdlrexprdata->denomcoef * SCIPvarGetLbLocal(nlhdlrexprdata->denomvar) + nlhdlrexprdata->denomconst;
       }
       assert(lby <= uby);
 
