@@ -83,7 +83,6 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(DEBUG_ADAPTOR "should rationals be used with a debug adaptor?" OFF)
 option(EXACTSOLVE "compile with support for exact rational solve (requires Boost and GMP to work)" ON)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
@@ -225,12 +224,8 @@ if(EXACTSOLVE)
         Either install Boost or set -DEXACTSOLVE=off")
     endif()
 endif()
-#if(NOT SOPLEX_GMP)
-#    message(WARNING "SoPlex with GMP is necessary for exact solving mode but Soplex_GMP is not set.
-#        Make sure to rebuild SoPlex with GMP enabled.")
-#endif()
 
-# use C++11 standard
+# use C++14 standard
 set(CMAKE_CXX_STANDARD 14)
 
 # set function visibility default to hidden
@@ -268,13 +263,6 @@ if(GMP_FOUND)
     include_directories(${GMP_INCLUDE_DIRS})
     set(SCIP_WITH_GMP on)
     set(SCIP_HAVE_GMP 1)
-    if((CMAKE_BUILD_TYPE MATCHES Debug) AND DEBUG_ADAPTOR)
-        set(SCIP_WITH_DEBUG_ADAPTOR on)
-        set(USE_DEBUG_ADAPTOR 1)
-    else()
-        set(SCIP_WITH_DEBUG_ADAPTOR off)
-        set(USE_DEBUG_ADAPTOR 0)
-    endif()
 else()
     set(GMP_LIBRARIES "")
     set(SCIP_HAVE_GMP 1)
@@ -418,8 +406,6 @@ else()
     message(FATAL_ERROR "option SYM has wrong value")
 endif()
 
-#set(rat scip/rational.cpp)
-#set(RAT_LIBRARIES ${RAT_LIBRARIES})
 
 #
 # enable coverage support
