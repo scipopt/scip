@@ -1690,10 +1690,10 @@ SCIP_RETCODE runPcMW(
       const int start = terminalperm[r];
       SCIPdebugMessage("TM run=%d start=%d\n", r, start);
 
-      if( graph->grad[start] <= 1  )
+      if( graph->grad[start] == 0  )
       {
          /* only root remaining? */
-         if( graph->grad[start] == 0 && start == graph->source )
+         if( start == graph->source )
          {
             assert(graph_pc_isRootedPcMw(graph));
 
@@ -1704,6 +1704,12 @@ SCIP_RETCODE runPcMW(
 
          continue;
       }
+      else if( graph->grad[start] == 1 )
+      {
+         if( !graph_pc_isRootedPcMw(graph) || !graph_pc_knotIsFixedTerm(graph, start) )
+            continue;
+      }
+
 
       if( pcmwmode == pcmode_fulltree )
       {
