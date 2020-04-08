@@ -935,10 +935,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    assert(success != NULL);
 
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/exactsolve", FALSE) );
-   
+
    if( uselprows )
    {
-      
+
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
@@ -970,6 +970,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
    *success = TRUE;
 
    return SCIP_OKAY;
