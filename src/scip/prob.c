@@ -610,11 +610,11 @@ SCIP_RETCODE SCIPprobTransform(
     */
    if( set->misc_exactsolve )
    {
-      SCIP_CALL( SCIPprobCheckObjIntegralExact(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+      SCIP_CALL( SCIPprobCheckObjIntegralExact(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
    }
    else
    {
-      SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+      SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
    }
 
    /* copy the nlpenabled flag */
@@ -2490,6 +2490,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -2537,7 +2538,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
    }
 
    return SCIP_OKAY;
