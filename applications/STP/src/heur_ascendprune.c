@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    )
 {
    GRAPH* newgraph;
-   SCIP_Real* nval;
+   SCIP_Real* nval = NULL;
    int* const mark = g->mark;
    int* const newedges = result;
    int* const nodechild = nodearrint;
@@ -378,16 +378,6 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(Is_term(g->term[root]));
    assert(graph_valid(scip, g));
    assert(!pcmw || graph_pc_knotIsFixedTerm(g, root));
-
-   if( addsol )
-   {
-      const int nvars = SCIPprobdataGetNVars(scip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
-   }
-   else
-   {
-      nval = NULL;
-   }
 
    /* DFS to identify 0-redcost subgraph */
    {
@@ -455,6 +445,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          if( mark[head] )
             newedges[nnewedges++] = a;
       }
+   }
+
+   if( nnewedges == 0 )
+   {
+      assert(g->stp_type == STP_RMWCSP);
+      *solfound = TRUE;
+      graph_solGetTrivialSol(g, result);
+
+      return SCIP_OKAY;
    }
 
 #ifdef DEBUG_ASCENDPRUNE
@@ -608,7 +607,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    if( addsol )
    {
-      assert(nval != NULL);
+      const int nvars = SCIPprobdataGetNVars(scip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
+
       for( int e = 0; e < nedges; e++ )
       {
          if( newedges[e] == CONNECT )

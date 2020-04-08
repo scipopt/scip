@@ -607,6 +607,7 @@ extern SCIP_Bool graph_solIsValid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_solContainsNode(const GRAPH*, const int*, int);
 extern SCIP_Real graph_solGetObj(const GRAPH*, const int*, SCIP_Real, int);
 extern int       graph_solGetNedges(const GRAPH*, const int*);
+extern void      graph_solGetTrivialSol(const GRAPH*, int*);
 extern SCIP_RETCODE   graph_solGetOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   graph_solReroot(SCIP*, GRAPH*, int*, int);
 SCIP_RETCODE       graph_solPrune(SCIP*, const GRAPH*, int*, STP_Bool*);

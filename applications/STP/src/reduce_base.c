@@ -1280,6 +1280,7 @@ SCIP_RETCODE redLoopMw(
             SCIP_Real ub = -1.0;
             printf("RMW \n\n \n");
 
+            SCIP_CALL(reduce_simple_mw(scip, g, solnode, fixed, &degelims));
 
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase, state, nodearrint,
                                 nodearrchar, &daelims, randnumgen) );

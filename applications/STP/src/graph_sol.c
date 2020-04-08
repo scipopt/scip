@@ -156,7 +156,6 @@ void pcsolGetTrivialEdges(
 )
 {
    const int root = g->source;
-   assert(!graph_pc_isRootedPcMw(g));
 
 #ifndef NEDBUG
    for( int i = 0; i < g->edges; i++ )
@@ -166,9 +165,9 @@ void pcsolGetTrivialEdges(
    for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
    {
       const int head = g->head[a];
-      if( Is_term(g->term[head]) )
+      if( graph_pc_knotIsDummyTerm(g, head) )
       {
-         assert(connected[head]);
+         assert(!connected || connected[head]);
          result[a] = CONNECT;
       }
    }
@@ -1207,6 +1206,26 @@ SCIP_Real graph_solGetObj(
    }
 
    return obj;
+}
+
+
+/** sets trivial solution (all UNKNOWN) */
+void graph_solGetTrivialSol(
+   const GRAPH*          g,                  /**< the graph */
+   int*                  soledge             /**< solution */
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+
+   assert(soledge);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      soledge[e] = UNKNOWN;
+   }
+
+   if( graph_pc_isPcMw(g) )
+      pcsolGetTrivialEdges(g, NULL, soledge);
 }
 
 
