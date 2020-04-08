@@ -2143,7 +2143,7 @@ SCIP_Real graph_pc_getNonLeafTermOffset(
    const int nnodes = graph_get_nNodes(graph);
 
    assert(scip);
-   assert(graph_pc_isPcMw(graph));
+   assert(graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG);
 
    for( int i = 0; i < nnodes; ++i )
    {

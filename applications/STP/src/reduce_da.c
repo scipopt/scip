@@ -63,7 +63,7 @@ SCIP_Real getSolObj(
 )
 {
    SCIP_Real obj;
-   if( graph_pc_isPc(g) )
+   if( graph_pc_isPcMw(g) )
       obj = graph_pc_solGetObj(scip, g, soledge, 0.0);
    else
       obj = graph_solGetObj(g, soledge, 0.0, g->edges);
@@ -72,7 +72,7 @@ SCIP_Real getSolObj(
 }
 
 
-/** returns maximum allowed deviation for dual-ascent*/
+/** returns maximum allowed deviation for dual-ascent */
 static
 SCIP_Real getDaMaxDeviation(
    const RPDA*           paramsda,           /**< parameters */
@@ -272,7 +272,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 
          solobjval = sol->obj;
 
-         if( graph_pc_isRootedPcMw(graph) )
+         if( graph->stp_type == STP_RPCSPG )
             solobjval += graph_pc_getNonLeafTermOffset(scip, graph);
 
          assert(SCIPisEQ(scip, getSolObj(scip, graph, sol->soledges), solobjval));
@@ -369,8 +369,10 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
             SCIP_Real solobjval;
 
             assert(sol != NULL);
+            solobjval = sol->obj;
 
-            solobjval = sol->obj + graph_pc_getNonLeafTermOffset(scip, graph);
+            if( graph_pc_isPc(graph) )
+               solobjval += graph_pc_getNonLeafTermOffset(scip, graph);
 
             assert(SCIPisEQ(scip, getSolObj(scip, graph, sol->soledges), solobjval));
 
@@ -423,8 +425,8 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
 
 
 
-/** collected terminals (fixed ones for RPC) */
-static
+/** collected terminals (fixed ones for RPC/RMW) */
+static inline
 void collectFixedTerminals(
    const GRAPH*          graph,              /**< graph data structure */
    int*                  terminals,          /**< terminals array (of size graph->terms) */
@@ -433,22 +435,22 @@ void collectFixedTerminals(
 {
    int n = 0;
    const int nnodes = graph->knots;
-   const SCIP_Bool rpc = graph_pc_isRootedPcMw(graph);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
 
    assert(graph->stp_type != STP_PCSPG && graph->stp_type != STP_MWCSP);
-   assert(!rpc || !graph->extended);
+   assert(!isRpcmw || !graph->extended);
 
    for( int i = 0; i < nnodes; i++ )
    {
       if( Is_term(graph->term[i]) )
       {
          assert(graph->mark[i]);
-         if( !rpc || graph_pc_knotIsFixedTerm(graph, i) )
+         if( !isRpcmw || graph_pc_knotIsFixedTerm(graph, i) )
             terminals[n++] = i;
       }
    }
 
-   assert(rpc || graph->terms == n);
+   assert(isRpcmw || graph->terms == n);
    *nterms = n;
 }
 
@@ -469,7 +471,7 @@ SCIP_RETCODE daInitializeDistances(
    int* const vbase = redcostdata->nodeTo3TermsBases;
    SCIP_Real* costrev = NULL;
    const int nedges = g->edges;
-   const SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
    const SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_NWSPG);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
@@ -484,13 +486,13 @@ SCIP_RETCODE daInitializeDistances(
    for( int e = g->outbeg[daroot]; e != EAT_LAST; e = g->oeat[e] )
       costrev[e] = FARAWAY;
 
-   if( rpc )
+   if( isRpcmw )
       graph_pc_2trans(scip, g);
 
    /* build Voronoi diagram */
    if( directed )
    {
-      assert(!rpc);
+      assert(!isRpcmw);
       graph_voronoiTerms(scip, g, costrev, vnoi, vbase, g->path_heap, state);
    }
    else
@@ -518,7 +520,7 @@ SCIP_RETCODE daInitializeDistances(
 #endif
    }
 
-   if( rpc )
+   if( isRpcmw )
       graph_pc_2org(scip, g);
 
    SCIPfreeBufferArray(scip, &costrev);
@@ -587,6 +589,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
    const SCIP_Real cutoff = upperbound - lpobjval;
    const int halfnedges = graph->edges / 2;
 
+   assert(!graph_pc_isMw(graph));
    assert(!SCIPisNegative(scip, cutoff));
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
 
@@ -1063,9 +1066,9 @@ void findRootsMark(
 }
 
 
-/** special method for RPC does deletes incident edges of terminal, but not the terminal and the extension itself */
+/** special method for RPC/RMW that deletes incident edges of terminal, but not the terminal and the extension itself */
 static
-void daRpcDeleteTermIncidents(
+void daRpcmwDeleteTermIncidents(
    SCIP*                 scip,               /**< SCIP data structure */
    const PATH*           vnoi,               /**< Voronoi data structure */
    int                   term,               /**< the terminal */
@@ -1081,6 +1084,7 @@ void daRpcDeleteTermIncidents(
    const int termedge = graph->term2edge[term];
    assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
    assert(vnoi[twinterm].dist == 0.0);
+   assert(graph_pc_isRootedPcMw(graph));
 #endif
 
    for( int e = graph->outbeg[term]; e != EAT_LAST; e = graph->oeat[e] )
@@ -1539,13 +1543,13 @@ SCIP_RETCODE daOrderRoots(
    const GRAPH*          graph,              /**< graph structure */
    int*                  terms,              /**< sol int array corresponding to upper bound */
    int                   nterms,             /**< number of terminals */
-   SCIP_Bool             randomize,          /**< randomize */
+   SCIP_Bool             randomize,          /**< randomize? */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
 {
    int* termdegs;
    int maxdeg = 0;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
 
    assert(terms != NULL);
    assert(nterms > 0);
@@ -1562,19 +1566,22 @@ SCIP_RETCODE daOrderRoots(
       if( grad > maxdeg )
          maxdeg = termdegs[i];
 
-      if( rpc )
+      if( isRpcmw )
       {
          assert(graph_pc_knotIsFixedTerm(graph, terms[i] ));
 
-         /* make sure root is selected for RPC */
+         /* make sure root is selected for RPC/RMW */
          if( terms[i] == graph->source )
             termdegs[i] = -graph->knots;
       }
    }
 
    if( randomize )
+   {
+      assert(randnumgen);
       for( int i = 0; i < nterms; i++ )
          termdegs[i] -= SCIPrandomGetInt(randnumgen, 0, maxdeg);
+   }
 
    SCIPsortIntInt(termdegs, terms, nterms);
 
@@ -1790,10 +1797,10 @@ SCIP_RETCODE reduceRootedProb(
 {
    int* incidents = NULL;
    const int nnodes = graph->knots;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
 
-   if( rpc )
+   if( isRpcmw )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &incidents, nnodes) );
 
@@ -1827,10 +1834,10 @@ SCIP_RETCODE reduceRootedProb(
 
       redcost = pathdist[k] + vnoi[k].dist;
 
-      if( rpc && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
+      if( isRpcmw && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
          && SCIPisGT(scip, redcost, minpathcost) )
       {
-         daRpcDeleteTermIncidents(scip, vnoi, k, graph, incidents, nfixedp);
+         daRpcmwDeleteTermIncidents(scip, vnoi, k, graph, incidents, nfixedp);
          continue;
       }
 
@@ -1850,7 +1857,7 @@ SCIP_RETCODE reduceRootedProb(
          const int enext = graph->oeat[e];
 
          /* for rpc no artificial terminal arcs should be deleted */
-         if( (rpc && !graph->mark[head])
+         if( (isRpcmw && !graph->mark[head])
           || (keepsol && (result[e] == CONNECT || result[flipedge(e)] == CONNECT)) )
          {
             e = enext;
@@ -2066,7 +2073,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
-   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  vbase,              /**< array for Voronoi bases */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
    int*                  pathedge,           /**< array for predecessor edge on a path */
@@ -2081,8 +2087,9 @@ SCIP_RETCODE reduce_da(
    SCIP_Real* nodereplacebounds = NULL;
    SCIP_Real upperbound;
    SCIP_Real damaxdeviation;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
-   const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
+   const SCIP_Bool isRpc = (graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
+   const SCIP_Bool isDirected = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    int* terms;
    int* result;
    SCIP_Bool* pseudoDelNodes;
@@ -2105,14 +2112,14 @@ SCIP_RETCODE reduce_da(
 
    assert(ub && scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
-   assert(!rpc || !graph->extended);
+   assert(!isRpcmw || !graph->extended);
 
    if( graph->terms <= 2 )
       return SCIP_OKAY;
 
 #ifdef STP_RPC_FIXEDPROPER
    assert(0 && "check");
-   if( rpc )
+   if( isRpcmw )
       return SCIP_OKAY;
 #endif
 
@@ -2128,7 +2135,7 @@ SCIP_RETCODE reduce_da(
    if( userec )
       SCIP_CALL( solpool_init(scip, &pool, nedges, SOLPOOL_SIZE) );
 
-   if( rpc )
+   if( isRpc )
       reduce_identifyNonLeafTerms(scip, graph);
 
    ndeletions = 0;
@@ -2140,7 +2147,7 @@ SCIP_RETCODE reduce_da(
    for( int e = 0; e < nedges; e++ )
       result[e] = UNKNOWN;
 
-   if( directed || rpc )
+   if( isDirected || isRpcmw )
    {
       SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
    }
@@ -2154,7 +2161,7 @@ SCIP_RETCODE reduce_da(
    // todo maybe inside the loop?
    damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
 
-   assert(!rpc || graph->extended);
+   assert(!isRpcmw || graph->extended);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
@@ -2181,7 +2188,7 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( computeDualSolution(scip, graph, damaxdeviation, &redcostdata, state) );
          }
 
-         if( !directed )
+         if( !isDirected )
          {
             SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, &redcostdata, userec, pool, result, &havenewsol, &upperbound) );
          }
@@ -2192,7 +2199,7 @@ SCIP_RETCODE reduce_da(
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata.dualBound, run, outerrounds);
          assert(SCIPisGE(scip, cutoffbound, 0.0));
 
-         if( rpc )
+         if( isRpcmw )
             graph_pc_2org(scip, graph);
          else
             graph_mark(graph);
@@ -2214,7 +2221,7 @@ SCIP_RETCODE reduce_da(
          }
 
          // todo don't call anymore!
-         if( extended && !rpc )
+         if( extended && !isRpcmw )
          {
             int extfixed = reduce_extendedEdge(scip, graph, redcostdata.nodeTo3TermsPaths, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, (havenewsol ? result : NULL), cutoffbound, redcostdata.redCostRoot, arcsdeleted, FALSE);
             ndeletions += extfixed;
@@ -2222,7 +2229,7 @@ SCIP_RETCODE reduce_da(
          }
 
          // todo call this methods fewer times, at the end maybe
-         if( extended && !SCIPisZero(scip, cutoffbound) )
+         if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) )
          {
             int extfixed;
 
@@ -2243,16 +2250,16 @@ SCIP_RETCODE reduce_da(
 #endif
          }
 
-         if( !directed && !SCIPisZero(scip, cutoffbound) && nodereplacing )
+         if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.nodeTo3TermsBases,
-                  redcostdata.dualBound, upperbound, redcostdata.redCostRoot, (run == 0), extended && !rpc));
+                  redcostdata.dualBound, upperbound, redcostdata.redCostRoot, (run == 0), extended && !isRpcmw));
 
-         if( ndeletions > 0 && !rpc )
+         if( ndeletions > 0 && !isRpcmw )
             reduceLevel0(scip, graph);
 
          assert(graph_valid(scip, graph));
 
-         if( !rpc )
+         if( !isRpcmw )
             graph_mark(graph);
          else
             graph_pc_2trans(scip, graph);
@@ -2260,9 +2267,11 @@ SCIP_RETCODE reduce_da(
       } /* root loop */
 
       /* do pseudo-elimination? */
-      if( !directed && !SCIPisZero(scip, cutoffbound) && nodereplacing )
+      if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
       {
          int nreplacings = 0;
+         assert(!graph_pc_isMw(graph));
+
          markPseudoDeletablesFromBounds(scip, graph, nodereplacebounds, upperbound, pseudoDelNodes);
 
          if( extended )
@@ -2297,7 +2306,7 @@ SCIP_RETCODE reduce_da(
 
    *nelims = ndeletions;
 
-   if( rpc )
+   if( isRpcmw )
       graph_pc_2orgcheck(scip, graph);
 
    if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
