@@ -1664,7 +1664,7 @@ SCIP_RETCODE SCIPsolexRetransform(
       SCIPsolexGetVal(transsolvals[v], sol, set, stat, transvars[v]);
    }
 
-   /** @todo exip: presolving extension (once we have exact presolving, we need to do here what we do in the fp case */)
+   /** @todo exip: presolving extension (once we have exact presolving, we need to do here what we do in the fp case */
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solexClearArrays(sol) );

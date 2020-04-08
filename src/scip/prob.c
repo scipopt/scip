@@ -35,6 +35,8 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/pub_varex.h"
+#include "scip/rational.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
@@ -606,7 +608,14 @@ SCIP_RETCODE SCIPprobTransform(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+   if( set->misc_exactsolve )
+   {
+      SCIP_CALL( SCIPprobCheckObjIntegralExact(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+   }
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
@@ -1543,6 +1552,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    return SCIP_OKAY;
 }
 
+
+
 /** update the number of variables with non-zero objective coefficient */
 void SCIPprobUpdateNObjVars(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2461,3 +2472,71 @@ void SCIPprobEnableConsCompression(
 }
 
 #endif
+
+/** exact methods @todo exip move these to a different file */
+
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
+ */
+SCIP_RETCODE SCIPprobCheckObjIntegralExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   SCIP_Rational* obj;
+   int v;
+
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(set->misc_exactsolve);
+
+   /* if we know already, that the objective value is integral, nothing has to be done */
+   if( transprob->objisintegral )
+      return SCIP_OKAY;
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
+      return SCIP_OKAY;
+
+   /* if the objective value offset is fractional, the value itself is possibly fractional */
+   if( !EPSISINT(transprob->objoffset, 0.0) )
+      return SCIP_OKAY;
+
+   /* scan through the variables */
+   for( v = 0; v < transprob->nvars; ++v )
+   {
+      /* get objective value of variable */
+      obj = SCIPvarGetObjExact(transprob->vars[v]);
+
+      /* check, if objective value is non-zero */
+      if( !RatIsZero(obj) )
+      {
+         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+         if( !RatIsIntegral(obj) )
+            break;
+
+         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            break;
+      }
+   }
+
+   /* objective value is integral, if the variable loop scanned all variables */
+   if( v == transprob->nvars )
+   {
+      transprob->objisintegral = TRUE;
+
+      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+   }
+
+   return SCIP_OKAY;
+}
