@@ -721,6 +721,10 @@ SCIP_RETCODE sepaBivariate(
    solx = SCIPgetSolVal(scip, sol, x);
    soly = SCIPgetSolVal(scip, sol, y);
 
+   /* project reference point to the rectangular domain */
+   solx = MIN(MAX(solx, lbx), ubx);
+   soly = MIN(MAX(soly, lby), uby);
+
    /* negate bounds of y if it is not positive */
    if( uby < 0.0 )
    {
