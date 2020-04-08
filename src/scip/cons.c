@@ -2331,8 +2331,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
       checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaysepa, delayprop, needscons, proptiming,
       presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
       consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
-      consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, 
-      consdelvars, consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+      consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
+      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
       (void) SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;

@@ -69,9 +69,10 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
+/** wrapper method to update the exact data of a variable if a bound gets changed */
 static
 SCIP_RETCODE updateLpexBdChg(
-   SCIP_VAR*             var,
+   SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENT*           event,              /**< event */
@@ -79,6 +80,7 @@ SCIP_RETCODE updateLpexBdChg(
    SCIP_Bool             isGlb               /**< is it a global or local bound */
    )
 {
+   /* do nothing if not in exact solving mode */
    if( !set->misc_exactsolve )
     return SCIP_OKAY;
 
@@ -88,8 +90,8 @@ SCIP_RETCODE updateLpexBdChg(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
          SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIP_Rational* newbound; 
-      SCIP_Rational* oldbound; 
+      SCIP_Rational* newbound;
+      SCIP_Rational* oldbound;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &newbound) );
       SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
@@ -1105,7 +1107,7 @@ SCIP_VAR* SCIPeventGetVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       return event->data.eventvaradded.var;
@@ -1166,7 +1168,7 @@ SCIP_RETCODE SCIPeventChgVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       event->data.eventvaradded.var = var;
@@ -1270,7 +1272,7 @@ SCIP_Real SCIPeventGetOldbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1294,7 +1296,7 @@ SCIP_Real SCIPeventGetNewbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1707,9 +1709,9 @@ SCIP_RETCODE SCIPeventProcess(
       /* if in exact solving mode, adjust rational lp data */
       if( set->misc_exactsolve )
       {
-         SCIP_Rational* newobj; 
-         SCIP_Rational* oldobj; 
-         
+         SCIP_Rational* newobj;
+         SCIP_Rational* oldobj;
+
          SCIP_CALL( RatCreateBuffer(set->buffer, &newobj) );
          SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
          RatSetReal(newobj, event->data.eventobjchg.newobj);
@@ -1785,6 +1787,7 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
+         /* update exact bounds if in exact solving mode */
          SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, FALSE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -1807,8 +1810,9 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
-         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound, 
+         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
+         /* update exact bounds if in exact solving mode */
          SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, TRUE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -2401,7 +2405,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventobjchg.var), (*event)->data.eventobjchg.oldobj,
                (*event)->data.eventobjchg.newobj,
-               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj, 
+               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj,
                qevent->data.eventobjchg.newobj);
 
             qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
@@ -2443,7 +2447,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
-               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound, 
+               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound,
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
