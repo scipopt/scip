@@ -722,7 +722,7 @@ SCIP_RETCODE sepaBivariate(
    soly = SCIPgetSolVal(scip, sol, y);
 
    /* negate bounds of y if it is not positive */
-   if( !SCIPisGT(scip, lby, 0.0) )
+   if( uby < 0.0 )
    {
       SCIP_Real tmp = uby;
 
@@ -754,8 +754,8 @@ SCIP_RETCODE sepaBivariate(
    /* case 2: 0 is not in the interior of [lbx,ubx] */
    else
    {
-      /* negate bounds of x if it is not positive */
-      if( !SCIPisGE(scip, lbx, 0.0) )
+      /* negate bounds of x if it is negative */
+      if( ubx < 0.0 )
       {
          SCIP_Real tmp = ubx;
 
