@@ -7,8 +7,20 @@
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
 
+: ${DOCLOG=${PWD}/builddoc.log}
+
+echo "" > ${DOCLOG}
+echo "running builddoc.sh in $(pwd)"
+
 # stop on error
 set -e
+
+if [ -e MathJax ]; then
+   echo "Found MathJax in doc folder."
+   export MATHJAX_RELPATH="../MathJax"
+else
+   echo "No local MathJax found, will build doc with online version."
+fi
 
 if [ "$1" != "" ]
 then
@@ -29,10 +41,10 @@ cd ..
 
 # build a fresh version of SCIP
 # make -j clean
-make -j ZIMPL=false
+make -j ZIMPL=false >> ${DOCLOG}
 
 # run scip with some commands for the shell tutorial
-bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
+bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp >> ${DOCLOG}
 
 # cleanup of files created by the SCIP commands
 rm stein27.lp stein27.sol settingsfile.set
@@ -40,7 +52,7 @@ rm stein27.lp stein27.sol settingsfile.set
 cd doc
 
 # modify the raw log file by adding doxygen snippet marker via the python script
-python inc/shelltutorial/insertsnippetstutorial.py
+python3 inc/shelltutorial/insertsnippetstutorial.py
 
 ### FINISHED SHELL TUTORIAL
 
@@ -48,7 +60,7 @@ python inc/shelltutorial/insertsnippetstutorial.py
 
 cd inc/faq
 
-python parser.py --linkext $HTML_FILE_EXTENSION  && php localfaq.php > faq.inc
+python3 parser.py --linkext $HTML_FILE_EXTENSION  && php localfaq.php > faq.inc
 cd ../../
 
 ### FINISHED FAQ GENERATION

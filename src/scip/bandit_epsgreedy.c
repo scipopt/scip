@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -241,8 +241,7 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
-                                               *  only relevant if exponential decay is enabled
-                                               */
+                                              *   only relevant if exponential decay is enabled */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial random seed */
    )
@@ -276,8 +275,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
-                                               *  only relevant if exponential decay is enabled
-                                               */
+                                              *   only relevant if exponential decay is enabled */
    int                   nactions,           /**< the positive number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
    )

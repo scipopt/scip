@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -404,9 +404,11 @@ SCIP_RETCODE setupAggregationData(
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrows, aggrrowsminsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrowscoef, aggrrowsminsize) );
+               aggrdata->aggrrowssize = aggrrowsminsize;
             }
-            assert(aggrdata->aggrrows != NULL);
-            assert(aggrdata->aggrrowscoef != NULL);
+            assert(aggrdata->aggrrows != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowscoef != NULL || aggrdata->aggrrowssize == 0);
+            assert(aggrdata->aggrrowssize > 0 || ncolnonzeros == 0);
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
@@ -416,6 +418,8 @@ SCIP_RETCODE setupAggregationData(
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
                /* coverity[var_deref_op] */
+               assert(aggrdata->aggrrows != NULL);  /* for lint */
+               assert(aggrdata->aggrrowscoef != NULL);
                aggrdata->aggrrows[aggrdata->naggrrows] = colrows[k];
                aggrdata->aggrrowscoef[aggrdata->naggrrows] = colrowvals[k];
                ++aggrdata->naggrrows;

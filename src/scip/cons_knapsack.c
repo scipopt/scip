@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1163,7 +1163,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* check if all profits are integer to strengthen the upper bound on the greedy solution */
    for( j = 0; j < nmyitems && intprofits; ++j )
       intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
-
 
    /* if no item is left then goto end */
    if( nmyitems == 0 )
@@ -6918,6 +6917,9 @@ SCIP_RETCODE checkParallelObjective(
 
          cutoffbound = (consdata->capacity - offset) / scale;
 
+         SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+            SCIPconsGetName(cons), cutoffbound);
+
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted
           */
@@ -7519,13 +7521,14 @@ SCIP_RETCODE propagateCons(
                         SCIP_CALL( SCIPresetConsAge(scip, cons) );
                      }
                   }
-                  if( *cutoff )
-                     break;
 
                   /* reset local minweightsum for clique because all fixed to one variables are now counted in consdata->onesweightsum */
                   localminweightsum = 0;
                   /* we can jump to the end of this clique */
                   i = cliqueendposs[c - 1];
+
+                  if( *cutoff )
+                     break;
                }
             }
             ++i;
@@ -11580,6 +11583,10 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* sort the constraint */
    sortItems(consdata0);
 
+   /* see #2970 */
+   if( consdata0->capacity == 0 )
+      return SCIP_OKAY;
+
    /* check constraint against all prior constraints */
    for( c = (consdata0->presolvedtiming == SCIP_PRESOLTIMING_EXHAUSTIVE ? firstchange : 0); c < chkind; ++c )
    {
@@ -11609,6 +11616,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       /* sort the constraint */
       sortItems(consdata1);
+
+      /* see #2970 */
+      if( consdata1->capacity == 0 )
+         continue;
 
       quotient = ((SCIP_Real) consdata0->capacity) / ((SCIP_Real) consdata1->capacity);
 
@@ -11662,8 +11673,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
 
          assert(v == v0 || v == v1);
-	 assert(v0 >= 0);
-	 assert(v1 >= 0);
+         assert(v0 >= 0);
+         assert(v1 >= 0);
 
          /* both variables are the same */
          if( consdata0->vars[v0] == consdata1->vars[v1] )

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -75,12 +75,9 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GAMS=$(GAMS)\\n\
-		SYM=$(SYM)\\n\
 		GMP=$(GMP)\\n\
 		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
-		WORHP=$(WORHP)\\n\
-		WORHPOPT=$(WORHPOPT)\\n\
 		LPS=$(LPS)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -90,9 +87,11 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
+		PAPILO=$(PAPILO)\\n\
 		READLINE=$(READLINE)\\n\
 		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
+		SYM=$(SYM)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
 		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
@@ -100,6 +99,8 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
 		VERSION=$(VERSION)\\n\
+		WORHP=$(WORHP)\\n\
+		WORHPOPT=$(WORHPOPT)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
@@ -166,7 +167,7 @@ ifeq ($(LPS),spx1)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
 LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
@@ -194,7 +195,7 @@ ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
 LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
@@ -226,7 +227,7 @@ ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
@@ -343,6 +344,16 @@ endif
 LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+endif
+
+#-----------------------------------------------------------------------------
+# PaPILO Library
+#-----------------------------------------------------------------------------
+
+ifeq ($(PAPILO),true)
+FLAGS		+=	-DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/papilo/external/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+SOFTLINKS	+=	$(LIBDIR)/include/papilo
+LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO directory\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -507,6 +518,7 @@ SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feas.o \
+			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
@@ -565,6 +577,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_solvingphase.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
+			scip/event_estim.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_adaptivediving.o \
@@ -599,6 +612,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_octane.o \
 			scip/heur_ofins.o \
 			scip/heur_oneopt.o \
+			scip/heur_padm.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_reoptsols.o \
@@ -644,6 +658,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
 			scip/presol_sparsify.o \
+			scip/presol_dualsparsify.o \
 			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
@@ -698,6 +713,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 
+SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
+
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
 			scip/bandit.o \
@@ -733,6 +750,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_nonlinear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -806,6 +824,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/syncstore.o \
 			scip/table.o \
 			scip/tree.o \
+			scip/treemodel.o \
 			scip/var.o \
 			scip/visual.o \
 			tclique/tclique_branch.o \
@@ -817,11 +836,14 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBOBJ))
+SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBCPPOBJ))
 SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
+SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.cpp))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
-SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+SCIPPLUGININCSRC +=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.h))
+SCIPLIBLINK	 =	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 # define library that contains everything
@@ -899,7 +921,7 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM)
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS).$(SYM).$(PAPILO)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -1439,6 +1461,9 @@ endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(PAPILO),$(LAST_PAPILO))
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1464,6 +1489,7 @@ endif
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
+		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1595,6 +1621,11 @@ endif
 ifneq ($(SYM),bliss)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
+endif
+endif
+ifneq ($(PAPILO),true)
+ifneq ($(PAPILO),false)
+		$(error invalid PAPILO flag selected: PAPILO=$(PAPILO). Possible options are: true false)
 endif
 endif
 

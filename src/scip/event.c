@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1351,7 +1351,7 @@ SCIP_NODE* SCIPeventGetNode(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_NODEDELETE | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
@@ -1369,7 +1369,7 @@ SCIP_RETCODE SCIPeventChgNode(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT |  SCIP_EVENTTYPE_NODEDELETE | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
@@ -1471,7 +1471,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowdeletedlp.row;
       case SCIP_EVENTTYPE_ROWCOEFCHANGED:
          return event->data.eventrowcoefchanged.row;
-      case SCIP_EVENTTYPE_ROWCONSTCHANGED:
+      case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowconstchanged.row;
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
          return event->data.eventrowsidechanged.row;
@@ -1540,7 +1540,7 @@ SCIP_Real SCIPeventGetRowOldConstVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) == 0 )
+   if( !(event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) )
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1557,7 +1557,7 @@ SCIP_Real SCIPeventGetRowNewConstVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) == 0 )
+   if( !(event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) )
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1648,6 +1648,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEBRANCHED:
+   case SCIP_EVENTTYPE_NODEDELETE:
    case SCIP_EVENTTYPE_FIRSTLPSOLVED:
    case SCIP_EVENTTYPE_LPSOLVED:
    case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -1657,7 +1658,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWADDEDLP:
    case SCIP_EVENTTYPE_ROWDELETEDLP:
    case SCIP_EVENTTYPE_ROWCOEFCHANGED:
-   case SCIP_EVENTTYPE_ROWCONSTCHANGED:
+   case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
       SCIP_CALL( SCIPeventfilterProcess(eventfilter, set, event) );
@@ -2361,6 +2362,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_NODEFEASIBLE:
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEBRANCHED:
+      case SCIP_EVENTTYPE_NODEDELETE:
       case SCIP_EVENTTYPE_FIRSTLPSOLVED:
       case SCIP_EVENTTYPE_LPSOLVED:
       case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -2374,7 +2376,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWADDEDLP: /* @todo remove previous DELETEDLP event */
       case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */
-      case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */
+      case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
          /* these events cannot (or need not) be merged; just add them to the queue */

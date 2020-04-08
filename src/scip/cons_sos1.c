@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1170,10 +1170,9 @@ SCIP_RETCODE extensionOperatorSOS1(
 #ifdef SCIP_DEBUG
    for (i = 0; i < nexts; ++i)
    {
-      int vertex = workingset[i];
       for (j = nexts; j < nworkingset; ++j)
       {
-         assert( isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) );
+         assert( isConnectedSOS1(adjacencymatrix, NULL, workingset[i], workingset[j]) );
       }
    }
 #endif
@@ -5641,17 +5640,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode1; ++j)
    {
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode1);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5706,18 +5704,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode2; ++j)
    {
       SCIP_VAR* var;
 
-      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode2);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6006,14 +6002,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = 0; j <= ind; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/(SCIP_Real)(ind + 1.0);
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -6025,14 +6020,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = ind+1; j < nvars; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) (nvars - ind - 1));
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -9229,14 +9223,10 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnchgbds;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldnchgbds = *nchgbds; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
+   SCIPdebug( int oldnupgdconss = *nupgdconss; )
    int nremovedvars;
 
    assert( scip != NULL );
@@ -9251,10 +9241,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldnchgbds = *nchgbds; )
-   SCIPdebug( oldndelconss = *ndelconss; )
-   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9344,8 +9330,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -10092,10 +10078,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
       /* global lower bound is not negative anymore -> remove down lock */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
       /* global lower bound turned negative -> add down lock */
       else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
       break;
 
    case SCIP_EVENTTYPE_GUBCHANGED:
@@ -10104,10 +10090,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
       /* global upper bound is not positive anymore -> remove up lock */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
-         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
       /* global upper bound turned positive -> add up lock */
       else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
-         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
 
    default:

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1000,7 +1000,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
-   int oldnimplications;
+   SCIPdebug( int oldnimplications; )
    int startidx;
    int ntotalvars;
    SCIP_Bool delay;
@@ -1089,8 +1089,8 @@ SCIP_DECL_PROPEXEC(propExecProbing)
 
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
-   SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n",
-      nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
+   SCIPdebug( SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n",
+      nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications); )
 
    if( delay )
    {

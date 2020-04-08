@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -105,6 +105,17 @@ SCIP_ROW* SCIPconsGetRow(
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
    );
 
+/** adds the given variable to the input constraint.
+ *  If the constraint is setppc or logicor the value is ignored. If the constraint is knapsack, then the value is
+ *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
+ *  TODO: Allow val to be a pointer.
+ */
+SCIP_RETCODE SCIPconsAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_VAR*             var,                /**< variable of the constraint entry */
+   SCIP_Real             val                 /**< the coefficient of the constraint entry */
+   );
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2062,6 +2062,7 @@ SCIP_Bool SCIPsolsAreEqual(
    )
 {
    SCIP_PROB* prob;
+   SCIP_Bool infobjs;
    SCIP_Real obj1;
    SCIP_Real obj2;
    int v;
@@ -2083,8 +2084,12 @@ SCIP_Bool SCIPsolsAreEqual(
       obj2 = SCIPsolGetObj(sol2, set, transprob, origprob);
    }
 
-   /* solutions with different objective values cannot be the same */
-   if( !SCIPsetIsEQ(set, obj1, obj2) )
+   /* solutions with different objective values cannot be the same; we consider two infinite objective values with the
+    * same sign always to be different
+    */
+   infobjs = (SCIPsetIsInfinity(set, obj1) && SCIPsetIsInfinity(set, obj2))
+      || (SCIPsetIsInfinity(set, -obj1) && SCIPsetIsInfinity(set, -obj2));
+   if( !infobjs && !SCIPsetIsEQ(set, obj1, obj2) )
       return FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -2184,8 +2189,11 @@ SCIP_RETCODE SCIPsolPrint(
       }
    }
 
-   /* display additional priced variables (if given problem data is original problem) */
-   if( !prob->transformed && !SCIPsolIsOriginal(sol) )
+   /* display additional priced variables (if given problem data is original problem); consider these variables only
+    * if there is at least one active pricer, otherwise we might print variables that have been added by, e.g., the
+    * dual sparsify presolver (see #2946)
+    */
+   if( !prob->transformed && !SCIPsolIsOriginal(sol) && set->nactivepricers > 0 )
    {
       assert(transprob != NULL);
       for( v = 0; v < transprob->nfixedvars; ++v )

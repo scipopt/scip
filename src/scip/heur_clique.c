@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,26 +72,23 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MININTFIXINGRATE 0.65                    /**< minimum percentage of integer variables that have to be fixed */
-#define DEFAULT_MINMIPFIXINGRATE 0.65                    /**< minimum percentage of variables that have to be fixed within sub-SCIP
-                                                          *   (integer and continuous) */
-#define DEFAULT_MINIMPROVE    0.01                       /**< factor by which clique heuristic should at least improve the
-                                                          *   incumbent
-                                                          */
-#define DEFAULT_MINNODES      500LL                      /**< minimum number of nodes to regard in the subproblem */
-#define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
-#define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
-#define DEFAULT_MAXBACKTRACKS 10                         /**< maximum number of backtracks during the fixing process */
-#define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
-                                                          *   original scip be copied to constraints of the subscip
-                                                          */
-#define DEFAULT_USELOCKFIXINGS FALSE                     /**< should more variables be fixed based on variable locks if
-                                                          *   the fixing rate was not reached?
-                                                          */
+#define DEFAULT_MAXNODES      5000LL         /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MININTFIXINGRATE 0.65        /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINMIPFIXINGRATE 0.65        /**< minimum percentage of variables that have to be fixed within sub-SCIP
+                                              *   (integer and continuous) */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which clique heuristic should at least improve the
+                                              *   incumbent */
+#define DEFAULT_MINNODES      500LL          /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL          /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_MAXPROPROUNDS 2              /**< maximum number of propagation rounds during probing */
+#define DEFAULT_MAXBACKTRACKS 10             /**< maximum number of backtracks during the fixing process */
+#define DEFAULT_COPYCUTS      TRUE           /**< should all active cuts from the cutpool of the
+                                              *   original scip be copied to constraints of the subscip */
+#define DEFAULT_USELOCKFIXINGS FALSE         /**< should more variables be fixed based on variable locks if
+                                              *   the fixing rate was not reached? */
 
 
 /*
@@ -725,12 +722,17 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* solve lp only if the problem is still feasible */
    if( solvelp )
    {
+      char strbuf[SCIP_MAXSTRLEN];
       SCIPdebugMsg(scip, "starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
        * SCIP will stop.
        */
+
+      /* print probing stats before LP */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;

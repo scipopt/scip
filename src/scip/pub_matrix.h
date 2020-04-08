@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -312,6 +312,14 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real*            scale,              /**< scale factors of rows */
    int*                  pclass              /**< parallel row classes */
+   );
+
+/** removes the bounds of a column and updates the activities accordingly */
+SCIP_EXPORT
+void SCIPmatrixRemoveColumnBounds(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int                   col                 /**< column variable to remove bounds from */
    );
 
 /** detect parallel columns, obj ignored */

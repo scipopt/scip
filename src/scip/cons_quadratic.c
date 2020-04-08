@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,8 +89,10 @@
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /* constraint handler properties */
@@ -2680,6 +2682,89 @@ SCIP_RETCODE removeBilinearTermsPos(
    return SCIP_OKAY;
 }
 
+/** changes side of constraint and allow to change between finite and infinite
+ *
+ * takes care of updating events and locks of linear variables
+ */
+static
+SCIP_RETCODE chgSideQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_SIDETYPE         side,               /**< which side to change */
+   SCIP_Real             sideval             /**< new value for side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, side == SCIP_SIDETYPE_LEFT ? sideval : -sideval));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* if remaining finite or remaining infinite, then can just update the value */
+   if( side == SCIP_SIDETYPE_LEFT )
+   {
+      if( SCIPisInfinity(scip, -consdata->lhs) == SCIPisInfinity(scip, -sideval) )
+      {
+         consdata->lhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, consdata->rhs) == SCIPisInfinity(scip, sideval) )
+      {
+         consdata->rhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* catched boundchange events and locks for linear variables depends on whether side is finite, so first drop all */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      if( consdata->lineventdata != NULL && consdata->lineventdata[i] != NULL )
+      {
+         assert(SCIPconsIsEnabled(cons));
+
+         SCIP_CALL( dropLinearVarEvents(scip, eventhdlr, cons, i) );
+      }
+
+      if( SCIPconsIsLocked(cons) )
+      {
+         assert(SCIPconsIsTransformed(cons));
+
+         /* remove rounding locks for variable with old side */
+         SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+      }
+   }
+
+   if( side == SCIP_SIDETYPE_LEFT )
+      consdata->lhs = sideval;
+   else
+      consdata->rhs = sideval;
+
+   /* catch boundchange events and locks on variables again */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      if( consdata->lineventdata != NULL )
+      {
+         SCIP_CALL( catchLinearVarEvents(scip, eventhdlr, cons, i) );
+      }
+
+      if( SCIPconsIsLocked(cons) )
+      {
+         /* add rounding locks for variable with new side */
+         SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** merges quad var terms that correspond to the same variable and does additional cleanup
  *
  *  If a quadratic variable terms is actually linear, makes a linear term out of it
@@ -2930,6 +3015,7 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
 static
 SCIP_RETCODE removeFixedVariables(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler for variable bound changes */
    SCIP_CONS*            cons                /**< quadratic constraint */
    )
 {
@@ -2989,9 +3075,13 @@ SCIP_RETCODE removeFixedVariables(
       if( offset != 0.0 )
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhs -= offset;
+         {
+            SCIP_CALL( chgSideQuadratic(scip, cons, eventhdlr, SCIP_SIDETYPE_LEFT, consdata->lhs - offset) );
+         }
          if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->rhs -= offset;
+         {
+            SCIP_CALL( chgSideQuadratic(scip, cons, eventhdlr, SCIP_SIDETYPE_RIGHT, consdata->rhs - offset) );
+         }
       }
 
       /* nothing left to do if variable had been fixed */
@@ -5258,10 +5348,12 @@ SCIP_RETCODE checkCurvature(
    if( consdata->iscurvchecked )
       return SCIP_OKAY;
 
-   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave, &consdata->maxnonconvexity);
+   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave,
+      &consdata->maxnonconvexity);
    if( !determined && checkmultivariate )
    {
-      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave, &consdata->maxnonconvexity) );
+      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave,
+            &consdata->maxnonconvexity) );
    }
 
    consdata->isconvex = isconvex;
@@ -5762,7 +5854,7 @@ SCIP_RETCODE sortAllBilinTerms(
    int                   nbilinterms,        /**< total number of bilinear terms */
    SCIP_CONS**           bilinconss,         /**< array for mapping each term to its constraint */
    int*                  bilinposs           /**< array for mapping each term to its position in the corresponding
-                                               *  bilinconss constraint */
+                                              *   bilinconss constraint */
    )
 {
    int* perm;
@@ -12126,6 +12218,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
 #ifndef NDEBUG
@@ -12136,6 +12229,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -12144,7 +12240,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 
       if( !consdata->isremovedfixings )
       {
-         SCIP_CALL( removeFixedVariables(scip, conss[c]) );
+         SCIP_CALL( removeFixedVariables(scip, conshdlrdata->eventhdlr, conss[c]) );
       }
 
       /* make sure we do not have duplicate bilinear terms, quad var terms, or linear vars */
@@ -12221,7 +12317,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+         {
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         }
       }
 
       /* setup sepaquadvars and sepabilinvar2pos */
@@ -12331,8 +12430,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* free nonlinear row representation */
-      if( consdata->nlrow != NULL )
+      /* free nonlinear row representation, if not called from consDisableQuadratic */
+      if( consdata->nlrow != NULL && SCIPgetStage(scip) == SCIP_STAGE_EXITSOLVE )
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
@@ -13064,7 +13163,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       if( !consdata->isremovedfixings )
       {
-         SCIP_CALL( removeFixedVariables(scip, conss[c]) );
+         SCIP_CALL( removeFixedVariables(scip, conshdlrdata->eventhdlr, conss[c]) );
          assert(consdata->isremovedfixings);
          havechange = TRUE;
       }
@@ -14105,7 +14204,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/empathy4and",
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
-         &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
+         &conshdlrdata->empathy4and, FALSE, 2, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",

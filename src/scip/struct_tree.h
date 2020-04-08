@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -204,6 +204,7 @@ struct SCIP_Tree
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
+   SCIP_Longint          lastbranchparentid; /**< last node id/number of branching parent */
    int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
    int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -10699,10 +10699,7 @@ SCIP_RETCODE tightenCapacity(
    /* check whether capacity can be tightened and whether demands need to be adjusted */
    if( bestcapacity < consdata->capacity )
    {
-      /* cppcheck-suppress unassignedVariable */
-      int oldnchgcoefs;
-
-      SCIPdebug(oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( int oldnchgcoefs = *nchgcoefs; )
 
       SCIPdebugMsg(scip, "+-+-+-+-+-+ --> CHANGE capacity of cons<%s> from %d to %d\n",
          SCIPconsGetName(cons), consdata->capacity, bestcapacity);
@@ -10719,7 +10716,7 @@ SCIP_RETCODE tightenCapacity(
       consdata->capacity = bestcapacity;
       (*nchgsides)++;
 
-      SCIPdebugMsgPrint(scip, "; changed additionally %d coefficients\n", (*nchgcoefs) - oldnchgcoefs);
+      SCIPdebug( SCIPdebugMsg(scip, "; changed additionally %d coefficients\n", (*nchgcoefs) - oldnchgcoefs); )
 
       consdata->varbounds = FALSE;
    }

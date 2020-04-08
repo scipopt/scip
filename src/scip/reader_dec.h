@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup FILEREADERS
  * @brief  file reader for decompositions in the constraint based dec-file format.
  * @author Gregor Hendel
+ *
  *
  * This reader allows to read a file containing decompositions for constraints of the current original problem. The
  * standard line ending for this format is '.dec'. The content of the file should obey the following format

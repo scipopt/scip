@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -531,7 +531,6 @@ SCIP_RETCODE consdataCreate(
    assert(linkvar != NULL);
    assert(binvars != NULL || nbinvars == 0);
    assert(SCIPvarGetType(linkvar) != SCIP_VARTYPE_CONTINUOUS || nbinvars > 0);
-
 
    /* allocate memory for consdata */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -3164,7 +3163,6 @@ SCIP_DECL_CONSPARSE(consParseLinking)
          /* convert SCIP_Real to integer */
          for( v = 0; v < nbinvars;  ++v )
          {
-
             if( SCIPisIntegral(scip, vals[v]) )
                vals[v] = SCIPconvertRealToInt(scip, vals[v]);
          }
@@ -3392,7 +3390,6 @@ SCIP_RETCODE SCIPcreateConsLinking(
    {
       SCIPdebugMsg(scip, "Var %d : <%s>\n", k, SCIPvarGetName(binvars[k]));
    }
-
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

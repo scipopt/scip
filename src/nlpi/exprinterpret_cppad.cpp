@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -133,9 +133,13 @@ size_t thread_num(void)
 /** sets up CppAD's datastructures for running in multithreading mode
  *
  *  It must be called once before multithreading is started.
+ *  For GCC-compatible compilers, this will happen automatically.
  */
-static
-char init_parallel(void)
+extern "C" SCIP_EXPORT char SCIPexprintCppADInitParallel(void);
+#ifdef __GNUC__
+__attribute__((constructor))
+#endif
+char SCIPexprintCppADInitParallel(void)
 {
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
@@ -144,14 +148,13 @@ char init_parallel(void)
    return 0;
 }
 
+#if !defined(__GNUC__)
 /** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
-#if !defined(_MSC_VER)
-__attribute__ ((unused))
+static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
-static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
 

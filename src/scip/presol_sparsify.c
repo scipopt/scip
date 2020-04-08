@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -931,7 +931,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
       oldnchgcoefs = *nchgcoefs;
-      for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
+      for( r = 0; r < nrows && nuseless <= maxuseless && !SCIPisStopped(scip); r++ )
       {
          int rowidx;
 

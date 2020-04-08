@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1794,7 +1794,7 @@ SCIP_RETCODE SCIPStpDualAscent(
       gnodearr = gnodearrterms;
    }
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist, NULL) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &active, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &edgearr, nedges) );
@@ -2387,7 +2387,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
       SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist, NULL) );
 
    k = 0;
    /* mark terminals as active, add all except root to pqueue */

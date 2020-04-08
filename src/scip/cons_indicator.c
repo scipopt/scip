@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3557,8 +3557,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->slackvar, cons, FALSE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -4228,8 +4228,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_Bool* S;
    SCIP_Bool error;
    int oldsize = -1;
-   /* cppcheck-suppress unassignedVariable */
-   int nGenOld;
+   SCIPdebug( int nGenOld = *nGen; )
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -4248,7 +4247,6 @@ SCIP_RETCODE separateIISRounding(
    lp = conshdlrdata->altlp;
    assert( lp != NULL );
 
-   SCIPdebug( nGenOld = *nGen; )
    SCIPdebugMsg(scip, "Separating IIS-cuts by rounding ...\n");
 
 #ifndef NDEBUG
@@ -4380,7 +4378,7 @@ SCIP_RETCODE separateIISRounding(
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
    }
-   SCIPdebugMsg(scip, "Generated %d IISs.\n", *nGen - nGenOld);
+   SCIPdebug( SCIPdebugMsg(scip, "Generated %d IISs.\n", *nGen - nGenOld); )
 
 #ifndef NDEBUG
    SCIP_CALL( checkLPBoundsClean(scip, lp, nconss, conss) );
@@ -5587,7 +5585,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( (*consdata)->binvar != NULL );
 
       /* free events only in correct stages */
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_EXITSOLVE )
       {
          if ( (*consdata)->linconsactive )
          {
@@ -5775,9 +5773,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool noReductions;
-   int oldnfixedvars;
-   int oldndelconss;
-   int removedvars = 0;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
    int c;
 
    assert( scip != NULL );
@@ -5786,8 +5783,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldndelconss = *ndelconss; )
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5939,8 +5934,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
       conshdlrdata->addedcouplingcons = TRUE;
    }
 
-   SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
-      nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
+   SCIPdebug( SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed 0 variables, and deleted %d constraints).\n",
+      nconss, *nfixedvars - oldnfixedvars, *ndelconss - oldndelconss); )
 
    return SCIP_OKAY; /*lint !e438*/
 }

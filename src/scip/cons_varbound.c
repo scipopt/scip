@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -147,6 +147,7 @@ typedef enum Proprule PROPRULE;
 
 /**@name Local methods
  *
+ * @{
  */
 
 /** compares two varbound constraints   cons1: \f$ lhs1 \le x1 + c1 y1 \le rhs1 \f$   and   cons2: \f$ lhs2 \le x2 + c2 y2 \le rhs2 \f$
@@ -2700,16 +2701,16 @@ SCIP_RETCODE preprocessConstraintPairs(
             if( SCIPisPositive(scip, consdata0->vbdcoef) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
             }
             else
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, consdata0->rhs),
-                  !SCIPisInfinity(scip, -consdata0->lhs)) );
+                     !SCIPisInfinity(scip, -consdata0->lhs)) );
                SCIP_CALL( SCIPlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
-                  !SCIPisInfinity(scip, consdata0->rhs)) );
+                     !SCIPisInfinity(scip, consdata0->rhs)) );
             }
          }
 
@@ -3119,6 +3120,11 @@ SCIP_RETCODE applyFixings(
       }
       else if( var != consdata->var )
       {
+         /* release and unlock old variable */
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          /* replace aggregated variable x in the constraint by its aggregation */
          if( varscalar > 0.0 )
          {
@@ -3163,11 +3169,13 @@ SCIP_RETCODE applyFixings(
 
             consdata->tightened = FALSE;
          }
-         /* release old variable */
-         SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
          consdata->var = var;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
       }
 
       /* apply aggregation on y */
@@ -3218,15 +3226,37 @@ SCIP_RETCODE applyFixings(
             consdata->lhs -= consdata->vbdcoef * vbdvarconstant;
          if( !SCIPisInfinity(scip, consdata->rhs) )
             consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
-         consdata->vbdcoef *= vbdvarscalar;
 
          consdata->tightened = FALSE;
 
-         /* release old variable */
+         /* release and unlock old variable */
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
+
+         consdata->vbdcoef *= vbdvarscalar;
          consdata->vbdvar = vbdvar;
-         /* capture new variable */
+
+         /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
+         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
       }
 
       /* catch the events again on the new variables */
@@ -3265,8 +3295,8 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, varscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, varconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, varconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
@@ -3291,16 +3321,16 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, vbdvarscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, vbdvarconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, vbdvarconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
-	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	    if( !SCIPisInfinity(scip, -lhs) )
 	    {
-	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	 }
       }
@@ -3637,7 +3667,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->rhs = newrhs;
+         consdata->rhs = MAX(newrhs, consdata->lhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3677,7 +3707,7 @@ SCIP_RETCODE tightenCoefs(
          assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
-         consdata->lhs = newlhs;
+         consdata->lhs = MIN(newlhs, consdata->rhs);
          (*nchgcoefs)++;
          (*nchgsides)++;
 
@@ -3987,6 +4017,7 @@ SCIP_RETCODE upgradeConss(
 
 /**@name Linear constraint upgrading
  *
+ * @{
  */
 
 /** tries to upgrade a linear constraint into a variable bound constraint */

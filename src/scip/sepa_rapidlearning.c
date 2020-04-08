@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -787,7 +787,7 @@ SCIP_RETCODE checkExec(
       SCIP_Real degeneracy;
       SCIP_Real varconsratio;
 
-      SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+      SCIP_CALL( SCIPgetLPDualDegeneracy(scip, &degeneracy, &varconsratio) );
 
       SCIPdebugMsg(scip, "degeneracy: %.2f ratio: %.2f\n", degeneracy, varconsratio);
 

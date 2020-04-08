@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_dcmp.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for working with decompositions
  * @author Gregor Hendel
  */
@@ -258,7 +259,7 @@ void SCIPgetDecomps(
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPaddDecomp", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDecomps", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( decomps != NULL )
       *decomps = original ? SCIPdecompstoreGetOrigDecomps(scip->decompstore) : SCIPdecompstoreGetDecomps(scip->decompstore);
@@ -495,7 +496,7 @@ SCIP_RETCODE SCIPcomputeDecompVarsLabels(
             varbufsize, &nconsvars, &requiredsize, &success) );
       SCIP_CALL( ensureCondition(success) );
 
-      /** each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
+      /* each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
       for( v = 0; v < nconsvars; ++v )
       {
          SCIP_VAR* var = varbuffer[v];
@@ -544,20 +545,36 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    )
 {
    SCIP_VAR** vars;
+   SCIP_VAR** allvars;
    int* varslabels;
    int requiredsize;
+   int nvars;
    int nconsvars;
    int varbufsize;
    int c;
    int nskipconsslocal;
+   int defaultlabel;
 
    assert(scip != NULL);
    assert(decomp != NULL);
 
+   nvars = SCIPgetNVars(scip);
    varbufsize = getVarbufSize(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varbufsize) );
+
+   /* get one label as default label */
+   allvars = SCIPgetVars(scip);
+   SCIPdecompGetVarsLabels(decomp, allvars, varslabels, nvars);
+   for( c = 0; c < nvars; c++ )
+   {
+      if( varslabels[c] != SCIP_DECOMP_LINKVAR )
+      {
+         defaultlabel = varslabels[c];
+         break;
+      }
+   }
 
    nskipconsslocal = 0;
    for( c = 0; c < nconss; c++ )
@@ -569,8 +586,13 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
       SCIP_CALL( ensureCondition(success) );
 
       SCIPsortIntPtr(varslabels, (void **)vars, nconsvars);
+      /* constraint contains no (active) variables */
+      if( nconsvars == 0 )
+      {
+         SCIP_CALL( SCIPdecompSetConsLabels(decomp, &conss[c], &defaultlabel, 1) );
+      }
       /* constraint contains only linking variables */
-      if( varslabels[nconsvars - 1] == SCIP_DECOMP_LINKVAR )
+      else if( varslabels[nconsvars - 1] == SCIP_DECOMP_LINKVAR )
       {
          nskipconsslocal++;
 
@@ -682,7 +704,6 @@ SCIP_RETCODE computeModularity(
    /* allocate buffer arrays to hold constraint and variable labels, and store within-edges and total community degrees */
    getDecompVarsConssData(scip, decomp, NULL, &conss, NULL, &nconss);
    varbufsize = getVarbufSize(scip);
-
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
@@ -826,7 +847,7 @@ SCIP_RETCODE buildBlockGraph(
    SCIP_DIGRAPH* blockgraph = NULL;
    int* varlabels;
    int* conslabels;
-   SCIP_CONS** consscopy; /**< working copy of the constraints */
+   SCIP_CONS** consscopy; /* working copy of the constraints */
    int* linkvaridx;
    int* succnodesblk;
    int* succnodesvar;
@@ -1047,7 +1068,6 @@ SCIP_RETCODE buildBlockGraph(
 
           ++nblockgraphedges;
       }
-
 
       /* clean up the adjacent array and free it */
       for( i = 0; i < nadjacentblks; ++i )

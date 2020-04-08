@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,6 +58,16 @@ enum SCIP_BendersSubStatus
    SCIP_BENDERSSUBSTATUS_INFEAS     = 3      /**< the subproblem is solved to be infeasible */
 };
 typedef enum SCIP_BendersSubStatus SCIP_BENDERSSUBSTATUS;
+
+enum SCIP_BendersSubType
+{
+   SCIP_BENDERSSUBTYPE_CONVEXCONT      = 0,  /**< the subproblem has convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_CONVEXDIS       = 1,  /**< the subproblem has convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXCONT   = 2,  /**< the subproblem has non-convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXDIS    = 3,  /**< the subproblem has non-convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_UNKNOWN         = 4,  /**< the default type before the type is known */
+};
+typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
 
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */

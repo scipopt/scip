@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_dcmp.h
- * @ingroup TODO
+ * @ingroup DecompMethods
  * @brief  public methods for decompositions
  * @author Gregor Hendel
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup DecompMethods
+ *
+ * @{
+ */
 
 /** creates a decomposition */
 SCIP_EXPORT
@@ -169,6 +174,8 @@ char* SCIPdecompPrintStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    char*                 strbuf              /**< string buffer storage */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

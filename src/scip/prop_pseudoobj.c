@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,6 +53,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/dbldblarith.h"
 #include <string.h>
 
 #define PROP_NAME              "pseudoobj"
@@ -1948,8 +1949,6 @@ SCIP_RETCODE addConflictBinvar(
    SCIP_Real ub;
    SCIP_Bool foundimplics;
 
-   assert(objimplics != NULL);
-
    assert(SCIPvarIsBinary(var));
 
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
@@ -1966,6 +1965,7 @@ SCIP_RETCODE addConflictBinvar(
    {
       if( respropuseimplics )
       {
+         assert(objimplics != NULL);
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, objimplics->nlbimpls, objimplics->nlbimpls + objimplics->nubimpls,
                bdchgidx, addedvars, reqpseudoobjval, &foundimplics) );
       }
@@ -1991,6 +1991,7 @@ SCIP_RETCODE addConflictBinvar(
    {
       if( respropuseimplics )
       {
+         assert(objimplics != NULL);
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, 0, objimplics->nlbimpls,
                bdchgidx, addedvars, reqpseudoobjval, &foundimplics) );
       }
@@ -2307,7 +2308,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    /* depending on the objective contribution we can try to tighten the lower or upper bound of the variable */
    if( objchg > 0.0 )
    {
-      newbd = lb + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is lb + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, lb);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
@@ -2334,7 +2341,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    }
    else
    {
-      newbd = ub + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is ub + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, ub);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
@@ -3736,7 +3749,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive non-binary variable propagations without a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -3746,7 +3759,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all non-binary variables if we are propagating the root node",
+         "whether to propagate all non-binary variables when we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3761,7 +3774,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxnewvars",
-         "number of variable added after the propgatore is reinitialized?",
+         "number of variables added after the propagator is reinitialized?",
          &propdata->maxnewvars, TRUE, DEFAULT_MAXNEWVARS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

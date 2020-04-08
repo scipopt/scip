@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3499,8 +3499,7 @@ SCIP_RETCODE separateOddCycles(
    SCIP_SEPADATA* sepadata;
    int depth;
    int ncalls;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnliftedcuts;
+   SCIPdebug( int oldnliftedcuts; )
    int nfrac = 0;
 
    *result = SCIP_DIDNOTRUN;
@@ -3601,8 +3600,8 @@ SCIP_RETCODE separateOddCycles(
 
    if( sepadata->ncuts - sepadata->oldncuts > 0 )
    {
-      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
-         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
+      SCIPdebug( SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts); )
       sepadata->nunsucessfull = 0;
    }
    else

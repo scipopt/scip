@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -100,7 +100,7 @@ check/% : $(SCIPDIR)/check/%
 	@-(cd check && ln -fs ../$^);
 
 .PHONY: test
-test: $(MAINFILE) check/evalcheck.sh check/check.awk check/getlastprob.awk
+test: $(MAINFILE) check/evalcheck.sh check/evaluate.sh check/check.awk check/getlastprob.awk
 	cd check; \
 	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 

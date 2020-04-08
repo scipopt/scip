@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
-#include "pub_heur.h"
+#include "scip/pub_heur.h"
 
 /* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
@@ -855,7 +855,7 @@ SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables to the corresponding
-                                               *   target variables */
+                                              *   target variables */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -944,7 +944,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_crossoversub" */
+      /* set name to the original problem name and possibly add a suffix */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
       /* create the subproblem */
@@ -1071,7 +1071,6 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* free local memory */
    SCIPfreeBufferArray(sourcescip, &consvals);
    SCIPfreeBufferArray(sourcescip, &consvars);
-
 
    return SCIP_OKAY;
 }

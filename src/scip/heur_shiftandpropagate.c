@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,6 +83,7 @@
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
+#define DEFAULT_MINFIXINGRATELP    0.0  /**< minimum fixing rate over all variables (including continuous) to solve LP */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
@@ -109,6 +110,7 @@ struct SCIP_HeurData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to register and process variable bound changes */
 
    SCIP_Real             maxcutoffquot;      /**< maximum percentage of allowed cutoffs before stopping the heuristic */
+   SCIP_Real             minfixingratelp;    /**< minimum fixing rate over all variables (including continuous) to solve LP */
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
    SCIP_Bool             collectstats;       /**< should variable statistics be collected during probing? */
@@ -777,9 +779,8 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
 
-
-     (*matrix)->nrows = 0;
-     (*matrix)->ncols = 0;
+      (*matrix)->nrows = 0;
+      (*matrix)->ncols = 0;
    }
 
    /* free matrix */
@@ -1570,7 +1571,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else
       SCIPdisableVarHistory(scip);
 
-   /* this should always be fulfilled becase we perform shift and propagate only at the root node */
+   /* this should always be fulfilled because we perform shift and propagate only at the root node */
    assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
    /* @todo check if this node is necessary (I don't think so) */
@@ -1921,8 +1922,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        * @todo this should not be necessary
        */
       if( heurdata->probing )
+      {
          SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex,lb, ub, violatedrows, violatedrowpos,
                &nviolatedrows) );
+      }
 
       SCIPdebugMsg(scip, "Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, matrix->transformstatus[permutedvarindex], matrix->upperbounds[permutedvarindex]);
@@ -2059,10 +2062,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             cutoff = TRUE;
             break;
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible */
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
+             */
             assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(var), origsolval + 1.0));
 
             ndomredsfound = 0;
@@ -2072,10 +2076,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
          }
-         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) )
+         else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) && REALABS( origsolval ) < 1.0 / SCIPepsilon(scip) )
          {
-            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
-             * into the direction of the other bound, if possible */
+            /* if the variable was set to one of its bounds, repropagate by tightening this bound by 1.0 into the
+             * direction of the other bound, if possible; if the bound is too large (in abs value) do not even bother
+             */
             assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), origsolval - 1.0));
 
             ndomredsfound = 0;
@@ -2138,6 +2143,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       SCIP_Bool stored;
       SCIP_Bool trysol;
+      SCIP_Bool solvelp;
 
       for( v = 0; v <= lastindexofsusp; ++v )
       {
@@ -2173,11 +2179,38 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       trysol = TRUE;
 
+      /* check if enough variables have been fixed (including continuous) to solve the remaining LP */
+      if( nlpcols != matrix->ndiscvars )
+      {
+         SCIP_VAR** vars;
+         int nvars = SCIPgetNVars(scip);
+         int nminfixings = (int)(SCIPceil(scip, heurdata->minfixingratelp * nvars));
+         int nfixedvars = ndiscvars;
+
+         vars = SCIPgetVars(scip);
+
+         /* count fixed variables */
+         for( v = ndiscvars; v < nvars && nfixedvars < nminfixings; ++v )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+               ++nfixedvars;
+         }
+
+         solvelp = (nfixedvars >= nminfixings);
+         trysol = solvelp;
+         SCIPdebugMsg(scip, "Fixed %d of %d (%.1f %%) variables after probing -> %s\n",
+            nfixedvars, nvars, (100.0 * nfixedvars / (SCIP_Real)nvars),
+         solvelp ? "continue and solve LP for remaining variables" : "terminate without LP");
+      }
+      else /* no need to solve an LP */
+         solvelp = FALSE;
+
       /* if the constructed solution might still be extendable to a feasible solution, try this by
        * solving the remaining LP
        */
-      if( nlpcols != matrix->ndiscvars )
+      if( solvelp )
       {
+         char strbuf[SCIP_MAXSTRLEN];
          /* case that remaining LP has to be solved */
          SCIP_Bool lperror;
 
@@ -2196,6 +2229,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
 #endif
 
+         /* print probing stats before LP */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+            SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
 #ifdef SCIP_DEBUG
@@ -2456,6 +2492,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxcutoffquot",
          "maximum percentage of allowed cutoffs before stopping the heuristic",
          &heurdata->maxcutoffquot, TRUE, DEFAULT_MAXCUTOFFQUOT, 0.0, 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingratelp",
+         "minimum fixing rate over all variables (including continuous) to solve LP",
+         &heurdata->minfixingratelp, TRUE, DEFAULT_MINFIXINGRATELP, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1375,7 +1375,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
 
       /* calculate node selection and objective estimate for node 2 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       cnt = 0;
       for( j = 0; j < nvars; ++j )
       {
@@ -1384,16 +1384,14 @@ SCIP_RETCODE branchUnbalancedCardinality(
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
             ++cnt;
          }
       }
+      assert(objest >= SCIPgetLocalTransEstimate(scip));
       assert(cnt == nvars - (1 + branchnnonzero));
       assert(cnt > 0);
-
-      /* take the average of the individual estimates */
-      objest = objest / (SCIP_Real) cnt;
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1594,17 +1592,15 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = 0; j <= ind; ++j )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
-
-         /* take the average of the individual estimates */
-         objest = objest/(SCIP_Real)(ind + 1.0);
+         assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -1639,18 +1635,16 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_Real objest;
 
          nodeselest = 0.0;
-         objest = 0.0;
+         objest = SCIPgetLocalTransEstimate(scip);
 
          /* calculate node selection and objective estimate for node */
          for( j = ind+1; j < nbranchvars; ++j )
          {
+            objest += SCIPcalcChildEstimateIncrease(scip, branchvars[j], SCIPgetSolVal(scip, sol, branchvars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-            objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
          assert(nbranchvars - (ind + 1) > 0);
-
-         /* take the average of the individual estimates */
-         objest = objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
+         assert(objest >= SCIPgetLocalTransEstimate(scip));
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -2520,12 +2514,9 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 static
 SCIP_DECL_CONSPRESOL(consPresolCardinality)
 {  /*lint --e{715}*/
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars; )
+   SCIPdebug( int oldndelconss; )
+   SCIPdebug( int oldnupgdconss; )
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
    int c;
@@ -2588,9 +2579,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
         and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
-        *nupgdconss - oldnupgdconss);
+        *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -3152,10 +3143,10 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       {
          /* global lower bound is not negative anymore -> remove down lock */
          if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
-            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 1, 0) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, TRUE, FALSE) );
          /* global lower bound turned negative -> add down lock */
          else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
-            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 1, 0) );
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, TRUE, FALSE) );
 
          return SCIP_OKAY;
       }
@@ -3163,10 +3154,10 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       {
          /* global upper bound is not positive anymore -> remove up lock */
          if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
-            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 0, 1) );
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, FALSE, TRUE) );
          /* global upper bound turned positive -> add up lock */
          else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
-            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 0, 1) );
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, FALSE, TRUE) );
 
          return SCIP_OKAY;
       }
@@ -3324,7 +3315,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
                                               *   in cardinality constraint, or NULL if new indicator variables should be
                                               *   introduced automatically */
    SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be
-                                                  ordered in the same way they were added to the constraint */
+                                              *   ordered in the same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
