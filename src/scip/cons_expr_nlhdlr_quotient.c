@@ -379,8 +379,6 @@ SCIP_INTERVAL intEvalQuotient(
    SCIP_INTERVAL result;
    SCIP_INTERVAL denominterval;
    SCIP_INTERVAL numinterval;
-   SCIP_Real infeval;
-   SCIP_Real supeval;
    int i;
 
    assert(scip != NULL);
