@@ -378,8 +378,10 @@ SCIP_INTERVAL intEvalQuotient(
 {
    SCIP_INTERVAL result;
    SCIP_INTERVAL denominterval;
+   SCIP_INTERVAL numinterval;
    SCIP_Real infeval;
    SCIP_Real supeval;
+   int i;
 
    assert(scip != NULL);
 
@@ -401,32 +403,50 @@ SCIP_INTERVAL intEvalQuotient(
       return result;
    }
 
+   /* a d = b c implies that f(x) = b / d + e, i.e., f is constant */
+   if( a*d - b*c == 0.0 )
+   {
+      SCIPintervalSet(&result, b / d + e);
+      return result;
+   }
+
    assert(!SCIPisZero(scip, c));
 
-   if( SCIPisInfinity(scip, -bnds.inf) )
-      infeval = a / c;
-   else
-      infeval = (a * bnds.inf + b) / (c * bnds.inf + d) + e;
+   /*
+    * evaluate for [x.inf,x.inf] and [x.sup,x.sup] independently
+    */
+   SCIPintervalSetEmpty(&result);
 
-   if( SCIPisInfinity(scip, bnds.sup) )
-      supeval = a / c;
-   else
-      supeval = (a * bnds.sup + b) / (c * bnds.sup + d) + e;
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_INTERVAL quotinterval;
+      SCIP_Real val = (i == 0) ? bnds.inf : bnds.sup;
 
-   /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
-   if( a*d - b*c > 0.0 ) /* monotone increasing */
-   {
-      SCIPintervalSetBounds(&result, infeval, supeval);
-   }
-   else if( a*d - b*c < 0.0 ) /* monotone decreasing */
-   {
-      SCIPintervalSetBounds(&result, supeval, infeval);
-   }
-   else /* a d = b c implies that f(x) = b / d + e, i.e., f is constant */
-   {
-      assert(a*d - b*c == 0.0);
+      /* set the resulting interval to a / c if the bounds is infinite */
+      if( SCIPisInfinity(scip, REALABS(val)) )
+      {
+         SCIPintervalSet(&quotinterval, a);
+         SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &quotinterval, quotinterval, c);
+      }
+      else
+      {
+         /* a x' + b */
+         SCIPintervalSet(&numinterval, val);
+         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &numinterval, numinterval, a);
+         SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &numinterval, numinterval, b);
 
-      SCIPintervalSet(&result, b / d + e);
+         /* c x' + d */
+         SCIPintervalSet(&denominterval, val);
+         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &denominterval, denominterval, c);
+         SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &denominterval, denominterval, d);
+
+         /* (a x' + b) / (c x' + d) + e */
+         SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &quotinterval, numinterval, denominterval);
+         SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &quotinterval, quotinterval, e);
+      }
+
+      /* unify with the resulting interval */
+      SCIPintervalUnify(&result, result, quotinterval);
    }
 
    return result;
