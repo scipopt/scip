@@ -928,7 +928,7 @@ int reduceWithEdgeFixingBounds(
 
             if( delete )
             {
-               assert(graph->cost[e] == graph->cost[erev]);
+               assert(EQ(graph->cost[e], graph->cost[erev]) || graph_pc_isMw(graph));
 
                SCIPdebugMessage("delete edge %d (upperbound=%f fixingbound=%f) \n", e, upperbound, fixingbounds[e]);
 
