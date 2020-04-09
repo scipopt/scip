@@ -462,17 +462,15 @@ SCIP_INTERVAL reversepropQuotient(
    )
 {
    SCIP_INTERVAL result;
-   SCIP_Real infpropval;
-   SCIP_Real suppropval;
+   int i;
+
+   SCIPintervalSetEmpty(&result);
 
    /* return empty interval if the domain of the expression is empty */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bnds) )
-   {
-      SCIPintervalSetEmpty(&result);
       return result;
-   }
 
-   /* substract constrant from bounds of the expression */
+   /* substract constant from bounds of the expression */
    SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &bnds, bnds, e);
 
    /* if the expression is constant or the limit lies inside the domain, nothing can be propagated */
@@ -482,20 +480,29 @@ SCIP_INTERVAL reversepropQuotient(
       return result;
    }
 
-   infpropval = (d * bnds.inf - b) / (a - c * bnds.inf);
-   suppropval = (d * bnds.sup - b) / (a - c * bnds.sup);
+   /* compute bounds for [x.inf,x.inf] and [x.sup,x.sup] independently */
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_INTERVAL denominator;
+      SCIP_INTERVAL numerator;
+      SCIP_INTERVAL quotient;
+      SCIP_Real val = (i == 0) ? bnds.inf : bnds.sup;
 
-   /* f(x) = (a x + b) / (c x + d) + e implies f'(x) = (a d - b c) / (d + c x)^2 */
-   if( a*d - b*c > 0.0 ) /* monotone increasing */
-   {
-      assert(infpropval <= suppropval);
-      SCIPintervalSetBounds(&result, infpropval, suppropval);
-   }
-   else /* monotone decreasing */
-   {
-      assert(a*d - b*c < 0.0);
-      assert(suppropval <= infpropval);
-      SCIPintervalSetBounds(&result, suppropval, infpropval);
+      /* (d * x' - b) */
+      SCIPintervalSet(&numerator, d);
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &numerator, numerator, val);
+      SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &numerator, numerator, -b);
+
+      /* (a - c * x') */
+      SCIPintervalSet(&denominator, -c);
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &denominator, denominator, val);
+      SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &denominator, denominator, a);
+
+      /* (d * x' - b) / (a - c * x') */
+      SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &quotient, numerator, denominator);
+
+      /* unify with the resulting interval */
+      SCIPintervalUnify(&result, result, quotient);
    }
 
    return result;

@@ -424,11 +424,11 @@ Test(nlhdlrquotient, reverseprop, .description = "tests reverse propagation simp
    cr_expect(SCIPisEQ(scip, result.inf, -0.75));
    cr_expect(SCIPisEQ(scip, result.sup, -0.5));
 
-   /* x / (x + 1) in [-2,1] => x in [-2/3,+inf]*/
-   SCIPintervalSetBounds(&bnds, -2.0, 1.0);
+   /* x / (x + 1) in [-2,0.9] => x in [-2/3,9]*/
+   SCIPintervalSetBounds(&bnds, -2.0, 0.9);
    result = reversepropQuotient(bnds, 1.0, 0.0, 1.0, 1.0, 0.0);
-   cr_expect(SCIPisEQ(scip, result.inf, -2.0/3.0));
-   cr_expect(SCIPisInfinity(scip, result.sup));
+   cr_expect(SCIPisEQ(scip, result.inf, -2.0 / 3.0));
+   cr_expect(SCIPisEQ(scip, result.sup, 9.0));
 
    /* (-5x + 2) / (3*x + 3) + 6 in [3,5] => x in [-inf,+inf]*/
    SCIPintervalSetBounds(&bnds, 3.0, 5.0);
