@@ -3458,7 +3458,7 @@ SCIP_RETCODE SCIPcheckSol(
    }
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || scip->set->misc_exactsolve_old;
+   checklprows = checklprows || scip->set->misc_exactsolve;
 
    if( !printreason )
       completely = FALSE;

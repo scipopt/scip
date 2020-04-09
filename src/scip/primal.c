@@ -1502,7 +1502,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    assert(stored != NULL);
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->misc_exactsolve_old;
+   checklprows = checklprows || set->misc_exactsolve;
 
    insertpos = -1;
 
@@ -1574,7 +1574,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    *stored = FALSE;
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->misc_exactsolve_old;
+   checklprows = checklprows || set->misc_exactsolve;
 
    insertpos = -1;
 

@@ -1909,11 +1909,6 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 #endif
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/exactsolve_old",
-         "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->misc_exactsolve_old, FALSE, FALSE,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/usefprelax",
          "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
          &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,

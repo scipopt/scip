@@ -762,7 +762,8 @@ void checkRowObjprod(
  * Local methods for pseudo and loose objective values
  */
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+   safe version for use in exact SCIP */
 static
 void recomputeSafeLooseObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -861,7 +862,8 @@ void recomputeLooseObjectiveValue(
    lp->looseobjvalid = TRUE;
 }
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+   safe version for use in exact SCIP */
 static
 void recomputeSafePseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -4201,7 +4203,7 @@ SCIP_Real colCalcInternalFarkasCoef(
    {
       row = col->rows[i];
       assert(row != NULL);
-      
+
       assert(row->dualfarkas < SCIP_INVALID);
       assert(row->lppos >= 0);
       assert(col->linkpos[i] >= 0);
@@ -8806,9 +8808,9 @@ SCIP_RETCODE SCIPlpFlush(
       checkLinks(lp);
    }
 
-   /* if the cutoff bound was changed in between and it is not disabled (e.g. for column generation),
+   /* if bound was changed in between and it is not disabled (e.g. for column generation),
     * we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set) && !set->misc_exactsolve ) /*lint !e777*/
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set) ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -12204,7 +12206,6 @@ SCIP_RETCODE lpSolve(
       assert(lpCutoffDisabled(set) || set->misc_exactsolve || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
-
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
       assert(!lpCutoffDisabled(set));
@@ -12706,6 +12707,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
+               /* in exact solving mode, the farkas proof has to be corrected to be exact */
                if( set->misc_exactsolve && !lp->diving )
                   SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
@@ -12851,8 +12853,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         /** @todo: exip. objlimit disabled for now (see setobjlimit)
-         assert(!lpCutoffDisabled(set)); */
+         assert(!lpCutoffDisabled(set));
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
           * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
@@ -12872,7 +12873,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
              */
             assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiobjlim));
 
-            /** @todo exip: take care here */
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* we need the lp solution to calculate a safe bound */
@@ -14342,7 +14342,7 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve_old && FALSE )
+   if( set->misc_exactsolve )
    {
       SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
    }
@@ -14466,7 +14466,7 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve_old )
+   if( set->misc_exactsolve )
    {
       SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
    }

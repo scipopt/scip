@@ -367,7 +367,6 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   SCIP_Bool             misc_exactsolve_old;/**< should the problem be solved exactly (with proven dual bounds)? */
    SCIP_Bool             misc_usefprelax;    /**< should the fp-approximation of the exact problem also be a relaxation? */
    char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
                                               *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
