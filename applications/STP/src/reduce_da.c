@@ -2110,7 +2110,7 @@ SCIP_RETCODE reduce_da(
 #endif
    };
 
-   assert(ub && scip && graph && nelims);
+   assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
    assert(!isRpcmw || !graph->extended);
 
@@ -2139,7 +2139,7 @@ SCIP_RETCODE reduce_da(
       reduce_identifyNonLeafTerms(scip, graph);
 
    ndeletions = 0;
-   upperbound = SCIPisGE(scip, *ub, 0.0) ? (*ub) : FARAWAY;
+   upperbound = (NULL != ub && SCIPisGE(scip, *ub, 0.0)) ? (*ub) : FARAWAY;
    graph_mark(graph);
    collectFixedTerminals(graph, terms, &nFixedTerms);
    assert(nFixedTerms >= 1);
@@ -2309,7 +2309,7 @@ SCIP_RETCODE reduce_da(
    if( isRpcmw )
       graph_pc_2orgcheck(scip, graph);
 
-   if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
+   if( NULL != ub && (SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0)) )
       *ub = upperbound;
 
    if( userec )

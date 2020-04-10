@@ -1061,8 +1061,6 @@ SCIP_RETCODE reduce_boundMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure (size 3 * nnodes) */
-   SCIP_Real*            cost,               /**< edge cost array                    */
-   SCIP_Real*            radius,             /**< radius array                       */
    SCIP_Real*            offset,             /**< pointer to the offset              */
    int*                  heap,               /**< heap array */
    int*                  state,              /**< array to store state of a node during Voronoi computation*/
@@ -1075,6 +1073,8 @@ SCIP_RETCODE reduce_boundMw(
    PATH* mst;
    SCIP_Real* costrev;
    SCIP_Real* prize;
+   SCIP_Real* radius;
+   SCIP_Real* cost;
    SCIP_Real  obj;
    SCIP_Real  bound;
    SCIP_Real  tmpcost;
@@ -1089,8 +1089,6 @@ SCIP_RETCODE reduce_boundMw(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(vnoi != NULL);
-   assert(cost != NULL);
-   assert(radius != NULL);
    assert(heap != NULL);
    assert(state != NULL);
    assert(vbase != NULL);
@@ -1104,7 +1102,6 @@ SCIP_RETCODE reduce_boundMw(
    nterms = graph->terms - 1;
    *nelims = 0;
 
-
    assert(prize != NULL);
 
    /* not more than two nodes of positive weight? */
@@ -1115,7 +1112,9 @@ SCIP_RETCODE reduce_boundMw(
    if( graph_pc_isRootedPcMw(graph) )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &radius, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
    /* initialize cost and costrev array */
@@ -1226,8 +1225,10 @@ SCIP_RETCODE reduce_boundMw(
    SCIPdebugMessage("nelims (edges) in MWCSP bound reduce: %d,\n", *nelims);
 
    SCIPfreeBufferArrayNull(scip, &mst);
+   SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &path);
+   SCIPfreeBufferArray(scip, &radius);
 
    return SCIP_OKAY;
 }

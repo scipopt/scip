@@ -771,16 +771,13 @@ SCIP_RETCODE reduceMw(
    PATH* vnoi;
    GNODE** gnodearr;
    SCIP_Real* nodearrreal;
-   SCIP_Real* edgearrreal;
    int* state;
    int* vbase;
    int* nodearrint;
    int i;
    int nterms;
    int nnodes;
-   int nedges;
    int redbound;
-   int extnedges;
    STP_Bool* nodearrchar;
    STP_Bool bred = FALSE;
 
@@ -788,7 +785,6 @@ SCIP_RETCODE reduceMw(
    assert(g != NULL);
    assert(fixed != NULL);
    nnodes = g->knots;
-   nedges = g->edges;
    nterms = g->terms;
    redbound = MAX(nnodes / 1000, minelims);
 
@@ -797,8 +793,6 @@ SCIP_RETCODE reduceMw(
 
    if( advanced )
    {
-      extnedges = nedges + 2 * (g->terms - 1);
-
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
       {
@@ -807,7 +801,6 @@ SCIP_RETCODE reduceMw(
    }
    else
    {
-      extnedges = nedges;
       gnodearr = NULL;
    }
 
@@ -820,20 +813,17 @@ SCIP_RETCODE reduceMw(
    if( bred || advanced )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, extnedges) );
    }
    else
    {
       nodearrreal = NULL;
-      edgearrreal = NULL;
    }
 
    /* reduction loop */
-   SCIP_CALL( redLoopMw(scip, g, vnoi, gnodearr, nodearrreal, edgearrreal, state,
+   SCIP_CALL( redLoopMw(scip, g, vnoi, gnodearr, nodearrreal, state,
          vbase, nodearrint, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
-   SCIPfreeBufferArrayNull(scip, &edgearrreal);
    SCIPfreeBufferArrayNull(scip, &nodearrreal);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &vbase);
@@ -1090,16 +1080,15 @@ SCIP_RETCODE reduceNw(
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
-   PATH*   vnoi;
-   SCIP_Real*  nodearrreal;
-   SCIP_Real   ub = FARAWAY;
-   SCIP_Real   timelimit;
-   int*    heap;
-   int*    state;
-   int*    vbase;
-   int*    nodearrint2;
-   int     nnodes;
-   int     redbound;
+   PATH *vnoi;
+   SCIP_Real *nodearrreal;
+   SCIP_Real timelimit;
+   int *heap;
+   int *state;
+   int *vbase;
+   int *nodearrint2;
+   int nnodes;
+   int redbound;
 
    STP_Bool*   nodearrchar;
    STP_Bool    da = TRUE;
@@ -1130,9 +1119,7 @@ SCIP_RETCODE reduceNw(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      ub = -1.0;
-
-      SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase, state, heap,
+      SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase, state, heap,
             nodearrchar, &danelims, randnumgen) );
 
       if( danelims <= 2 * redbound )
@@ -1160,7 +1147,6 @@ SCIP_RETCODE redLoopMw(
    PATH*                 vnoi,               /**< Voronoi data structure */
    GNODE**               gnodearr,           /**< nodes-sized array  */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
-   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< voronoi base array  */
    int*                  nodearrint,         /**< nodes-sized array  */
@@ -1204,18 +1190,6 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
-   // todo deleteme
-   if( graph_pc_isRootedPcMw(g) )
-   {
-        graph_pc_2trans(scip, g);
-
-        SCIP_CALL( reduceLevel0(scip, g) );
-
-        SCIPfreeRandom(scip, &randnumgen);
-
-        return SCIP_OKAY;
-   }
-
    prizesum = graph_pc_getPosPrizeSum(scip, g);
 
    for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
@@ -1236,7 +1210,6 @@ SCIP_RETCODE redLoopMw(
       if( ans || extensive )
       {
          SCIP_CALL( reduce_ans(scip, g, &anselims) );
-
          if( anselims <= redbound )
             ans = FALSE;
       }
@@ -1244,7 +1217,6 @@ SCIP_RETCODE redLoopMw(
       if( ansad || extensive )
       {
          SCIP_CALL( reduce_ansAdv(scip, g, &ansadelims, FALSE) );
-
          if( ansadelims <= redbound )
             ansad = FALSE;
 
@@ -1252,7 +1224,7 @@ SCIP_RETCODE redLoopMw(
       }
 
 
-#define TESTXXX
+//#define TESTXXX
 #ifdef TESTXXX
       if( advanced && g->terms > 2 )
       {
@@ -1326,35 +1298,39 @@ SCIP_RETCODE redLoopMw(
          const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE, .nodereplacing = FALSE,
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
 
-         SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
-               state, nodearrchar, &daelims, randnumgen, prizesum) );
+         if( graph_pc_isRootedPcMw(g) )
+         {
+            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase, state, nodearrint, nodearrchar, &daelims, randnumgen) );
+         }
+         else
+         {
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
+         }
 
          if( daelims <= 2 * redbound )
             da = FALSE;
          else
             SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-         SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
+         SCIPdebugMessage("Dual-ascent eliminations: %d \n", daelims);
       }
 
       if( nnp )
       {
          SCIP_CALL( reduce_nnp(scip, g, &nnpelims) );
-
          if( nnpelims <= redbound )
             nnp = FALSE;
 
-         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
+         SCIPdebugMessage("nnp eliminations: %d \n", nnpelims);
       }
 
       if( nnp || extensive )
       {
          SCIP_CALL(reduce_chain2(scip, g, vnoi, state, vbase, nodearrint, &chain2elims, 500));
-
          if( chain2elims <= redbound )
             chain2 = FALSE;
 
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+         SCIPdebugMessage("chain2 eliminations: %d \n", chain2elims);
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
@@ -1363,21 +1339,19 @@ SCIP_RETCODE redLoopMw(
       if( npv || extensive )
       {
          SCIP_CALL(reduce_npv(scip, g, vnoi, state, vbase, nodearrint, &npvelims, 400));
-
          if( npvelims <= redbound )
             npv = FALSE;
 
-         SCIPdebugMessage("npv delete: %d \n", npvelims);
+         SCIPdebugMessage("npv eliminations: %d \n", npvelims);
       }
 
       if( chain2 || extensive )
       {
          SCIP_CALL(reduce_chain2(scip, g, vnoi, state, vbase, nodearrint, &chain2elims, 300));
-
          if( chain2elims <= redbound )
             chain2 = FALSE;
 
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+         SCIPdebugMessage("chain2 eliminations: %d \n", chain2elims);
       }
 
       SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
@@ -1385,43 +1359,78 @@ SCIP_RETCODE redLoopMw(
       if( ansad2 || extensive )
       {
          SCIP_CALL( reduce_ansAdv2(scip, g, &ansad2elims) );
-
          if( ansad2elims <= redbound )
             ansad2 = FALSE;
          else
             SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &ansad2elims) );
 
-         SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", ansad2elims, da);
+         SCIPdebugMessage("ans advanced 2 eliminations: %d (da? %d ) \n", ansad2elims, da);
       }
 
       if( bred )
       {
-         SCIP_CALL( reduce_boundMw(scip, g, vnoi, edgearrreal, nodearrreal, fixed, nodearrint, state, vbase, NULL, &bredelims) );
-
+         SCIP_CALL( reduce_boundMw(scip, g, vnoi, fixed, nodearrint, state, vbase, NULL, &bredelims) );
          if( bredelims <= redbound )
             bred = FALSE;
 
-         SCIPdebugMessage("reduce_bound: %d \n", bredelims);
+         SCIPdebugMessage("reduce_bound eliminations: %d \n", bredelims);
       }
 
       if( anselims + nnpelims + chain2elims + bredelims + npvelims + ansadelims + ansad2elims + daelims <= redbound )
          rerun = FALSE;
 
+#ifdef SCIP_DEBUG
+      if(  advanced && tryrmw )
+      {
+         int nreal, mreal;
+         graph_get_nVET(g, &nreal, &mreal, NULL);
+
+         printf("round %d  nreal=%d mreal=%d\n", rounds, nreal, mreal);
+      }
+#endif
+
       if( !rerun && advanced && g->terms > 2 )
       {
-         int cnsadvelims = 0;
+         SCIP_Bool fullrerun = FALSE;
          const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .useExtRed = FALSE, .nodereplacing = FALSE,
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots =  (g->terms > STP_RED_MWTERMBOUND),
                .pcmw_markroots = tryrmw, .pcmw_fastDa = FALSE };
 
          SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-         SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint,
-               state, nodearrchar, &daelims, randnumgen, prizesum) );
+         if( graph_pc_isRootedPcMw(g) )
+         {
+            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase, state, nodearrint, nodearrchar, &daelims, randnumgen) );
+         }
+         else
+         {
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, gnodearr, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
+         }
 
          userec = FALSE;
+         advanced = FALSE;
+         fullrerun = (daelims >= redbound || (extensive && (daelims > 0)));
 
-         if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
+         if( !graph_pc_isRootedPcMw(g) && tryrmw && g->terms > 2 )
+         {
+#ifdef WITH_UG
+             SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, FALSE) );
+#else
+             SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, TRUE) );
+#endif
+             if( graph_pc_isRootedPcMw(g) )
+             {
+                int todo; // inner loop, otherwise rounds might already be over!
+
+                if( fullrerun )
+                   advanced = TRUE;
+
+                da = TRUE;
+                fullrerun = TRUE;
+             }
+         }
+
+         if( fullrerun )
          {
             ans = TRUE;
             nnp = TRUE;
@@ -1430,10 +1439,11 @@ SCIP_RETCODE redLoopMw(
             ansad2 = TRUE;
             chain2 = TRUE;
             rerun = TRUE;
-            advanced = FALSE;
 
             SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
-            SCIPdebugMessage("Restarting reduction loop! (%d eliminations) \n\n ", cnsadvelims + daelims);
+#ifndef WITH_UG
+            printf("Restarting reduction loop after %d rounds! (%d DA eliminations) \n\n ", rounds, daelims);
+#endif
             if( extensive )
                advanced = TRUE;
          }
@@ -1441,15 +1451,6 @@ SCIP_RETCODE redLoopMw(
    }
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
-
-   if( tryrmw && g->terms > 2 )
-   {
-#ifdef WITH_UG
-      SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, FALSE) );
-#else
-      SCIP_CALL( graph_transPcmw2rooted(scip, g, prizesum, TRUE) );
-#endif
-   }
 
    /* go back to the extended graph */
    graph_pc_2trans(scip, g);
@@ -1637,8 +1638,7 @@ SCIP_RETCODE redLoopPc(
 
             if( rpc )
             {
-               SCIP_Real ub = -1.0;
-               SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, state, heap,
+               SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, &fix, vbase, state, heap,
                      nodearrchar, &danelims, randnumgen) );
             }
             else
@@ -1671,8 +1671,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_Real ub = -1.0;
-            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, state, heap,
+            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, &fix, vbase, state, heap,
                   nodearrchar, &danelims, randnumgen) );
          }
          else

@@ -173,7 +173,7 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",
          "minimal number of eliminations per reduction method",
-         NULL, FALSE, DEFAULT_MINELIMS, 0, 10000, NULL, NULL) );
+         NULL, FALSE, DEFAULT_MINELIMS, 1, 10000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/sdext",
