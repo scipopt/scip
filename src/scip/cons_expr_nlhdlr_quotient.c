@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_quotient.h
+/**@file   cons_expr_nlhdlr_quotient.c
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -32,8 +32,8 @@
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "quotient"
-#define NLHDLR_DESC         "quotient handler for quotient expressions"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_DESC         "nonlinear handler for quotient expressions"
+#define NLHDLR_PRIORITY     20
 
 /*
  * Data structures
