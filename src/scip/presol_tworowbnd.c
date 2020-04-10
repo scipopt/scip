@@ -58,7 +58,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
-#include "presol_tworowbnd.h"
+#include "scip/presol_tworowbnd.h"
 #include <string.h>
 
 #define PRESOL_NAME                    "tworowbnd"
