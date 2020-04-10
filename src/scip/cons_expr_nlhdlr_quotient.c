@@ -222,12 +222,12 @@ SCIP_RETCODE detectExpr(
    /* case: prod(f(x), pow(g(y),-1)) */
    if( SCIPgetConsExprExprHdlr(expr) == prodhdlr )
    {
-      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1 )
+      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1.0 )  /*lint !e777*/
       {
          denomexpr = SCIPgetConsExprExprChildren(children[0])[0];
          nomexpr = children[1];
       }
-      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1 )
+      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1.0 )  /*lint !e777*/
       {
          denomexpr = SCIPgetConsExprExprChildren(children[1])[0];
          nomexpr = children[0];
@@ -245,8 +245,8 @@ SCIP_RETCODE detectExpr(
       sumcoefs = SCIPgetConsExprExprSumCoefs(expr);
 
       /* children[0] is 1/g(y) and children[1] is a product of f(x) and 1/g(y) */
-      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1
-         && SCIPgetConsExprExprHdlr(children[1]) == prodhdlr && SCIPgetConsExprExprNChildren(children[1]) == 2 )
+      if( SCIPgetConsExprExprHdlr(children[0]) == powhdlr && SCIPgetConsExprExprPowExponent(children[0]) == -1.0
+         && SCIPgetConsExprExprHdlr(children[1]) == prodhdlr && SCIPgetConsExprExprNChildren(children[1]) == 2 )  /* lint !e777 */
       {
          SCIP_Real prodcoef = SCIPgetConsExprExprProductCoef(children[1]);
 
@@ -266,8 +266,8 @@ SCIP_RETCODE detectExpr(
          numconst = sumcoefs[0];
       }
       /* children[1] is 1/g(y) and children[0] is a product of f(x) and 1/g(y) */
-      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1
-         && SCIPgetConsExprExprHdlr(children[0]) == prodhdlr && SCIPgetConsExprExprNChildren(children[0]) == 2 )
+      else if( SCIPgetConsExprExprHdlr(children[1]) == powhdlr && SCIPgetConsExprExprPowExponent(children[1]) == -1.0
+         && SCIPgetConsExprExprHdlr(children[0]) == prodhdlr && SCIPgetConsExprExprNChildren(children[0]) == 2 )  /* lint !e777 */
       {
          SCIP_Real prodcoef = SCIPgetConsExprExprProductCoef(children[0]);
 
