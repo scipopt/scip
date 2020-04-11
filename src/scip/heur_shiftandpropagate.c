@@ -2230,7 +2230,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 #endif
 
          /* print probing stats before LP */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic <" HEUR_NAME "> solves probing LP before root node LP (%s) ...\n",
             SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 

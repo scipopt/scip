@@ -731,7 +731,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
        */
 
       /* print probing stats before LP */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic <" HEUR_NAME "> solves probing LP before root node LP (%s) ...\n",
          SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 #ifdef NDEBUG
       {

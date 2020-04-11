@@ -1089,13 +1089,13 @@ char* SCIPsnprintfProbingStats(
       depth = SCIPgetDepth(scip);
       probingdepth = SCIPgetProbingDepth(scip);
 
-      ptr += SCIPsnprintf(ptr, len, "Depth: (%d total, %d probing) ", depth, probingdepth);
-      ptr += SCIPsnprintf(ptr, len, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
+      ptr += SCIPsnprintf(ptr, len, "Depth: %d total, %d probing ", depth, probingdepth);
+      ptr += SCIPsnprintf(ptr, len, "Fixed / Variables: %d / %d total", nvarsfixed, vartypeend[nvartypes - 1]);
 
       for( p = 0; p < nvartypes; ++p )
       {
          int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
-         ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
+         ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : "");
       }
    }
    else
