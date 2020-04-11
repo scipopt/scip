@@ -194,7 +194,7 @@ SCIP_RETCODE applyBoundHeur(
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 
       /* print probing stats before LP */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic <" HEUR_NAME "> solves probing LP before root node LP (%s) ...\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
          SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
