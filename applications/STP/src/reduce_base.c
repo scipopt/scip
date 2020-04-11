@@ -54,6 +54,19 @@ SCIP_Bool show;
 
 enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
 
+
+static
+int getWorkLimits_mw(
+   const GRAPH* g,
+   int roundnumber,
+   enum PC_REDTYPE redtype
+)
+{
+   // todo: fill for chain2 and npv2 perhaps
+   return 0;
+}
+
+
 static
 int getWorkLimits_pc(
    const GRAPH* g,

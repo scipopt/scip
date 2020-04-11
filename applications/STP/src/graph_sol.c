@@ -633,6 +633,7 @@ SCIP_RETCODE pruneSteinerTreePc(
 
    assert(scip && cost && result && connected);
    assert(g->extended);
+   assert(graph_pc_isPcMw(g));
 
    pcsolMarkGraphNodes(connected, g);
 
@@ -668,11 +669,7 @@ SCIP_RETCODE pruneSteinerTreePc(
    BMScopyMemoryArray(connected_dbg, connected, g->knots);
 #endif
 
-   // todo for MW write some unit checks and tests first!
-   if( graph_pc_isPc(g) )
-   {
-      SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
-   }
+   SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
 
    pcsolConnectDummies(g, solroot, result, connected);
 

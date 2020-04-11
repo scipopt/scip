@@ -357,14 +357,74 @@ SCIP_RETCODE testPrunedSolIsImprovedPc2(
 }
 
 
+
+
+/** tests that RMW solution is improved by pruning */
+static
+SCIP_RETCODE testPrunedSolIsImprovedRmw1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree_edges;
+   STP_Bool* steinertree_nodes;
+   const int nnodes_org = 5;
+   const int nedges_org = 8;
+   int nnodes = -1;
+   int nedges = -1;
+   const SCIP_Real cost_expected = 3.8;
+   SCIP_Real cost_pruned;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes_org, nedges_org, 1) );
+
+   for( int i = 0; i < nnodes_org; i++ )
+      graph_knot_add(graph, STP_TERM);
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2,3
+   graph_edge_addBi(scip, graph, 2, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+
+   graph_pc_initPrizes(scip, graph, nnodes_org);
+   graph->prize[0] = FARAWAY; /* the root */
+   graph->prize[1] = 1.0;
+   graph->prize[2] = 1.0;
+   graph->prize[3] = 0.8;
+   graph->prize[4] = 1.1;
+
+   SCIP_CALL( stptest_graphSetUpRmwExtended(scip, graph, &nnodes, &nedges) );
+
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &steinertree_edges, nedges));
+
+   for( int i = 0; i < nnodes; i++ )
+      steinertree_nodes[i] = TRUE;
+
+   /* actual test */
+   SCIP_CALL( graph_solPrune(scip, graph, steinertree_edges, steinertree_nodes) );
+
+   cost_pruned = graph_solGetObj(graph, steinertree_edges, 0.0, nedges);
+
+   STPTEST_ASSERT_MSG_ARGS(EQ(cost_pruned, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_pruned);
+
+   stptest_graphTearDown(scip, graph);
+
+   SCIPfreeMemoryArray(scip, &steinertree_edges);
+   SCIPfreeMemoryArray(scip, &steinertree_nodes);
+
+   return SCIP_OKAY;
+}
+
+
 /** test pruning of solution */
 SCIP_RETCODE stptest_testSolPrune(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
    assert(scip);
-
-
+   SCIP_CALL(testPrunedSolIsImprovedRmw1(scip));
    SCIP_CALL(testPrunedSolIsImprovedPc2(scip));
    SCIP_CALL(testPrunedSolIsImprovedPc1(scip));
 
