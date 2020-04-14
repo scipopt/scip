@@ -21,7 +21,6 @@
  * Note: This file is supposed to replace graph_path.c in the long run, as it includes the faster implementations.
  *
  */
-
 #include "shortestpath.h"
 
 #ifndef NDEBUG
@@ -52,6 +51,7 @@ SCIP_Bool computeSteinerTree_allTermsReached(
 static inline
 void computeSteinerTree_init(
    const GRAPH*          g,                  /**< graph data structure */
+   const CSR*            csr,                /**< CSR */
    int                   startnode,          /**< start vertex */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
    int* RESTRICT         nodes_pred,         /**< predecessor edge array (on vertices) */
@@ -60,10 +60,11 @@ void computeSteinerTree_init(
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   int* RESTRICT const state = dheap->position;
 
    assert(startnode >= 0 && startnode < g->knots);
    assert(nnodes >= 1);
+   assert(csr->nnodes == nnodes);
+   assert(csr->start[nnodes] <= g->edges);
 
    graph_heap_clean(TRUE, dheap);
 
@@ -72,19 +73,22 @@ void computeSteinerTree_init(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      assert(state[k] == UNKNOWN);
+      assert(dheap->position[k] == UNKNOWN);
+      nodes_pred[k] = -1;
    }
+
 #endif
 
    for( int k = 0; k < nnodes; k++ )
    {
       nodes_dist[k] = FARAWAY;
-      nodes_pred[k] = -1;
       connected[k] = FALSE;
    }
 
    nodes_dist[startnode] = 0.0;
+   nodes_pred[startnode] = -1;
    graph_heap_correct(startnode, 0.0, dheap);
+   connected[startnode] = TRUE;
 }
 
 
@@ -94,22 +98,27 @@ void computeSteinerTree_connectNode(
    const GRAPH*          g,                  /**< graph data structure */
    int                   k,                  /**< vertex to connect */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
-   int* RESTRICT         nodes_pred,         /**< predecessor edge array (on vertices) */
+   const int*            nodes_pred,         /**< predecessor array (on vertices) */
    DHEAP*                dheap,              /**< Dijkstra heap */
    STP_Bool* RESTRICT    connected           /**< array to mark whether a vertex is part of computed Steiner tree */
 )
 {
    assert(k >= 0 && k < g->knots);
-   assert(nodes_pred[k] >= 0 && !connected[k]);
+   assert(!connected[k]);
 
    connected[k] = TRUE;
    nodes_dist[k] = 0.0;
 
+   SCIPdebugMessage("connect node %d \n", k);
+
    /* connect k to current solution */
-   for( int node = g->tail[nodes_pred[k]]; !connected[node]; node = g->tail[nodes_pred[node]] )
+   for( int node = nodes_pred[k]; !connected[node]; node = nodes_pred[node] )
    {
-      assert(nodes_pred[node] != -1);
+      assert(node >= 0 && node < g->knots);
+      assert(!connected[node]);
       assert(!Is_term(g->term[node]));
+
+      SCIPdebugMessage("connect path node %d \n", node);
 
       connected[node] = TRUE;
       nodes_dist[node] = 0.0;
@@ -122,22 +131,25 @@ void computeSteinerTree_connectNode(
 static inline
 void computeSteinerTree_exec(
    const GRAPH*          g,                  /**< graph data structure */
+   const CSR*            csr,                /**< CSR */
    int                   startnode,          /**< start vertex */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
-   int* RESTRICT         nodes_pred,         /**< predecessor edge array (on vertices) */
+   int* RESTRICT         nodes_pred,         /**< predecessor node array (on vertices) */
    DHEAP*                dheap,              /**< Dijkstra heap */
    STP_Bool* RESTRICT    connected           /**< array to mark whether a vertex is part of computed Steiner tree */
 )
 {
-   int termscount = 0;
-   int *const state = dheap->position;
-   const CSR *const csr = g->csr_storage;
-   const SCIP_Real *const cost_csr = csr->cost;
+   int* const state = dheap->position;
+   const SCIP_Real* const cost_csr = csr->cost;
    const int* const head_csr = csr->head;
    const int* const start_csr = csr->start;
+   int termscount = 0;
 
    assert(dheap->size == 1);
-   assert(state[startnode] == CONNECT);
+   assert(connected[startnode]);
+
+   if( Is_term(g->term[startnode]) )
+      termscount++;
 
    /* main loop */
    while( dheap->size > 0 )
@@ -146,8 +158,12 @@ void computeSteinerTree_exec(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = start_csr[k];
       const int k_end = start_csr[k + 1];
-      const SCIP_Real k_dist = nodes_dist[k];
+      register SCIP_Real k_dist;
 
+      SCIPdebugMessage("take node %d from queue \n", k);
+
+      assert(state[k] == CONNECT);
+      /* NOTE: needs to be set for invariant of heap */
       state[k] = UNKNOWN;
 
       if( Is_term(g->term[k]) && k != startnode )
@@ -158,14 +174,17 @@ void computeSteinerTree_exec(
 
          /* have all terminals been reached? */
          if( ++termscount == g->terms )
+         {
             break;
+         }
       }
+
+      k_dist = nodes_dist[k];
 
       for( int e = k_start; e != k_end; e++ )
       {
          const int m = head_csr[e];
 
-         /* not yet in the tree? */
          if( !connected[m] )
          {
             const SCIP_Real distnew = k_dist + cost_csr[e];
@@ -189,24 +208,24 @@ void computeSteinerTree_exec(
 /** shortest path based heuristic for computing a Steiner tree */
 void shortestpath_computeSteinerTree(
    const GRAPH*          g,                  /**< graph data structure */
+   const CSR*            csr,                /**< CSR */
    int                   startnode,          /**< start vertex */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
-   int* RESTRICT         nodes_pred,         /**< predecessor edge array (on vertices) */
+   int* RESTRICT         nodes_pred,         /**< predecessor node array (on vertices)
+                                                  NOTE: might contain uninitialized values in opt mode! */
    DHEAP*                dheap,              /**< Dijkstra heap */
    STP_Bool* RESTRICT    connected           /**< array to mark whether a vertex is part of computed Steiner tree */
 )
 {
-   assert(g && nodes_dist && nodes_pred && dheap && connected);
-   assert(g->csr_storage);
+   assert(g && csr && nodes_dist && nodes_pred && dheap && connected);
    assert(graph_typeIsSpgLike(g));
-   // todo assert that csr is valid for g!
 
-   computeSteinerTree_init(g, startnode, nodes_dist, nodes_pred, dheap, connected);
+   computeSteinerTree_init(g, csr, startnode, nodes_dist, nodes_pred, dheap, connected);
 
    if( g->knots == 1 )
       return;
 
-   computeSteinerTree_exec(g, startnode, nodes_dist, nodes_pred, dheap, connected);
+   computeSteinerTree_exec(g, csr, startnode, nodes_dist, nodes_pred, dheap, connected);
 
    assert(computeSteinerTree_allTermsReached(g, connected));
 }

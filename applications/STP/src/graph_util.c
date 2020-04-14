@@ -74,7 +74,7 @@ SCIP_Bool csrdepoCsrIsSet(
    }
 
 
-   for( int i = 0; i < csr->nedges; i++ )
+   for( int i = 0; i < csr->nedges_max; i++ )
    {
       if( LT(csr->cost[i], 0.0) )
       {
@@ -85,7 +85,7 @@ SCIP_Bool csrdepoCsrIsSet(
       }
    }
 
-   for( int i = 0; i < csr->nedges; i++ )
+   for( int i = 0; i < csr->nedges_max; i++ )
    {
       if( csr->head[i] < 0 )
       {
@@ -109,10 +109,10 @@ void csrdepoCsrUnsetDebug(
    for( int i = 0; i <= csr->nnodes; i++ )
       csr->start[i] = -1;
 
-   for( int i = 0; i < csr->nedges; i++ )
+   for( int i = 0; i < csr->nedges_max; i++ )
       csr->cost[i] = -1.0;
 
-   for( int i = 0; i < csr->nedges; i++ )
+   for( int i = 0; i < csr->nedges_max; i++ )
       csr->head[i] = -1;
 }
 
@@ -164,7 +164,7 @@ SCIP_Real csrdepoCsrWeight(
 
    assert(csr);
 
-   for( int i = 0; i < csr->nedges; i++ )
+   for( int i = 0; i < csr->nedges_max; i++ )
       weight += csr->cost[i];
 
    return weight;
@@ -263,7 +263,7 @@ void csrdepoFillCSR(
    csr->start = &(depository->all_starts[ptr_start]);
    csr->head = &(depository->all_heads[ptr_data]);
    csr->cost = &(depository->all_costs[ptr_data]);
-   csr->nedges = nedges;
+   csr->nedges_max = nedges;
    csr->nnodes = nnodes;
 }
 
@@ -605,9 +605,9 @@ void graph_csrdepo_print(
       graph_csrdepo_getCSR(depository, i, &csr);
 
 #ifndef NDEBUG
-      printf("level %d: n=%d, m=%d w=%f \n", i, csr.nnodes, csr.nedges, depository->csr_weight[i] / 2.0);
+      printf("level %d: n=%d, m=%d w=%f \n", i, csr.nnodes, csr.nedges_max, depository->csr_weight[i] / 2.0);
 #else
-      printf("level %d: n=%d, m=%d \n", i, csr.nnodes, csr.nedges);
+      printf("level %d: n=%d, m=%d \n", i, csr.nnodes, csr.nedges_max);
 
 #endif
    }
@@ -930,7 +930,7 @@ SCIP_RETCODE graph_csr_alloc(
 
    csrd = *csr;
 
-   csrd->nedges = nedges;
+   csrd->nedges_max = nedges;
    csrd->nnodes = nnodes;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->start), nnodes + 1) );
@@ -938,6 +938,67 @@ SCIP_RETCODE graph_csr_alloc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->cost), nedges) );
 
    return SCIP_OKAY;
+}
+
+
+/** Builds CSR storage from graph and cost array.
+ *  NOTE: for PC/MW only the marked graph is considered! */
+void graph_csr_build(
+   const GRAPH*          g,                  /**< the graph */
+   const SCIP_Real*      edgecosts,          /**< edge costs */
+   CSR*                  csr                 /**< CSR */
+   )
+{
+   int* RESTRICT start_csr;
+   int* RESTRICT head_csr;
+   SCIP_Real* cost_csr;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const gMark = g->mark;
+   const int* const gOeat = g->oeat;
+   const int* const gHead = g->head;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   assert(!pcmw || graph_isMarked(g));
+
+   assert(csr && edgecosts);
+   assert(nnodes >= 1);
+   assert(csr->nnodes == nnodes);
+   assert(csr->nedges_max >= graph_get_nEdges(g));
+
+   start_csr = csr->start;
+   head_csr = csr->head;
+   cost_csr = csr->cost;
+
+   /* now fill the data in */
+
+   start_csr[0] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int pos = start_csr[k];
+
+      if( !pcmw || gMark[k] )
+      {
+         for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
+         {
+            const int ehead = gHead[e];
+
+            if( pcmw && !gMark[ehead] )
+               continue;
+
+            assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
+
+            head_csr[pos] = ehead;
+            cost_csr[pos++] = edgecosts[e];
+         }
+      }
+
+      assert((pos == start_csr[k] + g->grad[k]) || pcmw);
+
+      start_csr[k + 1] = pos;
+   }
+
+   assert(start_csr[nnodes] <= g->edges);
+   assert(graph_csr_isValid(csr, TRUE));
 }
 
 
@@ -949,17 +1010,17 @@ void graph_csr_copy(
 {
    assert(csr_in && csr_out);
    assert(csr_in->nnodes == csr_out->nnodes);
-   assert(csr_in->nedges == csr_out->nedges);
-   assert(csr_in->nnodes > 0 && csr_in->nedges >= 0);
+   assert(csr_in->nedges_max == csr_out->nedges_max);
+   assert(csr_in->nnodes > 0 && csr_in->nedges_max >= 0);
 
    assert(graph_csr_isValid(csr_in, FALSE));
 
    BMScopyMemoryArray(csr_out->start, csr_in->start, csr_in->nnodes + 1);
 
-   if( csr_in->nedges > 0 )
+   if( csr_in->nedges_max > 0 )
    {
-      BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges);
-      BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges);
+      BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges_max);
+      BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges_max);
    }
 
    assert(graph_csr_isValid(csr_out, FALSE));
@@ -974,7 +1035,7 @@ void graph_csr_print(
    assert(csr);
    assert(graph_csr_isValid(csr, FALSE));
 
-   printf("CSR with n=%d, m=%d; edges: \n", csr->nnodes, csr->nedges);
+   printf("CSR with n=%d, m=%d; edges: \n", csr->nnodes, csr->nedges_max);
 
    for( int k = 0; k < csr->nnodes; k++ )
    {
@@ -1017,56 +1078,17 @@ SCIP_RETCODE graph_init_csr(
    GRAPH*                g                   /**< the graph */
    )
 {
-   CSR* csr;
-   int* start_csr;
-   int* head_csr;
-   SCIP_Real* cost_csr;
    const int nedges = g->edges;
    const int nnodes = g->knots;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
 
    assert(scip && g);
    assert(nnodes >= 1);
    assert(g->csr_storage == NULL);
-   assert(!pcmw || !g->extended);
 
    SCIP_CALL( graph_csr_alloc(scip, nnodes, nedges, &(g->csr_storage)) );
 
-   csr = g->csr_storage;
-   start_csr = csr->start;
-   head_csr = csr->head;
-   cost_csr = csr->cost;
+   graph_csr_build(g, g->cost, g->csr_storage);
 
-   /* now fill the data in */
-
-   start_csr[0] = 0;
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      int pos = start_csr[k];
-
-      if( !pcmw || g->mark[k] )
-      {
-         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            const int ehead = g->head[e];
-
-            if( pcmw && !g->mark[ehead] )
-               continue;
-
-            assert(g->cost[e] < FARAWAY && g->cost[flipedge(e)] < FARAWAY);
-
-            head_csr[pos] = ehead;
-            cost_csr[pos++] = g->cost[e];
-         }
-      }
-
-      assert((pos == start_csr[k] + g->grad[k]) || pcmw);
-
-      start_csr[k + 1] = pos;
-   }
-
-   assert(start_csr[nnodes] <= nedges);
    assert(graph_valid_csr(g, TRUE));
 
    return SCIP_OKAY;
@@ -1094,9 +1116,11 @@ SCIP_Bool graph_csr_isValid(
 )
 {
    const int* start = csr->start;
-   const int nedges = csr->nedges;
    const int nnodes = csr->nnodes;
+   const int nedges = start[nnodes];
    const int* head = csr->head;
+
+   /* NOTE: we might have more edge capacity  */
 
    if( start[0] != 0 )
    {
@@ -1106,10 +1130,10 @@ SCIP_Bool graph_csr_isValid(
       return FALSE;
    }
 
-   if( start[nnodes] != nedges )
+   if( nedges > csr->nedges_max )
    {
       if( verbose )
-         printf("CSR: start last corrupted \n");
+         printf("CSR: start last corrupted %d!=%d \n", start[nnodes], nedges);
 
       return FALSE;
    }
@@ -1152,7 +1176,7 @@ SCIP_Bool graph_valid_csr(
 
    assert(csr && csr->head && csr->cost);
 
-   if( csr->nnodes != g->knots || csr->nedges != g->edges )
+   if( csr->nnodes != g->knots || csr->nedges_max != g->edges )
    {
       if( verbose )
          printf("CSR: wrong node/edge count \n");

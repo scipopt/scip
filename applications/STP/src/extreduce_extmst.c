@@ -220,7 +220,7 @@ void mstExtend(
    if( !mstextcomp->isExtended )
    {
       mst_new->nnodes = mst_parent->nnodes + 1;
-      mst_new->nedges = mst_parent->nedges + 2;
+      mst_new->nedges_max = mst_parent->nedges_max + 2;
       reduce_dcmstAddNode(scip, mst_parent, adjcosts, dcmst, mst_new);
 
       mstextcomp->isExtended = TRUE;
@@ -349,7 +349,7 @@ void baseMstInitMsts(
    assert(mst_parent->nnodes == extreduce_mldistsLevelNTargets(sds_vertical, level_parent));
    assert(mst_parent->nnodes == nleaves - extreduce_extStackCompNOutedges(extdata, stackpos_parent));
 
-   SCIPdebugMessage("got MST level parent with n=%d, m=%d \n", mst_parent->nnodes, mst_parent->nedges);
+   SCIPdebugMessage("got MST level parent with n=%d, m=%d \n", mst_parent->nnodes, mst_parent->nedges_max);
 
    /* get space for the new MST */
    graph_csrdepo_addEmptyTopTree(msts_levelbase, nnodes_new);
@@ -477,7 +477,7 @@ void baseMstFinalizeNew(
    assert(extreduce_mstTopLevelBaseObjValid(scip, graph, mstextcomp->comp_extnode, extdata));
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("add MST level with n=%d, m=%d \n", mstextcomp->mst_new->nnodes, mstextcomp->mst_new->nedges);
+   SCIPdebugMessage("add MST level with n=%d, m=%d \n", mstextcomp->mst_new->nnodes, mstextcomp->mst_new->nedges_max);
    SCIPdebugMessage("weight of levelbase new MST: %f \n", reduce_dcmstGetWeight(scip, mstextcomp->mst_new));
 #endif
 }
@@ -577,7 +577,7 @@ void compMstFinalizeNew(
 #endif
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("added MST component with n=%d, m=%d \n", mst_new->nnodes, mst_new->nedges);
+   SCIPdebugMessage("added MST component with n=%d, m=%d \n", mst_new->nnodes, mst_new->nedges_max);
 #endif
 }
 

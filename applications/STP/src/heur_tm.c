@@ -63,6 +63,8 @@
 #define TM_VORONOI  2
 #define TM_DIJKSTRA 3
 
+#define TM_USE_CSR
+
 #ifdef WITH_UG
 int getUgRank(void);
 #endif
@@ -75,6 +77,10 @@ int getUgRank(void);
 typedef
 struct TM_base_data
 {
+   int*                  heap_position;      /**< heap position array or  */
+   DENTRY*               heap_entries;       /**< entries array or NULL */
+   CSR*                  csr;                /**< CSR */
+   DHEAP*                dheap;              /**< Dijkstra heap */
    SCIP_Real*            cost;               /**< arc costs */
    SCIP_Real*            costrev;            /**< reversed arc costs */
    SCIP_Real*            nodes_dist;         /**< distance values for each node */
@@ -158,8 +164,6 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
  *  local functions
  */
 
-
-
 /** initializes */
 static
 SCIP_RETCODE tmBaseInit(
@@ -176,6 +180,7 @@ SCIP_RETCODE tmBaseInit(
    assert(tmbase->nodes_pred == NULL);
    assert(tmbase->startnodes == NULL);
    assert(tmbase->result == NULL);
+   assert(tmbase->cost);
 
    if( tmbase->nruns < 1 )
       tmbase->nruns = 1;
@@ -184,6 +189,20 @@ SCIP_RETCODE tmBaseInit(
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->result), nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_pred), nnodes) );
+
+#ifdef TM_USE_CSR
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->heap_position), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->heap_entries), nnodes + 2) );
+
+   SCIP_CALL( graph_heap_create(scip, nnodes, tmbase->heap_position, tmbase->heap_entries, &(tmbase->dheap)) );
+   SCIP_CALL( graph_csr_alloc(scip, nnodes, nedges, &(tmbase->csr)) );
+   graph_csr_build(graph, tmbase->cost, tmbase->csr);
+#else
+   tmbase->heap_position = NULL;
+   tmbase->heap_entries = NULL;
+   tmbase->dheap = NULL;
+   tmbase->csr = NULL;
+#endif
 
    return SCIP_OKAY;
 }
@@ -197,6 +216,18 @@ void tmBaseFree(
    TMBASE*               tmbase              /**< data */
 )
 {
+#ifdef TM_USE_CSR
+   graph_csr_free(scip, &(tmbase->csr));
+   graph_heap_free(scip, FALSE, FALSE, &(tmbase->dheap));
+   SCIPfreeBufferArray(scip, &(tmbase->heap_entries));
+   SCIPfreeBufferArray(scip, &(tmbase->heap_position));
+#endif
+
+   assert(tmbase->dheap == NULL);
+   assert(tmbase->csr == NULL);
+   assert(tmbase->heap_position == NULL);
+   assert(tmbase->heap_entries == NULL);
+
    SCIPfreeBufferArray(scip, &(tmbase->nodes_pred));
    SCIPfreeBufferArray(scip, &(tmbase->nodes_dist));
    SCIPfreeBufferArray(scip, &(tmbase->result));
@@ -575,9 +606,6 @@ SCIP_RETCODE computeStarts(
    return SCIP_OKAY;
 }
 
-
-#define TM_USE_CSR
-
 #ifdef TM_USE_CSR
 /** CSR based shortest paths heuristic */
 static inline
@@ -585,14 +613,17 @@ SCIP_RETCODE computeSteinerTreeCsr(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int                   startnode,          /**< start vertex*/
-   SCIP_Real*            dijkdist,           /**< distance array */
-   int*                  dijkedge,           /**< predecessor edge array */
-   DHEAP*                dheap,              /**< Dijkstra heap */
-   int*                  result,             /**< solution array (on edges) */
-   STP_Bool*             connected           /**< array marking all solution vertices*/
+   TMBASE*               tmbase,             /**< (in/out) */
+   STP_Bool*             connected           /**< array marking all solution vertices */
 )
 {
-   shortestpath_computeSteinerTree(g, startnode, dijkdist, dijkedge, dheap, connected);
+   const CSR* csr = tmbase->csr;
+   int* nodes_pred = tmbase->nodes_pred;
+   SCIP_Real* nodes_dist = tmbase->nodes_dist;
+   int* RESTRICT result = tmbase->result;
+   DHEAP* dheap = tmbase->dheap;
+
+   shortestpath_computeSteinerTree(g, csr, startnode, nodes_dist, nodes_pred, dheap, connected);
 
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, NULL, result, connected) );
 
@@ -606,8 +637,8 @@ static inline
 SCIP_RETCODE computeSteinerTreeDijk(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
-   TMBASE*               tmbase,             /**< (in/out) */
    int                   start,              /**< start vertex */
+   TMBASE*               tmbase,             /**< (in/out) */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
@@ -1565,6 +1596,7 @@ void initCostsAndPrioLP(
    }
 }
 
+
 /** submethod for runPCMW */
 static
 void initOrderedPrizesPcMw(
@@ -1788,7 +1820,7 @@ SCIP_RETCODE dhcstpWarmUp(
          result[e] = UNKNOWN;
       }
 
-      SCIP_CALL( computeSteinerTreeDijk(scip, graph, tmbase, root, connected) );
+      SCIP_CALL( computeSteinerTreeDijk(scip, graph, root, tmbase, connected) );
 
       for( int e = 0; e < nedges; e++)
       {
@@ -1923,7 +1955,11 @@ SCIP_RETCODE runTm(
       }
       else if( mode == TM_DIJKSTRA )
       {
-         SCIP_CALL( computeSteinerTreeDijk(scip, graph, tmbase, start[r], connected) );
+#if 0
+         SCIP_CALL( computeSteinerTreeDijk(scip, graph, start[r], tmbase, connected) );
+#else
+         SCIP_CALL( computeSteinerTreeCsr(scip, graph, start[r], tmbase, connected) );
+#endif
       }
       else if( mode == TM_SP )
       {
@@ -2785,8 +2821,9 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    const int mode = getTmMode(heurdata, graph);
    const int nedges = graph_get_nEdges(graph);
    const SCIP_Bool startsgiven = (runs >= 1 && (starts != NULL));
-   TMBASE tmbase = { .cost = cost, .costrev = costrev, .nodes_dist = NULL, .startnodes = NULL, .result = NULL,
-                    .best_result = best_result, .nodes_pred = NULL, .best_obj = FARAWAY, .nruns = runs };
+   TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL,
+                     .startnodes = NULL, .result = NULL, .best_result = best_result,
+                     .nodes_pred = NULL, .best_obj = FARAWAY, .nruns = runs };
    TMVNOI tmvnoi = {NULL, NULL, NULL, NULL, NULL, NULL};
    TMALLSP tmallsp = {NULL, NULL};
 
@@ -2876,6 +2913,17 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    tmBaseFree(scip, graph, &tmbase);
 
    SCIPdebugMessage("final objective: %f \n", tmbase.best_obj);
+
+#if 0
+   printf("final objective: %f \n", tmbase.best_obj);
+
+   FILE *fp;
+              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_old.txt", "a+");
+              fprintf(fp, "%s %f \n", SCIPgetProbName(scip), tmbase.best_obj);
+              fclose(fp);
+              exit(1);
+#endif
+
 
    return SCIP_OKAY;
 }

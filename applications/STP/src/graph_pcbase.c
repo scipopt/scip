@@ -2068,6 +2068,7 @@ void graph_pc_getBiased(
 
    if( !graph_pc_isPc(graph) )
    {
+      int todo;
       /* todo adapt for MWCSP...add for edge positive vertex with only negative neighbors the max value among those,
        * if not smaller than -vertex weight, otherwise -vertex weight */
       BMScopyMemoryArray(prizebiased, graph->prize, nnodes);

@@ -96,7 +96,7 @@ typedef struct csr_storage
    int*                  start;              /**< start position for each node */
    int*                  head;               /**< edge head array */
    SCIP_Real*            cost;               /**< edge cost array */
-   int                   nedges;             /**< number of edges */
+   int                   nedges_max;         /**< maximum number of edges (real number given by start[nnodes]) */
    int                   nnodes;             /**< number of nodes */
 } CSR;
 
@@ -363,6 +363,7 @@ extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
 extern void           graph_free_csr(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_csr_alloc(SCIP*, int, int, CSR**);
 extern void           graph_csr_copy(const CSR*, CSR*);
+extern void           graph_csr_build(const GRAPH*, const SCIP_Real*, CSR*);
 extern void           graph_csr_print(const CSR*);
 extern void           graph_csr_free(SCIP*, CSR**);
 extern SCIP_Bool      graph_csr_isValid(const CSR*, SCIP_Bool verbose);

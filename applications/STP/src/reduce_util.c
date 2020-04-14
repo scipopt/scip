@@ -177,7 +177,7 @@ void dcmstGetCSRfromStore(
    const int mst_nedges = mst_nnodes - 1;
 
    assert(mst_nnodes <= dmst->maxnnodes);
-   assert(2 * mst_nedges == mst_out->nedges);
+   assert(2 * mst_nedges == mst_out->nedges_max);
 
    BMSclearMemoryArray(mst_start, mst_nnodes + 1);
 
@@ -200,7 +200,7 @@ void dcmstGetCSRfromStore(
       mst_start[i] += mst_start[i - 1];
    }
 
-   assert(mst_start[mst_nnodes] == mst_out->nedges);
+   assert(mst_start[mst_nnodes] == mst_out->nedges_max);
 
    for( int i = 0; i < mst_nedges; ++i )
    {
@@ -534,7 +534,7 @@ void reduce_dcmstAddNode(
    assert(reduce_dcmstMstIsValid(scip, mst_in));
 
    assert(mst_out->nnodes == mst_in->nnodes + 1);
-   assert(mst_out->nedges == mst_in->nedges + 2);
+   assert(mst_out->nedges_max == mst_in->nedges_max + 2);
    assert(mst_in->nnodes < dmst->maxnnodes);
 
    dcmstAddNode(mst_in, adjcosts, dmst);
@@ -563,7 +563,7 @@ void reduce_dcmstAddNodeInplace(
    dcmstAddNode(mst, adjcosts, dmst);
 
    mst->nnodes += 1;
-   mst->nedges += 2;
+   mst->nedges_max += 2;
 
    dcmstGetCSRfromStore(dmst, mst);
 
@@ -579,7 +579,7 @@ void reduce_dcmstGet0NodeMst(
    int* const start = mst->start;
 
    assert(mst->nnodes == 0);
-   assert(mst->nedges == 0);
+   assert(mst->nedges_max == 0);
 
    start[0] = 0;
 
@@ -597,7 +597,7 @@ void reduce_dcmstGet1NodeMst(
    int* const start = mst->start;
 
    assert(mst->nnodes == 1);
-   assert(mst->nedges == 0);
+   assert(mst->nedges_max == 0);
 
    start[0] = 0;
    start[1] = 0;
@@ -620,7 +620,7 @@ void reduce_dcmstGet2NodeMst(
 
    assert(edgecost > 0.0);
    assert(mst->nnodes == 2);
-   assert(mst->nedges == 2);
+   assert(mst->nedges_max == 2);
 
    start[0] = 0;
    start[1] = 1;
@@ -666,8 +666,8 @@ SCIP_Real reduce_dcmstGetExtWeight(
 
    assert(scip && adjcosts && dmst);
    assert(reduce_dcmstMstIsValid(scip, mst));
-   assert(mst->nedges % 2 == 0);
-   assert((mst->nedges / 2) + 1 == nedges_ext);
+   assert(mst->nedges_max % 2 == 0);
+   assert((mst->nedges_max / 2) + 1 == nedges_ext);
 
    dcmstAddNode(mst, adjcosts, dmst);
 
@@ -689,7 +689,7 @@ SCIP_Real reduce_dcmstGetWeight(
 )
 {
    SCIP_Real weight = 0.0;
-   const int nedges = mst_in->nedges;
+   const int nedges = mst_in->nedges_max;
    const SCIP_Real* cost = mst_in->cost;
 
    assert(scip);
@@ -776,14 +776,14 @@ SCIP_Bool reduce_dcmstMstIsValid(
 
    if( nnodes == 0 )
    {
-      assert(cmst->nedges == 0);
+      assert(cmst->nedges_max == 0);
       assert(start_csr[0] == 0);
 
       return TRUE;
    }
 
    assert(nnodes >= 1);
-   assert(cmst->nedges % 2 == 0);
+   assert(cmst->nedges_max % 2 == 0);
    assert(start_csr[0] == 0);
 
    if( !graph_csr_isValid(cmst, FALSE) )
@@ -792,7 +792,7 @@ SCIP_Bool reduce_dcmstMstIsValid(
       return FALSE;
    }
 
-   if( cmst->nnodes != (cmst->nedges / 2) + 1 )
+   if( cmst->nnodes != (cmst->nedges_max / 2) + 1 )
    {
       SCIPdebugMessage("wrong nodes/edges ratio \n");
       return FALSE;
@@ -808,7 +808,7 @@ SCIP_Bool reduce_dcmstMstIsValid(
    for( int i = 0; i < nnodes; i++ )
       visited[i] = FALSE;
 
-   for( int i = 0; i < cmst->nedges; i++ )
+   for( int i = 0; i < cmst->nedges_max; i++ )
    {
       const int head = head_csr[i];
 

@@ -52,12 +52,12 @@ SCIP_RETCODE dcmstTest1(
    SCIP_CALL( graph_csr_alloc(scip, 3, 4, &csr_extended) );
 
    csr_base->nnodes = 1;
-   csr_base->nedges = 0;
+   csr_base->nedges_max = 0;
 
    reduce_dcmstGet1NodeMst(scip, csr_base);
 
    csr_extended->nnodes = 2;
-   csr_extended->nedges = 2;
+   csr_extended->nedges_max = 2;
 
    adjcosts[0] = 2.5;
 
@@ -71,12 +71,12 @@ SCIP_RETCODE dcmstTest1(
    }
 
    csr_base->nnodes = 2;
-   csr_base->nedges = 2;
+   csr_base->nedges_max = 2;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 3;
-   csr_extended->nedges = 4;
+   csr_extended->nedges_max = 4;
 
    adjcosts[0] = 1.0;
    adjcosts[1] = 1.2;
@@ -126,12 +126,12 @@ SCIP_RETCODE dcmstTest2(
    SCIP_CALL( graph_csr_alloc(scip, 4, 6, &csr_extended) );
 
    csr_base->nnodes = 2;
-   csr_base->nedges = 2;
+   csr_base->nedges_max = 2;
 
    reduce_dcmstGet2NodeMst(scip, 1.0, csr_base);
 
    csr_extended->nnodes = 3;
-   csr_extended->nedges = 4;
+   csr_extended->nedges_max = 4;
 
    adjcosts[0] = 1.5;
    adjcosts[1] = 0.7;
@@ -146,12 +146,12 @@ SCIP_RETCODE dcmstTest2(
    }
 
    csr_base->nnodes = 3;
-   csr_base->nedges = 4;
+   csr_base->nedges_max = 4;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 4;
-   csr_extended->nedges = 6;
+   csr_extended->nedges_max = 6;
 
    adjcosts[0] = 0.5;
    adjcosts[1] = 2.7;
@@ -192,12 +192,12 @@ SCIP_RETCODE dcmstTest2b(
    SCIP_CALL( graph_csr_alloc(scip, 4, 6, &csr_extended) );
 
    csr_base->nnodes = 2;
-   csr_base->nedges = 2;
+   csr_base->nedges_max = 2;
 
    reduce_dcmstGet2NodeMst(scip, 395.0, csr_base);
 
    csr_extended->nnodes = 3;
-   csr_extended->nedges = 4;
+   csr_extended->nedges_max = 4;
 
    adjcosts[0] = 200.0;
    adjcosts[1] = 302.0;
@@ -212,12 +212,12 @@ SCIP_RETCODE dcmstTest2b(
    }
 
    csr_base->nnodes = 3;
-   csr_base->nedges = 4;
+   csr_base->nedges_max = 4;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 4;
-   csr_extended->nedges = 6;
+   csr_extended->nedges_max = 6;
 
    adjcosts[0] = 197.0;
    adjcosts[1] = FARAWAY;
@@ -257,13 +257,13 @@ SCIP_RETCODE dcmstTest3(
    SCIP_CALL( graph_csr_alloc(scip, 6, 10, &csr_extended) );
 
    csr_base->nnodes = 2;
-   csr_base->nedges = 2;
+   csr_base->nedges_max = 2;
 
    reduce_dcmstGet2NodeMst(scip, 3.1, csr_base);
 
    /* build on 3x3 */
    csr_extended->nnodes = 3;
-   csr_extended->nedges = 4;
+   csr_extended->nedges_max = 4;
 
    adjcosts[0] = 1.2;
    adjcosts[1] = 7.3;
@@ -279,12 +279,12 @@ SCIP_RETCODE dcmstTest3(
 
    /* build on 4x4 */
    csr_base->nnodes = 3;
-   csr_base->nedges = 4;
+   csr_base->nedges_max = 4;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 4;
-   csr_extended->nedges = 6;
+   csr_extended->nedges_max = 6;
 
    adjcosts[0] = 1.6;
    adjcosts[1] = 0.1;
@@ -301,12 +301,12 @@ SCIP_RETCODE dcmstTest3(
 
    /* build on 5x5 */
    csr_base->nnodes = 4;
-   csr_base->nedges = 6;
+   csr_base->nedges_max = 6;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 5;
-   csr_extended->nedges = 8;
+   csr_extended->nedges_max = 8;
 
    adjcosts[0] = 0.2;
    adjcosts[1] = 0.01;
@@ -324,12 +324,12 @@ SCIP_RETCODE dcmstTest3(
 
    /* build on 6x6 */
    csr_base->nnodes = 5;
-   csr_base->nedges = 8;
+   csr_base->nedges_max = 8;
 
    graph_csr_copy(csr_extended, csr_base);
 
    csr_extended->nnodes = 6;
-   csr_extended->nedges = 10;
+   csr_extended->nedges_max = 10;
 
    adjcosts[0] = 0.3;
    adjcosts[1] = 0.2;

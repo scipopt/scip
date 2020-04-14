@@ -29,7 +29,7 @@
 #include "graph.h"
 
 
-void shortestpath_computeSteinerTree(const GRAPH*, int, SCIP_Real* RESTRICT, int* RESTRICT, DHEAP*, STP_Bool* RESTRICT);
+void shortestpath_computeSteinerTree(const GRAPH*, const CSR*, int, SCIP_Real* RESTRICT, int* RESTRICT, DHEAP*, STP_Bool* RESTRICT);
 
 
 #endif /* APPLICATIONS_STP_SRC_SHORTESTPATH_H_ */

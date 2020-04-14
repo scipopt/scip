@@ -38,7 +38,7 @@ SCIP_Bool csrdepoCSRsAreEqual(
    const CSR*            csr2                 /**< csr */
    )
 {
-   if( csr1->nedges != csr2->nedges )
+   if( csr1->nedges_max != csr2->nedges_max )
    {
       SCIPdebugMessage("wrong edge count \n");
       return FALSE;
@@ -59,7 +59,7 @@ SCIP_Bool csrdepoCSRsAreEqual(
       }
    }
 
-   for( int i = 0; i < csr1->nedges; ++i )
+   for( int i = 0; i < csr1->nedges_max; ++i )
    {
       if( !EQ(csr1->cost[i], csr2->cost[i]) )
       {
@@ -89,7 +89,7 @@ void csrdepoFillRandom(
    int* head_csr;
    SCIP_Real* cost_csr;
    const int nnodes = csrd->nnodes;
-   const int nedges = csrd->nedges;
+   const int nedges = csrd->nedges_max;
 
    assert(nnodes >= 1 && nedges >= 1);
    assert(seed >= 0);
@@ -133,9 +133,9 @@ SCIP_RETCODE csrdepoTest1(
    graph_csrdepo_addEmptyTop(depo, nnodes1, nedges1);
    graph_csrdepo_getEmptyTop(depo, &csr);
 
-   if( csr.nedges != nedges1 || csr.nnodes != nnodes1 )
+   if( csr.nedges_max != nedges1 || csr.nnodes != nnodes1 )
    {
-      SCIPdebugMessage("wrong number of nodes/edges (%d, %d) stored! \n", csr.nnodes, csr.nedges);
+      SCIPdebugMessage("wrong number of nodes/edges (%d, %d) stored! \n", csr.nnodes, csr.nedges_max);
       return SCIP_ERROR;
    }
 
@@ -146,9 +146,9 @@ SCIP_RETCODE csrdepoTest1(
    graph_csrdepo_addEmptyTop(depo, nnodes2, nedges2);
    graph_csrdepo_getEmptyTop(depo, &csr);
 
-   if( csr.nedges != nedges2 || csr.nnodes != nnodes2 )
+   if( csr.nedges_max != nedges2 || csr.nnodes != nnodes2 )
    {
-      SCIPdebugMessage("wrong number of nodes/edges (%d, %d) stored! \n", csr.nnodes, csr.nedges);
+      SCIPdebugMessage("wrong number of nodes/edges (%d, %d) stored! \n", csr.nnodes, csr.nedges_max);
       return SCIP_ERROR;
    }
 
