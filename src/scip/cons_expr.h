@@ -458,8 +458,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    int                     nfactors,         /**< number of factors in monomial */
    SCIP_CONSEXPR_EXPR**    factors,          /**< factors in monomial */
-   SCIP_Real*              exponents,        /**< exponent in each factor, or NULL if all 1.0 */
-   SCIP_Real               coef              /**< coefficient of the monomial */
+   SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
    );
 
 /** appends child to the children list of expr */

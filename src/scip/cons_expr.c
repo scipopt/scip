@@ -12442,64 +12442,68 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    int                     nfactors,         /**< number of factors in monomial */
    SCIP_CONSEXPR_EXPR**    factors,          /**< factors in monomial */
-   SCIP_Real*              exponents,        /**< exponent in each factor, or NULL if all 1.0 */
-   SCIP_Real               coef              /**< coefficient of the monomial */
+   SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
    )
 {
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(nfactors >= 0);
 
-   /* return coefficient as constant expression if there are no factors */
+   /* return 1 as constant expression if there are no factors */
    if( nfactors == 0 )
    {
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 0, NULL, NULL, coef) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, 1.0) );
    }
    else if( nfactors == 1 )
    {
-      /* only one factor and exponent is 1 => return coef * factors[0] */
+      /* only one factor and exponent is 1 => return factors[0] */
       if( exponents == NULL || exponents[0] == 1.0 )
       {
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 1, factors, &coef, 0.0) );
+         *expr = factors[0];
+         SCIPcaptureConsExprExpr(*expr);
       }
       else
       {
-         SCIP_CONSEXPR_EXPR** children;
-         int i;
-
-         /* allocate memory to store the children */
-         SCIP_CALL( SCIPallocBufferArray(scip, &children, nfactors) );
-
-         /* create children */
-         for( i = 0; i < nfactors; ++i )
-         {
-            SCIP_Real exponent = exponents == NULL ? 1.0 : exponents[i];
-
-            /* check whether to create a power expression or not */
-            if( exponents == NULL || exponents[i] == 1.0 )
-            {
-               children[i] = factors[i];
-               SCIPcaptureConsExprExpr(children[i]);
-            }
-            else
-            {
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], factors[i], exponent) );
-            }
-         }
-
-         /* create product expression */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nfactors, children, coef) );
-
-         /* free children */
-         for( i = 0; i < nfactors; ++i )
-         {
-            assert(children[i] != NULL);
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
-         }
-
-         /* free memory */
-         SCIPfreeBufferArray(scip, &children);
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, factors[0], exponents[0]) );
       }
+   }
+   else
+   {
+      SCIP_CONSEXPR_EXPR** children;
+      int i;
+
+      /* allocate memory to store the children */
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nfactors) );
+
+      /* create children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         SCIP_Real exponent = exponents == NULL ? 1.0 : exponents[i];
+
+         /* check whether to create a power expression or not */
+         if( exponents == NULL || exponents[i] == 1.0 )
+         {
+            children[i] = factors[i];
+            SCIPcaptureConsExprExpr(children[i]);
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], factors[i], exponent) );
+         }
+      }
+
+      /* create product expression */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nfactors, children, 1.0) );
+
+      /* free children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         assert(children[i] != NULL);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+      }
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &children);
    }
 
    return SCIP_OKAY;
