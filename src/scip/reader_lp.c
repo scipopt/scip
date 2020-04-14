@@ -1321,7 +1321,7 @@ SCIP_RETCODE readObjective(
 
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
@@ -1744,7 +1744,7 @@ SCIP_RETCODE readConstraints(
       {
          retcode = SCIPcreateConsExprQuadratic(scip, &cons, name, ncoefs, vars, coefs,
             nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
 
       if( retcode != SCIP_OKAY )

@@ -9650,8 +9650,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
       expr, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -9732,8 +9731,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
       expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -10234,7 +10232,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
       SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
       SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
       SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10846,7 +10844,7 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    /* create copy (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
       targetexpr, sourcedata->lhs, sourcedata->rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10981,7 +10979,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
       consexprtree, lhs, rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    assert(*cons != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
@@ -15288,11 +15286,8 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsExpr() call, if you don't need all the information */
@@ -15339,7 +15334,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -15359,7 +15354,7 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    )
 {
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -15396,11 +15391,8 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -15477,7 +15469,7 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
 
    /* create expression constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, sumexpr, lhs, rhs, initial, separate, enforce, check, propagate,
-      local, modifiable, dynamic, removable, stickingatnode) );
+      local, modifiable, dynamic, removable) );
 
    /* release sum expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
