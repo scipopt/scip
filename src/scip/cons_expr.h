@@ -450,6 +450,18 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
    );
 
+/** creates and captures an sum expression representing a monomial */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprExpr4(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nfactors,         /**< number of factors in monomial */
+   SCIP_CONSEXPR_EXPR**    factors,          /**< factors in monomial */
+   SCIP_Real*              exponents,        /**< exponent in each factor, or NULL if all 1.0 */
+   SCIP_Real               coef              /**< coefficient of the monomial */
+   );
+
 /** appends child to the children list of expr */
 SCIP_EXPORT
 SCIP_RETCODE SCIPappendConsExprExpr(
