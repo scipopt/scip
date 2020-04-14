@@ -102,6 +102,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_pcsimple.o \
 			reduce_simple.o \
 			reduce_util.o \
+			shortestpath.o \
 			solpool.o \
 			stptest_base.o \
 			stptest_extreduce.o \

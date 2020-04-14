@@ -2214,7 +2214,7 @@ void vnoiDataRepairPreprocess(
 
          if( vnoibase[node] != UNKNOWN )
          {
-            heap_add(vnoipath, node, graph->path_heap, state, &count);
+            graph_pathHeapAdd(vnoipath, node, graph->path_heap, state, &count);
          }
 
          blists_curr = blists_curr->parent;

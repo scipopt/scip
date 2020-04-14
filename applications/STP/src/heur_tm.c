@@ -35,6 +35,7 @@
 #include "probdata_stp.h"
 #include "portab.h"
 #include "scip/misc.h"
+#include "shortestpath.h"
 #include <math.h>
 
 #define HEUR_NAME             "TM"
@@ -69,6 +70,45 @@ int getUgRank(void);
 /*
  * Data structures
  */
+
+
+typedef
+struct TM_base_data
+{
+   SCIP_Real*            cost;               /**< arc costs */
+   SCIP_Real*            costrev;            /**< reversed arc costs */
+   SCIP_Real*            nodes_dist;         /**< distance values for each node */
+   int*                  nodes_pred;         /**< predecessor for each node */
+   int*                  startnodes;         /**< array containing start vertices (NULL to not provide any) */
+   int*                  result;             /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int*                  best_result;        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   SCIP_Real             best_obj;           /**< objective */
+   int                   nruns;              /**< number of runs */
+} TMBASE;
+
+
+/** All shortest paths data
+ *  NOTE: DEPRECATED */
+typedef
+struct TM_all_shortestpath
+{
+   int**                 pathedge;           /**< node predecessors for each terminal */
+   SCIP_Real**           pathdist;           /**< node distances for each terminal */
+} TMALLSP;
+
+
+/** Voronoi TM heuristic data
+ *  NOTE: DEPRECATED */
+typedef
+struct TM_voronoi
+{
+   SCIP_PQUEUE* pqueue;
+   SCIP_Real** node_dist;
+   GNODE** gnodearr;
+   int* nodenterms;
+   int** node_base;
+   int** node_edge;
+} TMVNOI;
 
 
 /** primal heuristic data */
@@ -119,6 +159,193 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
  */
 
 
+
+/** initializes */
+static
+SCIP_RETCODE tmBaseInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMBASE*               tmbase              /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(tmbase && scip);
+   assert(tmbase->nodes_dist == NULL);
+   assert(tmbase->nodes_pred == NULL);
+   assert(tmbase->startnodes == NULL);
+   assert(tmbase->result == NULL);
+
+   if( tmbase->nruns < 1 )
+      tmbase->nruns = 1;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->startnodes), MIN(tmbase->nruns, nnodes)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->result), nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_dist), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_pred), nnodes) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void tmBaseFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMBASE*               tmbase              /**< data */
+)
+{
+   SCIPfreeBufferArray(scip, &(tmbase->nodes_pred));
+   SCIPfreeBufferArray(scip, &(tmbase->nodes_dist));
+   SCIPfreeBufferArray(scip, &(tmbase->result));
+   SCIPfreeBufferArray(scip, &(tmbase->startnodes));
+}
+
+
+/** initializes */
+static
+SCIP_RETCODE tmAllspInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMALLSP*              tmallsp             /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &(tmallsp->pathdist), nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &(tmallsp->pathedge), nnodes));
+   BMSclearMemoryArray((tmallsp->pathdist), nnodes);
+   BMSclearMemoryArray((tmallsp->pathedge), nnodes);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      graph->mark[k] = (graph->grad[k] > 0);
+
+      if( Is_term(graph->term[k]) )
+      {
+         SCIP_CALL(SCIPallocBufferArray(scip, &((tmallsp->pathdist[k])), nnodes)); /*lint !e866*/
+         SCIP_CALL(SCIPallocBufferArray(scip, &((tmallsp->pathedge[k])), nnodes)); /*lint !e866*/
+      }
+      else
+      {
+         tmallsp->pathdist[k] = NULL;
+         tmallsp->pathedge[k] = NULL;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void tmAllspFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMALLSP*              tmallsp             /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(tmallsp->pathedge);
+   assert(tmallsp->pathdist);
+
+   for( int k = nnodes - 1; k >= 0; k-- )
+   {
+      SCIPfreeBufferArrayNull(scip, &(tmallsp->pathedge[k]));
+      SCIPfreeBufferArrayNull(scip, &(tmallsp->pathdist[k]));
+   }
+
+   SCIPfreeBufferArray(scip, &(tmallsp->pathedge));
+   SCIPfreeBufferArray(scip, &(tmallsp->pathdist));
+}
+
+
+/** initializes */
+static
+SCIP_RETCODE tmVnoiInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMVNOI*               tmvnoi              /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const int nterms = graph->terms;
+
+   assert(nnodes > 0 && nterms > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->nodenterms), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->gnodearr), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_base), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_dist), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_edge), nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &(tmvnoi->gnodearr[k])) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_base[k]), nterms) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_dist[k]), nterms) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_edge[k]), nterms) ); /*lint !e866*/
+   }
+
+   SCIP_CALL( SCIPpqueueCreate( &(tmvnoi->pqueue), nnodes, 2.0, GNODECmpByDist) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void tmVnoiFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   TMVNOI*               tmvnoi              /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   SCIPpqueueFree(&(tmvnoi->pqueue));
+
+   assert(tmvnoi->node_edge != NULL);
+   assert(tmvnoi->node_dist != NULL);
+   assert(tmvnoi->node_base != NULL);
+   assert(tmvnoi->gnodearr != NULL);
+
+   for( int k = nnodes - 1; k >= 0; k-- )
+   {
+      SCIPfreeBufferArray(scip, &(tmvnoi->node_edge[k]));
+      SCIPfreeBufferArray(scip, &(tmvnoi->node_dist[k]));
+      SCIPfreeBufferArray(scip, &(tmvnoi->node_base[k]));
+      SCIPfreeBuffer(scip, &(tmvnoi->gnodearr[k]));
+   }
+
+   SCIPfreeBufferArray(scip, &(tmvnoi->node_edge));
+   SCIPfreeBufferArray(scip, &(tmvnoi->node_dist));
+   SCIPfreeBufferArray(scip, &(tmvnoi->node_base));
+   SCIPfreeBufferArray(scip, &(tmvnoi->gnodearr));
+   SCIPfreeBufferArray(scip, &(tmvnoi->nodenterms));
+}
+
+
+/** returns TM heur data */
+static inline
+SCIP_HEURDATA* getTMheurData(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(scip);
+
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+   assert(heurdata);
+
+   return heurdata;
+}
+
+
 /** returns mode */
 static
 int getTmMode(
@@ -160,23 +387,23 @@ int getTmMode(
 static
 SCIP_RETCODE computeStarts(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
    const int*            orgstarts,          /**< original start vertices */
    SCIP_Bool             startsgiven,        /**< start vertices given? */
-   int*                  dijkedge,           /**< temp */
-   SCIP_Real*            dijkdist,           /**< temp */
    SCIP_Real*            nodepriority,       /**< nodepriority */
-   int*                  start,              /**< start vertices */
-   int*                  runsp,              /**< number of runs */
+   TMBASE*               tmbase,             /**< data */
    int*                  bestp               /**< pointer to best start vertex */
    )
 {
-   int runs = *runsp;
+   SCIP_HEURDATA* heurdata = getTMheurData(scip);
+   int runs = tmbase->nruns;
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nterms = graph->terms;
+   const SCIP_Real* cost = tmbase->cost;
+   int* const start = tmbase->startnodes;
+   int* const dijkedge = tmbase->nodes_pred;
+   SCIP_Real* const dijkdist = tmbase->nodes_dist;
 
    /* compute number of iterations and starting points for SPH */
    if( graph_pc_isPcMw(graph) )
@@ -343,32 +570,55 @@ SCIP_RETCODE computeStarts(
          start[k] = k;
    } /* runs > nnodes */
 
-   *runsp = runs;
+   tmbase->nruns = runs;
 
    return SCIP_OKAY;
 }
 
 
-/** Dijkstra based shortest paths heuristic */
-static
-SCIP_RETCODE computeSteinerTreeDijk(
+#define TM_USE_CSR
+
+#ifdef TM_USE_CSR
+/** CSR based shortest paths heuristic */
+static inline
+SCIP_RETCODE computeSteinerTreeCsr(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
+   int                   startnode,          /**< start vertex*/
    SCIP_Real*            dijkdist,           /**< distance array */
-   int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
-   int                   start,              /**< start vertex*/
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   int*                  result,             /**< solution array (on edges) */
+   STP_Bool*             connected           /**< array marking all solution vertices*/
+)
+{
+   shortestpath_computeSteinerTree(g, startnode, dijkdist, dijkedge, dheap, connected);
+
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, NULL, result, connected) );
+
+   return SCIP_OKAY;
+}
+#endif
+
+
+/** Dijkstra based shortest paths heuristic */
+static inline
+SCIP_RETCODE computeSteinerTreeDijk(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   TMBASE*               tmbase,             /**< (in/out) */
+   int                   start,              /**< start vertex */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
-   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Real* cost = tmbase->cost;
+   int* dijkedge = tmbase->nodes_pred;
+   SCIP_Real* dijkdist = tmbase->nodes_dist;
+   int* RESTRICT result = tmbase->result;
 
-   assert(g != NULL);
    assert(!graph_pc_isPcMw(g));
 
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = (g->grad[k] > 0);
+   graph_mark(g);
 
    graph_path_st(g, cost, dijkdist, dijkedge, start, connected);
 
@@ -433,25 +683,25 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 }
 
 
-/** shortest paths based heuristic */
+/** shortest paths based heuristic
+ *  NOTE: DEPRECATED */
 static
 SCIP_RETCODE computeSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
-   SCIP_Real**           pathdist,           /**< distance array */
    int                   start,              /**< start vertex */
-   int*                  perm,               /**< permutation array (on nodes) */
    int*                  result,             /**< solution array (on edges) */
-   int*                  cluster,            /**< array used to store current vertices of each subtree during construction */
-   int**                 pathedge,           /**< predecessor edge array */
+   TMALLSP*              tmallsp,            /**< all SP */
    STP_Bool*             connected,          /**< array marking all solution vertices */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
    SCIP_Real min;
    SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP);
+   int* perm = NULL;
+   int* cluster = NULL;
    int    k;
    int    e;
    int    i;
@@ -463,6 +713,8 @@ SCIP_RETCODE computeSteinerTree(
    int    csize;
    int    newval;
    int    nnodes;
+   SCIP_Real** pathdist = tmallsp->pathdist;
+   int** pathedge = tmallsp->pathedge;
 
    assert(scip      != NULL);
    assert(g         != NULL);
@@ -472,8 +724,6 @@ SCIP_RETCODE computeSteinerTree(
    assert(costrev   != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
-   assert(cluster != NULL);
-   assert(perm != NULL);
 
    root = g->source;
    csize = 0;
@@ -483,9 +733,14 @@ SCIP_RETCODE computeSteinerTree(
 
    SCIPdebugMessage("Heuristic: Start=%5d \n", start);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
+
    cluster[csize++] = start;
 
-   /* initialize arrays */
+   for( e = 0; e < g->edges; e++ )
+      result[e] = UNKNOWN;
+
    for( i = 0; i < nnodes; i++ )
    {
       g->mark[i]   = (g->grad[i] > 0);
@@ -509,7 +764,7 @@ SCIP_RETCODE computeSteinerTree(
 
       /* time limit exceeded? */
       if( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+         break;
 
       /* find shortest path from current tree to unconnected terminal */
       for( l = nnodes - 1; l >= 0; --l )
@@ -569,22 +824,23 @@ SCIP_RETCODE computeSteinerTree(
    /* prune the tree */
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
 
+   SCIPfreeBufferArrayNull(scip, &perm);
+   SCIPfreeBufferArray(scip, &cluster);
+
    return SCIP_OKAY;
 }
 
-/** heuristic for degree constrained STPs */
+/** heuristic for degree constrained STPs
+ *  NOTE: DEPRECATED */
 static
 SCIP_RETCODE computeDegConsTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
-   SCIP_Real**           pathdist,           /**< distances from each terminal to all nodes */
    int                   start,              /**< start vertex */
-   int*                  perm,               /**< permutation array */
    int*                  result,             /**< array to indicate whether an edge is in the solution */
-   int*                  cluster,            /**< array for internal computations */
-   int**                 pathedge,           /**< ancestor edges for shortest paths from each terminal to all nodes */
+   TMALLSP*              tmallsp,            /**< all SP */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    STP_Bool*             connected,          /**< array to indicate whether a vertex is in the solution */
    STP_Bool*             solfound            /**< pointer to store whether a solution has been found */
@@ -612,6 +868,11 @@ SCIP_RETCODE computeDegConsTree(
    int    termcount;
    int*   degs;
    int*   maxdegs;
+   int* cluster;
+   int* perm;
+   SCIP_Real** pathdist = tmallsp->pathdist;
+   int** pathedge = tmallsp->pathedge;
+
    assert(scip      != NULL);
    assert(g         != NULL);
    assert(g->maxdeg != NULL);
@@ -621,8 +882,6 @@ SCIP_RETCODE computeDegConsTree(
    assert(costrev   != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
-   assert(cluster   != NULL);
-   assert(perm   != NULL);
 
    z = 0;
    nterms = g->terms;
@@ -633,6 +892,8 @@ SCIP_RETCODE computeDegConsTree(
    SCIPdebugMessage("Heuristic: Start=%5d ", start);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &degs, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
 
    cluster[csize++] = start;
 
@@ -647,7 +908,7 @@ SCIP_RETCODE computeDegConsTree(
    for( e = 0; e < g->edges; e++ )
    {
       assert(SCIPisGT(scip, cost[e], 0.0));
-      assert(result[e] == UNKNOWN);
+      result[e] = UNKNOWN;
    }
    connected[start] = TRUE;
    tldegcount = MIN(g->grad[start], maxdegs[start]);
@@ -822,39 +1083,42 @@ SCIP_RETCODE computeDegConsTree(
          if( degs[t] > maxdegs[t] )
             *solfound = FALSE;
    }
-
+   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &cluster);
    SCIPfreeBufferArray(scip, &degs);
    return SCIP_OKAY;
 }
 
-/** Voronoi based shortest path heuristic */
+/** Voronoi based shortest path heuristic.
+ *  NOTE: DEPRECATED */
 static
 SCIP_RETCODE computeSteinerTreeVnoi(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_PQUEUE*          pqueue,             /**< priority queue */
-   GNODE**               gnodearr,           /**< internal array */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
-   SCIP_Real**           node_dist,          /**< internal array */
    int                   start,              /**< start vertex */
-   int*                  result,             /**< array to indicate whether an edge is in the solution */
-   int*                  vcount,             /**< internal array */
-   int*                  nodenterms,         /**< internal array */
-   int**                 node_base,          /**< internal array */
-   int**                 node_edge,          /**< internal array */
    STP_Bool              firstrun,           /**< method called for the first time? (during one heuristic round) */
+   TMVNOI*               tmvnoi,             /**< TM data */
+   int*                  result,             /**< array to indicate whether an edge is in the solution */
    STP_Bool*             connected           /**< array to indicate whether a vertex is in the solution */
    )
 {
-   int    k;
-   int    i;
-   int    j;
-   int    best;
-   int    term;
-   int    count;
-   int   nnodes;
-   int   nterms;
+   int *vcount;
+   int k;
+   int i;
+   int j;
+   int best;
+   int term;
+   int count;
+   int nnodes;
+   int nterms;
+   SCIP_Real **node_dist = tmvnoi->node_dist;
+   SCIP_PQUEUE *pqueue = tmvnoi->pqueue;
+   GNODE **gnodearr = tmvnoi->gnodearr;
+   int *nodenterms = tmvnoi->nodenterms;
+   int **node_base = tmvnoi->node_base;
+   int **node_edge = tmvnoi->node_edge;
 
    assert(scip      != NULL);
    assert(g         != NULL);
@@ -864,6 +1128,8 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    assert(costrev   != NULL);
    nnodes = g->knots;
    nterms = g->terms;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vcount, nnodes) );
 
    SCIPdebugMessage("TM_Polzin Heuristic: Start=%5d ", start);
 
@@ -1021,7 +1287,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
          for( j = 0; j < nneighbnodes; j++ )
          {
             assert(termsmark[vbase[tovisit[nnodes - j - 1]]]);
-            heap_add(vnoi, tovisit[nnodes - j - 1], g->path_heap, state, &count);
+            graph_pathHeapAdd(vnoi, tovisit[nnodes - j - 1], g->path_heap, state, &count);
          }
          SCIP_CALL( graph_voronoiExtend(scip, g, ((term == root)? cost : costrev), vnoi, node_dist, node_base, node_edge, termsmark, reachednodes, &nreachednodes, nodenterms,
                nneighbterms, term, nneighbnodes) );
@@ -1145,6 +1411,8 @@ SCIP_RETCODE computeSteinerTreeVnoi(
 
    /* prune the ST, so that all leaves are terminals */
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
+
+   SCIPfreeBufferArray(scip, &vcount);
 
    return SCIP_OKAY;
 }
@@ -1430,15 +1698,16 @@ void initTerminalPrioPcMw(
 
 /** initializes for TM SP runs (computes shortest paths from all terminals) */
 static
-void initTmSp(
+void buildTmAllSp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< arc costs */
    const SCIP_Real*      costrev,            /**< reversed arc costs */
-   SCIP_Real**           pathdist,           /**< distance arrays (on vertices) */
-   int**                 pathedge            /**< predecessor edge arrays (on vertices) */
+   TMALLSP*              tmallsp             /**< TM data */
 )
 {
+   SCIP_Real** pathdist = tmallsp->pathdist;
+   int** pathedge = tmallsp->pathedge;
    const int nnodes = graph_get_nNodes(graph);
    const int root = graph->source;
 
@@ -1465,30 +1734,31 @@ void initTmSp(
 static
 SCIP_RETCODE dhcstpWarmUp(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
-   int*                  result,             /**< result */
-   SCIP_Real*            hopfactor,          /**< (int/out) */
-   SCIP_Real*            minobj,             /**< (in/out) */
-   SCIP_Real*            dijkdist,           /**< distance array */
-   int*                  dijkedge,           /**< predecessor edge array */
-   STP_Bool*             connected,          /**< array marking all solution vertices*/
-   SCIP_Real*            cost,               /**< arc costs */
-   SCIP_Real*            costrev,            /**< reversed arc costs */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_Real*            hopfactor,          /**< (in/out) */
+   TMBASE*               tmbase,             /**< (in/out) */
    SCIP_Real*            orgcost,            /**< arc costs (out) */
    SCIP_Bool*            success             /**< success? */
 )
 {
+   STP_Bool* connected;
+   SCIP_Real* cost = tmbase->cost;
+   SCIP_Real* costrev = tmbase->costrev;
+   int* RESTRICT result = tmbase->result;
+   int* RESTRICT best_result = tmbase->best_result;
    SCIP_Bool lhopfactor;
    SCIP_Real besthopfactor = -1.0;
+   SCIP_Real maxcost = FARAWAY;
    const int nedges = graph_get_nEdges(graph);
    const int root = graph->source;
-   SCIP_Real maxcost = FARAWAY;
+   const int nnodes = graph_get_nNodes(graph);
 
    assert(hopfactor && success);
    assert(SCIPisGT(scip, (*hopfactor), 0.0));
    assert(*success == FALSE);
    assert(graph->stp_type == STP_DHCSTP);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
    for( int e = 0; e < nedges; e++ )
    {
@@ -1518,7 +1788,7 @@ SCIP_RETCODE dhcstpWarmUp(
          result[e] = UNKNOWN;
       }
 
-      SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, root, connected) );
+      SCIP_CALL( computeSteinerTreeDijk(scip, graph, tmbase, root, connected) );
 
       for( int e = 0; e < nedges; e++)
       {
@@ -1529,9 +1799,9 @@ SCIP_RETCODE dhcstpWarmUp(
          }
       }
 
-      if( SCIPisLT(scip, obj, *minobj) && edgecount <= graph->hoplimit )
+      if( SCIPisLT(scip, obj, tmbase->best_obj) && edgecount <= graph->hoplimit )
       {
-         *minobj = obj;
+         tmbase->best_obj = obj;
 
          for( int e = 0; e < nedges; e++ )
             best_result[e] = result[e];
@@ -1579,6 +1849,8 @@ SCIP_RETCODE dhcstpWarmUp(
    for( int e = 0; e < nedges; e++)
       costrev[e] = cost[flipedge(e)];
 
+   SCIPfreeBufferArray(scip, &connected);
+
    return SCIP_OKAY;
 }
 
@@ -1604,31 +1876,114 @@ void dhcstpFinalize(
 }
 
 
-/** submethod for SCIPStpHeurTMRun in PC or MW mode */
+/** submethod for SCIPStpHeurTMRun */
 static
-SCIP_RETCODE runPcMW(
+SCIP_RETCODE runTm(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            best_resultObj,     /**< objective value */
-   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
-   int*                  result,             /**< temporary array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
-   int*                  best_result,        /**< final array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
-   int*                  dijkedge,           /**< temp */
-   int                   maxruns,            /**< number of runs */
-   int                   bestincstart,       /**< best incumbent start vertex */
-   SCIP_Real*            dijkdist,           /**< temp */
-   SCIP_Real*            cost,               /**< arc costs */
-   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
-   enum PCMW_TmMode      pcmwmode            /**< mode */
+   TMBASE*               tmbase,             /**< TM base data */
+   TMALLSP*              tmallsp,            /**< TM data */
+   TMVNOI*               tmvnoi,             /**< TM data */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {
+   SCIP_HEURDATA* heurdata = getTMheurData(scip);
+   const int* const start = tmbase->startnodes;
+   int* const result = tmbase->result;
+   SCIP_Real* cost = tmbase->cost;
+   SCIP_Real* costrev = tmbase->costrev;
+   STP_Bool* connected;
+   const int mode = getTmMode(heurdata, graph);
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   const int runs = tmbase->nruns;
+   STP_Bool solfound = FALSE;
+
+   assert(!graph_pc_isPcMw(graph));
+   assert(runs >= 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
+
+   if( graph->stp_type == STP_DCSTP || mode == TM_SP  )
+   {
+      buildTmAllSp(scip, graph, cost, costrev, tmallsp);
+   }
+
+   /* main loop */
+   for( int r = 0; r < runs; r++ )
+   {
+      SCIP_Real obj;
+
+      assert(start[r] >= 0 && start[r] < nnodes);
+      assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
+
+      if( graph->stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, start[r], result, tmallsp,  heurdata->randnumgen, connected, &solfound) );
+      }
+      else if( mode == TM_DIJKSTRA )
+      {
+         SCIP_CALL( computeSteinerTreeDijk(scip, graph, tmbase, start[r], connected) );
+      }
+      else if( mode == TM_SP )
+      {
+         SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, start[r], result, tmallsp, connected, heurdata->randnumgen) );
+      }
+      else
+      {
+         SCIP_CALL( computeSteinerTreeVnoi(scip, graph, cost, costrev, start[r], (r == 0), tmvnoi, result, connected) );
+      }
+
+      /* here another measure than in the do_(...) heuristics is being used */
+      obj = graph_solGetObj(graph, result, 0.0, nedges);
+
+      SCIPdebugMessage("run=%d, obj=%.12e\n", r, obj);
+
+      if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
+      {
+         if( graph->stp_type != STP_DHCSTP || graph_solGetNedges(graph, result) <= graph->hoplimit )
+         {
+            tmbase->best_obj = obj;
+            BMScopyMemoryArray(tmbase->best_result, result, nedges);
+            (*success) = TRUE;
+         }
+      }
+
+      /* stop early? */
+      if( SCIPisStopped(scip) )
+         break;
+   }
+
+   SCIPfreeBufferArray(scip, &connected);
+
+   return SCIP_OKAY;
+}
+
+
+/** submethod for SCIPStpHeurTMRun in PC or MW mode */
+static
+SCIP_RETCODE runTmPcMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
+   enum PCMW_TmMode      pcmwmode,           /**< mode */
+   int                   bestincstart,       /**< best incumbent start vertex */
+   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+   TMBASE*               tmbase,             /**< data */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+)
+{
+   SCIP_HEURDATA* heurdata = getTMheurData(scip);
    SCIP_Real* terminalprio = NULL;
    SCIP_Real* costorg = NULL;
    SCIP_Real* costbiased = NULL;
    SCIP_Real* prizebiased = NULL;
    SCIP_Real* orderedprizes = NULL;
+   SCIP_Real* dijkdist = tmbase->nodes_dist;
+   SCIP_Real* cost = tmbase->cost;
+   int* dijkedge = tmbase->nodes_pred;
+   int* RESTRICT result = tmbase->result;
+   int* RESTRICT best_result = tmbase->best_result;
    const SCIP_Real* const prize_in = (prize) ? prize : graph->prize;
    int* orderedprizes_id = NULL;
    int* terminalperm = NULL;
@@ -1636,10 +1991,12 @@ SCIP_RETCODE runPcMW(
    const int nedges = graph->edges;
    const int nterms = graph->terms;
    STP_Bool* connected;
+   int maxruns = tmbase->nruns;
 
    assert(maxruns <= nterms);
    assert(graph->extended);
    assert(pcmwmode != pcmode_all);
+   assert(graph_valid(scip, graph));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
@@ -1710,7 +2067,6 @@ SCIP_RETCODE runPcMW(
             continue;
       }
 
-
       if( pcmwmode == pcmode_fulltree )
       {
          SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph,
@@ -1739,9 +2095,9 @@ SCIP_RETCODE runPcMW(
       /* compute objective value (w.r.t. original costs!) */
       obj = graph_solGetObj(graph, result, 0.0, nedges);
 
-      if( obj < *best_resultObj )
+      if( LT(obj, tmbase->best_obj) )
       {
-         *best_resultObj = obj;
+         tmbase->best_obj = obj;
 
          SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) heurdata->nexecs, obj);
 
@@ -1754,7 +2110,7 @@ SCIP_RETCODE runPcMW(
          break;
    }
 
-   SCIPdebugMessage("LP obj=%f \n", *best_resultObj);
+   SCIPdebugMessage("LP obj=%f \n", tmbase->best_obj);
 
    if( graph_pc_isPc(graph) )
    {
@@ -2424,53 +2780,25 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-   SCIP_HEURDATA* heurdata;
-   SCIP_PQUEUE* pqueue = NULL;
-   SCIP_Real* dijkdist = NULL;
-   SCIP_Real** pathdist = NULL;
-   SCIP_Real** node_dist = NULL;
-   GNODE** gnodearr = NULL;
+   SCIP_HEURDATA* heurdata = getTMheurData(scip);
    int beststart;
-   int mode;
-   const int nnodes = graph->knots;
-   const int nedges = graph->edges;
-   const int nterms = graph->terms;
-   int* perm = NULL;
-   int* start;
-   int* vcount = NULL;
-   int* RESTRICT result;
-   int* cluster = NULL;
-   int* dijkedge = NULL;
-   int* nodenterms = NULL;
-   int** pathedge = NULL;
-   int** node_base = NULL;
-   int** node_edge = NULL;
-   SCIP_Bool startsgiven;
+   const int mode = getTmMode(heurdata, graph);
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Bool startsgiven = (runs >= 1 && (starts != NULL));
+   TMBASE tmbase = { .cost = cost, .costrev = costrev, .nodes_dist = NULL, .startnodes = NULL, .result = NULL,
+                    .best_result = best_result, .nodes_pred = NULL, .best_obj = FARAWAY, .nruns = runs };
+   TMVNOI tmvnoi = {NULL, NULL, NULL, NULL, NULL, NULL};
+   TMALLSP tmallsp = {NULL, NULL};
 
 #ifndef NDEBUG
    assert(scip && cost && graph && costrev && best_result);
-   assert(graph->source >= 0);
-   assert(nedges > 0);
-   assert(nnodes > 0);
-   assert(nterms > 0);
+   assert(graph->source >= 0 && nedges > 0);
 
-   for( int e = 0; e < nedges; e++)
-      assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
+   for( int e = 0; e < nedges; e++) assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
 #endif
-
-   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-   assert(heurdata);
 
    beststart = bestincstart;
    (*success) = FALSE;
-
-   if( runs < 1 )
-   {
-      startsgiven = FALSE;
-      runs = 1;
-   }
-   else
-      startsgiven = (starts != NULL);
 
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
@@ -2478,229 +2806,76 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    if( graph_pc_isPcMw(graph) )
       graph_pc_2transcheck(scip, graph);
 
-   mode = getTmMode(heurdata, graph);
-
-   /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-
-   /* allocate memory according to selected mode */
-   if( mode == TM_DIJKSTRA || graph->stp_type == STP_DHCSTP )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
-   }
+   SCIP_CALL( tmBaseInit(scip, graph, &tmbase) );
    if( mode == TM_VORONOI )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodenterms, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &node_base, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &node_dist, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &node_edge, nnodes) );
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[k]) ); /*lint !e866*/
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_base[k], nterms) ); /*lint !e866*/
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_dist[k], nterms) ); /*lint !e866*/
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_edge[k], nterms) ); /*lint !e866*/
-      }
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &vcount, nnodes) );
-      SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+      SCIP_CALL( tmVnoiInit(scip, graph, &tmvnoi) );
    }
-   if( mode == TM_SP )
+   else if( mode == TM_SP )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
-      BMSclearMemoryArray(pathdist, nnodes);
-      BMSclearMemoryArray(pathedge, nnodes);
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         graph->mark[k] = (graph->grad[k] > 0);
-
-         if( Is_term(graph->term[k]) )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[k]), nnodes) ); /*lint !e866*/
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[k]), nnodes) ); /*lint !e866*/
-         }
-      }
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
+      SCIP_CALL( tmAllspInit(scip, graph, &tmallsp) );
    }
 
-   SCIP_CALL( computeStarts(scip, heurdata, graph, cost, starts, startsgiven, dijkedge, dijkdist, nodepriority, start, &runs, &beststart) );
+   SCIP_CALL( computeStarts(scip, graph, starts, startsgiven, nodepriority, &tmbase, &beststart) );
 
-   /* perform SPH computations, differentiate between STP variants todo refactor */
+   /* perform SPH computations, differentiate between STP variants*/
    if( graph_pc_isPcMw(graph) )
    {
-      SCIP_Real best_resultObj = FARAWAY;
       const enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
       const SCIP_Bool run_all = (pcmw_mode == pcmode_all);
 
       assert(graph_pc_isPc(graph) || pcmw_mode != pcmode_simple);
       assert(pcmw_mode != pcmode_fromheurdata);
-      assert(graph_valid(scip, graph));
 
       if( graph_pc_isPc(graph) && (pcmw_mode == pcmode_simple || run_all) )
       {
-         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmode_simple));
+         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_simple, beststart, nodepriority, &tmbase, success));
       }
-
       if( pcmw_mode == pcmode_bias || pcmw_mode == pcmode_biasAndFulltree || run_all )
       {
-         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmode_bias));
+         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_bias, beststart, nodepriority, &tmbase, success));
       }
-
       if( pcmw_mode == pcmode_biasfull || run_all )
       {
-         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-               dijkdist, cost, nodepriority, success, pcmode_biasfull) );
+         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_biasfull, beststart, nodepriority, &tmbase, success));
       }
-
       if( pcmw_mode == pcmode_fulltree || pcmw_mode == pcmode_biasAndFulltree || run_all )
       {
-         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, beststart,
-            dijkdist, cost, nodepriority, success, pcmode_fulltree) );
+         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_fulltree, beststart, nodepriority, &tmbase, success));
       }
    }
    else
    {
-      SCIP_Real minobj = FARAWAY;
       SCIP_Real* orgcost = NULL;
-      STP_Bool* connected;
-      STP_Bool solfound = FALSE;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
       if( graph->stp_type == STP_DHCSTP )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &orgcost, nedges) );
-
-         SCIP_CALL( dhcstpWarmUp(scip, graph, best_result, result, hopfactor, &minobj, dijkdist, dijkedge,
-               connected, cost, costrev, orgcost, success) );
+         SCIP_CALL( dhcstpWarmUp(scip, graph, hopfactor, &tmbase, orgcost, success) );
       }
 
-      /* main loop todo refactor */
-      for( int r = 0; r < runs; r++ )
-      {
-         SCIP_Real obj;
-
-         assert(start[r] >= 0 && start[r] < nnodes);
-         assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
-
-         if( graph->stp_type == STP_DCSTP )
-         {
-            if( r == 0 )
-               initTmSp(scip, graph, cost, costrev, pathdist, pathedge);
-
-            for( int e = 0; e < nedges; e++ )
-               result[e] = UNKNOWN;
-
-            SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge,  heurdata->randnumgen, connected, &solfound) );
-         }
-         else if( mode == TM_DIJKSTRA )
-         {
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, start[r], connected) );
-         }
-         else if( mode == TM_SP )
-         {
-            if( r == 0 )
-               initTmSp(scip, graph, cost, costrev, pathdist, pathedge);
-
-            for( int e = 0; e < nedges; e++ )
-               result[e] = UNKNOWN;
-
-            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, connected, heurdata->randnumgen) );
-         }
-         else
-         {
-            SCIP_CALL( computeSteinerTreeVnoi(scip, graph, pqueue, gnodearr, cost, costrev, node_dist, start[r], result, vcount,
-                  nodenterms, node_base, node_edge, (r == 0), connected) );
-         }
-
-         /* here another measure than in the do_(...) heuristics is being used */
-         obj = graph_solGetObj(graph, result, 0.0, nedges);
-
-         SCIPdebugMessage(" Obj=%.12e\n", obj);
-
-         /** stop early? */
-         if( SCIPisStopped(scip) )
-            break;
-
-         if( SCIPisLT(scip, obj, minobj) && (graph->stp_type != STP_DCSTP || solfound) )
-         {
-            if( graph->stp_type != STP_DHCSTP || graph_solGetNedges(graph, result) <= graph->hoplimit )
-            {
-               minobj = obj;
-
-               BMScopyMemoryArray(best_result, result, nedges);
-
-               (*success) = TRUE;
-            }
-         }
-      }
+      /* now call the main TM routines */
+      SCIP_CALL( runTm(scip, graph, &tmbase, &tmallsp, &tmvnoi, success) );
 
       if( graph->stp_type == STP_DHCSTP )
       {
          dhcstpFinalize(graph, orgcost, cost, costrev);
-
          SCIPfreeBufferArray(scip, &orgcost);
       }
-
-      SCIPfreeBufferArray(scip, &connected);
    }
 
-   /* free allocated memory */
-   SCIPfreeBufferArrayNull(scip, &perm);
    if( mode == TM_SP )
    {
-      assert(pathedge != NULL);
-      assert(pathdist != NULL);
-      SCIPfreeBufferArray(scip, &cluster);
-      for( int k = nnodes - 1; k >= 0; k-- )
-      {
-         SCIPfreeBufferArrayNull(scip, &(pathedge[k]));
-         SCIPfreeBufferArrayNull(scip, &(pathdist[k]));
-      }
-
-      SCIPfreeBufferArray(scip, &pathedge);
-      SCIPfreeBufferArray(scip, &pathdist);
+      tmAllspFree(scip, graph, &tmallsp);
    }
    else if( mode == TM_VORONOI )
    {
-      SCIPpqueueFree(&pqueue);
-
-      SCIPfreeBufferArray(scip, &vcount);
-      assert(node_edge != NULL);
-      assert(node_dist != NULL);
-      assert(node_base != NULL);
-      assert(gnodearr != NULL);
-      for( int k = nnodes - 1; k >= 0; k-- )
-      {
-         SCIPfreeBufferArray(scip, &node_edge[k]);
-         SCIPfreeBufferArray(scip, &node_dist[k]);
-         SCIPfreeBufferArray(scip, &node_base[k]);
-         SCIPfreeBuffer(scip, &gnodearr[k]);
-      }
-      SCIPfreeBufferArray(scip, &node_edge);
-      SCIPfreeBufferArray(scip, &node_dist);
-      SCIPfreeBufferArray(scip, &node_base);
-      SCIPfreeBufferArray(scip, &gnodearr);
-      SCIPfreeBufferArray(scip, &nodenterms);
-   }
-   if( mode == TM_DIJKSTRA || graph->stp_type == STP_DHCSTP )
-   {
-      SCIPfreeBufferArray(scip, &dijkedge);
-      SCIPfreeBufferArray(scip, &dijkdist);
+      tmVnoiFree(scip, graph, &tmvnoi);
    }
 
-   SCIPfreeBufferArray(scip, &result);
-   SCIPfreeBufferArray(scip, &start);
+   tmBaseFree(scip, graph, &tmbase);
+
+   SCIPdebugMessage("final objective: %f \n", tmbase.best_obj);
 
    return SCIP_OKAY;
 }

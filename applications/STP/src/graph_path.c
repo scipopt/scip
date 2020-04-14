@@ -22,6 +22,7 @@
  * Dijkstra's algorithm and Voronoi diagram algorithms
  *
  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -632,37 +633,6 @@ void updatmaxprize(
    }
 }
 
-/** adds element 'node' to heap */
-void heap_add(
-   const PATH* path,
-   int node,               /* the node to be added */
-   int* RESTRICT heap,     /* heap array */
-   int* RESTRICT state,
-   int* count             /* pointer to store the number of elements on the heap */
-   )
-{
-   int c;
-   int j;
-
-   heap[++(*count)] = node;
-   state[node]      = (*count);
-
-   /* Heap shift up */
-   j = state[node];
-   c = j / 2;
-
-   while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
-   {
-      const int t = heap[c];
-      heap[c] = heap[j];
-      heap[j] = t;
-      state[heap[j]] = j;
-      state[heap[c]] = c;
-      j = c;
-      c = j / 2;
-   }
-}
-
 
 inline static void resetX(
    SCIP_Real* pathdist,
@@ -934,6 +904,38 @@ void stRpcmwInit(
 
    if( nrealterms )
       *nrealterms = nrterms;
+}
+
+
+/** adds element 'node' to heap */
+void graph_pathHeapAdd(
+   const PATH* path,
+   int node,               /* the node to be added */
+   int* RESTRICT heap,     /* heap array */
+   int* RESTRICT state,
+   int* count             /* pointer to store the number of elements on the heap */
+   )
+{
+   int c;
+   int j;
+
+   heap[++(*count)] = node;
+   state[node]      = (*count);
+
+   /* Heap shift up */
+   j = state[node];
+   c = j / 2;
+
+   while((j > 1) && GT(path[heap[c]].dist, path[heap[j]].dist))
+   {
+      const int t = heap[c];
+      heap[c] = heap[j];
+      heap[j] = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j = c;
+      c = j / 2;
+   }
 }
 
 
@@ -3373,166 +3375,6 @@ void graph_path_st_rpcmw(
 }
 
 
-/** extend a Voronoi region until all neighbouring terminals are spanned */
-SCIP_RETCODE graph_voronoiExtend(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edgecosts */
-   PATH*                 path,               /**< shortest paths data structure */
-   SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
-   int**                 basearr,            /**< array to store the bases */
-   int**                 edgearr,            /**< array to store the ancestor edge */
-   STP_Bool*             termsmark,          /**< array to mark terminal */
-   int*                  reachednodes,       /**< array to mark reached nodes */
-   int*                  nreachednodes,      /**< pointer to number of reached nodes */
-   int*                  nodenterms,         /**< array to store number of terimals to each node */
-   int                   nneighbterms,       /**< number of neighbouring terminals */
-   int                   base,               /**< voronoi base */
-   int                   countex             /**< count of heap elements */
-   )
-{
-   int   k;
-   int   m;
-   int   i;
-   int* heap;
-   int* state;
-   int count = countex;
-
-   assert(g      != NULL);
-   assert(g->path_heap   != NULL);
-   assert(g->path_state  != NULL);
-   assert(path   != NULL);
-   assert(cost   != NULL);
-
-   if( g->knots == 0 || nneighbterms <= 0 )
-      return SCIP_OKAY;
-
-   heap = g->path_heap;
-   state = g->path_state;
-
-   if( g->knots > 1 )
-   {
-      while( count > 0 && nneighbterms > 0 )
-      {
-         k = nearest(heap, state, &count, path);
-         state[k] = CONNECT;
-	 reachednodes[(*nreachednodes)++] = k;
-         distarr[k][nodenterms[k]] = path[k].dist;
-         edgearr[k][nodenterms[k]] = path[k].edge;
-         basearr[k][nodenterms[k]] = base;
-
-         nodenterms[k]++;
-
-         if( termsmark[k] == TRUE )
-         {
-            termsmark[k] = FALSE;
-            if( --nneighbterms == 0 )
-            {
-               while( count > 0 )
-                  reachednodes[(*nreachednodes)++] = heap[count--];
-
-               return SCIP_OKAY;
-            }
-         }
-         else if( !Is_term(g->term[k]) )
-         {
-            /* iterate over all outgoing edges of vertex k */
-            for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
-            {
-               m = g->head[i];
-
-               /* check whether the path (to m) including (k, m) is shorter than the so far best known */
-               if( (state[m]) && (g->mark[m]) && (GT(path[m].dist, (path[k].dist + cost[i]))) )
-                  correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
-            }
-         }
-      }
-      assert(nneighbterms == 0);
-   }
-   return SCIP_OKAY;
-}
-
-
-/** build a Voronoi region, w.r.t. shortest paths, for a given set of bases */
-void graph_voronoi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   const SCIP_Real*      costrev,            /**< reversed edge costs */
-   const STP_Bool*       basemark,           /**< array to indicate whether a vertex is a Voronoi base */
-   int*                  vbase,              /**< voronoi base to each vertex */
-   PATH*                 path                /**< path data struture (leading to respective Voronoi base) */
-   )
-{
-   int* heap;
-   int* state;
-   int root;
-   int count = 0;
-   int nbases = 0;
-
-   assert(g && scip && cost && costrev && basemark && vbase && path);
-   assert(g->path_heap != NULL);
-   assert(g->path_state != NULL);
-
-   if( g->knots == 0 )
-      return;
-
-   root = g->source;
-   heap = g->path_heap;
-   state = g->path_state;
-
-   /* initialize */
-   for( int i = 0; i < g->knots; i++ )
-   {
-      /* set the base of vertex i */
-      if( basemark[i] )
-      {
-         nbases++;
-         if( g->knots > 1 )
-            heap[++count] = i;
-         vbase[i] = i;
-         path[i].dist = 0.0;
-         path[i].edge = UNKNOWN;
-         state[i] = count;
-      }
-      else
-      {
-         vbase[i] = UNKNOWN;
-         path[i].dist = FARAWAY;
-         path[i].edge = UNKNOWN;
-         state[i] = UNKNOWN;
-      }
-   }
-   assert(nbases > 0);
-
-   if( g->knots > 1 )
-   {
-      /* until the heap is empty */
-      while( count > 0 )
-      {
-         /* get the next (i.e. a nearest) vertex of the heap */
-         const int k = nearest(heap, state, &count, path);
-
-         /* mark vertex k as scanned */
-         state[k] = CONNECT;
-
-         /* iterate over all outgoing edges of vertex k */
-         for( int i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
-         {
-            const int m = g->head[i];
-
-            /* check whether the path (to m) including k is shorter than the so far best known */
-            if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
-            {
-               assert(!basemark[m]);
-               correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);
-               vbase[m] = vbase[k];
-            }
-         }
-      }
-   }
-}
-
 /** 2th next terminal to all non terminal nodes */
 void graph_get2next(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4019,6 +3861,168 @@ SCIP_RETCODE graph_get4nextTTerms(
    SCIPfreeBufferArray(scip, &boundedges);
 
    return SCIP_OKAY;
+}
+
+
+
+/** extend a Voronoi region until all neighbouring terminals are spanned */
+SCIP_RETCODE graph_voronoiExtend(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real*            cost,               /**< edgecosts */
+   PATH*                 path,               /**< shortest paths data structure */
+   SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
+   int**                 basearr,            /**< array to store the bases */
+   int**                 edgearr,            /**< array to store the ancestor edge */
+   STP_Bool*             termsmark,          /**< array to mark terminal */
+   int*                  reachednodes,       /**< array to mark reached nodes */
+   int*                  nreachednodes,      /**< pointer to number of reached nodes */
+   int*                  nodenterms,         /**< array to store number of terimals to each node */
+   int                   nneighbterms,       /**< number of neighbouring terminals */
+   int                   base,               /**< voronoi base */
+   int                   countex             /**< count of heap elements */
+   )
+{
+   int   k;
+   int   m;
+   int   i;
+   int* heap;
+   int* state;
+   int count = countex;
+
+   assert(g      != NULL);
+   assert(g->path_heap   != NULL);
+   assert(g->path_state  != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+
+   if( g->knots == 0 || nneighbterms <= 0 )
+      return SCIP_OKAY;
+
+   heap = g->path_heap;
+   state = g->path_state;
+
+   if( g->knots > 1 )
+   {
+      while( count > 0 && nneighbterms > 0 )
+      {
+         k = nearest(heap, state, &count, path);
+         state[k] = CONNECT;
+         reachednodes[(*nreachednodes)++] = k;
+         distarr[k][nodenterms[k]] = path[k].dist;
+         edgearr[k][nodenterms[k]] = path[k].edge;
+         basearr[k][nodenterms[k]] = base;
+
+         nodenterms[k]++;
+
+         if( termsmark[k] == TRUE )
+         {
+            termsmark[k] = FALSE;
+            if( --nneighbterms == 0 )
+            {
+               while( count > 0 )
+                  reachednodes[(*nreachednodes)++] = heap[count--];
+
+               return SCIP_OKAY;
+            }
+         }
+         else if( !Is_term(g->term[k]) )
+         {
+            /* iterate over all outgoing edges of vertex k */
+            for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+            {
+               m = g->head[i];
+
+               /* check whether the path (to m) including (k, m) is shorter than the so far best known */
+               if( (state[m]) && (g->mark[m]) && (GT(path[m].dist, (path[k].dist + cost[i]))) )
+                  correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+            }
+         }
+      }
+      assert(nneighbterms == 0);
+   }
+   return SCIP_OKAY;
+}
+
+
+/** build a Voronoi region, w.r.t. shortest paths, for a given set of bases */
+void graph_voronoi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const STP_Bool*       basemark,           /**< array to indicate whether a vertex is a Voronoi base */
+   int*                  vbase,              /**< voronoi base to each vertex */
+   PATH*                 path                /**< path data struture (leading to respective Voronoi base) */
+   )
+{
+   int* heap;
+   int* state;
+   int root;
+   int count = 0;
+   int nbases = 0;
+
+   assert(g && scip && cost && costrev && basemark && vbase && path);
+   assert(g->path_heap != NULL);
+   assert(g->path_state != NULL);
+
+   if( g->knots == 0 )
+      return;
+
+   root = g->source;
+   heap = g->path_heap;
+   state = g->path_state;
+
+   /* initialize */
+   for( int i = 0; i < g->knots; i++ )
+   {
+      /* set the base of vertex i */
+      if( basemark[i] )
+      {
+         nbases++;
+         if( g->knots > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = 0.0;
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i] = UNKNOWN;
+      }
+   }
+   assert(nbases > 0);
+
+   if( g->knots > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         const int k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( int i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            const int m = g->head[i];
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+            {
+               assert(!basemark[m]);
+               correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]), FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
 }
 
 /** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */
