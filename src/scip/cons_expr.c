@@ -12441,7 +12441,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    int                     nfactors,         /**< number of factors in monomial */
-   SCIP_CONSEXPR_EXPR**    factors,          /**< factors in monomial */
+   SCIP_VAR**              vars,             /**< variables in the in monomial */
    SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
    )
 {
@@ -12459,12 +12459,16 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
       /* only one factor and exponent is 1 => return factors[0] */
       if( exponents == NULL || exponents[0] == 1.0 )
       {
-         *expr = factors[0];
-         SCIPcaptureConsExprExpr(*expr);
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, vars[0]) );
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, factors[0], exponents[0]) );
+         SCIP_CONSEXPR_EXPR* varexpr;
+
+         /* create variable and power expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[0]) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, varexpr, exponents[0]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
       }
    }
    else
@@ -12478,17 +12482,21 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
       /* create children */
       for( i = 0; i < nfactors; ++i )
       {
-         SCIP_Real exponent = exponents == NULL ? 1.0 : exponents[i];
+         SCIP_Real exponent = (exponents == NULL) ? 1.0 : exponents[i];
 
-         /* check whether to create a power expression or not */
+         /* check whether to create a power expression or not, i.e., exponent == 1 */
          if( exponents == NULL || exponents[i] == 1.0 )
          {
-            children[i] = factors[i];
-            SCIPcaptureConsExprExpr(children[i]);
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[i], vars[i]) );
          }
          else
          {
-            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], factors[i], exponent) );
+            SCIP_CONSEXPR_EXPR* varexpr;
+
+            /* create variable and pow expression */
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[i]) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], varexpr, exponent) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
          }
       }
 

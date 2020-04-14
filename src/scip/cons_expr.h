@@ -457,7 +457,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    int                     nfactors,         /**< number of factors in monomial */
-   SCIP_CONSEXPR_EXPR**    factors,          /**< factors in monomial */
+   SCIP_VAR**              vars,             /**< variables in the in monomial */
    SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
    );
 
