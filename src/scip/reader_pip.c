@@ -1388,7 +1388,7 @@ SCIP_RETCODE readObjective(
          lincoefs[nlinvars] = -1.0;
          ++nlinvars;
 
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", nlinvars + 1, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
