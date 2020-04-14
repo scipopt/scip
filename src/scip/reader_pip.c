@@ -933,7 +933,7 @@ SCIP_RETCODE readPolynomial(
          if( monomialdegree > *degree )
             *degree = monomialdegree;
 
-         /* release variable expressions */
+         /* reset variables */
          nfactors = 0;
          coef = 1.0;
          coefsign = +1;
