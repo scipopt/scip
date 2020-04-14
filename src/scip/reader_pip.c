@@ -28,11 +28,11 @@
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_expr.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/pub_cons.h"
@@ -1359,7 +1359,7 @@ SCIP_RETCODE readObjective(
          SCIP_VAR** quadvars2;
          SCIP_Real* quadcoefs;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials + 1) );
          SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonomials) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonomials) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
@@ -1382,10 +1382,14 @@ SCIP_RETCODE readObjective(
             rhs = SCIPinfinity(scip);
          }
 
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         /* add -quadobjvar to the linvars array */
+         assert(nlinvars < nmonomials + 1);
+         linvars[nlinvars] = quadobjvar;
+         lincoefs[nlinvars] = -1.0;
+         ++nlinvars;
 
-         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quadobjcons, quadobjvar, -1.0) );
+         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", nlinvars + 1, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent quadratic objective: ", pipinput->linenumber, SCIPconsGetName(quadobjcons));
@@ -1614,9 +1618,9 @@ SCIP_RETCODE readConstraints(
       }
       else
       {
-         retcode = SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs,
+         retcode = SCIPcreateConsExprQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs,
             nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
 
       /* free memory */
