@@ -29,6 +29,8 @@
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
@@ -717,7 +719,8 @@ SCIP_RETCODE readStart(
 static
 SCIP_RETCODE ensureMonomialsSize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRDATA_MONOMIAL*** monomials,      /**< pointer to current array of monomials */
+   SCIP_CONSEXPR_EXPR*** monomials,          /**< pointer to current array of monomials */
+   SCIP_Real**           monomialscoef,      /**< pointer to current array of monomial coefficients */
    int*                  monomialssize,      /**< current size of monomials array at input; new size at exit */
    int                   minnmonomials       /**< required minimal size of monomials array */
    )
@@ -726,6 +729,7 @@ SCIP_RETCODE ensureMonomialsSize(
 
    assert(scip != NULL);
    assert(monomials != NULL);
+   assert(monomialscoef != NULL);
    assert(monomialssize != NULL);
    assert(*monomials != NULL || *monomialssize == 0);
 
@@ -742,6 +746,14 @@ SCIP_RETCODE ensureMonomialsSize(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, monomials, newsize) );
    }
+   if( *monomialscoef != NULL )
+   {
+      SCIP_CALL( SCIPreallocBufferArray(scip, monomialscoef, newsize) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, monomialscoef, newsize) );
+   }
    *monomialssize = newsize;
 
    return SCIP_OKAY;
@@ -751,8 +763,8 @@ SCIP_RETCODE ensureMonomialsSize(
 static
 SCIP_RETCODE ensureFactorsSize(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to current array of variables */
    SCIP_Real**           exponents,          /**< pointer to current array of exponents */
-   int**                 varidxs,            /**< pointer to current array of variable indices */
    int*                  factorssize,        /**< current size of arrays at input; new size at exit */
    int                   minnfactors         /**< required minimal size of arrays */
    )
@@ -760,12 +772,11 @@ SCIP_RETCODE ensureFactorsSize(
    int newsize;
 
    assert(scip != NULL);
+   assert(vars != NULL);
    assert(exponents != NULL);
-   assert(varidxs != NULL);
    assert(factorssize != NULL);
    assert(*exponents != NULL || *factorssize == 0);
-   assert(*varidxs   != NULL || *factorssize == 0);
-   assert((*exponents != NULL) == (*varidxs != NULL));
+   assert(*vars != NULL || *factorssize == 0);
 
    if( minnfactors <= *factorssize )
       return SCIP_OKAY;
@@ -775,72 +786,14 @@ SCIP_RETCODE ensureFactorsSize(
    if( *exponents != NULL )
    {
       SCIP_CALL( SCIPreallocBufferArray(scip, exponents, newsize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, varidxs,   newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, newsize) );
    }
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, exponents, newsize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, varidxs,   newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, vars, newsize) );
    }
    *factorssize = newsize;
-
-   return SCIP_OKAY;
-}
-
-/** gives index of variable in vars array, inserts it at the end if not existing yet */
-static
-SCIP_RETCODE getVariableIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           vars,               /**< pointer to current array of variables */
-   int*                  varssize,           /**< current size of variables array at input; new size at exit */
-   int*                  nvars,              /**< number of variables stored in array */
-   SCIP_HASHMAP*         varhash,            /**< hashmap variables -> indices */
-   SCIP_VAR*             var,                /**< the variable which index we need */
-   int*                  varidx              /**< pointer to store index of variable in *vars */
-   )
-{
-   assert(scip != NULL);
-   assert(varssize != NULL);
-   assert(vars != NULL);
-   assert(*vars != NULL || *varssize == 0);
-   assert(nvars != NULL);
-   assert(*nvars <= *varssize);
-   assert(varhash != NULL);
-   assert(var != NULL);
-   assert(varidx != NULL);
-
-   /* check if we saw this variable before */
-   if( SCIPhashmapExists(varhash, (void*)var) )
-   {
-      *varidx = SCIPhashmapGetImageInt(varhash, (void*)var);
-      assert(*varidx >= 0);
-      assert(*varidx < *nvars);
-
-      return SCIP_OKAY;
-   }
-
-   /* since variable is new, add it to the end of vars array and into hashmap */
-
-   /* ensure enough space in vars array */
-   if( *nvars + 1 > *varssize )
-   {
-      *varssize = SCIPcalcMemGrowSize(scip, *nvars + 1);
-      if( *vars == NULL )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, vars, *varssize) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPreallocBufferArray(scip, vars, *varssize) );
-      }
-   }
-   assert(*vars != NULL);  /*lint !e613*/
-
-   (*vars)[*nvars] = var;  /*lint !e613*/
-   SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)var, (*nvars)) );
-   *varidx = *nvars;
-
-   ++*nvars;
 
    return SCIP_OKAY;
 }
@@ -853,47 +806,42 @@ SCIP_RETCODE readPolynomial(
    PIPINPUT*             pipinput,           /**< PIP reading data */
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
                                               *   PIP_MAX_LINELEN */
-   SCIP_EXPRTREE**       exprtree,           /**< pointer to store constraint function as polynomial expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer to store the constraint function as expression */
    int*                  degree,             /**< pointer to store degree of polynomial */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
-   SCIP_EXPR* expression;
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
    SCIP_Real coef;
    int coefsign;
    int nextcoefsign;
    int monomialdegree;
-   SCIP_EXPR** varexprs;
    int i;
 
    SCIP_VAR** vars;
-   int varssize;
    int nvars;
-   SCIP_HASHMAP* varhash;
-
    SCIP_Real constant;
 
-   SCIP_EXPRDATA_MONOMIAL** monomials;
+   SCIP_CONSEXPR_EXPR** monomials;
+   SCIP_Real* monomialscoef;
    int monomialssize;
    int nmonomials;
 
    int nfactors;
    int factorssize;
    SCIP_Real* exponents;
-   int* varidxs;
 
    assert(scip != NULL);
    assert(exprconshdlr != NULL);
    assert(pipinput != NULL);
    assert(name != NULL);
-   assert(exprtree != NULL);
+   assert(expr != NULL);
    assert(degree != NULL);
    assert(newsection != NULL);
 
    *name = '\0';
-   *exprtree = NULL;
+   *expr = NULL;
    *degree = 0;
    *newsection = FALSE;
 
@@ -933,19 +881,15 @@ SCIP_RETCODE readPolynomial(
       }
    }
 
-   /* initialize buffer for storing the variables */
-   varssize = PIP_INIT_VARSSIZE;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), PIP_INIT_VARSSIZE) );
-
    /* initialize buffer for storing the monomials */
    monomialssize = PIP_INIT_MONOMIALSSIZE;
    SCIP_CALL( SCIPallocBufferArray(scip, &monomials, monomialssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &monomialscoef, monomialssize) );
 
    /* initialize buffer for storing the factors in a monomial */
    factorssize = PIP_INIT_FACTORSSIZE;
    SCIP_CALL( SCIPallocBufferArray(scip, &exponents, factorssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varidxs,   factorssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, factorssize) );
 
    /* read the coefficients */
    coefsign = +1;
@@ -969,19 +913,19 @@ SCIP_RETCODE readPolynomial(
 
       issign = FALSE;   /* fix compiler warning */
       issense = FALSE;  /* fix lint warning */
-      if( (isnewsection = isNewSection(scip, pipinput)) ||  /*lint !e820*/ 
+      if( (isnewsection = isNewSection(scip, pipinput)) ||  /*lint !e820*/
          (issense = isSense(pipinput, NULL))      ||  /*lint !e820*/
          ((nfactors > 0 || havevalue) && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
          /* finish the current monomial */
          if( nfactors > 0 )
          {
-            SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
-            SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
-                  &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
+            SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialscoef, &monomialssize, nmonomials + 1) );
+            SCIP_CALL( SCIPcreateConsExprExpr4(scip, exprconshdlr, &monomials[nmonomials], nfactors, vars, exponents) );
+            monomialscoef[nmonomials] = coefsign * coef;
             ++nmonomials;
          }
-         else if( havevalue) 
+         else if( havevalue )
          {
             constant += coefsign * coef;
          }
@@ -989,7 +933,7 @@ SCIP_RETCODE readPolynomial(
          if( monomialdegree > *degree )
             *degree = monomialdegree;
 
-         /* reset variables */
+         /* release variable expressions */
          nfactors = 0;
          coef = 1.0;
          coefsign = +1;
@@ -1074,7 +1018,7 @@ SCIP_RETCODE readPolynomial(
             monomialdegree = SCIP_EXPR_DEGREEINFINITY;
 
          SCIPdebugMsg(scip, "(line %d) read exponent value %g for variable %s\n", pipinput->linenumber, exponent,
-            SCIPvarGetName(vars[varidxs[nfactors-1]]));
+            SCIPvarGetName(vars[nfactors-1]));
          continue;
       }
 
@@ -1102,13 +1046,12 @@ SCIP_RETCODE readPolynomial(
       /* the token is a variable name: get the corresponding variable (or create a new one) */
       SCIP_CALL( getVariable(scip, pipinput->token, pipinput->dynamiccols, &var, NULL) );
 
-      /* get the index of the variable in the vars array, or add there if not in it yet */
-      SCIP_CALL( getVariableIndex(scip, &vars, &varssize, &nvars, varhash, var, &varidx) );
+      /* ensure that there is enough memory to store all factors */
+      SCIP_CALL( ensureFactorsSize(scip, &vars, &exponents, &factorssize, nfactors + 1) );
 
-      SCIP_CALL( ensureFactorsSize(scip, &exponents, &varidxs, &factorssize, nfactors + 1) );
-
+      /* create and store corresponding variable expression */
+      vars[nfactors] = var;
       exponents[nfactors] = 1.0;
-      varidxs[nfactors]   = varidx;
       ++nfactors;
       ++monomialdegree;
    }
@@ -1119,33 +1062,27 @@ SCIP_RETCODE readPolynomial(
       goto TERMINATE_READPOLYNOMIAL;
    }
 
-   /* create variable expressions */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nvars) );
-   for( i = 0; i < nvars; ++i )
+   /* create sum expression consisting of all monomial expressions */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, exprconshdlr, expr, nmonomials, monomials, monomialscoef, constant) );
+
+   /* release monomial expressions */
+   for( i = 0; i < nmonomials; ++i )
    {
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexprs[i], SCIP_EXPR_VARIDX, i) );
+      assert(monomials[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &monomials[i]) );
    }
 
-   /* create polynomial expression, let polynomial take over ownership of monomials */
-   SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expression, nvars, varexprs,
-         nmonomials, monomials, constant, FALSE) );
-
-   SCIPfreeBufferArray(scip, &varexprs);
-
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, expression, 0, 0, NULL) );
-   SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvars, vars) );
-
+#ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "read polynomial of degree %d: ", *degree);
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugMsgPrint(scip, "\n");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, exprconshdlr, *expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
  TERMINATE_READPOLYNOMIAL:
-   SCIPfreeBufferArray(scip, &varidxs);
-   SCIPfreeBufferArray(scip, &exponents);
-   SCIPfreeBufferArray(scip, &monomials);
    SCIPfreeBufferArray(scip, &vars);
-
-   SCIPhashmapFree(&varhash);
+   SCIPfreeBufferArray(scip, &exponents);
+   SCIPfreeBufferArray(scip, &monomialscoef);
+   SCIPfreeBufferArray(scip, &monomials);
 
    return SCIP_OKAY;
 }
@@ -1260,8 +1197,7 @@ SCIP_RETCODE readObjective(
    )
 {
    char name[PIP_MAX_LINELEN];
-   SCIP_EXPRTREE* exprtree;
-   SCIP_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* expr;
    int degree;
    SCIP_Bool newsection;
    int varidx;
@@ -1294,163 +1230,88 @@ SCIP_RETCODE readObjective(
    removable = FALSE;
 
    /* read the objective coefficients */
-   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &exprtree, &degree, &newsection) );
-   if( !hasError(pipinput) && exprtree != NULL )
+   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &expr, &degree, &newsection) );
+   if( !hasError(pipinput) && expr != NULL )
    {
-      int i;
-
-      expr = SCIPexprtreeGetRoot(exprtree);
-      assert(expr != NULL);
-      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
-
-      nmonomials = SCIPexprGetNMonomials(expr);
-
       assert(degree >= 0);
       if( degree == 1 )
       {
-         SCIP_Real coef;
-         SCIP_VAR* var;
-         SCIP_EXPRDATA_MONOMIAL** monomials;
+         SCIP_Real constant = SCIPgetConsExprExprSumConstant(expr);
+         int i;
 
-         assert(SCIPexprtreeGetVars(exprtree) != NULL);
-         assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
-
-         if( SCIPexprGetPolynomialConstant(expr) != 0.0 )
+         /* create a variable that represents the constant */
+         if( constant != 0.0 )
          {
             SCIP_VAR* objconst;
-            SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, SCIPexprGetPolynomialConstant(expr), SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, constant, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(scip, objconst) );
             SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
          }
 
-         monomials  = SCIPexprGetMonomials(expr);
-
-         for( i = 0; i < nmonomials; ++i )
+         /* set objective coefficients of variables */
+         for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
          {
-            assert(SCIPexprGetMonomialNFactors(monomials[i]) == 1);
-            assert(SCIPexprGetMonomialExponents(monomials[i]) != NULL);
-            assert(SCIPexprGetMonomialExponents(monomials[i])[0] == 1.0);
-            assert(SCIPexprGetMonomialChildIndices(monomials[i]) != NULL);
+            SCIP_CONSEXPR_EXPR* child;
+            SCIP_VAR* var;
+            SCIP_Real coef;
 
-            varidx = SCIPexprGetMonomialChildIndices(monomials[i])[0];
-            assert(varidx >= 0);
-            assert(varidx < SCIPexprGetNChildren(expr));
-            assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
-            assert(SCIPexprGetOpIndex(SCIPexprGetChildren(expr)[varidx]) == varidx); /* assume that child varidx corresponds to variable varidx */
+            child = SCIPgetConsExprExprChildren(expr)[i];
+            assert(child != NULL);
+            assert(SCIPisConsExprExprVar(child));
 
-            coef = SCIPexprGetMonomialCoef(monomials[i]);
-            var = SCIPexprtreeGetVars(exprtree)[varidx];
+            /* child has to be a variable expression, see SCIPcreateConsExprExpr4() */
+            var = SCIPgetConsExprExprVarVar(child);
+            assert(var != NULL);
+            coef = SCIPgetConsExprExprSumCoefs(expr)[i];
 
+            /* adjust the objective coefficient */
             SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + coef) );
          }
       }
-      else if( degree == 2 )
+      else /* insert dummy variable and constraint to represent the nonlinear objective */
       {
-         /* insert dummy variable and constraint to represent quadratic part of objective */
-
-         SCIP_VAR*  quadobjvar;
-         SCIP_CONS* quadobjcons;
-         SCIP_Real  lhs;
-         SCIP_Real  rhs;
-
-         SCIP_Real constant;
-         int nlinvars;
-         SCIP_VAR** linvars;
-         SCIP_Real* lincoefs;
-         int nquadterms;
-         SCIP_VAR** quadvars1;
-         SCIP_VAR** quadvars2;
-         SCIP_Real* quadcoefs;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials + 1) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonomials) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonomials) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
-
-         getLinearAndQuadraticCoefs(exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
-
-         SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-         SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
-
-         if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
-         {
-            lhs = -SCIPinfinity(scip);
-            rhs = -constant;
-         }
-         else
-         {
-            lhs = -constant;
-            rhs = SCIPinfinity(scip);
-         }
-
-         /* add -quadobjvar to the linvars array */
-         assert(nlinvars < nmonomials + 1);
-         linvars[nlinvars] = quadobjvar;
-         lincoefs[nlinvars] = -1.0;
-         ++nlinvars;
-
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-
-         SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
-         SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent quadratic objective: ", pipinput->linenumber, SCIPconsGetName(quadobjcons));
-         SCIPdebugPrintCons(scip, quadobjcons, NULL);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &quadobjcons) );
-         SCIP_CALL( SCIPreleaseVar(scip, &quadobjvar) );
-
-         /* free memory */
-         SCIPfreeBufferArray(scip, &linvars);
-         SCIPfreeBufferArray(scip, &lincoefs);
-         SCIPfreeBufferArray(scip, &quadvars1);
-         SCIPfreeBufferArray(scip, &quadvars2);
-         SCIPfreeBufferArray(scip, &quadcoefs);
-      }
-      else if( degree > 2 )
-      {
-         /* insert dummy variable and constraint to represent nonlinear part of objective */
-
+         SCIP_CONSEXPR_EXPR* nonlinobjvarexpr;
          SCIP_VAR*  nonlinobjvar;
          SCIP_CONS* nonlinobjcons;
-         SCIP_Real  minusone;
-         SCIP_Real  lhs;
-         SCIP_Real  rhs;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
-
-         minusone = -1.0;
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
-            rhs = -SCIPexprGetPolynomialConstant(expr);
+            rhs = 0.0;
          }
          else
          {
-            lhs = -SCIPexprGetPolynomialConstant(expr);
+            lhs = 0.0;
             rhs = SCIPinfinity(scip);
          }
 
-         SCIP_CALL( SCIPcreateConsNonlinear(scip, &nonlinobjcons, "nonlinobj", 1, &nonlinobjvar, &minusone, 1, &exprtree, NULL, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+         /* add created objective variable */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, exprconshdlr, &nonlinobjvarexpr, nonlinobjvar) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nonlinobjvarexpr, -1.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nonlinobjvarexpr) );
+
+         /* create expression constraint */
+         SCIP_CALL( SCIPcreateConsExpr(scip, &nonlinobjcons, "nonlinobj", expr, lhs, rhs, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
          SCIP_CALL( SCIPaddCons(scip, nonlinobjcons) );
          SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
          SCIPdebugPrintCons(scip, nonlinobjcons, NULL);
 
-         SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
-         SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
+          SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
+          SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
       }
    }
 
-   if( exprtree != NULL )
+   /* release expression */
+   if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
    return SCIP_OKAY;
@@ -1466,24 +1327,11 @@ SCIP_RETCODE readConstraints(
    )
 {
    char name[PIP_MAX_LINELEN];
-   SCIP_CONS* cons;
-   SCIP_EXPRTREE* exprtree;
-   SCIP_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons = NULL;
    int degree;
 
-   SCIP_Real constant;
-
-   int nlinvars;
-   SCIP_VAR** linvars;
-   SCIP_Real* lincoefs;
-
-   int nquadcoefs;
-   SCIP_VAR** quadvars1;
-   SCIP_VAR** quadvars2;
-   SCIP_Real* quadcoefs;
-
    PIPSENSE sense;
-   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -1503,21 +1351,21 @@ SCIP_RETCODE readConstraints(
    assert(pipinput != NULL);
 
    /* read polynomial */
-   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &exprtree, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &expr, &degree, &newsection) );
    if ( hasError(pipinput) )
-      goto TERMINATE;
+      return SCIP_READERROR;
    if ( newsection )
    {
-      if ( exprtree != NULL )
+      if ( expr != NULL )
          syntaxError(scip, pipinput, "expected constraint sense '<=', '=', or '>='");
-      goto TERMINATE;
+      return SCIP_OKAY;
    }
 
    /* read the constraint sense */
    if ( !getNextToken(scip, pipinput) || !isSense(pipinput, &sense) )
    {
       syntaxError(scip, pipinput, "expected constraint sense '<=', '=', or '>='");
-      goto TERMINATE;
+      return SCIP_READERROR;
    }
 
    /* read the right hand side */
@@ -1525,20 +1373,20 @@ SCIP_RETCODE readConstraints(
    if ( !getNextToken(scip, pipinput) )
    {
       syntaxError(scip, pipinput, "missing right hand side");
-      goto TERMINATE;
+      return SCIP_READERROR;
    }
    if ( isSign(pipinput, &sidesign) )
    {
       if( !getNextToken(scip, pipinput) )
       {
          syntaxError(scip, pipinput, "missing value of right hand side");
-         goto TERMINATE;
+         return SCIP_READERROR;
       }
    }
    if ( !isValue(scip, pipinput, &sidevalue) )
    {
       syntaxError(scip, pipinput, "expected value as right hand side");
-      goto TERMINATE;
+      return SCIP_READERROR;
    }
    sidevalue *= sidesign;
 
@@ -1553,106 +1401,85 @@ SCIP_RETCODE readConstraints(
    dynamic = pipinput->dynamicconss;
    removable = pipinput->dynamicrows;
 
-   if( degree > 2 )
+   /* assign the left and right hand side, depending on the constraint sense */
+   switch ( sense )  /*lint !e530*/
    {
-      /* assign the left and right hand side, depending on the constraint sense */
-      switch ( sense )  /*lint !e530*/
-      {
-      case PIP_SENSE_GE:
-         lhs = sidevalue;
-         rhs = SCIPinfinity(scip);
-         break;
-      case PIP_SENSE_LE:
-         lhs = -SCIPinfinity(scip);
-         rhs = sidevalue;
-         break;
-      case PIP_SENSE_EQ:
-         lhs = sidevalue;
-         rhs = sidevalue;
-         break;
-      case PIP_SENSE_NOTHING:
-      default:
-         SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
-         return SCIP_INVALIDDATA;
-      }
-
-      SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE), TERMINATE );
+   case PIP_SENSE_GE:
+      lhs = sidevalue;
+      rhs = SCIPinfinity(scip);
+      break;
+   case PIP_SENSE_LE:
+      lhs = -SCIPinfinity(scip);
+      rhs = sidevalue;
+      break;
+   case PIP_SENSE_EQ:
+      lhs = sidevalue;
+      rhs = sidevalue;
+      break;
+   case PIP_SENSE_NOTHING:
+   default:
+      SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
+      return SCIP_INVALIDDATA;
    }
-   else
+
+   /* linear constraint function */
+   if( degree == 1 )
    {
-      expr = SCIPexprtreeGetRoot(exprtree);
-      assert(expr != NULL);
-      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
-      nmonomials = SCIPexprGetNMonomials(expr);
+      SCIP_VAR** vars;
+      SCIP_Real* coefs;
+      SCIP_Real constant;
+      int nchildren;
+      int i;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonomials) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonomials) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
+      nchildren = SCIPgetConsExprExprNChildren(expr);
+      constant = SCIPgetConsExprExprSumConstant(expr);
+      coefs = SCIPgetConsExprExprSumCoefs(expr);
 
-      getLinearAndQuadraticCoefs(exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
+      /* allocate memory to store variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
 
-      /* assign the left and right hand side, depending on the constraint sense */
-      switch( sense ) /*lint !e530*/
+      /* collect variables */
+      for( i = 0; i < nchildren; ++i )
       {
-      case PIP_SENSE_GE:
-         lhs = sidevalue - constant;
-         rhs = SCIPinfinity(scip);
-         break;
-      case PIP_SENSE_LE:
-         lhs = -SCIPinfinity(scip);
-         rhs = sidevalue - constant;
-         break;
-      case PIP_SENSE_EQ:
-         lhs = sidevalue - constant;
-         rhs = sidevalue - constant;
-         break;
-      case PIP_SENSE_NOTHING:
-      default:
-         SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
-         return SCIP_INVALIDDATA;
+         SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+         assert(child != NULL);
+         assert(SCIPisConsExprExprVar(child));
+
+         vars[i] = SCIPgetConsExprExprVarVar(child);
+         assert(vars[i] != NULL);
       }
 
-      if( nquadcoefs == 0 )
-      {
-         retcode = SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, lincoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
-      }
-      else
-      {
-         retcode = SCIPcreateConsExprQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs,
-            nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
-      }
+      /* adjust lhs and rhs */
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs -= constant;
+      if( !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
+
+      /* create linear constraint */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nchildren, vars, coefs, lhs, rhs, initial, separate, enforce,
+         check, propagate, local, modifiable, dynamic, removable, FALSE) );
 
       /* free memory */
-      SCIPfreeBufferArray(scip, &quadcoefs);
-      SCIPfreeBufferArray(scip, &quadvars2);
-      SCIPfreeBufferArray(scip, &quadvars1);
-      SCIPfreeBufferArray(scip, &lincoefs);
-      SCIPfreeBufferArray(scip, &linvars);
+      SCIPfreeBufferArray(scip, &vars);
    }
-
-   if( retcode == SCIP_OKAY )
+   else /* nonlinear constraint function */
    {
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMsg(scip, "(line %d) created constraint: ", pipinput->linenumber);
-      SCIPdebugPrintCons(scip, cons, NULL);
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, expr, lhs, rhs, initial, separate, enforce, check, propagate,
+      local, modifiable, dynamic, removable) );
    }
 
- TERMINATE:
-   if( exprtree != NULL )
+   /* add and release constraint */
+   assert(cons != NULL);
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebugMsg(scip, "(line %d) created constraint: ", pipinput->linenumber);
+   SCIPdebugPrintCons(scip, cons, NULL);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* release expression */
+   if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
-
-   if( hasError(pipinput) )
-      retcode = SCIP_READERROR;
-
-   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
