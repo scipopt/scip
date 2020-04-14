@@ -15449,7 +15449,7 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
          SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], quadvars2[i]) );
 
          /* create product expression */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &children[i], 2, exprs, 0.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &children[i], 2, exprs, 1.0) );
 
          /* release variable expressions; note that the variable expressions are still captured by children[i] */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
@@ -15481,6 +15481,13 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
 
    /* release sum expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+
+   /* release children */
+   for( i = 0; i < nquadterms + nlinvars; ++i )
+   {
+      assert(children[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+   }
 
    /* free memory */
    SCIPfreeBufferArray(scip, &coefs);
