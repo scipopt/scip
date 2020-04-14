@@ -1292,6 +1292,46 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
+/** creates and captures a quadratic expression constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
 /** @} */
 
 /**@name Expression Constraint Methods */
