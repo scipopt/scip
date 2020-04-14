@@ -849,6 +849,7 @@ SCIP_RETCODE getVariableIndex(
 static
 SCIP_RETCODE readPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        exprconshdlr,       /**< expression constraint handler */
    PIPINPUT*             pipinput,           /**< PIP reading data */
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
                                               *   PIP_MAX_LINELEN */
@@ -884,6 +885,7 @@ SCIP_RETCODE readPolynomial(
    int* varidxs;
 
    assert(scip != NULL);
+   assert(exprconshdlr != NULL);
    assert(pipinput != NULL);
    assert(name != NULL);
    assert(exprtree != NULL);
@@ -1253,6 +1255,7 @@ void getLinearAndQuadraticCoefs(
 static
 SCIP_RETCODE readObjective(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        exprconshdlr,       /**< expression constraint handler */
    PIPINPUT*             pipinput            /**< PIP reading data */
    )
 {
@@ -1291,7 +1294,7 @@ SCIP_RETCODE readObjective(
    removable = FALSE;
 
    /* read the objective coefficients */
-   SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &exprtree, &degree, &newsection) );
    if( !hasError(pipinput) && exprtree != NULL )
    {
       int i;
@@ -1458,6 +1461,7 @@ SCIP_RETCODE readObjective(
 static
 SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        exprconshdlr,       /**< expression constraint handler */
    PIPINPUT*             pipinput            /**< PIP reading data */
    )
 {
@@ -1499,7 +1503,7 @@ SCIP_RETCODE readConstraints(
    assert(pipinput != NULL);
 
    /* read polynomial */
-   SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &exprtree, &degree, &newsection) );
    if ( hasError(pipinput) )
       goto TERMINATE;
    if ( newsection )
@@ -1911,7 +1915,17 @@ SCIP_RETCODE readPIPFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_CONSHDLR* exprconshdlr;
+
    assert(pipinput != NULL);
+
+   /* find expression constraint handler */
+   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   if( exprconshdlr == NULL )
+   {
+      SCIPerrorMessage("cannot parse nonlinear constraint without expression constraint handler\n");
+      return SCIP_INVALIDCALL;
+   }
 
    /* open file */
    pipinput->file = SCIPfopen(filename, "r");
@@ -1936,11 +1950,11 @@ SCIP_RETCODE readPIPFile(
          break;
 
       case PIP_OBJECTIVE:
-         SCIP_CALL( readObjective(scip, pipinput) );
+         SCIP_CALL( readObjective(scip, exprconshdlr, pipinput) );
          break;
 
       case PIP_CONSTRAINTS:
-         SCIP_CALL( readConstraints(scip, pipinput) );
+         SCIP_CALL( readConstraints(scip, exprconshdlr, pipinput) );
          break;
 
       case PIP_BOUNDS:
