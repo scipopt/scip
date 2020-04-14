@@ -1126,7 +1126,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 { /*lint --e{715}*/
    SCIP_INTERVAL exprbounds;
-   SCIP_INTERVAL interval;
    SCIP_INTERVAL result;
 
    assert(nlhdlrexprdata != NULL);
@@ -1139,7 +1138,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 
    /* get activity of the expression and the numerator (= denominator) expression */
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
-   interval = SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr);
 
    SCIPdebugMsg(scip, "call reverse propagation for expression (%g %p + %g) / (%g %p + %g) + %g bounds [%g,%g]\n",
       nlhdlrexprdata->numcoef, (void*)nlhdlrexprdata->numexpr, nlhdlrexprdata->numconst,
@@ -1151,7 +1149,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    SCIPdebugMsg(scip, "try to tighten bounds of %p: [%g,%g] -> [%g,%g]\n",
-      (void*)nlhdlrexprdata->numexpr, interval.inf, interval.sup, result.inf, result.sup);
+      (void*)nlhdlrexprdata->numexpr, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr).inf,
+      SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr).sup, result.inf, result.sup);
 
    /* tighten bounds of the expression */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->numexpr, result, force,
