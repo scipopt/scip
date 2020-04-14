@@ -97,17 +97,19 @@ TestSuite(nlhdlrquotient, .init = setup, .fini = teardown);
 static
 void checkData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< the nlhdlr expression data */
-   SCIP_VAR*             numvar,             /**< expected numerator variable */
+   SCIP_VAR*             numvar,             /**< expected auxiliary variable of numerator expression */
    SCIP_Real             numcoef,            /**< expected numerator coefficient */
    SCIP_Real             numconst,           /**< expected numerator constant */
-   SCIP_VAR*             denomvar,           /**< expected denominator variable */
+   SCIP_VAR*             denomvar,           /**< expected auxiliary variable of denominator expression */
    SCIP_Real             denomcoef,          /**< expected denominator coefficient */
    SCIP_Real             denomconst,         /**< expected denominator constant */
    SCIP_Real             constant            /**< expected constant */
    )
 {
-   cr_expect_not_null(nlhdlrexprdata->numvar);
-   cr_expect_not_null(nlhdlrexprdata->denomvar);
+   cr_expect_not_null(nlhdlrexprdata->numexpr);
+   cr_expect_not_null(nlhdlrexprdata->denomexpr);
+   cr_expect(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->numexpr) == numvar);
+   cr_expect(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->denomexpr) == denomvar);
    cr_expect(SCIPisEQ(scip, numcoef, nlhdlrexprdata->numcoef));
    cr_expect(SCIPisEQ(scip, numconst, nlhdlrexprdata->numconst));
    cr_expect(SCIPisEQ(scip, denomcoef, nlhdlrexprdata->denomcoef));
@@ -274,8 +276,8 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_VAR* auxvar1;
-   SCIP_VAR* auxvar2;
+   SCIP_VAR* auxvarabs;
+   SCIP_VAR* auxvarlog;
    SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
@@ -302,11 +304,11 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    }
    cr_assert_not_null(nlhdlrexprdata);
 
-   auxvar1 = SCIPgetConsExprExprAuxVar(expr->children[0]);
-   auxvar2 = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
+   auxvarabs = SCIPgetConsExprExprAuxVar(expr->children[0]->children[0]);
+   auxvarlog = SCIPgetConsExprExprAuxVar(expr->children[1]);
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, auxvar1, 1.0, 0.0, auxvar2, 1.0, 0.0, 0.0);
+   checkData(nlhdlrexprdata, auxvarlog, 1.0, 0.0, auxvarabs, 1.0, 0.0, 0.0);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
