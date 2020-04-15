@@ -57,6 +57,7 @@ void shortestpath_pcConnectNode(const GRAPH*, const STP_Bool*, int, SPATHSPC*);
 
 void shortestpath_computeSteinerTree(const GRAPH*, int, SPATHS*);
 void shortestpath_computeSteinerTreePcMw(const GRAPH*, int, const SCIP_Real*, SCIP_Bool, SPATHSPC*, SPATHS*);
+void shortestpath_computeSteinerTreePcMwFull(const GRAPH*, int, SPATHS*);
 
 
 #endif /* APPLICATIONS_STP_SRC_SHORTESTPATH_H_ */

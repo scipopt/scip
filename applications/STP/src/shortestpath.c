@@ -48,6 +48,7 @@ SCIP_Bool computeSteinerTree_allTermsAreReached(
    return TRUE;
 }
 
+
 /** all pseudo terminals reached? */
 static
 SCIP_Bool computeSteinerTree_allPseudoTermsAreReached(
@@ -69,6 +70,29 @@ SCIP_Bool computeSteinerTree_allPseudoTermsAreReached(
 
    return TRUE;
 }
+
+
+/** all fixed terminals reached? */
+static
+SCIP_Bool computeSteinerTree_allFixedTermsAreReached(
+   const GRAPH*          g,                  /**< graph data structure */
+   const STP_Bool*       connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(graph_pc_isPcMw(g));
+
+   for( int k = 0; k < nnodes; ++k )
+   {
+      if( graph_pc_knotIsFixedTerm(g, k) && !connected[k] )
+      {
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
 #endif
 
 
@@ -81,7 +105,6 @@ void computeSteinerTree_init(
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   const CSR* csr = spaths->csr;
    DHEAP* dheap = spaths->dheap;
    SCIP_Real* RESTRICT nodes_dist = spaths->nodes_dist;
    int* RESTRICT nodes_pred = spaths->nodes_pred;
@@ -89,8 +112,8 @@ void computeSteinerTree_init(
 
    assert(startnode >= 0 && startnode < g->knots);
    assert(nnodes >= 1);
-   assert(csr->nnodes == nnodes);
-   assert(csr->start[nnodes] <= g->edges);
+   assert(spaths->csr->nnodes == nnodes);
+   assert(spaths->csr->start[nnodes] <= g->edges);
 
    graph_heap_clean(TRUE, dheap);
 
@@ -116,7 +139,7 @@ void computeSteinerTree_init(
 }
 
 
-/** connects node to current tree */
+/** connects (also PC/MW potential) terminal to current tree */
 static inline
 void computeSteinerTree_connectTerminal(
    const GRAPH*          g,                  /**< graph data structure */
@@ -139,8 +162,7 @@ void computeSteinerTree_connectTerminal(
    for( int node = nodes_pred[k]; !connected[node]; node = nodes_pred[node] )
    {
       assert(node >= 0 && node < g->knots);
-      assert(!connected[node]);
-      assert(!Is_term(g->term[node]));
+      assert(!Is_term(g->term[node]) && !Is_pseudoTerm(g->term[node]));
 
       SCIPdebugMessage("connect path node %d \n", node);
 
@@ -427,6 +449,86 @@ void computeSteinerTree_execPcMw(
 }
 
 
+/** executes */
+static inline
+void computeSteinerTree_execPcMwFull(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   const CSR* const csr = spaths->csr;
+   DHEAP* const dheap = spaths->dheap;
+   SCIP_Real* RESTRICT nodes_dist = spaths->nodes_dist;
+   int* RESTRICT nodes_pred = spaths->nodes_pred;
+   STP_Bool* RESTRICT connected = spaths->nodes_isConnected;
+   int* const state = dheap->position;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   int termscount = 0;
+   const int nterms = graph_pc_isRootedPcMw(g) ? g->terms : g->terms - 1;
+
+   assert(g->extended && graph_pc_isPcMw(g));
+   assert(dheap->size == 1);
+   assert(connected[startnode]);
+
+   if( Is_term(g->term[startnode]) || Is_pseudoTerm(g->term[startnode]) )
+        termscount++;
+
+   /* main loop */
+   while( dheap->size > 0 )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = start_csr[k];
+      const int k_end = start_csr[k + 1];
+      register SCIP_Real k_dist;
+
+      SCIPdebugMessage("take node %d from queue \n", k);
+
+      assert(state[k] == CONNECT);
+      state[k] = UNKNOWN;
+
+      /* connect k to current subtree? */
+      if( !connected[k] && (Is_term(g->term[k]) || Is_pseudoTerm(g->term[k])) )
+      {
+         computeSteinerTree_connectTerminal(g, k, nodes_pred, nodes_dist, dheap, connected);
+
+         assert(termscount < nterms);
+
+         /* have all terminals been reached? */
+         if( ++termscount == nterms )
+         {
+            break;
+         }
+      }
+
+      k_dist = nodes_dist[k];
+
+      for( int e = k_start; e != k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( !connected[m] )
+         {
+            const SCIP_Real distnew = k_dist + cost_csr[e];
+
+            /* closer to k than to current predecessor? */
+            if( distnew < nodes_dist[m] )
+            {
+               nodes_pred[m] = k;
+               nodes_dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   assert(!graph_pc_isRootedPcMw(g) || computeSteinerTree_allFixedTermsAreReached(g, connected));
+}
+
+
 /*
  * Interface methods
  */
@@ -533,3 +635,24 @@ void shortestpath_computeSteinerTreePcMw(
    computeSteinerTree_execPcMw(g, startnode, prize, costIsBiased, spaths_pc, spaths);
 }
 
+
+/** shortest path based heuristic for computing a Steiner tree in PC/MW case
+ *  that contains all (potential and fixed) terminals */
+void shortestpath_computeSteinerTreePcMwFull(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   assert(g && spaths);
+   assert(spaths->csr && spaths->nodes_dist && spaths->nodes_pred && spaths->dheap && spaths->nodes_isConnected);
+   assert(graph_pc_isPcMw(g) && g->extended);
+   assert(!graph_pc_knotIsDummyTerm(g, startnode));
+
+   computeSteinerTree_init(g, startnode, spaths);
+
+   if( g->knots == 1 )
+      return;
+
+   computeSteinerTree_execPcMwFull(g, startnode, spaths);
+}

@@ -64,6 +64,7 @@
 #define TM_DIJKSTRA 3
 
 #define TM_USE_CSR
+#define TM_USE_CSR_PCMW
 
 #ifdef WITH_UG
 int getUgRank(void);
@@ -674,7 +675,6 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
 {
    assert(graph_pc_isPcMw(g));
 
-
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
    {
       graph_path_st_rpcmw(g, orderedprizes, orderedprizes_id, tmbase->cost, prize,
@@ -682,16 +682,16 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    }
    else
    {
-#if 0
-      graph_path_st_pcmw(g, orderedprizes, orderedprizes_id, tmbase->cost, prize, costsAreBiased,
-            tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
-#else
+#ifdef TM_USE_CSR_PCMW
       SPATHSPC spaths_pc = { .orderedprizes = orderedprizes, .orderedprizes_id = orderedprizes_id,
                              .maxoutprize = -FARAWAY, .maxoutprize_idx = -1};
       SPATHS spaths = { .csr = tmbase->csr, .nodes_dist = tmbase->nodes_dist, .nodes_pred = tmbase->nodes_pred,
                         .dheap = tmbase->dheap, .nodes_isConnected = connected };
 
       shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, &spaths_pc, &spaths);
+#else
+      graph_path_st_pcmw(g, orderedprizes, orderedprizes_id, tmbase->cost, prize, costsAreBiased,
+            tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
 #endif
    }
 
@@ -708,18 +708,22 @@ static
 SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs (possibly biased!) */
    const SCIP_Real*      cost_org,           /**< (un-biased) edge costs, only needed for PC/RPC */
-   SCIP_Real*            dijkdist,           /**< distance array */
-   int*                  result,             /**< solution array (on edges) */
-   int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex */
+   TMBASE*               tmbase,             /**< data */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
-   graph_path_st_pcmw_full(g, cost, dijkdist, dijkedge, start, connected);
+#ifdef TM_USE_CSR_PCMW
+   SPATHS spaths = { .csr = tmbase->csr, .nodes_dist = tmbase->nodes_dist, .nodes_pred = tmbase->nodes_pred,
+                     .dheap = tmbase->dheap, .nodes_isConnected = connected };
 
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, result, connected) );
+   shortestpath_computeSteinerTreePcMwFull(g, start, &spaths);
+#else
+   graph_path_st_pcmw_full(g, tmbase->cost, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+#endif
+
+   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, tmbase->result, connected) );
 
    return SCIP_OKAY;
 }
@@ -2026,10 +2030,6 @@ SCIP_RETCODE runTmPcMW(
    SCIP_Real* costbiased = NULL;
    SCIP_Real* prizebiased = NULL;
    SCIP_Real* orderedprizes = NULL;
-   SCIP_Real* dijkdist = tmbase->nodes_dist;
-   int* dijkedge = tmbase->nodes_pred;
-   int* RESTRICT result = tmbase->result;
-   int* RESTRICT best_result = tmbase->best_result;
    const SCIP_Real* const prize_in = (prize) ? prize : graph->prize;
    int* orderedprizes_id = NULL;
    int* terminalperm = NULL;
@@ -2106,11 +2106,13 @@ SCIP_RETCODE runTmPcMW(
       const int start = terminalperm[r];
       SCIPdebugMessage("TM run=%d start=%d\n", r, start);
 
-      if( graph->grad[start] == 0  )
+      if( graph->grad[start] == 0 )
       {
          /* only root remaining? */
          if( start == graph->source )
          {
+            int* RESTRICT best_result = tmbase->best_result;
+
             assert(graph_pc_isRootedPcMw(graph));
 
             for( int e = 0; e < nedges; e++ )
@@ -2128,8 +2130,7 @@ SCIP_RETCODE runTmPcMW(
 
       if( pcmwmode == pcmode_fulltree )
       {
-         SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph,
-               tmbase->cost, costorg, dijkdist, result, dijkedge, start, connected) );
+         SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, costorg, start, tmbase, connected) );
       }
       else if( pcmwmode == pcmode_biasfull )
       {
@@ -2150,14 +2151,14 @@ SCIP_RETCODE runTmPcMW(
       }
 
       /* compute objective value (w.r.t. original costs!) */
-      obj = graph_solGetObj(graph, result, 0.0, nedges);
+      obj = graph_solGetObj(graph, tmbase->result, 0.0, nedges);
 
       if( LT(obj, tmbase->best_obj) )
       {
          SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) heurdata->nexecs, obj);
 
          tmbase->best_obj = obj;
-         BMScopyMemoryArray(best_result, result, nedges);
+         BMScopyMemoryArray(tmbase->best_result, tmbase->result, nedges);
          (*success) = TRUE;
       }
 
@@ -2931,7 +2932,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    printf("final objective: %f \n", tmbase.best_obj);
 
    FILE *fp;
-              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_ref.txt", "a+");
+              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_csr.txt", "a+");
               fprintf(fp, "%s %f \n", SCIPgetProbName(scip), tmbase.best_obj);
               fclose(fp);
               exit(1);
