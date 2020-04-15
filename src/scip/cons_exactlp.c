@@ -7152,11 +7152,6 @@ SCIP_RETCODE checkCons(
       }
    }
 
-   /* update absolute and relative violation of the solution */
-   /** @todo exip: check if we need this and if it should be exact */
-   if( sol != NULL )
-      SCIPupdateSolLPConsViolation(scip, sol, absviolfp, absviolfp);
-
    return SCIP_OKAY;
 }
 
