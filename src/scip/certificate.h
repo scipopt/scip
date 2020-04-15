@@ -217,7 +217,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    );
 
 /** Print a dual bound from an exact lp solution */
-SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
+SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */

@@ -215,6 +215,7 @@ SCIP_RETCODE certificateFreeNodeData(
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_left);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_right);
+   RatFreeBlock(certificate->blkmem, &nodedata->derbound_inherit);
    BMSfreeBlockMemory(certificate->blkmem, &nodedata);
    SCIP_CALL( SCIPhashmapRemove(certificate->nodedatahash, node) );
 
@@ -278,6 +279,23 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    RatFreeBufferArray(SCIPbuffer(scip), &vals, nvars);
 
    return SCIP_OKAY;
+}
+
+/** set the node to have its own bound proof */
+SCIP_RETCODE SCIPcertificateSetInheritanceData(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_NODE*            node,               /**< node data structure */
+   SCIP_Longint          fileindex,          /**< index of new bound */
+   SCIP_Rational*        newbound            /**< the inherited bound */
+   )
+{
+   SCIP_CERTNODEDATA* nodedata;
+
+   assert(SCIPhashmapExists(certificate->nodedatahash, node));
+   nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
+   nodedata->inheritedbound = FALSE;
+   nodedata->derindex_inherit = fileindex;
+   RatSet(nodedata->derbound_inherit, newbound);
 }
 
 /** creates certificate data structure */
@@ -1249,7 +1267,10 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    if( certificate->file == NULL )
       return SCIP_OKAY;
-   
+   /* only print line if bound improved */
+   if( !usefarkas && SCIPlpGetObjval(lpex->fplp, set, prob) < SCIPnodeGetLowerbound(node) )
+      return SCIP_OKAY;
+
    /* if at root node set, objintegral flag */
    if( SCIPnodeGetParent(node) == NULL )
       certificate->objintegral = SCIPprobIsObjIntegral(prob);
@@ -1385,8 +1406,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       RatSet(lowerbound, lpex->lpobjval);
 
    SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, len, ind, vals);
-
    SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
+   SCIPcertificateSetInheritanceData(certificate, node, certificate->indexcounter - 1, lowerbound);
 
    RatFreeBuffer(set->buffer, &lowerbound);
    SCIPsetFreeBufferArray(set, &ind);
@@ -1397,7 +1418,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 }
 
 /** Print a dual bound from the pseudo solution */
-SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
+SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
@@ -1422,6 +1443,9 @@ SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
 
    /* only print if not -infinity and certificate is active */
    if( !SCIPcertificateIsActive(certificate) || SCIPsetIsInfinity(set, -psval) )
+      return SCIP_OKAY;
+
+   if( psval < SCIPnodeGetLowerbound(node) )
       return SCIP_OKAY;
 
    vars = SCIPprobGetVars(prob);
@@ -1471,10 +1495,11 @@ SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
    SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
       pseudoobjval) );
 
+   SCIPcertificateSetInheritanceData(certificate, node, certificate->indexcounter - 1, pseudoobjval);
+
    SCIPsetFreeBufferArray(set, &dualind);
    RatFreeBufferArray(set->buffer, &bounds, nnonzeros);
    RatFreeBuffer(set->buffer, &pseudoobjval);
-
 
    return SCIP_OKAY;
 }
@@ -1652,11 +1677,25 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    nodedata->assumptionindex_right = -1;
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_left, "-inf") );
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_right, "-inf") );
+   SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_inherit, "-inf") );
    nodedata->assumptionindex_self = -1;
    nodedata->leftinfeas = FALSE;
    nodedata->leftfilled = FALSE;
    nodedata->rightinfeas = FALSE;
    nodedata->rightfilled = FALSE;
+   nodedata->inheritedbound = TRUE;
+   nodedata->derindex_inherit = -1;
+   if( SCIPnodeGetParent(node) != NULL )
+   {
+      SCIP_NODE* parent = SCIPnodeGetParent(node);
+      SCIP_CERTNODEDATA* parentdata;
+      assert(SCIPhashmapExists(certificate->nodedatahash, parent));
+      parentdata = SCIPhashmapGetImage(certificate->nodedatahash, (void*) parent);
+      assert(parentdata != NULL);
+
+      nodedata->derindex_inherit = parentdata->derindex_inherit;
+      RatSet(nodedata->derbound_inherit, parentdata->derbound_inherit);
+   }
 
    /* link the node to its nodedata in the corresponding hashmap */
    SCIP_CALL( SCIPhashmapSetImage(certificate->nodedatahash, node, (void*)nodedata) );
@@ -1683,6 +1722,7 @@ int SCIPcertificatePrintUnsplitting(
       return SCIP_OKAY;
 
    /* get the current node data */
+   assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
    SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
    infeas = FALSE;
@@ -1725,24 +1765,31 @@ int SCIPcertificatePrintUnsplitting(
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left, 
          nodedata->derindex_right, nodedata->assumptionindex_right);
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
-      /* if( SCIPnodeGetParent(node) == NULL && certificate->derindex_root >= 0 )
-      {
-         SCIP_Rational* ratone;
-
-         SCIP_CALL( RatCreateBuffer(set->buffer, &ratone) );
-
-         if( certificate->rootinfeas )
-            infeas = TRUE;
-         else
-           RatSet(lowerbound, certificate->rootbound);
-
-         SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, &(certificate->derindex_root), &ratone );
-         RatFreeBuffer(set->buffer, &ratone);
-      } */
    }
    else
    {
       SCIPdebugMessage("Node %lld is a leaf! \n", SCIPnodeGetNumber(node));
+      /* if a leaf has an inher  d bound, we need to print a bound for it and update the parent data */
+      if( nodedata->inheritedbound )
+      {
+         SCIP_Longint ind[1];
+         ind[0] = nodedata->derindex_inherit;
+         SCIP_Rational* lowerbound;
+         SCIP_Rational* val;
+
+         RatCreateBuffer(set->buffer, &lowerbound);
+         RatCreateBuffer(set->buffer, &val);
+
+         RatSet(lowerbound, nodedata->derbound_inherit);
+         RatSetInt(val, 1, 1);
+
+         SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
+         SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
+
+         RatFreeBuffer(set->buffer, &lowerbound);
+         RatFreeBuffer(set->buffer, &val);
+      }
+
    }
 
    certificateFreeNodeData(certificate, node);

@@ -2041,7 +2041,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             SCIP_Rational* bound;
             bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
             RatSetReal(bound, newbound);
-            SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex,
+            SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex,
                node, set, transprob, newpseudoobjval) );
             RatSetReal(bound, oldbound);
          }
@@ -2441,7 +2441,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( SCIPcertificateIsActive(stat->certificate) && lpobjval > node->lowerbound )
+   if( SCIPcertificateIsActive(stat->certificate) && lpobjval > SCIPnodeGetLowerbound(node) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);

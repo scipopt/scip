@@ -3916,7 +3916,7 @@ SCIP_RETCODE propAndSolve(
 
       if( set->misc_exactsolve && focusnode->parent == NULL )
       {
-         SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex, focusnode, set,
             transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );
       }
 
