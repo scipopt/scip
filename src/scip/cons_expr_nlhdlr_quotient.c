@@ -410,8 +410,6 @@ SCIP_INTERVAL intEvalQuotient(
       return result;
    }
 
-   assert(!SCIPisZero(scip, c));
-
    /*
     * evaluate for [x.inf,x.inf] and [x.sup,x.sup] independently
     */
