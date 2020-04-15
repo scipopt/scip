@@ -1129,20 +1129,26 @@ SCIP_RETCODE readObjective(
    SCIP_CALL( readPolynomial(scip, exprconshdlr, pipinput, name, &expr, &degree, &newsection) );
    if( !hasError(pipinput) && expr != NULL )
    {
+      SCIP_Real constant = SCIPgetConsExprExprSumConstant(expr);
+
+      /* always create a variable that represents the constant; otherwise, this might lead to numerical issues on
+       * instances with a relatively large constant, e.g., popdynm* instances
+       */
+      if( constant != 0.0 )
+      {
+         SCIP_VAR* objconst;
+         SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, constant, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, objconst) );
+         SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
+
+         /* remove the constant of the sum expression */
+         SCIPsetConsExprExprSumConstant(expr, 0.0);
+      }
+
       assert(degree >= 0);
       if( degree == 1 )
       {
-         SCIP_Real constant = SCIPgetConsExprExprSumConstant(expr);
          int i;
-
-         /* create a variable that represents the constant */
-         if( constant != 0.0 )
-         {
-            SCIP_VAR* objconst;
-            SCIP_CALL( SCIPcreateVarBasic(scip, &objconst, "objconst", 1.0, 1.0, constant, SCIP_VARTYPE_CONTINUOUS) );
-            SCIP_CALL( SCIPaddVar(scip, objconst) );
-            SCIP_CALL( SCIPreleaseVar(scip, &objconst) );
-         }
 
          /* set objective coefficients of variables */
          for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
