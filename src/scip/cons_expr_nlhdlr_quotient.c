@@ -927,8 +927,8 @@ SCIP_RETCODE estimateBivariateQuotient(
 
    /* compute an estimator */
    SCIP_CALL( estimateBivariate(scip,
-      MIN(a*lbx + b, a * ubx + b), MAX(a*lbx + b, a * ubx + b), /* bounds of x' */
-      MIN(c*lby + d, c * uby + d), MAX(c*lby + d, c * uby + d), /* bounds of y' */
+      MIN(a * lbx, a * ubx) + b, MAX(a * lbx, a * ubx) + b, /* bounds of x' */
+      MIN(c * lby, c * uby) + d, MAX(c * lby, c * uby) + d, /* bounds of y' */
       lbz, ubz, a * solx + b, c * soly + d, solz, overestimate, &coefs[0], &coefs[1], &constant, success) );
 
    /* add estimator to rowprep, if successful */
