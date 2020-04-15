@@ -1790,6 +1790,101 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    return SCIP_OKAY;
 }
 
+static
+void chooseRefpoints(
+   SCIP_CONSEXPR_EXPRDATA* exprdata,
+   SCIP_Real             lb,
+   SCIP_Real             ub,
+   SCIP_Real             exponent,
+   SCIP_Bool             underestimate,
+   SCIP_Bool             overestimate,
+   SCIP_Real*            refpoints,
+   int*                  nrefpoints
+)
+{
+   *nrefpoints = 0;
+
+   /* TODO all cases with secant */
+
+   /* TODO all cases with 3pt tangent */
+
+   /* TODO signpower */
+
+   /* TODO hyperbola */
+
+}
+
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real exponent;
+   SCIP_Bool iseven;
+   SCIP_Bool isinteger;
+   SCIP_Real* refpoints;
+   int nrefpoints;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(infeasible != NULL);
+
+   /* get aux variables: we over- and/or underestimate childvar^exponent  */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) )
+   {
+      SCIPdebugMsg(scip, "skip initsepa as child <%s> seems essentially fixed [%.15g,%.15g]\n", SCIPvarGetName(childvar), childlb, childub);
+      return SCIP_OKAY;
+   }
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   exponent = exprdata->exponent;
+   assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
+
+   isinteger = EPSISINT(exponent, 0.0);
+   iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
+
+   /* if exponent is not integral, then child must be non-negative */
+   if( !isinteger && childlb < 0.0 )
+   {
+      /* somewhere we should have tightened the bound on x, but small tightening are not always applied by SCIP
+       * it is ok to do this tightening here, but let's assert that we were close to 0.0 already
+       */
+      assert(SCIPisFeasZero(scip, childlb));
+      childlb = 0.0;
+   }
+   assert(isinteger || childlb >= 0.0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &refpoints, 6) );
+
+   chooseRefpoints(exprdata, childlb, childub, exponent, underestimate, overestimate, refpoints, &nrefpoints);
+
+   for( i = 0; i < nrefpoints; ++i )
+   {
+      assert(SCIPisLE(scip, refpoints[i], childub) && SCIPisGE(scip, refpoints[i], childlb));
+
+      /* TODO built a cut at refpoints[i] */
+
+   }
+
+   SCIPfreeBufferArray(scip, &refpoints);
+
+   return SCIP_OKAY;
+}
+
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
