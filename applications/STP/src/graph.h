@@ -364,6 +364,7 @@ extern void           graph_free_csr(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_csr_alloc(SCIP*, int, int, CSR**);
 extern void           graph_csr_copy(const CSR*, CSR*);
 extern void           graph_csr_build(const GRAPH*, const SCIP_Real*, CSR*);
+extern void           graph_csr_chgCosts(const GRAPH*, const SCIP_Real*, CSR*);
 extern void           graph_csr_print(const CSR*);
 extern void           graph_csr_free(SCIP*, CSR**);
 extern SCIP_Bool      graph_csr_isValid(const CSR*, SCIP_Bool verbose);
@@ -547,8 +548,8 @@ extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Re
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
-extern void   graph_path_st_rpcmw(GRAPH*, const SCIP_Real*, const int*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
-extern void   graph_path_st_pcmw(GRAPH*, const SCIP_Real*, const int*, const SCIP_Real*, const SCIP_Real*, SCIP_Bool, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_rpcmw(GRAPH*, SCIP_Real*, int*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_pcmw(GRAPH*, SCIP_Real*, int*, const SCIP_Real*, const SCIP_Real*, SCIP_Bool, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_full(GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Bool, PATH*, STP_Bool*, SCIP_Bool*);

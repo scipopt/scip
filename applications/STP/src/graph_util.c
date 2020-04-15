@@ -941,11 +941,63 @@ SCIP_RETCODE graph_csr_alloc(
 }
 
 
+/** Changes edge costs.
+ *  NOTE: for PC/MW no dummy nodes are considered! */
+void graph_csr_chgCosts(
+   const GRAPH*          g,                  /**< the graph */
+   const SCIP_Real*      edgecosts,          /**< edge costs (w.r.t graph 'g') */
+   CSR*                  csr                 /**< CSR */
+   )
+{
+   int* RESTRICT start_csr;
+   SCIP_Real* cost_csr;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const gOeat = g->oeat;
+   const int* const gHead = g->head;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+
+   assert(csr && edgecosts);
+   assert(nnodes >= 1);
+   assert(csr->nnodes == nnodes);
+   assert(csr->nedges_max >= graph_get_nEdges(g));
+
+   start_csr = csr->start;
+   cost_csr = csr->cost;
+
+   assert(0 == start_csr[0]);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int pos = start_csr[k];
+
+      if( !pcmw || !graph_pc_knotIsDummyTerm(g, k) )
+      {
+         for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
+         {
+            if( pcmw && graph_pc_knotIsDummyTerm(g, gHead[e])  )
+               continue;
+
+            assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
+            assert(gHead[e] == csr->head[pos] );
+
+            cost_csr[pos++] = edgecosts[e];
+         }
+      }
+
+      assert((pos == start_csr[k] + g->grad[k]) || pcmw);
+      assert(start_csr[k + 1] == pos);
+   }
+
+   assert(start_csr[nnodes] <= g->edges);
+   assert(graph_csr_isValid(csr, TRUE));
+}
+
+
 /** Builds CSR storage from graph and cost array.
- *  NOTE: for PC/MW only the marked graph is considered! */
+ *  NOTE: for PC/MW no dummy nodes are considered! */
 void graph_csr_build(
    const GRAPH*          g,                  /**< the graph */
-   const SCIP_Real*      edgecosts,          /**< edge costs */
+   const SCIP_Real*      edgecosts,          /**< edge costs (w.r.t graph 'g') */
    CSR*                  csr                 /**< CSR */
    )
 {
@@ -953,11 +1005,9 @@ void graph_csr_build(
    int* RESTRICT head_csr;
    SCIP_Real* cost_csr;
    const int nnodes = graph_get_nNodes(g);
-   const int* const gMark = g->mark;
    const int* const gOeat = g->oeat;
    const int* const gHead = g->head;
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
-   assert(!pcmw || graph_isMarked(g));
 
    assert(csr && edgecosts);
    assert(nnodes >= 1);
@@ -976,13 +1026,13 @@ void graph_csr_build(
    {
       int pos = start_csr[k];
 
-      if( !pcmw || gMark[k] )
+      if( !pcmw || !graph_pc_knotIsDummyTerm(g, k) )
       {
          for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
          {
             const int ehead = gHead[e];
 
-            if( pcmw && !gMark[ehead] )
+            if( pcmw && graph_pc_knotIsDummyTerm(g, ehead)  )
                continue;
 
             assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);

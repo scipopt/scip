@@ -28,8 +28,35 @@
 
 #include "graph.h"
 
+/** information needed for prize-collecting problems */
+typedef
+struct stortest_path_prizecollecting
+{
+   SCIP_Real*            orderedprizes;      /**< ordered prizes for (pseudo) terminals */
+   int*                  orderedprizes_id;   /**< ordered prizes IDs */
+   SCIP_Real             maxoutprize;        /**< maximum prize of not yet connected vertex */
+   int                   maxoutprize_idx;    /**< index */
+} SPATHSPC;
 
-void shortestpath_computeSteinerTree(const GRAPH*, const CSR*, int, SCIP_Real* RESTRICT, int* RESTRICT, DHEAP*, STP_Bool* RESTRICT);
+
+/** information for shortest paths */
+typedef
+struct stortest_paths
+{
+   const CSR*            csr;                /**< CSR */
+   DHEAP*                dheap;              /**< Dijkstra heap */
+   SCIP_Real* RESTRICT   nodes_dist;         /**< distance array (on vertices) */
+   int* RESTRICT         nodes_pred;         /**< predecessor node array (on vertices)
+                                                  NOTE: might contain uninitialized values in opt mode! */
+   STP_Bool* RESTRICT    nodes_isConnected;  /**< array to mark whether a vertex is part of computed Steiner tree */
+} SPATHS;
+
+/* todo should be made static, currently kept global for legacy reasons */
+void shortestpath_pcStart(SPATHSPC*);
+void shortestpath_pcConnectNode(const GRAPH*, const STP_Bool*, int, SPATHSPC*);
+
+void shortestpath_computeSteinerTree(const GRAPH*, int, SPATHS*);
+void shortestpath_computeSteinerTreePcMw(const GRAPH*, int, const SCIP_Real*, SCIP_Bool, SPATHSPC*, SPATHS*);
 
 
 #endif /* APPLICATIONS_STP_SRC_SHORTESTPATH_H_ */

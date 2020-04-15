@@ -29,6 +29,7 @@
 #include <assert.h>
 #include "portab.h"
 #include "graph.h"
+#include "shortestpath.h"
 
 
 
@@ -591,48 +592,6 @@ inline static void correctXwalk(
    }
 }
 
-static
-void updatmaxprize(
-   const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   const int*            orderedprizes_id,   /**< ordered prizes ids */
-   const STP_Bool*       connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
-   int                   node,               /**< current node */
-   int*                  maxprizeidx_p,      /**< pointer to */
-   SCIP_Real*            maxprizeval_p       /**< pointer to */
-)
-{
-   int maxprizeidx = *maxprizeidx_p;
-   assert(maxprizeidx >= 0 && maxprizeidx <= g->terms);
-
-   /* sentinel? */
-   if( orderedprizes_id[maxprizeidx] < 0 )
-   {
-      assert(orderedprizes_id[maxprizeidx] == -1);
-      assert(*maxprizeval_p == 0.0);
-      return;
-   }
-
-   assert(maxprizeidx < g->terms);
-
-   /* is current node at the maximum? */
-   if( node == orderedprizes_id[maxprizeidx] )
-   {
-      while( orderedprizes_id[maxprizeidx] >= 0 && connected[orderedprizes_id[maxprizeidx]] )
-      {
-         maxprizeidx++;
-         assert(maxprizeidx <= g->terms);
-      }
-
-      *maxprizeidx_p = maxprizeidx;
-
-      if( orderedprizes_id[maxprizeidx] < 0 )
-         *maxprizeval_p = 0.0;
-      else
-         *maxprizeval_p = orderedprizes[maxprizeidx];
-   }
-}
-
 
 inline static void resetX(
    SCIP_Real* pathdist,
@@ -801,13 +760,10 @@ static inline
 void stPcmwConnectNode(
    int                   k,                  /**< the vertex */
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   const int*            orderedprizes_id,   /**< ordered prizes ids */
+   SPATHSPC*             spaths_pc,          /**< shortest paths data */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
-   int*                  maxprizeidx,        /**< index */
-   SCIP_Real*            maxprizeval,        /**< value */
    int*                  count,              /**< for the heap */
    int*                  nterms              /**< terminal count */
 )
@@ -816,7 +772,7 @@ void stPcmwConnectNode(
 
    connected[k] = TRUE;
    pathdist[k] = 0.0;
-   updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, maxprizeidx, maxprizeval);
+   shortestpath_pcConnectNode(g, connected, k, spaths_pc);
    (*nterms)++;
 
    assert(pathedge[k] != -1);
@@ -829,7 +785,7 @@ void stPcmwConnectNode(
 
       if( Is_pseudoTerm(g->term[node]) )
       {
-         updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, maxprizeidx, maxprizeval);
+         shortestpath_pcConnectNode(g, connected, node, spaths_pc);
          (*nterms)++;
       }
 
@@ -2663,14 +2619,15 @@ void graph_path_st(
 
 
 
-/** Find a tree rooted in node 'start' and connecting
+/** !!!LEGACY CODE!!!
+ *  Find a tree rooted in node 'start' and connecting
  *  positive vertices as long as this is profitable.
  *  Note that this function overwrites g->mark.
  *  */
 void graph_path_st_pcmw(
    GRAPH*                g,                  /**< graph data structure */
-   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   const int*            orderedprizes_id,   /**< ordered prizes ids */
+   SCIP_Real*            orderedprizes,      /**< legacy code */
+   int*                  orderedprizes_id,   /**< legacy code */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
    SCIP_Bool             costIsBiased,       /**< is cost biased? */
@@ -2684,8 +2641,10 @@ void graph_path_st_pcmw(
    int* const RESTRICT heap = g->path_heap;
    int* const RESTRICT state = g->path_state;
    int ntermspos = -1;
+   SPATHSPC spaths_pc = { .orderedprizes = orderedprizes, .orderedprizes_id = orderedprizes_id,
+                          .maxoutprize = -FARAWAY, .maxoutprize_idx = -1};
 
-   assert(g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
+   assert(g && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
    assert(start  <  g->knots);
    assert(g->extended);
@@ -2703,15 +2662,15 @@ void graph_path_st_pcmw(
    if( nnodes > 1 )
    {
       int count = 1;
-      int maxprizeidx = 0;
-      SCIP_Real maxprizeval = orderedprizes[0];
       int nterms = 0;
       const SCIP_Bool isPc = graph_pc_isPc(g);
+
+      shortestpath_pcStart(&spaths_pc);
 
       if( Is_pseudoTerm(g->term[start]) )
       {
          nterms++;
-         updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
+         shortestpath_pcConnectNode(g, connected, start, &spaths_pc);
       }
 
       /* add start vertex to heap */
@@ -2755,8 +2714,7 @@ void graph_path_st_pcmw(
 
             if( connectK )
             {
-               stPcmwConnectNode(k, g, orderedprizes, orderedprizes_id, pathdist, pathedge, connected,
-                     &maxprizeidx, &maxprizeval, &count, &nterms);
+               stPcmwConnectNode(k, g, &spaths_pc, pathdist, pathedge, connected, &count, &nterms);
 
                assert(nterms <= ntermspos);
 
@@ -2769,7 +2727,7 @@ void graph_path_st_pcmw(
             }
          }
 
-         if( !connectK && pathdist[k] > maxprizeval )
+         if( !connectK && pathdist[k] > spaths_pc.maxoutprize )
          {
             break;
          }
@@ -3219,14 +3177,15 @@ void graph_path_st_pcmw_extendBiased(
 }
 
 
-/** Shortest path heuristic for the RMWCSP and RPCSPG
- * Find a directed tree rooted in node 'start' and connecting all terminals as well as all
+/** !!!LEGACY CODE!!!
+ *  Shortest path heuristic for the RMWCSP and RPCSPG
+ *  Find a directed tree rooted in node 'start' and connecting all terminals as well as all
  *  positive vertices (as long as this is profitable).
  *  */
 void graph_path_st_rpcmw(
    GRAPH*                g,                  /**< graph data structure */
-   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   const int*            orderedprizes_id,   /**< ordered prizes ids */
+   SCIP_Real*            orderedprizes,      /**< legacy code */
+   int*                  orderedprizes_id,   /**< legacy code */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
@@ -3239,8 +3198,10 @@ void graph_path_st_rpcmw(
    int nrterms = -1;
    int* const heap = g->path_heap;
    int* const state = g->path_state;
+   SPATHSPC spaths_pc = { .orderedprizes = orderedprizes, .orderedprizes_id = orderedprizes_id,
+                          .maxoutprize = -FARAWAY, .maxoutprize_idx = -1};
 
-   assert(g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
+   assert(g && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
    assert(start  <  g->knots);
    assert(g->extended);
@@ -3258,8 +3219,8 @@ void graph_path_st_rpcmw(
       const int nterms = g->terms;
       int termscount = 0;
       int rtermscount = 0;
-      int maxprizeidx = 0;
-      SCIP_Real maxprizeval = orderedprizes[0];
+
+      shortestpath_pcStart(&spaths_pc);
 
       /* add start vertex to heap */
       count = 1;
@@ -3268,7 +3229,7 @@ void graph_path_st_rpcmw(
 
       if( Is_anyTerm(g->term[start]) )
       {
-         updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
+         shortestpath_pcConnectNode(g, connected, start, &spaths_pc);
 
          termscount++;
       }
@@ -3307,7 +3268,7 @@ void graph_path_st_rpcmw(
             }
             else if( Is_pseudoTerm(g->term[k]) )
             {
-               updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
+               shortestpath_pcConnectNode(g, connected, k, &spaths_pc);
             }
 
             connected[k] = TRUE;
@@ -3328,7 +3289,7 @@ void graph_path_st_rpcmw(
                if( Is_pseudoTerm(g->term[node]) )
                {
                   termscount++;
-                  updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, &maxprizeidx, &maxprizeval);
+                  shortestpath_pcConnectNode(g, connected, node, &spaths_pc);
                }
             }
 
@@ -3341,7 +3302,7 @@ void graph_path_st_rpcmw(
                break;
             }
          }
-         else if( rtermscount >= nrterms && pathdist[k] > maxprizeval )
+         else if( rtermscount >= nrterms && pathdist[k] > spaths_pc.maxoutprize )
          {
             SCIPdebugMessage("all fixed terminals reached \n");
 
