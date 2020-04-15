@@ -916,10 +916,13 @@ SCIP_RETCODE readPolynomial(
          /* finish the current monomial */
          if( nfactors > 0 )
          {
-            SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialscoef, &monomialssize, nmonomials + 1) );
-            SCIP_CALL( SCIPcreateConsExprExpr4(scip, exprconshdlr, &monomials[nmonomials], nfactors, vars, exponents) );
-            monomialscoef[nmonomials] = coefsign * coef;
-            ++nmonomials;
+            if( coefsign * coef != 0.0 )
+            {
+               SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialscoef, &monomialssize, nmonomials + 1) );
+               SCIP_CALL( SCIPcreateConsExprExpr4(scip, exprconshdlr, &monomials[nmonomials], nfactors, vars, exponents) );
+               monomialscoef[nmonomials] = coefsign * coef;
+               ++nmonomials;
+            }
          }
          else if( havevalue )
          {
