@@ -1476,12 +1476,6 @@ SCIP_Real RatRoundReal(
       return (rational->val.sign() * SCIP_DEFAULT_INFINITY);
    if( rational->fpexact == SCIP_FPEXACT_TRUE || roundmode == SCIP_ROUND_NEAREST )
       return RatApproxReal(rational);
-   if( (roundmode == SCIP_ROUND_DOWNWARDS && RatIsPositive(rational)) || ((roundmode == SCIP_ROUND_UPWARDS) && RatIsNegative(rational)) )
-   {
-      realapprox = RatApproxReal(rational);
-      SCIPdebugMessage("%.*e , Roundmode %d, R is positive: %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode, RatIsPositive(rational) );
-      return realapprox;
-   }
 
 #ifdef FALSE
    {
