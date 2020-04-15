@@ -163,7 +163,7 @@ SCIP_Bool isExprUnivariateLinear(
   * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
   *
   * @todo At the moment quotients like xy / z are not detected, because they are turned into a product expression
-  * with three children, i,e., x * y * (1 / z).
+  * with three children, i.e., x * y * (1 / z).
   */
 static
 SCIP_RETCODE detectExpr(
@@ -510,7 +510,7 @@ SCIP_INTERVAL reversepropQuotient(
    return result;
 }
 
-/** prepares a rowprep from given data; the generated estimator is always locally valid
+/** adds data to given rowprep; the generated estimator is always locally valid
  *
  *  @note the constant is moved to the left- or right-hand side
  */
@@ -518,30 +518,23 @@ static
 SCIP_RETCODE createRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP *        rowprep,            /**< a rowprep where to store the estimator */
-   const char*           name,               /**< name of type of cut */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_Real*            coefs,              /**< coefficients */
    SCIP_Real             constant,           /**< constant */
    int                   nlinvars            /**< total number of variables */
    )
 {
-   int i;
-
    assert(scip != NULL);
    assert(rowprep != NULL);
    assert(coefs != NULL);
    assert(vars != NULL);
 
    /* create rowprep */
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, name);
    SCIPaddRowprepSide(rowprep, -constant);
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlinvars + 1) );
 
    /* add coefficients */
-   for( i = 0; i < nlinvars; ++i )
-   {
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[i], coefs[i]) );
-   }
+   SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nlinvars, vars, coefs) );
 
    return SCIP_OKAY;
 }
@@ -673,10 +666,8 @@ SCIP_RETCODE estimateUnivariateQuotient(
    /* create rowprep if estimation was successful */
    if( *success )
    {
-      char name[SCIP_MAXSTRLEN];
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
-      SCIP_CALL( createRowprep(scip, rowprep, name, &x, &coef, constant, 1) );
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
+      SCIP_CALL( createRowprep(scip, rowprep, &x, &coef, constant, 1) );
 
       /* clean up rowprep */
       SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
@@ -944,8 +935,6 @@ SCIP_RETCODE estimateBivariateQuotient(
    /* create rowprep if estimation was successful */
    if( *success )
    {
-      char name[SCIP_MAXSTRLEN];
-
       /* transform estimator Ax' + By'+ C = A(ax + b) + B (cy + d) + C = (Aa) x + (Bc) y + (C + Ab + Bd);
        * add the constant e separately
        */
@@ -953,9 +942,9 @@ SCIP_RETCODE estimateBivariateQuotient(
       coefs[0] *= a;
       coefs[1] *= c;
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
          SCIPgetNLPs(scip));
-      SCIP_CALL( createRowprep(scip, rowprep, name, vars, coefs, constant, 2) );
+      SCIP_CALL( createRowprep(scip, rowprep, vars, coefs, constant, 2) );
 
       /* clean up rowprep */
       SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), success) );
