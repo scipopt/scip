@@ -511,6 +511,7 @@ SCIP_INTERVAL reversepropQuotient(
 /** adds data to given rowprep; the generated estimator is always locally valid
  *
  *  @note the constant is moved to the left- or right-hand side
+ *  @note other than the name of this function may indicate, it does not create a rowprep
  */
 static
 SCIP_RETCODE createRowprep(
@@ -661,7 +662,7 @@ SCIP_RETCODE estimateUnivariateQuotient(
    /* compute an estimator */
    SCIP_CALL( estimateUnivariate(scip, lbx, ubx, solx, a, b, c, d, e, &coef, &constant, overestimate, success) );
 
-   /* create rowprep if estimation was successful */
+   /* add estimator to rowprep, if successful */
    if( *success )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
@@ -930,7 +931,7 @@ SCIP_RETCODE estimateBivariateQuotient(
       MIN(c*lby + d, c * uby + d), MAX(c*lby + d, c * uby + d), /* bounds of y' */
       lbz, ubz, a * solx + b, c * soly + d, solz, overestimate, &coefs[0], &coefs[1], &constant, success) );
 
-   /* create rowprep if estimation was successful */
+   /* add estimator to rowprep, if successful */
    if( *success )
    {
       /* transform estimator Ax' + By'+ C = A(ax + b) + B (cy + d) + C = (Aa) x + (Bc) y + (C + Ab + Bd);
