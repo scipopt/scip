@@ -289,32 +289,14 @@ SCIP_RETCODE detectExpr(
       /* detection is only be successful if the expression of the numerator an denominator are the same
        * (so boundtightening can be stronger than default) or we are in SOLVING stage
        */
-      if( xexpr == yexpr )
-      {
-         *success = TRUE;
-      }
-      else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-      {
-         xexpr = numexpr;
-         a = 1.0;
-         b = 0.0;
+      *success = (xexpr == yexpr) || SCIPgetStage(scip) == SCIP_STAGE_SOLVING;
 
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, numexpr, NULL) );
-#endif
-
-         yexpr = denomexpr;
-         c = 1.0;
-         d = 0.0;
-
-#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, xexpr, NULL) );
          SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, denomexpr, NULL) );
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, yexpr, NULL) );
 #endif
-
-         *success = TRUE;
-      }
    }
 
    /* create nonlinear handler expression data */
