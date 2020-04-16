@@ -576,7 +576,7 @@ SCIP_RETCODE estimateUnivariate(
    singularity = -d / c;
 
    /* estimate is globally valid if local and global bounds are equal */
-   *local = gllbx != lbx || glubx != ubx;
+   *local = gllbx != lbx || glubx != ubx; /*lint !e777*/
 
    /* if 0 is in the denom interval, estimation is not possible */
    if( SCIPisLE(scip, lbx, singularity) && SCIPisGE(scip, ubx, singularity) )
@@ -1053,6 +1053,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    assert(nlhdlrexprdata != NULL);
    assert(rowprep != NULL);
 
+   *addedbranchscores = FALSE;
    *success = FALSE;
 
    /* get auxiliary variables */
