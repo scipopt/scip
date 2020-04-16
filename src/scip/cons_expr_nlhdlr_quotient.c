@@ -976,6 +976,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
    /* call detection routine */
    SCIP_CALL( detectExpr(scip, conshdlr, expr, nlhdlrexprdata, success) );
 
+   /* update enforcement flags for the univariate case */
+   if( *success && (*nlhdlrexprdata)->numexpr == (*nlhdlrexprdata)->denomexpr )
+   {
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP
+         | SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+   }
+
    return SCIP_OKAY;
 }
 
