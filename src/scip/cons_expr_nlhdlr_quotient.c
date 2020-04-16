@@ -643,6 +643,13 @@ SCIP_RETCODE estimateUnivariateQuotient(
    lbx = SCIPvarGetLbLocal(x);
    ubx = SCIPvarGetUbLocal(x);
 
+   /* check whether variable has been fixed */
+   if( SCIPisEQ(scip, lbx, ubx) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* get global variable bounds */
    gllbx = SCIPvarGetLbGlobal(x);
    glubx = SCIPvarGetUbGlobal(x);
@@ -924,6 +931,13 @@ SCIP_RETCODE estimateBivariateQuotient(
    uby = SCIPvarGetUbLocal(y);
    lbz = SCIPvarGetLbLocal(auxvar);
    ubz = SCIPvarGetUbLocal(auxvar);
+
+   /* check whether one of the variables has been fixed */
+   if( SCIPisEQ(scip, lbx, ubx) || SCIPisEQ(scip, lby, uby) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* get and adjust solution values */
    solx = SCIPgetSolVal(scip, sol, x);
