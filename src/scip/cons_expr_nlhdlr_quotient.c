@@ -133,10 +133,6 @@ void transformExpr(
    assert(coef != NULL);
    assert(constant != NULL);
 
-   *target = NULL;
-   *coef = 0.0;
-   *constant = 0.0;
-
    /* expression is a sum with one child */
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) == 1 )
    {
@@ -290,8 +286,8 @@ SCIP_RETCODE detectExpr(
       SCIPdebugMsg(scip, "detected numerator (%g * %p + %g) and denominator (%g * %p + %g)\n", a, (void*)xexpr, b,
          c, (void*)yexpr, d);
 
-      /* detection can only be successful if the expression of the numerator an denominator are the same or when it is
-       * possible to create auxiliary variables, i.e., during SOLVING stage
+      /* detection is only be successful if the expression of the numerator an denominator are the same
+       * (so boundtightening can be stronger than default) or we are in SOLVING stage
        */
       if( xexpr == yexpr )
       {
