@@ -2043,6 +2043,8 @@ SCIP_Bool graph_edge_isBlocked(
    int                   e                   /**< the edge */
    )
 {
+   int todo; // EQ!
+
    assert(scip && g);
    assert(e >= 0 && e < g->edges);
 

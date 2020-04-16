@@ -2107,7 +2107,7 @@ void graph_pc_getBiased(
             if( !rpcmw && tail == root )
                continue;
 
-            if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
+            if( GE(graph->cost[e], FARAWAY) )
             {
                assert(Is_term(graph->term[tail]));
 

@@ -2665,7 +2665,7 @@ void graph_path_st_pcmw(
       int nterms = 0;
       const SCIP_Bool isPc = graph_pc_isPc(g);
 
-      shortestpath_pcStart(&spaths_pc);
+      shortestpath_pcReset(&spaths_pc);
 
       if( Is_pseudoTerm(g->term[start]) )
       {
@@ -3220,7 +3220,7 @@ void graph_path_st_rpcmw(
       int termscount = 0;
       int rtermscount = 0;
 
-      shortestpath_pcStart(&spaths_pc);
+      shortestpath_pcReset(&spaths_pc);
 
       /* add start vertex to heap */
       count = 1;

@@ -663,37 +663,46 @@ static
 SCIP_RETCODE computeSteinerTreeDijkPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
-   SCIP_Real*            orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   int*                  orderedprizes_id,   /**< ordered prizes ids */
    const SCIP_Real*      cost_org,           /**< (un-biased) edge costs, only needed for PC/RPC */
    const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
    SCIP_Bool             costsAreBiased,     /**< biased? */
    int                   start,              /**< start vertex */
+   SPATHSPC*             sppc,               /**< PC/MW shortest path data */
    TMBASE*               tmbase,             /**< data */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
+#ifdef TM_USE_CSR_PCMW
+   SPATHS spaths = { .csr = tmbase->csr, .nodes_dist = tmbase->nodes_dist, .nodes_pred = tmbase->nodes_pred,
+                     .dheap = tmbase->dheap, .nodes_isConnected = connected };
+
    assert(graph_pc_isPcMw(g));
 
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
    {
-      graph_path_st_rpcmw(g, orderedprizes, orderedprizes_id, tmbase->cost, prize,
-            tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+      shortestpath_computeSteinerTreeRpcMw(g, start, prize, sppc, &spaths);
    }
    else
    {
-#ifdef TM_USE_CSR_PCMW
-      SPATHSPC spaths_pc = { .orderedprizes = orderedprizes, .orderedprizes_id = orderedprizes_id,
-                             .maxoutprize = -FARAWAY, .maxoutprize_idx = -1};
-      SPATHS spaths = { .csr = tmbase->csr, .nodes_dist = tmbase->nodes_dist, .nodes_pred = tmbase->nodes_pred,
-                        .dheap = tmbase->dheap, .nodes_isConnected = connected };
+      graph_path_st_pcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
+            tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
 
-      shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, &spaths_pc, &spaths);
-#else
-      graph_path_st_pcmw(g, orderedprizes, orderedprizes_id, tmbase->cost, prize, costsAreBiased,
-            tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
-#endif
+      shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, sppc, &spaths);
    }
+#else
+   assert(graph_pc_isPcMw(g));
+
+   if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
+   {
+      graph_path_st_rpcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
+            tmbase->cost, prize, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+   }
+   else
+   {
+      graph_path_st_pcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
+            tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+   }
+#endif
 
    SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, tmbase->result, connected));
 
@@ -1614,64 +1623,6 @@ void initCostsAndPrioLP(
 
 /** submethod for runPCMW */
 static
-void initOrderedPrizesPcMw(
-   const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      costs,              /**< cost for edges (might be negative for MWCS or RMWCS) */
-   const SCIP_Real*      prizes,             /**< prizes for all nodes */
-   SCIP_Real*            orderedprizes,      /**< ordered prizes for (pseudo) terminals */
-   int*                  orderedprizes_id    /**< ordered prizes ids */
-   )
-{
-   const int nnodes = graph->knots;
-   const int nterms = graph->terms;
-   const SCIP_Bool usecosts = (costs && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP));
-   int termcount;
-
-   assert(prizes && graph && orderedprizes && orderedprizes_id);
-   assert(graph->extended);
-   assert(nterms >= 1);
-
-   termcount = 0;
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( Is_pseudoTerm(graph->term[k]) )
-      {
-         orderedprizes[termcount] = prizes[k];
-
-         /* consider incoming negative arcs */
-         if( usecosts )
-         {
-            SCIP_Real mincost = 0.0;
-            for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-               if( costs[e] < mincost )
-                  mincost = costs[e];
-
-            if( mincost < 0.0 )
-               orderedprizes[termcount] -= mincost;
-         }
-
-         orderedprizes_id[termcount++] = k;
-      }
-   }
-
-   for( int k = termcount; k < nterms; k++ )
-   {
-      orderedprizes[k] = 0.0;
-      orderedprizes_id[k] = -1;
-   }
-
-   SCIPsortDownRealInt(orderedprizes, orderedprizes_id, nterms);
-
-   /* set sentinel */
-   orderedprizes[nterms] = 0.0;
-   orderedprizes_id[nterms] = -1;
-
-   assert(orderedprizes[0] >= orderedprizes[nterms - 1]);
-}
-
-
-/** submethod for runPCMW */
-static
 void initTerminalPrioPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
@@ -2013,7 +1964,7 @@ SCIP_RETCODE runTm(
 
 /** submethod for SCIPStpHeurTMRun in PC or MW mode */
 static
-SCIP_RETCODE runTmPcMW(
+SCIP_RETCODE runTmPcMW_mode(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
@@ -2024,14 +1975,13 @@ SCIP_RETCODE runTmPcMW(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {
+   SPATHSPC* sppc;
    SCIP_HEURDATA* heurdata = getTMheurData(scip);
    SCIP_Real* terminalprio = NULL;
    SCIP_Real* costorg = NULL;
    SCIP_Real* costbiased = NULL;
    SCIP_Real* prizebiased = NULL;
-   SCIP_Real* orderedprizes = NULL;
    const SCIP_Real* const prize_in = (prize) ? prize : graph->prize;
-   int* orderedprizes_id = NULL;
    int* terminalperm = NULL;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
@@ -2044,8 +1994,6 @@ SCIP_RETCODE runTmPcMW(
    assert(pcmwmode != pcmode_all);
    assert(graph_valid(scip, graph));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &terminalperm, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &terminalprio, nterms) );
@@ -2061,11 +2009,11 @@ SCIP_RETCODE runTmPcMW(
    if( pcmwmode == pcmode_biasfull )
    {
       graph_pc_getBiased(scip, graph, costbiased, prizebiased);
-      initOrderedPrizesPcMw(graph, costbiased, prizebiased, orderedprizes, orderedprizes_id);
+      SCIP_CALL( shortestpath_pcInit(scip, graph, costbiased, prizebiased, &sppc) );
    }
    else
    {
-      initOrderedPrizesPcMw(graph, NULL, prize_in, orderedprizes, orderedprizes_id);
+      SCIP_CALL( shortestpath_pcInit(scip, graph, NULL, prize_in, &sppc) );
    }
 
    initTerminalPrioPcMw(scip, heurdata, nodepriority, graph, terminalperm, terminalprio);
@@ -2112,7 +2060,6 @@ SCIP_RETCODE runTmPcMW(
          if( start == graph->source )
          {
             int* RESTRICT best_result = tmbase->best_result;
-
             assert(graph_pc_isRootedPcMw(graph));
 
             for( int e = 0; e < nedges; e++ )
@@ -2134,20 +2081,20 @@ SCIP_RETCODE runTmPcMW(
       }
       else if( pcmwmode == pcmode_biasfull )
       {
-         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-               costorg, prizebiased, TRUE, start, tmbase, connected));
+         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph,
+               costorg, prizebiased, TRUE, start, sppc, tmbase, connected) );
       }
       else if( pcmwmode == pcmode_simple )
       {
          assert(graph_pc_isPc(graph));
-         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-               costorg, prize_in, FALSE, start, tmbase, connected));
+         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph,
+               costorg, prize_in, FALSE, start, sppc, tmbase, connected) );
       }
       else
       {
          assert(pcmwmode == pcmode_bias);
-         SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-               costorg, prize_in, TRUE, start, tmbase, connected));
+         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph,
+               costorg, prize_in, TRUE, start, sppc, tmbase, connected) );
       }
 
       /* compute objective value (w.r.t. original costs!) */
@@ -2166,14 +2113,55 @@ SCIP_RETCODE runTmPcMW(
          break;
    }
 
+   shortestpath_pcFree(scip, &sppc);
+
    SCIPfreeBufferArrayNull(scip, &costorg);
    SCIPfreeBufferArray(scip, &prizebiased);
    SCIPfreeBufferArray(scip, &costbiased);
    SCIPfreeBufferArray(scip, &terminalprio);
    SCIPfreeBufferArray(scip, &terminalperm);
    SCIPfreeBufferArray(scip, &connected);
-   SCIPfreeBufferArray(scip, &orderedprizes_id);
-   SCIPfreeBufferArray(scip, &orderedprizes);
+
+   return SCIP_OKAY;
+}
+
+
+/** submethod for SCIPStpHeurTMRun in PC or MW mode */
+static
+SCIP_RETCODE runTmPcMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const SCIP_Real*      prize,              /**< prizes (for PCMW) or NULL */
+   enum PCMW_TmMode      pcmw_tmmode,        /**< mode */
+   int                   beststart,          /**< best incumbent start vertex */
+   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+   TMBASE*               tmbase,             /**< data */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+)
+{
+   SCIP_HEURDATA* heurdata = getTMheurData(scip);
+   const enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
+   const SCIP_Bool run_all = (pcmw_mode == pcmode_all);
+
+   assert(graph_pc_isPc(graph) || pcmw_mode != pcmode_simple);
+   assert(pcmw_mode != pcmode_fromheurdata);
+
+   if( graph_pc_isPc(graph) && (pcmw_mode == pcmode_simple || run_all) )
+   {
+      SCIP_CALL( runTmPcMW_mode(scip, graph, prize, pcmode_simple, beststart, nodepriority, tmbase, success));
+   }
+   if( pcmw_mode == pcmode_bias || pcmw_mode == pcmode_biasAndFulltree || run_all )
+   {
+      SCIP_CALL( runTmPcMW_mode(scip, graph, prize, pcmode_bias, beststart, nodepriority, tmbase, success));
+   }
+   if( pcmw_mode == pcmode_biasfull || run_all )
+   {
+      SCIP_CALL( runTmPcMW_mode(scip, graph, prize, pcmode_biasfull, beststart, nodepriority, tmbase, success));
+   }
+   if( pcmw_mode == pcmode_fulltree || pcmw_mode == pcmode_biasAndFulltree || run_all )
+   {
+      SCIP_CALL( runTmPcMW_mode(scip, graph, prize, pcmode_fulltree, beststart, nodepriority, tmbase, success));
+   }
 
    return SCIP_OKAY;
 }
@@ -2830,9 +2818,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-   SCIP_HEURDATA* heurdata = getTMheurData(scip);
    int beststart;
-   const int mode = getTmMode(heurdata, graph);
+   const int mode = getTmMode(getTMheurData(scip), graph);
    const int nedges = graph_get_nEdges(graph);
    const SCIP_Bool startsgiven = (runs >= 1 && (starts != NULL));
    TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL,
@@ -2842,9 +2829,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    TMALLSP tmallsp = {NULL, NULL};
 
 #ifndef NDEBUG
-   assert(scip && cost && graph && costrev && best_result);
+   assert(scip && cost && costrev && best_result);
    assert(graph->source >= 0 && nedges > 0);
-
    for( int e = 0; e < nedges; e++) assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
 #endif
 
@@ -2869,31 +2855,10 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    SCIP_CALL( computeStarts(scip, graph, starts, startsgiven, nodepriority, &tmbase, &beststart) );
 
-   /* perform SPH computations, differentiate between STP variants*/
+   /* perform SPH computations, differentiate between STP variants */
    if( graph_pc_isPcMw(graph) )
    {
-      const enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
-      const SCIP_Bool run_all = (pcmw_mode == pcmode_all);
-
-      assert(graph_pc_isPc(graph) || pcmw_mode != pcmode_simple);
-      assert(pcmw_mode != pcmode_fromheurdata);
-
-      if( graph_pc_isPc(graph) && (pcmw_mode == pcmode_simple || run_all) )
-      {
-         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_simple, beststart, nodepriority, &tmbase, success));
-      }
-      if( pcmw_mode == pcmode_bias || pcmw_mode == pcmode_biasAndFulltree || run_all )
-      {
-         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_bias, beststart, nodepriority, &tmbase, success));
-      }
-      if( pcmw_mode == pcmode_biasfull || run_all )
-      {
-         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_biasfull, beststart, nodepriority, &tmbase, success));
-      }
-      if( pcmw_mode == pcmode_fulltree || pcmw_mode == pcmode_biasAndFulltree || run_all )
-      {
-         SCIP_CALL( runTmPcMW(scip, graph, prize, pcmode_fulltree, beststart, nodepriority, &tmbase, success));
-      }
+      SCIP_CALL( runTmPcMW(scip, graph, prize, pcmw_tmmode, beststart, nodepriority, &tmbase, success));
    }
    else
    {
@@ -2937,7 +2902,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
               fclose(fp);
               exit(1);
 #endif
-
 
    return SCIP_OKAY;
 }

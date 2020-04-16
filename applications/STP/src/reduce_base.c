@@ -77,6 +77,7 @@ int getWorkLimits_pc(
    const int nedges = g->edges;
    const int sqrtnedges = (int) sqrt(nedges);
    int limit = 0;
+   int todo; // pc_bd3 far too aggressive! for handbi04 takes a lot of time...try to go down to STP_RED_SDSPBOUND2 / 2? or / 3 ?
 
    assert(roundnumber >= 0);
    assert(nedges >= 0);

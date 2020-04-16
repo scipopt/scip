@@ -374,19 +374,7 @@ void computeSteinerTree_execPcMw(
    assert(connected[startnode]);
    assert(graph_pc_isPcMw(g) && !graph_pc_isRootedPcMw(g));
 
-#ifndef NDEBUG
-   {
-      // todo deleteme
-      int posCheck = 0;
-      for( int k = 0; k < g->knots; k++ )
-         if( Is_pseudoTerm(g->term[k]) )
-            posCheck++;
-
-      assert(posCheck == ntermspos);
-   }
-#endif
-
-   shortestpath_pcStart(spaths_pc);
+   shortestpath_pcReset(spaths_pc);
 
    if( Is_pseudoTerm(g->term[startnode]) )
    {
@@ -446,6 +434,117 @@ void computeSteinerTree_execPcMw(
    }
 
    assert(termsposCount == ntermspos || !computeSteinerTree_allPseudoTermsAreReached(g, connected));
+}
+
+
+
+/** executes */
+static inline
+void computeSteinerTree_execRpcMw(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   const SCIP_Real*      prize,              /**< (possibly biased) prize */
+   SPATHSPC*             spaths_pc,          /**< PC/MW shortest paths data */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   const CSR* const csr = spaths->csr;
+   DHEAP* const dheap = spaths->dheap;
+   SCIP_Real* RESTRICT nodes_dist = spaths->nodes_dist;
+   int* RESTRICT nodes_pred = spaths->nodes_pred;
+   STP_Bool* RESTRICT connected = spaths->nodes_isConnected;
+   int* const state = dheap->position;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   const int nfixedterms = graph_pc_nFixedTerms(g);
+   int fixedtermsCount = 0;
+
+   assert(g->extended);
+   assert(dheap->size == 1 && connected[startnode]);
+   assert(graph_pc_isRootedPcMw(g));
+
+   shortestpath_pcReset(spaths_pc);
+
+   if( Is_pseudoTerm(g->term[startnode]) )
+      shortestpath_pcConnectNode(g, connected, startnode, spaths_pc);
+
+   if( Is_term(g->term[startnode]) )
+   {
+      assert(graph_pc_knotIsFixedTerm(g, startnode));
+      fixedtermsCount++;
+   }
+
+   while( dheap->size > 0 )
+   {
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = start_csr[k];
+      const int k_end = start_csr[k + 1];
+      register SCIP_Real k_dist;
+
+      assert(state[k] == CONNECT);
+      state[k] = UNKNOWN;
+
+      /* if k is fixed terminal positive vertex and close enough, connect its path to current subtree */
+      if( Is_anyTerm(g->term[k]) && (Is_term(g->term[k]) || GE(prize[k], nodes_dist[k])) && !connected[k] )
+      {
+         assert(!graph_pc_knotIsDummyTerm(g, k));
+         assert(graph_pc_knotIsFixedTerm(g, k) || GE(prize[k], nodes_dist[k]));
+         assert(graph_pc_knotIsFixedTerm(g, k) == Is_term(g->term[k]));
+
+         if( Is_term(g->term[k]) )
+            fixedtermsCount++;
+         else if( Is_pseudoTerm(g->term[k]) )
+            shortestpath_pcConnectNode(g, connected, k, spaths_pc);
+
+         connected[k] = TRUE;
+         nodes_dist[k] = 0.0;
+
+         assert(nodes_pred[k] >= 0);
+
+         for( int node = nodes_pred[k]; !connected[node]; node = nodes_pred[node] )
+         {
+            assert(node >= 0 && node < g->knots);
+            SCIPdebugMessage("connect path node %d \n", node);
+
+            if( Is_pseudoTerm(g->term[node]) )
+               shortestpath_pcConnectNode(g, connected, node, spaths_pc);
+
+            connected[node] = TRUE;
+            nodes_dist[node] = 0.0;
+            graph_heap_correct(node, 0.0, dheap);
+         }
+      }
+
+      k_dist = nodes_dist[k];
+      assert(!graph_pc_knotIsFixedTerm(g, k) || EQ(k_dist, 0.0));
+
+      if( fixedtermsCount >= nfixedterms && k_dist > spaths_pc->maxoutprize )
+      {
+         SCIPdebugMessage("all fixed terminals reached \n");
+         assert(fixedtermsCount == nfixedterms);
+         break;
+      }
+
+      for( int e = k_start; e != k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( !connected[m] )
+         {
+            const SCIP_Real distnew = k_dist + cost_csr[e];
+
+            if( distnew < nodes_dist[m] )
+            {
+               nodes_pred[m] = k;
+               nodes_dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   assert(computeSteinerTree_allFixedTermsAreReached(g, connected));
 }
 
 
@@ -534,8 +633,92 @@ void computeSteinerTree_execPcMwFull(
  */
 
 
+/** initializes */
+SCIP_RETCODE shortestpath_pcInit(
+    SCIP*                scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      costs,              /**< cost for edges (might be negative for MWCS or RMWCS) */
+   const SCIP_Real*      prizes,             /**< prizes for all nodes */
+   SPATHSPC**            sppc                /**< PC/MW shortest path data */
+   )
+{
+   SCIP_Real* orderedprizes;
+   int* orderedprizes_id;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nterms = graph->terms;
+   const SCIP_Bool usecosts = (costs && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP));
+   int termcount;
+
+   assert(graph_pc_isPcMw(graph));
+   assert(prizes && graph && orderedprizes && orderedprizes_id);
+   assert(graph->extended);
+   assert(nterms >= 1);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &orderedprizes, nterms + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &orderedprizes_id, nterms + 1) );
+   SCIP_CALL( SCIPallocMemory(scip, sppc) );
+
+   termcount = 0;
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(graph->term[k]) )
+      {
+         orderedprizes[termcount] = prizes[k];
+
+         /* consider incoming negative arcs */
+         if( usecosts )
+         {
+            SCIP_Real mincost = 0.0;
+            for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+               if( costs[e] < mincost )
+                  mincost = costs[e];
+
+            if( mincost < 0.0 )
+               orderedprizes[termcount] -= mincost;
+         }
+
+         orderedprizes_id[termcount++] = k;
+      }
+   }
+
+   for( int k = termcount; k < nterms; k++ )
+   {
+      orderedprizes[k] = 0.0;
+      orderedprizes_id[k] = -1;
+   }
+
+   SCIPsortDownRealInt(orderedprizes, orderedprizes_id, nterms);
+
+   /* set sentinel */
+   orderedprizes[nterms] = 0.0;
+   orderedprizes_id[nterms] = -1;
+
+   assert(orderedprizes[0] >= orderedprizes[nterms - 1]);
+
+   (*sppc)->orderedprizes = orderedprizes;
+   (*sppc)->orderedprizes_id = orderedprizes_id;
+   (*sppc)->maxoutprize_idx = -1;
+   (*sppc)->maxoutprize = -FARAWAY;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+void shortestpath_pcFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SPATHSPC**            sppc                /**< PC/MW shortest path data */
+   )
+{
+   SCIPfreeMemoryArray(scip, &((*sppc)->orderedprizes_id));
+   SCIPfreeMemoryArray(scip, &((*sppc)->orderedprizes));
+
+   SCIPfreeMemory(scip, sppc);
+}
+
+
 /** start computation */
-void shortestpath_pcStart(
+void shortestpath_pcReset(
    SPATHSPC*             sppc                /**< PC/MW shortest path data */
 )
 {
@@ -546,6 +729,7 @@ void shortestpath_pcStart(
    sppc->maxoutprize = orderedprizes[0];
    sppc->maxoutprize_idx = 0;
 }
+
 
 /** update maximum prize */
 void shortestpath_pcConnectNode(
@@ -633,6 +817,29 @@ void shortestpath_computeSteinerTreePcMw(
       return;
 
    computeSteinerTree_execPcMw(g, startnode, prize, costIsBiased, spaths_pc, spaths);
+}
+
+
+/** shortest path based heuristic for computing a Steiner tree in rooted PC/MW case */
+void shortestpath_computeSteinerTreeRpcMw(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   const SCIP_Real*      prize,              /**< (possibly biased) prize */
+   SPATHSPC*             spaths_pc,          /**< PC/MW shortest paths data */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   assert(g && spaths);
+   assert(spaths->csr && spaths->nodes_dist && spaths->nodes_pred && spaths->dheap && spaths->nodes_isConnected);
+   assert(graph_pc_isRootedPcMw(g) && g->extended);
+   assert(!graph_pc_knotIsDummyTerm(g, startnode));
+
+   computeSteinerTree_init(g, startnode, spaths);
+
+   if( g->knots == 1 )
+      return;
+
+   computeSteinerTree_execRpcMw(g, startnode, prize, spaths_pc, spaths);
 }
 
 

@@ -18,7 +18,7 @@
  * @author Daniel Rehfeldt
  *
  * This file encompasses various shortest path based algorithms.
- * Note: This file is supposed to replace graph_path.c in the long run, as it includes the faster implementations.
+ * Note: This file is supposed to replace graph_path.c in the long run, as it includes faster implementations.
  *
  */
 
@@ -51,12 +51,15 @@ struct stortest_paths
    STP_Bool* RESTRICT    nodes_isConnected;  /**< array to mark whether a vertex is part of computed Steiner tree */
 } SPATHS;
 
-/* todo should be made static, currently kept global for legacy reasons */
-void shortestpath_pcStart(SPATHSPC*);
+
+SCIP_RETCODE shortestpath_pcInit(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, SPATHSPC**);
+void shortestpath_pcFree(SCIP*, SPATHSPC**);
+void shortestpath_pcReset(SPATHSPC*);
 void shortestpath_pcConnectNode(const GRAPH*, const STP_Bool*, int, SPATHSPC*);
 
 void shortestpath_computeSteinerTree(const GRAPH*, int, SPATHS*);
 void shortestpath_computeSteinerTreePcMw(const GRAPH*, int, const SCIP_Real*, SCIP_Bool, SPATHSPC*, SPATHS*);
+void shortestpath_computeSteinerTreeRpcMw(const GRAPH*, int, const SCIP_Real*, SPATHSPC*, SPATHS*);
 void shortestpath_computeSteinerTreePcMwFull(const GRAPH*, int, SPATHS*);
 
 
