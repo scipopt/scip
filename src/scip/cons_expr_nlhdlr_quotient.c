@@ -292,10 +292,10 @@ SCIP_RETCODE detectExpr(
       *success = (xexpr == yexpr) || SCIPgetStage(scip) == SCIP_STAGE_SOLVING;
 
 #ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, xexpr, NULL) );
-         SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, yexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, xexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, yexpr, NULL) );
 #endif
    }
 
