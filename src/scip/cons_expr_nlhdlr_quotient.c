@@ -19,6 +19,7 @@
  * @author Fabian Wegscheider
  *
  * @todo implement INITSEPA
+ * @todo use the convex envelope for x/y described in Tawarmalani and Sahinidis (2002) if y has a finite upper bound
  */
 
 #include <string.h>
