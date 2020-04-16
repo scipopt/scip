@@ -1069,7 +1069,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
 { /*lint --e{715}*/
    SCIP_INTERVAL bnds;
-   SCIP_INTERVAL tmp;
 
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->numexpr != NULL);
