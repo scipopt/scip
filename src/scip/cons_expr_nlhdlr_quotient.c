@@ -809,7 +809,7 @@ SCIP_RETCODE estimateBivariate(
    else
    {
       /* negate bounds of x if it is negative */
-      if( ubx < 0.0 )
+      if( ubx <= 0.0 )
       {
          SCIP_Real tmp = ubx;
 
