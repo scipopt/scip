@@ -450,44 +450,58 @@ Test(nlhdlrquotient, estimation1, .description = "estimates simple univariate qu
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Bool success;
+   SCIP_Bool local;
+   SCIP_Real lbx = 1.5;
+   SCIP_Real ubx = 5.0;
+   SCIP_Real gllbx = 1.5;
+   SCIP_Real glubx = 6.0;
 
    /*
     * tests overestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, 1.5, 5.0, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &local, &success) );
    cr_expect(success);
+   cr_expect(!local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 3.0), "got %g expected %g", coef, 5.0 / 3.0);
    cr_expect(SCIPisEQ(scip, constant, -25.0 / 3.0), "got %g expected %g", constant, -25.0 / 3.0);
 
    /*
     * tests underestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, 1.5, 5.0, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &local, &success) );
    cr_expect(success);
+   cr_expect(local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 6.0), "got %g expected %g", coef, 5.0 / 6.0);
    cr_expect(SCIPisEQ(scip, constant, -95.0 / 12.0), "got %g expected %g", constant, -95.0 / 12.0);
 }
 
-/* estimates x = -1 for (4x + 1) / (-3x + 3) - 2 and y in [-4,0] */
+/* estimates x = -1 for (4x + 1) / (-3x + 3) - 2 and x in [-4,0] */
 Test(nlhdlrquotient, estimation2, .description = "estimates simple univariate quotient expression")
 {
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Bool success;
+   SCIP_Bool local;
+   SCIP_Real lbx = -4.0;
+   SCIP_Real ubx = 0.0;
+   SCIP_Real gllbx = -5.0;
+   SCIP_Real glubx = 0.0;
 
    /*
     * tests overestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, -4.0, 0.0, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &local, &success) );
    cr_expect(success);
+   cr_expect(local);
    cr_expect(SCIPisEQ(scip, coef, 1.0 / 3.0), "got %g expected %g", coef, 1.0 / 3.0);
    cr_expect(SCIPisEQ(scip, constant, -5.0 / 3.0), "got %g expected %g", constant, -5.0 / 3.0);
 
    /*
     * tests underestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, -4.0, 0.0, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &local, &success) );
    cr_expect(success);
+   cr_expect(!local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 12.0), "got %g expected %g", coef, 5.0 / 12.0);
    cr_expect(SCIPisEQ(scip, constant, -25.0 / 12.0), "got %g expected %g", constant, -25.0 / 12.0);
 }

@@ -543,8 +543,10 @@ SCIP_RETCODE createRowprep(
 static
 SCIP_RETCODE estimateUnivariate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lbx,                /**< lower bound of x */
-   SCIP_Real             ubx,                /**< upper bound of x */
+   SCIP_Real             lbx,                /**< local lower bound of x */
+   SCIP_Real             ubx,                /**< local upper bound of x */
+   SCIP_Real             gllbx,              /**< global lower bound of x */
+   SCIP_Real             glubx,              /**< global upper bound of x */
    SCIP_Real             solx,               /**< solution value of x */
    SCIP_Real             a,                  /**< coefficient in numerator */
    SCIP_Real             b,                  /**< constant in numerator */
@@ -554,6 +556,7 @@ SCIP_RETCODE estimateUnivariate(
    SCIP_Real*            coef,               /**< pointer to store the coefficient */
    SCIP_Real*            constant,           /**< pointer to store the constant */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
+   SCIP_Bool*            local,             /**< pointer to store whether the estimate is locally valid */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -564,12 +567,16 @@ SCIP_RETCODE estimateUnivariate(
    assert(lbx <= solx && solx <= ubx);
    assert(coef != NULL);
    assert(constant != NULL);
+   assert(local != NULL);
    assert(success != NULL);
 
    *success = FALSE;
    *coef = 0.0;
    *constant = 0.0;
    singularity = -d / c;
+
+   /* estimate is globally valid if local and global bounds are equal */
+   *local = gllbx != lbx || glubx != ubx;
 
    /* if 0 is in the denom interval, estimation is not possible */
    if( SCIPisLE(scip, lbx, singularity) && SCIPisGE(scip, ubx, singularity) )
@@ -604,6 +611,9 @@ SCIP_RETCODE estimateUnivariate(
       /* compute coefficient and constant of linear estimator */
       *coef = (a * d - b * c) / SQR(d + c * solx);
       *constant = soleval - (*coef) * solx;
+
+      /* gradient cuts are globally valid if the singularity is not in [gllbx,glubx] */
+      *local = SCIPisLE(scip, gllbx, singularity) && SCIPisGE(scip, glubx, singularity);
    }
 
    /* avoid huge values in the cut */
@@ -633,26 +643,34 @@ SCIP_RETCODE estimateUnivariateQuotient(
 {
    SCIP_Real constant;
    SCIP_Real coef;
+   SCIP_Real gllbx;
+   SCIP_Real glubx;
    SCIP_Real lbx;
    SCIP_Real ubx;
    SCIP_Real solx;
+   SCIP_Bool local;
 
    /* get variable bounds */
    lbx = SCIPvarGetLbLocal(x);
    ubx = SCIPvarGetUbLocal(x);
+
+   /* get global variable bounds */
+   gllbx = SCIPvarGetLbGlobal(x);
+   glubx = SCIPvarGetUbGlobal(x);
 
    /* get and adjust solution value */
    solx = SCIPgetSolVal(scip, sol, x);
    solx = MIN(MAX(solx, lbx), ubx);
 
    /* compute an estimator */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, solx, a, b, c, d, e, &coef, &constant, overestimate, success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, solx, a, b, c, d, e, &coef, &constant, overestimate, &local, success) );
 
    /* add estimator to rowprep, if successful */
    if( *success )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
       SCIP_CALL( createRowprep(scip, rowprep, &x, &coef, constant, 1) );
+      rowprep->local = local;
    }
 
    return SCIP_OKAY;
