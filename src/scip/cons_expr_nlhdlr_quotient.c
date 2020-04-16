@@ -801,9 +801,6 @@ SCIP_RETCODE estimateBivariate(
       *coefx = 1.0 / mccoefaux;
       *coefy = -mccoefy / mccoefaux;
       *constant = -mcconst / mccoefaux;
-
-      /* estimator is independent of the bounds of x */
-      *branchingusefulx = FALSE;
    }
    /* case 2: 0 is not in the interior of [lbx,ubx] */
    else
