@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -111,6 +111,7 @@ SCIP_RETCODE freeSepaData(
    SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->nbilinvars);
    SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->nbilinvars);
 
+   sepadata->nbilinvars = 0;
    sepadata->iscreated = FALSE;
 
    return SCIP_OKAY;
@@ -626,6 +627,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( createSepaData(scip, sepadata) );
    }
+   assert(sepadata->iscreated || sepadata->nbilinvars == 0);
 
    /* no bilinear terms available -> skip */
    if( sepadata->nbilinvars == 0 )

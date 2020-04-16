@@ -135,6 +135,9 @@ int SCIPfclose(SCIP_FILE *fp)
 
 #else
 
+#ifdef _MSC_VER
+#define fdopen _fdopen
+#endif
 
 /* file i/o using standard i/o */
 
