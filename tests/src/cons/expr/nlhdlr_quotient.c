@@ -451,6 +451,7 @@ Test(nlhdlrquotient, estimation1, .description = "estimates simple univariate qu
    SCIP_Real coef;
    SCIP_Bool success;
    SCIP_Bool local;
+   SCIP_Bool branchinguseful;
    SCIP_Real lbx = 1.5;
    SCIP_Real ubx = 5.0;
    SCIP_Real gllbx = 1.5;
@@ -459,8 +460,10 @@ Test(nlhdlrquotient, estimation1, .description = "estimates simple univariate qu
    /*
     * tests overestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &local, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE,
+      &local, &branchinguseful, &success) );
    cr_expect(success);
+   cr_expect(!branchinguseful);
    cr_expect(!local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 3.0), "got %g expected %g", coef, 5.0 / 3.0);
    cr_expect(SCIPisEQ(scip, constant, -25.0 / 3.0), "got %g expected %g", constant, -25.0 / 3.0);
@@ -468,8 +471,10 @@ Test(nlhdlrquotient, estimation1, .description = "estimates simple univariate qu
    /*
     * tests underestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &local, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, 2.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE,
+      &local, &branchinguseful, &success) );
    cr_expect(success);
+   cr_expect(branchinguseful);
    cr_expect(local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 6.0), "got %g expected %g", coef, 5.0 / 6.0);
    cr_expect(SCIPisEQ(scip, constant, -95.0 / 12.0), "got %g expected %g", constant, -95.0 / 12.0);
@@ -482,6 +487,7 @@ Test(nlhdlrquotient, estimation2, .description = "estimates simple univariate qu
    SCIP_Real coef;
    SCIP_Bool success;
    SCIP_Bool local;
+   SCIP_Bool branchinguseful;
    SCIP_Real lbx = -4.0;
    SCIP_Real ubx = 0.0;
    SCIP_Real gllbx = -5.0;
@@ -490,8 +496,10 @@ Test(nlhdlrquotient, estimation2, .description = "estimates simple univariate qu
    /*
     * tests overestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE, &local, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, TRUE,
+      &local, &branchinguseful, &success) );
    cr_expect(success);
+   cr_expect(branchinguseful);
    cr_expect(local);
    cr_expect(SCIPisEQ(scip, coef, 1.0 / 3.0), "got %g expected %g", coef, 1.0 / 3.0);
    cr_expect(SCIPisEQ(scip, constant, -5.0 / 3.0), "got %g expected %g", constant, -5.0 / 3.0);
@@ -499,8 +507,10 @@ Test(nlhdlrquotient, estimation2, .description = "estimates simple univariate qu
    /*
     * tests underestimation
     */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE, &local, &success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, -1.0, 4.0, 1.0, -3.0, 3.0, -2.0, &coef, &constant, FALSE,
+      &branchinguseful, &local, &success) );
    cr_expect(success);
+   cr_expect(!branchinguseful);
    cr_expect(!local);
    cr_expect(SCIPisEQ(scip, coef, 5.0 / 12.0), "got %g expected %g", coef, 5.0 / 12.0);
    cr_expect(SCIPisEQ(scip, constant, -25.0 / 12.0), "got %g expected %g", constant, -25.0 / 12.0);
@@ -511,13 +521,17 @@ Test(nlhdlrquotient, estimation3, .description = "estimates simple bivariate quo
 {
    SCIP_Real vals[3];
    SCIP_Bool success;
+   SCIP_Bool branchingusefulx;
+   SCIP_Bool branchingusefuly;
 
    /*
     * test overestimation
     */
 
    SCIP_CALL( estimateBivariate(scip, 1.0, 4.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), 3.0, 2.0, 0.0, TRUE,
-      &vals[0], &vals[1], &vals[2], &success) );
+      &vals[0], &vals[1], &vals[2], &branchingusefulx, &branchingusefuly, &success) );
+   cr_expect(branchingusefulx);
+   cr_expect(branchingusefuly);
    cr_expect(success);
    cr_expect(SCIPisEQ(scip, vals[0], 2.0 / 3.0), "got %g expected %g", vals[0], 2.0 / 3.0);
    cr_expect(SCIPisEQ(scip, vals[1], -1.0 / 7.5), "got %g expected %g", vals[1], -1.0 / 7.5);
@@ -528,7 +542,9 @@ Test(nlhdlrquotient, estimation3, .description = "estimates simple bivariate quo
     */
 
    SCIP_CALL( estimateBivariate(scip, 1.0, 4.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), 3.0, 2.0, 0.0, FALSE,
-      &vals[0], &vals[1], &vals[2], &success) );
+      &vals[0], &vals[1], &vals[2], &branchingusefulx, &branchingusefuly, &success) );
+   cr_expect(branchingusefulx);
+   cr_expect(!branchingusefuly);
    cr_expect(success);
    cr_expect(SCIPisEQ(scip, vals[0], 5.0 / 9.0), "got %g expected %g", vals[0], 5.0 / 9.0);
    cr_expect(SCIPisEQ(scip, vals[1], -25.0 / 36.0), "got %g expected %g", vals[1], -25.0 / 36.0);
@@ -540,14 +556,18 @@ Test(nlhdlrquotient, estimation4, .description = "estimates simple bivariate quo
 {
    SCIP_Real vals[3];
    SCIP_Bool success;
+   SCIP_Bool branchingusefulx;
+   SCIP_Bool branchingusefuly;
 
    /*
     * test overestimation
     */
 
    SCIP_CALL( estimateBivariate(scip, -4.0, -1.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), -3.0, 2.0, 0.0, TRUE,
-      &vals[0], &vals[1], &vals[2], &success) );
+      &vals[0], &vals[1], &vals[2], &branchingusefulx, &branchingusefuly, &success) );
    cr_expect(success);
+   cr_expect(branchingusefulx);
+   cr_expect(!branchingusefuly);
    cr_expect(SCIPisEQ(scip, vals[0], 5.0 / 9.0), "got %g expected %g", vals[0], 5.0 / 9.0);
    cr_expect(SCIPisEQ(scip, vals[1], 25.0 / 36.0), "got %g expected %g", vals[1], 25.0 / 36.0);
    cr_expect(SCIPisEQ(scip, vals[2], -10.0 / 9.0), "got %g expected %g", vals[2], -10.0 / 9.0);
@@ -557,8 +577,10 @@ Test(nlhdlrquotient, estimation4, .description = "estimates simple bivariate quo
     */
 
    SCIP_CALL( estimateBivariate(scip, -4.0, -1.0, 1.5, 5.0, -SCIPinfinity(scip), SCIPinfinity(scip), -3.0, 2.0, 0.0, FALSE,
-      &vals[0], &vals[1], &vals[2], &success) );
+      &vals[0], &vals[1], &vals[2], &branchingusefulx, &branchingusefuly, &success) );
    cr_expect(success);
+   cr_expect(branchingusefulx);
+   cr_expect(branchingusefuly);
    cr_expect(SCIPisEQ(scip, vals[0], 2.0 / 3.0), "got %g expected %g", vals[0], 2.0 / 3.0);
    cr_expect(SCIPisEQ(scip, vals[1], 2.0 / 15.0), "got %g expected %g", vals[1], 2.0 / 15.0);
    cr_expect(SCIPisEQ(scip, vals[2], -1.0 / 5.0), "got %g expected %g", vals[2], -1.0 / 5.0);

@@ -534,7 +534,8 @@ SCIP_RETCODE estimateUnivariate(
    SCIP_Real*            coef,               /**< pointer to store the coefficient */
    SCIP_Real*            constant,           /**< pointer to store the constant */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
-   SCIP_Bool*            local,             /**< pointer to store whether the estimate is locally valid */
+   SCIP_Bool*            local,              /**< pointer to store whether the estimate is locally valid */
+   SCIP_Bool*            branchinguseful,    /**< pointer to store whether branching on the expression would improve the estimator */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -546,8 +547,10 @@ SCIP_RETCODE estimateUnivariate(
    assert(coef != NULL);
    assert(constant != NULL);
    assert(local != NULL);
+   assert(branchinguseful != NULL);
    assert(success != NULL);
 
+   *branchinguseful = TRUE;
    *success = FALSE;
    *coef = 0.0;
    *constant = 0.0;
@@ -592,6 +595,9 @@ SCIP_RETCODE estimateUnivariate(
 
       /* gradient cuts are globally valid if the singularity is not in [gllbx,glubx] */
       *local = SCIPisLE(scip, gllbx, singularity) && SCIPisGE(scip, glubx, singularity);
+
+      /* branching will not improve the convexification via tangent cuts */
+      *branchinguseful = FALSE;
    }
 
    /* avoid huge values in the cut */
@@ -616,6 +622,7 @@ SCIP_RETCODE estimateUnivariateQuotient(
    SCIP_Real             e,                  /**< constant */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
    SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
+   SCIP_Bool*            branchinguseful,    /**< pointer to store whether branching on the expression would improve the estimator */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -627,6 +634,10 @@ SCIP_RETCODE estimateUnivariateQuotient(
    SCIP_Real ubx;
    SCIP_Real solx;
    SCIP_Bool local;
+
+   assert(rowprep != NULL);
+   assert(branchinguseful != NULL);
+   assert(success != NULL);
 
    /* get variable bounds */
    lbx = SCIPvarGetLbLocal(x);
@@ -641,7 +652,7 @@ SCIP_RETCODE estimateUnivariateQuotient(
    solx = MIN(MAX(solx, lbx), ubx);
 
    /* compute an estimator */
-   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, solx, a, b, c, d, e, &coef, &constant, overestimate, &local, success) );
+   SCIP_CALL( estimateUnivariate(scip, lbx, ubx, gllbx, glubx, solx, a, b, c, d, e, &coef, &constant, overestimate, &local, branchinguseful, success) );
 
    /* add estimator to rowprep, if successful */
    if( *success )
@@ -725,6 +736,8 @@ SCIP_RETCODE estimateBivariate(
    SCIP_Real*            coefx,              /**< pointer to store the x coefficient */
    SCIP_Real*            coefy,              /**< pointer to store the y coefficient */
    SCIP_Real*            constant,           /**< pointer to store the constant */
+   SCIP_Bool*            branchingusefulx,   /**< pointer to store whether branching on x would improve the estimator */
+   SCIP_Bool*            branchingusefuly,   /**< pointer to store whether branching on y would improve the estimator */
    SCIP_Bool*            success             /**< buffer to store whether computing the estimator was successful */
    )
 {
@@ -737,8 +750,12 @@ SCIP_RETCODE estimateBivariate(
    assert(coefx != NULL);
    assert(coefy != NULL);
    assert(constant != NULL);
+   assert(branchingusefulx != NULL);
+   assert(branchingusefuly != NULL);
    assert(success != NULL);
 
+   *branchingusefulx = TRUE;
+   *branchingusefuly = TRUE;
    *success = TRUE;
    *coefx = 0.0;
    *coefy = 0.0;
@@ -784,6 +801,9 @@ SCIP_RETCODE estimateBivariate(
       *coefx = 1.0 / mccoefaux;
       *coefy = -mccoefy / mccoefaux;
       *constant = -mcconst / mccoefaux;
+
+      /* estimator is independent of the bounds of x */
+      *branchingusefulx = FALSE;
    }
    /* case 2: 0 is not in the interior of [lbx,ubx] */
    else
@@ -822,6 +842,9 @@ SCIP_RETCODE estimateBivariate(
       {
          /* compute gradient cut for h^c(x,y) at (solx,soly) */
          hcGradCut(lbx, ubx, solx, soly, coefx, coefy, constant);
+
+         /* estimator is independent of the bounds of y */
+         *branchingusefuly = FALSE;
       }
    }
 
@@ -870,6 +893,8 @@ SCIP_RETCODE estimateBivariateQuotient(
    SCIP_Real             e,                  /**< constant term */
    SCIP_Bool             overestimate,       /**< whether the expression should be overestimated */
    SCIP_ROWPREP*         rowprep,            /**< a rowprep where to store the estimator */
+   SCIP_Bool*            branchingusefulx,   /**< pointer to store whether branching on x would improve the estimator */
+   SCIP_Bool*            branchingusefuly,   /**< pointer to store whether branching on y would improve the estimator */
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
@@ -891,6 +916,8 @@ SCIP_RETCODE estimateBivariateQuotient(
    assert(x != y);
    assert(auxvar != NULL);
    assert(rowprep != NULL);
+   assert(branchingusefulx != NULL);
+   assert(branchingusefuly != NULL);
    assert(success != NULL);
 
    /* get variable bounds */
@@ -913,7 +940,8 @@ SCIP_RETCODE estimateBivariateQuotient(
    SCIP_CALL( estimateBivariate(scip,
       MIN(a * lbx, a * ubx) + b, MAX(a * lbx, a * ubx) + b, /* bounds of x' */
       MIN(c * lby, c * uby) + d, MAX(c * lby, c * uby) + d, /* bounds of y' */
-      lbz, ubz, a * solx + b, c * soly + d, solz, overestimate, &coefs[0], &coefs[1], &constant, success) );
+      lbz, ubz, a * solx + b, c * soly + d, solz, overestimate, &coefs[0], &coefs[1], &constant,
+      branchingusefulx, branchingusefuly, success) );
 
    /* add estimator to rowprep, if successful */
    if( *success )
@@ -1033,6 +1061,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 { /*lint --e{715}*/
    SCIP_VAR* auxvarx;
    SCIP_VAR* auxvary;
+   SCIP_Bool branchingusefulx = FALSE;
+   SCIP_Bool branchingusefuly = FALSE;
 
    assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
@@ -1054,7 +1084,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
       /* univariate case */
       SCIP_CALL( estimateUnivariateQuotient(scip, sol, auxvarx, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
          nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep,
-         success) );
+         &branchingusefulx, success) );
    }
    else
    {
@@ -1063,7 +1093,31 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
       /* bivariate case */
       SCIP_CALL( estimateBivariateQuotient(scip, auxvarx, auxvary, SCIPgetConsExprExprAuxVar(expr), sol,
          nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
-         nlhdlrexprdata->constant, overestimate, rowprep, success) );
+         nlhdlrexprdata->constant, overestimate, rowprep,
+         &branchingusefulx, &branchingusefuly, success) );
+   }
+
+   /* add branching scores if requested */
+   if( addbranchscores )
+   {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real violation;
+      int nexprs = 0;
+
+      if( branchingusefulx )
+         exprs[nexprs++] = nlhdlrexprdata->numexpr;
+      if( branchingusefuly )
+         exprs[nexprs++] = nlhdlrexprdata->denomexpr;
+
+      /* compute violation w.r.t. the auxiliary variable(s) */
+#ifndef BRSCORE_ABSVIOL
+      SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#else
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
+#endif
+      assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
+
+      SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
    }
 
    return SCIP_OKAY;
