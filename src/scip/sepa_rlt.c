@@ -650,18 +650,23 @@ SCIP_RETCODE createLinearisation(
    SCIP_VAR*             y,                  /**< the third variable to be added to expression */
    SCIP_Real*            coefs,              /**< coefficients of the variables in the order w, x, y */
    SCIP_Real             cst,                /**< constant term */
-   SCIP_CONSEXPR_EXPR**  linexpr             /**< buffer to store the created expression */
+   SCIP_CONSEXPR_EXPR**  linexpr,            /**< buffer to store the created expression */
+   SCIP_Bool             underestimate,      /**< does auxexpr underestimate the product? */
+   SCIP_Bool             overestimate,       /**< does linexpr overestimate the product? */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr            /**< auxiliary expression to be filled here */
    )
 {
-   SCIP_CONSEXPR_EXPR* simplified;
+/*   SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPR* linchildren[3];
    SCIP_Bool changed;
-   SCIP_Bool infeasible;
+   SCIP_Bool infeasible; */
    int i;
 
-   for( i = 0; i <= 2; ++i )
-      assert(!SCIPisInfinity(scip, coefs[i]));
+   assert(auxexpr != NULL);
+   assert(!SCIPisInfinity(scip, coefs[0]) && !SCIPisInfinity(scip, coefs[1]) && !SCIPisInfinity(scip, coefs[2]));
+   assert(underestimate || overestimate);
 
+   /*
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linchildren[0], w) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linchildren[1], x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linchildren[2], y) );
@@ -676,6 +681,16 @@ SCIP_RETCODE createLinearisation(
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linchildren[2]) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linchildren[1]) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linchildren[0]) );
+    */
+
+   for( i = 0; i < 3; ++i )
+   {
+      auxexpr->coefs[i] = coefs[i];
+   }
+   auxexpr->cst = cst;
+   auxexpr->auxvar = w;
+   auxexpr->underestimate = underestimate;
+   auxexpr->overestimate = overestimate;
 
    return SCIP_OKAY;
 }
@@ -705,6 +720,7 @@ SCIP_RETCODE extractProducts(
    SCIP_VAR* x;
    SCIP_VAR* y;
    SCIP_Bool overest; /* does linexpr overestimate the product? */
+   SCIP_CONSEXPR_AUXEXPR auxexpr;
 
    /* x must be binary */
    assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
@@ -723,7 +739,7 @@ SCIP_RETCODE extractProducts(
 
    /* cannot use a global bound on x to detect a product */
    if( (coefs1[1] == 0 && coefs1[2] == 0) ||
-      (coefs2[1] == 0 && coefs2[2] == 0) )
+       (coefs2[1] == 0 && coefs2[2] == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "binary var = %s, its coefs: %g\n", SCIPvarGetName(vars[0]), coefs1[0]*coefs2[0]);
@@ -801,7 +817,8 @@ SCIP_RETCODE extractProducts(
       SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? ">=" : "<=",
          lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs2[1]*side1*mult);
 
-      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[1]*side1*mult, &linexpr) );
+      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[1]*side1*mult, &linexpr,
+            !overest, overest, &auxexpr) );
       SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, !overest, overest, varmap) );
    }
    else /* f == TRUE */
@@ -828,8 +845,12 @@ SCIP_RETCODE extractProducts(
       SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? "<=" : ">=",
          lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs1[1]*side2*mult);
 
-      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[1]*side2*mult, &linexpr) );
+      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[1]*side2*mult, &linexpr,
+            !overest, overest, &auxexpr) );
       SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, !overest, overest, varmap) );
+      SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) ); /* TODO check nlocks */
+      /* TODO call add bilin from consexpr */
+      SCIP_CALL( bilinearTermsInsert(scip, sepadata->conshdlr, x, y, w, ) );
    }
 
    return SCIP_OKAY;
@@ -1718,7 +1739,8 @@ SCIP_RETCODE createSepaData(
          continue;
 
       /* if only initial rows are requested, skip products that contain at least one auxiliary variable */
-      if( sepadata->onlyinitial && (SCIPvarIsRelaxationOnly(bilinterms[i].x) || SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
+      if( sepadata->onlyinitial && (SCIPvarIsRelaxationOnly(bilinterms[i].x) ||
+          SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
          continue;
 
       SCIP_CALL( addProductVars(scip, sepadata, bilinterms[i].x, bilinterms[i].y, varmap,

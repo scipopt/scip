@@ -1187,6 +1187,20 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_VAR*                  y               /**< second variable */
    );
 
+/** stores the variables of a bilinear term in the data of the constraint handler */
+SCIP_EXPORT
+SCIP_RETCODE bilinearTermsInsert(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression (for implicit relations) (might be NULL) */
+   int                   nlockspos,          /**< number of positive expression locks */
+   int                   nlocksneg,          /**< number of negative expression locks */
+   SCIP_Bool             isimplicit          /**< is this an implicit product relation? */
+   );
+
 /** upgrading method for expression constraints into more specific constraints
  *
  * the method might upgrade an expression constraint into a set of upgrade constraints

@@ -83,6 +83,7 @@ struct SCIP_ConsExpr_BilinTerm
       SCIP_VAR*          auxvar;             /**< auxiliary variable for the explicit product of x and y */
    };
    int                   nauxexprs;          /**< number of auxexprs (0 for products without implicit relations) */
+   int                   sauxexprs;          /**< size of the auxexprs array */
    int                   nlockspos;          /**< number of positive expression locks */
    int                   nlocksneg;          /**< number of negative expression locks */
 };
