@@ -922,6 +922,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
+ * @note this function can only be called in SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(

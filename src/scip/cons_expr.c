@@ -60,8 +60,9 @@
 #include "scip/cons_expr_nlhdlr_bilinear.h"
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
-#include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_nlhdlr_perspective.h"
+#include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_nlhdlr_quotient.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
@@ -14146,6 +14147,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
+ * @note this function can only be called in SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14162,6 +14164,12 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
+      return SCIP_INVALIDCALL;
+   }
 
    /* if we already have auxvar, then just return it */
    if( expr->auxvar != NULL )
@@ -15366,6 +15374,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include nonlinear handler for perspective reformulations */
    SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
+
+   /* include nonlinear handler for quotient expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuotient(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
