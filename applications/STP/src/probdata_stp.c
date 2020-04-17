@@ -359,6 +359,7 @@ SCIP_RETCODE presolveStp(
    /* the actual presolving */
    SCIP_CALL( reduce(scip, graph, offset, reduction, probdata->minelims, TRUE) );
 
+
 #ifdef STP_WRITE_RED_STATS
    graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
    exit(1);
@@ -375,6 +376,50 @@ SCIP_RETCODE presolveStp(
 
    probdata->stp_type = graph->stp_type;
    probdata->graph = graph;
+
+
+#if 0
+   for( int i = 0 ; i < graph->knots; i++)
+   {
+      if( Is_term(graph->term[i]) )
+      {
+         SCIP_Real m1 = FARAWAY;
+         int mine = -1;
+
+         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+
+            if( graph->cost[e] < m1 )
+            {
+               m1 = graph->cost[e];
+
+               mine = e;
+            }
+         }
+         SCIP_Real m2 = FARAWAY;
+         if( mine == -1 )
+         {
+            return SCIP_ERROR;
+         }
+
+         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+
+            if( e != mine && graph->cost[e] < m2 )
+            {
+               m2 = graph->cost[e];
+
+            }
+         }
+
+         graph_knot_printInfo(graph, i);
+
+         printf("...%f %f \n\n", m1, m2);
+
+      }
+   }
+   exit(1);
+#endif
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 

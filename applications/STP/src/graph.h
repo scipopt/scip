@@ -97,6 +97,7 @@ typedef struct csr_storage
    int*                  start;              /**< start position for each node */
    int*                  head;               /**< edge head array */
    SCIP_Real*            cost;               /**< edge cost array */
+   int*                  edge_id;            /**< edge ids */
    int                   nedges_max;         /**< maximum number of edges (real number given by start[nnodes]) */
    int                   nnodes;             /**< number of nodes */
 } CSR;

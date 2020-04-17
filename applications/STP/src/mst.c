@@ -112,8 +112,18 @@ void computeOnMarked_computePredecessors(
    MST*                  mst                 /**< MST data */
 )
 {
+   int* RESTRICT nodes_pred = mst->nodes_predEdge;
+   int* RESTRICT edgeid_csr = mst->csr->edge_id;
    const int nnodes = graph_get_nNodes(g);
 
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodes_pred[i] != UNKNOWN )
+      {
+         assert(g->mark[i]);
+         nodes_pred[i] = edgeid_csr[nodes_pred[i]];
+      }
+   }
 }
 
 

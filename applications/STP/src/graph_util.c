@@ -936,6 +936,7 @@ SCIP_RETCODE graph_csr_alloc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->start), nnodes + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->head), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->cost), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->edge_id), nedges) );
 
    return SCIP_OKAY;
 }
@@ -979,6 +980,7 @@ void graph_csr_chgCosts(
 
             assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
             assert(gHead[e] == csr->head[pos] );
+            assert(e == csr->edge_id[pos]);
 
             cost_csr[pos++] = edgecosts[e];
          }
@@ -1003,6 +1005,7 @@ void graph_csr_build(
 {
    int* RESTRICT start_csr;
    int* RESTRICT head_csr;
+   int* RESTRICT edgeid_csr;
    SCIP_Real* cost_csr;
    const int nnodes = graph_get_nNodes(g);
    const int* const gOeat = g->oeat;
@@ -1017,6 +1020,7 @@ void graph_csr_build(
    start_csr = csr->start;
    head_csr = csr->head;
    cost_csr = csr->cost;
+   edgeid_csr = csr->edge_id;
 
    /* now fill the data in */
 
@@ -1038,6 +1042,7 @@ void graph_csr_build(
             assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
 
             head_csr[pos] = ehead;
+            edgeid_csr[pos] = e;
             cost_csr[pos++] = edgecosts[e];
          }
       }
@@ -1071,6 +1076,7 @@ void graph_csr_copy(
    {
       BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges_max);
       BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges_max);
+      BMScopyMemoryArray(csr_out->edge_id, csr_in->edge_id, csr_in->nedges_max);
    }
 
    assert(graph_csr_isValid(csr_out, FALSE));
@@ -1114,6 +1120,7 @@ void graph_csr_free(
 
    assert(csrd != NULL && csrd->nnodes >= 1);
 
+   SCIPfreeMemoryArray(scip, &(csrd->edge_id));
    SCIPfreeMemoryArray(scip, &(csrd->cost));
    SCIPfreeMemoryArray(scip, &(csrd->head));
    SCIPfreeMemoryArray(scip, &(csrd->start));
