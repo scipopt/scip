@@ -150,7 +150,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
 
 /** enforce integrality of the current exact rational lp solution */ 
 SCIP_EXPORT
-SCIP_RETCODE SCIPenfoIntegralityExact(
+SCIP_RETCODE SCIPcheckIntegralityExact(
    SCIP*                 scip,
    SCIP_RESULT*          result
    );

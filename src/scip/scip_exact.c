@@ -302,8 +302,8 @@ SCIP_RETCODE SCIPforceExactSolve(
    return SCIP_OKAY;
 }
 
-/** enforce exact integrality */
-SCIP_RETCODE SCIPenfoIntegralityExact(
+/** check exact integrality of lp solution */
+SCIP_RETCODE SCIPcheckIntegralityExact(
    SCIP*                 scip,              /**< SCIP data structure */
    SCIP_RESULT*          result             /**< result pointer */
    )
@@ -311,7 +311,7 @@ SCIP_RETCODE SCIPenfoIntegralityExact(
    assert(scip != NULL);
    assert(scip->lp != NULL && scip->lpex != NULL);
 
-   SCIP_CALL( SCIPlpexEnfoIntegralityExact(scip->lp, scip->lpex,
+   SCIP_CALL( SCIPlpexCheckIntegralityExact(scip->lp, scip->lpex,
          scip->set, scip->stat, result) );
 
    return SCIP_OKAY;

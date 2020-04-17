@@ -165,13 +165,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    }
 
    /* in exact solving mode, we need to enforce with extra care to get rid of slighlty fractional lp solutions */
-   /** @todo exip this does not really make sense atm */
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIP_CALL( SCIPenfoIntegralityExact(scip, result) );
-      if( *result == SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
+   /** @todo exip this does not really make sense atm, it is a bigger problem, since we can't rely on the branchin to branch
+    * on slightly non-integral variables */
+   //if( SCIPisExactSolve(scip) )
+   //{
+   //   SCIP_CALL( SCIPenfoIntegralityExact(scip, result) );
+   //   if( *result == SCIP_FEASIBLE )
+   //      return SCIP_OKAY;
+   //}
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );

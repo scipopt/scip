@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,13 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lp.c
- * @brief  LP management methods and data structures
- * @author Tobias Achterberg
- * @author Timo Berthold
- * @author Marc Pfetsch
- * @author Kati Wolter
- * @author Gerald Gamrath
+/**@file   lpex.c
+ * @brief  LP management methods and data structures for exact mirror of LP
+ * @author Leon Eifler
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
  *  stored in the LP solver. All LP methods affect the current LP only.
@@ -61,121 +57,6 @@
 #include "scip/varex.h"
 #include <string.h>
 #include <inttypes.h>
-
-static
-SCIP_DECL_HASHKEYVAL(hashValExCol)
-{
-   /*lint --e{715}*/
-   SCIP_COL* col;
-   int i;
-   SCIP_Real scale;
-   SCIP_SET* set;
-   uint64_t hash;
-
-   set = (SCIP_SET*) userptr;
-   col = (SCIP_COL*)key;
-   assert(col != NULL);
-   assert(col->len >= 0);
-
-   hash = (uint64_t) (long) col->index;
-   hash += SCIPhashTwo(col->ub, col->index);
-   hash += SCIPhashTwo(col->lb, col->index);
-
-   for( i = 0; i < col->len; ++i )
-   {
-      SCIP_Real val = col->vals[i];
-
-      hash += SCIPhashTwo(SCIPrealHashCode(val), col->index);
-   }
-
-   return hash;
-}
-
-static
-SCIP_DECL_HASHGETKEY(hashKeyExCol)
-{
-   /*lint --e{715}*/
-   SCIP_COLEX* col;
-
-   col = (SCIP_COLEX*)elem;
-   assert(col != NULL);
-   assert(col->fpcol != NULL);
-
-   /* the key of a cut is the row */
-   return col->fpcol;
-}
-
-static
-SCIP_DECL_HASHKEYEQ(hashEqExCol)
-{
-   /*lint --e{715}*/
-   SCIP_COL* col1;
-   SCIP_COL* col2;
-
-   col1 = (SCIP_COL*)key1;
-   col2 = (SCIP_COL*)key2;
-   assert(col1 != NULL);
-   assert(col2 != NULL);
-
-   /* return true if the COL is the same */
-   if( col1 == col2 )
-      return TRUE;
-   else
-      return FALSE;
-}
-
-static
-SCIP_DECL_HASHKEYVAL(hashValExRow)
-{
-   /*lint --e{715}*/
-   SCIP_ROW* row;
-   int i;
-   SCIP_Real scale;
-   SCIP_SET* set;
-   uint64_t hash;
-
-   set = (SCIP_SET*) userptr;
-   row = (SCIP_ROW*)key;
-   assert(row != NULL);
-   assert(row->len > 0);
-
-   hash = SCIPhashTwo(row->len, row->index);
-
-   return hash;
-}
-
-static
-SCIP_DECL_HASHGETKEY(hashKeyExRow)
-{
-   /*lint --e{715}*/
-   SCIP_ROWEX* row;
-
-   row = (SCIP_ROWEX*)elem;
-   assert(row != NULL);
-   assert(row->fprow != NULL);
-
-   /* the key of a cut is the row */
-   return row->fprow;
-}
-
-static
-SCIP_DECL_HASHKEYEQ(hashEqExRow)
-{
-   /*lint --e{715}*/
-   SCIP_ROW* row1;
-   SCIP_ROW* row2;
-
-   row1 = (SCIP_ROW*)key1;
-   row2 = (SCIP_ROW*)key2;
-   assert(row1 != NULL);
-   assert(row2 != NULL);
-
-   /* return true if the row is the same */
-   if( row1 == row2 )
-      return TRUE;
-   else
-      return FALSE;
-}
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIProwexComp)
@@ -290,7 +171,6 @@ SCIP_Bool colexInSync(
    assert(fpcol != NULL);
 
    assert(colex->len == fpcol->len);
-   //assert(colex->size == fpcol->size);
    assert(colex->var == fpcol->var);
    assert(colex->lpipos == fpcol->lpipos);
    assert(colex->index == fpcol->index);
@@ -298,7 +178,6 @@ SCIP_Bool colexInSync(
    assert(colex->lpipos == fpcol->lpipos);
 
    assert(RatIsApproxEqualReal(colex->obj, fpcol->obj));
-   //assert(RApproxEqualReal(colex->unchangedobj, fpcol->unchangedobj));
    assert(RatIsApproxEqualReal(colex->flushedobj, fpcol->flushedobj));
    assert(RatIsApproxEqualReal(colex->lb, fpcol->lb) || (RatIsNegInfinity(colex->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
    assert(RatIsApproxEqualReal(colex->ub, fpcol->ub) || (RatIsInfinity(colex->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
@@ -334,7 +213,6 @@ SCIP_Bool rowexInSync(
    assert(fprow != NULL);
 
    assert(rowex->len == fprow->len);
-   //assert(rowex->size == fprow->size);
 
    assert(rowex->lpipos == fprow->lpipos);
    assert(rowex->lppos == fprow->lppos);
@@ -379,7 +257,7 @@ SCIP_Bool rowexInSync(
    return TRUE;
 }
 
-/** checks if the exact lp and lp are consistent */
+/** checks if the exact lp and lp are consistent (same number of rows/cols, and all cols/rows in sync) */
 static
 SCIP_Bool lpexInSync(
    SCIP_LPEX*            lpex,               /**< exact lp */
@@ -1210,7 +1088,6 @@ SCIP_RETCODE colexAddCoef(
    assert(col->nlprows <= col->len);
    assert(col->var != NULL);
    assert(!RatIsZero(val));
-   /*assert(colSearchCoef(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    SCIP_CALL( colexEnsureSize(col, blkmem, set, col->len+1) );
    assert(col->rows != NULL);
@@ -1342,8 +1219,8 @@ SCIP_RETCODE colexDelCoefPos(
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
 
-   /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from column <%s>\n",
-     col->vals[pos], row->fprow->name, pos, SCIPvarGetName(col->var));*/
+   RatDebugMessage("deleting coefficient %q * <%s> at position %d from column <%s>\n",
+     col->vals[pos], row->fprow->name, pos, SCIPvarGetName(col->var));
 
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
@@ -1381,8 +1258,8 @@ SCIP_RETCODE colexChgCoefPos(
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
 
-   /*debugMsg(scip, "changing coefficient %g * <%s> at position %d of column <%s> to %g\n",
-     col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
+   RatDebugMessage("changing coefficient %q * <%s> at position %d of column <%s> to %g\n",
+     col->vals[pos], col->rows[pos]->fprow->name, pos, SCIPvarGetName(col->var), val);
 
    if( RatIsZero(val) )
    {
@@ -1527,16 +1404,10 @@ SCIP_RETCODE rowexAddCoef(
       }
    }
 
-   /* update row norm */
-   //rowAddNorms(row, set, col, val, TRUE);
-
    coefChangedExact(row, col, lp);
 
    RatDebugMessage("added coefficient %q * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
       val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->fprow->name, row->nunlinked);
-
-   /* issue row coefficient changed event */
-   //SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, 0.0, val) );
 
    return SCIP_OKAY;
 }
@@ -1564,8 +1435,8 @@ SCIP_RETCODE rowexDelCoefPos(
 
    assert((pos < row->nlpcols) == (col->lppos >= 0 && row->linkpos[pos] >= 0));
 
-   /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from row <%s>\n",
-     val, SCIPvarGetName(col->var), pos, row->fprow->name);*/
+   RatDebugMessage("deleting coefficient %q * <%s> at position %d from row <%s>\n",
+     row->vals[pos], SCIPvarGetName(col->var), pos, row->fprow->name);
 
    if( row->nlocks > 0 )
    {
@@ -1616,8 +1487,8 @@ SCIP_RETCODE rowexChgCoefPos(
    assert(col != NULL);
    assert(0 <= pos && pos < row->len);
 
-   /*SCIPsetDebugMsg(set, "changing coefficient %g * <%s> at position %d of row <%s> to %g\n",
-     row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->fprow->name, val);*/
+   RatDebugMessage("changing coefficient %q * <%s> at position %d of row <%s> to %q\n",
+     row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->fprow->name, val);
 
    if( row->nlocks > 0 )
    {
@@ -1635,15 +1506,10 @@ SCIP_RETCODE rowexChgCoefPos(
    else if( !RatIsEqual(row->vals[pos], val) )
    {
       /* change existing coefficient */
-      //rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       RatSet(row->vals[pos], val);
       SCIPintervalSetRational(&row->valsinterval[pos], val);
       row->integral = row->integral && SCIPcolIsIntegral(col->fpcol) && RatIsIntegral(val);
-      //rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChangedExact(row, col, lp);
-
-      /* issue row coefficient changed event */
-      //SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, oldval, val) );
    }
 
    return SCIP_OKAY;
@@ -1844,9 +1710,6 @@ void colexUpdateAddLP(
          /* if no swap was necessary, mark lpcols to be unsorted */
          if( pos == row->nlpcols-1 )
             row->lpcolssorted = FALSE;
-
-         /* update norms */
-         //rowAddNorms(row, set, col, row->vals[row->nlpcols-1], FALSE);
       }
    }
 }
@@ -1912,9 +1775,6 @@ void colexUpdateDelLP(
          assert(row->linkpos[pos] == i);
          assert(row->cols[pos] == col);
          assert(0 <= pos && pos < row->nlpcols);
-
-         /* update norms */
-         //rowDelNorms(row, set, col, row->vals[pos], TRUE, FALSE, FALSE);
 
          row->nlpcols--;
          rowexSwapCoefs(row, set->buffer, pos, row->nlpcols);
@@ -2421,10 +2281,6 @@ SCIP_RETCODE lpexFlushChgCols(
             SCIP_CALL( SCIPlpiexGetObj(lp->lpiex, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiexGetBounds(lp->lpiex, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(RatIsEqual(lpiobj, col->flushedobj));
-            /* assert((RisNegInfinity(lpilb) && RisNegInfinity(col->flushedlb))
-                  || (!RisNegInfinity(lpilb) && !RisNegInfinity(col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
-            assert((RisInfinity(lpiub) && RisInfinity(col->flushedub))
-                  || (!RisInfinity(lpiub) && !RisInfinity(col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub))); */
             RatFreeBuffer(set->buffer, &lpiub);
             RatFreeBuffer(set->buffer, &lpilb);
             RatFreeBuffer(set->buffer, &lpiobj);
@@ -2819,7 +2675,7 @@ SCIP_RETCODE SCIPcolexDelCoef(
    /* delete the row from the column's row vector */
    SCIP_CALL( colexDelCoefPos(col, set, lp, pos) );
 
-   //checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -2870,7 +2726,7 @@ SCIP_RETCODE SCIPcolexChgCoef(
       SCIP_CALL( colexChgCoefPos(col, set, lp, pos, val) );
    }
 
-   //   checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -2926,7 +2782,7 @@ SCIP_RETCODE SCIPcolexIncCoef(
       SCIP_CALL( colexChgCoefPos(col, set, lp, pos, incval) );
    }
 
-   //   checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -3117,7 +2973,6 @@ SCIP_RETCODE SCIProwCreateExact(
       int i;
 
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*row)->cols, cols, len) );
-      //SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*row)->vals, vals, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->cols_index, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->linkpos, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->valsinterval, len) );
@@ -3213,15 +3068,8 @@ SCIP_RETCODE SCIPlpexFlush(
 
       lp->flushed = TRUE;
 
-      //checkLinks(lp);
+      checkLinks(lp);
    }
-
-   /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
-   /* if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) 
-   {
-      lp->solved = FALSE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   } */
 
    assert(lp->nlpicols == lp->ncols);
    assert(lp->lpifirstchgcol == lp->nlpicols);
@@ -3248,6 +3096,7 @@ SCIP_RETCODE SCIPlpexFlush(
  * lp methods
  */
 
+/** creates the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpPsdataCreate(
    SCIP_LPEX*            lp,                 /**< pointer to LP data object */
@@ -3294,10 +3143,11 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    return SCIP_OKAY;
 }
 
+/** frees the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpPsdataFree(
-   SCIP_LPEX*            lp,                 /**< pointer to LP data object */
-   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEX*           lp,                 /**< pointer to LP data object */
+   SCIP_SET*            set,                /**< global SCIP settings */
    BMS_BLKMEM*          blkmem              /**< block memory buffers */
    )
 {
@@ -3542,23 +3392,13 @@ SCIP_RETCODE SCIPlpexAddCol(
    col->lppos = lp->ncols;
    lp->ncols++;
 
-   /** todo: exip: do we need this? if( !RisNegInfinity(col->lazylb) || !RisInfinity(col->lazyub) )
-   {
-      SCIP_CALL( ensureLazycolesSize(lp, set, lp->nlazycols+1) );
-      lp->lazycols[lp->nlazycols] = col;
-      lp->nlazycols++;
-   } */
-
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
    /* update column arrays of all linked rows */
    colexUpdateAddLP(col, set);
 
-   /* update the objective function vector norms */
-   //lpUpdateObjNorms(lp, set, 0.0, col->unchangedobj);
-
-   //checkLinks(lp);
+   checkLinks(lp);
 
    /* update bound-shift status */
    if( RatIsInfinity(col->ub) || RatIsNegInfinity(col->lb) )
@@ -3584,7 +3424,7 @@ SCIP_RETCODE SCIPlpexAddRow(
    assert(rowex->lppos == -1);
    assert(rowex->fprow != NULL);
 
-   /** todo: exip do we need capture and locks on exact rows? */
+   /** todo: exip do we need locks on exact rows? */
    SCIProwexCapture(rowex);
    //SCIProwLock(row);
 
@@ -3612,17 +3452,6 @@ SCIP_RETCODE SCIPlpexAddRow(
    /* update row arrays of all linked columns */
    rowexUpdateAddLP(rowex, set);
 
-   //rowCalcNorms(rowex, set);
-
-   /* check, if row addition to LP events are tracked
-    * if so, issue ROWADDEDLP event
-    */
-   //if( (eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDLP) != 0) )
-   //{
-   //   SCIP_EVENT* event;
-   //   SCIP_CALL( SCIPeventCreateRowAddedLP(&event, blkmem, rowex) );
-   //   SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
-   //}
    return SCIP_OKAY;
 }
 
@@ -3868,7 +3697,7 @@ SCIP_RETCODE SCIProwexAddCoef(
 
    SCIP_CALL( rowexAddCoef(rowex, blkmem, set, eventqueue, lp, colex, val, -1) );
 
-   //checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -3914,7 +3743,7 @@ SCIP_RETCODE SCIProwexDelCoef(
    /* delete the column from the row's col vector */
    SCIP_CALL( rowexDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
 
-   //checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -3966,7 +3795,7 @@ SCIP_RETCODE SCIProwexChgCoef(
       SCIP_CALL( rowexChgCoefPos(row, blkmem, set, eventqueue, lp, pos, val) );
    }
 
-   //checkLinks(lp);
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -4021,7 +3850,7 @@ SCIP_RETCODE SCIProwexIncCoef(
       SCIP_CALL( rowexChgCoefPos(row, blkmem, set, eventqueue, lp, pos, incval) );
    }
 
-   //checkLinks(lp);
+   checkLinks(lp);
 
    /* invalid the activity */
    row->validactivitylp = -1;
@@ -4104,7 +3933,7 @@ void SCIProwexGetSolFeasibility(
    SCIP_Real activity;
    SCIP_Rational* temp1;
    SCIP_Rational* temp2;
-   
+
    RatCreateBuffer(set->buffer, &temp1);
    RatCreateBuffer(set->buffer, &temp2);
 
@@ -4214,7 +4043,6 @@ SCIP_RETCODE SCIProwexFree(
    assert(*row != NULL);
    assert((*row)->nuses == 0);
    assert((*row)->lppos == -1);
-   //assert((*row)->eventfilter != NULL);
 
    /* remove column indices from corresponding rows */
    SCIP_CALL( rowexUnlink(*row, set, lp) );
@@ -4250,8 +4078,8 @@ void SCIProwexGetLPFeasibility(
    )
 {
    SCIP_Rational* activity;
-   SCIP_Rational* actrhs; 
-   SCIP_Rational* actlhs; 
+   SCIP_Rational* actrhs;
+   SCIP_Rational* actlhs;
 
    RatCreateBuffer(set->buffer, &actrhs);
    RatCreateBuffer(set->buffer, &actlhs);
@@ -4276,8 +4104,8 @@ void SCIProwexGetPseudoFeasibility(
    )
 {
    SCIP_Rational* pseudoactivity;
-   SCIP_Rational* actrhs; 
-   SCIP_Rational* actlhs; 
+   SCIP_Rational* actrhs;
+   SCIP_Rational* actlhs;
 
    assert(row != NULL);
 
@@ -4920,7 +4748,7 @@ SCIP_RETCODE SCIPlpexUpdateVarLbGlobal(
 
    if( !RatIsEqual(oldlb, newlb) && RatIsPositive(SCIPvarGetObjExact(var)) )
    {
-      SCIP_Rational* deltaval; 
+      SCIP_Rational* deltaval;
       int deltainf;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
@@ -5226,7 +5054,7 @@ SCIP_RETCODE SCIPlexGetNRows(
 
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpexGetSol(
-   SCIP_LPEX*            lp,               /**< current LP data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -6170,15 +5998,15 @@ SCIP_RETCODE SCIPlpexClear(
    return SCIP_OKAY;
 }
 
-/** checks whether primal solution satisfies all integrality restrictions exactly. 
+/** checks whether primal solution satisfies all integrality restrictions exactly.
  * This checks either the fp solution exactly or checks the exact solution, if one exists.
  */
-SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
-   SCIP_LP* lp,
-   SCIP_LPEX* lpex,
-   SCIP_SET* set,
-   SCIP_STAT* stat,
-   SCIP_RESULT* result
+SCIP_RETCODE SCIPlpexCheckIntegralityExact(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    int c;

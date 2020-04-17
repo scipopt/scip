@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -253,7 +253,7 @@ SCIP_RETCODE SCIPlpexFlush(
    );
 
 /*
- * lp methods 
+ * lp methods
  */
 
 /** returns whether it is possible to use neumair-shcherbina bounding method */
@@ -647,15 +647,15 @@ SCIP_RETCODE SCIPlpexClear(
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
-/** checks whether primal solution satisfies all integrality restrictions exactly. 
+/** checks whether primal solution satisfies all integrality restrictions exactly.
  * This checks either the fp solution exactly or checks the exact solution, if one exists.
  */
-SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
-   SCIP_LP* lp,
-   SCIP_LPEX* lpex,
-   SCIP_SET* set,
-   SCIP_STAT* stat,
-   SCIP_RESULT* result
+SCIP_RETCODE SCIPlpexCheckIntegralityExact(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_RESULT*          result              /**< result pointer */
    );
 
 #ifdef __cplusplus
