@@ -265,7 +265,7 @@ void pcsolGetMstEdges_csr(
       if( gmark[i] && (predEdge[i] != UNKNOWN) )
       {
          assert(g->head[predEdge[i]] == i);
-         assert(result[predEdge[i]] == CONNECT);
+         assert(result[predEdge[i]] == UNKNOWN);
 
          result[predEdge[i]] = CONNECT;
       }

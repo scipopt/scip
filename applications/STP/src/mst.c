@@ -141,7 +141,6 @@ void mst_computeOnMarked(
 {
    assert(g && mst);
    assert(mst->csr && mst->dheap && mst->nodes_dist && mst->nodes_predEdge);
-   assert(graph_typeIsSpgLike(g));
 
    computeOnMarked_init(g, startnode, mst);
 

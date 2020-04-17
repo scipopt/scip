@@ -688,7 +688,13 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
       shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, sppc, &spaths);
    }
 
+   //SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, connected));
+
+
    SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, tmbase->result, connected));
+  // assert(0);
+
+
 #else
    assert(graph_pc_isPcMw(g));
 
