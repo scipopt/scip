@@ -684,9 +684,6 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    }
    else
    {
-      graph_path_st_pcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
-            tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
-
       shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, sppc, &spaths);
    }
 #else

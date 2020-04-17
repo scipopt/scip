@@ -89,10 +89,10 @@ SCIP_Real pcsubtreePruneForProfit(
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
    int                   subtree_root,       /**< root of the subtree */
-   int                   dfspos[],           /**< array to mark DFS positions of nodes */
-   int                   result[],           /**< ST edges */
-   STP_Bool              connected[],        /**< ST nodes */
-   int*                  dfscount            /**< counter */
+   int* RESTRICT         dfspos,             /**< array to mark DFS positions of nodes */
+   int* RESTRICT         result,             /**< ST edges */
+   STP_Bool* RESTRICT    connected,        /**< ST nodes */
+   int* RESTRICT         dfscount            /**< counter */
 )
 {
    SCIP_Real profit = g->prize[subtree_root];
@@ -111,7 +111,7 @@ SCIP_Real pcsubtreePruneForProfit(
 
    SCIPdebugMessage("strong-prune from root %d \n", subtree_root);
 
-   for( int e = g->outbeg[subtree_root]; e != EAT_LAST; e = g->oeat[e] )
+   for( int e = g->outbeg[subtree_root]; e >= 0; e = g->oeat[e] )
    {
       if( result[e] == CONNECT )
       {
