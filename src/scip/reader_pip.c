@@ -1205,8 +1205,8 @@ SCIP_RETCODE readObjective(
          SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
          SCIPdebugPrintCons(scip, nonlinobjcons, NULL);
 
-          SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
-          SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
+         SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
+         SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
       }
    }
 
@@ -1650,7 +1650,7 @@ SCIP_RETCODE readPIPFile(
    exprconshdlr = SCIPfindConshdlr(scip, "expr");
    if( exprconshdlr == NULL )
    {
-      SCIPerrorMessage("cannot parse nonlinear constraint without expression constraint handler\n");
+      SCIPerrorMessage("cannot read PIP without expression constraint handler\n");
       return SCIP_INVALIDCALL;
    }
 
