@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   graph_sol.c
+/**@file   solstp.c
  * @brief  includes methods working on solutions (i.e. trees) to Steiner tree problems
  * @author Daniel Rehfeldt
  *
  * Methods for manipulating solutions (i.e. trees) to Steiner tree problems, such as pruning.
  * Also includes methods for obtaining information about solutions.
  *
- * A list of all interface methods can be found in graph.h
+ * A list of all interface methods can be found in solstp.h
  *
  */
 
@@ -30,9 +30,45 @@
 /*lint -esym(766,string.h) */
 //#define SCIP_DEBUG
 
-#include "graph.h"
 #include "probdata_stp.h"
 #include "portab.h"
+#include "solstp.h"
+#include "mst.h"
+#include "shortestpath.h"
+
+#ifndef NDEBUG
+/** (simple) pruning of given solution possible? */
+static
+SCIP_Bool pruningIsPossible(
+   const GRAPH*          g,                  /**< graph structure */
+   const int*            result             /**< ST edges */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = nnodes - 1; i >= 0; --i )
+   {
+      int j;
+
+      if( !g->mark[i] )
+         continue;
+
+      if( Is_term(g->term[i]) || Is_pseudoTerm(g->term[i]) )
+         continue;
+
+      for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
+         if( result[j] == CONNECT )
+            break;
+
+      if( j == EAT_LAST )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+#endif
 
 
 /** Deletes subtree from given node, marked by dfspos.
@@ -208,6 +244,35 @@ SCIP_RETCODE pcsolGetMstEdges(
 }
 
 
+/** computes MST on marked graph and sets result edges */
+static inline
+void pcsolGetMstEdges_csr(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   root,               /**< root of solution */
+   MST*                  mst,                /**< the MST */
+   int* RESTRICT         result              /**< MST solution, which does not include artificial terminals */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int* const gmark = g->mark;
+   const int* predEdge;
+
+   mst_computeOnMarked(g, root, mst);
+   predEdge = mst->nodes_predEdge;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( gmark[i] && (predEdge[i] != UNKNOWN) )
+      {
+         assert(g->head[predEdge[i]] == i);
+         assert(result[predEdge[i]] == CONNECT);
+
+         result[predEdge[i]] = CONNECT;
+      }
+   }
+}
+
+
 /** Gets root of solution for unrooted PC/MW.
  *  Returns -1 if the solution is empty. */
 static inline
@@ -268,7 +333,7 @@ void pcsolMarkGraphNodes(
    const GRAPH*          g                   /**< graph structure */
    )
 {
-   int* const gmark = g->mark;
+   int* RESTRICT gmark = g->mark;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
@@ -467,7 +532,7 @@ SCIP_RETCODE strongPruneSteinerTreePc(
    int dfscount = 0;
    SCIP_Real profit;
 #ifndef NDEBUG
-   const int nsoledges = graph_solGetNedges(g, result);
+   const int nsoledges = solstp_getNedges(g, result);
 #endif
 
    assert(solroot >= 0);
@@ -673,20 +738,78 @@ SCIP_RETCODE pruneSteinerTreePc(
 
    pcsolConnectDummies(g, solroot, result, connected);
 
-   /* simple pruning todo omit */
-   pcsolPrune(g, result, connected);
+   /* simple pruning */
+  // pcsolPrune(g, result, connected);
+   assert(!pruningIsPossible(g, result));
+
 
 #ifndef NDEBUG
    pcsolConnectDummies(g, solroot, result_dbg, connected_dbg);
    pcsolPrune(g, result_dbg, connected_dbg);
 
-   assert(LE(graph_solGetObj(g, result, 0.0, nedges), graph_solGetObj(g, result_dbg, 0.0, nedges)));
+   assert(LE(solstp_getObj(g, result, 0.0, nedges), solstp_getObj(g, result_dbg, 0.0, nedges)));
 
    SCIPfreeBufferArray(scip, &connected_dbg);
    SCIPfreeBufferArray(scip, &result_dbg);
 #endif
 
-   assert(graph_solIsValid(scip, g, result));
+   assert(solstp_isValid(scip, g, result));
+
+   return SCIP_OKAY;
+}
+
+
+
+/* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals
+ * NOTE: graph is not really const, mark is changed! todo */
+static
+SCIP_RETCODE pruneSteinerTreePc_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   MST*                  mst,                /**< the MST */
+   int* RESTRICT         result,             /**< ST edges (need to be set to UNKNOWN) */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+   int solroot = g->source;
+
+#ifndef NDEBUG
+   for( int i = 0; i < g->edges; i++ ) assert(UNKNOWN == result[i]);
+#endif
+
+   assert(scip && result && connected);
+   assert(g->extended);
+   assert(graph_pc_isPcMw(g));
+
+   pcsolMarkGraphNodes(connected, g);
+
+   if( !rpcmw )
+   {
+      solroot = pcsolGetRoot(scip, g, connected);
+
+      /* trivial solution? */
+      if( solroot == -1 )
+      {
+         printf("trivial solution in pruning \n");
+         pcsolGetTrivialEdges(g, connected, result);
+         return SCIP_OKAY;
+      }
+   }
+
+   assert(0 <= solroot && solroot < g->knots);
+   assert(g->mark[solroot]);
+   SCIPdebugMessage("(non-artificial) solution root=%d \n", solroot);
+
+   pcsolGetMstEdges_csr(g, solroot, mst, result);
+
+   int todo;
+//   SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
+
+   pcsolConnectDummies(g, solroot, result, connected);
+
+   assert(!pruningIsPossible(g, result));
+   assert(solstp_isValid(scip, g, result));
 
    return SCIP_OKAY;
 }
@@ -697,7 +820,7 @@ SCIP_RETCODE pruneSteinerTreePc(
 
 /** Prune solution given by included nodes.
  *  NOTE: For PC/RPC this method will get the original edge costs before pruning! */
-SCIP_RETCODE graph_solPrune(
+SCIP_RETCODE solstp_prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int*                  result,             /**< ST edges (out) */
@@ -739,14 +862,14 @@ SCIP_RETCODE graph_solPrune(
       SCIP_CALL( pruneSteinerTreeStp(scip, g, g->cost, result, connected) );
    }
 
-   assert(graph_solIsValid(scip, g, result));
+   assert(solstp_isValid(scip, g, result));
 
    return SCIP_OKAY;
 }
 
 
 /** prune solution given by included nodes */
-SCIP_RETCODE graph_solPruneFromNodes(
+SCIP_RETCODE solstp_pruneFromNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int*                  result,             /**< ST edges */
@@ -756,14 +879,14 @@ SCIP_RETCODE graph_solPruneFromNodes(
    assert(scip && g && result && connected);
    assert(g->stp_type != STP_DHCSTP);
 
-   SCIP_CALL( graph_solPrune(scip, g, result, connected) );
+   SCIP_CALL( solstp_prune(scip, g, result, connected) );
 
    return SCIP_OKAY;
 }
 
 
 /** prune solution given by included edges */
-SCIP_RETCODE graph_solPruneFromEdges(
+SCIP_RETCODE solstp_pruneFromEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int*                  result              /**< ST edges */
@@ -774,7 +897,7 @@ SCIP_RETCODE graph_solPruneFromEdges(
    const int nedges = graph_get_nEdges(g);
 
    assert(scip && result);
-   assert(graph_solIsValid(scip, g, result));
+   assert(solstp_isValid(scip, g, result));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
@@ -792,10 +915,10 @@ SCIP_RETCODE graph_solPruneFromEdges(
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("prune from edges: \n");
-   graph_solPrint(g, result);
+   solstp_print(g, result);
 #endif
 
-   SCIP_CALL( graph_solPruneFromNodes(scip, g, result, connected) );
+   SCIP_CALL( solstp_pruneFromNodes(scip, g, result, connected) );
 
    SCIPfreeBufferArray(scip, &connected);
 
@@ -805,12 +928,12 @@ SCIP_RETCODE graph_solPruneFromEdges(
 
 /** Prunes solution with respect to the provided edges costs.
  *  NOTE: method exists purely for optimization, so that unbiased costs for PC do not have to computed again! */
-SCIP_RETCODE graph_solPruneFromTmHeur(
+SCIP_RETCODE solstp_pruneFromTmHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs (original edge costs for PC!) */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
+   int* RESTRICT         result,             /**< ST edges */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
    )
 {
    const int nedges = graph_get_nEdges(g);
@@ -844,8 +967,46 @@ SCIP_RETCODE graph_solPruneFromTmHeur(
 }
 
 
+
+/** Prunes solution with respect to the provided edges costs.
+ *  CSR version!
+ *  NOTE: method exists purely for optimization, so that unbiased costs for PC do not have to computed again! */
+SCIP_RETCODE solstp_pruneFromTmHeur_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   SPATHS*               spaths,             /**< shortest paths;
+                                                 NOTE: distances and preds not valid afterwards!
+                                                 hacky, but improves cache-efficiency */
+   int* RESTRICT         result,             /**< ST edges */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   MST mst = { .csr = spaths->csr, .dheap = spaths->dheap,
+               .nodes_dist = spaths->nodes_dist, .nodes_predEdge = spaths->nodes_pred };
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip && result && connected);
+   assert(g->stp_type != STP_DHCSTP && "does not work because DHCSTP uses different edge costs");
+
+   for( int e = 0; e < nedges; e++ )
+      result[e] = UNKNOWN;
+
+   if( graph_pc_isPcMw(g) )
+   {
+      SCIP_CALL( pruneSteinerTreePc_csr(scip, g, &mst, result, connected) );
+   }
+   else
+   {
+      int todo;
+      assert(0);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** changes solution according to given root */
-SCIP_RETCODE graph_solReroot(
+SCIP_RETCODE solstp_reroot(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
    int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
@@ -950,7 +1111,7 @@ SCIP_RETCODE graph_solReroot(
    {
       const int realroot = g->source;
       g->source = newroot;
-      assert(graph_solIsValid(scip, g, result));
+      assert(solstp_isValid(scip, g, result));
       g->source = realroot;
    }
 #endif
@@ -960,7 +1121,7 @@ SCIP_RETCODE graph_solReroot(
 
 
 /** checks whether edge(s) of given primal solution have been deleted */
-SCIP_Bool graph_solIsUnreduced(
+SCIP_Bool solstp_isUnreduced(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
@@ -982,7 +1143,7 @@ SCIP_Bool graph_solIsUnreduced(
 
 
 /** is the node contained in the solution? */
-SCIP_Bool graph_solContainsNode(
+SCIP_Bool solstp_containsNode(
    const GRAPH*          g,                  /**< graph data structure */
    const int*            result,             /**< solution array, indicating whether an edge is in the solution */
    int                   node                /**< node to check for */
@@ -1004,7 +1165,7 @@ SCIP_Bool graph_solContainsNode(
 
 
 /** verifies whether a given primal solution is feasible */
-SCIP_Bool graph_solIsValid(
+SCIP_Bool solstp_isValid(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
@@ -1118,7 +1279,7 @@ SCIP_Bool graph_solIsValid(
          }
       }
 
-      graph_solPrint(graph, result);
+      solstp_print(graph, result);
    }
 #endif
 
@@ -1130,7 +1291,7 @@ SCIP_Bool graph_solIsValid(
 
 
 /** prints given solution */
-void graph_solPrint(
+void solstp_print(
    const GRAPH*          graph,              /**< graph data structure */
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
    )
@@ -1155,7 +1316,7 @@ void graph_solPrint(
 
 
 /** mark endpoints of edges in given list */
-void graph_solSetNodeList(
+void solstp_setNodeList(
    const GRAPH*          g,              /**< graph data structure */
    STP_Bool*             solnode,        /**< solution nodes array (TRUE/FALSE) */
    IDX*                  listnode        /**< edge list */
@@ -1181,7 +1342,7 @@ void graph_solSetNodeList(
 }
 
 /** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
-SCIP_Real graph_solGetObj(
+SCIP_Real solstp_getObj(
    const GRAPH*          g,                  /**< the graph */
    const int*            soledge,            /**< solution */
    SCIP_Real             offset,             /**< offset */
@@ -1207,7 +1368,7 @@ SCIP_Real graph_solGetObj(
 
 
 /** sets trivial solution (all UNKNOWN) */
-void graph_solGetTrivialSol(
+void solstp_getTrivialSol(
    const GRAPH*          g,                  /**< the graph */
    int*                  soledge             /**< solution */
    )
@@ -1227,7 +1388,7 @@ void graph_solGetTrivialSol(
 
 
 /** computes number of edges in solution value */
-int graph_solGetNedges(
+int solstp_getNedges(
    const GRAPH*          g,                  /**< the graph */
    const int*            soledge             /**< solution */
    )
@@ -1246,7 +1407,7 @@ int graph_solGetNedges(
 
 
 /** marks vertices for given edge-solution array (CONNECT/UNKNOWN) */
-void graph_solSetVertexFromEdge(
+void solstp_setVertexFromEdge(
    const GRAPH*          g,                  /**< the graph */
    const int*            result,             /**< solution array (CONNECT/UNKNOWN) */
    STP_Bool*             solnode             /**< marks whether node is in solution */
@@ -1280,7 +1441,7 @@ void graph_solSetVertexFromEdge(
 }
 
 /** get original solution */
-SCIP_RETCODE graph_solGetOrg(
+SCIP_RETCODE solstp_getOrg(
    SCIP*           scip,               /**< SCIP data structure */
    const GRAPH*    transgraph,         /**< the transformed graph */
    const GRAPH*    orggraph,           /**< the original graph */
@@ -1306,10 +1467,10 @@ SCIP_RETCODE graph_solGetOrg(
 
    for( int e = 0; e < transnedges; e++ )
       if( transsoledge[e] == CONNECT )
-         graph_solSetNodeList(orggraph, orgnodearr, ancestors[e]);
+         solstp_setNodeList(orggraph, orgnodearr, ancestors[e]);
 
    /* retransform edges fixed during graph reduction */
-   graph_solSetNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
+   solstp_setNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
 
    if( pcmw )
    {
@@ -1317,16 +1478,16 @@ SCIP_RETCODE graph_solGetOrg(
       if( graph_pc_isRootedPcMw(transgraph) && transgraph->terms == 1 && graph_pc_nFixedTerms(orggraph) == 1 )
          orgnodearr[orggraph->source] = TRUE;
 
-      SCIP_CALL( graph_solMarkPcancestors(scip, transgraph->pcancestors, orggraph->tail, orggraph->head, orgnnodes,
+      SCIP_CALL( solstp_markPcancestors(scip, transgraph->pcancestors, orggraph->tail, orggraph->head, orgnnodes,
             orgnodearr, NULL, NULL, NULL, NULL ) );
    }
 
    /* prune solution (in original graph) */
-   SCIP_CALL( graph_solPrune(scip, orggraph, orgsoledge, orgnodearr) );
+   SCIP_CALL( solstp_prune(scip, orggraph, orgsoledge, orgnodearr) );
 
    SCIPfreeBufferArray(scip, &orgnodearr);
 
-   assert(graph_solIsValid(scip, orggraph, orgsoledge));
+   assert(solstp_isValid(scip, orggraph, orgsoledge));
 
    return SCIP_OKAY;
 }
@@ -1334,7 +1495,7 @@ SCIP_RETCODE graph_solGetOrg(
 
 
 /** mark original solution */
-SCIP_RETCODE graph_solMarkPcancestors(
+SCIP_RETCODE solstp_markPcancestors(
    SCIP*           scip,               /**< SCIP data structure */
    IDX**           pcancestors,        /**< the ancestors */
    const int*      tails,              /**< tails array */

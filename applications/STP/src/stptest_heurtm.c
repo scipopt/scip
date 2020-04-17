@@ -29,6 +29,7 @@
 #include <assert.h>
 #include "stptest.h"
 #include "graph.h"
+#include "solstp.h"
 #include "heur_tm.h"
 #include "portab.h"
 
@@ -95,7 +96,7 @@ SCIP_RETCODE testTmGivesExpectedTreePcFull1(
    SCIP_CALL( runTmPcFull(scip, graph, steinertree_edges) );
 
    offset = graph_pc_getNonLeafTermOffset(scip, graph);
-   cost_tmfull = graph_solGetObj(graph, steinertree_edges, offset, nedges);
+   cost_tmfull = solstp_getObj(graph, steinertree_edges, offset, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_tmfull, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_tmfull);
 
@@ -154,7 +155,7 @@ SCIP_RETCODE testTmGivesExpectedTreePcFull2(
    SCIP_CALL( runTmPcFull(scip, graph, steinertree_edges) );
 
    offset = graph_pc_getNonLeafTermOffset(scip, graph);
-   cost_tmfull = graph_solGetObj(graph, steinertree_edges, offset, nedges);
+   cost_tmfull = solstp_getObj(graph, steinertree_edges, offset, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_tmfull, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_tmfull);
 
@@ -219,7 +220,7 @@ SCIP_RETCODE testTmGivesExpectedTreePcFull3(
    SCIP_CALL( runTmPcFull(scip, graph, steinertree_edges) );
 
    offset = graph_pc_getNonLeafTermOffset(scip, graph);
-   cost_tmfull = graph_solGetObj(graph, steinertree_edges, offset, nedges);
+   cost_tmfull = solstp_getObj(graph, steinertree_edges, offset, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_tmfull, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_tmfull);
 
@@ -276,10 +277,10 @@ SCIP_RETCODE testPrunedSolIsImprovedPc1(
       steinertree_nodes[i] = TRUE;
 
    /* actual test */
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree_edges, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree_edges, steinertree_nodes) );
 
    offset = graph_pc_getNonLeafTermOffset(scip, graph);
-   cost_pruned = graph_solGetObj(graph, steinertree_edges, offset, nedges);
+   cost_pruned = solstp_getObj(graph, steinertree_edges, offset, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_pruned, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_pruned);
 
@@ -341,10 +342,10 @@ SCIP_RETCODE testPrunedSolIsImprovedPc2(
       steinertree_nodes[i] = TRUE;
 
    /* actual test */
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree_edges, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree_edges, steinertree_nodes) );
 
    offset = graph_pc_getNonLeafTermOffset(scip, graph);
-   cost_pruned = graph_solGetObj(graph, steinertree_edges, offset, nedges);
+   cost_pruned = solstp_getObj(graph, steinertree_edges, offset, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_pruned, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_pruned);
 
@@ -403,9 +404,9 @@ SCIP_RETCODE testPrunedSolIsImprovedRmw1(
       steinertree_nodes[i] = TRUE;
 
    /* actual test */
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree_edges, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree_edges, steinertree_nodes) );
 
-   cost_pruned = graph_solGetObj(graph, steinertree_edges, 0.0, nedges);
+   cost_pruned = solstp_getObj(graph, steinertree_edges, 0.0, nedges);
 
    STPTEST_ASSERT_MSG_ARGS(EQ(cost_pruned, cost_expected), "wrong cost: expected=%f, real=%f \n", cost_expected, cost_pruned);
 

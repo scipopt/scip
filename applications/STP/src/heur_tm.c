@@ -34,6 +34,7 @@
 #include "heur_tm.h"
 #include "probdata_stp.h"
 #include "portab.h"
+#include "solstp.h"
 #include "scip/misc.h"
 #include "shortestpath.h"
 #include <math.h>
@@ -624,7 +625,7 @@ SCIP_RETCODE computeSteinerTreeCsr(
 
    shortestpath_computeSteinerTree(g, startnode, &spaths);
 
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, NULL, result, connected) );
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, NULL, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -653,7 +654,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    graph_path_st(g, cost, dijkdist, dijkedge, start, connected);
 
    /* cost will actually only be used for hop-constrained problem */
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -686,6 +687,8 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    {
       shortestpath_computeSteinerTreePcMw(g, start, prize, costsAreBiased, sppc, &spaths);
    }
+
+   SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, tmbase->result, connected));
 #else
    assert(graph_pc_isPcMw(g));
 
@@ -699,9 +702,11 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
       graph_path_st_pcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
             tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
    }
+
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, connected));
+
 #endif
 
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, tmbase->result, connected));
 
    return SCIP_OKAY;
 }
@@ -729,7 +734,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    graph_path_st_pcmw_full(g, tmbase->cost, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
 #endif
 
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost_org, tmbase->result, connected) );
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, connected) );
 
    return SCIP_OKAY;
 }
@@ -874,7 +879,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    /* prune the tree */
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost, result, connected) );
 
    SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArray(scip, &cluster);
@@ -1462,7 +1467,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    }
 
    /* prune the ST, so that all leaves are terminals */
-   SCIP_CALL( graph_solPruneFromTmHeur(scip, g, cost, result, connected) );
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost, result, connected) );
 
    SCIPfreeBufferArray(scip, &vcount);
 
@@ -1934,13 +1939,13 @@ SCIP_RETCODE runTm(
       }
 
       /* here another measure than in the do_(...) heuristics is being used */
-      obj = graph_solGetObj(graph, result, 0.0, nedges);
+      obj = solstp_getObj(graph, result, 0.0, nedges);
 
       SCIPdebugMessage("run=%d, obj=%.12e\n", r, obj);
 
       if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
       {
-         if( graph->stp_type != STP_DHCSTP || graph_solGetNedges(graph, result) <= graph->hoplimit )
+         if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
          {
             tmbase->best_obj = obj;
             BMScopyMemoryArray(tmbase->best_result, result, nedges);
@@ -2095,7 +2100,7 @@ SCIP_RETCODE runTmPcMW_mode(
       }
 
       /* compute objective value (w.r.t. original costs!) */
-      obj = graph_solGetObj(graph, tmbase->result, 0.0, nedges);
+      obj = solstp_getObj(graph, tmbase->result, 0.0, nedges);
 
       if( LT(obj, tmbase->best_obj) )
       {
@@ -2124,7 +2129,7 @@ SCIP_RETCODE runTmPcMW_mode(
 
 
 /** submethod for SCIPStpHeurTMRun in PC or MW mode */
-static
+static inline
 SCIP_RETCODE runTmPcMW(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -2347,7 +2352,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          if( success )
          {
             SCIPdebugMessage("TM solution added, value %f \n",
-                  graph_solGetObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
+                  solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
 
             *result = SCIP_FOUNDSOL;
          }

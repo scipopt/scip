@@ -38,6 +38,7 @@ add_executable(scipstp
     src/heur_slackprune.c
     src/heur_tm.c
     src/misc_stp.c
+    src/mst.c
     src/pricer_stp.c
     src/probdata_stp.c
     src/prop_stp.c
@@ -62,6 +63,7 @@ add_executable(scipstp
     src/stptest_pcreduce.c
     src/stptest_reduceutils.c
     src/solpool.c
+    src/solstp.c
     src/validate.c
 )
 

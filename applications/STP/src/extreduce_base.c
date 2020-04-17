@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "graph.h"
+#include "solstp.h"
 #include "extreduce.h"
 
 #define EXT_PSEUDO_DEGREE_MIN 3
@@ -266,7 +267,7 @@ SCIP_RETCODE pseudodeleteExecute(
 
       if( pseudodeleteNodeIsPromising(graph, i) )
       {
-         extpermanent.redcostEqualAllow = (result && !graph_solContainsNode(graph, result, i));
+         extpermanent.redcostEqualAllow = (result && !solstp_containsNode(graph, result, i));
 
          SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
       }

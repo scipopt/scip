@@ -33,6 +33,7 @@
 #include "scip/struct_scip.h"
 #include "graph.h"
 #include "heur_tm.h"
+#include "solstp.h"
 #include "heur_local.h"
 #include "branch_stp.h"
 #include "prop_stp.h"
@@ -365,7 +366,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
 
-   assert(graph_solIsValid(scip, graph, soledges));
+   assert(solstp_isValid(scip, graph, soledges));
 
    /* restore the graph */
    for( int k = 0; k < nnodes; k++ )
@@ -383,7 +384,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
          BMScopyMemoryArray(graph->cost_org_pc, costorg_pc, nedges);
    }
 
-   assert(graph_solIsValid(scip, graph, soledges));
+   assert(solstp_isValid(scip, graph, soledges));
 
    if( addsol )
    {

@@ -78,7 +78,6 @@ CMAINOBJ	=	cmain.o \
 			graph_path.o \
 			graph_pcbase.o \
 			graph_save.o \
-			graph_sol.o \
 			graph_trans.o \
 			graph_util.o \
 			heur_ascendprune.o \
@@ -88,6 +87,7 @@ CMAINOBJ	=	cmain.o \
 			heur_prune.o \
 			heur_rec.o \
 			misc_stp.o \
+			mst.o \
 			probdata_stp.o \
 			event_bestsol.o \
 			dialog_stp.o \
@@ -104,6 +104,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_util.o \
 			shortestpath.o \
 			solpool.o \
+			solstp.o \
 			stptest_base.o \
 			stptest_extreduce.o \
 			stptest_extutils.o \

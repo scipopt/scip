@@ -43,6 +43,7 @@
 #include "cons_stp.h"
 #include "scip/pub_misc.h"
 #include "probdata_stp.h"
+#include "solstp.h"
 #include "math.h"
 
 #define HEUR_NAME             "rec"
@@ -327,7 +328,7 @@ SCIP_RETCODE retransformReducedProbSolution(
          pcancestoredges[k] = FALSE;
 
       SCIP_CALL(
-            graph_solMarkPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots, solnodes, pcancestoredges, NULL, NULL, NULL ));
+            solstp_markPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots, solnodes, pcancestoredges, NULL, NULL, NULL ));
 
       for( int k = 0; k < solgraph->orgedges; k++ )
          if( pcancestoredges[k] )
@@ -467,7 +468,7 @@ SCIP_RETCODE computeReducedProbSolution(
          solgraph->source, cost, costrev, &hopfactor, nodepriority, &success) );
 
       assert(SCIPisStopped(scip) || success);
-      assert(SCIPisStopped(scip) || graph_solIsValid(scip, solgraph, soledges));
+      assert(SCIPisStopped(scip) || solstp_isValid(scip, solgraph, soledges));
    }
 
    SCIPfreeBufferArrayNull(scip, &prize);
@@ -477,7 +478,7 @@ SCIP_RETCODE computeReducedProbSolution(
          && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
    {
       SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
-      assert(graph_solIsValid(scip, solgraph, soledges));
+      assert(solstp_isValid(scip, solgraph, soledges));
    }
 
    graph_path_exit(scip, solgraph);
@@ -543,7 +544,7 @@ void initializeIncumbent(
    }
 
    /* get objective value of incumbent */
-   *incumentobj = graph_solGetObj(graph, incumbentedges, 0.0, nedges);
+   *incumentobj = solstp_getObj(graph, incumbentedges, 0.0, nedges);
 }
 
 
@@ -1504,10 +1505,10 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          if( probtype == STP_DCSTP )
             SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
          else
-            SCIP_CALL( graph_solPrune(scip, graph, newsoledges, stnodes) );
+            SCIP_CALL( solstp_prune(scip, graph, newsoledges, stnodes) );
 
-         assert(graph_solIsValid(scip, graph, newsoledges) || SCIPisStopped(scip));
-         pobj = graph_solGetObj(graph, newsoledges, 0.0, nedges);
+         assert(solstp_isValid(scip, graph, newsoledges) || SCIPisStopped(scip));
+         pobj = solstp_getObj(graph, newsoledges, 0.0, nedges);
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
@@ -1556,7 +1557,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       *newsolindex = -1;
    }
 
-   SCIPdebugMessage("incumbentobj=%f newsolobj=%f \n", graph_solGetObj(graph, incumbentedges, 0.0, nedges), graph_solGetObj(graph, newsoledges, 0.0, nedges));
+   SCIPdebugMessage("incumbentobj=%f newsolobj=%f \n", solstp_getObj(graph, incumbentedges, 0.0, nedges), solstp_getObj(graph, newsoledges, 0.0, nedges));
    SCIPdebugMessage("incumentobj=%f \n", incumentobj);
 
    SCIPfreeBufferArray(scip, &stnodes);
@@ -1723,7 +1724,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    graph_path_exit(scip, newgraph);
 
    assert(*success);
-   assert(graph_solIsValid(scip, newgraph, newresult));
+   assert(solstp_isValid(scip, newgraph, newresult));
 
 
    /*** step 4: retransform solution to original graph ***/
@@ -1754,7 +1755,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          solnodes[dnodemap[k]] = TRUE;
       }
 
-   SCIP_CALL( graph_solMarkPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
+   SCIP_CALL( solstp_markPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
 
    for( int k = 0; k < nsolnodes; k++ )
       if( solnodes[k] )
@@ -1764,25 +1765,25 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    assert(graph_pc_isPcMw(graph));
 
-   SCIP_CALL( graph_solPrune(scip, graph, newresult, stvertex) );
+   SCIP_CALL( solstp_prune(scip, graph, newresult, stvertex) );
 
    /* solution better than original one?  */
 
-   if( SCIPisLT(scip, graph_solGetObj(graph, newresult, 0.0, nedges),
-         graph_solGetObj(graph, result, 0.0, nedges)) )
+   if( SCIPisLT(scip, solstp_getObj(graph, newresult, 0.0, nedges),
+         solstp_getObj(graph, result, 0.0, nedges)) )
    {
       *success = TRUE;
-      SCIPdebugMessage("success %f < %f \n", graph_solGetObj(graph, newresult, 0.0, nedges), graph_solGetObj(graph, result, 0.0, nedges));
+      SCIPdebugMessage("success %f < %f \n", solstp_getObj(graph, newresult, 0.0, nedges), solstp_getObj(graph, result, 0.0, nedges));
    }
    else
    {
-      SCIPdebugMessage("no improvements %f >= %f \n", graph_solGetObj(graph, newresult, 0.0, nedges), graph_solGetObj(graph, result, 0.0, nedges));
+      SCIPdebugMessage("no improvements %f >= %f \n", solstp_getObj(graph, newresult, 0.0, nedges), solstp_getObj(graph, result, 0.0, nedges));
       *success = FALSE;
    }
 
-   assert(graph_solIsValid(scip, graph, newresult));
+   assert(solstp_isValid(scip, graph, newresult));
 
-   if( !graph_solIsValid(scip, graph, newresult) )
+   if( !solstp_isValid(scip, graph, newresult) )
       *success = FALSE;
 
    SCIPfreeBufferArray(scip, &unodemap);

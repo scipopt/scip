@@ -29,6 +29,7 @@
 #include <assert.h>
 #include "stptest.h"
 #include "graph.h"
+#include "solstp.h"
 #include "heur_local.h"
 #include "heur_tm.h"
 
@@ -82,7 +83,7 @@ SCIP_RETCODE localKeyPathExchange(
    steinertree[4] = CONNECT;
    steinertree[6] = CONNECT;
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
@@ -174,9 +175,9 @@ SCIP_RETCODE localKeyPathExchangePc(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
@@ -277,18 +278,18 @@ SCIP_RETCODE localKeyPathExchangePc2(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
    // 5 is the implicit root
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 1.0, cost0) )
       return SCIP_ERROR;
@@ -377,18 +378,18 @@ SCIP_RETCODE localKeyPathExchangeMw(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
    // 5 is the implicit root
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
@@ -464,10 +465,10 @@ SCIP_RETCODE localKeyVertex(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
-   assert(graph_solIsValid(scip, graph, steinertree));
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    assert(steinertree[12] != CONNECT && steinertree[15] != CONNECT);
    assert(steinertree[0] == CONNECT && steinertree[2] == CONNECT);
@@ -477,7 +478,7 @@ SCIP_RETCODE localKeyVertex(
 
    // 5 is the implicit root
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
    if( !SCIPisEQ(scip, cost1 + 1.0, cost0) )
       return SCIP_ERROR;
 
@@ -576,10 +577,10 @@ SCIP_RETCODE localKeyVertexPc(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
-   assert(graph_solIsValid(scip, graph, steinertree));
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    assert(steinertree[12] != CONNECT && steinertree[15] != CONNECT);
    assert(steinertree[1] == CONNECT && steinertree[3] == CONNECT);
@@ -588,7 +589,7 @@ SCIP_RETCODE localKeyVertexPc(
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
 
@@ -694,10 +695,10 @@ SCIP_RETCODE localKeyVertexPc2(
 
    // 4 is the implicit root
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
-   assert(graph_solIsValid(scip, graph, steinertree));
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    assert(steinertree[16] == UNKNOWN && steinertree[18] == UNKNOWN);
    assert(steinertree[1] == CONNECT && steinertree[3] == CONNECT);
@@ -707,7 +708,7 @@ SCIP_RETCODE localKeyVertexPc2(
 
    // 6 is the implicit root
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
 
@@ -813,15 +814,15 @@ SCIP_RETCODE localExtendPc(
    steinertree_nodes[3] = TRUE;
    steinertree_nodes[4] = TRUE;
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
-   assert(graph_solIsValid(scip, graph, steinertree));
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, steinertree, steinertree_nodes) );
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
 
@@ -889,15 +890,15 @@ SCIP_RETCODE localInsertion(
    steinertree[4] = CONNECT;
    steinertree[6] = CONNECT;
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 1.0, cost0) )
       return SCIP_ERROR;
@@ -966,15 +967,15 @@ SCIP_RETCODE localInsertion2(
    steinertree[4] = CONNECT;
    steinertree[6] = CONNECT;
 
-   assert(graph_solIsValid(scip, graph, steinertree));
+   assert(solstp_isValid(scip, graph, steinertree));
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 1.5, cost0) )
    {
@@ -1076,14 +1077,14 @@ SCIP_RETCODE localInsertion2pc(
    steinertree_nodes[3] = TRUE;
    steinertree_nodes[4] = TRUE;
 
-   SCIP_CALL( graph_solPrune(scip, graph, steinertree, steinertree_nodes) );
+   SCIP_CALL( solstp_prune(scip, graph, steinertree, steinertree_nodes) );
 
-   cost0 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost0 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
-   cost1 = graph_solGetObj(graph, steinertree, 0.0, nedges);
+   cost1 = solstp_getObj(graph, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 0.75, cost0) )
    {

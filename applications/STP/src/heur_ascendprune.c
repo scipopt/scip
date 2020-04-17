@@ -39,6 +39,7 @@
 #include "graph.h"
 #include "reduce.h"
 #include "heur_tm.h"
+#include "solstp.h"
 #include "cons_stp.h"
 #include "scip/pub_misc.h"
 #include "probdata_stp.h"
@@ -451,7 +452,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    {
       assert(g->stp_type == STP_RMWCSP);
       *solfound = TRUE;
-      graph_solGetTrivialSol(g, result);
+      solstp_getTrivialSol(g, result);
 
       return SCIP_OKAY;
    }
@@ -563,7 +564,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       assert( !(Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source) );
    }
 
-   assert(graph_solIsValid(scip, newgraph, newedges));
+   assert(solstp_isValid(scip, newgraph, newedges));
 #endif
 
    if( !success )
@@ -572,15 +573,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       goto TERMINATE;
    }
 
-   assert(success && graph_solIsValid(scip, newgraph, newedges));
+   assert(success && solstp_isValid(scip, newgraph, newedges));
 
-   SCIPdebugMessage("obj after prune %f \n", graph_solGetObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after prune %f \n", solstp_getObj(newgraph, newedges, 0.0, newgraph->edges));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
-   SCIPdebugMessage("obj after local %f \n", graph_solGetObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after local %f \n", solstp_getObj(newgraph, newedges, 0.0, newgraph->edges));
 
-   assert(graph_solIsValid(scip, newgraph, newedges));
+   assert(solstp_isValid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);
 
 
@@ -601,9 +602,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( newgraph->knots == 1 )
       nodearrchar[g->source] = TRUE;
 
-   SCIP_CALL( graph_solPrune(scip, g, newedges, nodearrchar) );
+   SCIP_CALL( solstp_prune(scip, g, newedges, nodearrchar) );
 
-   assert(graph_solIsValid(scip, g, newedges));
+   assert(solstp_isValid(scip, g, newedges));
 
    if( addsol )
    {
@@ -619,7 +620,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
    }
 
-   success = graph_solIsValid(scip, g, newedges);
+   success = solstp_isValid(scip, g, newedges);
 
    assert(success);
 

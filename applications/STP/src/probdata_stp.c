@@ -46,6 +46,7 @@
 #include "graph.h"
 #include "reduce.h"
 #include "stptest.h"
+#include "solstp.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
@@ -3246,7 +3247,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          }
       }
 
-      SCIP_CALL( graph_solMarkPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
+      SCIP_CALL( solstp_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
             orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);

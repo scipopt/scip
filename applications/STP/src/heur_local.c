@@ -32,6 +32,7 @@
 #include "heur_tm.h"
 #include "probdata_stp.h"
 #include "cons_stp.h"
+#include "solstp.h"
 
 
 /* @note if heuristic is running in root node timing is changed there to (SCIP_HEURTIMING_DURINGLPLOOP |
@@ -219,22 +220,22 @@ SCIP_RETCODE solPrune(
 
 #ifndef NDEBUG
    const int nedges = graph->edges;
-   const SCIP_Real initialobj = graph_solGetObj(graph, results, 0.0, nedges);
+   const SCIP_Real initialobj = solstp_getObj(graph, results, 0.0, nedges);
 #endif
 
-   assert(graph_solIsValid(scip, graph, results));
+   assert(solstp_isValid(scip, graph, results));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
 
-   graph_solSetVertexFromEdge(graph, results, steinertree);
+   solstp_setVertexFromEdge(graph, results, steinertree);
 
-   SCIP_CALL( graph_solPrune(scip, graph, results, steinertree) );
+   SCIP_CALL( solstp_prune(scip, graph, results, steinertree) );
 
    SCIPfreeBufferArray(scip, &steinertree);
 
 #ifndef NDEBUG
    {
-       const SCIP_Real initialobj_pruned = graph_solGetObj(graph, results, 0.0, nedges);
+       const SCIP_Real initialobj_pruned = solstp_getObj(graph, results, 0.0, nedges);
 
        assert(SCIPisLE(scip, initialobj_pruned, initialobj));
    }
@@ -309,7 +310,7 @@ SCIP_RETCODE solAddTry(
    /* is new solution feasible? */
    if( feasible )
    {
-      const SCIP_Real newsol_obj = graph_solGetObj(graph, results, 0.0, nedges);
+      const SCIP_Real newsol_obj = solstp_getObj(graph, results, 0.0, nedges);
       const SCIP_Bool solIsBetter = SCIPisLT(scip, newsol_obj, initialsol_obj);
       const SCIP_Bool solIsBetter_org
          = SCIPisLT(scip, newsol_obj, SCIPgetSolOrigObj(scip, initialsol) - SCIPprobdataGetOffset(scip));
@@ -432,7 +433,7 @@ void markSolTreeNodes(
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
 
-   assert(graph_solIsValid(scip, graph, solEdges));
+   assert(solstp_isValid(scip, graph, solEdges));
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -2883,7 +2884,7 @@ SCIP_RETCODE localVertexInsertion(
 
 
 #ifndef NDEBUG
-   const SCIP_Real initialobj = graph_solGetObj(graph, solEdges, 0.0, nedges);
+   const SCIP_Real initialobj = solstp_getObj(graph, solEdges, 0.0, nedges);
    SCIP_Real diff_total = 0.0;
 #endif
 
@@ -3055,7 +3056,7 @@ SCIP_RETCODE localVertexInsertion(
 
    if( newnverts > 0  )
    {
-      SCIP_CALL( graph_solPrune(scip, graph, solEdges, solNodes) );
+      SCIP_CALL( solstp_prune(scip, graph, solEdges, solNodes) );
 
       for( int i = 0; i < nnodes; i++ )
          SCIPlinkcuttreeInit(&linkcutNodes[i]);
@@ -3084,14 +3085,14 @@ SCIP_RETCODE localVertexInsertion(
 
 #ifndef NDEBUG
    {
-      const SCIP_Real newobj = graph_solGetObj(graph, solEdges, 0.0, nedges);
+      const SCIP_Real newobj = solstp_getObj(graph, solEdges, 0.0, nedges);
       SCIPdebugMessage("vertex inclusion obj before/after: %f/%f \n", initialobj, newobj);
       assert(SCIPisLE(scip, newobj + diff_total, initialobj));
       assert(SCIPisGE(scip, diff_total, 0.0));
    }
 #endif
 
-   assert(graph_solIsValid(scip, graph, solEdges));
+   assert(solstp_isValid(scip, graph, solEdges));
 
    return SCIP_OKAY;
 }
@@ -3140,7 +3141,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_Bool solimproved = FALSE;
 
 #ifndef NDEBUG
-   const SCIP_Real initialobj = graph_solGetObj(graph, solEdges, 0.0, graph->edges);
+   const SCIP_Real initialobj = solstp_getObj(graph, solEdges, 0.0, graph->edges);
    SCIP_Real objimprovement = 0.0;
 #endif
 
@@ -3526,13 +3527,13 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
    if( solimproved )
    {
-      SCIP_CALL( graph_solPruneFromEdges(scip, graph, solEdges) );
+      SCIP_CALL( solstp_pruneFromEdges(scip, graph, solEdges) );
       *success = TRUE;
    }
 
 #ifndef NDEBUG
    {
-      const SCIP_Real newobj = graph_solGetObj(graph, solEdges, 0.0, nedges);
+      const SCIP_Real newobj = solstp_getObj(graph, solEdges, 0.0, nedges);
       SCIPdebugMessage("key vertex heuristic obj before/after: %f/%f (improvement=%f)\n", initialobj, newobj, objimprovement);
       assert(SCIPisLE(scip, newobj + objimprovement, initialobj));
    }
@@ -3721,7 +3722,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* write solution into 'results' array */
    solGetStpSol(scip, graph, initialsol, results);
 
-   if( !graph_solIsValid(scip, graph, results) )
+   if( !solstp_isValid(scip, graph, results) )
    {
       SCIPfreeBufferArray(scip, &results);
 
@@ -3734,7 +3735,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( solPrune(scip, graph, results) );
    }
 
-   initialsol_obj = graph_solGetObj(graph, results, 0.0, nedges);
+   initialsol_obj = solstp_getObj(graph, results, 0.0, nedges);
 
    /* execute local heuristics */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, results) );
@@ -3775,7 +3776,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool success = FALSE;
 #ifndef NDEBUG
-   const SCIP_Real initialobj = graph_solGetObj(graph, solEdges, 0.0, graph->edges);
+   const SCIP_Real initialobj = solstp_getObj(graph, solEdges, 0.0, graph->edges);
 #endif
 
    assert(graph && solEdges);
@@ -3824,9 +3825,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
 #ifndef NDEBUG
    {
-      const SCIP_Real newobj = graph_solGetObj(graph, solEdges, 0.0, graph->edges);
+      const SCIP_Real newobj = solstp_getObj(graph, solEdges, 0.0, graph->edges);
       assert(SCIPisLE(scip, newobj, initialobj));
-      assert(graph_solIsValid(scip, graph, solEdges));
+      assert(solstp_isValid(scip, graph, solEdges));
    }
 #endif
 
@@ -3861,7 +3862,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
 
       SCIPallocBufferArray(scip, &stvertex, nnodes);
 
-      graph_solSetVertexFromEdge(graph, result, stvertex);
+      solstp_setVertexFromEdge(graph, result, stvertex);
 
       for( int i = 0; i < nnodes; i++ )
       {
@@ -3931,7 +3932,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
 #ifndef NDEBUG
    SCIP_Real objdiff = 0.0;
-   const SCIP_Real initialobj = graph_solGetObj(graph, stedge, 0.0, nedges);
+   const SCIP_Real initialobj = solstp_getObj(graph, stedge, 0.0, nedges);
 #endif
 
    assert(GREEDY_EXTENSIONS_MW >= greedyextensions);
@@ -4117,10 +4118,10 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    {
       assert(graph_pc_isPcMw(graph));
 
-      SCIP_CALL( graph_solPrune(scip, graph, stedge, stvertex) );
+      SCIP_CALL( solstp_prune(scip, graph, stedge, stvertex) );
    }
 
-   assert(graph_solIsValid(scip, graph, stedge));
+   assert(solstp_isValid(scip, graph, stedge));
 
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &path);
@@ -4129,7 +4130,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
 #ifndef NDEBUG
    {
-      const SCIP_Real newsolval = graph_solGetObj(graph, stedge, 0.0, nedges);
+      const SCIP_Real newsolval = solstp_getObj(graph, stedge, 0.0, nedges);
       SCIPdebugMessage("pcmw extend obj: initial=%f, new=%f \n", initialobj, newsolval);
       assert(SCIPisLE(scip, newsolval + objdiff, initialobj));
    }
@@ -4159,14 +4160,14 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
 
 #ifndef NDEBUG
    const int nedges = graph->edges;
-   const SCIP_Real initialobj = graph_solGetObj(graph, stedge, 0.0, nedges);
+   const SCIP_Real initialobj = solstp_getObj(graph, stedge, 0.0, nedges);
 #endif
 
    assert(scip && graph && stedge && stvertex);
 
    graph_pc_2orgcheck(scip, graph);
 
-   graph_solSetVertexFromEdge(graph, stedge, stvertex);
+   solstp_setVertexFromEdge(graph, stedge, stvertex);
 
    /* compute candidates for extension */
 
@@ -4239,7 +4240,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
 
       assert(graph_pc_isPcMw(graph));
 
-      SCIP_CALL( graph_solPrune(scip, graph, stedge, stvertex) );
+      SCIP_CALL( solstp_prune(scip, graph, stedge, stvertex) );
    }
 
    if( maxnode != -1 )
@@ -4253,7 +4254,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    }
 
 #ifndef NDEBUG
-   assert(SCIPisLE(scip, graph_solGetObj(graph, stedge, 0.0, nedges), initialobj));
+   assert(SCIPisLE(scip, solstp_getObj(graph, stedge, 0.0, nedges), initialobj));
 #endif
 
    if( isexended && !graph->extended )

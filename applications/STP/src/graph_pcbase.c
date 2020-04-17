@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "solstp.h"
 #include "portab.h"
 #include "graph.h"
 
@@ -2571,7 +2572,7 @@ SCIP_Real graph_pc_solGetObj(
 
       SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solnode, nnodes) );
 
-      graph_solSetVertexFromEdge(g, soledge, solnode);
+      solstp_setVertexFromEdge(g, soledge, solnode);
 
       for( int i = 0; i < nnodes; ++i )
       {

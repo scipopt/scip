@@ -38,6 +38,7 @@
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
 #include "misc_stp.h"
+#include "solstp.h"
 #include "probdata_stp.h"
 #include "prop_stp.h"
 
@@ -113,7 +114,7 @@ SCIP_RETCODE computeSteinerTree(
    }
    else
    {
-      obj = graph_solGetObj(graph, result, 0.0, nedges);
+      obj = solstp_getObj(graph, result, 0.0, nedges);
    }
 
    if( !(*success) )
