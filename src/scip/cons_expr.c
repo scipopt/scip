@@ -9312,6 +9312,105 @@ SCIP_RETCODE removeSingleLockedVars(
    return SCIP_OKAY;
 }
 
+/* presolving method to check if there is a single linear continuous variable that can be made implicit integer */
+static
+SCIP_RETCODE presolveImplint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< expression constraints */
+   int                   nconss,             /**< total number of expression constraints */
+   int*                  nchgvartypes,       /**< pointer to update the total number of changed variable types */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nchgvartypes != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* nothing can be done if there are no integer variables available */
+   if( SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* get sum expression handler */
+   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_EXPR** children;
+      int nchildren;
+
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      children = SCIPgetConsExprExprChildren(consdata->expr);
+      nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+      /* the constraint must be an equality constraint with an integer constraint side; also, the root expression
+       * needs to be a sum expression with at least two children
+       */
+      if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)
+         && nchildren > 1 && SCIPgetConsExprExprHdlr(consdata->expr) == sumhdlr
+         && SCIPisIntegral(scip, SCIPgetConsExprExprSumConstant(consdata->expr)) )
+      {
+         SCIP_Real* coefs;
+         SCIP_VAR* cand = NULL;
+         SCIP_Bool fail = FALSE;
+         int i;
+
+         coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+
+         /* find candidate variable and check whether all coefficients are integral */
+         for( i = 0; i < nchildren; ++i )
+         {
+            /* check coefficient */
+            if( !SCIPisIntegral(scip, coefs[i]) )
+            {
+               fail = TRUE;
+               break;
+            }
+
+            if( !SCIPisConsExprExprIntegral(children[i]) )
+            {
+               /* the child must be a variable expression and the first non-integral expression */
+               if( cand != NULL || !SCIPisConsExprExprVar(children[i]) || !SCIPisEQ(scip, REALABS(coefs[i]), 1.0) )
+               {
+                  fail = TRUE;
+                  break;
+               }
+
+               /* store candidate variable */
+               cand = SCIPgetConsExprExprVarVar(children[i]);
+            }
+         }
+
+         if( !fail && cand != NULL )
+         {
+            SCIPdebugMsg(scip, "make variable <%s> implicit integer due to constraint <%s>\n",
+               SCIPvarGetName(cand), SCIPconsGetName(conss[c]));
+
+            /* change variable type */
+            SCIP_CALL( SCIPchgVarType(scip, cand, SCIP_VARTYPE_IMPLINT, infeasible) );
+
+            if( *infeasible )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
  *  expression contraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
  *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
@@ -10547,6 +10646,21 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
          continue;
 
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
+   }
+
+   /* try to change continuous variables that appear linearly to be implicit integer */
+   if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( presolveImplint(scip, conshdlr, conss, nconss, nchgvartypes, &infeasible) );
+
+      if( infeasible )
+      {
+         SCIPdebugMsg(scip, "presolveImplint() detected infeasibility\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
 
    /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
