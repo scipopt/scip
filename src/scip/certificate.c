@@ -385,7 +385,11 @@ SCIP_RETCODE SCIPcertificateInit(
    BMScopyMemoryArray(name, set->certificate_filename, filenamelen);
    name[filenamelen] = '\0';
 
-   SCIPsplitFilename(name, NULL, NULL, NULL, &compression);
+   /** @todo exip: this currently strips the .vipr from the filename if there is no compression...
+    * the whole compression code currently makes no sense, since the certificate has to be unpacked to be read by vipr 
+    * again anyway, so it is just disabled.
+    */
+   //SCIPsplitFilename(name, NULL, NULL, NULL, &compression);
 
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing certificate information in file <%s>\n", set->certificate_filename);
@@ -788,12 +792,16 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          RatSetString(primalbound, "inf");
       }
 
-      RatSetReal(dualbound, SCIPgetLowerbound(scip));
+      /** @todo exip: can't call SCIPgetLowerbound(scip) in stage exitsolve, what to do here? */
+      // RatSetReal(dualbound, SCIPgetLowerbound(scip));
 
-      SCIPcertificatePrintRtpRange(certificate,
-         RatIsAbsInfinity(dualbound) ? NULL : dualbound,
-         RatIsAbsInfinity(primalbound) ? NULL : primalbound);
-      SCIP_CALL( SCIPcertificatePrintSol(scip, certificate, bestsol) );
+      //SCIPcertificatePrintRtpRange(certificate,
+      //   RatIsAbsInfinity(dualbound) ? NULL : dualbound,
+      //   RatIsAbsInfinity(primalbound) ? NULL : primalbound);
+      if( bestsol != NULL )
+      {
+         SCIP_CALL( SCIPcertificatePrintSol(scip, certificate, bestsol) );
+      }
    }
    SCIPcertificatePrintDerHeader(certificate);
 
@@ -1710,7 +1718,7 @@ int SCIPcertificatePrintUnsplitting(
    SCIP_NODE*            node                /**< node data */
    )
 {
-   SCIP_CERTNODEDATA* nodedata; 
+   SCIP_CERTNODEDATA* nodedata;
    SCIP_Longint unsplit_index;
    SCIP_Rational* lowerbound;
    SCIP_Bool infeas;
@@ -1769,8 +1777,9 @@ int SCIPcertificatePrintUnsplitting(
    else
    {
       SCIPdebugMessage("Node %lld is a leaf! \n", SCIPnodeGetNumber(node));
-      /* if a leaf has an inher  d bound, we need to print a bound for it and update the parent data */
-      if( nodedata->inheritedbound )
+      /* if a leaf has an inher  d bound, we need to print a bound for it and update the parent data
+         don't do it if we interrupted the solve, e.g. due to timeout */
+      if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )
       {
          SCIP_Longint ind[1];
          ind[0] = nodedata->derindex_inherit;

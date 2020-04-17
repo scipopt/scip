@@ -212,6 +212,7 @@ do
 		export EXECNAME
 		# @todo exip integrate vipr better somehow
 		export VIPRCHECKNAME=viprchk
+		export VIPRCOMPRESSNAME=viprttn
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
