@@ -10651,8 +10651,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    /* try to change continuous variables that appear linearly to be implicit integer */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      SCIP_Bool infeasible;
-
       SCIP_CALL( presolveImplint(scip, conshdlr, conss, nconss, nchgvartypes, &infeasible) );
 
       if( infeasible )
