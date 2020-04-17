@@ -9650,8 +9650,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
       expr, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -9732,8 +9731,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
       expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -10234,7 +10232,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
       SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
       SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
       SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10846,7 +10844,7 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    /* create copy (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
       targetexpr, sourcedata->lhs, sourcedata->rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10981,7 +10979,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
       consexprtree, lhs, rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    assert(*cons != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
@@ -12433,6 +12431,86 @@ TERMINATE:
    }
 
    SCIPfreeBufferArrayNull(scip, &children);
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an expression representing a monomial */
+SCIP_RETCODE SCIPcreateConsExprExprMonomial(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nfactors,         /**< number of factors in monomial */
+   SCIP_VAR**              vars,             /**< variables in the monomial */
+   SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
+   )
+{
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+   assert(nfactors >= 0);
+
+   /* return 1 as constant expression if there are no factors */
+   if( nfactors == 0 )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, 1.0) );
+   }
+   else if( nfactors == 1 )
+   {
+      /* only one factor and exponent is 1 => return factors[0] */
+      if( exponents == NULL || exponents[0] == 1.0 )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, vars[0]) );
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR* varexpr;
+
+         /* create variable and power expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[0]) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, varexpr, exponents[0]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+      }
+   }
+   else
+   {
+      SCIP_CONSEXPR_EXPR** children;
+      int i;
+
+      /* allocate memory to store the children */
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nfactors) );
+
+      /* create children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         /* check whether to create a power expression or not, i.e., exponent == 1 */
+         if( exponents == NULL || exponents[i] == 1.0 )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[i], vars[i]) );
+         }
+         else
+         {
+            SCIP_CONSEXPR_EXPR* varexpr;
+
+            /* create variable and pow expression */
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[i]) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], varexpr, exponents[i]) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+         }
+      }
+
+      /* create product expression */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nfactors, children, 1.0) );
+
+      /* release children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         assert(children[i] != NULL);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+      }
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &children);
+   }
 
    return SCIP_OKAY;
 }
@@ -15288,11 +15366,8 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsExpr() call, if you don't need all the information */
@@ -15339,7 +15414,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -15359,7 +15434,136 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    )
 {
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a quadratic expression constraint */
+SCIP_RETCODE SCIPcreateConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONSEXPR_EXPR* sumexpr;
+   SCIP_Real* coefs;
+   int i;
+
+   assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
+   assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* get expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadterms + nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nquadterms + nlinvars) );
+
+   /* create children for quadratic terms */
+   for( i = 0; i < nquadterms; ++i )
+   {
+      assert(quadvars1 != NULL && quadvars1[i] != NULL);
+      assert(quadvars2 != NULL && quadvars2[i] != NULL);
+
+      /* quadratic term */
+      if( quadvars1[i] == quadvars2[i] )
+      {
+         SCIP_CONSEXPR_EXPR* xexpr;
+
+         /* create variable expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, quadvars1[i]) );
+
+         /* create pow expression */
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &children[i], xexpr, 2.0) );
+
+         /* release variable expression; note that the variable expression is still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+      }
+      else /* bilinear term */
+      {
+         SCIP_CONSEXPR_EXPR* exprs[2];
+
+         /* create variable expressions */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], quadvars1[i]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], quadvars2[i]) );
+
+         /* create product expression */
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &children[i], 2, exprs, 1.0) );
+
+         /* release variable expressions; note that the variable expressions are still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      }
+
+      /* store coefficient */
+      coefs[i] = quadcoefs[i];
+   }
+
+   /* create children for linear terms */
+   for( i = 0; i < nlinvars; ++i )
+   {
+      assert(linvars != NULL && linvars[i] != NULL);
+
+      /* create variable expression; release variable expression after the constraint has been created */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &children[nquadterms + i], linvars[i]) );
+
+      /* store coefficient */
+      coefs[nquadterms + i] = lincoefs[i];
+   }
+
+   /* create sum expression */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, nquadterms + nlinvars, children, coefs, 0.0) );
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, sumexpr, lhs, rhs, initial, separate, enforce, check, propagate,
+      local, modifiable, dynamic, removable) );
+
+   /* release sum expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+
+   /* release children */
+   for( i = 0; i < nquadterms + nlinvars; ++i )
+   {
+      assert(children[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &children);
 
    return SCIP_OKAY;
 }

@@ -32,11 +32,11 @@
 #include <ctype.h>
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
@@ -1320,7 +1320,7 @@ SCIP_RETCODE readObjective(
          }
 
          minusone = -1.0;
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
@@ -1742,7 +1742,7 @@ SCIP_RETCODE readConstraints(
       }
       else
       {
-         retcode = SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
+         retcode = SCIPcreateConsExprQuadratic(scip, &cons, name, ncoefs, vars, coefs,
             nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
