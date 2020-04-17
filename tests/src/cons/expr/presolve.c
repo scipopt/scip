@@ -195,3 +195,30 @@ Test(presolve, singlelockedvars3)
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
 }
+
+/* test for presolveImplint()
+ *
+ * consider x + 2 y^2 - 3 y^3 - 4 z == 5 with x continuous, y integer, and z binary
+ */
+Test(presolve, implint)
+{
+   SCIP_Bool infeasible;
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_INTEGER, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add expression constraint */
+   SCIP_CALL( addCons("<x> + 2*<y>^2 - 3*<y>^3 - 4*<z>", 5.0, 5.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+}
