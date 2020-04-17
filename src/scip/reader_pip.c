@@ -919,7 +919,7 @@ SCIP_RETCODE readPolynomial(
             if( coefsign * coef != 0.0 )
             {
                SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialscoef, &monomialssize, nmonomials + 1) );
-               SCIP_CALL( SCIPcreateConsExprExpr4(scip, exprconshdlr, &monomials[nmonomials], nfactors, vars, exponents) );
+               SCIP_CALL( SCIPcreateConsExprExprMonomial(scip, exprconshdlr, &monomials[nmonomials], nfactors, vars, exponents) );
                monomialscoef[nmonomials] = coefsign * coef;
                ++nmonomials;
             }
@@ -1161,7 +1161,7 @@ SCIP_RETCODE readObjective(
             assert(child != NULL);
             assert(SCIPisConsExprExprVar(child));
 
-            /* child has to be a variable expression, see SCIPcreateConsExprExpr4() */
+            /* child has to be a variable expression, see SCIPcreateConsExprExprMonomial() */
             var = SCIPgetConsExprExprVarVar(child);
             assert(var != NULL);
             coef = SCIPgetConsExprExprSumCoefs(expr)[i];

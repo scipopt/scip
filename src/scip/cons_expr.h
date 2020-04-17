@@ -452,7 +452,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
 /** creates and captures an expression representing a monomial */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExpr4(
+SCIP_RETCODE SCIPcreateConsExprExprMonomial(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
