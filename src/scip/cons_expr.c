@@ -12435,13 +12435,13 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** creates and captures an sum expression representing a monomial */
+/** creates and captures an expression representing a monomial */
 SCIP_RETCODE SCIPcreateConsExprExpr4(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    int                     nfactors,         /**< number of factors in monomial */
-   SCIP_VAR**              vars,             /**< variables in the in monomial */
+   SCIP_VAR**              vars,             /**< variables in the monomial */
    SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
    )
 {
@@ -12482,8 +12482,6 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
       /* create children */
       for( i = 0; i < nfactors; ++i )
       {
-         SCIP_Real exponent = (exponents == NULL) ? 1.0 : exponents[i];
-
          /* check whether to create a power expression or not, i.e., exponent == 1 */
          if( exponents == NULL || exponents[i] == 1.0 )
          {
@@ -12495,7 +12493,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
 
             /* create variable and pow expression */
             SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[i]) );
-            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], varexpr, exponent) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], varexpr, exponents[i]) );
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
          }
       }
@@ -12503,7 +12501,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr4(
       /* create product expression */
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nfactors, children, 1.0) );
 
-      /* free children */
+      /* release children */
       for( i = 0; i < nfactors; ++i )
       {
          assert(children[i] != NULL);
