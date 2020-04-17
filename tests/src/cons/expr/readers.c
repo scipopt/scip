@@ -15,6 +15,8 @@
 
 /**@file   readers.c
  * @brief  tests readers
+ * @author Benjamin Mueller
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -155,4 +157,90 @@ Test(readers, pip)
    cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[0]), 2.0);
    cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[1]), 3.0);
    cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[2]), 4.0);
+}
+
+Test(readers, mps1)
+{
+   SCIP* scip;
+   SCIP_VAR** vars;
+   SCIP_CONS** conss;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_EXPR* expr;
+   char filename[SCIP_MAXSTRLEN];
+   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
+
+   /* get file to read: test.mps that lives in the same directory as this file */
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
+   dirname(filename);
+   strcat(filename, "/test.mps");
+   printf("Reading %s\n", filename);
+
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL));
+
+   /* check that vars are what we expect */
+   cr_expect_eq(SCIPgetNVars(scip), 4);
+   vars = SCIPgetVars(scip);
+
+   cr_expect_str_eq(SCIPvarGetName(vars[0]), "x1");
+   cr_expect_str_eq(SCIPvarGetName(vars[1]), "x2");
+   cr_expect_str_eq(SCIPvarGetName(vars[2]), "x3");
+   cr_expect_str_eq(SCIPvarGetName(vars[3]), "qmatrixvar");
+
+   /* check that cons are what we expect */
+   cr_expect_eq(SCIPgetNConss(scip), 4);
+   conss = SCIPgetConss(scip);
+
+   cr_expect_str_eq(SCIPconsGetName(conss[0]), "c0");
+   cr_expect_str_eq(SCIPconsGetName(conss[1]), "c1");
+   cr_expect_str_eq(SCIPconsGetName(conss[2]), "c2");
+   cr_expect_str_eq(SCIPconsGetName(conss[3]), "qmatrix");
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   cr_assert_not_null(conshdlr);
+   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
+   cr_assert_not_null(sumhdlr);
+
+   /* check some things from the constraints which should be
+    * c0: x1 + 9 x1^2 + 0.5 x1 * x2 + 0.5 x2 * x1 = 0.1
+    * c1: x2 + 2 x3^2 <= 0.2
+    * c2: 0.5 x1 + x1^2 + x2^2 - x3^2 >= 0.3
+    * qmatrix: 2x1*x2 + 0.1x2*x3 -0.1 x3*x1 <= qmatrixvar
+    */
+   SCIP_Real lhs[4] = {0.1, -SCIPinfinity(scip), 0.3, -SCIPinfinity(scip)};
+   SCIP_Real rhs[4] = {0.1, 0.2, SCIPinfinity(scip),  0.0};
+   int expectednnonz[4] = {4, 2, 4, 4};
+   /* cons expr creates first the quadratic terms and then the linear terms; note that for whatever reason the quadratic
+    * part of the objective is divided by two */
+   SCIP_Real expectedcoeffs[4][4] = {{9.0, 0.5, 0.5, 1.0}, {2.0, 1.0, SCIPinfinity(scip), SCIPinfinity(scip)},
+      {1.0,1.0,-1.0, 0.5}, {1.0,0.05,-0.05,-1.0} };
+
+   for( int i = 0; i < 4; ++i )
+   {
+      cr_assert_eq(conshdlr, SCIPconsGetHdlr(conss[i]));
+      cr_expect_eq(SCIPgetLhsConsExpr(scip, conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsConsExpr(scip, conss[i]));
+      cr_expect_eq(SCIPgetRhsConsExpr(scip, conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsConsExpr(scip, conss[i]));
+
+      expr = SCIPgetExprConsExpr(scip, conss[i]);
+
+      cr_assert_not_null(expr);
+      cr_assert_eq(expr->exprhdlr, sumhdlr);
+      cr_expect_eq(SCIPgetConsExprExprNChildren(expr), expectednnonz[i]);
+      cr_expect_eq(SCIPgetConsExprExprSumConstant(expr), 0.0);
+      for( int j = 0; j < expectednnonz[i]; ++j )
+         cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
+               i, j, expectedcoeffs[i][j], SCIPgetConsExprExprSumCoefs(expr)[j]);
+   }
+
+   /* check constraint c1 */
+   expr = SCIPgetExprConsExpr(scip, conss[1]);
+   cr_expect_eq(expr->children[0]->exprhdlr, SCIPgetConsExprExprHdlrPower(conshdlr));
+   cr_expect_eq(expr->children[0]->children[0]->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
+   cr_expect_eq(SCIPgetConsExprExprVarVar(expr->children[0]->children[0]), vars[2]);
+
+   cr_expect_eq(expr->children[1]->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
+   cr_expect_eq(SCIPgetConsExprExprVarVar(expr->children[1]), vars[1]);
 }
