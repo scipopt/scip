@@ -1350,6 +1350,19 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+ *
+ * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expr in each SCIP_CONSEXPR_QUADEXPRTERM will be a variable expressions and
+ * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetQuadExprConsExpr(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   );
+
 /** gets the left hand side of an expression constraint */
 SCIP_EXPORT
 SCIP_Real SCIPgetLhsConsExpr(
@@ -1454,6 +1467,19 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
    int                   nconss,             /**< total number of constraints */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   );
+
+/** checks whether an expression is quadratic and returns the corresponding coefficients
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
    );
 
 /** @} */
@@ -1656,6 +1682,43 @@ SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** @} */
+
+/**@name Quadratic expression functions */
+/**@{ */
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * This function returns pointers to internal data.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
+   SCIP_CONSEXPR_QUADEXPRTERM**  quadexprterms,    /**< buffer to store pointer to array of quadratic expression terms, or NULL */
+   int*                          nbilinexprterms,  /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_CONSEXPR_BILINEXPRTERM** bilinexprterms   /**< buffer to store pointer to array of bilinear expression terms, or NULL */
+   );
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
+   );
+
+/** @} */
+
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function
  *
