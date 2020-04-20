@@ -1042,6 +1042,12 @@ SCIP_RETCODE SCIPgetConsExprExprNDomainUses(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_EXPORT
+void SCIPincrementConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** returns the total number of variables in an expression
  *
  * The function counts variables in common sub-expressions only once.
