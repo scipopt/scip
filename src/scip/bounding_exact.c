@@ -3283,7 +3283,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    char dualboundmethod;
 
    /* If we are not in exact solving mode, just return */
-   if( !set->misc_exactsolve )
+   if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
       return SCIP_OKAY;
 
 #ifdef SCIP_WITH_EXACTSOLVE

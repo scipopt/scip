@@ -2031,23 +2031,19 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       /* update the child's lower bound */
-      if( set->misc_exactsolve )
+      newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
       {
-         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-         if( newpseudoobjval > SCIPnodeGetLowerbound(node) )
-         {
-            /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
-             * @todo exip could this be done differently somewhere else? */
-            SCIP_Rational* bound;
-            bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
-            RatSetReal(bound, newbound);
-            SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex,
-               node, set, transprob, newpseudoobjval) );
-            RatSetReal(bound, oldbound);
-         }
+         /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
+         * @todo exip could this be done differently somewhere else? */
+         SCIP_Rational* bound;
+         bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
+         RatSetReal(bound, newbound);
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex,
+         node, set, transprob, newpseudoobjval) );
+         RatSetReal(bound, oldbound);
       }
-      else
-         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
+
       SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
    }
    else

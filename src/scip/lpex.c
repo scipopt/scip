@@ -3324,6 +3324,9 @@ SCIP_RETCODE SCIPlpexFree(
 {
    int i;
 
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
    assert(lp != NULL);
    assert(*lp != NULL);
 
@@ -3369,6 +3372,9 @@ SCIP_RETCODE SCIPlpexAddCol(
    int                   depth               /**< depth in the tree where the column addition is performed */
    )
 {
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
    assert(lp != NULL);
    assert(!lp->fplp->diving);
    assert(col != NULL);

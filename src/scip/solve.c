@@ -3914,7 +3914,7 @@ SCIP_RETCODE propAndSolve(
             sepastore, cutpool, delayedcutpool, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable,
             initiallpsolved, fullseparation, newinitconss, propagateagain, solverelaxagain, cutoff, unbounded, lperror, pricingaborted) );
 
-      if( set->misc_exactsolve && focusnode->parent == NULL )
+      if( focusnode->parent == NULL )
       {
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex, focusnode, set,
             transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );

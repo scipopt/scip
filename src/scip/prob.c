@@ -608,14 +608,7 @@ SCIP_RETCODE SCIPprobTransform(
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known
     */
-   if( set->misc_exactsolve )
-   {
-      SCIP_CALL( SCIPprobCheckObjIntegralExact(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
-   }
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
@@ -1509,6 +1502,9 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
 
    assert(transprob != NULL);
    assert(origprob != NULL);
+
+   if( set->misc_exactsolve )
+      return SCIPprobCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( transprob->objisintegral )

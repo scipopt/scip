@@ -297,7 +297,7 @@ SCIP_RETCODE SCIPlpexFree(
 SCIP_RETCODE SCIPlpexAddCol(
    SCIP_LPEX*            lpex,               /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_COLEX*           colex,              /**< LP column */
+   SCIP_COLEX*           col,                /**< LP column */
    int                   depth               /**< depth in the tree where the column addition is performed */
    );
 

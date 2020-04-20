@@ -842,6 +842,12 @@ void recomputeLooseObjectiveValue(
    nvars = prob->nvars;
    lp->looseobjval = 0.0;
 
+   if( set->misc_exactsolve )
+   {
+      recomputeSafeLooseObjectiveValue(lp, set, prob);
+      return;
+   }
+
    /* iterate over all variables in the problem */
    for( v = 0; v < nvars; ++v )
    {
@@ -939,6 +945,12 @@ void recomputePseudoObjectiveValue(
    nvars = prob->nvars;
    lp->pseudoobjval = 0.0;
 
+   if( set->misc_exactsolve )
+   {
+      recomputeSafePseudoObjectiveValue(lp, set, prob);
+      return;
+   }
+
    /* iterate over all variables in the problem */
    for( v = 0; v < nvars; ++v )
    {
@@ -1018,10 +1030,8 @@ SCIP_Real getFiniteLooseObjval(
    assert(lp->looseobjvalinf == 0);
 
    /* recalculate the loose objective value, if needed */
-   if( !lp->looseobjvalid && !set->misc_exactsolve )
+   if( !lp->looseobjvalid )
       recomputeLooseObjectiveValue(lp, set, prob);
-   if( !lp->looseobjvalid && set->misc_exactsolve )
-      recomputeSafeLooseObjectiveValue(lp, set, prob);
 
    return lp->looseobjval;
 }
@@ -12625,12 +12635,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
-         /** @todo exip: placeholder for probing/diving, this needs to be refactored at some point */
-         if( set->misc_exactsolve && !lp->diving && !lp->probing && !lp->strongbranchprobing )
-         {
-            SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                     prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
-         }
+         SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+               prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -12708,8 +12714,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
                /* in exact solving mode, the farkas proof has to be corrected to be exact */
-               if( set->misc_exactsolve && !lp->diving )
-                  SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+               SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
@@ -12877,7 +12882,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
             /* we need the lp solution to calculate a safe bound */
             if( set->misc_exactsolve )
+            {
                SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
+            }
 
             /* the objval has to be safe (if in exact solving mode) */
             SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
@@ -13052,11 +13059,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      {
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
-                        if( set->misc_exactsolve && !lp->diving )
-                        {
-                           SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                                 prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
-                        }
+                        SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                              prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
                       * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -13424,11 +13428,8 @@ SCIP_Real SCIPlpGetPseudoObjval(
    else
    {
       /* recalculate the pseudo solution value, if needed */
-      if( !lp->pseudoobjvalid && !set->misc_exactsolve )
+      if( !lp->pseudoobjvalid )
          recomputePseudoObjectiveValue(lp, set, prob);
-
-      if( !lp->pseudoobjvalid && set->misc_exactsolve )
-         recomputeSafePseudoObjectiveValue(lp, set, prob);
 
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
       if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )
@@ -13455,6 +13456,9 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_Real pseudoobjval;
    int pseudoobjvalinf;
    SCIP_Real obj;
+
+   if( set->misc_exactsolve )
+      return SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
 
    pseudoobjval = getFinitePseudoObjval(lp, set, prob);
    pseudoobjvalinf = lp->pseudoobjvalinf;

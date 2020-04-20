@@ -2764,10 +2764,7 @@ SCIP_RETCODE varFree(
    SCIPvaluehistoryFree(&(*var)->valuehistory, blkmem);
 
    /* free exact data if it exists */
-   if( set->misc_exactsolve )
-   {
-      SCIP_CALL( SCIPvarFreeExactData(*var, blkmem, set, eventqueue, NULL) );
-   }
+   SCIP_CALL( SCIPvarFreeExactData(*var, blkmem, set, eventqueue, NULL) );
 
    /* free variable data structure */
    BMSfreeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);
@@ -7498,7 +7495,10 @@ SCIP_RETCODE varProcessChgLbLocal(
    var->locdom.lb = newbound;
    /* todo: exip this is temporary */
    if( set->misc_exactsolve )
+   {
+      assert(var->exactdata != NULL);
       RatSetReal(var->exactdata->locdom.lb, newbound);
+   }
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic

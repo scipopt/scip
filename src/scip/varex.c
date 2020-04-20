@@ -756,32 +756,31 @@ SCIP_RETCODE SCIPvarFreeExactData(
    assert(blkmem != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( !set->misc_exactsolve )
    {
-      if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
-      {
-         SCIP_CALL( SCIPcolexFree(&(var->exactdata->excol), blkmem, set, eventqueue, lp) );
-      }
-      /* free exact variable data if it was created */
-      if( var->exactdata != NULL )
-      {
-         RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
-         RatFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
-         RatFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
-         RatFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
-         RatFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
-         RatFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
-         RatFreeBlock(blkmem, &(var)->exactdata->obj );
+      assert( var->exactdata == NULL );
+      return SCIP_OKAY;
+   }
 
-         BMSfreeBlockMemory(blkmem, &(var)->exactdata);
-         assert((var)->exactdata == NULL);
-      }
-   }
-   else
+   if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
    {
-      assert(var->exactdata == NULL);
+      SCIP_CALL( SCIPcolexFree(&(var->exactdata->excol), blkmem, set, eventqueue, lp) );
    }
-   
+   /* free exact variable data if it was created */
+   if( var->exactdata != NULL )
+   {
+      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->obj );
+
+      BMSfreeBlockMemory(blkmem, &(var)->exactdata);
+      assert((var)->exactdata == NULL);
+   }
+
    return SCIP_OKAY;
 }
 

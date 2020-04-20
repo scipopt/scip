@@ -280,6 +280,9 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
 {
    int c;
 
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
    assert(sepastoreex != NULL);
 
    SCIPsetDebugMsg(set, "clearing %d cuts\n", sepastoreex->ncuts);
