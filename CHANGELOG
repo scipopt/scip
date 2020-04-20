@@ -51,6 +51,7 @@ Fixed bugs
 ----------
 
 - Fixed handling of constant term in quadratic objective of pip-reader.
+- Fixed incorrect value string for parameter estimation/completiontype
 
 Miscellaneous
 -------------
