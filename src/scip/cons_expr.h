@@ -1350,6 +1350,19 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+ *
+ * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expr in each SCIP_CONSEXPR_QUADEXPRTERM will be a variable expressions and
+ * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetQuadExprConsExpr(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   );
+
 /** gets the left hand side of an expression constraint */
 SCIP_EXPORT
 SCIP_Real SCIPgetLhsConsExpr(
