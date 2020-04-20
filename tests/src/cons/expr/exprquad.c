@@ -114,6 +114,7 @@ Test(exprquad, detectandfree1, .init = setup, .fini = teardown)
    cr_expect_eq(quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", quaddata->nlinexprs);
    cr_expect_eq(quaddata->nquadexprs, 1, "Expecting 1 quadratic terms, got %d\n", quaddata->nquadexprs);
    cr_expect_eq(quaddata->nbilinexprterms, 0, "Expecting 0 bilinear terms, got %d\n", quaddata->nbilinexprterms);
+   cr_expect(quaddata->allexprsarevars);
 
    quad = quaddata->quadexprterms[0];
    cr_assert_not_null(quad.expr);
@@ -170,6 +171,7 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(quaddata->nlinexprs, 0, "Expecting 0 linear vars, got %d\n", quaddata->nlinexprs);
    cr_expect_eq(quaddata->nquadexprs, 2, "Expecting 2 quadratic terms, got %d\n", quaddata->nquadexprs);
    cr_expect_eq(quaddata->nbilinexprterms, 1, "Expecting 1 bilinear terms, got %d\n", quaddata->nbilinexprterms);
+   cr_expect(!quaddata->allexprsarevars);
 
    /* x var */
    quad = quaddata->quadexprterms[0];

@@ -16166,6 +16166,8 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
       expr->quaddata->quadexprterms[0].expr = SCIPgetConsExprExprChildren(expr)[0];
       expr->quaddata->quadexprterms[0].sqrcoef = 1.0;
 
+      expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(expr->quaddata->quadexprterms[0].expr);
+
       *quaddata = expr->quaddata;
 
       return SCIP_OKAY;
@@ -16196,6 +16198,8 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
       expr->quaddata->bilinexprterms[0].expr1 = SCIPgetConsExprExprChildren(expr)[1];
       expr->quaddata->bilinexprterms[0].expr2 = SCIPgetConsExprExprChildren(expr)[0];
       expr->quaddata->bilinexprterms[0].coef = 1.0;
+
+      expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(expr->quaddata->quadexprterms[0].expr) && SCIPisConsExprExprVar(expr->quaddata->quadexprterms[1].expr);
 
       *quaddata = expr->quaddata;
 
@@ -16266,6 +16270,7 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->lincoefs, nlinterms) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->bilinexprterms, nbilinterms) );
 
+   expr->quaddata->allexprsarevars = TRUE;
    /* for every term of the sum-expr */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -16290,6 +16295,9 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
          SCIP_CALL( quadDetectGetQuadexprterm(scip, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
          assert(quadexprterm->expr == child);
          quadexprterm->sqrcoef = coef;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
       }
       else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
          SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
@@ -16324,14 +16332,20 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
          quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
          ++quadexprterm->nadjbilin;
 
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+
          SCIP_CALL( quadDetectGetQuadexprterm(scip, expr2, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
          assert(quadexprterm->expr == expr2);
          quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
          ++quadexprterm->nadjbilin;
 
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+
          ++expr->quaddata->nbilinexprterms;
 
-         /* TODO: in future store position of second factor in quadexprterms */
+         /* TODO: in future store position of second factor in quadexprterms - in nlhdlr_quadratic this todo was done in the meanwhile */
          /*bilinexprterm->pos = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2) */
       }
       else /* linear term */
@@ -16344,6 +16358,9 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
             expr->quaddata->linexprs[expr->quaddata->nlinexprs] = child;
             expr->quaddata->lincoefs[expr->quaddata->nlinexprs] = coef;
             expr->quaddata->nlinexprs++;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(child);
          }
          else
          {
@@ -16354,6 +16371,9 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
             SCIP_CALL( quadDetectGetQuadexprterm(scip, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
             assert(quadexprterm->expr == child);
             quadexprterm->lincoef = coef;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
          }
       }
    }

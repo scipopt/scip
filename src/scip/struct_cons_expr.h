@@ -159,6 +159,8 @@ struct SCIP_ConsExpr_QuadExpr
    int                          nbilinexprterms; /**< number of bilinear expressions terms */
    SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterms;  /**< bilinear expression terms array */
 
+   SCIP_Bool                    allexprsarevars; /**< whether all arguments (linexprs, quadexprterms[.].expr) are variable expressions */
+
    SCIP_EXPRCURV                curvature;       /**< curvature of the quadratic representation of the expression */
    SCIP_Bool                    curvaturechecked;/**< whether curvature has been checked */
 };
