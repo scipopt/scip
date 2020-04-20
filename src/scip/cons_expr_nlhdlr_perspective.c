@@ -1345,8 +1345,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
             SCIPaddRowprepConstant(rowprep, cst0);
             SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
 
-            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
-
             SCIPdebugMsg(scip, "rowprep after perspectivy is: \n");
 #ifdef SCIP_DEBUG
             SCIPprintRowprep(scip, rowprep, NULL);
