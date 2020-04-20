@@ -502,6 +502,7 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
+   expr->ndomainuses = 0;
 
    return SCIP_OKAY;
 }
