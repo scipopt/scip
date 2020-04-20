@@ -1532,6 +1532,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    SCIP_CONSEXPR_EXPR* nlexpr = NULL;
    SCIP_HASHMAP* nlexpr2origexpr;
    int nleafs = 0;
+   int c;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -1629,6 +1630,19 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
 
    /* store variable expressions into the expression data of the nonlinear handler */
    SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs) );
+
+   /* mark expressions whose bounds are important for constructing the estimators (basically all possible branching
+    * candidates that are registered in nlhdlrEstimateConcave)
+    */
+   for( c = 0; c < (*nlhdlrexprdata)->nleafs; ++c )
+   {
+      SCIP_CONSEXPR_EXPR* leaf;
+
+      leaf = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage((*nlhdlrexprdata)->nlexpr2origexpr, (*nlhdlrexprdata)->leafexprs[c]);
+      assert(leaf != NULL);
+
+      SCIPincrementConsExprExprNDomainUses(leaf);
+   }
 
    return SCIP_OKAY;
 }

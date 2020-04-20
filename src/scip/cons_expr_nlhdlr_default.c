@@ -156,6 +156,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    if( *success )
    {
+      SCIP_Bool sepabelow;
+      SCIP_Bool sepaabove;
+
       /* remember in the nlhdlr exprdata (pointer) which methods we advertised */
       *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
       /* augment mymethods in enforcemethods */
@@ -166,6 +169,37 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
        */
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
+
+      sepabelow = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0;
+      sepaabove = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
+
+      /* update ndomainuses counter for the children if under- or overestimators will be computed */
+      if( sepabelow || sepaabove )
+      {
+         SCIP_EXPRCURV* childcurv;
+         SCIP_Bool isconvex;
+         SCIP_Bool isconcave;
+
+         /* allocate memory to store the required curvature of the children */
+         SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
+
+         /* check whether the expression is convex and concave
+          *
+          * TODO add a method that computes the curvature of an expression when the children are considered to be variables
+          */
+         SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv);
+         SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv);
+
+         /* use the curvature to decide whether bounds on the children are used to refine under- or overestimates */
+         if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
+         {
+            for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+               SCIPincrementConsExprExprNDomainUses(SCIPgetConsExprExprChildren(expr)[c]);
+         }
+
+         /* free memory */
+         SCIPfreeBufferArray(scip, &childcurv);
+      }
    }
 
    return SCIP_OKAY;
