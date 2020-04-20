@@ -1605,7 +1605,8 @@ SCIP_Real solstp_pcGetObjCsr(
    const SCIP_Real* const edgecost_csr = csr->cost;
    const SCIP_Real* const prize = g->prize;
    const int* const gTerm = g->term;
-   SCIP_Real obj = 0.0;
+   register SCIP_Real obj = 0.0;
+   const SCIP_Bool isPc = graph_pc_isPc(g);
 
    assert(graph_pc_isPcMw(g));
    assert(g->extended);
@@ -1622,10 +1623,16 @@ SCIP_Real solstp_pcGetObjCsr(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( Is_pseudoTerm(gTerm[k]) && !solnode[k] )
+      if( solnode[k] )
+         continue;
+
+      if( Is_pseudoTerm(gTerm[k]) )
       {
          assert(g->grad[k] >= 1);
-
+         obj += prize[k];
+      }
+      else if( isPc && Is_nonleafTerm(gTerm[k]) )
+      {
          obj += prize[k];
       }
    }
