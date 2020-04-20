@@ -16419,140 +16419,6 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
    return SCIP_OKAY;
 }
 
-/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
- *
- * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
- * - semidefinite positive -> provided is set to sepaunder
- * - semidefinite negative -> provided is set to sepaover
- * - otherwise -> provided is set to none
- */
-SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
-   )
-{
-   SCIP_HASHMAP* expr2matrix;
-   double* matrix;
-   double* alleigval;
-   int nvars;
-   int nn;
-   int n;
-   int i;
-
-   assert(quaddata != NULL);
-   assert(curv != NULL);
-
-   if( quaddata->curvaturechecked )
-   {
-      *curv = quaddata->curvature;
-      return SCIP_OKAY;
-   }
-   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN);
-
-   quaddata->curvaturechecked = TRUE;
-   *curv = SCIP_EXPRCURV_UNKNOWN;
-
-   n  = quaddata->nquadexprs;
-
-   /* do not check curvature if nn will be too large
-    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
-    * sqrt(2*214748364/8) = 7327.1475350234
-    */
-   if( n > 7000 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "consexpr - number of quadratic variables is too large (%d) to check the curvature\n", n);
-      return SCIP_OKAY;
-   }
-
-   /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
-
-   if( !SCIPisIpoptAvailableIpopt() )
-      return SCIP_OKAY;
-
-   nn = n * n;
-   assert(nn > 0);
-   assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
-
-   SCIP_CALL( SCIPhashmapCreate(&expr2matrix, SCIPblkmem(scip), n) );
-
-   /* fill matrix's diagonal */
-   nvars = 0;
-   for( i = 0; i < n; ++i )
-   {
-      SCIP_CONSEXPR_QUADEXPRTERM quadexprterm;
-
-      quadexprterm = quaddata->quadexprterms[i];
-
-      assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
-
-      if( quadexprterm.sqrcoef == 0.0 )
-      {
-         assert(quadexprterm.nadjbilin > 0);
-         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
-         goto CLEANUP;
-      }
-
-      matrix[nvars * n + nvars] = quadexprterm.sqrcoef;
-
-      /* remember row of variable in matrix */
-      SCIP_CALL( SCIPhashmapInsert(expr2matrix, (void *)quadexprterm.expr, (void *)(size_t)nvars) );
-      nvars++;
-   }
-
-   /* fill matrix's upper-diagonal */
-   for( i = 0; i < quaddata->nbilinexprterms; ++i )
-   {
-      SCIP_CONSEXPR_BILINEXPRTERM bilinexprterm;
-      int col;
-      int row;
-
-      bilinexprterm = quaddata->bilinexprterms[i];
-
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1));
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2));
-      row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
-      col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
-
-      assert(row != col);
-
-      if( row < col )
-         matrix[row * n + col] = bilinexprterm.coef / 2.0;
-      else
-         matrix[col * n + row] = bilinexprterm.coef / 2.0;
-   }
-
-   /* compute eigenvalues */
-   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
-   {
-      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
-      goto CLEANUP;
-   }
-
-   /* check convexity */
-   if( !SCIPisNegative(scip, alleigval[0]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONVEX;
-   }
-   else if( !SCIPisPositive(scip, alleigval[n-1]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONCAVE;
-   }
-
-CLEANUP:
-   SCIPhashmapFree(&expr2matrix);
-   SCIPfreeBufferArray(scip, &matrix);
-   SCIPfreeBufferArray(scip, &alleigval);
-
-   *curv = quaddata->curvature;
-
-   return SCIP_OKAY;
-}
-
-
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP*                       scip,         /**< SCIP data structure */
@@ -17076,6 +16942,178 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 
    return SCIP_OKAY;
 }
+
+/* Quadratic expression functions */
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * This function returns pointers to internal data.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
+   SCIP_CONSEXPR_QUADEXPRTERM**  quadexprterms,    /**< buffer to store pointer to array of quadratic expression terms, or NULL */
+   int*                          nbilinexprterms,  /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_CONSEXPR_BILINEXPRTERM** bilinexprterms   /**< buffer to store pointer to array of bilinear expression terms, or NULL */
+   )
+{
+   assert(quaddata != NULL);
+
+   if( nlinexprs != NULL )
+      *nlinexprs = quaddata->nlinexprs;
+   if( linexprs != NULL )
+      *linexprs = quaddata->linexprs;
+   if( lincoefs != NULL )
+      *lincoefs = quaddata->lincoefs;
+   if( nquadexprs != NULL )
+      *nquadexprs = quaddata->nquadexprs;
+   if( quadexprterms != NULL )
+      *quadexprterms = quaddata->quadexprterms;
+   if( nbilinexprterms != NULL )
+      *nbilinexprterms = quaddata->nbilinexprterms;
+   if( bilinexprterms != NULL )
+      *bilinexprterms = quaddata->bilinexprterms;
+}
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
+   )
+{
+   SCIP_HASHMAP* expr2matrix;
+   double* matrix;
+   double* alleigval;
+   int nvars;
+   int nn;
+   int n;
+   int i;
+
+   assert(quaddata != NULL);
+   assert(curv != NULL);
+
+   if( quaddata->curvaturechecked )
+   {
+      *curv = quaddata->curvature;
+      return SCIP_OKAY;
+   }
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN);
+
+   quaddata->curvaturechecked = TRUE;
+   *curv = SCIP_EXPRCURV_UNKNOWN;
+
+   n  = quaddata->nquadexprs;
+
+   /* do not check curvature if nn will be too large
+    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
+    * sqrt(2*214748364/8) = 7327.1475350234
+    */
+   if( n > 7000 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "consexpr - number of quadratic variables is too large (%d) to check the curvature\n", n);
+      return SCIP_OKAY;
+   }
+
+   /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
+
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
+   nn = n * n;
+   assert(nn > 0);
+   assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2matrix, SCIPblkmem(scip), n) );
+
+   /* fill matrix's diagonal */
+   nvars = 0;
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_CONSEXPR_QUADEXPRTERM quadexprterm;
+
+      quadexprterm = quaddata->quadexprterms[i];
+
+      assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
+
+      if( quadexprterm.sqrcoef == 0.0 )
+      {
+         assert(quadexprterm.nadjbilin > 0);
+         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
+         goto CLEANUP;
+      }
+
+      matrix[nvars * n + nvars] = quadexprterm.sqrcoef;
+
+      /* remember row of variable in matrix */
+      SCIP_CALL( SCIPhashmapInsert(expr2matrix, (void *)quadexprterm.expr, (void *)(size_t)nvars) );
+      nvars++;
+   }
+
+   /* fill matrix's upper-diagonal */
+   for( i = 0; i < quaddata->nbilinexprterms; ++i )
+   {
+      SCIP_CONSEXPR_BILINEXPRTERM bilinexprterm;
+      int col;
+      int row;
+
+      bilinexprterm = quaddata->bilinexprterms[i];
+
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2));
+      row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
+      col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
+
+      assert(row != col);
+
+      if( row < col )
+         matrix[row * n + col] = bilinexprterm.coef / 2.0;
+      else
+         matrix[col * n + row] = bilinexprterm.coef / 2.0;
+   }
+
+   /* compute eigenvalues */
+   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      goto CLEANUP;
+   }
+
+   /* check convexity */
+   if( !SCIPisNegative(scip, alleigval[0]) )
+   {
+      quaddata->curvature = SCIP_EXPRCURV_CONVEX;
+   }
+   else if( !SCIPisPositive(scip, alleigval[n-1]) )
+   {
+      quaddata->curvature = SCIP_EXPRCURV_CONCAVE;
+   }
+
+CLEANUP:
+   SCIPhashmapFree(&expr2matrix);
+   SCIPfreeBufferArray(scip, &matrix);
+   SCIPfreeBufferArray(scip, &alleigval);
+
+   *curv = quaddata->curvature;
+
+   return SCIP_OKAY;
+}
+
+
 
 /* computes a facet of the convex or concave envelope of a vertex polyhedral function
  * see (doxygen-)comment of this function in cons_expr.h

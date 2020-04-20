@@ -35,11 +35,6 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
 
-/* to access quadexpr data
- * TODO remove
- */
-#include "scip/struct_cons_expr.h"
-
 /* fundamental nonlinear handler properties */
 #define CONVEX_NLHDLR_NAME     "convex"
 #define CONVEX_NLHDLR_DESC     "handler that identifies and estimates convex expressions"
@@ -324,6 +319,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_EXPRCURV presentcurv;
    SCIP_EXPRCURV wantedcurv;
+   int nquadexprs;
    int i;
 
    assert(nlexpr != NULL);
@@ -350,8 +346,13 @@ DECL_CURVCHECK(curvCheckQuadratic)
    /* check whether quadratic */
    SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
 
-   /* if not quadratic or only square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
-   if( quaddata == NULL || quaddata->nquadexprs <= 1 )
+   /* if not quadratic, then give up here */
+   if( quaddata == NULL )
+      return SCIP_OKAY;
+
+   /* if only square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+   if( nquadexprs <= 1 )
       return SCIP_OKAY;
 
    /* get curvature of quadratic

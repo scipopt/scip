@@ -1465,20 +1465,6 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
    );
 
-/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
- *
- * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
- * - semidefinite positive -> provided is set to sepaunder
- * - semidefinite negative -> provided is set to sepaover
- * - otherwise -> provided is set to none
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
-   );
-
 /** @} */
 
 /**@name Nonlinear Handler Methods */
@@ -1679,6 +1665,43 @@ SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** @} */
+
+/**@name Quadratic expression functions */
+/**@{ */
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * This function returns pointers to internal data.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
+   SCIP_CONSEXPR_QUADEXPRTERM**  quadexprterms,    /**< buffer to store pointer to array of quadratic expression terms, or NULL */
+   int*                          nbilinexprterms,  /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_CONSEXPR_BILINEXPRTERM** bilinexprterms   /**< buffer to store pointer to array of bilinear expression terms, or NULL */
+   );
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
+   );
+
+/** @} */
+
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function
  *
