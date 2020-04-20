@@ -260,6 +260,7 @@ void csrdepoFillCSR(
    assert(ptr_data >= 0);
 
    /* fill the entries of the CSR */
+   csr->edge_id = NULL;
    csr->start = &(depository->all_starts[ptr_start]);
    csr->head = &(depository->all_heads[ptr_data]);
    csr->cost = &(depository->all_costs[ptr_data]);
@@ -934,9 +935,46 @@ SCIP_RETCODE graph_csr_alloc(
    csrd->nnodes = nnodes;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->start), nnodes + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->head), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->cost), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->edge_id), nedges) );
+
+   if( nedges == 0 )
+   {
+      csrd->head = NULL;
+      csrd->cost = NULL;
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->head), nedges) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->cost), nedges) );
+   }
+
+   csrd->edge_id = NULL;
+
+   return SCIP_OKAY;
+}
+
+
+/** allocates empty (and invalid!) CSR storage */
+SCIP_RETCODE graph_csr_allocWithEdgeId(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nnodes,             /**< nodes */
+   int                   nedges,             /**< edges */
+   CSR**                 csr                 /**< CSR */
+   )
+{
+   CSR* csrd;
+
+   SCIP_CALL( graph_csr_alloc(scip, nnodes, nedges, csr) );
+
+   csrd = *csr;
+
+   if( nedges == 0 )
+   {
+      csrd->edge_id = NULL;
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(csrd->edge_id), nedges) );
+   }
 
    return SCIP_OKAY;
 }
@@ -980,7 +1018,7 @@ void graph_csr_chgCosts(
 
             assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
             assert(gHead[e] == csr->head[pos] );
-            assert(e == csr->edge_id[pos]);
+            assert(NULL == csr->edge_id || e == csr->edge_id[pos]);
 
             cost_csr[pos++] = edgecosts[e];
          }
@@ -1011,6 +1049,7 @@ void graph_csr_build(
    const int* const gOeat = g->oeat;
    const int* const gHead = g->head;
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   SCIP_Bool hasEdgeId;
 
    assert(csr && edgecosts);
    assert(nnodes >= 1);
@@ -1021,6 +1060,8 @@ void graph_csr_build(
    head_csr = csr->head;
    cost_csr = csr->cost;
    edgeid_csr = csr->edge_id;
+
+   hasEdgeId = (edgeid_csr != NULL);
 
    /* now fill the data in */
 
@@ -1042,7 +1083,8 @@ void graph_csr_build(
             assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
 
             head_csr[pos] = ehead;
-            edgeid_csr[pos] = e;
+            if( hasEdgeId )
+               edgeid_csr[pos] = e;
             cost_csr[pos++] = edgecosts[e];
          }
       }
@@ -1054,6 +1096,71 @@ void graph_csr_build(
 
    assert(start_csr[nnodes] <= g->edges);
    assert(graph_csr_isValid(csr, TRUE));
+}
+
+
+/** builds CSR costs from given edgecosts array */
+void graph_csr_buildCosts(
+   const GRAPH*          g,                  /**< the graph */
+   const CSR*            csr,                /**< CSR */
+   const SCIP_Real*      edgecosts_g,        /**< edge costs (w.r.t graph 'g') */
+   SCIP_Real* RESTRICT   edgecosts_csr       /**< new edgecosts for CSR */
+   )
+{
+   const int* const edgeid = csr->edge_id;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = csr->start[nnodes];
+
+   assert(edgeid);
+   assert(nnodes >= 1);
+   assert(csr->nnodes == nnodes);
+   assert(nedges <= csr->nedges_max);
+   assert(nedges >= graph_get_nEdges(g));
+   assert(edgecosts_csr && edgecosts_g);
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int edge_g = edgeid[i];
+
+      assert(0 <= edge_g && edge_g < g->edges);
+
+      edgecosts_csr[i] = edgecosts_g[edge_g];
+   }
+}
+
+
+/** are CSR and graph costs corresponding? */
+SCIP_Bool graph_csr_costsAreInSync(
+   const GRAPH*          g,                  /**< the graph */
+   const CSR*            csr,                /**< CSR */
+   const SCIP_Real*      edgecosts_g         /**< edge costs w.r.t graph 'g' */
+)
+{
+   const SCIP_Real* const edgecosts_csr = csr->cost;
+   const int* const edgeid = csr->edge_id;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = csr->start[nnodes];
+
+   assert(edgeid);
+   assert(nnodes >= 1);
+   assert(csr->nnodes == nnodes);
+   assert(nedges <= csr->nedges_max);
+   assert(nedges <= graph_get_nEdges(g));
+   assert(edgecosts_csr && edgecosts_g);
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int edge_g = edgeid[i];
+
+      assert(0 <= edge_g && edge_g < g->edges);
+
+      if( !EQ(edgecosts_csr[i], edgecosts_g[edge_g]) )
+      {
+         return FALSE;
+      }
+   }
+
+   return TRUE;
 }
 
 
@@ -1069,6 +1176,7 @@ void graph_csr_copy(
    assert(csr_in->nnodes > 0 && csr_in->nedges_max >= 0);
 
    assert(graph_csr_isValid(csr_in, FALSE));
+   assert((csr_out->edge_id != NULL) == (csr_in->edge_id != NULL));
 
    BMScopyMemoryArray(csr_out->start, csr_in->start, csr_in->nnodes + 1);
 
@@ -1076,7 +1184,11 @@ void graph_csr_copy(
    {
       BMScopyMemoryArray(csr_out->head, csr_in->head, csr_in->nedges_max);
       BMScopyMemoryArray(csr_out->cost, csr_in->cost, csr_in->nedges_max);
-      BMScopyMemoryArray(csr_out->edge_id, csr_in->edge_id, csr_in->nedges_max);
+
+      if( csr_out->edge_id != NULL )
+      {
+         BMScopyMemoryArray(csr_out->edge_id, csr_in->edge_id, csr_in->nedges_max);
+      }
    }
 
    assert(graph_csr_isValid(csr_out, FALSE));
@@ -1105,6 +1217,23 @@ void graph_csr_print(
    }
 }
 
+/** gets currently used CSR edges */
+int graph_csr_getNedges(
+   const CSR*            csr                 /**< CSR to print */
+)
+{
+   int nnodes;
+   assert(csr);
+   assert(csr->start);
+
+   nnodes = csr->nnodes;
+
+   assert(nnodes >= 0);
+   assert(csr->start[nnodes] >= 0);
+   assert(csr->start[nnodes] <= csr->nedges_max);
+
+   return csr->start[nnodes];
+}
 
 /** frees dynamic CSR storage */
 void graph_csr_free(
@@ -1118,11 +1247,15 @@ void graph_csr_free(
 
    csrd = *csr;
 
-   assert(csrd != NULL && csrd->nnodes >= 1);
+   assert(csrd);
+   assert(csrd->nnodes >= 1);
+   assert(csrd->cost);
+   assert(csrd->head);
+   assert(csrd->start);
 
-   SCIPfreeMemoryArray(scip, &(csrd->edge_id));
-   SCIPfreeMemoryArray(scip, &(csrd->cost));
-   SCIPfreeMemoryArray(scip, &(csrd->head));
+   SCIPfreeMemoryArrayNull(scip, &(csrd->edge_id));
+   SCIPfreeMemoryArrayNull(scip, &(csrd->cost));
+   SCIPfreeMemoryArrayNull(scip, &(csrd->head));
    SCIPfreeMemoryArray(scip, &(csrd->start));
 
    SCIPfreeMemory(scip, csr);

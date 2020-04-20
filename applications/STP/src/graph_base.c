@@ -2043,7 +2043,8 @@ SCIP_Bool graph_edge_isBlocked(
    int                   e                   /**< the edge */
    )
 {
-   int todo; // EQ!
+   int todo; // EQ! already change it at "is blocked"...maybe might be even possible to check in which solving phase!
+   // then we dont even have to look for blocked! the problem is getOrgCosts!
 
    assert(scip && g);
    assert(e >= 0 && e < g->edges);

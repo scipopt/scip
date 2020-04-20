@@ -43,7 +43,10 @@ struct stortest_path_prizecollecting
 typedef
 struct stortest_paths
 {
-   const CSR*            csr;                /**< CSR */
+   const CSR*            csr;                /**< CSR with possibly biased edge costs
+                                                  NOTE: all pointers except for cost alias with csr_orgcosts */
+   const CSR*            csr_orgcosts;       /**< CSR with original edge costs
+                                                  NOTE: all pointers except for cost alias with csr */
    DHEAP*                dheap;              /**< Dijkstra heap */
    SCIP_Real* RESTRICT   nodes_dist;         /**< distance array (on vertices) */
    int* RESTRICT         nodes_pred;         /**< predecessor node array (on vertices)

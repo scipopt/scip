@@ -32,6 +32,9 @@
 #include "graph.h"
 #include "shortestpath.h"
 
+extern void solstp_pcConnectDummies(const GRAPH*, int, int* RESTRICT, STP_Bool* RESTRICT);
+extern SCIP_Real solstp_pcGetObjCsr(const GRAPH*, const CSR*, const int*, const STP_Bool*);
+extern int solstp_pcGetSolRoot(SCIP*, const GRAPH*, const STP_Bool*);
 
 extern void   solstp_setNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   solstp_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
@@ -40,14 +43,17 @@ extern SCIP_RETCODE   solstp_markPcancestors(SCIP*, IDX**, const int*, const int
 extern SCIP_Bool solstp_isUnreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool solstp_isValid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool solstp_containsNode(const GRAPH*, const int*, int);
+extern SCIP_Bool stpsol_pruningIsPossible(const GRAPH*, const int*, const STP_Bool*);
 extern SCIP_Real solstp_getObj(const GRAPH*, const int*, SCIP_Real, int);
 extern int       solstp_getNedges(const GRAPH*, const int*);
+extern int       solstp_getNedgesBounded(const GRAPH*, const int*, int);
 extern void      solstp_getTrivialSol(const GRAPH*, int*);
+extern void      solstp_convertCsrToGraph(SCIP*, const GRAPH*, const CSR*, const int*, STP_Bool* RESTRICT, int* RESTRICT);
 extern SCIP_RETCODE   solstp_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   solstp_reroot(SCIP*, GRAPH*, int*, int);
 SCIP_RETCODE       solstp_prune(SCIP*, const GRAPH*, int*, STP_Bool*);
 SCIP_RETCODE       solstp_pruneFromTmHeur(SCIP*, const GRAPH*, const SCIP_Real*, int* RESTRICT, STP_Bool* RESTRICT);
-SCIP_RETCODE       solstp_pruneFromTmHeur_csr(SCIP*, const GRAPH*, SPATHS*, int* RESTRICT, STP_Bool* RESTRICT);
+SCIP_RETCODE       solstp_pruneFromTmHeur_csr(SCIP*, const GRAPH*, SPATHS*, int* RESTRICT);
 SCIP_RETCODE       solstp_pruneFromNodes(SCIP*, const GRAPH*, int*, STP_Bool*);
 SCIP_RETCODE       solstp_pruneFromEdges(SCIP*, const GRAPH*, int*);
 

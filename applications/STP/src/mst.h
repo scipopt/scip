@@ -43,7 +43,7 @@ struct minimum_spanning_tree
 } MST;
 
 
-void mst_computeOnMarked(const GRAPH*, int, MST*);
+void mst_computeOnMarked(const GRAPH*, const STP_Bool*, int, MST*);
 
 
 #endif /* APPLICATIONS_STP_SRC_MST_H_ */

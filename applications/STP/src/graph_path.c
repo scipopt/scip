@@ -3830,7 +3830,7 @@ SCIP_RETCODE graph_get4nextTTerms(
 SCIP_RETCODE graph_voronoiExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edgecosts */
+   const SCIP_Real*      cost,               /**< edgecosts */
    PATH*                 path,               /**< shortest paths data structure */
    SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
    int**                 basearr,            /**< array to store the bases */

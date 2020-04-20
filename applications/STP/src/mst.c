@@ -31,6 +31,7 @@
 static inline
 void computeOnMarked_init(
    const GRAPH*          g,                  /**< graph data structure */
+   const STP_Bool*       nodes_isMarked,     /**< should the node be considered? */
    int                   startnode,          /**< start vertex */
    MST*                  mst                 /**< MST data */
 )
@@ -41,7 +42,7 @@ void computeOnMarked_init(
    int* RESTRICT nodes_pred = mst->nodes_predEdge;
 
    assert(startnode >= 0 && startnode < g->knots);
-   assert(g->mark[startnode]);
+   assert(nodes_isMarked[startnode]);
    assert(nnodes >= 1);
    assert(mst->csr->nnodes == nnodes);
    assert(mst->csr->start[nnodes] <= g->edges);
@@ -63,6 +64,7 @@ void computeOnMarked_init(
 static inline
 void computeOnMarked_exec(
    const GRAPH*          g,                  /**< graph data structure */
+   const STP_Bool*       nodes_isMarked,     /**< should the node be considered? */
    int                   startnode,          /**< start vertex */
    MST*                  mst                 /**< MST data */
 )
@@ -75,7 +77,6 @@ void computeOnMarked_exec(
    const SCIP_Real* const cost_csr = csr->cost;
    const int* const head_csr = csr->head;
    const int* const start_csr = csr->start;
-   const int* const nodeIsMarked = g->mark;
 
    assert(dheap->size == 1);
 
@@ -94,7 +95,7 @@ void computeOnMarked_exec(
       {
          const int m = head_csr[e];
 
-         if( state[m] != CONNECT && nodeIsMarked[m] && cost_csr[e] < nodes_dist[m] )
+         if( state[m] != CONNECT && nodes_isMarked[m] && cost_csr[e] < nodes_dist[m] )
          {
             nodes_pred[m] = e;
             nodes_dist[m] = cost_csr[e];
@@ -102,9 +103,11 @@ void computeOnMarked_exec(
          }
       }
    }
+
+   assert(nodes_pred[startnode] == UNKNOWN);
 }
 
-
+#if 0
 /** update predecessors */
 static inline
 void computeOnMarked_computePredecessors(
@@ -125,6 +128,7 @@ void computeOnMarked_computePredecessors(
       }
    }
 }
+#endif
 
 
 /*
@@ -135,6 +139,7 @@ void computeOnMarked_computePredecessors(
 /** computes MST on marked vertices */
 void mst_computeOnMarked(
    const GRAPH*          g,                  /**< graph data structure */
+   const STP_Bool*       nodes_isMarked,     /**< should the node be considered? */
    int                   startnode,          /**< start vertex */
    MST*                  mst                 /**< MST data */
 )
@@ -142,11 +147,11 @@ void mst_computeOnMarked(
    assert(g && mst);
    assert(mst->csr && mst->dheap && mst->nodes_dist && mst->nodes_predEdge);
 
-   computeOnMarked_init(g, startnode, mst);
+   computeOnMarked_init(g, nodes_isMarked, startnode, mst);
 
    if( g->knots == 1 )
       return;
 
-   computeOnMarked_exec(g, startnode, mst);
-   computeOnMarked_computePredecessors(g, mst);
+   computeOnMarked_exec(g, nodes_isMarked, startnode, mst);
+ //  computeOnMarked_computePredecessors(g, mst);
 }

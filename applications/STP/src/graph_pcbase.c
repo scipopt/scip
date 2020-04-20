@@ -1518,8 +1518,52 @@ void graph_pc_getOrgCosts(
    BMScopyMemoryArray(edgecosts, graph->cost, nedges);
 
    for( int e = 0; e < nedges; ++e )
+   {
       if( !graph_edge_isBlocked(scip, graph, e) )
          edgecosts[e] = cost_org[e];
+   }
+}
+
+
+/** gets original edge costs for CSR, when in extended mode */
+void graph_pc_getOrgCostsCsr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   CSR*                  csr                 /**< CSR */
+)
+{
+   const SCIP_Real* const gCosts = g->cost;
+   const SCIP_Real* const gCosts_org = g->cost_org_pc;
+   SCIP_Real* RESTRICT csrCosts = csr->cost;
+   const int* const edgeid = csr->edge_id;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = csr->start[nnodes];
+
+   assert(edgeid && gCosts && gCosts_org);
+   assert(nnodes >= 1 && nedges >= 0);
+   assert(csr->nnodes == nnodes);
+   assert(nedges <= csr->nedges_max);
+   assert(nedges <= graph_get_nEdges(g));
+   assert(g->extended && graph_pc_isPc(g));
+   assert(graph_pc_transOrgAreConistent(scip, g, TRUE));
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int edge_g = edgeid[i];
+      const SCIP_Bool edgeIsBlocked = EQ(gCosts[edge_g], BLOCKED_MINOR) || EQ(gCosts[edge_g], BLOCKED);
+
+      assert(0 <= edge_g && edge_g < g->edges);
+      assert(edgeIsBlocked == graph_edge_isBlocked(scip, g, edge_g));
+
+      if( edgeIsBlocked )
+      {
+         csrCosts[i] = gCosts[edge_g];
+      }
+      else
+      {
+         csrCosts[i] = gCosts_org[edge_g];
+      }
+   }
 }
 
 

@@ -650,7 +650,7 @@ SCIP_RETCODE shortestpath_pcInit(
    int termcount;
 
    assert(graph_pc_isPcMw(graph));
-   assert(prizes && graph && orderedprizes && orderedprizes_id);
+   assert(prizes && graph);
    assert(graph->extended);
    assert(nterms >= 1);
 

@@ -36,41 +36,6 @@
 #include "mst.h"
 #include "shortestpath.h"
 
-#ifndef NDEBUG
-/** (simple) pruning of given solution possible? */
-static
-SCIP_Bool pruningIsPossible(
-   const GRAPH*          g,                  /**< graph structure */
-   const int*            result             /**< ST edges */
-   )
-{
-   const int nnodes = graph_get_nNodes(g);
-
-   for( int i = nnodes - 1; i >= 0; --i )
-   {
-      int j;
-
-      if( !g->mark[i] )
-         continue;
-
-      if( Is_term(g->term[i]) || Is_pseudoTerm(g->term[i]) )
-         continue;
-
-      for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-         if( result[j] == CONNECT )
-            break;
-
-      if( j == EAT_LAST )
-      {
-         return TRUE;
-      }
-   }
-
-   return FALSE;
-}
-#endif
-
-
 /** Deletes subtree from given node, marked by dfspos.
  *  NOTE: recursive method. */
 static
@@ -112,6 +77,48 @@ void pcsubtreeDelete(
             graph_edge_printInfo(g, e);
 #endif
             pcsubtreeDelete(g, neighbor, dfspos, result, connected);
+         }
+      }
+   }
+}
+
+
+/** Deletes subtree from given node, marked by dfspos.
+ *  NOTE: recursive method. */
+static
+void pcsubtreeDelete_csr(
+   const CSR*            csr_orgcosts,       /**< CSR */
+   int                   subtree_root,       /**< root of the subtree */
+   int* RESTRICT         dfspos,             /**< array to mark DFS positions of nodes */
+   int* RESTRICT         result,             /**< ST edges */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+)
+{
+   const int dfspos_root = dfspos[subtree_root];
+   const int rootedges_start = csr_orgcosts->start[subtree_root];
+   const int rootedges_end = csr_orgcosts->start[subtree_root + 1];
+
+   assert(dfspos_root > 0);
+   assert(connected[subtree_root]);
+
+   connected[subtree_root] = FALSE;
+
+   SCIPdebugMessage("strong prune deletes tree vertex %d \n", subtree_root);
+
+   for( int e = rootedges_start; e != rootedges_end; e++ )
+   {
+      if( result[e] == CONNECT )
+      {
+         const int neighbor = csr_orgcosts->head[e];
+
+         assert(dfspos[neighbor] >= 0);
+         assert(dfspos[neighbor] != dfspos_root);
+
+         /* is neighbor a DFS child of the root?  */
+         if( dfspos[neighbor] > dfspos_root)
+         {
+            result[e] = UNKNOWN;
+            pcsubtreeDelete_csr(csr_orgcosts, neighbor, dfspos, result, connected);
          }
       }
    }
@@ -183,24 +190,93 @@ SCIP_Real pcsubtreePruneForProfit(
 }
 
 
+
+/** Prunes subtree from given node such that it becomes most profitable and returns the profit.
+ *  NOTE: recursive method. */
+static
+SCIP_Real pcsubtreePruneForProfit_csr(
+   const CSR*            csr_orgcosts,       /**< CSR */
+   const SCIP_Real*      prize,              /**< the prize */
+   SCIP_Bool             isPc,               /**< is PC? */
+   int                   subtree_root,       /**< root of the subtree */
+   int* RESTRICT         dfspos,             /**< array to mark DFS positions of nodes */
+   int* RESTRICT         result,             /**< ST edges */
+   STP_Bool* RESTRICT    connected,          /**< ST nodes */
+   int* RESTRICT         dfscount            /**< counter */
+)
+{
+   const SCIP_Real* const orgcosts_csr = csr_orgcosts->cost;
+   const int rootedges_start = csr_orgcosts->start[subtree_root];
+   const int rootedges_end = csr_orgcosts->start[subtree_root + 1];
+   const int* const heads_csr = csr_orgcosts->head;
+   SCIP_Real profit = prize[subtree_root];
+
+   if( !isPc )
+   {
+      /* NOTE: for MW any negative prize is already counted with the edge costs! */
+      if( LT(profit, 0.0) )
+         profit = 0.0;
+   }
+
+   assert(0 <= *dfscount && *dfscount < csr_orgcosts->nnodes);
+   assert(rootedges_start <= rootedges_end);
+
+   dfspos[subtree_root] = ++(*dfscount);
+
+   SCIPdebugMessage("strong-prune from root %d \n", subtree_root);
+
+   for( int e = rootedges_start; e != rootedges_end; e++ )
+   {
+      if( result[e] == CONNECT )
+      {
+         const int neighbor = heads_csr[e];
+
+         assert(dfspos[neighbor] >= 0);
+
+         /* not visited yet? */
+         if( dfspos[neighbor] == 0 )
+         {
+            const SCIP_Real neighbor_profit = pcsubtreePruneForProfit_csr(csr_orgcosts, prize, isPc, neighbor, dfspos,
+                  result, connected, dfscount);
+            const SCIP_Real extension_profit = neighbor_profit - orgcosts_csr[e];
+
+            if( LT(extension_profit, 0.0) )
+            {
+               result[e] = UNKNOWN;
+               pcsubtreeDelete_csr(csr_orgcosts, neighbor, dfspos, result, connected);
+            }
+            else
+            {
+               profit += extension_profit;
+            }
+         }
+      }
+   }
+
+   return profit;
+}
+
+
 /** computes trivial solution and sets result edges */
 static inline
 void pcsolGetTrivialEdges(
    const GRAPH*          g,                  /**< graph structure */
    const STP_Bool*       connected,          /**< ST nodes */
-   int*                  result              /**< MST solution, which does not include artificial terminals */
+   int* RESTRICT         result              /**< MST solution, which does not include artificial terminals */
 )
 {
    const int root = g->source;
+   const int* const gOeat = g->oeat;
+   const int* const gHead = g->head;
 
 #ifndef NEDBUG
    for( int i = 0; i < g->edges; i++ )
       assert(UNKNOWN == result[i]);
 #endif
 
-   for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+   for( int a = g->outbeg[root]; a >= 0; a = gOeat[a] )
    {
-      const int head = g->head[a];
+      const int head = gHead[a];
       if( graph_pc_knotIsDummyTerm(g, head) )
       {
          assert(!connected || connected[head]);
@@ -208,6 +284,7 @@ void pcsolGetTrivialEdges(
       }
    }
 }
+
 
 /** computes MST on marked graph and sets result edges */
 static inline
@@ -248,83 +325,29 @@ SCIP_RETCODE pcsolGetMstEdges(
 static inline
 void pcsolGetMstEdges_csr(
    const GRAPH*          g,                  /**< graph structure */
+   const STP_Bool*       connected,          /**< ST nodes */
    int                   root,               /**< root of solution */
    MST*                  mst,                /**< the MST */
    int* RESTRICT         result              /**< MST solution, which does not include artificial terminals */
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   const int* const gmark = g->mark;
    const int* predEdge;
 
-   mst_computeOnMarked(g, root, mst);
+   mst_computeOnMarked(g, connected, root, mst);
    predEdge = mst->nodes_predEdge;
 
    for( int i = 0; i < nnodes; i++ )
    {
-      if( gmark[i] && (predEdge[i] != UNKNOWN) )
+      if( connected[i] && (predEdge[i] != UNKNOWN) )
       {
-         assert(g->head[predEdge[i]] == i);
+         assert(mst->csr->head[predEdge[i]] == i);
          assert(result[predEdge[i]] == UNKNOWN);
 
          result[predEdge[i]] = CONNECT;
       }
    }
 }
-
-
-/** Gets root of solution for unrooted PC/MW.
- *  Returns -1 if the solution is empty. */
-static inline
-int pcsolGetRoot(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const STP_Bool*       connected           /**< ST nodes */
-   )
-{
-   int proot = -1;
-   const int nnodes = graph_get_nNodes(g);
-   const int groot = g->source;
-
-   assert(graph_pc_isPcMw(g));
-   assert(!graph_pc_isRootedPcMw(g));
-
-   /* todo remove this hack, better ask for the SCIP stage */
-   if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
-   {
-      int min = nnodes;
-      const int* termsorder = SCIPprobdataGetPctermsorder(scip);
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         if( termsorder[k] < min && connected[k] )
-         {
-            assert(Is_pseudoTerm(g->term[k]));
-
-            min = termsorder[k];
-            proot = k;
-         }
-      }
-
-      assert(min >= 0);
-      assert(proot == -1 || min < nnodes);
-   }
-   else
-   {
-      for( int a = g->outbeg[groot]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
-         if( !Is_term(g->term[head]) && connected[head] )
-         {
-            proot = head;
-            break;
-         }
-      }
-   }
-
-   return proot;
-}
-
 
 /** mark nodes of the solution in the graph */
 static inline
@@ -363,6 +386,52 @@ void pcsolMarkGraphNodes(
             gmark[i] = TRUE;
          else
             gmark[i] = FALSE;
+      }
+   }
+}
+
+
+/** mark nodes of the solution in the graph */
+static inline
+void pcsolMarkGraphNodes_csr(
+   const GRAPH*          g,                  /**< graph structure */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+
+   assert(g->extended);
+
+   if( rpcmw )
+   {
+      const int* const gGrad = g->grad;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( gGrad[i] == 2 )
+         {
+            if( graph_pc_knotIsDummyTerm(g, i) )
+               connected[i] = FALSE;
+         }
+         else
+         {
+            assert(!graph_pc_knotIsDummyTerm(g, i));
+         }
+
+         assert(connected[i] || !graph_pc_knotIsFixedTerm(g, i));
+      }
+
+      assert(connected[g->source]);
+   }
+   else
+   {
+      const int* const gterm = g->term;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(gterm[i]) )
+            connected[i] = FALSE;
       }
    }
 }
@@ -443,78 +512,6 @@ void pcsolPrune(
 #endif
 }
 
-/** connects dummy terminals to given (pre-) PC solution */
-static
-void pcsolConnectDummies(
-   const GRAPH*          g,                  /**< graph structure */
-   int                   solroot,            /**< root of solution */
-   int*                  result,             /**< MST solution, which does not include artificial terminals */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   const int nnodes = graph_get_nNodes(g);
-   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
-
-   /* connect all terminals */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) && i != g->source )
-      {
-         const SCIP_Bool isFixedTerm = (rpcmw && g->mark[i]);
-
-         assert(isFixedTerm == graph_pc_knotIsFixedTerm(g, i));
-         assert(isFixedTerm || g->grad[i] == 2);
-         assert(isFixedTerm || g->inpbeg[i] >= 0);
-
-         if( isFixedTerm )
-         {
-            assert(connected[i]);
-
-            continue;
-         }
-         else
-         {
-            const int e1 = g->inpbeg[i];
-            const int e2 = g->ieat[e1];
-            const int k1 = g->tail[e1];
-            const int k2 = g->tail[e2];
-
-            connected[i] = TRUE;
-
-            assert(graph_pc_knotIsDummyTerm(g, i));
-            assert(g->ieat[e2] == EAT_LAST);
-            assert(k1 == g->source || k2 == g->source);
-
-            if( k1 != g->source && g->mark[k1] )
-               result[e1] = CONNECT;
-            else if( k2 != g->source && g->mark[k2] )
-               result[e2] = CONNECT;
-            else if( k1 == g->source )
-               result[e1] = CONNECT;
-            else if( k2 == g->source )
-               result[e2] = CONNECT;
-
-            /* xor: exactly one of e1 and e2 is used */
-            assert((result[e1] != CONNECT) != (result[e2] != CONNECT));
-         }
-      }
-      else if( i == solroot && !rpcmw )
-      {
-         int e1;
-         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
-            if( g->tail[e1] == g->source )
-               break;
-         assert(e1 != EAT_LAST);
-         result[e1] = CONNECT;
-      }
-   }
-
-   if( !rpcmw )
-      connected[g->source] = TRUE;
-
-   assert(connected[g->source]);
-}
-
 
 /** Finds optimal prize-collecting Steiner tree on given tree. */
 static
@@ -570,6 +567,54 @@ SCIP_RETCODE strongPruneSteinerTreePc(
 
    return SCIP_OKAY;
 }
+
+
+
+/** Finds optimal prize-collecting Steiner tree on given tree. */
+static
+SCIP_RETCODE strongPruneSteinerTreePc_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const CSR*            csr_orgcosts,       /**< CSR */
+   int                   solroot,            /**< root of the solution */
+   int*                  result,             /**< ST edges */
+   STP_Bool*             connected           /**< ST nodes */
+)
+{
+   int* dfspos;
+   SCIP_Real profit;
+   const int nnodes = graph_get_nNodes(g);
+   int dfscount = 0;
+#ifndef NDEBUG
+   const int nsoledges = solstp_getNedgesBounded(g, result, graph_csr_getNedges(csr_orgcosts));
+#endif
+   const SCIP_Bool isPc = graph_pc_isPc(g);
+
+   assert(solroot >= 0);
+   assert(connected[solroot]);
+   assert(graph_pc_isPcMw(g));
+   assert(!graph_pc_knotIsDummyTerm(g, solroot));
+   assert(g->extended);
+   assert(nnodes == csr_orgcosts->nnodes);
+
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dfspos, nnodes) );
+
+   BMSclearMemoryArray(dfspos, nnodes);
+
+   /* compute the subtree */
+
+   profit = pcsubtreePruneForProfit_csr(csr_orgcosts, g->prize, isPc, solroot, dfspos, result, connected, &dfscount);
+
+   assert(GE(profit, 0.0) );
+   assert(nsoledges + 1 == dfscount);
+
+
+   SCIPfreeBufferArray(scip, &dfspos);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** prune a Steiner tree in such a way that all leaves are terminals */
@@ -704,7 +749,7 @@ SCIP_RETCODE pruneSteinerTreePc(
 
    if( !rpcmw )
    {
-      solroot = pcsolGetRoot(scip, g, connected);
+      solroot = solstp_pcGetSolRoot(scip, g, connected);
 
       /* trivial solution? */
       if( solroot == -1 )
@@ -736,15 +781,15 @@ SCIP_RETCODE pruneSteinerTreePc(
 
    SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
 
-   pcsolConnectDummies(g, solroot, result, connected);
+   solstp_pcConnectDummies(g, solroot, result, connected);
 
    /* simple pruning */
   // pcsolPrune(g, result, connected);
-   assert(!pruningIsPossible(g, result));
+   assert(!stpsol_pruningIsPossible(g, result, connected));
 
 
 #ifndef NDEBUG
-   pcsolConnectDummies(g, solroot, result_dbg, connected_dbg);
+   solstp_pcConnectDummies(g, solroot, result_dbg, connected_dbg);
    pcsolPrune(g, result_dbg, connected_dbg);
 
    assert(LE(solstp_getObj(g, result, 0.0, nedges), solstp_getObj(g, result_dbg, 0.0, nedges)));
@@ -775,41 +820,39 @@ SCIP_RETCODE pruneSteinerTreePc_csr(
    int solroot = g->source;
 
 #ifndef NDEBUG
-   for( int i = 0; i < g->edges; i++ ) assert(UNKNOWN == result[i]);
+   {
+      const int nedges_csr = graph_csr_getNedges(mst->csr);
+      for( int i = 0; i < nedges_csr; i++ )
+         assert(UNKNOWN == result[i]);
+
+      assert(scip && result && connected);
+      assert(g->extended);
+      assert(graph_pc_isPcMw(g));
+   }
 #endif
 
-   assert(scip && result && connected);
-   assert(g->extended);
-   assert(graph_pc_isPcMw(g));
-
-   pcsolMarkGraphNodes(connected, g);
+   pcsolMarkGraphNodes_csr(g, connected);
 
    if( !rpcmw )
    {
-      solroot = pcsolGetRoot(scip, g, connected);
+      solroot = solstp_pcGetSolRoot(scip, g, connected);
 
       /* trivial solution? */
       if( solroot == -1 )
       {
          printf("trivial solution in pruning \n");
-         pcsolGetTrivialEdges(g, connected, result);
-         return SCIP_OKAY;
+        // pcsolGetTrivialEdges(g, connected, result); // does not work for CSR!
+         return SCIP_ERROR;
       }
    }
 
    assert(0 <= solroot && solroot < g->knots);
-   assert(g->mark[solroot]);
+   assert(connected[solroot]);
    SCIPdebugMessage("(non-artificial) solution root=%d \n", solroot);
 
-   pcsolGetMstEdges_csr(g, solroot, mst, result);
+   pcsolGetMstEdges_csr(g, connected, solroot, mst, result);
 
-   int todo;
-//   SCIP_CALL( strongPruneSteinerTreePc(scip, g, cost, solroot, result, connected) );
-
-   pcsolConnectDummies(g, solroot, result, connected);
-
-   assert(!pruningIsPossible(g, result));
-   assert(solstp_isValid(scip, g, result));
+   SCIP_CALL( strongPruneSteinerTreePc_csr(scip, g, mst->csr, solroot, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -817,6 +860,180 @@ SCIP_RETCODE pruneSteinerTreePc_csr(
 /*
  * Interface methods
  */
+
+
+
+/** Gets root of solution for unrooted PC/MW.
+ *  Returns -1 if the solution is empty. */
+int solstp_pcGetSolRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const STP_Bool*       connected           /**< ST nodes */
+   )
+{
+   int proot = -1;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(g && connected);
+   assert(graph_pc_isPcMw(g));
+
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      return g->source;
+   }
+
+   /* todo remove this hack, better ask for the SCIP stage */
+   if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
+   {
+      int min = nnodes;
+      const int* termsorder = SCIPprobdataGetPctermsorder(scip);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( termsorder[k] < min && connected[k] )
+         {
+            assert(Is_pseudoTerm(g->term[k]));
+
+            min = termsorder[k];
+            proot = k;
+         }
+      }
+
+      assert(min >= 0);
+      assert(proot == -1 || min < nnodes);
+   }
+   else
+   {
+      const int* const gOeat = g->oeat;
+      const int* const gHead = g->head;
+      const int* const gTerm = g->term;
+      const int groot = g->source;
+
+      for( int a = g->outbeg[groot]; a >= 0; a = gOeat[a] )
+      {
+         const int head = gHead[a];
+         if( !Is_term(gTerm[head]) && connected[head] )
+         {
+            proot = head;
+            break;
+         }
+      }
+   }
+
+   return proot;
+}
+
+
+/** connects dummy terminals to given (pre-) PC solution */
+void solstp_pcConnectDummies(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   solroot,            /**< root of solution */
+   int* RESTRICT         result,             /**< MST solution, which does not include artificial terminals */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   const int* const gTerm = g->term;
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+   const int gRoot = g->source;
+
+   assert(graph_pc_isPcMw(g));
+
+   /* connect all terminals */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(gTerm[i]) && i != gRoot )
+      {
+         const SCIP_Bool isFixedTerm = graph_pc_knotIsFixedTerm(g, i);
+
+         assert(isFixedTerm || g->grad[i] == 2);
+         assert(isFixedTerm || g->inpbeg[i] >= 0);
+
+         if( isFixedTerm )
+         {
+            assert(rpcmw);
+            assert(connected[i]);
+            continue;
+         }
+         else
+         {
+            const int e1 = g->inpbeg[i];
+            const int e2 = g->ieat[e1];
+            const int k1 = g->tail[e1];
+            const int k2 = g->tail[e2];
+
+            connected[i] = TRUE;
+
+            assert(graph_pc_knotIsDummyTerm(g, i));
+            assert(g->ieat[e2] == EAT_LAST);
+            assert(g->grad[i] == 2);
+            assert(k1 == gRoot || k2 == gRoot);
+
+            if( k1 != gRoot && connected[k1] )
+               result[e1] = CONNECT;
+            else if( k2 != gRoot && connected[k2] )
+               result[e2] = CONNECT;
+            else if( k1 == gRoot )
+               result[e1] = CONNECT;
+            else if( k2 == gRoot )
+               result[e2] = CONNECT;
+
+            /* xor: exactly one of e1 and e2 is used */
+            assert((result[e1] != CONNECT) != (result[e2] != CONNECT));
+         }
+      }
+      else if( i == solroot && !rpcmw )
+      {
+         int e1;
+         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
+         {
+            if( g->tail[e1] == gRoot )
+               break;
+         }
+
+         assert(e1 != EAT_LAST);
+         result[e1] = CONNECT;
+      }
+   }
+
+   if( !rpcmw )
+      connected[gRoot] = TRUE;
+
+   assert(connected[gRoot]);
+}
+
+
+/** (simple) pruning of given solution possible? */
+SCIP_Bool stpsol_pruningIsPossible(
+   const GRAPH*          g,                  /**< graph structure */
+   const int*            result,             /**< ST edges */
+   const STP_Bool*       connected           /**< ST nodes */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int j;
+
+      if( !connected[i] )
+         continue;
+
+      if( Is_term(g->term[i]) || Is_pseudoTerm(g->term[i]) )
+         continue;
+
+      for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
+         if( result[j] == CONNECT )
+            break;
+
+      if( j == EAT_LAST )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
 
 /** Prune solution given by included nodes.
  *  NOTE: For PC/RPC this method will get the original edge costs before pruning! */
@@ -967,25 +1184,23 @@ SCIP_RETCODE solstp_pruneFromTmHeur(
 }
 
 
-
 /** Prunes solution with respect to the provided edges costs.
- *  CSR version!
- *  NOTE: method exists purely for optimization, so that unbiased costs for PC do not have to computed again! */
+ *  CSR version! */
 SCIP_RETCODE solstp_pruneFromTmHeur_csr(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SPATHS*               spaths,             /**< shortest paths;
-                                                 NOTE: distances and preds not valid afterwards!
-                                                 hacky, but improves cache-efficiency */
-   int* RESTRICT         result,             /**< ST edges */
-   STP_Bool* RESTRICT    connected           /**< ST nodes */
+                                                  NOTE: distances and preds not valid afterwards!
+                                                  hacky, but improves cache-efficiency */
+   int* RESTRICT         result              /**< ST edges */
    )
 {
-   MST mst = { .csr = spaths->csr, .dheap = spaths->dheap,
-               .nodes_dist = spaths->nodes_dist, .nodes_predEdge = spaths->nodes_pred };
-   const int nedges = graph_get_nEdges(g);
+   const int nnodes = spaths->csr->nnodes;
+   const int nedges = spaths->csr->start[nnodes];
 
-   assert(scip && result && connected);
+   assert(scip && result);
+   assert(nedges <= g->edges);
+
    assert(g->stp_type != STP_DHCSTP && "does not work because DHCSTP uses different edge costs");
 
    for( int e = 0; e < nedges; e++ )
@@ -993,11 +1208,22 @@ SCIP_RETCODE solstp_pruneFromTmHeur_csr(
 
    if( graph_pc_isPcMw(g) )
    {
-      SCIP_CALL( pruneSteinerTreePc_csr(scip, g, &mst, result, connected) );
+      MST mst = { .csr = spaths->csr_orgcosts, .dheap = spaths->dheap, .nodes_dist = spaths->nodes_dist,
+                  .nodes_predEdge = spaths->nodes_pred};
+
+      assert(graph_pc_isPc(g) || graph_csr_costsAreInSync(g, mst.csr, g->cost));
+
+      SCIP_CALL( pruneSteinerTreePc_csr(scip, g, &mst, result, spaths->nodes_isConnected) );
    }
    else
    {
-      int todo;
+      MST mst = { .csr = spaths->csr_orgcosts, .dheap = spaths->dheap,
+                  .nodes_dist = spaths->nodes_dist, .nodes_predEdge = spaths->nodes_pred };
+
+
+      assert(graph_csr_costsAreInSync(g, mst.csr, g->cost));
+
+      // todo
       assert(0);
    }
 
@@ -1366,6 +1592,91 @@ SCIP_Real solstp_getObj(
    return obj;
 }
 
+/** compute solution value for given edge-solution array */
+SCIP_Real solstp_pcGetObjCsr(
+   const GRAPH*          g,                  /**< the graph */
+   const CSR*            csr,                /**< the csr */
+   const int*            soledge_csr,        /**< solution (CONNECT/UNKNOWN)  */
+   const STP_Bool*       solnode             /**< solution vertices (TRUE/FALSE) */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges_csr = graph_csr_getNedges(csr);
+   const SCIP_Real* const edgecost_csr = csr->cost;
+   const SCIP_Real* const prize = g->prize;
+   const int* const gTerm = g->term;
+   SCIP_Real obj = 0.0;
+
+   assert(graph_pc_isPcMw(g));
+   assert(g->extended);
+   assert(nnodes == csr->nnodes);
+   assert(nedges_csr <= g->edges);
+
+   for( int e = 0; e < nedges_csr; e++ )
+   {
+      assert(soledge_csr[e] == CONNECT || soledge_csr[e] == UNKNOWN);
+
+      if( soledge_csr[e] == CONNECT )
+         obj += edgecost_csr[e];
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(gTerm[k]) && !solnode[k] )
+      {
+         assert(g->grad[k] >= 1);
+
+         obj += prize[k];
+      }
+   }
+
+   return obj;
+}
+
+
+/** converts solution from CSR to graph based */
+void solstp_convertCsrToGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const CSR*            csr,                /**< the CSR */
+   const int*            soledge_csr,        /**< CSR solution (CONNECT/UNKNOWN)  */
+   STP_Bool* RESTRICT    solnode,            /**< solution vertices (TRUE/FALSE) in/out! */
+   int* RESTRICT         soledge_g           /**< graph solution (CONNECT/UNKNOWN) out */
+)
+{
+   const int nedges_g = graph_get_nEdges(g);
+   const int nedges_csr = graph_csr_getNedges(csr);
+   const int* const edgeid = csr->edge_id;
+
+   assert(solnode && soledge_csr && soledge_g);
+   assert(edgeid);
+   assert(0 <= nedges_csr && nedges_csr <= nedges_g);
+
+   for( int i = 0; i < nedges_g; i++ )
+   {
+      soledge_g[i] = UNKNOWN;
+   }
+
+   for( int i = 0; i < nedges_csr; i++ )
+   {
+      if( CONNECT == soledge_csr[i] )
+      {
+         const int edge_g = edgeid[i];
+
+         assert(0 <= edge_g && edge_g < nedges_g);
+         assert(UNKNOWN == soledge_g[edge_g]);
+
+         soledge_g[edge_g] = CONNECT;
+      }
+   }
+
+   if( graph_pc_isPcMw(g) )
+   {
+      const int solroot = solstp_pcGetSolRoot(scip, g, solnode);
+      solstp_pcConnectDummies(g, solroot, soledge_g, solnode);
+   }
+}
+
 
 /** sets trivial solution (all UNKNOWN) */
 void solstp_getTrivialSol(
@@ -1396,6 +1707,25 @@ int solstp_getNedges(
    const int nedges = graph_get_nEdges(g);
    int edgecount = 0;
 
+   assert(soledge);
+
+   for( int e = 0; e < nedges; e++ )
+      if( soledge[e] == CONNECT )
+         edgecount++;
+
+   return edgecount;
+}
+
+/** computes number of edges in solution value */
+int solstp_getNedgesBounded(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge,            /**< solution */
+   int                   nedges              /**< the (first) number of edges to consider */
+   )
+{
+   int edgecount = 0;
+
+   assert(nedges <= graph_get_nEdges(g));
    assert(soledge);
 
    for( int e = 0; e < nedges; e++ )
