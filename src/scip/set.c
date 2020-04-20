@@ -719,6 +719,22 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of exact solving mode */
+static
+SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( param != NULL );
+
+   if ( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+   {
+      SCIPerrorMessage("Exact solving mode can only be changed in SICP_STAGE_INIT.\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
    SCIP_SET*             set,                /**< SCIP data structure */
@@ -1904,10 +1920,9 @@ SCIP_RETCODE SCIPsetCreate(
 #ifdef SCIP_WITH_EXACTSOLVE
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)?",
+         "should the problem be solved exactly (with proven dual bounds)? (Only possible if no problem has been read in yet)",
          &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
-         NULL, NULL) );
-#endif
+         paramChgdExactSolve, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/usefprelax",
          "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
@@ -1918,6 +1933,7 @@ SCIP_RETCODE SCIPsetCreate(
          "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
          &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
+#endif
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
          "should the statistics be reset if the transformed problem is freed (in case of a Benders' decomposition this parameter should be set to FALSE)",
