@@ -14720,6 +14720,18 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    return expr->isintegral;
 }
 
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_RETCODE SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->ndomainuses;
+}
+
 /** returns the total number of variables in an expression
  *
  * The function counts variables in common sub-expressions only once.
