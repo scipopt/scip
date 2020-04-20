@@ -1469,7 +1469,11 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
-/** checks whether an expression is quadratic and returns the corresponding coefficients */
+/** checks whether an expression is quadratic and returns the corresponding coefficients
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */

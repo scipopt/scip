@@ -16148,7 +16148,11 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    return SCIP_OKAY;
 }
 
-/** checks whether an expression is quadratic and returns the corresponding coefficients */
+/** checks whether an expression is quadratic and returns the corresponding coefficients
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ */
 SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
