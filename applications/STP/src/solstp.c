@@ -240,7 +240,7 @@ SCIP_Real pcsubtreePruneForProfit_csr(
                   result, connected, dfscount);
             const SCIP_Real extension_profit = neighbor_profit - orgcosts_csr[e];
 
-            if( LT(extension_profit, 0.0) )
+            if( LE(extension_profit, 0.0) )
             {
                result[e] = UNKNOWN;
                pcsubtreeDelete_csr(csr_orgcosts, neighbor, dfspos, result, connected);
@@ -787,9 +787,8 @@ SCIP_RETCODE pruneSteinerTreePc(
    solstp_pcConnectDummies(g, solroot, result, connected);
 
    /* simple pruning */
-  // pcsolPrune(g, result, connected);
+   pcsolPrune(g, result, connected);
    assert(!stpsol_pruningIsPossible(g, result, connected));
-
 
 #ifndef NDEBUG
    solstp_pcConnectDummies(g, solroot, result_dbg, connected_dbg);
