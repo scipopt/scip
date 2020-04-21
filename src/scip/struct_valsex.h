@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_valsex.h
+ * @ingroup
  * @brief  datastructures for storing exact primal CIP solutions
  * @author Kati Wolter
  */

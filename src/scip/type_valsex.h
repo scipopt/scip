@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_solex.h
+ * @ingroup
  * @brief  type definitions for storing exact primal CIP solutions
  * @author Kati Wolter
  */

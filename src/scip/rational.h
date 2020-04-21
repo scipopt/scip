@@ -58,7 +58,7 @@ typedef enum SCIP_RoundModeR SCIP_ROUNDMODER;
  * Creation methods
  */
 
-/** Allocate and create a rational from a string in the format, e.g. "12/35" */
+/** allocates and creates a rational from a string in the format, e.g. "12/35" */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -66,14 +66,14 @@ SCIP_RETCODE RatCreateString(
    char*                 desc                /**< the string describing the rational */
    );
 
-/** create an array of rationals */
+/** creates an array of rationals */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    );
 
-/** create an array of rationals */
+/** creates an array of rationals */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -81,7 +81,7 @@ SCIP_RETCODE RatCreateBlockArray(
    int                   size                /**< the size of the array */
    );
 
-/** create an array of rationals */
+/** creates an array of rationals */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBufferArray(
    BMS_BUFMEM*           mem,                /**< block memory */
@@ -89,7 +89,7 @@ SCIP_RETCODE RatCreateBufferArray(
    int                   size                /** the size of the array */
    );
 
-/** copy an array of rationals */
+/** copies an array of rationals */
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      target,             /**< address to copy to */
@@ -97,7 +97,7 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    );
 
-/** create a copy of a rational */
+/** creates a copy of a rational */
 SCIP_EXPORT
 SCIP_RETCODE RatCopy(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -162,13 +162,13 @@ void RatClearGMPArray(
    );
 #endif
 
-/** delete a rational and free the allocated memory */
+/** deletes a rational and frees the allocated memory */
 SCIP_EXPORT
 void RatFree(
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** delete a rational and free the allocated memory */
+/** deletes a rational and frees the allocated memory */
 SCIP_EXPORT
 void RatFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -181,14 +181,14 @@ void RatFreeBuffer(
    SCIP_Rational**       r
    );
 
-/** delete an array of rationals and free the allocated memory */
+/** deletes an array of rationals and frees the allocated memory */
 SCIP_EXPORT
 void RatFreeArray(
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
-/** delete an array of rationals and free the allocated memory */
+/** deletes an array of rationals and frees the allocated memory */
 SCIP_EXPORT
 void RatFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -196,7 +196,7 @@ void RatFreeBlockArray(
    int                   size                /**< size of the array */
    );
 
-/** free an array of rationals */
+/** frees an array of rationals */
 SCIP_EXPORT
 void RatFreeBufferArray(
    BMS_BUFMEM*           mem,                /**< block memory */
@@ -204,14 +204,14 @@ void RatFreeBufferArray(
    int                   size                /**< size of the array */
    );
 
-/** set a rational to the value of another rational */
+/** sets a rational to the value of another rational */
 SCIP_EXPORT
 void RatSet(
    SCIP_Rational*        res,                /**< the result */
     SCIP_Rational*   src                 /**< the src */
    );
 
-/** set a rational to a nom/denom value */
+/** sets a rational to a nom/denom value */
 SCIP_EXPORT
 void RatSetInt(
    SCIP_Rational*        res,                /**< the result */
@@ -219,14 +219,14 @@ void RatSetInt(
    SCIP_Longint          denom               /**< the denominator */
    );
 
-/** set a rational to the value described by a string */
+/** sets a rational to the value described by a string */
 SCIP_EXPORT
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
    const char*           desc                /**< the string describing the rational */
    );
 
-/** set a rational to the value of another a real */
+/** sets a rational to the value of another a real */
 SCIP_EXPORT
 void RatSetReal(
    SCIP_Rational*        r,
@@ -237,13 +237,13 @@ void RatSetReal(
  * Computing methods
  */
 
-/* transform rational into canonical form */
+/* transforms rational into canonical form */
 SCIP_EXPORT
 void RatCanonicalize(
    SCIP_Rational*        r                   /**< rational to put in canonical form */
    );
 
-/** add two rationals and save the result in res*/
+/** adds two rationals and saves the result in res */
 SCIP_EXPORT
 void RatAdd(
    SCIP_Rational*        res,                /**< the result */
@@ -251,7 +251,7 @@ void RatAdd(
     SCIP_Rational*  op2                 /**< second operand */
    );
 
-/** add a rational and a real and save the result in res*/
+/** adds a rational and a real and saves the result in res */
 SCIP_EXPORT
 void RatAddReal(
    SCIP_Rational*        res,                /**< the result */
@@ -259,7 +259,7 @@ void RatAddReal(
    SCIP_Real             real                /**< real number */
    );
 
-/** subtract two rationals and save the result in res*/
+/** subtracts two rationals and saves the result in res */
 SCIP_EXPORT
 void RatDiff(
    SCIP_Rational*        res,                /**< the result */
@@ -267,11 +267,11 @@ void RatDiff(
     SCIP_Rational*  op2                 /**< second operand */
    );
 
-/** subtract a rational and a real and save the result in res*/
+/** subtracts a rational and a real and saves the result in res */
 SCIP_EXPORT
 void RatDiffReal(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  rat,                /**< rational number */
+   SCIP_Rational*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    );
 
@@ -279,39 +279,39 @@ void RatDiffReal(
 SCIP_EXPORT
 void RatRelDiff(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  val1,               /**< first value to be compared */
-    SCIP_Rational*  val2                /**< second value to be compared */
+   SCIP_Rational*        val1,               /**< first value to be compared */
+   SCIP_Rational*        val2                /**< second value to be compared */
    );
 
-/** multiply two rationals and save the result in res*/
+/** multiplies two rationals and saves the result in res */
 SCIP_EXPORT
 void RatMult(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op1,                /**< first operand */
-    SCIP_Rational*  op2                 /**< second operand */
+    SCIP_Rational*       op1,                /**< first operand */
+    SCIP_Rational*       op2                 /**< second operand */
    );
 
-/** multiply a rational and a real and save the result in res*/
+/** multiply a rational and a real and save the result in res */
 SCIP_EXPORT
 void RatMultReal(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op1,                /**< first operand */
+   SCIP_Rational*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    );
 
-/** divide two rationals and save the result in res*/
+/** divide two rationals and save the result in res */
 SCIP_EXPORT
 void RatDiv(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op1,                /**< first operand */
-    SCIP_Rational*  op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    );
 
-/** divide a rational and a real and save the result in res*/
+/** divide a rational by a real and save the result in res */
 SCIP_EXPORT
 void RatDivReal(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op1,                /**< first operand */
+   SCIP_Rational*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    );
 
@@ -335,29 +335,29 @@ void RatDiffProd(
 SCIP_EXPORT
 void RatNegate(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    );
 
 /** set res to Abs(op) */
 SCIP_EXPORT
 void RatAbs(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    );
 
 /** set res to 1/op */
 SCIP_EXPORT
 void RatInvert(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    );
 
 /** compute the minimum of two rationals */
 SCIP_EXPORT
 void RatMIN(
    SCIP_Rational*        ret,                /**< the result */
-    SCIP_Rational*  r1,                 /**< the first rational */
-    SCIP_Rational*  r2                  /**< the second rational */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
    );
 
 /** compute the maximum of two rationals */

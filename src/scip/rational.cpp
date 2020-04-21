@@ -46,9 +46,10 @@
 #else
 #endif
 
-extern "C"{
+extern "C" {
 
-struct SCIP_Rational{
+struct SCIP_Rational
+{
    Rational val;
    unsigned int isinf:1;
    unsigned int fpexact:2;
@@ -581,7 +582,7 @@ void RatSetReal(
  * Computing methods
  */
 
-/** add two rationals and save the result in res*/
+/** add two rationals and save the result in res */
 void RatAdd(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -607,7 +608,7 @@ void RatAdd(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** add a rational and a real and save the result in res*/
+/** add a rational and a real and save the result in res */
 void RatAddReal(
    SCIP_Rational*        res,                /**< The result */
    SCIP_Rational*        rat,                /**< rational number */
@@ -625,7 +626,7 @@ void RatAddReal(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/*** subtract two rationals and save the result in res*/
+/*** subtract two rationals and save the result in res */
 void RatDiff(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -651,7 +652,7 @@ void RatDiff(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** subtract a rational and a real and save the result in res*/
+/** subtract a rational and a real and save the result in res */
 void RatDiffReal(
    SCIP_Rational*        res,                /**< The result */
    SCIP_Rational*        rat,                /**< rational number */
@@ -694,7 +695,7 @@ void RatRelDiff(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** multiply two rationals and save the result in res*/
+/** multiply two rationals and save the result in res */
 void RatMult(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -726,7 +727,7 @@ void RatMult(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** multiply a rational and a real and save the result in res*/
+/** multiplies a rational and a real and saves the result in res */
 void RatMultReal(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -757,7 +758,7 @@ void RatMultReal(
 }
 
 
-/** divide two rationals and save the result in res*/
+/** divides two rationals and saves the result in res */
 /** @todo exip: should we allow infinity here? */
 void RatDiv(
    SCIP_Rational*        res,                /**< the result */
@@ -773,7 +774,7 @@ void RatDiv(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** divide a rational and a real and save the result in res*/
+/** divides a rational by a real and saves the result in res */
 void RatDivReal(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
