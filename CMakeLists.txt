@@ -207,21 +207,28 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# soplex and Boost is required
-find_package(SOPLEX REQUIRED CONFIG)
-set(lpiex lpi/lpiex_spx.cpp)
-
 #Multiprecision
 if(EXACTSOLVE)
     message(STATUS "Building SCIP with support for exact solving mode.")
+    # soplex and Boost is required
+    find_package(SOPLEX CONFIG)
     find_package(Boost 1.65.0)
-    add_definitions(-DSCIP_WITH_EXACTSOLVE)
-    set(TEST_MIPEX on)
+
     if(Boost_FOUND)
         include_directories(${Boost_INCLUDE_DIRS})
+        if(SOPLEX_FOUND)
+            add_definitions(-DSCIP_WITH_EXACTSOLVE)
+            set(TEST_MIPEX on)
+            set(lpiex lpi/lpiex_spx.cpp)
+        else()
+            message(WARNING "SoPlex is needed as exact LP solver to compile with exact solving support.\
+                No SoPlex was found. Continuing without support for exact solving.")
+            set(EXACTSOLVE off)
+        endif()
     else()
-        message(FATAL_ERROR "Boost is needed to compile with exact solving support.\
-        Either install Boost or set -DEXACTSOLVE=off")
+        message(WARNING "Boost Version 1.65 or higher is needed to compile with exact solving support.\
+        No Boost was found. Continuing without support for exact solving.")
+        set(EXACTSOLVE off)
     endif()
 endif()
 
