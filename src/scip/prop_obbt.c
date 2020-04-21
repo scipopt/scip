@@ -38,11 +38,9 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/cons_abspower.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_bivariate.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
+#include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
 #include "scip/intervalarith.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
@@ -2628,76 +2626,6 @@ unsigned int getScore(
    return score;
 }
 
-/** count the variables which appear in non-convex term of nlrow  */
-static
-SCIP_RETCODE countNLRowVarsNonConvexity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int*                  nlcounts,           /**< store the number each variable appears in a
-                                              *   non-convex term */
-   SCIP_NLROW*           nlrow               /**< nonlinear row */
-   )
-{
-   int t;
-   int nexprtreevars;
-   SCIP_VAR** exprtreevars;
-   SCIP_EXPRTREE* exprtree;
-
-   assert(scip != NULL);
-   assert(nlcounts != NULL);
-   assert(nlrow != NULL);
-
-   /* go through all quadratic terms */
-   for( t = SCIPnlrowGetNQuadElems(nlrow) - 1; t >= 0; --t )
-   {
-      SCIP_QUADELEM* quadelem;
-      SCIP_VAR* bilinvar1;
-      SCIP_VAR* bilinvar2;
-
-      /* get quadratic term */
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[t];
-
-      /* get involved variables */
-      bilinvar1 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
-      bilinvar2 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
-
-      assert(bilinvar1 != NULL);
-      assert(bilinvar2 != NULL);
-
-      /* we have a non-convex square term */
-      if( bilinvar1 == bilinvar2 && !(quadelem->coef >= 0 ? SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) : SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow))) )
-      {
-         ++nlcounts[SCIPvarGetProbindex(bilinvar1)];
-         ++nlcounts[SCIPvarGetProbindex(bilinvar2)];
-      }
-
-      /* bilinear terms are in general non-convex */
-      if( bilinvar1 != bilinvar2 )
-      {
-         ++nlcounts[SCIPvarGetProbindex(bilinvar1)];
-         ++nlcounts[SCIPvarGetProbindex(bilinvar2)];
-      }
-   }
-
-   exprtree = SCIPnlrowGetExprtree(nlrow);
-   if( exprtree != NULL )
-   {
-      nexprtreevars = SCIPexprtreeGetNVars(exprtree);
-      exprtreevars = SCIPexprtreeGetVars(exprtree);
-
-      /* assume that the expression tree represents a non-convex constraint */
-      for( t = 0; t < nexprtreevars; ++t)
-      {
-         SCIP_VAR* var;
-         var = exprtreevars[t];
-         assert(var != NULL);
-
-         ++nlcounts[SCIPvarGetProbindex(var)];
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** count how often each variable appears in a non-convex term */
 static
 SCIP_RETCODE getNLPVarsNonConvexity(
@@ -2706,11 +2634,10 @@ SCIP_RETCODE getNLPVarsNonConvexity(
                                               *   non-convex term */
    )
 {
+   SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS** conss;
    int nvars;
-   int nconss;
-   int i;
+   int c;
 
    assert(scip != NULL);
    assert(nlcounts != NULL);
@@ -2718,137 +2645,56 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    nvars = SCIPgetNVars(scip);
    BMSclearMemoryArray(nlcounts, nvars);
 
-   /* quadratic constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "quadratic");
-   if( conshdlr != NULL )
+   /* get expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   /* allocate memory to store variable expressions */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nvars) );
+
+   /* iterate through all expression constraints and collect the corresponding variable expressions */
+   for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
+      SCIP_CONSEXPR_EXPR* root;
+      SCIP_CONS* cons;
+      int nvarexprs;
+      int i;
 
-      SCIPdebugMsg(scip, "nconss(quadratic) = %d\n", nconss);
+      cons = SCIPconshdlrGetConss(conshdlr)[c];
+      assert(cons != NULL);
 
-      for( i = 0; i < nconss; ++i )
+      /* get root expression */
+      root = SCIPgetExprConsExpr(scip, cons);
+      assert(root != NULL);
+
+      /* get all variable expressions; note this method captures the variable expressions */
+      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, root, varexprs, &nvarexprs) );
+
+      for( i = 0; i < nvarexprs; ++i )
       {
-         SCIP_Bool isnonconvex;
+         SCIP_VAR* var;
+         int ndomainuses;
 
-         isnonconvex = (!SCIPisConvexQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, conss[i])))
-            || (!SCIPisConcaveQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, conss[i])));
+         assert(varexprs[i] != NULL);
+         assert(SCIPisConsExprExprVar(varexprs[i]));
 
-         /* only check the nlrow if the constraint is not convex */
-         if( isnonconvex )
-         {
-            SCIP_NLROW* nlrow;
-            SCIP_CALL( SCIPgetNlRowQuadratic(scip, conss[i], &nlrow) );
-            assert(nlrow != NULL);
+         var = SCIPgetConsExprExprVarVar(varexprs[i]);
+         assert(var != NULL);
 
-            SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-         }
+         ndomainuses = SCIPgetConsExprExprNDomainUses(varexprs[i]);
+         assert(ndomainuses >= 0);
+
+         nlcounts[SCIPvarGetProbindex(var)] = ndomainuses;
+         SCIPdebugMsg(scip, "nlcounts[%s] = %d\n", SCIPvarGetName(var), ndomainuses);
+
+         /* release variable expression */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
       }
    }
 
-   /* nonlinear constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   if( conshdlr != NULL )
-   {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
-
-      SCIPdebugMsg(scip, "nconss(nonlinear) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_EXPRCURV curvature;
-         SCIP_Bool isnonconvex;
-
-         SCIP_CALL( SCIPgetCurvatureNonlinear(scip, conss[i], TRUE, &curvature) );
-
-         isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, conss[i])))
-            || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, conss[i])));
-
-         /* only check the nlrow if the constraint is not convex */
-         if( isnonconvex )
-         {
-            SCIP_NLROW* nlrow;
-            SCIP_CALL( SCIPgetNlRowNonlinear(scip, conss[i], &nlrow) );
-            assert(nlrow != NULL);
-
-            SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-         }
-      }
-   }
-
-   /* bivariate constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "bivariate");
-   if( conshdlr != NULL )
-   {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
-
-      SCIPdebugMsg(scip, "nconss(bivariate) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_EXPRCURV curvature;
-         SCIP_INTERVAL* varbounds;
-         SCIP_EXPRTREE* exprtree;
-         int j;
-
-         exprtree = SCIPgetExprtreeBivariate(scip, conss[i]);
-         if( exprtree != NULL )
-         {
-            SCIP_Bool isnonconvex;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &varbounds, SCIPexprtreeGetNVars(exprtree)) );
-            for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
-            {
-               SCIP_VAR* var;
-               var = SCIPexprtreeGetVars(exprtree)[j];
-
-               SCIPintervalSetBounds(&varbounds[j],
-                  -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -MIN(SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var))),    /*lint !e666*/
-                  +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var))) );  /*lint !e666*/
-            }
-
-            SCIP_CALL( SCIPexprtreeCheckCurvature(exprtree, SCIPinfinity(scip), varbounds, &curvature, NULL) );
-
-            isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, conss[i])))
-               || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, conss[i])));
-
-            /* increase counter for all variables in the expression tree if the constraint is non-convex */
-            if( isnonconvex )
-            {
-               for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
-               {
-                  SCIP_VAR* var;
-                  var = SCIPexprtreeGetVars(exprtree)[j];
-
-                  ++nlcounts[SCIPvarGetProbindex(var)];
-               }
-            }
-            SCIPfreeBufferArray(scip, &varbounds);
-         }
-      }
-   }
-
-   /* abspower constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "abspower");
-   if( conshdlr != NULL )
-   {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
-
-      SCIPdebugMsg(scip, "nconss(abspower) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
-      {
-         /* constraint is non-convex in general */
-         SCIP_NLROW* nlrow;
-         SCIP_CALL( SCIPgetNlRowAbspower(scip, conss[i], &nlrow) );
-         assert(nlrow != NULL);
-
-         SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-      }
-   }
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }
