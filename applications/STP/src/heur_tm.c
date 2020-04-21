@@ -176,11 +176,10 @@ SCIP_Bool pcmwUpdateBestSol_csrInSync(
    obj_dummy = solstp_getObj(graph, result_dummy, 0.0, nedges);
    obj_dummy += graph_pc_getNonLeafTermOffset(scip, graph);
 
-
    SCIPfreeMemoryArray(scip, &connected_dummy);
    SCIPfreeMemoryArray(scip, &result_dummy);
 
-   return EQ(obj_dummy, obj);
+   return SCIPisEQ(scip, obj_dummy, obj);
 }
 #endif
 
