@@ -187,8 +187,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
           *
           * TODO add a method that computes the curvature of an expression when the children are considered to be variables
           */
-         SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv);
-         SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv);
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
 
          /* use the curvature to decide whether bounds on the children are used to refine under- or overestimates */
          if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
