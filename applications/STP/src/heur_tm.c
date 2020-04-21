@@ -2176,13 +2176,15 @@ SCIP_RETCODE runTmPcMW_mode(
    assert(pcmwmode != pcmode_all);
    assert(graph_valid(scip, graph));
 
-#ifndef TM_USE_CSR_PCMW
    if( graph_pc_isPc(graph) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
       graph_pc_getOrgCosts(scip, graph, costorg);
-   }
+
+#ifdef TM_USE_CSR_PCMW
+      assert(graph_csr_costsAreInSync(graph, tmbase->csr_orgcosts, costorg));
 #endif
+   }
 
    if( pcmwmode == pcmode_biasfull )
    {
