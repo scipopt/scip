@@ -1939,16 +1939,16 @@ void buildTmAllSp(
 static
 SCIP_RETCODE dhcstpWarmUp(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
    GRAPH*                graph,              /**< graph data structure */
+   SCIP_Real*            cost,               /**< hacky */
+   SCIP_Real*            costrev,            /**< hacky */
    SCIP_Real*            hopfactor,          /**< (in/out) */
    TMBASE*               tmbase,             /**< (in/out) */
-   SCIP_Real*            orgcost,            /**< arc costs (out) */
    SCIP_Bool*            success             /**< success? */
 )
 {
    STP_Bool* connected;
+   SCIP_Real* RESTRICT orgcost;
    int* RESTRICT result = tmbase->result;
    int* RESTRICT best_result = tmbase->best_result;
    SCIP_Real hopfactor_local;
@@ -1966,6 +1966,7 @@ SCIP_RETCODE dhcstpWarmUp(
       *hopfactor = DEFAULT_HOPFACTOR;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgcost, nedges) );
 
    for( int e = 0; e < nedges; e++ )
    {
@@ -2058,30 +2059,10 @@ SCIP_RETCODE dhcstpWarmUp(
    for( int e = 0; e < nedges; e++)
       costrev[e] = cost[flipedge(e)];
 
+   SCIPfreeBufferArray(scip, &orgcost);
    SCIPfreeBufferArray(scip, &connected);
 
    return SCIP_OKAY;
-}
-
-
-/** finalizes */
-static
-void dhcstpFinalize(
-   const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      orgcost,            /**< arc costs (out) */
-   SCIP_Real*            cost,               /**< arc costs */
-   SCIP_Real*            costrev             /**< reversed arc costs */
-)
-{
-   const int nedges = graph_get_nEdges(graph);
-
-   assert(orgcost != NULL);
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      cost[e] = orgcost[e];
-      costrev[e] = orgcost[flipedge(e)];
-   }
 }
 
 
@@ -2102,7 +2083,6 @@ SCIP_RETCODE runTm(
    const SCIP_Real* cost = tmbase->cost;
    const SCIP_Real* costrev = tmbase->costrev;
    const int mode = getTmMode(heurdata, graph);
-   const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
    const int runs = tmbase->nruns;
    STP_Bool solfound = FALSE;
@@ -2120,7 +2100,7 @@ SCIP_RETCODE runTm(
    {
       SCIP_Real obj;
 
-      assert(start[r] >= 0 && start[r] < nnodes);
+      assert(start[r] >= 0 && start[r] < graph->knots);
       assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
 
       if( graph->stp_type == STP_DCSTP )
@@ -2196,16 +2176,13 @@ SCIP_RETCODE runTmPcMW_mode(
    assert(pcmwmode != pcmode_all);
    assert(graph_valid(scip, graph));
 
+#ifndef TM_USE_CSR_PCMW
    if( graph_pc_isPc(graph) )
    {
-      int todo;       // todo don build costorg in csr case!
       SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
       graph_pc_getOrgCosts(scip, graph, costorg);
-
-#ifdef TM_USE_CSR_PCMW
-      assert(graph_csr_costsAreInSync(graph, tmbase->csr_orgcosts, costorg));
-#endif
    }
+#endif
 
    if( pcmwmode == pcmode_biasfull )
    {
@@ -2319,6 +2296,48 @@ SCIP_RETCODE runTmPcMW(
    {
       SCIP_CALL( runTmPcMW_mode(scip, graph, cost, prize, pcmode_fulltree, beststart, nodepriority, tmbase, success));
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** submethod for SCIPStpHeurTMRun */
+static
+SCIP_RETCODE runTmDhcstp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   TMBASE*               tmbase,             /**< TM base data */
+   TMALLSP*              tmallsp,            /**< TM data */
+   TMVNOI*               tmvnoi,             /**< TM data */
+   SCIP_Real*            hopfactor,          /**< hopfactor */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+)
+{
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   const SCIP_Real* cost_org;
+   const SCIP_Real* costrev_org;
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(graph->stp_type == STP_DHCSTP);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   BMScopyMemoryArray(cost, tmbase->cost, nedges);
+   BMScopyMemoryArray(costrev, tmbase->costrev, nedges);
+
+   cost_org = tmbase->cost;
+   costrev_org = tmbase->costrev;
+   tmbase->cost = cost;
+   tmbase->costrev = costrev;
+
+   SCIP_CALL( dhcstpWarmUp(scip, graph, cost, costrev, hopfactor, tmbase, success) );
+   SCIP_CALL( runTm(scip, graph, tmbase, tmallsp, tmvnoi, success) );
+
+   tmbase->cost = cost_org;
+   tmbase->costrev = costrev_org;
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }
@@ -3014,33 +3033,18 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    SCIP_CALL( computeStarts(scip, graph, starts, startsgiven, nodepriority, &tmbase, &beststart) );
 
-   /* perform SPH computations, differentiate between STP variants */
+   /* call the main routines for SPH computations, differentiate between STP variants */
    if( graph_pc_isPcMw(graph) )
    {
       SCIP_CALL( runTmPcMW(scip, graph, cost, prize, pcmw_tmmode, beststart, nodepriority, &tmbase, success));
    }
+   else if( graph->stp_type == STP_DHCSTP )
+   {
+      SCIP_CALL( runTmDhcstp(scip, graph, &tmbase, &tmallsp, &tmvnoi, hopfactor, success) );
+   }
    else
    {
-      SCIP_Real* orgcost = NULL;
-
-      if( graph->stp_type == STP_DHCSTP )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &orgcost, nedges) );
-         SCIP_CALL( dhcstpWarmUp(scip, cost, costrev, graph, hopfactor, &tmbase, orgcost, success) );
-
-         // else if( graph->stp_type == STP_DHCSTP )
-         //       SCIP_CALL( runTmDhcstp(scip, graph, &tmbase, &tmallsp, &tmvnoi, success) );
-
-      }
-
-      /* now call the main TM routines */
       SCIP_CALL( runTm(scip, graph, &tmbase, &tmallsp, &tmvnoi, success) );
-
-      if( graph->stp_type == STP_DHCSTP )
-      {
-         dhcstpFinalize(graph, orgcost, cost, costrev);
-         SCIPfreeBufferArray(scip, &orgcost);
-      }
    }
 
    if( mode == TM_SP )
