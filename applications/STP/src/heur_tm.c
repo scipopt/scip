@@ -2998,7 +2998,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 {
    int beststart;
    const int mode = getTmMode(getTMheurData(scip), graph);
-   const int nedges = graph_get_nEdges(graph);
    const SCIP_Bool startsgiven = (runs >= 1 && (starts != NULL));
    TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL,
                      .startnodes = NULL, .result = NULL, .best_result = best_result,
@@ -3008,9 +3007,12 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    TMALLSP tmallsp = {NULL, NULL};
 
 #ifndef NDEBUG
-   assert(scip && cost && costrev && best_result);
-   assert(graph->source >= 0 && nedges > 0);
-   for( int e = 0; e < nedges; e++) assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
+   {
+      const int nedges = graph_get_nEdges(graph);
+      assert(scip && cost && costrev && best_result);
+      assert(graph->source >= 0 && nedges > 0);
+      for( int e = 0; e < nedges; e++) assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
+   }
 #endif
 
    beststart = bestincstart;
@@ -3062,16 +3064,11 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    SCIPdebugMessage("final objective: %f \n", tmbase.best_obj);
 
-  // printf("final objective: %f \n", tmbase.best_obj);
-
-  // assert(0);
-
-
 #if 0
    printf("final objective: %f \n", tmbase.best_obj);
 
    FILE *fp;
-              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_csr.txt", "a+");
+              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_old.txt", "a+");
               fprintf(fp, "%s %f \n", SCIPgetProbName(scip), tmbase.best_obj);
               fclose(fp);
               exit(1);
