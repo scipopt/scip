@@ -606,11 +606,14 @@ SCIP_RETCODE strongPruneSteinerTreePc_csr(
 
    profit = pcsubtreePruneForProfit_csr(csr_orgcosts, g->prize, isPc, solroot, dfspos, result, connected, &dfscount);
 
-   assert(GE(profit, 0.0) );
    assert(nsoledges + 1 == dfscount);
 
-
    SCIPfreeBufferArray(scip, &dfspos);
+
+   if( LT(profit, 0.0) )
+   {
+      return SCIP_ERROR;
+   }
 
    return SCIP_OKAY;
 }
