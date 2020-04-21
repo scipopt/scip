@@ -108,7 +108,6 @@
                                               *   (0: no, 1: greedy, 2: greedy reverse) */
 #define OBBT_SCOREBASE                     5 /**< base that is used to calculate a bounds score value */
 #define GENVBOUND_PROP_NAME    "genvbounds"
-#define INTERVALINFTY                  1E+43 /**< value for infinity in interval operations */
 
 #define DEFAULT_SEPARATESOL            FALSE /**< should the obbt LP solution be separated? note that that by
                                               *   separating solution OBBT will apply all bound tightenings
@@ -123,13 +122,6 @@
 #define DEFAULT_ITLIMITFAC_BILININEQS    3.0 /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
 #define DEFAULT_MINNONCONVEXITY         1e-1 /**< minimum nonconvexity for choosing a bilinear term */
 #define DEFAULT_RANDSEED                 149 /**< initial random seed */
-
-
-/** translate from one value of infinity to another
- *
- *  if val is >= infty1, then give infty2, else give val
- */
-#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
 /*
  * Data structures
