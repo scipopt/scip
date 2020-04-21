@@ -1951,17 +1951,19 @@ SCIP_RETCODE dhcstpWarmUp(
    STP_Bool* connected;
    int* RESTRICT result = tmbase->result;
    int* RESTRICT best_result = tmbase->best_result;
-   SCIP_Bool lhopfactor;
-   SCIP_Real besthopfactor = -1.0;
-   SCIP_Real maxcost = FARAWAY;
+   SCIP_Real hopfactor_local;
+   SCIP_Real hopfactor_best = -1.0;
+   SCIP_Real maxcost = 0.0;
    const int nedges = graph_get_nEdges(graph);
    const int root = graph->source;
    const int nnodes = graph_get_nNodes(graph);
 
    assert(hopfactor && success);
-   assert(SCIPisGT(scip, (*hopfactor), 0.0));
    assert(*success == FALSE);
    assert(graph->stp_type == STP_DHCSTP);
+
+   if( LE(*hopfactor, 0.0 ) )
+      *hopfactor = DEFAULT_HOPFACTOR;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
@@ -1971,9 +1973,9 @@ SCIP_RETCODE dhcstpWarmUp(
          maxcost = cost[e];
    }
 
-   assert(LT(maxcost, FARAWAY));
+   assert(GT(maxcost, 0.0));
 
-   lhopfactor = *hopfactor;
+   hopfactor_local = *hopfactor;
 
    BMScopyMemoryArray(orgcost, cost, nedges);
 
@@ -1985,10 +1987,12 @@ SCIP_RETCODE dhcstpWarmUp(
       int edgecount = 0;
       SCIP_Bool lsuccess = FALSE;
 
+      assert(GT(hopfactor_local, 0.0));
+
       for( int e = 0; e < nedges; e++ )
       {
          if( LT(cost[e], BLOCKED) )
-            cost[e] = 1.0 + orgcost[e] / (lhopfactor * maxcost);
+            cost[e] = 1.0 + orgcost[e] / (hopfactor_local * maxcost);
 
          result[e] = UNKNOWN;
       }
@@ -2013,7 +2017,7 @@ SCIP_RETCODE dhcstpWarmUp(
 
          (*success) = TRUE;
          lsuccess = TRUE;
-         besthopfactor = lhopfactor;
+         hopfactor_best = hopfactor_local;
       }
 
       if( !lsuccess || SCIPisGT(scip, fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit, 0.05) )
@@ -2022,20 +2026,20 @@ SCIP_RETCODE dhcstpWarmUp(
          {
             if( (*success) )
             {
-               lhopfactor = lhopfactor * (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+               hopfactor_local = hopfactor_local * (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
             }
             else
             {
-               lhopfactor = lhopfactor * (1.0 + 3 * fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
-               besthopfactor = lhopfactor;
+               hopfactor_local = hopfactor_local * (1.0 + 3 * fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+               hopfactor_best = hopfactor_local;
             }
          }
          else
          {
-            lhopfactor = lhopfactor / (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+            hopfactor_local = hopfactor_local / (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
          }
 
-         assert(SCIPisGT(scip, lhopfactor, 0.0));
+         assert(SCIPisGT(scip, hopfactor_local, 0.0));
       }
       else
       {
@@ -2043,13 +2047,13 @@ SCIP_RETCODE dhcstpWarmUp(
       }
    }
 
-   assert(SCIPisGT(scip, besthopfactor, 0.0));
+   assert(SCIPisGT(scip, hopfactor_best, 0.0));
 
-   (*hopfactor) = besthopfactor;
+   (*hopfactor) = hopfactor_best;
 
    for( int e = 0; e < nedges; e++ )
       if( (LT(cost[e], BLOCKED) ) )
-         cost[e] = 1.0 + orgcost[e] / (besthopfactor * maxcost);
+         cost[e] = 1.0 + orgcost[e] / (hopfactor_best * maxcost);
 
    for( int e = 0; e < nedges; e++)
       costrev[e] = cost[flipedge(e)];

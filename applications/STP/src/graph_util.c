@@ -1080,7 +1080,7 @@ void graph_csr_build(
             if( pcmw && graph_pc_knotIsDummyTerm(g, ehead)  )
                continue;
 
-            assert(edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY);
+            assert(g->stp_type == STP_DHCSTP || (edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY));
 
             head_csr[pos] = ehead;
             if( hasEdgeId )
@@ -1115,7 +1115,7 @@ void graph_csr_buildCosts(
    assert(nnodes >= 1);
    assert(csr->nnodes == nnodes);
    assert(nedges <= csr->nedges_max);
-   assert(nedges >= graph_get_nEdges(g));
+   assert(nedges <= graph_get_nEdges(g));
    assert(edgecosts_csr && edgecosts_g);
 
    for( int i = 0; i < nedges; i++ )
