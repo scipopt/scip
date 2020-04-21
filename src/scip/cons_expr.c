@@ -14725,7 +14725,7 @@ SCIP_Bool SCIPisConsExprExprIntegral(
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
-SCIP_RETCODE SCIPgetConsExprExprNDomainUses(
+int SCIPgetConsExprExprNDomainUses(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
