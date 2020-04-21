@@ -946,15 +946,15 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
    {
       graph_path_st_rpcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
-            tmbase->cost, prize, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+            tmbase->cost, prize, tmbase->nodes_dist, tmbase->nodes_pred, start, tmbase->connected);
    }
    else
    {
       graph_path_st_pcmw(g, sppc->orderedprizes, sppc->orderedprizes_id,
-            tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+            tmbase->cost, prize, costsAreBiased, tmbase->nodes_dist, tmbase->nodes_pred, start, tmbase->connected);
    }
 
-   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, connected));
+   SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, tmbase->connected));
 
 #endif
 
@@ -984,7 +984,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 
    SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, tmbase->result));
 #else
-   graph_path_st_pcmw_full(g, tmbase->cost, tmbase->nodes_dist, tmbase->nodes_pred, start, connected);
+   graph_path_st_pcmw_full(g, tmbase->cost, tmbase->nodes_dist, tmbase->nodes_pred, start, tmbase->connected);
    SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, tmbase->connected) );
 #endif
 
