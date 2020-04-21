@@ -54,6 +54,8 @@ struct SCIP_Rational{
    unsigned int fpexact:2;
 };
 
+/**@todo Use C++ STL for SCIP_RATIONALARRAY implementation */
+
 struct SCIP_RationalArray
 {
    std::vector<SCIP_Rational> vals;
@@ -62,16 +64,11 @@ struct SCIP_RationalArray
 
 static const char posinf[4] = "inf";
 static const char neginf[5] = "-inf";
-static char stringbuf[SCIP_MAXSTRLEN]; 
+static char stringbuf[SCIP_MAXSTRLEN];
 static SCIP_Rational buffer;
 
-//struct SCIP_RationalVector
-//{
-//   densevec vals;
-//};
-
 /** basis status for columns and rows */
-enum SCIP_fpexact
+enum SCIP_FPExact
 {
    SCIP_FPEXACT_UNKNOWN = 0,
    SCIP_FPEXACT_TRUE = 1,
@@ -84,7 +81,7 @@ enum SCIP_fpexact
 #ifdef SCIP_WITH_EXACTSOLVE
 static
 SCIP_Longint Rnumerator(
-    SCIP_Rational*        rational
+   SCIP_Rational*        rational
    )
 {
    long result;
@@ -96,7 +93,7 @@ SCIP_Longint Rnumerator(
 
 static
 SCIP_Longint Rdenominator(
-    SCIP_Rational*        rational
+   SCIP_Rational*        rational
    )
 {
    long result;
@@ -178,7 +175,7 @@ SCIP_RETCODE RatCreateString(
 
    if( 0 == strcmp(desc, "inf") )
    {
-      (*rational)->val  = 1;
+      (*rational)->val = 1;
       (*rational)->isinf = TRUE;
    }
    else if ( 0 == strcmp(desc, "-inf") )
@@ -188,7 +185,7 @@ SCIP_RETCODE RatCreateString(
    }
    else
    {
-      (*rational)->val  = Rational(desc);
+      (*rational)->val = Rational(desc);
       (*rational)->isinf = FALSE;
    }
    (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -270,7 +267,7 @@ SCIP_RETCODE RatCopyBlockArray(
 
 
 
-/* create a copy of a rational */
+/** creates a copy of a rational */
 SCIP_RETCODE RatCopy(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       result,             /**< pointer to the rational to create */
@@ -285,7 +282,7 @@ SCIP_RETCODE RatCopy(
 }
 
 #ifdef SCIP_WITH_EXACTSOLVE
-/** cretae a rational from an mpq_t */
+/** creates a rational from an mpq_t */
 #ifdef SCIP_WITH_GMP
 SCIP_RETCODE RatCreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -302,8 +299,8 @@ SCIP_RETCODE RatCreateGMP(
    return SCIP_OKAY;
 }
 
-/** get the underlying mpq_t* */
- mpq_t* RatGetGMP(
+/** gets the underlying mpq_t* */
+mpq_t* RatGetGMP(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
@@ -1220,8 +1217,9 @@ SCIP_Bool RatIsFpRepresentable(
  * Printing/Conversion methods
  */
 
-/** convert a Rational to a string for printing, returns the number of copied characters.
- * If return value is equal to strlen, it means the string was truncated.
+/** converts a rational to a string for printing, returns the number of copied characters.
+ *
+ *  @note If return value is equal to strlen, it means the string was truncated.
  */
 int RatToString(
    SCIP_Rational*        rational,           /**< the rational to print */
@@ -1253,31 +1251,7 @@ int RatToString(
    return ret;
 }
 
-/** returns legnth of string representation of rational */
-int RatStrLen(
-   SCIP_Rational*        rational             /**< rational to get length of */
-   )
-{
-   int ret = 0;
-   assert(rational != NULL);
-
-   if( rational->isinf )
-   {
-      if( rational->val.sign() > 0 )
-         ret = 3;
-      else
-         ret = 4;
-   }
-   else
-   {
-      std::string s = rational->val.str();
-      ret = (int) s.size();
-   }
-
-   return ret;
-}
-
-/** return the strlen of a rational number */
+/** returns the strlen of a rational number */
 SCIP_Longint RatStrlen(
    SCIP_Rational*        rational           /** rational to consider */
    )
@@ -1294,7 +1268,7 @@ SCIP_Longint RatStrlen(
       return (SCIP_Longint) rational->val.str().length();
 }
 
-/** print rational to file using message handler */
+/** prints rational to file using message handler */
 void RatMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
@@ -1807,7 +1781,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
    return SCIP_OKAY;
 }
 
-/** print a rationalarray to std out */
+/** prints a rationalarray to std out */
 SCIP_RETCODE SCIPrationalArrayPrint(
    SCIP_RATIONALARRAY*   rationalarray      /**< dynamic rational array */
    )
@@ -1841,29 +1815,5 @@ int SCIPrationalarrayGetMaxIdx(
 
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
-
-
-// SCIP_RETCODE SCIPrationalarryAdd(
-//    SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
-//    SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
-//    SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
-//    )
-// {
-//    const auto& v1 = rationalarray1->vals;
-//    const auto& v2 = rationalarray2->vals;
-//    result->vals = v1 + v2;
-// }
-
-// SCIP_RETCODE SCIPrationalarryDiff(
-//    SCIP_RATIONALARRAY*   result,             /**< the resulting rational array */
-//    SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic rational array */
-//    SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic rational array */
-//    )
-// {
-//    const auto& v1 = rationalarray1->vals;
-//    const auto& v2 = rationalarray2->vals;
-//    result->vals = v1 - v2;
-//    boost::multiprecision::sqrt()
-// }
 
 }

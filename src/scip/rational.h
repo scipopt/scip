@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
-/*         SCIP --- Solving raint Integer Programs                      */
+/*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
@@ -63,7 +63,7 @@ SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   char*                 desc                /**< the String describing the rational */
+   char*                 desc                /**< the string describing the rational */
    );
 
 /** create an array of rationals */
@@ -123,7 +123,7 @@ SCIP_RETCODE RatCreateBlock(
    );
 
 #ifdef SCIP_WITH_GMP
-/** create a rational from an mpq_t */
+/** creates a rational from an mpq_t */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -131,7 +131,7 @@ SCIP_RETCODE RatCreateGMP(
     mpq_t           numb                /**< the mpq_rational */
    );
 
-/** get the underlying mpq_t* */
+/** gets the underlying mpq_t* */
 SCIP_EXPORT mpq_t* RatGetGMP(
     SCIP_Rational*  r                   /**< the rational */
    );
@@ -146,7 +146,7 @@ SCIP_EXPORT
 void RatSetGMPArray(
    mpq_t*                res,
    SCIP_Rational**       src,
-   int                   len 
+   int                   len
    );
 
 void RatSetArrayGMP(
@@ -487,8 +487,9 @@ SCIP_Bool RatIsFpRepresentable(
  * Printing/Conversion methods
  */
 
-/** convert a Rational to a string for printing, returns the number of copied characters.
- * If return value is equal to strlen, it means the string was truncated.
+/** converts a rational to a string for printing, returns the number of copied characters.
+ *
+ *  @note If return value is equal to strlen, it means the string was truncated.
  */
 SCIP_EXPORT
 int RatToString(
@@ -497,30 +498,30 @@ int RatToString(
    int                   strlen              /**< maximal length that can be copied to str */
    );
 
-/** return the strlen of a rational number */
+/** returns the strlen of a rational number */
 SCIP_EXPORT
 SCIP_Longint RatStrlen(
    SCIP_Rational*        r                /** rational to consider */
    );
 
-/** print a rational to command line (for debugging) */\
+/** prints a rational to command line (for debugging) */
 SCIP_EXPORT
 void RatPrint(
    SCIP_Rational*        r                   /**< the rational to print */
    );
 
-/** printf extension for rationals (does not support all format options yet)*/
+/** printf extension for rationals (does not support all format options yet) */
 SCIP_EXPORT
 void RatPrintf(const char *format, ...);
 
-/** ratinal extension for the SCIPdebugMsd */
+/** rational extension for the SCIPdebugMsg */
 #ifdef SCIP_DEBUG
 #define RatDebugMessage           printf("[%s:%d] debug: ", __FILE__, __LINE__), RatPrintf
 #else
 #define RatDebugMessage           while( FALSE ) /*lint -e{530}*/ RatPrintf
 #endif
 
-/** print rational to file using message handler */
+/** prints rational to file using message handler */
 SCIP_EXPORT
 void RatMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
@@ -528,17 +529,17 @@ void RatMessage(
    SCIP_Rational*        r                   /**< the rational to print */
    );
 
-/** return approximation of Rational as SCIP_Real */
+/** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
 SCIP_Real RatRoundReal(
-   SCIP_Rational*  r,                  /**< the rational to convert */
+   SCIP_Rational*        r,                  /**< the rational to convert */
    SCIP_ROUNDMODE        roundmode           /**< rounding direction (not really working yet) */
    );
 
-/** return approximation of Rational as SCIP_Real */
+/** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
 SCIP_Real RatApproxReal(
-    SCIP_Rational*  r                   /**< the rational to convert */
+    SCIP_Rational*       r                   /**< the rational to convert */
    );
 
 SCIP_EXPORT
@@ -548,7 +549,7 @@ void RatRound(
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    );
 
-/** round rational to next integer in direction of roundmode */
+/** rounds rational to next integer in direction of roundmode */
 SCIP_EXPORT
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         retval,             /**< the resulting rounded lon int */
@@ -557,13 +558,13 @@ SCIP_Bool RatRoundInteger(
    );
 
 /*
- * Dynamic Arrays todo: use stl to do this
+ * Dynamic Arrays
  */
 
 /** creates a dynamic array of real values */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayCreate(
-   SCIP_RATIONALARRAY**  rationalarray,          /**< pointer to store the real array */
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the real array */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
@@ -585,8 +586,8 @@ SCIP_RETCODE SCIPrationalarrayCopy(
 /** frees a dynamic array of real values */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayFree(
-   SCIP_RATIONALARRAY**      rationalarray,  /**< pointer to the real array */
-   BMS_BLKMEM*           blkmem          /**< block memory */
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** clears a dynamic real array */
@@ -608,7 +609,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarraySetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
    int                   idx,                /**< array index to set value for */
-    SCIP_Rational*  val                 /**< value to set array index to */
+   SCIP_Rational*        val                 /**< value to set array index to */
    );
 
 /** increases value of entry in dynamic array */
@@ -616,17 +617,10 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
    int                   idx,                /**< array index to increase value for */
-    SCIP_Rational*  incval              /**< value to increase array index */
+   SCIP_Rational*        incval              /**< value to increase array index */
    );
 
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalarryScalarProd(
-   SCIP_Rational*        result,             /**< the resulting rational */
-   SCIP_RATIONALARRAY*   rationalarray1,     /**< dynamic real array */
-   SCIP_RATIONALARRAY*   rationalarray2      /**< dynamic real array */
-   );
-
-/** print a rationalarray to std out */
+/** prints a rationalarray to std out */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalArrayPrint(
    SCIP_RATIONALARRAY*   rationalarray      /**< dynamic rational array */
@@ -642,9 +636,6 @@ int SCIPrationalarrayGetMinIdx(
 SCIP_EXPORT
 int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
-   );
-
-void testRuntimesRational(
    );
 
 #ifdef __cplusplus
