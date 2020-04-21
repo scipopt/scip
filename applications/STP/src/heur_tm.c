@@ -3062,16 +3062,20 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    tmBaseFree(scip, graph, &tmbase);
 
-   SCIPdebugMessage("final objective: %f \n", tmbase.best_obj);
+   SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0, graph->edges));
 
 #if 0
-   printf("final objective: %f \n", tmbase.best_obj);
+   {
+      FILE *fp;
+      const SCIP_Real obj_final = solstp_getObj(graph, tmbase.best_result, 0.0, graph->edges);
 
-   FILE *fp;
-              fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_old.txt", "a+");
-              fprintf(fp, "%s %f \n", SCIPgetProbName(scip), tmbase.best_obj);
-              fclose(fp);
-              exit(1);
+      fp = fopen(
+                  "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_csr.txt",
+                  "a+");
+      fprintf(fp, "%s %f \n", SCIPgetProbName(scip), obj_final);
+      fclose(fp);
+      exit(1);
+   }
 #endif
 
    return SCIP_OKAY;
