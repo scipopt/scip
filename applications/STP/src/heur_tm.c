@@ -174,7 +174,9 @@ SCIP_Bool pcmwUpdateBestSol_csrInSync(
    assert(!stpsol_pruningIsPossible(graph, result_dummy, connected_dummy));
 
    obj_dummy = solstp_getObj(graph, result_dummy, 0.0, nedges);
-   obj_dummy += graph_pc_getNonLeafTermOffset(scip, graph);
+
+   if( graph_pc_isPc(graph) )
+      obj_dummy += graph_pc_getNonLeafTermOffset(scip, graph);
 
    SCIPfreeMemoryArray(scip, &connected_dummy);
    SCIPfreeMemoryArray(scip, &result_dummy);
