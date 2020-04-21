@@ -1032,9 +1032,10 @@ SCIP_Bool stpsol_pruningIsPossible(
 
       if( outedge == EAT_LAST )
       {
+         int e;
+
          if( isPc && graph_pc_knotIsNonLeafTerm(g, i) )
          {
-            int e;
             assert(g->prize && g->cost_org_pc);
 
             for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
@@ -1045,6 +1046,15 @@ SCIP_Bool stpsol_pruningIsPossible(
 
             if( GE(g->prize[i], g->cost_org_pc[e]) )
                continue;
+         }
+
+         for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+            if( result[e] == CONNECT )
+               break;
+
+         if( e != EAT_LAST && EQ(g->cost[e], 0.0) )
+         {
+            continue;
          }
 
          return TRUE;
