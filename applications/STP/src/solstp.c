@@ -1011,10 +1011,11 @@ SCIP_Bool stpsol_pruningIsPossible(
    )
 {
    const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool isPc = graph_pc_isPc(g);
 
    for( int i = 0; i < nnodes; i++ )
    {
-      int j;
+      int outedge;
 
       if( !connected[i] )
          continue;
@@ -1022,12 +1023,27 @@ SCIP_Bool stpsol_pruningIsPossible(
       if( Is_term(g->term[i]) || Is_pseudoTerm(g->term[i]) )
          continue;
 
-      for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-         if( result[j] == CONNECT )
+      for( outedge = g->outbeg[i]; outedge != EAT_LAST; outedge = g->oeat[outedge] )
+         if( result[outedge] == CONNECT )
             break;
 
-      if( j == EAT_LAST )
+      if( outedge == EAT_LAST )
       {
+         if( isPc && graph_pc_knotIsNonLeafTerm(g, i) )
+         {
+            int e;
+            assert(g->prize && g->cost_org_pc);
+
+            for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+               if( result[e] == CONNECT )
+                  break;
+
+            assert(e != EAT_LAST);
+
+            if( GE(g->prize[i], g->cost_org_pc[e]) )
+               continue;
+         }
+
          return TRUE;
       }
    }
