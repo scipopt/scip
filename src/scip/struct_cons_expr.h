@@ -146,6 +146,9 @@ struct SCIP_ConsExpr_Expr
    SCIP_Bool               quadchecked;    /**< whether we checked whether the expression is quadratic */
 };
 
+typedef struct SCIP_ConsExpr_QuadExprTerm  SCIP_CONSEXPR_QUADEXPRTERM;  /**< a single term associated to a quadratic variable */
+typedef struct SCIP_ConsExpr_BilinExprTerm SCIP_CONSEXPR_BILINEXPRTERM; /**< a single bilinear term */
+
 /** data for representation of an expression as quadratic */
 struct SCIP_ConsExpr_QuadExpr
 {
