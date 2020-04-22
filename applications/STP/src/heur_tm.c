@@ -2192,7 +2192,7 @@ SCIP_RETCODE runTmPcMW_mode(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &costfullbiased, nedges) );
       SCIP_CALL( SCIPallocBufferArray(scip, &prizefullbiased, nnodes) );
-      graph_pc_getBiased(scip, graph, costfullbiased, prizefullbiased);
+      graph_pc_getBiased(graph, costfullbiased, prizefullbiased);
       SCIP_CALL( shortestpath_pcInit(scip, graph, costfullbiased, prizefullbiased, &sppc) );
    }
    else

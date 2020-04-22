@@ -2038,18 +2038,14 @@ void graph_edge_hide(
 
 /** is the edge blocked? */
 SCIP_Bool graph_edge_isBlocked(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    int                   e                   /**< the edge */
    )
 {
-   int todo; // EQ! already change it at "is blocked"...maybe might be even possible to check in which solving phase!
-   // then we dont even have to look for blocked! the problem is getOrgCosts!
-
-   assert(scip && g);
+   assert(g);
    assert(e >= 0 && e < g->edges);
 
-   if( SCIPisEQ(scip, g->cost[e], BLOCKED_MINOR) || SCIPisEQ(scip, g->cost[e], BLOCKED) )
+   if( EQ(g->cost[e], BLOCKED_MINOR) || EQ(g->cost[e], BLOCKED) )
       return TRUE;
 
    return FALSE;

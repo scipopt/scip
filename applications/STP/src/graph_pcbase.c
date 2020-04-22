@@ -82,7 +82,7 @@ void setCostToOrgPc(
    assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
 
    for( int e = 0; e < nedges; ++e )
-      if( !graph_edge_isBlocked(scip, graph, e) )
+      if( !graph_edge_isBlocked(graph, e) )
          edgecosts[e] = cost_org[e];
 }
 
@@ -333,6 +333,172 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
 }
 
 
+
+
+/** initializes biased data */
+static
+void getBiasedPc(
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real* RESTRICT   costbiased,         /**< biased costs */
+   SCIP_Real* RESTRICT   prizebiased         /**< biased prizes */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const SCIP_Bool isRpc = graph_pc_isRootedPcMw(graph);
+   const int root = graph->source;
+
+   assert(graph_pc_isPc(graph));
+
+   BMScopyMemoryArray(costbiased, graph->cost, graph->edges);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
+      {
+         SCIP_Real mincost = FARAWAY;
+
+         /* get the minimum cost among all incoming arcs */
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            const int tail = graph->tail[e];
+
+            if( !isRpc && tail == root )
+               continue;
+
+            if( graph->cost[e] < mincost )
+            {
+               assert(!Is_term(graph->term[tail]) || graph_pc_knotIsFixedTerm(graph, tail));
+               assert(!graph_pc_knotIsDummyTerm(graph, tail));
+               assert(tail != root || isRpc);
+
+               mincost = graph->cost[e];
+            }
+         }
+
+         mincost = MIN(mincost, graph->prize[k]);
+
+         /** apply the minimum */
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            const int tail = graph->tail[e];
+
+            if( !isRpc && tail == root )
+               continue;
+
+            if( GE(graph->cost[e], FARAWAY) )
+            {
+               assert(Is_term(graph->term[tail]));
+               continue;
+            }
+
+            assert(!Is_term(graph->term[tail]) || graph_pc_knotIsFixedTerm(graph, tail));
+            assert(!graph_pc_knotIsDummyTerm(graph, tail));
+
+            costbiased[e] -= mincost;
+            assert(GE(costbiased[e], 0.0));
+         }
+
+         prizebiased[k] = graph->prize[k] - mincost;
+         assert(GE(prizebiased[k], 0.0));
+      }
+      else
+      {
+         if( isRpc && graph_pc_knotIsFixedTerm(graph, k) )
+            prizebiased[k] = graph->prize[k];
+         else
+            prizebiased[k] = 0.0;
+      }
+   }
+}
+
+
+/** initializes biased data */
+static
+void getBiasedMw(
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real* RESTRICT   costbiased,         /**< biased costs */
+   SCIP_Real* RESTRICT   prizebiased         /**< biased prizes */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const SCIP_Bool isRmw = graph_pc_isRootedPcMw(graph);
+   const int root = graph->source;
+
+   assert(graph_pc_isMw(graph));
+
+   BMScopyMemoryArray(costbiased, graph->cost, graph->edges);
+
+#if 0
+    BMScopyMemoryArray(prizebiased, graph->prize, nnodes);
+    return;
+#endif
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
+      {
+         SCIP_Real mincost = FARAWAY;
+
+         /* get the minimum cost among all outgoing arcs */
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            const int head = graph->head[e];
+
+            if( graph_pc_knotIsDummyTerm(graph, head) )
+               continue;
+
+            if( !isRmw && head == root )
+               continue;
+
+            if( graph->cost[e] < mincost )
+            {
+               assert(head != root || isRmw);
+               mincost = graph->cost[e];
+            }
+         }
+
+         mincost = MIN(mincost, graph->prize[k]);
+
+         /** apply the minimum */
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            const int tail = graph->tail[e];
+
+            if( !isRmw && tail == root )
+               continue;
+
+            assert(EQ(costbiased[e], graph->cost[e]));
+
+            if( GE(costbiased[e], FARAWAY) )
+            {
+               assert(Is_term(graph->term[tail]));
+               continue;
+            }
+
+            assert(!graph_pc_knotIsDummyTerm(graph, tail));
+            assert(GE(mincost, 0.0) && LT(mincost, FARAWAY));
+            assert(EQ(costbiased[e], 0.0));
+
+            costbiased[e] = -mincost;
+         }
+
+         prizebiased[k] = graph->prize[k] - mincost;
+         assert(GE(prizebiased[k], 0.0));
+      }
+      else
+      {
+         if( isRmw && graph_pc_knotIsFixedTerm(graph, k) )
+         {
+            assert(EQ(graph->prize[k], FARAWAY));
+            prizebiased[k] = FARAWAY;
+         }
+         else
+            prizebiased[k] = 0.0;
+      }
+   }
+}
+
+
 /*
  * Interface methods
  */
@@ -511,7 +677,7 @@ void graph_pc_shiftNonLeafCosts(
             assert(SCIPisLT(scip, cost[e], FARAWAY));
             assert(SCIPisLT(scip, cost[flipedge(e)], FARAWAY));
 
-            if( graph_edge_isBlocked(scip, g, e) )
+            if( graph_edge_isBlocked(g, e) )
                continue;
 
             cost[e] -= prize;
@@ -806,7 +972,7 @@ SCIP_Bool graph_pc_transOrgAreConistent(
       if( graph->oeat[e] == EAT_FREE )
          continue;
 
-      if( graph_edge_isBlocked(scip, graph, e) )
+      if( graph_edge_isBlocked(graph, e) )
          continue;
 
       head = graph->head[e];
@@ -1507,6 +1673,7 @@ void graph_pc_getOrgCosts(
    SCIP_Real*            edgecosts           /**< original costs */
 )
 {
+   const SCIP_Real* const gCosts = graph->cost;
    const int nedges = graph->edges;
    const SCIP_Real* const cost_org = graph->cost_org_pc;
 
@@ -1519,7 +1686,10 @@ void graph_pc_getOrgCosts(
 
    for( int e = 0; e < nedges; ++e )
    {
-      if( !graph_edge_isBlocked(scip, graph, e) )
+      const SCIP_Bool edgeIsBlocked = EQ(gCosts[e], BLOCKED_MINOR) || EQ(gCosts[e], BLOCKED);
+      assert(edgeIsBlocked == graph_edge_isBlocked(graph, e));
+
+      if( !edgeIsBlocked )
          edgecosts[e] = cost_org[e];
    }
 }
@@ -1553,7 +1723,7 @@ void graph_pc_getOrgCostsCsr(
       const SCIP_Bool edgeIsBlocked = EQ(gCosts[edge_g], BLOCKED_MINOR) || EQ(gCosts[edge_g], BLOCKED);
 
       assert(0 <= edge_g && edge_g < g->edges);
-      assert(edgeIsBlocked == graph_edge_isBlocked(scip, g, edge_g));
+      assert(edgeIsBlocked == graph_edge_isBlocked(g, edge_g));
 
       if( edgeIsBlocked )
       {
@@ -2091,90 +2261,26 @@ void graph_pc_adaptSap(
 }
 
 
-/** initializes biased data structure */
+/** initializes biased data structures */
 void graph_pc_getBiased(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Real*            costbiased,         /**< biased costs */
-   SCIP_Real*            prizebiased         /**< biased prizes */
+   SCIP_Real* RESTRICT   costbiased,         /**< biased costs */
+   SCIP_Real* RESTRICT   prizebiased         /**< biased prizes */
 )
 {
-   const int nnodes = graph_get_nNodes(graph);
-   const int nedges = graph_get_nEdges(graph);
-   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
-   const int root = graph->source;
-
-   assert(scip && costbiased && prizebiased);
+   assert(graph && costbiased && prizebiased);
    assert(graph->extended);
-   assert(graph_pc_knotIsFixedTerm(graph, root));
+   assert(graph_pc_knotIsFixedTerm(graph, graph->source));
    assert(graph_pc_isPcMw(graph));
 
-   BMScopyMemoryArray(costbiased, graph->cost, nedges);
-
-   if( !graph_pc_isPc(graph) )
+   if( graph_pc_isPc(graph) )
    {
-      int todo;
-      /* todo adapt for MWCSP...add for edge positive vertex with only negative neighbors the max value among those,
-       * if not smaller than -vertex weight, otherwise -vertex weight */
-      BMScopyMemoryArray(prizebiased, graph->prize, nnodes);
-
-      return;
+      getBiasedPc(graph, costbiased, prizebiased);
    }
-
-   for( int k = 0; k < nnodes; k++ )
+   else
    {
-      if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
-      {
-         SCIP_Real mincost = FARAWAY;
-
-         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-         {
-            const int tail = graph->tail[e];
-
-            if( !rpcmw && tail == root )
-               continue;
-
-            if( graph->cost[e] < mincost )
-            {
-               assert(!Is_term(graph->term[tail]) || graph_pc_knotIsFixedTerm(graph, tail));
-               assert(tail != root || rpcmw);
-
-               mincost = graph->cost[e];
-            }
-         }
-
-         mincost = MIN(mincost, graph->prize[k]);
-
-         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-         {
-            const int tail = graph->tail[e];
-
-            if( !rpcmw && tail == root )
-               continue;
-
-            if( GE(graph->cost[e], FARAWAY) )
-            {
-               assert(Is_term(graph->term[tail]));
-
-               continue;
-            }
-
-            assert(!Is_term(graph->term[tail]) || graph_pc_knotIsFixedTerm(graph, tail));
-
-            costbiased[e] -= mincost;
-            assert(!SCIPisNegative(scip, costbiased[e]) || (graph->stp_type != STP_PCSPG && graph->stp_type != STP_RPCSPG));
-         }
-
-         prizebiased[k] = graph->prize[k] - mincost;
-         assert(!SCIPisNegative(scip, prizebiased[k]));
-      }
-      else
-      {
-         if( rpcmw && graph_pc_knotIsFixedTerm(graph, k) )
-            prizebiased[k] = graph->prize[k];
-         else
-            prizebiased[k] = 0.0;
-      }
+      assert(graph_pc_isMw(graph));
+      getBiasedMw(graph, costbiased, prizebiased);
    }
 }
 

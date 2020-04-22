@@ -3176,8 +3176,17 @@ SCIP_RETCODE localKeyVertexHeuristics(
       for( int k = 0; k < nnodes; k++ )
          prizemark[k] = FALSE;
 
-      graph_pc_getBiased(scip, graph, edgecostBiased_pc, prize_pc);
+      if( graph_pc_isPc(graph) )
+      {
+         graph_pc_getBiased(graph, edgecostBiased_pc, prize_pc);
+      }
+      else
+      {
+         BMScopyMemoryArray(edgecostBiased_pc, graph->cost, graph->edges);
+         BMScopyMemoryArray(prize_pc, graph->prize, graph->knots);
+      }
    }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &scanned, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pheapsize, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blists_start, nnodes) );
