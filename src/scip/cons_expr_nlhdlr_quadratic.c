@@ -226,6 +226,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_Bool propagable;
    SCIP_Bool separate = FALSE;
+   SCIP_Bool nlhdlrconvexdoesquadratic;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -310,6 +311,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       return SCIP_OKAY;
 
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+   /* if nlhdlr_convex handles convex quadratic, then we don't (and vice versa)
+    * TODO nlhdlr_convex is supposed to take this over permanently, but for now I keep both possibilities
+    */
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/expr/nlhdlr/convex/cvxquadratic", &nlhdlrconvexdoesquadratic) );
+   if( nlhdlrconvexdoesquadratic )
+      return SCIP_OKAY;
 
    /* check if we can do something more: check curvature of quadratic function stored in nlexprdata
     * this is currently only used to decide whether we want to separate, so it can be skipped if in presolve
