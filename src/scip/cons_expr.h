@@ -1688,7 +1688,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** gives the coefficients and expressions that define a quadratic expression
  *
- * This function returns pointers to internal data.
+ * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
  */
 SCIP_EXPORT
@@ -1699,9 +1699,69 @@ void SCIPgetConsExprQuadraticData(
    SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
    SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
    int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
-   SCIP_CONSEXPR_QUADEXPRTERM**  quadexprterms,    /**< buffer to store pointer to array of quadratic expression terms, or NULL */
-   int*                          nbilinexprterms,  /**< buffer to store number of bilinear expressions terms, or NULL */
-   SCIP_CONSEXPR_BILINEXPRTERM** bilinexprterms   /**< buffer to store pointer to array of bilinear expression terms, or NULL */
+   int*                          nbilinexprterms   /**< buffer to store number of bilinear expressions terms, or NULL */
+   );
+
+/** gives the data of a quadratic expression term
+ *
+ * For a term a*expr^2 + b*expr + sum_i (c_i * expr * otherexpr_i), returns
+ * expr, a, b, the number of summands, and indices of bilinear terms in the quadratic expressions bilinexprterms.
+ *
+ * This function returns pointers to internal data in adjbilin.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticQuadTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of quadratic term */
+   SCIP_CONSEXPR_EXPR**          expr,             /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
+   SCIP_Real*                    lincoef,          /**< buffer to store linear coefficient of variable, or NULL */
+   SCIP_Real*                    sqrcoef,          /**< buffer to store square coefficient of variable, or NULL */
+   int*                          nadjbilin,        /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
+   int**                         adjbilin          /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   );
+
+/** gives the data of a bilinear expression term
+ *
+ * For a term a*expr1*expr2, returns
+ * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticBilinTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of bilinear term */
+   SCIP_CONSEXPR_EXPR**          expr1,            /**< buffer to store first factor, or NULL */
+   SCIP_CONSEXPR_EXPR**          expr2,            /**< buffer to store second factor, or NULL */
+   SCIP_Real*                    coef,             /**< buffer to coefficient, or NULL */
+   int*                          pos2              /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   );
+
+/** returns whether all expressions that are used in a quadratic expression are variable expression
+ *
+ * @return TRUE iff all linexprs and quadexprterms[.].expr in quaddata are variable expressions
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPareConsExprQuadraticExprsVariables(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata          /**< quadratic coefficients data */
+   );
+
+/** evaluates quadratic term in a solution w.r.t. auxiliary variables
+ *
+ * \note This assumes that for every expr used in the quadratic data, an auxiliary variable is available.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPevalConsExprQuadraticAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic form */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   );
+
+/** prints quadratic expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression conshdlr */
+   SCIP_CONSEXPR_QUADEXPR* quaddata          /**< quadratic form */
    );
 
 /** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
