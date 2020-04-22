@@ -149,6 +149,8 @@ struct SCIP_ConsExpr_Expr
 /** data for representation of an expression as quadratic */
 struct SCIP_ConsExpr_QuadExpr
 {
+   SCIP_Real                    constant;        /**< a constant term */
+
    int                          nlinexprs;       /**< number of expressions that appear linearly */
    SCIP_CONSEXPR_EXPR**         linexprs;        /**< expressions that appear linearly */
    SCIP_Real*                   lincoefs;        /**< coefficients of expressions that appear linearly */

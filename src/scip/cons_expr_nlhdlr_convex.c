@@ -351,7 +351,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
       return SCIP_OKAY;
 
    /* if only square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
    if( nquadexprs <= 1 )
       return SCIP_OKAY;
 

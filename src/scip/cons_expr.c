@@ -16300,6 +16300,8 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->lincoefs, nlinterms) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->bilinexprterms, nbilinterms) );
 
+   expr->quaddata->constant = SCIPgetConsExprExprSumConstant(expr);
+
    expr->quaddata->allexprsarevars = TRUE;
    /* for every term of the sum-expr */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -17000,9 +17002,9 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
  * This function returns pointers to internal data.
  * The user must not change this data.
  */
-SCIP_EXPORT
 void SCIPgetConsExprQuadraticData(
    SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   SCIP_Real*                    constant,         /**< buffer to store constant term, or NULL */
    int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
    SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
    SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
@@ -17014,6 +17016,8 @@ void SCIPgetConsExprQuadraticData(
 {
    assert(quaddata != NULL);
 
+   if( constant != NULL )
+      *constant = quaddata->constant;
    if( nlinexprs != NULL )
       *nlinexprs = quaddata->nlinexprs;
    if( linexprs != NULL )
