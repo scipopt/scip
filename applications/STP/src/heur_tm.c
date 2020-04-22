@@ -478,6 +478,55 @@ int getTmMode(
 }
 
 
+
+/** updates best (non PC/MW) solution if possible */
+static inline
+void updateBestSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Bool             solfound,           /**< solution found in this run? */
+   TMBASE*               tmbase,             /**< data */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+)
+{
+#ifdef TM_USE_CSR
+   const int* const result_csr = tmbase->result;
+   STP_Bool* const connected = tmbase->connected;
+
+   /* compute objective value w.r.t. original costs! */
+   const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, result_csr, connected);
+
+   if( LT(obj, tmbase->best_obj) )
+   {
+      SCIPdebugMessage("\n improved obj=%f ", obj);
+
+      tmbase->best_obj = obj;
+      solstp_convertCsrToGraph(scip, graph, tmbase->csr_orgcosts, result_csr, connected, tmbase->best_result);
+
+      (*success) = TRUE;
+   }
+#else
+   /* here another measure than in the TM heuristics is being used */
+   const int nedges = graph_get_nEdges(graph);
+   const int* const result = tmbase->best_result;
+
+   const SCIP_Real obj = solstp_getObj(graph, result, 0.0, nedges);
+
+   if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
+   {
+      if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
+      {
+         SCIPdebugMessage("improved obj=%.12e\n", obj);
+
+         tmbase->best_obj = obj;
+         BMScopyMemoryArray(tmbase->best_result, result, nedges);
+         (*success) = TRUE;
+      }
+   }
+#endif
+}
+
+
 /** updates best PC/MW solution if possible */
 static inline
 void pcmwUpdateBestSol(
@@ -878,7 +927,6 @@ SCIP_RETCODE computeSteinerTreeCsr(
 
    shortestpath_computeSteinerTree(g, startnode, &spaths);
 
-   // SCIP_CALL( solstp_pruneFromTmHeur(scip, g, NULL, result, connected) );
    SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, result));
 
    return SCIP_OKAY;
@@ -2085,7 +2133,6 @@ SCIP_RETCODE runTm(
    const SCIP_Real* cost = tmbase->cost;
    const SCIP_Real* costrev = tmbase->costrev;
    const int mode = getTmMode(heurdata, graph);
-   const int nedges = graph_get_nEdges(graph);
    const int runs = tmbase->nruns;
    STP_Bool solfound = FALSE;
 
@@ -2097,11 +2144,9 @@ SCIP_RETCODE runTm(
       buildTmAllSp(scip, graph, cost, costrev, tmallsp);
    }
 
-   /* main loop */
+   /* loop over start nodes and call TM heuristic */
    for( int r = 0; r < runs; r++ )
    {
-      SCIP_Real obj;
-
       assert(start[r] >= 0 && start[r] < graph->knots);
       assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
 
@@ -2126,20 +2171,8 @@ SCIP_RETCODE runTm(
          SCIP_CALL( computeSteinerTreeVnoi(scip, graph, cost, costrev, start[r], (r == 0), tmvnoi, result, tmbase->connected) );
       }
 
-      /* here another measure than in the do_(...) heuristics is being used */
-      obj = solstp_getObj(graph, result, 0.0, nedges);
-
-      SCIPdebugMessage("run=%d, obj=%.12e\n", r, obj);
-
-      if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
-      {
-         if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
-         {
-            tmbase->best_obj = obj;
-            BMScopyMemoryArray(tmbase->best_result, result, nedges);
-            (*success) = TRUE;
-         }
-      }
+      /* check whether best solution can be improved, and if so, replace */
+      updateBestSol(scip, graph, solfound, tmbase, success);
 
       /* stop early? */
       if( SCIPisStopped(scip) )

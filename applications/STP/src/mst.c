@@ -146,6 +146,7 @@ void mst_computeOnMarked(
 {
    assert(g && mst);
    assert(mst->csr && mst->dheap && mst->nodes_dist && mst->nodes_predEdge);
+   assert(g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || startnode == g->source);
 
    computeOnMarked_init(g, nodes_isMarked, startnode, mst);
 

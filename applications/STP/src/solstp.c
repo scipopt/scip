@@ -321,34 +321,6 @@ SCIP_RETCODE pcsolGetMstEdges(
 }
 
 
-/** computes MST on marked graph and sets result edges */
-static inline
-void pcsolGetMstEdges_csr(
-   const GRAPH*          g,                  /**< graph structure */
-   const STP_Bool*       connected,          /**< ST nodes */
-   int                   root,               /**< root of solution */
-   MST*                  mst,                /**< the MST */
-   int* RESTRICT         result              /**< MST solution, which does not include artificial terminals */
-)
-{
-   const int nnodes = graph_get_nNodes(g);
-   const int* predEdge;
-
-   mst_computeOnMarked(g, connected, root, mst);
-   predEdge = mst->nodes_predEdge;
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( connected[i] && (predEdge[i] != UNKNOWN) )
-      {
-         assert(mst->csr->head[predEdge[i]] == i);
-         assert(result[predEdge[i]] == UNKNOWN);
-
-         result[predEdge[i]] = CONNECT;
-      }
-   }
-}
-
 /** mark nodes of the solution in the graph */
 static inline
 void pcsolMarkGraphNodes(
@@ -513,6 +485,88 @@ void pcsolPrune(
 }
 
 
+/** prunes the Steiner tree in such a way that all leaves are terminals */
+static
+void stpsolPrune_csr(
+   const GRAPH*          g,                  /**< graph structure */
+   const MST*            mst,                /**< the MST */
+   int* RESTRICT         result,             /**< ST edges (need to be set to UNKNOWN) */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   const CSR* const csr = mst->csr;
+   const int* const csr_start = csr->start;
+   const int nnodes = graph_get_nNodes(g);
+   int count;
+
+   SCIPdebugMessage("starting (simple, CSR) pruning \n");
+
+   do
+   {
+      count = 0;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         int outedge;
+
+         if( !connected[i] || Is_term(g->term[i]) )
+            continue;
+
+         for( outedge = csr_start[i]; outedge != csr_start[i + 1]; outedge++ )
+         {
+            if( result[outedge] == CONNECT )
+               break;
+         }
+
+         /* no outgoing edge? */
+         if( outedge == csr_start[i + 1] )
+         {
+            /* there has to be exactly one incoming edge -> remove it */
+
+            const int inedge = mst->nodes_predEdge[i];
+            assert(inedge != UNKNOWN);
+            assert(result[inedge] == CONNECT);
+
+            SCIPdebugMessage("prune delete vertex %d \n", i);
+
+            result[inedge] = UNKNOWN;
+            connected[i] = FALSE;
+            count++;
+         }
+      }
+   }
+   while( count > 0 );
+}
+
+
+/** computes MST on marked graph and sets result edges */
+static inline
+void solGetMstEdges_csr(
+   const GRAPH*          g,                  /**< graph structure */
+   const STP_Bool*       connected,          /**< ST nodes */
+   int                   root,               /**< root of solution */
+   MST*                  mst,                /**< the MST */
+   int* RESTRICT         result              /**< MST solution, which does not include artificial terminals */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int* predEdge;
+
+   mst_computeOnMarked(g, connected, root, mst);
+   predEdge = mst->nodes_predEdge;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] && (predEdge[i] != UNKNOWN) )
+      {
+         assert(mst->csr->head[predEdge[i]] == i);
+         assert(result[predEdge[i]] == UNKNOWN);
+
+         result[predEdge[i]] = CONNECT;
+      }
+   }
+}
+
 /** Finds optimal prize-collecting Steiner tree on given tree. */
 static
 SCIP_RETCODE strongPruneSteinerTreePc(
@@ -651,8 +705,7 @@ SCIP_RETCODE pruneSteinerTreeStp(
          nconnected++;
 
    assert(nconnected >= g->terms);
-   assert(g->source >= 0);
-   assert(g->source < nnodes);
+   assert(g->source >= 0 && g->source < nnodes);
 #endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
@@ -717,6 +770,37 @@ SCIP_RETCODE pruneSteinerTreeStp(
    while( count > 0 );
 
    SCIPfreeBufferArray(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
+/** Prunes the Steiner tree in such a way that all leaves are terminals:
+ *  1. Builds MST
+ *  2. Removes non-terminal leaves repeatedly */
+static
+SCIP_RETCODE pruneSteinerTreeStp_csr(
+   const GRAPH*          g,                  /**< graph structure */
+   MST*                  mst,                /**< the MST */
+   int* RESTRICT         result,             /**< ST edges (need to be set to UNKNOWN) */
+   STP_Bool* RESTRICT    connected           /**< ST nodes */
+   )
+{
+   assert(g && mst && result && connected);
+
+#ifndef NDEBUG
+   {
+      const int nedges_csr = graph_csr_getNedges(mst->csr);
+      for( int i = 0; i < nedges_csr; i++ )
+         assert(UNKNOWN == result[i]);
+   }
+#endif
+
+   /* 1. build MST on solution nodes */
+   solGetMstEdges_csr(g, connected, g->source, mst, result);
+
+   /* 2. prune MST */
+   stpsolPrune_csr(g, mst, result, connected);
 
    return SCIP_OKAY;
 }
@@ -852,7 +936,7 @@ SCIP_RETCODE pruneSteinerTreePc_csr(
    assert(connected[solroot]);
    SCIPdebugMessage("(non-artificial) solution root=%d \n", solroot);
 
-   pcsolGetMstEdges_csr(g, connected, solroot, mst, result);
+   solGetMstEdges_csr(g, connected, solroot, mst, result);
 
    SCIP_CALL( strongPruneSteinerTreePc_csr(scip, g, mst->csr, solroot, result, connected) );
 
@@ -1248,11 +1332,9 @@ SCIP_RETCODE solstp_pruneFromTmHeur_csr(
       MST mst = { .csr = spaths->csr_orgcosts, .dheap = spaths->dheap,
                   .nodes_dist = spaths->nodes_dist, .nodes_predEdge = spaths->nodes_pred };
 
-
       assert(graph_csr_costsAreInSync(g, mst.csr, g->cost));
 
-      // todo
-      assert(0);
+      pruneSteinerTreeStp_csr(g, &mst, result, spaths->nodes_isConnected);
    }
 
    return SCIP_OKAY;
@@ -1620,6 +1702,7 @@ SCIP_Real solstp_getObj(
    return obj;
 }
 
+
 /** compute solution value for given edge-solution array */
 SCIP_Real solstp_pcGetObjCsr(
    const GRAPH*          g,                  /**< the graph */
@@ -1667,6 +1750,35 @@ SCIP_Real solstp_pcGetObjCsr(
 
    return obj;
 }
+
+
+/** compute solution value for given edge-solution array */
+SCIP_Real solstp_getObjCsr(
+   const GRAPH*          g,                  /**< the graph */
+   const CSR*            csr,                /**< the csr */
+   const int*            soledge_csr,        /**< solution (CONNECT/UNKNOWN)  */
+   const STP_Bool*       solnode             /**< solution vertices (TRUE/FALSE) */
+   )
+{
+   const int nedges_csr = graph_csr_getNedges(csr);
+   const SCIP_Real* const edgecost_csr = csr->cost;
+   register SCIP_Real obj = 0.0;
+
+   assert(!graph_pc_isPcMw(g));
+   assert(graph_get_nNodes(g) == csr->nnodes);
+   assert(nedges_csr <= g->edges);
+
+   for( int e = 0; e < nedges_csr; e++ )
+   {
+      assert(soledge_csr[e] == CONNECT || soledge_csr[e] == UNKNOWN);
+
+      if( soledge_csr[e] == CONNECT )
+         obj += edgecost_csr[e];
+   }
+
+   return obj;
+}
+
 
 
 /** converts solution from CSR to graph based */
