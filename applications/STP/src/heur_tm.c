@@ -215,7 +215,9 @@ SCIP_RETCODE tmBaseInit(
    TMBASE*               tmbase              /**< data */
 )
 {
+#ifdef TM_USE_CSR
    SCIP_Real* costorg_csr;
+#endif
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
 
@@ -508,7 +510,7 @@ void updateBestSol(
 #else
    /* here another measure than in the TM heuristics is being used */
    const int nedges = graph_get_nEdges(graph);
-   const int* const result = tmbase->best_result;
+   const int* const result = tmbase->result;
 
    const SCIP_Real obj = solstp_getObjBounded(graph, result, 0.0, nedges);
 
@@ -2156,10 +2158,10 @@ SCIP_RETCODE runTm(
       }
       else if( mode == TM_DIJKSTRA )
       {
-#if 0
-         SCIP_CALL( computeSteinerTreeDijk(scip, graph, start[r], tmbase) );
-#else
+#ifdef TM_USE_CSR
          SCIP_CALL( computeSteinerTreeCsr(scip, graph, start[r], tmbase) );
+#else
+         SCIP_CALL( computeSteinerTreeDijk(scip, graph, start[r], tmbase) );
 #endif
       }
       else if( mode == TM_SP )
@@ -3097,15 +3099,15 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    tmBaseFree(scip, graph, &tmbase);
 
-   SCIPdebugMessage("final objective: %f \n", solstp_getObjBounded(graph, tmbase.best_result, 0.0, graph->edges));
+   SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0));
 
 #if 0
    {
       FILE *fp;
-      const SCIP_Real obj_final = solstp_getObjBounded(graph, tmbase.best_result, 0.0, graph->edges);
+      const SCIP_Real obj_final = solstp_getObj(graph, tmbase.best_result, 0.0);
 
       fp = fopen(
-                  "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_csr.txt",
+                  "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_old.txt",
                   "a+");
       fprintf(fp, "%s %f \n", SCIPgetProbName(scip), obj_final);
       fclose(fp);
