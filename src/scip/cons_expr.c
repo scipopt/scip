@@ -16375,8 +16375,8 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
 
          ++expr->quaddata->nbilinexprterms;
 
-         /* TODO: in future store position of second factor in quadexprterms - in nlhdlr_quadratic this todo was done in the meanwhile */
-         /*bilinexprterm->pos = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2) */
+         /* store position of second factor in quadexprterms */
+         bilinexprterm->pos2 = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2);
       }
       else /* linear term */
       {

@@ -177,14 +177,15 @@ struct SCIP_ConsExpr_QuadExprTerm
    int*                  adjbilin;           /**< indices of associated bilinear terms */
 };
 
-/** data structure to store a single bilinear term (similar to SCIP_CONSEXPR_QUADELEM)
+/** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_CONSEXPR_QUADELEM)
  * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
  */
 struct SCIP_ConsExpr_BilinExprTerm
 {
-   SCIP_CONSEXPR_EXPR*   expr1;
-   SCIP_CONSEXPR_EXPR*   expr2;
-   SCIP_Real             coef;
+   SCIP_CONSEXPR_EXPR*   expr1;              /**< first factor of bilinear term */
+   SCIP_CONSEXPR_EXPR*   expr2;              /**< second factor of bilinear term */
+   SCIP_Real             coef;               /**< coefficient of bilinear term */
+   int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
 };
 
 /** generic data and callback methods of an nonlinear handler */

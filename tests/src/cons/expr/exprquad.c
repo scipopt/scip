@@ -195,6 +195,7 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
          SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprAuxVar(bilin.expr1)));
    cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
+   cr_expect_eq(bilin.pos2, 1);  /* because quaddata->quadexprterms[1].expr == cosexpr */
 
    SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
    cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
