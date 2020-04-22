@@ -1137,7 +1137,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
    return SCIP_OKAY;
 }
 
-
 /** callback to detect structure in expression tree */
 #if 0
 static
@@ -1163,6 +1162,331 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 }
 #endif
 
+/** analyse on/off bounds for: 1) tightening bounds in probing for indicator = 1, 2) fixing indicator / detecting
+  * cutoff if one or both states is infeasible 3) tightening local bounds if indicator is fixed */
+static
+SCIP_RETCODE applyOnoffBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HASHMAP*         scvars,             /**< hashmap linking variables to scvardata's */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_VAR*             indicator,          /**< indicator variable */
+   SCIP_Bool             indvalue,           /**< indicator value for which the bounds are applied */
+   SCIP_Bool*            infeas,             /**< pointer to store whether infeasibility has been detected */
+   SCIP_Bool*            changed             /**< pointer to store whether bounds have been changed for indvalue = 1 */
+   )
+{
+   SCVARDATA* scvdata;
+   int pos;
+   SCIP_Bool fixed;
+   SCIP_Real sclb;
+   SCIP_Real scub;
+   SCIP_Bool indfixed;
+
+   *infeas = FALSE;
+
+   /* nothing to do if var is already fixed to !indvalue */
+   if( (indvalue && SCIPvarGetUbLocal(indicator) == 0) || (!indvalue && SCIPvarGetLbLocal(indicator) == 1))
+      return SCIP_OKAY;
+
+   scvdata = getSCVarDataInd(scvars, var, indicator, &pos);
+   assert(scvdata != NULL);
+
+   sclb = indvalue ? scvdata->lbs1[pos] : scvdata->vals0[pos];
+   scub = indvalue ? scvdata->ubs1[pos] : scvdata->vals0[pos];
+
+   indfixed = SCIPvarGetUbLocal(var) == 0 || SCIPvarGetLbLocal(var) == 1;
+
+   /* use a non-redundant lower bound */
+   if( SCIPisGT(scip, sclb, SCIPvarGetLbLocal(var)) )
+   {
+      if( indvalue )
+         *changed = TRUE;
+
+      /* first check for infeasibility */
+      if( SCIPisFeasGT(scip, sclb, SCIPvarGetUbLocal(var)) )
+      {
+         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &fixed) );
+         if( *infeas )
+            return SCIP_OKAY;
+      }
+      else
+      { /* sclb is feasible wrt local ub, apply it */
+         if( indfixed )
+         { /* if indicator is fixed to indvalue, sclb is valid for the current node */
+            SCIP_CALL( SCIPchgVarLb(scip, var, sclb) );
+         }
+         else if( indvalue )
+         { /* else we can only fix in probing; we do probing only for indicator = 1 */
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, sclb) );
+         }
+      }
+   }
+
+   /* use a non-redundant upper bound */
+   if( SCIPisLT(scip, scub, SCIPvarGetUbLocal(var)) )
+   {
+      if( indvalue )
+         *changed = TRUE;
+
+      /* first check for infeasibility */
+      if( SCIPisFeasLT(scip, scub, SCIPvarGetLbLocal(var)) )
+      {
+         SCIP_CALL( SCIPfixVar(scip, indicator, 0, infeas, &fixed) );
+         if( *infeas )
+            return SCIP_OKAY;
+      }
+      else
+      { /* scub is feasible wrt local ub, apply it */
+         if( indfixed )
+         { /* if indicator is fixed to indvalue, scub is valid for the current node */
+            SCIP_CALL( SCIPchgVarUb(scip, var, scub) );
+         }
+         else if( indvalue )
+         { /* else we can only fix in probing; we do probing only for indicator = 1 */
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, scub) );
+         }
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "%s in [%g, %g] instead of [%g, %g] (vals0 = %g)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                            SCIPvarGetUbLocal(var), oldlb, oldub, scvdata->vals0[pos]);
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** nonlinear handler enforcement callback
+ *
+ * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
+ * If g(x) = g0 if indicator z = 0, and a cut is given by sum aixi + c <= aux, where xi = xi0 if z = 0 for all i,
+ * then the "perspectivied" cut is sum aixi + c + (1 - z)*(g0 - c - sum aix0i) <= aux. This ensures that at z = 1,
+ * the new cut is equivalent to the given cut, and at z = 0 it reduces to g0 <= aux.
+ */
+static
+SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
+{ /*lint --e{715}*/
+   SCIP_ROWPREP* rowprep;
+   SCIP_VAR* auxvar;
+   int i;
+   int j;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_Real cst0;
+   SCIP_VAR* indicator;
+   SCIP_PTRARRAY* rowpreps2;
+   SCIP_PTRARRAY* rowpreps;
+   int nrowpreps;
+   SCIP_Bool addedbranchscores = FALSE;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(conshdlr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrdata != NULL);
+
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   assert(auxvar != NULL);
+
+   nrowpreps = 0;
+   *result = SCIP_DIDNOTFIND;
+
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps2) );
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
+
+   /* build cuts for every indicator variable */
+   for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
+   {
+      int v;
+      int minidx;
+      int maxidx;
+      int r;
+      SCIP_Bool changed;
+      SCIP_Bool cutoff;
+      SCIP_Longint ndomreds;
+
+      indicator = nlhdlrexprdata->indicators[i];
+
+      /* go into probing */
+      SCIP_CALL( SCIPstartProbing(scip) );
+
+      /* create a probing node */
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+
+      changed = FALSE;
+
+      SCIP_CALL( SCIPfixVarProbing(scip, indicator, 1) );
+
+      /* change bounds to those at indicators[i] = 1 */
+      for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Bool infeas;
+         int b;
+#ifdef SCIP_DEBUG
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+#endif
+
+         var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+
+#ifdef SCIP_DEBUG
+         oldlb = SCIPvarGetLbLocal(var);
+         oldub = SCIPvarGetUbLocal(var);
+#endif
+
+         for( b = 0; b < 2; ++b )
+         {
+            SCIP_Bool indvalue = b == 1;
+
+            SCIP_CALL( applyOnoffBounds(scip, nlhdlrdata->scvars, var, indicator, indvalue, &infeas, &changed) );
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               SCIPendProbing(scip);
+               goto TERMINATE;
+            }
+         }
+      }
+
+      /* don't add cuts for fixed indicators since there is no use for perspectivy */
+      if( SCIPvarGetLbLocal(indicator) == 1 )
+      {
+         SCIPendProbing(scip);
+         continue;
+      }
+      if( SCIPvarGetUbLocal(indicator) == 0 )
+      { /* this case is stronger as it implies that everything is fixed;
+         * therefore we are now happy
+         */
+
+         SCIPendProbing(scip);
+         *result = SCIP_SEPARATED;
+         goto TERMINATE;
+      }
+
+      if( changed && SCIPgetDepth(scip) == 0 )
+      {
+         SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff, &ndomreds) );
+         SCIPdebugMsg(scip, "ndomreds = %d\n", ndomreds);
+      }
+
+      /* use cuts from every suitable nlhdlr */
+      for( j = 0; j < expr->nenfos; ++j )
+      {
+         SCIP_Bool addedbranchscores2;
+         SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+         SCIP_Bool success2;
+
+         nlhdlr2 = expr->enfos[j]->nlhdlr;
+
+         if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) || nlhdlr2 == nlhdlr )
+            continue;
+
+         SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
+
+         /* evaluate auxiliary before calling estimate */
+         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, sol) );
+
+         /* ask the nonlinear handler for an estimator */
+         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, sol, expr->enfos[j]->auxvalue,
+               overestimate, SCIPgetSolVal(scip, sol, auxvar), rowpreps2, &success2, FALSE, &addedbranchscores2) );
+
+         addedbranchscores += addedbranchscores2;
+
+         minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
+         maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
+
+         assert((success2 && minidx <= maxidx) || (!success2 && minidx > maxidx));
+
+         for( r = minidx; r <= maxidx; ++r )
+         {
+            SCIP_VAR *var;
+            SCIP_Bool var_is_sc;
+
+            rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
+
+            assert(rowprep != NULL);
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMsg(scip, "rowprep for expr ");
+            SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+            SCIPinfoMessage(scip, NULL, " before perspectivy is: \n");
+            SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
+            /* perspectivy the estimator by adding (1-z)(g0 - c - sum aix0i),
+             * where sum aixi + c = rowprep */
+
+            /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
+            cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
+
+            for( v = 0; v < rowprep->nvars; ++v )
+            {
+               SCIP_Real val0;
+
+               var = rowprep->vars[v];
+
+               /* is var sc with respect to this indicator? */
+               SCIP_CALL(varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
+
+               assert(var_is_sc);
+
+               cst0 -= rowprep->coefs[v] * val0;
+            }
+
+            /* update the rowprep by adding cst0 - cst0*z */
+            SCIPaddRowprepConstant(rowprep, cst0);
+            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
+
+            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
+
+            SCIPdebugMsg(scip, "rowprep after perspectivy is: \n");
+#ifdef SCIP_DEBUG
+            SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
+            SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, nrowpreps, rowprep) );
+            ++nrowpreps;
+         }
+
+         SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
+      }
+
+      SCIP_CALL( SCIPendProbing(scip) );
+
+      /* add the cuts */
+      minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
+      maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
+
+      for( r = minidx; r <= maxidx; ++r )
+      {
+#ifdef SCIP_DEBUG
+         SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+         rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
+
+         SCIP_CALL( SCIPconsExprCutAndScore(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+               auxvalue, allowweakcuts, addedbranchscores, addbranchscores, sol, result) );
+         SCIPfreeRowprep(scip, &rowprep);
+      }
+      SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
+   }
+
+TERMINATE:
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps2) );
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
+
+   return SCIP_OKAY;
+}
 
 /** nonlinear handler estimation callback
  *
@@ -1701,7 +2025,9 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimatePerspective, NULL);
+   /* SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimatePerspective, NULL); */
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
+   /* SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalPerspective, NULL); */
 
    return SCIP_OKAY;
 }
