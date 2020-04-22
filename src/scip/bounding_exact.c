@@ -53,7 +53,7 @@
 #define PSPOSTPROCESSDUALSOL       TRUE
 
 
-#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_WITH_BOOST
 static
 SCIP_Bool fpLPisIntFeasible(
    SCIP_LP*              lp,
@@ -3286,7 +3286,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
       return SCIP_OKAY;
 
-#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_WITH_BOOST
    assert(set->misc_exactsolve);
    assert(!lp->hasprovedbound);
 

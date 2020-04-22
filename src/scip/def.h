@@ -115,6 +115,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_message.h"
 #include "scip/pub_message.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -161,7 +162,6 @@ extern "C" {
  */
 
 #define SCIP_Real double                               /**< type used for floating point values */
-typedef struct SCIP_Rational SCIP_Rational;            /**< type used for rational numbers */
 
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX

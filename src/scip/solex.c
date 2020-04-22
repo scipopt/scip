@@ -44,7 +44,6 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_sol.h"
-#include "scip/struct_valsex.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"

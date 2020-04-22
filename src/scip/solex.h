@@ -38,13 +38,11 @@
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
-#include "scip/type_valsex.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
 #include "scip/type_heur.h"
 #include "scip/rational.h"
 #include "scip/struct_sol.h"
-#include "scip/struct_valsex.h"
 
 #ifdef __cplusplus
 extern "C" {

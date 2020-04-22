@@ -216,8 +216,8 @@ if(EXACTSOLVE)
 
     if(Boost_FOUND)
         include_directories(${Boost_INCLUDE_DIRS})
+        add_definitions(-DSCIP_WITH_BOOST)
         if(SOPLEX_FOUND)
-            add_definitions(-DSCIP_WITH_EXACTSOLVE)
             set(TEST_MIPEX on)
             set(lpiex lpi/lpiex_spx.cpp)
         else()
@@ -226,7 +226,7 @@ if(EXACTSOLVE)
             set(EXACTSOLVE off)
         endif()
     else()
-        message(WARNING "Boost Version 1.65 or higher is needed to compile with exact solving support.\
+        message(WARNING "Boost Version 1.65 or high is needed to compile with exact solving support.\
         No Boost was found. Continuing without support for exact solving.")
         set(EXACTSOLVE off)
     endif()

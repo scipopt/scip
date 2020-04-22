@@ -194,7 +194,7 @@ static void RsetSpxR(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
       RatSetGMP(r, spxr.getMpqRef());
 #else
       RatSetReal(r, spxr);
@@ -232,7 +232,7 @@ static void SpxRSetRat(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
       spxr = *RatGetGMP(src);
 #else
       spxr = RatApproxReal(src);

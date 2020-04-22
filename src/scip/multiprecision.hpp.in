@@ -12,9 +12,8 @@
 #include <vector>
 #include <string>
 
-#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_WITH_BOOST
    #include <boost/multiprecision/number.hpp>
-   #include <boost/numeric/ublas/vector_sparse.hpp>
 
    #if @SCIP_HAVE_GMP@
    #include <boost/multiprecision/gmp.hpp>

@@ -29,7 +29,6 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_sol.h"
-#include "scip/type_valsex.h"
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
 
@@ -92,6 +91,19 @@ struct SCIP_Sol
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
+};
+
+/** exact primal CIP solution
+ *
+ *  Solutions with origin ORIGINAL contain the values for original variables. The stored objective value also
+ *  corresponds to the original problem.
+ */
+struct SCIP_Valsex
+{
+   SCIP_Rational*        obj;                /**< objective value of solution */
+   SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */
+   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
+                                              *   origin */
 };
 
 #ifdef __cplusplus
