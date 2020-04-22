@@ -1048,7 +1048,8 @@ SCIP_RETCODE collectLeafs(
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr */
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original */
    SCIP_HASHMAP*         leaf2index,         /**< mapping from leaf to index */
-   int*                  nindices            /**< number of indices */
+   int*                  nindices,           /**< number of indices */
+   SCIP_Bool*            usingaux            /**< buffer to store whether auxiliary variable are used */
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
@@ -1057,9 +1058,12 @@ SCIP_RETCODE collectLeafs(
    assert(nlexpr2origexpr != NULL);
    assert(leaf2index != NULL);
    assert(nindices != NULL);
+   assert(usingaux != NULL);
 
    assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);
    assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
+
+   *usingaux = FALSE;
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, nlexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -1109,6 +1113,9 @@ SCIP_RETCODE collectLeafs(
             }
 
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );  /* because it was captured by both create and replace */
+
+            /* remember that we use an auxvar */
+            *usingaux = TRUE;
          }
          else if( SCIPisConsExprExprVar(child) )
          {
@@ -1140,6 +1147,7 @@ SCIP_RETCODE createNlhdlrExprData(
    )
 {
    SCIP_HASHMAP* leaf2index;
+   SCIP_Bool usingaux;
    int i;
 
    assert(scip != NULL);
@@ -1156,7 +1164,7 @@ SCIP_RETCODE createNlhdlrExprData(
    /* make sure there are auxvars and collect all variables */
    SCIP_CALL( SCIPhashmapCreate(&leaf2index, SCIPblkmem(scip), nleafs) );
    (*nlhdlrexprdata)->nleafs = 0;  /* we start a new count, this time skipping value-expressions */
-   SCIP_CALL( collectLeafs(scip, conshdlr, nlexpr, nlexpr2origexpr, leaf2index, &(*nlhdlrexprdata)->nleafs) );
+   SCIP_CALL( collectLeafs(scip, conshdlr, nlexpr, nlexpr2origexpr, leaf2index, &(*nlhdlrexprdata)->nleafs, &usingaux) );
    assert((*nlhdlrexprdata)->nleafs <= nleafs);  /* we should not have seen more leafs now than in constructExpr */
 
    /* assemble auxvars array */
@@ -1191,6 +1199,16 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
    SCIPinfoMessage(scip, NULL, " (%p) is handled as %s\n", SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr), SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(nlexpr)));
 #endif
+
+   /* If we don't work on the extended formulation, then set curvature also in original expression
+    * (in case someone wants to pick this up; this might be remove again).
+    * This doesn't ensure that every convex or concave original expression is actually marked here.
+    * Not only because our tests are incomprehensive, but also because we may not detect on sums,
+    * prefer extended formulations (in nlhdlr_convex), or introduce auxvars for linear subexpressions
+    * on purpose (in nlhdlr_concave).
+    */
+   if( !usingaux )
+      SCIPsetConsExprExprCurvature(expr, SCIPgetConsExprExprCurvature(nlexpr));
 
    return SCIP_OKAY;
 }
