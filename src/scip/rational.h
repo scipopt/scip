@@ -127,7 +127,7 @@ SCIP_RETCODE RatCreateGMP(
 /** gets the underlying mpq_t* */
 SCIP_EXPORT
 mpq_t* RatGetGMP(
-    SCIP_Rational*  r                         /**< the rational */
+   SCIP_Rational*        r                   /**< the rational */
    );
 
 /** sets a rational to a value of an mpq_t */
@@ -262,8 +262,8 @@ void RatAddReal(
 SCIP_EXPORT
 void RatDiff(
    SCIP_Rational*        res,                /**< the result */
-    SCIP_Rational*       op1,                /**< first operand */
-    SCIP_Rational*       op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    );
 
 /** subtracts a rational and a real and saves the result in res */
@@ -539,7 +539,7 @@ SCIP_Real RatRoundReal(
 /** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
 SCIP_Real RatApproxReal(
-    SCIP_Rational*       r                   /**< the rational to convert */
+   SCIP_Rational*        r                   /**< the rational to convert */
    );
 
 SCIP_EXPORT

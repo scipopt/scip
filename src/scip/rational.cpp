@@ -270,7 +270,6 @@ SCIP_RETCODE RatCreateGMP(
    mpq_t                 numb                /**< the gmp rational */
    )
 {
-
    BMSallocBlockMemory(mem, rational);
    new (&(*rational)->val) Rational(numb);
    (*rational)->isinf = FALSE;
@@ -490,7 +489,6 @@ void RatSetInt(
    res->val = Rational(buf);
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-
 }
 
 /** set a rational to the value described by a string */
@@ -1671,8 +1669,8 @@ SCIP_RETCODE SCIPrationalarrayCopy(
 
 /** frees a dynamic array of real values */
 SCIP_RETCODE SCIPrationalarrayFree(
-   SCIP_RATIONALARRAY**  rationalarray,   /**< pointer to the real array */
-   BMS_BLKMEM*           blkmem          /**< block memory */
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(rationalarray != NULL);
