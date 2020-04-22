@@ -114,7 +114,7 @@ SCIP_RETCODE computeSteinerTree(
    }
    else
    {
-      obj = solstp_getObj(graph, result, 0.0, nedges);
+      obj = solstp_getObjBounded(graph, result, 0.0, nedges);
    }
 
    if( !(*success) )

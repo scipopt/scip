@@ -575,11 +575,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    assert(success && solstp_isValid(scip, newgraph, newedges));
 
-   SCIPdebugMessage("obj after prune %f \n", solstp_getObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after prune %f \n", solstp_getObjBounded(newgraph, newedges, 0.0, newgraph->edges));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
-   SCIPdebugMessage("obj after local %f \n", solstp_getObj(newgraph, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after local %f \n", solstp_getObjBounded(newgraph, newedges, 0.0, newgraph->edges));
 
    assert(solstp_isValid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);

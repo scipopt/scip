@@ -878,7 +878,7 @@ SCIP_RETCODE pruneSteinerTreePc(
    solstp_pcConnectDummies(g, solroot, result_dbg, connected_dbg);
    pcsolPrune(g, result_dbg, connected_dbg);
 
-   assert(LE(solstp_getObj(g, result, 0.0, nedges), solstp_getObj(g, result_dbg, 0.0, nedges)));
+   assert(LE(solstp_getObjBounded(g, result, 0.0, nedges), solstp_getObjBounded(g, result_dbg, 0.0, nedges)));
 
    SCIPfreeBufferArray(scip, &connected_dbg);
    SCIPfreeBufferArray(scip, &result_dbg);
@@ -1678,14 +1678,14 @@ void solstp_setNodeList(
 }
 
 /** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
-SCIP_Real solstp_getObj(
+SCIP_Real solstp_getObjBounded(
    const GRAPH*          g,                  /**< the graph */
    const int*            soledge,            /**< solution */
    SCIP_Real             offset,             /**< offset */
-   int                   nedges              /**< number of edges todo delete */
+   int                   nedges              /**< number of edges */
    )
 {
-   SCIP_Real obj = offset;
+   register SCIP_Real obj = offset;
    const SCIP_Real* const edgecost = g->cost;
 
    assert(nedges == g->edges);
@@ -1700,6 +1700,19 @@ SCIP_Real solstp_getObj(
    }
 
    return obj;
+}
+
+
+/** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
+SCIP_Real solstp_getObj(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge,            /**< solution */
+   SCIP_Real             offset             /**< offset */
+   )
+{
+   assert(g);
+
+   return solstp_getObjBounded(g, soledge, offset, g->edges);
 }
 
 

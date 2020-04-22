@@ -67,7 +67,7 @@ SCIP_Real getSolObj(
    if( graph_pc_isPcMw(g) )
       obj = graph_pc_solGetObj(scip, g, soledge, 0.0);
    else
-      obj = solstp_getObj(g, soledge, 0.0, g->edges);
+      obj = solstp_getObjBounded(g, soledge, 0.0, g->edges);
 
    return obj;
 }

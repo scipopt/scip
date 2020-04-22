@@ -544,7 +544,7 @@ void initializeIncumbent(
    }
 
    /* get objective value of incumbent */
-   *incumentobj = solstp_getObj(graph, incumbentedges, 0.0, nedges);
+   *incumentobj = solstp_getObjBounded(graph, incumbentedges, 0.0, nedges);
 }
 
 
@@ -1508,7 +1508,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( solstp_prune(scip, graph, newsoledges, stnodes) );
 
          assert(solstp_isValid(scip, graph, newsoledges) || SCIPisStopped(scip));
-         pobj = solstp_getObj(graph, newsoledges, 0.0, nedges);
+         pobj = solstp_getObjBounded(graph, newsoledges, 0.0, nedges);
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
@@ -1557,7 +1557,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       *newsolindex = -1;
    }
 
-   SCIPdebugMessage("incumbentobj=%f newsolobj=%f \n", solstp_getObj(graph, incumbentedges, 0.0, nedges), solstp_getObj(graph, newsoledges, 0.0, nedges));
+   SCIPdebugMessage("incumbentobj=%f newsolobj=%f \n", solstp_getObjBounded(graph, incumbentedges, 0.0, nedges), solstp_getObjBounded(graph, newsoledges, 0.0, nedges));
    SCIPdebugMessage("incumentobj=%f \n", incumentobj);
 
    SCIPfreeBufferArray(scip, &stnodes);
@@ -1769,15 +1769,15 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* solution better than original one?  */
 
-   if( SCIPisLT(scip, solstp_getObj(graph, newresult, 0.0, nedges),
-         solstp_getObj(graph, result, 0.0, nedges)) )
+   if( SCIPisLT(scip, solstp_getObjBounded(graph, newresult, 0.0, nedges),
+         solstp_getObjBounded(graph, result, 0.0, nedges)) )
    {
       *success = TRUE;
-      SCIPdebugMessage("success %f < %f \n", solstp_getObj(graph, newresult, 0.0, nedges), solstp_getObj(graph, result, 0.0, nedges));
+      SCIPdebugMessage("success %f < %f \n", solstp_getObjBounded(graph, newresult, 0.0, nedges), solstp_getObjBounded(graph, result, 0.0, nedges));
    }
    else
    {
-      SCIPdebugMessage("no improvements %f >= %f \n", solstp_getObj(graph, newresult, 0.0, nedges), solstp_getObj(graph, result, 0.0, nedges));
+      SCIPdebugMessage("no improvements %f >= %f \n", solstp_getObjBounded(graph, newresult, 0.0, nedges), solstp_getObjBounded(graph, result, 0.0, nedges));
       *success = FALSE;
    }
 

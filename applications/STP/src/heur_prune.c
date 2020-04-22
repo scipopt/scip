@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    {
       SCIP_Real objold;
 
-      objnew = solstp_getObj(prunegraph, soledge, 0.0, nedges);
+      objnew = solstp_getObjBounded(prunegraph, soledge, 0.0, nedges);
 
       if( pcmw )
          SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
@@ -536,7 +536,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
                soledge[e] = CONNECT;
          }
 
-         assert(SCIPisEQ(scip, objold, solstp_getObj(prunegraph, soledge, 0.0, nedges)));
+         assert(SCIPisEQ(scip, objold, solstp_getObjBounded(prunegraph, soledge, 0.0, nedges)));
       }
    }
 
@@ -560,7 +560,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    }
 #endif
 
-   objnew = solstp_getObj(g, edgearrint, 0.0, nedges);
+   objnew = solstp_getObjBounded(g, edgearrint, 0.0, nedges);
 
    SCIPdebugMessage("old global obj: %f ... new global obj: %f \n", *globalobj, objnew);
 
@@ -571,7 +571,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
       SCIP_CALL( SCIPStpHeurLocalRun(scip, g, edgearrint) );
 
-      objnew = solstp_getObj(g, edgearrint, 0.0, nedges);
+      objnew = solstp_getObjBounded(g, edgearrint, 0.0, nedges);
 
       assert(SCIPisLE(scip, objnew, *globalobj));
 
@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    if( solgiven )
    {
       BMScopyMemoryArray(globalsoledge, soledge, nedges);
-      globalobj = solstp_getObj(g, soledge, 0.0, nedges);
+      globalobj = solstp_getObjBounded(g, soledge, 0.0, nedges);
       setNodeSolArray(g, &uborg, solnode, soledge);
    }
    else
@@ -871,7 +871,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    *success = solstp_isValid(scip, g, globalsoledge);
    assert(*success);
 
-   SCIPdebugMessage("obj of best prune sol: %f \n", solstp_getObj(g, globalsoledge, 0.0, nedges));
+   SCIPdebugMessage("obj of best prune sol: %f \n", solstp_getObjBounded(g, globalsoledge, 0.0, nedges));
 
    BMScopyMemoryArray(soledge, globalsoledge, nedges);
 

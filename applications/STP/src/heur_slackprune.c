@@ -566,7 +566,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
    }
 
-   ubbest = solstp_getObj(g, soledge, 0.0, nedges);
+   ubbest = solstp_getObjBounded(g, soledge, 0.0, nedges);
 
    globalobj = ubbest;
 
@@ -694,7 +694,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
                globalsoledge, nodearrchar, &globalobj, TRUE, success) );
 
          /* calculate objective value of solution */
-         obj = solstp_getObj(prunegraph, soledge, offsetnew, nedges);
+         obj = solstp_getObjBounded(prunegraph, soledge, offsetnew, nedges);
 
          /* obj <= incumbent objective value? */
          if( SCIPisLE(scip, obj, ubbest) )

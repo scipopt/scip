@@ -173,7 +173,7 @@ SCIP_Bool pcmwUpdateBestSol_csrInSync(
 
    assert(!stpsol_pruningIsPossible(graph, result_dummy, connected_dummy));
 
-   obj_dummy = solstp_getObj(graph, result_dummy, 0.0, nedges);
+   obj_dummy = solstp_getObjBounded(graph, result_dummy, 0.0, nedges);
 
    if( graph_pc_isPc(graph) )
       obj_dummy += graph_pc_getNonLeafTermOffset(scip, graph);
@@ -510,7 +510,7 @@ void updateBestSol(
    const int nedges = graph_get_nEdges(graph);
    const int* const result = tmbase->best_result;
 
-   const SCIP_Real obj = solstp_getObj(graph, result, 0.0, nedges);
+   const SCIP_Real obj = solstp_getObjBounded(graph, result, 0.0, nedges);
 
    if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
    {
@@ -556,7 +556,7 @@ void pcmwUpdateBestSol(
 
 #else
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real obj = solstp_getObj(graph, tmbase->result, 0.0, nedges);
+   const SCIP_Real obj = solstp_getObjBounded(graph, tmbase->result, 0.0, nedges);
 
    if( LT(obj, tmbase->best_obj) )
    {
@@ -2563,7 +2563,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          if( success )
          {
             SCIPdebugMessage("TM solution added, value %f \n",
-                  solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
+                  solstp_getObjBounded(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
 
             *result = SCIP_FOUNDSOL;
          }
@@ -3097,12 +3097,12 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    tmBaseFree(scip, graph, &tmbase);
 
-   SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0, graph->edges));
+   SCIPdebugMessage("final objective: %f \n", solstp_getObjBounded(graph, tmbase.best_result, 0.0, graph->edges));
 
 #if 0
    {
       FILE *fp;
-      const SCIP_Real obj_final = solstp_getObj(graph, tmbase.best_result, 0.0, graph->edges);
+      const SCIP_Real obj_final = solstp_getObjBounded(graph, tmbase.best_result, 0.0, graph->edges);
 
       fp = fopen(
                   "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_csr.txt",
