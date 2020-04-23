@@ -1075,13 +1075,13 @@ void graph_pc_knotTofixedTerm(
       assert(g->extended);
 
       termDeleteExtension(scip, g, node, TRUE);
+   }
 
-      if( isMw )
+   if( isMw )
+   {
+      for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
       {
-         for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            g->cost[e] = 0.0;
-         }
+         g->cost[e] = 0.0;
       }
    }
 
