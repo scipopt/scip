@@ -21,7 +21,6 @@
  * TODO curvature information that have been computed during the detection
  *      of other nonlinear handler can not be used right now
  * TODO convex: perturb reference point if separation fails due to too large numbers
- * TODO convex: if univariate integer, then do secant on 2 nearest integers instead of tangent
  */
 
 #include <string.h>
@@ -69,7 +68,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_Bool             isnlhdlrconvex;     /**< whether this data is used for the convex nlhdlr (TRUE) or the concave one (FALSE) */
-   SCIP_SOL*             vpevalsol;          /**< solution used when evaluating vertex-polyhedral function in facet computation */
+   SCIP_SOL*             evalsol;            /**< solution used for evaluating expression in a different point, e.g., for facet computation of vertex-polyhedral function */
 
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a non-quadratic sum */
@@ -86,7 +85,7 @@ struct SCIP_ConsExpr_NlhdlrData
 typedef struct
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
-   SCIP_SOL*                     vpevalsol;
+   SCIP_SOL*                     evalsol;
    SCIP*                         scip;
    SCIP_CONSHDLR*                conshdlr;
 } VERTEXPOLYFUN_EVALDATA;
@@ -218,10 +217,10 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(evaldata->scip, "  <%s> = %g\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i])), args[i]);
 #endif
-      SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->vpevalsol, SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
+      SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->evalsol, SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
    }
 
-   SCIP_CALL_ABORT( SCIPevalConsExprExpr(evaldata->scip, evaldata->conshdlr, evaldata->nlhdlrexprdata->nlexpr, evaldata->vpevalsol, 0) );
+   SCIP_CALL_ABORT( SCIPevalConsExprExpr(evaldata->scip, evaldata->conshdlr, evaldata->nlhdlrexprdata->nlexpr, evaldata->evalsol, 0) );
 
    return SCIPgetConsExprExprValue(evaldata->nlhdlrexprdata->nlexpr);
 }
@@ -1118,6 +1117,7 @@ SCIP_RETCODE collectLeafs(
                SCIP_CALL( SCIPhashmapInsertInt(leaf2index, (void*)newchild, (*nindices)++) );
             }
 
+            child = newchild;
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );  /* because it was captured by both create and replace */
 
             /* remember that we use an auxvar */
@@ -1132,6 +1132,9 @@ SCIP_RETCODE collectLeafs(
             }
          }
          /* else: it's probably a value-expression, nothing to do */
+
+         /* update integrality flag for future leaf expressions: convex nlhdlr may use this information */
+         SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, child) );
       }
    }
 
@@ -1273,13 +1276,13 @@ SCIP_RETCODE estimateVertexPolyhedral(
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   if( nlhdlrdata->vpevalsol == NULL )
+   if( nlhdlrdata->evalsol == NULL )
    {
-      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->vpevalsol, NULL) );
+      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->evalsol, NULL) );
    }
 
    evaldata.nlhdlrexprdata = nlhdlrexprdata;
-   evaldata.vpevalsol = nlhdlrdata->vpevalsol;
+   evaldata.evalsol = nlhdlrdata->evalsol;
    evaldata.scip = scip;
    evaldata.conshdlr = conshdlr;
 
@@ -1358,7 +1361,8 @@ SCIP_RETCODE estimateGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
-   SCIP_SOL*             sol,                /**< solution to use, unless usemidpoint is TRUE */
+   SCIP_SOL*             sol,                /**< solution to use */
+   SCIP_Real             auxvalue,           /**< value of nlexpr in sol - we may not be able to take this value from nlexpr if it was evaluated at a different sol recently */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
    SCIP_Bool*            success             /**< buffer to store whether successful */
    )
@@ -1376,13 +1380,13 @@ SCIP_RETCODE estimateGradient(
    *success = FALSE;
 
    /* evaluation error or a too large constant -> skip */
-   if( SCIPisInfinity(scip, REALABS(SCIPgetConsExprExprValue(nlexpr))) )
+   if( SCIPisInfinity(scip, REALABS(auxvalue)) )
    {
-      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", SCIPgetConsExprExprValue(nlexpr), (void*)nlexpr);
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)nlexpr);
       return SCIP_OKAY;
    }
 
-   /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary) */
+   /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before) */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, nlexpr, sol, 0) );
 
    /* gradient evaluation error -> skip */
@@ -1427,6 +1431,102 @@ SCIP_RETCODE estimateGradient(
    return SCIP_OKAY;
 }
 
+/** adds an estimator generated by putting a secant through the coordinates given by the two closest integer points */
+static
+SCIP_RETCODE estimateConvexSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_SOL*             sol,                /**< solution to use, unless usemidpoint is TRUE */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
+   SCIP_Bool*            success             /**< buffer to store whether successful */
+   )
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_VAR* var;
+   SCIP_Real x;
+   SCIP_Real left, right;
+   SCIP_Real fleft, fright;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nleafs == 1);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+
+   *success = FALSE;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[0]);
+   assert(var != NULL);
+
+   /* find out coordinates of var left and right to sol */
+   x = SCIPgetSolVal(scip, sol, var);
+   if( SCIPisIntegral(scip, x) )
+   {
+      x = SCIPround(scip, x);
+      if( SCIPisEQ(scip, x, SCIPvarGetLbGlobal(var)) )
+      {
+         left = x;
+         right = left + 1.0;
+      }
+      else
+      {
+         right = x;
+         left = right - 1.0;
+      }
+   }
+   else
+   {
+      left = SCIPfloor(scip, x);
+      right = SCIPceil(scip, x);
+   }
+   assert(left != right);
+
+   /* now evaluate at left and right */
+   if( nlhdlrdata->evalsol == NULL )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->evalsol, NULL) );
+   }
+
+   SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, left) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0) );
+
+   /* evaluation error or a too large constant -> skip */
+   fleft = SCIPgetConsExprExprValue(nlexpr);
+   if( SCIPisInfinity(scip, REALABS(fleft)) )
+   {
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", SCIPgetConsExprExprValue(nlexpr), (void*)nlexpr);
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, right) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0) );
+
+   /* evaluation error or a too large constant -> skip */
+   fright = SCIPgetConsExprExprValue(nlexpr);
+   if( SCIPisInfinity(scip, REALABS(fright)) )
+   {
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", SCIPgetConsExprExprValue(nlexpr), (void*)nlexpr);
+      return SCIP_OKAY;
+   }
+
+   /* now add f(left) + (f(right) - f(left)) * (x - left) as estimator to rowprep */
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, fright - fleft) );
+   SCIPaddRowprepConstant(rowprep, fleft - (fright - fleft) * left);
+   rowprep->local = FALSE;
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -1437,7 +1537,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexConcave)
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
-   assert((*nlhdlrdata)->vpevalsol == NULL);
+   assert((*nlhdlrdata)->evalsol == NULL);
 
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
@@ -1457,6 +1557,22 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvexConcave)
    SCIPhashmapFree(&(*nlhdlrexprdata)->nlexpr2origexpr);
 
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitConvex)
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( nlhdlrdata->evalsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &nlhdlrdata->evalsol) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1592,7 +1708,16 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
    assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
 
-   SCIP_CALL( estimateGradient(scip, conshdlr, nlhdlrexprdata, sol, rowprep, success) );
+   if( nlhdlrexprdata->nleafs == 1 && SCIPisConsExprExprIntegral(nlhdlrexprdata->leafexprs[0]) )
+   {
+      SCIP_CALL( estimateConvexSecant(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
+   }
+
+   /* if secant method was not used or failed, then try with gradient */
+   if( !*success )
+   {
+      SCIP_CALL( estimateGradient(scip, conshdlr, nlhdlrexprdata, sol, auxvalue, rowprep, success) );
+   }
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
       overestimate ? "over" : "under",
@@ -1630,7 +1755,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = TRUE;
-   nlhdlrdata->vpevalsol = NULL;
+   nlhdlrdata->evalsol = NULL;
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC, CONVEX_NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
    assert(nlhdlr != NULL);
@@ -1663,6 +1788,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexConcave);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitConvex);
 
    return SCIP_OKAY;
 }
@@ -1680,9 +1806,9 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitConcave)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   if( nlhdlrdata->vpevalsol != NULL )
+   if( nlhdlrdata->evalsol != NULL )
    {
-      SCIP_CALL( SCIPfreeSol(scip, &nlhdlrdata->vpevalsol) );
+      SCIP_CALL( SCIPfreeSol(scip, &nlhdlrdata->evalsol) );
    }
 
    return SCIP_OKAY;
@@ -1980,7 +2106,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = FALSE;
-   nlhdlrdata->vpevalsol = NULL;
+   nlhdlrdata->evalsol = NULL;
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONCAVE_NLHDLR_NAME, CONCAVE_NLHDLR_DESC, CONCAVE_NLHDLR_PRIORITY, nlhdlrDetectConcave, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
    assert(nlhdlr != NULL);

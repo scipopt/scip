@@ -14849,6 +14849,21 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
+   /* shortcut for expr without children */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);

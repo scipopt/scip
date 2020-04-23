@@ -92,6 +92,8 @@ void setup(void)
 static
 void teardown(void)
 {
+   nlhdlrExitConvex(scip, nlhdlr);
+
    SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_2) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_3) );
@@ -289,10 +291,10 @@ SCIP_RETCODE estimate(
       }
    }
 
-   cr_expect_float_eq(x1coef, x1coef_expected, 1e-9, "Expected %g, but got %g", x1coef_expected, x1coef);
-   cr_expect_float_eq(x2coef, x2coef_expected, 1e-9, "Expected %g, but got %g", x2coef_expected, x2coef);
-   cr_expect_float_eq(x3coef, x3coef_expected, 1e-9, "Expected %g, but got %g", x3coef_expected, x3coef);
-   cr_expect_float_eq(constant, constant_expected, 1e-9, "Expected %g, but got %g", constant_expected, constant);
+   cr_expect_float_eq(x1coef, x1coef_expected, 1e-9, "x1 coef wrong. Expected %g, but got %g", x1coef_expected, x1coef);
+   cr_expect_float_eq(x2coef, x2coef_expected, 1e-9, "x2 coef wrong. Expected %g, but got %g", x2coef_expected, x2coef);
+   cr_expect_float_eq(x3coef, x3coef_expected, 1e-9, "x3 coef wrong. Expected %g, but got %g", x3coef_expected, x3coef);
+   cr_expect_float_eq(constant, constant_expected, 1e-9, "Constant wrong. Expected %g, but got %g", constant_expected, constant);
 
    SCIPfreeRowprep(scip, &rowprep);
 
@@ -335,6 +337,20 @@ void gradest_bivariate(
    *constant = fxy - fpx * x - fpy * y;
 }
 
+static
+void secantest(
+   SCIP_Real left,
+   SCIP_Real fleft,
+   SCIP_Real right,
+   SCIP_Real fright,
+   SCIP_Real* xcoef,
+   SCIP_Real* constant
+   )
+{
+   *xcoef = (fright - fleft) / (right - left);
+   *constant = fleft - *xcoef * left;
+}
+
 /* tests detection of convex/concave subexpressions */
 Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
 {
@@ -349,13 +365,18 @@ Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
    /* convex exp(exp(x)) at x=2 */
    SCIPsetSolVal(scip, sol, x_1, 2.0);
    gradest_univariate(2.0, exp(exp(2.0)), exp(2.0)*exp(exp(2.0)), &x1coef, &constant);
-   estimate("exp(exp(<x1>))", FALSE, sol, x1coef, x2coef, x3coef, constant);
+   estimate("exp(exp(<x1>))", FALSE, sol, x1coef, 0.0, 0.0, constant);
 
    /* concave sqrt(x1*x2) at x1=4, x2=9 */
    SCIPsetSolVal(scip, sol, x_1, 4.0);
    SCIPsetSolVal(scip, sol, x_2, 9.0);
    gradest_bivariate(4.0, 9.0, 2.0*3.0, 0.5*3.0/2.0, 0.5*2.0/3.0, &x1coef, &x2coef, &constant);
-   estimate("<x1>^0.5*<x2>^0.5)", FALSE, sol, x1coef, x2coef, x3coef, constant);
+   estimate("<x1>^0.5*<x2>^0.5)", FALSE, sol, x1coef, x2coef, 0.0, constant);
+
+   /* convex x3*exp(x3) with x3 being integer */
+   SCIPsetSolVal(scip, sol, x_3, 2.5);
+   secantest(2.0, 2.0*exp(2.0), 3.0, 3.0*exp(3.0), &x3coef, &constant);
+   estimate("<x3>*exp(<x3>)", FALSE, sol, 0.0, 0.0, x3coef, constant);
 
    SCIPfreeSol(scip, &sol);
 }
