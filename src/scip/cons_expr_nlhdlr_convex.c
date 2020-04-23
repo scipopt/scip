@@ -1219,18 +1219,19 @@ SCIP_RETCODE createNlhdlrExprData(
    return SCIP_OKAY;
 }
 
+/** adds an estimator for a vertex-polyhedral (e.g., concave) function to a given rowprep */
 static
 SCIP_RETCODE estimateVertexPolyhedral(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONSEXPR_NLHDLR* nlhdlr,
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_SOL*             sol,
-   SCIP_Bool             usemidpoint,
-   SCIP_Bool             overestimate,
-   SCIP_Real             targetvalue,
-   SCIP_ROWPREP*         rowprep,
-   SCIP_Bool*            success
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_SOL*             sol,                /**< solution to use, unless usemidpoint is TRUE */
+   SCIP_Bool             usemidpoint,        /**< whether to use the midpoint of the domain instead of sol */
+   SCIP_Bool             overestimate,       /**< whether over- or underestimating */
+   SCIP_Real             targetvalue,        /**< a target value to achieve; if not reachable, then can give up early */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
+   SCIP_Bool*            success             /**< buffer to store whether successful */
    )
 {
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
@@ -1347,6 +1348,81 @@ SCIP_RETCODE estimateVertexPolyhedral(
  TERMINATE:
    SCIPfreeBufferArray(scip, &box);
    SCIPfreeBufferArray(scip, &xstar);
+
+   return SCIP_OKAY;
+}
+
+/** adds an estimator computed via a gradient to a given rowprep */
+static
+SCIP_RETCODE estimateGradient(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_SOL*             sol,                /**< solution to use, unless usemidpoint is TRUE */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
+   SCIP_Bool*            success             /**< buffer to store whether successful */
+   )
+{
+   SCIP_CONSEXPR_EXPR* nlexpr;
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+
+   *success = FALSE;
+
+   /* evaluation error or a too large constant -> skip */
+   if( SCIPisInfinity(scip, REALABS(SCIPgetConsExprExprValue(nlexpr))) )
+   {
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", SCIPgetConsExprExprValue(nlexpr), (void*)nlexpr);
+      return SCIP_OKAY;
+   }
+
+   /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary) */
+   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, nlexpr, sol, 0) );
+
+   /* gradient evaluation error -> skip */
+   if( SCIPgetConsExprExprDerivative(nlexpr) == SCIP_INVALID ) /*lint !e777*/
+   {
+      SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)nlexpr);
+      return SCIP_OKAY;
+   }
+
+   /* add gradient underestimator to rowprep: first contribution of each variable, (x - sol) \nabla f(sol) */
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real deriv;
+      SCIP_Real varval;
+
+      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
+      if( deriv == SCIP_INVALID ) /*lint !e777*/
+      {
+         SCIPdebugMsg(scip, "gradient evaluation error for component %d of %p\n", i, (void*)nlexpr);
+         return SCIP_OKAY;
+      }
+
+      varval = SCIPgetSolVal(scip, sol, var);
+
+      SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", deriv, SCIPvarGetName(var), varval);
+
+      /* add deriv * (var - varval) to rowprep */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, deriv) );
+      SCIPaddRowprepConstant(rowprep, -deriv * varval);
+   }
+
+   /* next add f(sol) */
+   SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprValue(nlexpr));
+   rowprep->local = FALSE;
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1491,7 +1567,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
-   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1516,54 +1591,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
    assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
-   /* evaluation error or a too large constant -> skip */
-   if( SCIPisInfinity(scip, REALABS(auxvalue)) )
-   {
-      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)expr);
-      return SCIP_OKAY;
-   }
 
-   /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary) */
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, nlexpr, sol, 0) );
-
-   /* gradient evaluation error -> skip */
-   if( SCIPgetConsExprExprDerivative(nlexpr) == SCIP_INVALID ) /*lint !e777*/
-   {
-      SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-
-   /* add gradient underestimator to rowprep: first contribution of each variable, (x - sol) \nabla f(sol) */
-   *success = TRUE;
-   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real deriv;
-      SCIP_Real varval;
-
-      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
-      assert(var != NULL);
-
-      deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
-      if( deriv == SCIP_INVALID ) /*lint !e777*/
-      {
-         SCIPdebugMsg(scip, "gradient evaluation error for component %d of %p\n", i, (void*)expr);
-         *success = FALSE;
-         break;
-      }
-
-      varval = SCIPgetSolVal(scip, sol, var);
-
-      SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", deriv, SCIPvarGetName(var), varval);
-
-      /* add deriv * (var - varval) to rowprep */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, deriv) );
-      SCIPaddRowprepConstant(rowprep, -deriv * varval);
-   }
-
-   /* next add f(sol) */
-   SCIPaddRowprepConstant(rowprep, auxvalue);
-   rowprep->local = FALSE;
+   SCIP_CALL( estimateGradient(scip, conshdlr, nlhdlrexprdata, sol, rowprep, success) );
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
       overestimate ? "over" : "under",
@@ -1860,6 +1889,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
       return SCIP_OKAY;
 
    SCIP_CALL( estimateVertexPolyhedral(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, FALSE, overestimate, targetvalue, rowprep, success) );
+
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
+      overestimate ? "over" : "under",
+      (void*)expr,
+      sol != NULL ? "sol" : "lp",
+      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
 
    if( addbranchscores )
    {
