@@ -319,6 +319,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_EXPRCURV presentcurv;
    SCIP_EXPRCURV wantedcurv;
+   int nbilinexprs;
    int nquadexprs;
    int i;
 
@@ -350,9 +351,14 @@ DECL_CURVCHECK(curvCheckQuadratic)
    if( quaddata == NULL )
       return SCIP_OKAY;
 
-   /* if only square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, &nbilinexprs);
+
+   /* if only single square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
    if( nquadexprs <= 1 )
+      return SCIP_OKAY;
+
+   /* if root expression is only sum of squares (+linear) and detectsum is disabled, then give up here, too */
+   if( isrootexpr && !nlhdlrdata->detectsum && nbilinexprs == 0 )
       return SCIP_OKAY;
 
    /* get curvature of quadratic

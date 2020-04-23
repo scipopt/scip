@@ -196,6 +196,6 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("log(4-<x1>)*<x1>", SCIP_EXPRCURV_CONCAVE, TRUE);   /* similar to arki0017 */
 
    /* quadratic */
-   detect("<x1>^2+<x2>^2", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("exp(<x1>^2+<x2>^2)", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
 }
