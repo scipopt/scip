@@ -1429,7 +1429,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          * therefore we are now happy
          */
          int nchildren;
+         int pos;
          SCIP_CONSEXPR_EXPR** children;
+         SCVARDATA* scvdata;
 
          SCIPendProbing(scip);
 
@@ -1459,8 +1461,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                else
                {
                   SCIP_CALL(varIsSemicontinuous(scip, childauxvar, nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
+                  scvdata = getSCVarDataInd(nlhdlrdata->scvars, childauxvar, indicator, &pos);
 
-                  if( var_is_sc )
+                  if( scvdata != NULL )
                      SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprValue(child));
                   else
                      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childauxvar, SCIPgetConsExprExprSumCoefs(child)[j]) );
