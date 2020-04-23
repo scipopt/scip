@@ -812,6 +812,7 @@ SCIP_RETCODE presolveUpgrade(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
    SCIP_CONS** upgdconss;
    int upgdconsssize;
    int nupgdconss_;
@@ -844,6 +845,9 @@ SCIP_RETCODE presolveUpgrade(
       SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
    SCIPdebugPrintCons(scip, cons, NULL);
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
    {
@@ -852,7 +856,8 @@ SCIP_RETCODE presolveUpgrade(
 
       assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
 
-      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, consdata->nvarexprs, &nupgdconss_,
+         upgdconss, upgdconsssize) );
 
       while( nupgdconss_ < 0 )
       {
@@ -861,7 +866,8 @@ SCIP_RETCODE presolveUpgrade(
          upgdconsssize = -nupgdconss_;
          SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
 
-         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, consdata->nvarexprs, &nupgdconss_,
+            upgdconss, upgdconsssize) );
 
          assert(nupgdconss_ != 0);
       }

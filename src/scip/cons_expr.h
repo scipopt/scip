@@ -1228,11 +1228,12 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
  *  input:
  *  - scip            : SCIP main data structure
  *  - cons            : the nonlinear constraint to upgrade
+ *  - nvarexprs       : total number of variable expressions in the expression constraint
  *  - nupgdconss      : pointer to store number of constraints that replace this constraint
  *  - upgdconss       : array to store constraints that replace this constraint
  *  - upgdconsssize   : length of the provided upgdconss array
  */
-#define SCIP_DECL_EXPRCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
+#define SCIP_DECL_EXPRCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvarexprs, \
       int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 
