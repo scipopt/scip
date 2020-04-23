@@ -16954,6 +16954,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 
 /** gives the coefficients and expressions that define a quadratic expression
  *
+ * It can return the constant part, the number, arguments, and coefficients of the purely linear part
+ * and the number of quadratic terms and bilinear terms.
+ * Note that for arguments that appear in the quadratic part, a linear coefficient is
+ * stored with the quadratic term.
+ * Use SCIPgetConsExprQuadraticQuadTermData() and SCIPgetConsExprQuadraticBilinTermData()
+ * to access the data for a quadratic or bilinear term.
+ *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
  */
@@ -17145,7 +17152,9 @@ SCIP_RETCODE SCIPprintConsExprQuadratic(
    SCIPinfoMessage(scip, NULL, "Quadratic: \n");
    for( c = 0; c < quaddata->nquadexprs; ++c )
    {
-      SCIPinfoMessage(scip, NULL, "(%g * sqr() + %g) * ", quaddata->quadexprterms[c].sqrcoef, quaddata->quadexprterms[c].lincoef);
+      SCIPinfoMessage(scip, NULL, "(%g * sqr(", quaddata->quadexprterms[c].sqrcoef);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->quadexprterms[c].expr, NULL) );
+      SCIPinfoMessage(scip, NULL, ") + %g) * ", quaddata->quadexprterms[c].lincoef);
       SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->quadexprterms[c].expr, NULL) );
       SCIPinfoMessage(scip, NULL, " + ");
    }
