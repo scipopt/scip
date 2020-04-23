@@ -109,7 +109,7 @@ SCIP_ReaderData
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
 
-#if defined(SCIP_WITH_GMP) &&  defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SCIP_WITH_GMP) &&  defined(SCIP_WITH_BOOST)
 /** convert between scips_rational and zimpl's numb type */
 static
 SCIP_RETCODE RcreateNumb(

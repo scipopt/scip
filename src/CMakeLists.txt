@@ -855,6 +855,7 @@ set(scipheaders
     scip/struct_primal.h
     scip/struct_prob.h
     scip/struct_prop.h
+    scip/struct_rational.h
     scip/struct_reader.h
     scip/struct_relax.h
     scip/struct_reopt.h
@@ -912,6 +913,7 @@ set(scipheaders
     scip/type_primal.h
     scip/type_prob.h
     scip/type_prop.h
+    scip/type_rational.h
     scip/type_reader.h
     scip/type_relax.h
     scip/type_reopt.h

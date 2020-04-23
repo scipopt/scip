@@ -104,9 +104,6 @@ typedef struct SCIP_HashSet SCIP_HASHSET;
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;
 
-/** dynamic array for storing SCIP_Real values */
-typedef struct SCIP_RationalArray SCIP_RATIONALARRAY;
-
 /** dynamic array for storing int values */
 typedef struct SCIP_IntArray SCIP_INTARRAY;
 

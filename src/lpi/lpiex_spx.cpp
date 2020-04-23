@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -194,7 +194,7 @@ static void RsetSpxR(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
       RatSetGMP(r, spxr.getMpqRef());
 #else
       RatSetReal(r, spxr);
@@ -232,7 +232,7 @@ static void SpxRSetRat(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
       spxr = *RatGetGMP(src);
 #else
       spxr = RatApproxReal(src);
