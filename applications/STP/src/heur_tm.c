@@ -1865,7 +1865,7 @@ void initCostsAndPrioLP(
    {
       for( int e = 0; e < nedges; e++ )
       {
-         assert(graph->oeat[e] != EAT_LAST);
+         assert(graph->oeat[e] != EAT_FREE);
          nodepriority[gHead[e]] += xval[e];
          nodepriority[gTail[e]] += xval[e];
       }
