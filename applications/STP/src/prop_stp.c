@@ -695,7 +695,7 @@ void propgraphFixEdge(
    assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, tail));
    assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, head));
 
-   assert(SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
+   assert(graph_pc_isMw(propgraph) || SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
 
    propgraph->cost[e] = 0.0;
    propgraph->cost[erev] = 0.0;
@@ -1322,10 +1322,6 @@ SCIP_RETCODE fixVarsRedbased(
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool error;
 
-   int todo;
-   assert(graph->stp_type != STP_MWCSP);
-   assert(graph->stp_type != STP_RMWCSP); // todo implement! especially reduction techniques for rooted
-
    assert(propdata && scip && vars && probisinfeas && nfixedvars);
    assert(!graph_pc_isPcMw(graph) || graph->extended);
 
@@ -1358,23 +1354,27 @@ SCIP_RETCODE fixVarsRedbased(
       goto TERMINATE;
    }
 
-   // todo replace by assert
-   if( !graph_valid(scip, propgraph) )
-   {
-      printf("FAIL: problem in propagation has become invalid! \n");
-      return SCIP_ERROR;
-   }
+   assert(graph_valid(scip, propgraph));
 
    /* start with extended reductions based on reduced costs of LP */
-   SCIP_CALL( fixVarsExtendedRed(scip, graph, lpobjval, vars, propgraph, nfixedvars) );
+   if( !graph_pc_isMw(propgraph) )
+   {
+      SCIP_CALL( fixVarsExtendedRed(scip, graph, lpobjval, vars, propgraph, nfixedvars) );
+   }
 
    /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
+   else if( graph_pc_isMw(propgraph) )
+   {
+      SCIPdebugMessage("starting MW reductions \n");
+      SCIP_CALL( reduceMw(scip, propgraph, &offset, 2, FALSE, FALSE) );
+   }
    else
    {
+      assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduceLevel0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
@@ -1544,7 +1544,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    callreduce = FALSE;
 
-   if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_RMWCSP ) )
+   if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP) )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
 

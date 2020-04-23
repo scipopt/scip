@@ -1056,16 +1056,18 @@ void graph_pc_knotTofixedTerm(
    int                   node                /**< node */
    )
 {
-   assert(scip && g);
+   const SCIP_Bool isMw = graph_pc_isMw(g);
+   assert(scip);
    assert(g->prize && g->term2edge);
    assert(node != g->source);
    assert(!graph_pc_knotIsFixedTerm(g, node));
+   assert(graph_pc_isRootedPcMw(g));
 
    if( Is_term(g->term[node]) )
    {
       assert(!g->extended);
 
-      if( !graph_pc_termIsNonLeafTerm(g, node) )
+      if( isMw || !graph_pc_termIsNonLeafTerm(g, node) )
          termDeleteExtension(scip, g, node, TRUE);
    }
    else if( Is_pseudoTerm(g->term[node]) )
@@ -1073,6 +1075,14 @@ void graph_pc_knotTofixedTerm(
       assert(g->extended);
 
       termDeleteExtension(scip, g, node, TRUE);
+
+      if( isMw )
+      {
+         for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            g->cost[e] = 0.0;
+         }
+      }
    }
 
    graph_knot_chg(g, node, STP_TERM);
@@ -1198,6 +1208,14 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
    {
       assert(Is_term(g->term[node]));
       assert(node == g->source || g->prize[node] == FARAWAY);
+   }
+
+   if( (TERM2EDGE_FIXEDTERM == g->term2edge[node]) && node != g->source && graph_pc_isMw(g) )
+   {
+      for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         assert(EQ(g->cost[e], 0.0));
+      }
    }
 #endif
 
@@ -1481,7 +1499,7 @@ void graph_pc_enforceNonLeafTerm(
 )
 {
    assert(scip && graph);
-   assert(graph_pc_isPcMw(graph) && graph->extended);
+   assert(graph_pc_isPc(graph) && graph->extended);
    assert(graph_pc_knotIsNonLeafTerm(graph, nonleafterm));
 
    if( graph_pc_isRootedPcMw(graph) )

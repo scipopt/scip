@@ -79,10 +79,6 @@ SCIP_Bool isProbCompatible(
    const GRAPH*          graph               /**< graph */
 )
 {
-   int todo; // activate
-   if( graph_pc_isMw(graph))
-      return FALSE;
-
    return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));
 }
 

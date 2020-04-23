@@ -4770,6 +4770,7 @@ SCIP_RETCODE reduce_nvAdv(
    /* compute shortest incident edge to each terminal */
    for( i = 0; i < nnodes; i++ )
    {
+      int todo; // here is a bug....minedge1 fails for STP-DIMACS/PCSPG-H/hc9u.stp with valgrind!
       neighb[i] = FALSE;
       if( Is_term(g->term[i]) && g->mark[i] && g->grad[i] > 0 )
       {
