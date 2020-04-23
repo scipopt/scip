@@ -1736,7 +1736,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONVEX) );
 
-      if( nlexpr != NULL && nleafs > 14 )
+      if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
          SCIPdebugMsg(scip, "Too many variables (%d) in constructed expression. Will not be able to estimate. Rejecting.\n", nleafs);
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexpr) );
