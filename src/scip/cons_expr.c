@@ -206,6 +206,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsignpowhdlr; /**< signed power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprexphdlr;     /**< exponential expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprloghdlr;     /**< logarithm expression handler */
 
    /* nonlinear handler */
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
@@ -783,6 +784,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
    conshdlrdata->exprsignpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "signpower");
    conshdlrdata->exprexphdlr = SCIPfindConsExprExprHdlr(conshdlr, "exp");
+   conshdlrdata->exprloghdlr = SCIPfindConsExprExprHdlr(conshdlr, "log");
 
    /* copy nonlinear handlers */
    for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
@@ -11710,6 +11712,16 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    return SCIPconshdlrGetData(conshdlr)->exprexphdlr;
 }
 
+/** returns expression handler for logarithm expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrLog(
+        SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+)
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprloghdlr;
+}
+
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -15477,6 +15489,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for logarithmic expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "log") == 0);
+   conshdlrdata->exprloghdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
