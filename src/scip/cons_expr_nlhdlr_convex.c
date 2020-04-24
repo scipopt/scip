@@ -373,6 +373,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
 
    /* add immediate children to nlexpr */
    SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
+   assert(SCIPgetConsExprExprNChildren(nlexpr) == SCIPgetConsExprExprNChildren(expr));
 
    /* put children that are not square or product on stack
     * grow child for children that are square or product and put this child on stack
@@ -386,22 +387,27 @@ DECL_CURVCHECK(curvCheckQuadratic)
       child = SCIPgetConsExprExprChildren(nlexpr)[i];
       assert(child != NULL);
 
+      assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)child) == SCIPgetConsExprExprChildren(expr)[i]);
+
       if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
-         SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+         SCIPgetConsExprExprPowExponent(child) == 2.0 )
       {
+         /* square term */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
          assert(SCIPgetConsExprExprNChildren(child) == 1);
          SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(child)) );
       }
       else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
-         SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
+         SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(expr)[i]) == 2 )  /* using original version of child here as NChildren(child)==0 atm */
       {
+         /* bilinear term */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
          assert(SCIPgetConsExprExprNChildren(child) == 2);
          SCIP_CALL( exprstackPush(scip, stack, 2, SCIPgetConsExprExprChildren(child)) );
       }
       else
       {
+         /* linear term (or term to be considered as linear) */
          SCIPsetConsExprExprCurvature(child, SCIP_EXPRCURV_LINEAR);
          SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
       }
