@@ -69,7 +69,7 @@ SCIP_RETCODE sepastoreexEnsureCutsMem(
 
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreexCreate(
-   SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
+   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPsepastoreexCreate(
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreexFree(
-   SCIP_SEPASTOREEX**    sepastoreex,          /**< pointer to store separation storage */
+   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
@@ -135,7 +135,7 @@ void SCIPsepastoreexEndInitialLP(
 
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreexAddCut(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -225,9 +225,9 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
 
    assert(fprows != NULL);
 
-   /** this method should sync the fp-lp withe the exact lp */
+   /* this method should sync the fp-lp withe the exact lp */
 
-   /** remove all rows from exact lp that are not in the floating point lp */
+   /* remove all rows from exact lp that are not in the floating point lp */
    for( i = nrowsex - 1; i >= 0; --i )
    {
       SCIP_ROW* fprow =lpex->rows[i]->fprow;
@@ -246,10 +246,10 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
       rowex = SCIProwGetExRow(lpex, fplp->rows[i]);
       if( rowex != NULL )
       {
-         /** if the row is already in lp, do nothing */
+         /* if the row is already in lp, do nothing */
          if( !SCIProwexIsInLP(rowex) )
          {
-            /** add the exact row to the exact lp */
+            /* add the exact row to the exact lp */
             SCIP_CALL( SCIPlpexAddRow(lpex, blkmem, set, eventqueue,
                 eventfilter, rowex, 0) );
          }
@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
 
 /** clears the separation storage without adding the cuts to the LP */
 SCIP_RETCODE SCIPsepastoreexClearCuts(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -320,7 +320,7 @@ SCIP_ROWEX** SCIPsepastoreexGetCuts(
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreexGetNCuts(
-   SCIP_SEPASTOREEX*       sepastoreex           /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {
    assert(sepastoreex != NULL);

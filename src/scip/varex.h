@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   var.h
+/**@file   varex.h
  * @ingroup INTERNALAPI
  * @brief  internal methods for exact data of problem variables
  * @author Leon Eifler
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
 /** return the status of the exact variable data */
 SCIP_VARSTATUS SCIPvarGetStatusExact(
-   SCIP_VAR*             var                /**< scip variabel */
+   SCIP_VAR*             var                 /**< scip variable */
    );
 
 /** gets column of COLUMN variable */

@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LPEX*            lp                /**< current LP data */
+   SCIP_LPEX*            lp                  /**< current LP data */
    )
 {
    if( !set->misc_exactsolve )
@@ -86,7 +86,6 @@ SCIP_RETCODE SCIPvarColumnExact(
    assert(var->exactdata != NULL);
 
    SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
-
 
    /* switch variable status */
    var->exactdata->exvarstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
@@ -894,7 +893,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
 /** return the status of the exact variable data */
 SCIP_VARSTATUS SCIPvarGetStatusExact(
-   SCIP_VAR*             var                /**< scip variabel */
+   SCIP_VAR*             var                 /**< scip variable */
    )
 {
    assert(var != NULL);

@@ -539,7 +539,7 @@ void SCIPsortIntIntPtrPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   void**                ptrarray2,           /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 

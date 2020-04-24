@@ -645,9 +645,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -661,9 +661,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -1006,7 +1006,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_Rational**       obj,                /**< objective function values of new columns */
    SCIP_Rational**       lb,                 /**< lower bounds of new columns */
    SCIP_Rational**       ub,                 /**< upper bounds of new columns */
-   char**                colnames,       /**< column names, or NULL */
+   char**                colnames,           /**< column names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    int*                  beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
    int*                  ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
@@ -1656,7 +1656,6 @@ SCIP_RETCODE SCIPlpiScaleCol(
 #endif
 
 
-
 /*
  * Data Accessing Methods
  */
@@ -2064,8 +2063,6 @@ SCIP_RETCODE SCIPlpiexGetCoef(
    return SCIP_OKAY;
 }
 /**@} */
-
-
 
 
 /*
@@ -2639,7 +2636,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 #endif
 
 
-
 /*
  * Solution Information Methods
  */
@@ -3209,8 +3205,6 @@ SCIP_RETCODE SCIPlpiexGetRealSolQuality(
 /**@} */
 
 
-
-
 /*
  * LP Basis Methods
  */
@@ -3615,8 +3609,6 @@ SCIP_RETCODE SCIPlpiexGetBInvACol(
 /**@} */
 
 
-
-
 /*
  * LP State Methods
  */
@@ -3671,7 +3663,7 @@ SCIP_RETCODE SCIPlpiexGetState(
  */
 SCIP_RETCODE SCIPlpiexSetState(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
-   BMS_BLKMEM*           blkmem,         /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {
@@ -3789,8 +3781,8 @@ SCIP_Bool SCIPlpiexHasStateBasis(
 
 /** reads LP state (like basis information from a file */
 SCIP_RETCODE SCIPlpiexReadState(
-   SCIP_LPIEX*           lpi,               /**< LP interface structure */
-   const char*           fname              /**< file name */
+   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
@@ -3808,8 +3800,8 @@ SCIP_RETCODE SCIPlpiexReadState(
 
 /** writes LPi state (i.e. basis information) to a file */
 SCIP_RETCODE SCIPlpiexWriteState(
-   SCIP_LPIEX*           lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    assert(lpi != NULL);
@@ -3829,8 +3821,6 @@ SCIP_RETCODE SCIPlpiexWriteState(
 }
 
 /**@} */
-
-
 
 #if 0
 /*
@@ -3952,7 +3942,6 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@} */
 
 #endif
-
 
 /*
  * Parameter Methods
@@ -4259,7 +4248,7 @@ SCIP_Real SCIPlpiexInfinity(
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiexIsInfinity(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< the value */
    )
 {
    assert(lpi != NULL);
@@ -4269,8 +4258,6 @@ SCIP_Bool SCIPlpiexIsInfinity(
 }
 
 /**@} */
-
-
 
 
 /*

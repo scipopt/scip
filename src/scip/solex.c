@@ -55,7 +55,7 @@
 /** clears solution arrays of primal CIP solution */
 static
 SCIP_RETCODE solexClearArrays(
-   SCIP_SOL*             sol                /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPvalsexCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_VALSEX*          sourcevals           /**< primal CIP solution to copy */
+   SCIP_VALSEX*          sourcevals          /**< primal CIP solution to copy */
    )
 {
    assert(valsex != NULL);
@@ -765,7 +765,6 @@ SCIP_RETCODE SCIPsolexLinkPseudoSol(
 {
    assert(sol != NULL);
 
-
    /* clear the old solution arrays */
    SCIP_CALL( solexClearArrays(sol) );
 
@@ -891,7 +890,6 @@ SCIP_RETCODE SCIPsolexSetVal(
             RatDiffProd(sol->valsex->obj, obj, oldval);
 
             RatAddProd(sol->valsex->obj, obj, val);
-
          }
       }
       else
@@ -909,9 +907,7 @@ SCIP_RETCODE SCIPsolexSetVal(
          SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
          obj = SCIPvarGetObjExact(var);
          RatDiffProd(sol->valsex->obj, obj, oldval);
-
          RatAddProd(sol->valsex->obj, obj, val);
-
       }
       return SCIP_OKAY;
 
@@ -2019,8 +2015,9 @@ SCIP_RETCODE SCIPsolPrintRay(
 }
 #endif
 
+/** returns whether a solution is an exact rational solution */
 SCIP_Bool SCIPsolIsExactSol(
-   SCIP_SOL*             sol                /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);

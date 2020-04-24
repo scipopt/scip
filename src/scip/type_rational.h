@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-/**< type used for rational numbers */
+/** type used for rational numbers */
 typedef struct SCIP_Rational SCIP_Rational;
 
 /** dynamic array for storing SCIP_Real values */

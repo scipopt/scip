@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
    SCIP_Rational*        newobj              /**< new objective value */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarObjExact", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPaddVarExactData(
 
    assert(RatIsLE(lb, ub));
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* forbid infinite objective function values */
    if( obj != NULL && RatIsAbsInfinity(obj) )
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPwriteVarsExactLinearsum(
 {
    int v;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteVarsLinearsum", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteVarsExactLinearsum", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    for( v = 0; v < nvars; ++v )
    {

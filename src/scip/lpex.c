@@ -184,7 +184,6 @@ SCIP_Bool colexInSync(
    assert(RatIsApproxEqualReal(colex->flushedlb, fpcol->flushedlb) || (RatIsNegInfinity(colex->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
    assert(RatIsApproxEqualReal(colex->flushedub, fpcol->flushedub) || (RatIsInfinity(colex->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
 
-
    for( i = 0; i < colex->len; ++i )
    {
       assert(RatIsApproxEqualReal(colex->vals[i], fpcol->vals[i]));
@@ -346,7 +345,7 @@ void colexSortLP(
  */
 static
 void colexSortNonLP(
-   SCIP_COLEX*           col                   /**< column to be sorted */
+   SCIP_COLEX*           col                 /**< column to be sorted */
    )
 {
    int i;
@@ -3146,9 +3145,9 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 /** frees the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpPsdataFree(
-   SCIP_LPEX*           lp,                 /**< pointer to LP data object */
-   SCIP_SET*            set,                /**< global SCIP settings */
-   BMS_BLKMEM*          blkmem              /**< block memory buffers */
+   SCIP_LPEX*            lp,                 /**< pointer to LP data object */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory buffers */
    )
 {
    SCIP_PSDATA* psdata;
@@ -3430,9 +3429,8 @@ SCIP_RETCODE SCIPlpexAddRow(
    assert(rowex->lppos == -1);
    assert(rowex->fprow != NULL);
 
-   /** todo: exip do we need locks on exact rows? */
+   /** @todo: exip do we need locks on exact rows? */
    SCIProwexCapture(rowex);
-   //SCIProwLock(row);
 
    SCIPsetDebugMsg(set, "adding row <%s> to LP (%d rows, %d cols)\n", rowex->fprow->name, lpex->nrows, lpex->ncols);
 #ifdef SCIP_DEBUG
@@ -3655,7 +3653,6 @@ void SCIPcolexCalcFarkasRedcostCoef(
                RatAdd(result, result, tmp);
             else
                RatDiff(result, result, tmp);
-
          }
       }
    }
@@ -3965,7 +3962,7 @@ void SCIProwexGetSolActivity(
    SCIP_Rational*        result              /**< resulting activity */
    )
 {
-   /** todo: exip: rational solution might be necessary */
+   /** @todo: exip: rational solution might be necessary */
    SCIP_COLEX* colex;
    SCIP_Real inf;
    SCIP_Rational* solval;
@@ -4001,7 +3998,6 @@ void SCIProwexGetSolActivity(
 
       RatMult(solval, solval, rowex->vals[i]);
       RatAdd(result, result, solval);
-
    }
 
    RatFreeBuffer(set->buffer, &solval);
@@ -4202,8 +4198,8 @@ void SCIProwexRecalcLPActivity(
       assert(!RatIsInfinity(colex->primsol));
       assert(col->lppos >= 0);
       assert(row->linkpos[c] >= 0);
-      RatAddProd(rowex->activity, rowex->vals[c], colex->primsol);
 
+      RatAddProd(rowex->activity, rowex->vals[c], colex->primsol);
    }
 
    if( row->nunlinked > 0 )
@@ -4218,10 +4214,7 @@ void SCIProwexRecalcLPActivity(
          assert(col->lppos >= 0 || col->primsol == 0.0);
          assert(col->lppos == -1 || row->linkpos[c] == -1);
          if( col->lppos >= 0 )
-         {
             RatAddProd(rowex->activity, rowex->vals[c], colex->primsol);
-
-         }
       }
    }
 #ifndef NDEBUG
@@ -5158,7 +5151,6 @@ SCIP_RETCODE SCIPlpexGetSol(
             (RatIsNegInfinity(lpicols[c]->lb) || !RatIsLT(lpicols[c]->primsol, lpicols[c]->lb))
             && (RatIsInfinity(lpicols[c]->ub) || !RatIsGT(lpicols[c]->primsol, lpicols[c]->ub));
          RatAddProd(primalbound, lpicols[c]->primsol, lpicols[c]->obj);
-
       }
 
       /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
@@ -5194,12 +5186,10 @@ SCIP_RETCODE SCIPlpexGetSol(
          if( RatIsPositive(lpicols[c]->redcost) && !RatIsNegInfinity(lpicols[c]->lb) )
          {
             RatAddProd(dualbound, lpicols[c]->redcost, lpicols[c]->lb);
-
          }
          else if( RatIsNegative(lpicols[c]->redcost) && !RatIsInfinity(lpicols[c]->ub) )
          {
             RatAddProd(dualbound, lpicols[c]->redcost, lpicols[c]->ub);
-
          }
       }
    }
@@ -5249,13 +5239,11 @@ SCIP_RETCODE SCIPlpexGetSol(
          {
             RatDiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
             RatAddProd(dualbound, tmp, lpirows[r]->dualsol);
-
          }
          else if( RatIsNegative(lpirows[r]->dualsol) && !RatIsInfinity(lpirows[r]->rhs) )
          {
             RatDiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
             RatAddProd(dualbound, tmp, lpirows[r]->dualsol);
-
          }
       }
    }
@@ -5386,10 +5374,7 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
       }
 
       if( !RatIsZero(ray[c]) )
-      {
          RaddProd(rayobjval, ray[c], col->obj);
-
-      }
 
       /* Many LP solvers cannot directly provide a feasible solution if they detected unboundedness. We therefore first
        * heuristically try to construct a primal solution.
@@ -5425,8 +5410,6 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
          assert( col != NULL );
          assert( col->lppos >= 0 );
          assert( row->linkpos[c] >= 0 );
-
-
       }
 
       if( row->nunlinked > 0 )
@@ -5440,7 +5423,6 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
             if( col->lppos >= 0 )
             {
                RaddProd(act, row->vals[c], primsol[col->lppos]);
-
             }
          }
       }
@@ -5575,7 +5557,6 @@ SCIP_RETCODE SCIPlpexGetPrimalRay(
                                               *   (all entries have to be initialized to 0 before) */
    )
 {
-
    SCIP_COLEX** lpicols;
    SCIP_Rational** lpiray;
    SCIP_VAR* var;
@@ -5730,7 +5711,6 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
 
             assert(pos >= 0 && pos < nlpicols);
             RatAddProd(farkascoefs[pos], dualfarkas[r], lpirows[r]->vals[c]);
-
          }
 
          /* the row contributes with its left-hand side to the proof */
@@ -5739,15 +5719,14 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
             assert(!RatIsNegInfinity(lpirows[r]->lhs));
             RatDiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
             RatAddProd(farkaslhs, tmp, dualfarkas[r]);
-
          }
+
          /* the row contributes with its right-hand side to the proof */
          else if( RatIsNegative(dualfarkas[r]) )
          {
             assert(!RatIsInfinity(lpirows[r]->rhs));
             RatDiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
             RatAddProd(farkaslhs, tmp, dualfarkas[r]);
-
          }
       }
    }

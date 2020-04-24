@@ -390,7 +390,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    assert(scip != NULL);
    assert(sol != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPsol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPsolexOverwriteFPSol(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
@@ -440,7 +440,6 @@ SCIP_RETCODE SCIPprintSolex(
 
    RatMessage(scip->messagehdlr, file, objvalue);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
-
 
    SCIP_CALL( SCIPsolexPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
          printzeros) );
@@ -499,7 +498,7 @@ SCIP_RETCODE SCIPcheckSolex(
    SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSolex", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* return immediately if the solution is of type partial */
    if( SCIPsolIsPartial(sol) )

@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -15,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_lpex.c
- * @brief  public methods for the LP relaxation, rows and columns
+ * @brief  public methods for the exact LP relaxation, rows and columns
  * @author Leon Eifler
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
@@ -140,7 +139,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
    SCIP_ROWEX**          row                 /**< pointer to LP row */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPreleaseRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPreleaseRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwexRelease(row, scip->mem->probmem, scip->set, scip->lpex) );
 
@@ -149,8 +148,8 @@ SCIP_RETCODE SCIPreleaseRowExact(
 
 static
 void SCIProwexForceSort(
-   SCIP_ROWEX*           row,
-   SCIP_SET*             set
+   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_SET*             set                 /**< SCIP settings */
    )
 {
    assert(row != NULL);
@@ -263,7 +262,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRowEx", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwexEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
@@ -301,7 +300,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_Rational*        rhs                 /**< right hand side of row */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreateExact(rowex, fprow, scip->mem->probmem, scip->set,
                                  scip->stat, scip->lpex, 0, NULL, NULL, lhs, rhs,
@@ -324,7 +323,7 @@ void SCIPgetRowSolFeasibilityExact(
    SCIP_Rational*        result              /**< result pointer */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibilityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
       SCIProwexGetSolFeasibility(row, scip->set, scip->stat, sol, result);
@@ -349,7 +348,7 @@ void SCIPgetRowSolActivityExact(
    SCIP_Rational*        result              /**< result pointer */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
       SCIProwexGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
@@ -378,7 +377,7 @@ SCIP_RETCODE SCIPprintRowex(
 {
    assert(row != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowex", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwexPrint(row, scip->messagehdlr, file);
 

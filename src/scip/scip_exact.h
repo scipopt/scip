@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
 /** force the next lp to be solved by a rational lp solver */
 SCIP_EXPORT
 SCIP_RETCODE SCIPforceExactSolve(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

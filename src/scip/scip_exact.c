@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    assert(scip->stat != NULL);
    assert(scip->lp != NULL && scip->lpex != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcomputeSafeBound", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPlpexComputeSafeBound(scip->lp, scip->lpex, scip->set, scip->messagehdlr, SCIPblkmem(scip),
          scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpex->lpiitlim,
@@ -291,7 +291,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
 
 /** force the next lp to be solved exactly */
 SCIP_RETCODE SCIPforceExactSolve(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -304,8 +304,8 @@ SCIP_RETCODE SCIPforceExactSolve(
 
 /** check exact integrality of lp solution */
 SCIP_RETCODE SCIPcheckIntegralityExact(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_RESULT*          result             /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    assert(scip != NULL);
