@@ -652,7 +652,9 @@ SCIP_RETCODE addConsTerm(
       for( j = nmonomials - 1; j >= 0; --j )
       {
          if( monomials[j] != NULL )
+         {
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &monomials[j]) );
+         }
       }
 
       SCIPfreeBufferArrayNull(scip, &coefs);
