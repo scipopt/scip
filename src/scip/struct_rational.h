@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_rational.h
- * @ingroup
  * @brief  datastructures for storing rational numbers
  * @author Leon Eifler
  */
@@ -29,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_rational.h"
+#include "scip/multiprecision.hpp"
 
 #ifdef __cplusplus
 extern "C" {
