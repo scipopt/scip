@@ -74,7 +74,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
-#define QUADCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of linear constraints */
+#define EXPRCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of expr constraints */
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -9034,7 +9034,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    if( SCIPfindConshdlr(scip, "expr") != NULL )
    {
       /* notify function that upgrades quadratic constraint to setpacking */
-      SCIP_CALL( SCIPincludeExprconsUpgrade(scip, exprUpgdSetppc, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeExprconsUpgrade(scip, exprUpgdSetppc, EXPRCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    /* set partitioning constraint handler parameters */
