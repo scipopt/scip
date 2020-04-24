@@ -264,6 +264,9 @@ Test(readers, zimpl)
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
+   if( SCIPfindReader(scip, "zplreader") == NULL )
+      return;
+
    SCIP_CALL( SCIPreadProb(scip, filename, NULL));
 
    /* check that vars are what we expect; zimpl will create 2 auxiliary variables, hence we expect 5 */
