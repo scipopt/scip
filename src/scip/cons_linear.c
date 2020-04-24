@@ -17503,7 +17503,7 @@ SCIP_DECL_EXPRCONSUPGD(upgradeConsExpr)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /*
  * constraint specific interface methods
