@@ -123,11 +123,11 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 
 # build/check/compress vipr file if it exists
-echo Building vipr file ... >> $OUTFILE
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipraw
 if test -e $VIPRFILE
 then
+echo Building vipr file ... >> $OUTFILE
 cp $VIPRFILE $VIPRRAWFILE
 
 echo -----------------------------  >> $OUTFILE
