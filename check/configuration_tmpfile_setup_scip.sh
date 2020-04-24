@@ -38,6 +38,7 @@ CLIENTTMPDIR=${16} # - directory for temporary files
 SOLBASENAME=${17}  # - base name for solution file
 VISUALIZE=${18}    # - true, if the branch-and-bound search should be visualized
 SOLUFILE=${19}     # - solu file, only necessary if $SETCUTOFF is 1
+WITHCERTIFICATE=${20} # - true, if a certificate file should be created
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -114,8 +115,11 @@ echo set timing clocktype 1            >> $TMPFILE
 echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
 echo set memory savefac 1.0            >> $TMPFILE
-echo set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr >> $TMPFILE
-echo set certificate maxfilesize 100240 >> $TMPFILE
+if test "$WITHCERTIFICATE" = true
+then
+    echo set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr >> $TMPFILE
+    echo set certificate maxfilesize 100240 >> $TMPFILE
+fi
 echo set save $SETFILE                 >> $TMPFILE
 
 if test "$VISUALIZE" = true

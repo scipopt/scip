@@ -122,10 +122,12 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 
-# build vipr file
+# build/check/compress vipr file if it exists
 echo Building vipr file ... >> $OUTFILE
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipraw
+if test -e $VIPRFILE
+then
 cp $VIPRFILE $VIPRRAWFILE
 
 echo -----------------------------  >> $OUTFILE
@@ -164,6 +166,10 @@ echo Gzipping untightened vipr file ... >> $OUTFILE
 bash -c "gzip $VIPRRAWFILE 2>>$ERRFILE"  | tee -a $OUTFILE
 echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
 
+mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
+mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
+fi
+
 if test -e $SOLFILE
 then
     # translate SCIP solution format into format for solution checker. The
@@ -197,8 +203,6 @@ echo =ready=                        >> $OUTFILE
 
 mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
-mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
 
 # move a possible data file
 if [ -f "${DATFILE}" ] ;
