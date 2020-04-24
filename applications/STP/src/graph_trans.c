@@ -717,10 +717,12 @@ SCIP_RETCODE graph_transRmw(
       }
    }
 
-   assert(i == npterms);
    graph->extended = TRUE;
    graph->stp_type = STP_RMWCSP;
    graph->orgsource = graph->source;
+
+   assert(i == npterms);
+   assert(graph_valid(scip, graph));
 
    SCIPdebugMessage("Transformed to RMW \n");
 
@@ -841,6 +843,8 @@ SCIP_RETCODE graph_transPcmw2rooted(
       if( !graph_pc_isRootedPcMw(graph) )
          printf("...failed \n");
    }
+
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }

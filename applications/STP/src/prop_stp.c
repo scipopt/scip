@@ -576,7 +576,8 @@ static inline
 void propgraphFixNode(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   node,               /**< the node */
-   GRAPH*                propgraph           /**< propagator graph */
+   GRAPH*                propgraph,          /**< propagator graph */
+   SCIP_Real*            offset              /**< pointer to the offset (in/out) */
    )
 {
    assert(node >= 0 && node < propgraph->knots);
@@ -596,14 +597,14 @@ void propgraphFixNode(
       {
          if( !graph_pc_knotIsFixedTerm(propgraph, node) )
          {
-            graph_pc_knotTofixedTerm(scip, propgraph, node);
+            graph_pc_knotToFixedTerm(scip, propgraph, node, offset);
 
             SCIPdebugMessage("...fixed \n");
          }
       }
       else
       {
-         graph_pc_enforceNode(scip, propgraph, node);
+         graph_pc_enforceNode(scip, propgraph, node, offset);
 
          SCIPdebugMessage("...enforced \n");
       }
@@ -809,7 +810,7 @@ void propgraphApplyStates(
    {
       if( BRANCH_STP_VERTEX_TERM == nodestate[k] )
       {
-         propgraphFixNode(scip, k, propgraph);
+         propgraphFixNode(scip, k, propgraph, offset);
       }
       else if( BRANCH_STP_VERTEX_KILLED == nodestate[k] )
       {
@@ -910,7 +911,7 @@ SCIP_RETCODE propgraphApplyImplicationsPcMw(
                   const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
                   SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[rootedge], nfixed ) );
 
-                  graph_pc_knotTofixedTerm(scip, propgraph, i);
+                  graph_pc_knotToFixedTerm(scip, propgraph, i, offset);
                   break;
                }
             }

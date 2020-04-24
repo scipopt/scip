@@ -461,7 +461,6 @@ SCIP_Bool graphisValidPcMw(
       }
    }
 
-
    if( isRooted )
    {
       SCIP_CALL_ABORT( graph_trail_costAware(scip, g, g->source, nodevisited) );
@@ -472,6 +471,27 @@ SCIP_Bool graphisValidPcMw(
          {
             SCIPdebugMessage("disconnected fixed terminal %d \n", k);
             return FALSE;
+         }
+      }
+   }
+
+   if( isRooted && graph_pc_isMw(g) )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( !graph_pc_knotIsFixedTerm(g, k))
+            continue;
+
+         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( !EQ(g->cost[e], 0.0) )
+            {
+               if( k == g->source && graph_pc_knotIsDummyTerm(g, g->tail[e]) )
+                  continue;
+
+               SCIPdebugMessage("non-zero incoming arc for fixed MW terminal %d \n", k);
+               return FALSE;
+            }
          }
       }
    }

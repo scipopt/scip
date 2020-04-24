@@ -233,10 +233,11 @@ SCIP_RETCODE contractEdgeWithFixedEnd(
    {
       if( !graph_pc_knotIsFixedTerm(g, t) )
       {
+         assert(!graph_pc_isMw(g)); // currently does not work due to offset issue in graph_pc_knotTofixedTerm!
          assert(g->source != t);
          assert(SCIPisEQ(scip, g->prize[s], FARAWAY));
 
-         graph_pc_knotTofixedTerm(scip, g, t);
+         graph_pc_knotToFixedTerm(scip, g, t, NULL);
       }
 
       graph_pc_fixedTermToNonTerm(scip, g, s);
@@ -1050,10 +1051,11 @@ void graph_pc_knotToFixedTermProperty(
 
 
 /** Makes a node a fixed terminal */
-void graph_pc_knotTofixedTerm(
+void graph_pc_knotToFixedTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int                   node                /**< node */
+   int                   node,               /**< node */
+   SCIP_Real*            offset              /**< offset needed for RMW, or NULL */
    )
 {
    const SCIP_Bool isMw = graph_pc_isMw(g);
@@ -1077,10 +1079,43 @@ void graph_pc_knotTofixedTerm(
       termDeleteExtension(scip, g, node, TRUE);
    }
 
-   if( isMw )
+   graph_knot_chg(g, node, STP_TERM_NONE);
+   g->term2edge[node] = TERM2EDGE_NOTERM;
+
+   graph_pc_nonTermToFixedTerm(g, node, offset);
+}
+
+
+/** makes a non-terminal node a fixed terminal */
+void graph_pc_nonTermToFixedTerm(
+   GRAPH*                g,                  /**< graph data structure */
+   int                   node,               /**< node */
+   SCIP_Real*            offset              /**< offset needed for RMW, or NULL */
+   )
+{
+   const SCIP_Bool isMw = graph_pc_isMw(g);
+   assert(g->prize && g->term2edge);
+   assert(!graph_pc_knotIsFixedTerm(g, node));
+   assert(graph_pc_isRootedPcMw(g));
+   assert(!Is_term(g->term[node]));
+   assert(!Is_pseudoTerm(g->term[node]));
+   assert(!graph_pc_knotIsDummyTerm(g, node));
+   assert(g->term2edge[node] == TERM2EDGE_NOTERM);
+   assert(g->term[node] == STP_TERM_NONE);
+
+   if( isMw && g->grad[node] > 0 )
    {
+      const SCIP_Real incost = g->cost[g->inpbeg[node]];
+
+      if( offset != NULL && node != g->source  )
+      {
+         (*offset) += incost;
+      }
+
       for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
       {
+         assert(EQ(g->cost[e], incost));
+
          g->cost[e] = 0.0;
       }
    }
@@ -1504,6 +1539,8 @@ void graph_pc_enforceNonLeafTerm(
 
    if( graph_pc_isRootedPcMw(graph) )
    {
+      assert(!graph_pc_isMw(graph));
+
       /* make it a proper fixed terminal */
       graph_pc_knotToFixedTermProperty(graph, nonleafterm);
 
@@ -1537,13 +1574,14 @@ SCIP_Bool graph_pc_nonLeafTermIsEnforced(
 }
 
 
-/** Tires to enforce node without deleting or adding edges.
+/** Tries to enforce node without deleting or adding edges.
  *  I.e. the terminal is part of any optimal solution.
- *  Is not always possible!  */
+ *  Is not always possible! */
 void graph_pc_enforceNode(
    SCIP*           scip,               /**< SCIP data */
    GRAPH*          graph,              /**< graph */
-   int             term                /**< the terminal */
+   int             term,               /**< the terminal */
+   SCIP_Real*      offset              /**< pointer to the offset, for RMW only */
 )
 {
    assert(graph_pc_isPcMw(graph));
@@ -1560,7 +1598,7 @@ void graph_pc_enforceNode(
       }
       else if( graph_pc_isRootedPcMw(graph) && !graph_pc_knotIsNonLeafTerm(graph, term) )
       {
-         graph_pc_knotToFixedTermProperty(graph, term);
+         graph_pc_nonTermToFixedTerm(graph, term, offset);
       }
    }
    else
@@ -1568,7 +1606,7 @@ void graph_pc_enforceNode(
       if( graph_pc_knotIsFixedTerm(graph, term) )
          return;
 
-      if( graph_pc_knotIsNonLeafTerm(graph, term) )
+      if( !graph_pc_isMw(graph) && graph_pc_knotIsNonLeafTerm(graph, term) )
       {
          if( graph_pc_isRootedPcMw(graph) )
             graph_pc_knotToFixedTermProperty(graph, term);
@@ -1584,10 +1622,9 @@ void graph_pc_enforceNode(
       }
       else if( graph_pc_isRootedPcMw(graph) )
       {
-         assert(!Is_term(graph->term[term]));
          assert(!graph_pc_knotIsDummyTerm(graph, term));
 
-         graph_pc_knotToFixedTermProperty(graph, term);
+         graph_pc_nonTermToFixedTerm(graph, term, offset);
       }
    }
 }
@@ -2207,6 +2244,8 @@ SCIP_RETCODE graph_transPcGetRsap(
 
    p->term2edge[saproot] = TERM2EDGE_FIXEDTERM;
    p->term2edge[twinterm] = TERM2EDGE_NOTERM;
+
+   assert(p->stp_type == STP_SAP);
 
    if( nrootcands > 0 )
    {

@@ -141,6 +141,7 @@ void applyBranchHistoryToGraph(
    )
 {
    const int nnodes = graph->knots;
+   const SCIP_Bool mw = graph_pc_isMw(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
 
@@ -174,8 +175,7 @@ void applyBranchHistoryToGraph(
          }
          else if( graph_pc_isRootedPcMw(graph) )
          {
-            assert(graph->term2edge[k] == TERM2EDGE_NOTERM);
-            graph_pc_knotToFixedTermProperty(graph, k);
+            graph_pc_nonTermToFixedTerm(graph, k, NULL);
          }
       }
       else if( nodestatenew[k] == BRANCH_STP_VERTEX_KILLED )
@@ -202,7 +202,7 @@ void applyBranchHistoryToGraph(
 
             assert(SCIPisLT(scip, graph->cost[e], FARAWAY) && SCIPisLT(scip, graph->cost[flipedge(e)], FARAWAY));
 
-            if( graph->cost[e] < BLOCKED )
+            if( !mw && graph->cost[e] < BLOCKED )
                graph->cost[e] = BLOCKED;
 
             if( graph->cost[flipedge(e)] < BLOCKED )

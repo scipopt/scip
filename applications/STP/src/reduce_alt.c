@@ -4476,7 +4476,7 @@ SCIP_RETCODE reduce_sl(
             if( pc )
             {
                assert(SCIPisZero(scip, g->prize[i]) && !Is_anyTerm(g->term[i]));
-               graph_pc_knotTofixedTerm(scip, g, i);
+               graph_pc_knotToFixedTerm(scip, g, i, NULL);
             }
             else
             {
