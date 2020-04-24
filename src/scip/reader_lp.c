@@ -39,7 +39,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_varbound.h"
@@ -2597,7 +2596,7 @@ void appendLine(
 
 /* print row in LP format to file stream */
 static
-void printRow(
+SCIP_RETCODE printRow(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           rowname,            /**< row name */
@@ -2606,11 +2605,9 @@ void printRow(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Real*            linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
-   int                   nquadvarterms,      /**< number of quadratic variable terms */
-   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
-   int                   nbilinterms,        /**< number of bilinear terms */
-   SCIP_Real             rhs                 /**< right hand side */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic expression data */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
    int v;
@@ -2626,10 +2623,6 @@ void printRow(
    assert( scip != NULL );
    assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
    assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
-   assert( nquadvarterms == 0 || quadvarterms != NULL );
-
-   /* if there is a bilinear term, then there need to be at least two quadratic variables */
-   assert( nbilinterms == 0 || (bilinterms != NULL && nquadvarterms >= 2) );
 
    clearLine(linebuffer, &linecnt);
 
@@ -2663,21 +2656,91 @@ void printRow(
    }
 
    /* print quadratic part */
-   if( nquadvarterms > 0 )
+   if( quaddata != NULL )
    {
-      /* print linear coefficients of quadratic variables */
-      for( v = 0; v < nquadvarterms; ++v )
+      SCIP_CONSEXPR_EXPR** linexprs;
+      SCIP_VAR** activevars;
+      SCIP_Real* activevals;
+      SCIP_Real* lincoefs;
+      SCIP_Real constant;
+      SCIP_Real activeconstant;
+      int nbilinexprterms;
+      int nactivevars;
+      int nquadexprs;
+      int nlinexprs;
+
+      /* get data from the quadratic expression */
+      SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms);
+
+      /* allocate memory to store active linear variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nlinexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nlinexprs) );
+      nactivevars = nlinexprs;
+
+      for( v = 0; v < nlinexprs; ++v )
       {
-         assert(quadvarterms != NULL);   /* for lint */
-         if( quadvarterms[v].lincoef == 0.0 )
+         assert(linexprs != NULL && linexprs[v] != NULL);
+         assert(SCIPisConsExprExprVar(linexprs[v]));
+
+         activevars[v] = SCIPgetConsExprExprVarVar(linexprs[v]);
+         assert(activevars[v] != NULL);
+      }
+
+      /* get active variables */
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
+      constant += activeconstant;
+
+      /* print linear coefficients of linear variables */
+      for( v = 0; v < nactivevars; ++v )
+      {
+         assert(activevars != NULL);  /* for lint */
+         assert(activevals != NULL);
+
+         var = activevars[v];
+         assert( var != NULL );
+
+         /* we start a new line; therefore we tab this line */
+         if( linecnt == 0 )
+            appendLine(scip, file, linebuffer, &linecnt, " ");
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", activevals[v], varname);
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+
+      /* free memory for active linear variables */
+      SCIPfreeBufferArray(scip, &activevals);
+      SCIPfreeBufferArray(scip, &activevars);
+
+      /* adjust rhs if there is a constant */
+      if( constant != 0.0 && !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
+
+      /* print linear coefficients of quadratic variables */
+      for( v = 0; v < nquadexprs; ++v )
+      {
+         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_VAR* var;
+         SCIP_Real lincoef;
+
+         /* get linear coefficient and variable of quadratic term */
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, &lincoef, NULL, NULL, NULL);
+         assert(expr != NULL);
+         assert(SCIPisConsExprExprVar(expr));
+
+         var = SCIPgetConsExprExprVarVar(expr);
+         assert(var != NULL);
+
+         if( lincoef == 0.0 )
             continue;
 
          /* we start a new line; therefore we tab this line */
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", quadvarterms[v].lincoef, varname);
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", lincoef, varname);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
@@ -2686,32 +2749,61 @@ void printRow(
       appendLine(scip, file, linebuffer, &linecnt, " + [");
 
       /* print square terms */
-      for( v = 0; v < nquadvarterms; ++v )
+      for( v = 0; v < nquadexprs; ++v )
       {
-         assert(quadvarterms != NULL);   /* for lint */
-         if( quadvarterms[v].sqrcoef == 0.0 )
+         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_VAR* var;
+         SCIP_Real sqrcoef;
+
+         /* get square coefficient and variable of quadratic term */
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, NULL, &sqrcoef, NULL, NULL);
+         assert(expr != NULL);
+         assert(SCIPisConsExprExprVar(expr));
+
+         var = SCIPgetConsExprExprVarVar(expr);
+         assert(var != NULL);
+
+         if( sqrcoef == 0.0 )
             continue;
 
          /* we start a new line; therefore we tab this line */
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(quadvarterms[v].var));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", quadvarterms[v].sqrcoef, varname);
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", sqrcoef, varname);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       /* print bilinear terms */
-      for( v = 0; v < nbilinterms; ++v )
+      for( v = 0; v < nbilinexprterms; ++v )
       {
+         SCIP_CONSEXPR_EXPR* expr1;
+         SCIP_CONSEXPR_EXPR* expr2;
+         SCIP_VAR* var1;
+         SCIP_VAR* var2;
+         SCIP_Real bilincoef;
+
+         /* get coefficient and variables of bilinear */
+         SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &bilincoef, NULL);
+         assert(expr1 != NULL);
+         assert(SCIPisConsExprExprVar(expr1));
+         assert(expr2 != NULL);
+         assert(SCIPisConsExprExprVar(expr2));
+
+         var1 = SCIPgetConsExprExprVarVar(expr1);
+         assert(var1 != NULL);
+         var2 = SCIPgetConsExprExprVarVar(expr2);
+         assert(var2 != NULL);
+
          /* we start a new line; therefore we tab this line */
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(bilinterms[v].var1));
-         (void) SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(bilinterms[v].var2));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s * %s", bilinterms[v].coef, varname, varname2);
+         (void) SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(var1));
+         (void) SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var2));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s * %s", bilincoef, varname, varname2);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
@@ -2732,6 +2824,8 @@ void printRow(
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
 }
 
 /** prints given (linear or) quadratic constraint information in LP format to file stream */
@@ -2743,10 +2837,7 @@ SCIP_RETCODE printQuadraticCons(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Real*            linvals,            /**< array of linear coefficients values (or NULL if all linear coefficient values are 1) */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
-   int                   nquadvarterms,      /**< number of quadratic variable terms */
-   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
-   int                   nbilinterms,        /**< number of bilinear terms */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic expression data (or NULL if nlinvars > 0) */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
@@ -2760,19 +2851,17 @@ SCIP_RETCODE printQuadraticCons(
 
    assert( scip != NULL );
    assert( rowname != NULL );
+   assert( quaddata == NULL || nlinvars == 0);
 
    /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
-   assert( nquadvarterms == 0 || quadvarterms != NULL );
-   assert( nbilinterms == 0 || bilinterms != NULL );
-
    assert( lhs <= rhs );
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
    nactivevars = nlinvars;
-   if( nlinvars > 0 ) 
+   if( nlinvars > 0 )
    {
       /* duplicate variable and value array */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, linvars, nactivevars ) );
@@ -2798,27 +2887,22 @@ SCIP_RETCODE printQuadraticCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equal constraint */
-      printRow(scip, file, rowname, "", "=", activevars, activevals, nactivevars,
-         quadvarterms, nquadvarterms, bilinterms, nbilinterms,
-         rhs - activeconstant);
+      SCIP_CALL( printRow(scip, file, rowname, "", "=", activevars, activevals, nactivevars, quaddata,
+         rhs - activeconstant, transformed) );
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         printRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=",
-            activevars, activevals, nactivevars,
-            quadvarterms, nquadvarterms, bilinterms, nbilinterms,
-            lhs - activeconstant);
+         SCIP_CALL( printRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=", activevars, activevals,
+            nactivevars, quaddata, lhs - activeconstant, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
-         printRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=",
-            activevars, activevals, nactivevars,
-            quadvarterms, nquadvarterms, bilinterms, nbilinterms,
-            rhs - activeconstant);
+         SCIP_CALL( printRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=", activevars, activevals,
+            nactivevars, quaddata, rhs - activeconstant, transformed) );
       }
    }
 
@@ -2828,120 +2912,6 @@ SCIP_RETCODE printQuadraticCons(
       SCIPfreeBufferArray(scip, &activevals);
       SCIPfreeBufferArray(scip, &activevars);
    }
-
-   return SCIP_OKAY;
-}
-
-/** prints given expression constraint information in LP format to file stream */
-static
-SCIP_RETCODE printExprCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< name of the row */
-   SCIP_CONS*            cons,               /**< expression constraint */
-   SCIP_Bool             transformed         /**< transformed constraint? */
-   )
-{
-   SCIP_QUADVARTERM* quadvarterms;
-   SCIP_BILINTERM* bilinterms;
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
-   SCIP_CONSEXPR_EXPR** linexprs;
-   SCIP_VAR** linvars;
-   SCIP_Real* lincoefs;
-   SCIP_Real constant;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int nbilinexprterms;
-   int nquadexprs;
-   int nlinexprs;
-   int i;
-
-   assert(scip != NULL);
-   assert(rowname != NULL);
-   assert(cons != NULL);
-
-   /* get the quadratic representation of the expression constraint */
-   SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
-
-   /* we cannot handle expression constraint that are not quadratically representable */
-   if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
-   {
-      SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));
-      SCIPinfoMessage(scip, file, "\\ ");
-      SCIP_CALL( SCIPprintCons(scip, cons, file) );
-      SCIPinfoMessage(scip, file, ";\n");
-
-      return SCIP_OKAY;
-   }
-
-   /* get lhs and rhs */
-   lhs = SCIPgetLhsConsExpr(scip, cons);
-   rhs = SCIPgetRhsConsExpr(scip, cons);
-
-   /* transform data such that we can use printQuadraticCons() */
-   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms);
-
-   /* adjust lhs and rhs */
-   if( constant != 0.0 )
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-         lhs -= constant;
-      if( !SCIPisInfinity(scip, rhs) )
-         rhs -= constant;
-   }
-
-   /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinexprs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvarterms, nquadexprs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bilinterms, nbilinexprterms) );
-
-   /* linear terms */
-   for( i = 0; i < nlinexprs; ++i )
-   {
-      assert(linexprs != NULL && linexprs[i] != NULL);
-      assert(SCIPisConsExprExprVar(linexprs[i]));
-
-      linvars[i] = SCIPgetConsExprExprVarVar(linexprs[i]);
-      assert(linvars[i] != NULL);
-   }
-
-   /* quadratic terms */
-   for( i = 0; i < nquadexprs; ++i )
-   {
-      SCIP_CONSEXPR_EXPR* expr;
-
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, &quadvarterms[i].lincoef, &quadvarterms[i].sqrcoef,
-         NULL, NULL);
-      assert(expr != NULL);
-      assert(SCIPisConsExprExprVar(expr));
-
-      quadvarterms[i].var = SCIPgetConsExprExprVarVar(expr);
-   }
-
-   /* bilinear terms */
-   for( i = 0; i < nbilinexprterms; ++i )
-   {
-      SCIP_CONSEXPR_EXPR* expr1;
-      SCIP_CONSEXPR_EXPR* expr2;
-
-      SCIPgetConsExprQuadraticBilinTermData(quaddata, i, &expr1, &expr2, &bilinterms[i].coef, NULL);
-      assert(expr1 != NULL);
-      assert(SCIPisConsExprExprVar(expr1));
-      assert(expr2 != NULL);
-      assert(SCIPisConsExprExprVar(expr2));
-
-      bilinterms[i].var1 = SCIPgetConsExprExprVarVar(expr1);
-      bilinterms[i].var2 = SCIPgetConsExprExprVarVar(expr2);
-   }
-
-   /* print expression constraint */
-   SCIP_CALL( printQuadraticCons(scip, file, rowname, linvars, lincoefs, nlinexprs, quadvarterms, nquadexprs,
-      bilinterms, nbilinexprterms, lhs, rhs, transformed) );
-
-   /* free memory */
-   SCIPfreeBufferArray(scip, &bilinterms);
-   SCIPfreeBufferArray(scip, &quadvarterms);
-   SCIPfreeBufferArray(scip, &linvars);
 
    return SCIP_OKAY;
 }
@@ -3005,156 +2975,6 @@ void printSosCons(
    endLine(scip, file, linebuffer, &linecnt);
 }
 
-/** prints given soc constraint in LP format to file stream */
-static
-SCIP_RETCODE printSOCCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< name of the row */
-   SCIP_CONS*            cons                /**< second order cone constraint */
-   )
-{
-   int v;
-   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-   SCIP_VAR* var;
-   SCIP_Real coef;
-   SCIP_Real offset;
-   char varname[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
-   char buffer[LP_MAX_PRINTLEN];
-
-   SCIP_Real rhs;
-
-   assert( scip != NULL );
-   assert( rowname != NULL );
-   assert( cons != NULL );
-
-   /* print constraint in LP format
-    * the SOC constraint is given as
-    *   sqrt(constant + sum_i (lhscoef_i(lhsvar_i+lhsoffset_i))^2) <= rhscoef(rhsvar+rhsoffset)
-    * and is printed as
-    *    sum_i (2*lhscoef_i^2 lhs_offset_i) lhsvar_i - (2 * rhscoef^2 * rhsoffset) rhsvar 
-    *    + [ sum_i lhscoef_i^2 lhsvar_i^2 - rhscoef^2 rhsvar^2 ]
-    *  <=
-    *    - sum_i lhscoef_i^2 lhs_offset_i^2 - constant + rhscoef^2 rhsoffset^2 
-    */
-
-   clearLine(linebuffer, &linecnt);
-
-   /* start each line with a space */
-   appendLine(scip, file, linebuffer, &linecnt, " ");
-
-   /* print row name */
-   if( strlen(rowname) > 0 )
-   {
-      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s:", rowname);
-      appendLine(scip, file, linebuffer, &linecnt, consname);
-   }
-
-   rhs = -SCIPgetLhsConstantSOC(scip, cons);
-
-   /* print linear part of left hand side and add constant parts to rhs */
-   for( v = 0; v < SCIPgetNLhsVarsSOC(scip, cons); ++v )
-   {
-      var = SCIPgetLhsVarsSOC(scip, cons)[v];
-      assert( var != NULL );
-      offset = SCIPgetLhsOffsetsSOC(scip, cons)[v];
-      coef = SCIPgetLhsCoefsSOC(scip, cons)[v];
-
-      rhs -= coef * coef * offset * offset;
-
-      if( offset == 0.0 || coef == 0.0 )
-         continue;
-
-      /* we start a new line; therefore we tab this line */
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, " ");
-
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", 2*offset*coef*coef, varname);
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-   }
-
-   /* print linear part from right hand side and add constant part to rhs */
-   offset = SCIPgetRhsOffsetSOC(scip, cons);
-   coef = SCIPgetRhsCoefSOC(scip, cons);
-   if( offset != 0.0 && coef != 0.0 )
-   {
-      var = SCIPgetRhsVarSOC(scip, cons);
-      assert( var != NULL );
-
-      rhs += coef * coef * offset * offset; 
-
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, " ");
-
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", -2*offset*coef*coef, varname);
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-   }
-
-   /* start quadratic part */
-   appendLine(scip, file, linebuffer, &linecnt, " + [");
-
-   /* print quadratic part of left hand side  */
-   for( v = 0; v < SCIPgetNLhsVarsSOC(scip, cons); ++v )
-   {
-      var = SCIPgetLhsVarsSOC(scip, cons)[v];
-      assert( var != NULL );
-      coef = SCIPgetLhsCoefsSOC(scip, cons)[v];
-
-      if( coef == 0.0 )
-         continue;
-
-      /* we start a new line; therefore we tab this line */
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, " ");
-
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", coef*coef, varname);
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-   }
-
-   /* print quadratic part of right hand side  */
-   coef = SCIPgetRhsCoefSOC(scip, cons);
-   if( coef != 0.0 )
-   {
-      var = SCIPgetRhsVarSOC(scip, cons);
-      assert( var != NULL );
-
-      /* we start a new line; therefore we tab this line */
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, " ");
-
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", -coef*coef, varname);
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-   }
-
-   /* end quadratic part */
-   appendLine(scip, file, linebuffer, &linecnt, " ]");
-
-   /* print right hand side */
-   if( SCIPisZero(scip, rhs) )
-      rhs = 0.0;
-
-   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " <= %+.15g", rhs);
-
-   /* we start a new line; therefore we tab this line */
-   if( linecnt == 0 )
-      appendLine(scip, file, linebuffer, &linecnt, " ");
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   endLine(scip, file, linebuffer, &linecnt);
-
-   return SCIP_OKAY;
-}
-
 /** prints a linearization of an and-constraint into the given file */
 static
 SCIP_RETCODE printAndCons(
@@ -3200,8 +3020,8 @@ SCIP_RETCODE printAndCons(
          vars[1] = operands[v];
 
          /* print for each operator a row */
-         SCIP_CALL( printQuadraticCons(scip, file, rowname,
-               vars, vals, 2, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+         SCIP_CALL( printQuadraticCons(scip, file, rowname, vars, vals, 2, NULL, -SCIPinfinity(scip), 0.0,
+            transformed) );
       }
    }
 
@@ -3223,8 +3043,8 @@ SCIP_RETCODE printAndCons(
       vals[nvars] = (SCIP_Real) nvars;
 
       /* print aggregated operator row */
-      SCIP_CALL( printQuadraticCons(scip, file, rowname,
-            vars, vals, nvars + 1, NULL, 0, NULL, 0, -SCIPinfinity(scip), 0.0, transformed) );
+      SCIP_CALL( printQuadraticCons(scip, file, rowname, vars, vals, nvars + 1, NULL, -SCIPinfinity(scip), 0.0,
+         transformed) );
    }
 
    /* create additional linear constraint */
@@ -3232,8 +3052,8 @@ SCIP_RETCODE printAndCons(
 
    vals[nvars] = 1.0;
 
-   SCIP_CALL( printQuadraticCons(scip, file, rowname,
-         vars, vals, nvars + 1, NULL, 0, NULL, 0, -nvars + 1.0, SCIPinfinity(scip), transformed) );
+   SCIP_CALL( printQuadraticCons(scip, file, rowname, vars, vals, nvars + 1, NULL, -nvars + 1.0, SCIPinfinity(scip),
+      transformed) );
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vals);
@@ -3341,7 +3161,8 @@ SCIP_RETCODE printAggregatedCons(
 
       /* output constraint */
       (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(aggregatedVars[j]));
-      printRow(scip, file, consname, "", "=", activevars, activevals, nactivevars, NULL, 0, NULL, 0, - activeconstant);
+      SCIP_CALL( printRow(scip, file, consname, "", "=", activevars, activevals, nactivevars, NULL, - activeconstant,
+         transformed) );
    }
 
    /* free buffer arrays */
@@ -3667,12 +3488,10 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CONS** consSOS1;
    SCIP_CONS** consSOS2;
    SCIP_CONS** consExpr;
-   SCIP_CONS** consSOC;
    SCIP_CONS** consIndicator;
    int nConsSOS1 = 0;
    int nConsSOS2 = 0;
    int nConsExpr = 0;
-   int nConsSOC = 0;
    int nConsIndicator = 0;
    char consname[LP_MAX_NAMELEN];
 
@@ -3831,7 +3650,6 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consExpr, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, SCIPgetNTotalVars(scip)) );
@@ -3862,7 +3680,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-               NULL, 0, NULL, 0, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), transformed) );
+               NULL, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), transformed) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -3873,15 +3691,15 @@ SCIP_RETCODE SCIPwriteLp(
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
-                  consvars, NULL, nconsvars, NULL, 0, NULL, 0, 1.0, 1.0, transformed) );
+                  consvars, NULL, nconsvars, NULL, 1.0, 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
-                  consvars, NULL, nconsvars, NULL, 0, NULL, 0, -SCIPinfinity(scip), 1.0, transformed) );
+                  consvars, NULL, nconsvars, NULL, -SCIPinfinity(scip), 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( printQuadraticCons(scip, file, consname,
-                  consvars, NULL, nconsvars, NULL, 0, NULL, 0, 1.0, SCIPinfinity(scip), transformed) );
+                  consvars, NULL, nconsvars, NULL, 1.0, SCIPinfinity(scip), transformed) );
             break;
          }
       }
@@ -3889,7 +3707,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-               NULL, 0, NULL, 0, 1.0, SCIPinfinity(scip), transformed) );
+               NULL, 1.0, SCIPinfinity(scip), transformed) );
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -3905,7 +3723,7 @@ SCIP_RETCODE SCIPwriteLp(
             consvals[v] = (SCIP_Real)weights[v];
 
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, nconsvars,
-               NULL, 0, NULL, 0, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+               NULL, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
@@ -3920,7 +3738,7 @@ SCIP_RETCODE SCIPwriteLp(
          consvals[0] = 1.0;
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, 2, NULL, 0, NULL, 0, 
+         SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, 2, NULL,
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
@@ -3996,7 +3814,7 @@ SCIP_RETCODE SCIPwriteLp(
             /* if slackvariable is fixed, it might have been removed from constraint */
             assert( nlinvars == 0 || cnt == nlinvars-1 || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar)) );
 
-            SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
+            SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL,
                   SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -4008,15 +3826,26 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else if( strcmp(conshdlrname, "expr") == 0 )
       {
-         SCIP_CALL( printExprCons(scip, file, consname, cons, transformed) );
+         SCIP_CONSEXPR_QUADEXPR* quaddata;
+
+         /* get the quadratic representation of the expression constraint */
+         SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
+
+         /* we cannot handle expression constraint that are not quadratically representable */
+         if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+         {
+            SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
+
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, quaddata,
+            SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons), transformed) );
 
          consExpr[nConsExpr++] = cons;
-      }
-      else if( strcmp(conshdlrname, "soc") == 0 )
-      {
-         SCIP_CALL( printSOCCons(scip, file, consname, cons) );
-
-         consSOC[nConsSOC++] = cons;
       }
       else if( strcmp(conshdlrname, "and") == 0 )
       {
@@ -4081,16 +3910,6 @@ SCIP_RETCODE SCIPwriteLp(
       assert(success);
 
       SCIP_CALL( collectAggregatedVars(scip, tmpvars, ntmpvars, &aggvars, &naggvars, &saggvars, varAggregated) );
-   }
-
-   /* check for aggregated variables in second order cone constraints and output aggregations as linear constraints */
-   for( c = 0; c < nConsSOC; ++c )
-   {
-      cons = consSOC[c];
-
-      SCIP_CALL( collectAggregatedVars(scip, SCIPgetLhsVarsSOC(scip, cons), SCIPgetNLhsVarsSOC(scip, cons), &aggvars, &naggvars, &saggvars, varAggregated) );
-      var = SCIPgetRhsVarSOC(scip, cons);
-      SCIP_CALL( collectAggregatedVars(scip, &var, 1, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
 
    /* check for aggregated variables in indicator constraints and output aggregations as linear constraints */
@@ -4284,7 +4103,6 @@ SCIP_RETCODE SCIPwriteLp(
    /* free space */
    SCIPfreeBufferArray(scip, &tmpvars);
    SCIPfreeBufferArray(scip, &consIndicator);
-   SCIPfreeBufferArray(scip, &consSOC);
    SCIPfreeBufferArray(scip, &consExpr);
    SCIPfreeBufferArray(scip, &consSOS2);
    SCIPfreeBufferArray(scip, &consSOS1);
