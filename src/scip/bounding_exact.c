@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
- 
+
 #include "scip/bounding_exact.h"
 #include "scip/struct_set.h"
 #include "scip/pub_message.h"
@@ -2050,7 +2050,7 @@ SCIP_RETCODE psComputeSintPointRay(
          psdata->psintpointselection);
       return SCIP_PARAMETERWRONGVAL;
    }
-   
+
    for( i = 0; i < ndvarmap; i++ )
    {
       if( psdata->pshaspoint )

@@ -1610,7 +1610,7 @@ SCIP_RETCODE consdataRecomputeMaxActivityDelta(
    int v;
 
    RatSetReal(consdata->maxactdelta, 0.0);
-   
+
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &delta) );
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &domain) );
 
@@ -2821,7 +2821,7 @@ void consdataGetGlbActivityResiduals(
    SCIP_Rational* maxactbound;
    SCIP_Rational* absval;
    SCIP_Rational* tmp;
-   
+
    RatCreateBuffer(SCIPbuffer(scip), &minactbound);
    RatCreateBuffer(SCIPbuffer(scip), &maxactbound);
    RatCreateBuffer(SCIPbuffer(scip), &absval);
@@ -15846,7 +15846,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
          {
             SCIP_CONSDATA* consdata;
             SCIP_Rational* activity;
-            
+
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activity) );
 
             consdata = SCIPconsGetData(conss[c]);

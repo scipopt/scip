@@ -906,7 +906,7 @@ void SCIPcertificatePrintProblemComment(
    /* check if certificate output should be created */
    if( certificate->file == NULL )
       return;
-   
+
    SCIPfprintf(certificate->file, "# ");
 
    va_start(ap, formatstr);
@@ -929,7 +929,7 @@ void SCIPcertificatePrintProofComment(
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
       return;
-   
+
    SCIPfprintf(certificate->derivationfile, "# ");
 
    va_start(ap, formatstr);
@@ -1169,7 +1169,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
       SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
-      
+
       /* ensure size and insert boundval in array to be able to free it at the end */
       if( certificate->nboundvals >= certificate->boundvalsize )
       {
@@ -1178,7 +1178,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
       }
       certificate->boundvals[certificate->nboundvals] = insertbound;
       certificate->nboundvals++;
-      
+
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
 
       certificate->indexcounter++;
@@ -1298,7 +1298,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       }
       certificate->valssize =  lpex->ncols + lpex->nrows;
    }
-   
+
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
