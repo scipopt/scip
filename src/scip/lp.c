@@ -14744,10 +14744,11 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             assert( lpicols[c] != NULL );
             assert( lpicols[c]->var != NULL );
 
-            /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
+            /* check primal feasibility of (finite) primal solution; note that we also ensure that the primal
              * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
              */
             *primalfeasible = *primalfeasible
+               && !SCIPsetIsInfinity(set, REALABS(primsol[c]))
                && SCIPlpIsFeasGE(set, lp, primsol[c], lpicols[c]->lb)
                && SCIPlpIsFeasLE(set, lp, primsol[c], lpicols[c]->ub);
          }
