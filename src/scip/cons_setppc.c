@@ -7115,7 +7115,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 /** tries to upgrade an expression constraint to a setpacking constraint */
 static
 SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
-{  /*lint !e715*/
+{
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_CONSEXPR_EXPR* expr1;
    SCIP_CONSEXPR_EXPR* expr2;
@@ -7249,7 +7249,7 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    ++(*nupgdconss);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /*
  * Callback methods of constraint handler

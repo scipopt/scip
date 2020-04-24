@@ -17477,7 +17477,7 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
 /** tries to upgrade an expression constraint into a linear constraint */
 static
 SCIP_DECL_EXPRCONSUPGD(upgradeConsExpr)
-{  /*lint !e715*/
+{
    SCIP_CONSDATA* upgdconsdata;
 
    assert(nupgdconss != NULL);
@@ -17503,7 +17503,7 @@ SCIP_DECL_EXPRCONSUPGD(upgradeConsExpr)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /*
  * constraint specific interface methods
