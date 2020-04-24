@@ -548,8 +548,6 @@ SCIP_RETCODE addConsTerm(
 
          SCIP_CALL( SCIPcreateConsExprExprMonomial(scip, consexprhdlr, &monomialexpr, varpos, polyvars, polyexps) );
 
-         coefs[nmonomials] = numb_todbl(mono_get_coeff(monomial));
-
          SCIPfreeBufferArrayNull(scip, &polyexps);
          SCIPfreeBufferArrayNull(scip, &polyvars);
 
@@ -557,9 +555,12 @@ SCIP_RETCODE addConsTerm(
          if( mono_get_function(monomial) == MFUN_NONE )
          {
             monomials[nmonomials] = monomialexpr;
+            coefs[nmonomials] = numb_todbl(mono_get_coeff(monomial));
          }
          else
          {
+            coefs[nmonomials] = 1.0;
+
             /* nonlinear monomial with an extra function around it */
             switch( mono_get_function(monomial) )
             {
