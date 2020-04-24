@@ -473,6 +473,10 @@ SCIP_RETCODE mwContractTerminalsSimple(
    const int nnodes = graph_get_nNodes(g);
    int nfixed_local = 0;
    SCIP_Bool contracted = TRUE;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
+
+   assert(graph_pc_isMw(g));
+
 
    /* contract adjacent positive vertices */
    for( int i = 0; i < nnodes; i++ )
@@ -497,6 +501,10 @@ SCIP_RETCODE mwContractTerminalsSimple(
             const int i2 = g->head[e];
             if( g->mark[i2] && Is_term(g->term[i2]) && i2 != g->source )
             {
+               /* NOTE necessary, because this would currently not work with the edge contraction */
+               if( isRooted && graph_pc_knotIsFixedTerm(g, i2) && !graph_pc_knotIsFixedTerm(g, i1) )
+                  continue;
+
                SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i2, i1) );
 
                SCIPdebugMessage("contracted simple positive->positive %d->%d \n", i2, i1);
