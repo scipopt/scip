@@ -606,10 +606,6 @@ SCIP_RETCODE addConsTerm(
             case MFUN_ABS:
                SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
                break;
-            case MFUN_SGN:
-               SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, &monomials[nmonomials], monomialexpr,
-                     1.0) );
-               break;
             case MFUN_POW:
                SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &monomials[nmonomials], monomialexpr,
                      numb_todbl(mono_get_coeff(monomial))) );
