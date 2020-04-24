@@ -2339,7 +2339,6 @@ void printRowNl(
    endLine(scip, file, linebuffer, &linecnt);
 }
 
-
 /** prints given (linear or) quadratic constraint information in LP format to file stream */
 static
 SCIP_RETCODE printQuadraticCons(
@@ -2433,6 +2432,123 @@ SCIP_RETCODE printQuadraticCons(
       SCIPfreeBufferArray(scip, &activevars);
       SCIPfreeBufferArray(scip, &activevals);
    }
+
+   return SCIP_OKAY;
+}
+
+/** prints given expression constraint information in LP format to file stream
+ *
+ * @todo also support polynomial expression constraints
+ */
+static
+SCIP_RETCODE printExprCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< name of the row */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   SCIP_QUADVARTERM* quadvarterms;
+   SCIP_BILINTERM* bilinterms;
+   SCIP_CONSEXPR_QUADEXPR* quaddata;
+   SCIP_CONSEXPR_EXPR** linexprs;
+   SCIP_VAR** linvars;
+   SCIP_Real* lincoefs;
+   SCIP_Real constant;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nbilinexprterms;
+   int nquadexprs;
+   int nlinexprs;
+   int i;
+
+   assert(scip != NULL);
+   assert(rowname != NULL);
+   assert(cons != NULL);
+
+   /* get the quadratic representation of the expression constraint */
+   SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
+
+   /* we cannot handle expression constraint that are not quadratically representable */
+   if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+   {
+      SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));
+      SCIPinfoMessage(scip, file, "\\ ");
+      SCIP_CALL( SCIPprintCons(scip, cons, file) );
+      SCIPinfoMessage(scip, file, ";\n");
+
+      return SCIP_OKAY;
+   }
+
+   /* get lhs and rhs */
+   lhs = SCIPgetLhsConsExpr(scip, cons);
+   rhs = SCIPgetRhsConsExpr(scip, cons);
+
+   /* transform data such that we can use printQuadraticCons() */
+   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms);
+
+   /* adjust lhs and rhs */
+   if( constant != 0.0 )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs -= constant;
+      if( !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
+   }
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvarterms, nquadexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bilinterms, nbilinexprterms) );
+
+   /* linear terms */
+   for( i = 0; i < nlinexprs; ++i )
+   {
+      assert(linexprs != NULL && linexprs[i] != NULL);
+      assert(SCIPisConsExprExprVar(linexprs[i]));
+
+      linvars[i] = SCIPgetConsExprExprVarVar(linexprs[i]);
+      assert(linvars[i] != NULL);
+   }
+
+   /* quadratic terms */
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, &quadvarterms[i].lincoef, &quadvarterms[i].sqrcoef,
+         NULL, NULL);
+      assert(expr != NULL);
+      assert(SCIPisConsExprExprVar(expr));
+
+      quadvarterms[i].var = SCIPgetConsExprExprVarVar(expr);
+   }
+
+   /* bilinear terms */
+   for( i = 0; i < nbilinexprterms; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* expr1;
+      SCIP_CONSEXPR_EXPR* expr2;
+
+      SCIPgetConsExprQuadraticBilinTermData(quaddata, i, &expr1, &expr2, &bilinterms[i].coef, NULL);
+      assert(expr1 != NULL);
+      assert(SCIPisConsExprExprVar(expr1));
+      assert(expr2 != NULL);
+      assert(SCIPisConsExprExprVar(expr2));
+
+      bilinterms[i].var1 = SCIPgetConsExprExprVarVar(expr1);
+      bilinterms[i].var2 = SCIPgetConsExprExprVarVar(expr2);
+   }
+
+   /* print expression constraint */
+   SCIP_CALL( printQuadraticCons(scip, file, rowname, linvars, lincoefs, nlinexprs, quadvarterms, nquadexprs,
+      bilinterms, nbilinexprterms, lhs, rhs, transformed) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &bilinterms);
+   SCIPfreeBufferArray(scip, &quadvarterms);
+   SCIPfreeBufferArray(scip, &linvars);
 
    return SCIP_OKAY;
 }
@@ -2740,8 +2856,8 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_CONS* cons;
-   SCIP_CONS** consQuadratic;
-   int nConsQuadratic;
+   SCIP_CONS** consExpr;
+   int nConsExpr;
    SCIP_CONS** consNonlinear;
    int nConsNonlinear;
    SCIP_CONS** consAbspower;
@@ -2755,6 +2871,8 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_VAR** aggregatedVars;
    int nAggregatedVars;
    SCIP_HASHTABLE* varAggregated;
+
+   SCIP_VAR** tmpvars;
 
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
@@ -2770,7 +2888,7 @@ SCIP_RETCODE SCIPwritePip(
    assert( scip != NULL );
 
    nAggregatedVars = 0;
-   nConsQuadratic = 0;
+   nConsExpr = 0;
    nConsNonlinear = 0;
    nConsAbspower = 0;
    nConsAnd = 0;
@@ -2826,11 +2944,13 @@ SCIP_RETCODE SCIPwritePip(
    SCIPinfoMessage(scip, file, "Subject to\n");
 
    /* collect quadratic, nonlinear, absolute power, and, and bivariate constraints in arrays */
-   SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consExpr, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consNonlinear, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consAbspower, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consAnd, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consBivariate, nconss) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, SCIPgetNTotalVars(scip)) );
 
    for (c = 0; c < nconss; ++c)
    {
@@ -2915,16 +3035,11 @@ SCIP_RETCODE SCIPwritePip(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if( strcmp(conshdlrname, "quadratic") == 0 )
+      else if( strcmp(conshdlrname, "expr") == 0 )
       {
-         SCIP_CALL( printQuadraticCons(scip, file, consname,
-               SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
-               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
-               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetLhsQuadratic(scip, cons),
-               SCIPgetRhsQuadratic(scip, cons), transformed) );
+         SCIP_CALL( printExprCons(scip, file, consname, cons, transformed) );
 
-         consQuadratic[nConsQuadratic++] = cons;
+         consExpr[nConsExpr++] = cons;
       }
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
@@ -3258,15 +3373,19 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
    SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), nvars/10, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
-   /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
-   for (c = 0; c < nConsQuadratic; ++c)
+   /* check for aggregated variables in expression constraints and output aggregations as linear constraints */
+   for( c = 0; c < nConsExpr; ++c )
    {
-      cons = consQuadratic[c];
-      for( v = 0; v < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++v )
-      {
-         SCIP_CALL( collectAggregatedVars(1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, 
-               &nAggregatedVars, &aggregatedVars, &varAggregated) );
-      }         
+      SCIP_Bool success;
+      int ntmpvars;
+
+      /* get variables of the expression constraint */
+      SCIP_CALL( SCIPgetConsNVars(scip, consExpr[c], &ntmpvars, &success) );
+      assert(success);
+      SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, SCIPgetNTotalVars(scip), &success) );
+      assert(success);
+
+      SCIP_CALL( collectAggregatedVars(ntmpvars, tmpvars, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
 
    /* check for aggregated variables in expression trees of nonlinear constraints and output aggregations as linear constraints */
@@ -3439,7 +3558,8 @@ SCIP_RETCODE SCIPwritePip(
    }
 
    /* free space */
-   SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &tmpvars);
+   SCIPfreeBufferArray(scip, &consExpr);
    SCIPfreeBufferArray(scip, &consNonlinear);
    SCIPfreeBufferArray(scip, &consAbspower);
    SCIPfreeBufferArray(scip, &consAnd);
