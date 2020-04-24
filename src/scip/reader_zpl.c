@@ -58,6 +58,9 @@
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_sin.h"
+#include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_product.h"
 #include "scip/type_reader.h"
 
 #ifdef __cplusplus
@@ -559,6 +562,9 @@ SCIP_RETCODE addConsTerm(
          }
          else
          {
+            SCIP_CONSEXPR_EXPR* cosexpr;
+            SCIP_CONSEXPR_EXPR* prodchildren[2];
+
             coefs[nmonomials] = 1.0;
 
             /* nonlinear monomial with an extra function around it */
@@ -579,18 +585,24 @@ SCIP_RETCODE addConsTerm(
             case MFUN_LN:
                SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
                break;
-            /* TODO why was this removed? */
-            /*
             case MFUN_SIN:
-               op = SCIP_EXPR_SIN;
+               SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
                break;
             case MFUN_COS:
-               op = SCIP_EXPR_COS;
+               SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
                break;
             case MFUN_TAN:
-               op = SCIP_EXPR_TAN;
+               SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, &prodchildren[0], monomialexpr) );
+               SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, &cosexpr, monomialexpr) );
+               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &prodchildren[1], cosexpr, -1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &monomials[nmonomials], 2, prodchildren,
+                     1.0) );
+
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodchildren[1]) );
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &cosexpr) );
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodchildren[0]) );
+
                break;
-            */
             case MFUN_ABS:
                SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
                break;
@@ -613,11 +625,6 @@ SCIP_RETCODE addConsTerm(
                SCIPerrorMessage("ZIMPL function %d invalid here.\n", mono_get_function(monomial));
                (*created) = FALSE;
                break;
-#if ZIMPL_VERSION >= 330
-            case MFUN_SIN:
-            case MFUN_COS:
-            case MFUN_TAN:
-#endif
             default:
                SCIPerrorMessage("ZIMPL function %d not supported\n", mono_get_function(monomial));
                (*created) = FALSE;
