@@ -693,6 +693,13 @@ void propgraphFixEdge(
       return;
    }
 
+   /* nothing has to be done here, because tail and head will be fixed
+    * ...and later merged during presolving */
+   if( graph_pc_isMw(propgraph) )
+   {
+      return;
+   }
+
    assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, tail));
    assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, head));
 
