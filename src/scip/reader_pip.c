@@ -1863,7 +1863,6 @@ SCIP_RETCODE printRow(
    char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
-   SCIP_VAR* var;
    char varname[PIP_MAX_NAMELEN];
    char varname2[PIP_MAX_NAMELEN];
    char consname[PIP_MAX_NAMELEN + 1]; /* an extra character for ':' */
@@ -1888,6 +1887,8 @@ SCIP_RETCODE printRow(
    /* print coefficients */
    for( v = 0; v < nlinvars; ++v )
    {
+      SCIP_VAR* var;
+
       assert(linvars != NULL);  /* for lint */
       assert(linvals != NULL);
 
