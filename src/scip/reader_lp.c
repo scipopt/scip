@@ -2664,7 +2664,7 @@ SCIP_RETCODE printRow(
       SCIP_Real* activevals;
       SCIP_Real* lincoefs;
       SCIP_Real constant;
-      SCIP_Real activeconstant;
+      SCIP_Real activeconstant = 0.0;
       int nbilinexprterms;
       int nactivevars;
       int nquadexprs;
@@ -2675,7 +2675,7 @@ SCIP_RETCODE printRow(
 
       /* allocate memory to store active linear variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nlinexprs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nlinexprs) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, lincoefs, nlinexprs) );
       nactivevars = nlinexprs;
 
       for( v = 0; v < nlinexprs; ++v )
