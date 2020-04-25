@@ -1997,9 +1997,6 @@ SCIP_RETCODE printRow(
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
-      /* start quadratic part */
-      appendLine(scip, file, linebuffer, &linecnt, " + [");
-
       /* print square terms */
       for( v = 0; v < nquadexprs; ++v )
       {
@@ -2059,9 +2056,6 @@ SCIP_RETCODE printRow(
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
-
-      /* end quadratic part */
-      appendLine(scip, file, linebuffer, &linecnt, " ]");
    }
 
    /* print right hand side */
