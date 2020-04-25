@@ -182,6 +182,14 @@ void applyBranchHistoryToGraph(
       {
          assert(!pcmw || !graph_pc_knotIsFixedTerm(graph, k));
 
+         if( mw )
+         {
+            if( Is_anyTerm(graph->term[k]) )
+               continue;
+
+            graph->prize[k] = -BLOCKED;
+         }
+
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
             if( pcmw )
