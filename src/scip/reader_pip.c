@@ -2722,7 +2722,6 @@ SCIP_RETCODE SCIPwritePip(
 {
    int c;
    int v;
-   int e;
 
    int linecnt;
    char linebuffer[PIP_MAX_PRINTLEN+1];
