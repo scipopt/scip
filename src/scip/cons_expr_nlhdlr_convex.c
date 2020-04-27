@@ -1385,8 +1385,8 @@ SCIP_RETCODE estimateGradient(
 
    *success = FALSE;
 
-   /* evaluation error or a too large constant -> skip */
-   if( SCIPisInfinity(scip, REALABS(auxvalue)) )
+   /* evaluation error -> skip */
+   if( auxvalue == SCIP_INVALID )  /* lint !e777 */
    {
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)nlexpr);
       return SCIP_OKAY;
