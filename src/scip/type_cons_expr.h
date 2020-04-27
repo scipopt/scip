@@ -79,7 +79,7 @@ struct SCIP_ConsExpr_BilinTerm
    SCIP_VAR*             y;                  /**< second variable */
    union
    {
-      SCIP_CONSEXPR_AUXEXPR* auxexprs;       /**< auxiliary expressions for the implicit product of x and y */
+      SCIP_CONSEXPR_AUXEXPR** auxexprs;      /**< auxiliary expressions for the implicit product of x and y */
       SCIP_VAR*          auxvar;             /**< auxiliary variable for the explicit product of x and y */
    };
    int                   nauxexprs;          /**< number of auxexprs (0 for products without implicit relations) */
