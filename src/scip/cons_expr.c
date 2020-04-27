@@ -7162,7 +7162,7 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s>" \
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> " \
             "auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar),
             expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
