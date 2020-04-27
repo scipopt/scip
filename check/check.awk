@@ -1081,6 +1081,11 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( certified )
+      {
+         status = "vipr-ok";
+         pass++;
+      }
       else if( solstatus[prob] == "opt" )
       {
          # in case a solution was found we compare primal and dual bound
@@ -1323,14 +1328,10 @@ BEGIN {
             modelstat = 8;
             solverstat = 1;
          }
-         else if( status == "ok" || status == "solved not verified" )
+         else if( status == "ok" || status == "solved not verified" || status == "vipr-ok" )
          {
             modelstat = 1;
             solverstat = 1;
-            if( certified )
-            {
-               status = "vipr-ok"
-            }
          }
          else
          {
