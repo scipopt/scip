@@ -78,12 +78,11 @@ Test(bilinhash, createInsertFree)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* create constraint handler data */
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    /* inserts two bilinear terms into the hash table */
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL, 0, 0) );
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL, 0, 0) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlr, x, y, NULL, NULL, 0, 0, FALSE) );
+   SCIP_CALL( bilinearTermsInsert(scip, conshdlr, y, z, NULL, NULL, 0, 0, FALSE) );
    cr_expect(conshdlrdata->nbilinterms == 2);
    cr_expect(conshdlrdata->bilinterms[0].x == x);
    cr_expect(conshdlrdata->bilinterms[0].y == y);
@@ -92,9 +91,6 @@ Test(bilinhash, createInsertFree)
 
    /* free hash table */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
-
-   /* free constraint handler data */
-   SCIPfreeBlockMemory(scip, &conshdlrdata);
 }
 
 /* tests API methods for a simple problem containing two expression constraints */
