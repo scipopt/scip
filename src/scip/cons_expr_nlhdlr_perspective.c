@@ -715,9 +715,8 @@ SCIP_RETCODE exprIsSemicontinuous(
             var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
             SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
 
-            childacceptable = var_is_sc || SCIPgetConsExprExprAuxVar(child) != NULL;
-
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childvarexprs[v]) );
+            /* TODO for now we accept only actual non-sc vars; with a bit of work this can be extended to auxvars */
+            childacceptable = var_is_sc || SCIPisConsExprExprVar(child); /* || SCIPgetConsExprExprAuxVar(child) != NULL; */
 
             if( !childacceptable )
             {
@@ -726,7 +725,12 @@ SCIP_RETCODE exprIsSemicontinuous(
             }
          }
 
+         for( v = 0; v < nchildvarexprs; ++v )
+         {
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childvarexprs[v]) );
+         }
          SCIPfreeBufferArray(scip, &childvarexprs);
+
          if( !issc )
             return SCIP_OKAY;
       }
@@ -779,6 +783,9 @@ SCIP_RETCODE exprIsSemicontinuous(
       }
    }
 
+   /* this could happen if all children were linear vars and none were semicontinuous,
+    * but since expr is nonlinear, this is impossible
+    */
    assert(indicators != NULL);
    assert(nindicators > 0 && nindicators <= nbnds0);
 
@@ -935,15 +942,16 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 }
 #endif
 
-
-/** callback to be called in deinitialization */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
+   if( nlhdlr->ndetections != 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nndetects = %d", nlhdlr->ndetections);
+   }
+
    return SCIP_OKAY;
 }
-#endif
 
 /* remove an indicator from nonlinear expression data */
 static
@@ -1008,7 +1016,9 @@ SCIP_RETCODE computeOffValues(
       {
          SCIP_CALL( varIsSemicontinuous(scip, vars[v], hdlrdata->scvars, exprdata->indicators[i], &vals0[v], &var_is_sc) );
 
-         /* set vals0[v] = 0 if var is non-sc - then it will not contribute to exprvals0[i] */
+         /* set vals0[v] = 0 if var is non-sc - then it will not contribute to exprvals0[i] since any
+          * non-sc var must be linear
+          */
          if( !var_is_sc )
             vals0[v] = 0.0;
       }
@@ -2124,6 +2134,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
            "maximal number of propagation rounds in probing",
            &nlhdlrdata->maxproprounds, FALSE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX, NULL, NULL) );
 
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
