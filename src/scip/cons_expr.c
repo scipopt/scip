@@ -13374,6 +13374,44 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    return NULL;
 }
 
+/** returns the index of the bilinear term representing the product of the two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns -1 if the variables do not appear bilinearly.
+ */
+int SCIPgetConsExprBilinTermIdx(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_BILINTERM entry;
+   int idx;
+
+   assert(consexprhdlr != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* use a new entry to find the image in the bilinear hash table */
+   entry.x = x;
+   entry.y = y;
+   idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
+   assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
+
+   return idx;
+}
+
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_RETCODE bilinearTermsInsert(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13392,6 +13430,7 @@ SCIP_RETCODE bilinearTermsInsert(
    SCIP_CONSEXPR_BILINTERM entry;
    int idx;
    int i;
+   /* TODO adding implicit product to existing */
 
    assert(conshdlr != NULL);
    assert(x != NULL);
@@ -13512,7 +13551,10 @@ SCIP_RETCODE bilinearTermsInsert(
    /* capture variables */
    SCIP_CALL( SCIPcaptureVar(scip, x) );
    SCIP_CALL( SCIPcaptureVar(scip, y) );
-   SCIP_CALL( SCIPcaptureVar(scip, isimplicit ? auxexpr->auxvar : auxvar) );
+   if( (isimplicit ? auxexpr->auxvar : auxvar) != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, isimplicit ? auxexpr->auxvar : auxvar) );
+   }
 
    return SCIP_OKAY;
 }
