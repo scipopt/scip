@@ -249,26 +249,28 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       return SCIP_OKAY;
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detecting expr %p aka", (void*)expr);
+   SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detecting expr %p aka ", (void*)expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "Have to enforce: Below? %s. Above? %s\n", *enforcedbelow ? "no" : "yes", *enforcedabove ? "no" : "yes");
 #endif
-   SCIPdebugMsg(scip, "checking if expr %p is a propagable quadratic\n", (void*)expr);
 
    /* check whether expression is quadratic (a sum with at least one square or bilinear term) */
    SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
 
    /* not quadratic -> nothing for us */
    if( quaddata == NULL )
+   {
+      SCIPdebugMsg(scip, "expr %p is not quadratic -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    propagable = isPropagable(quaddata);
 
    /* if we are not propagable and are in presolving, return */
    if( !propagable && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
    {
-      SCIPdebugMsg(scip, "expr %p is not propagable and in presolving -> abort detect\n");
+      SCIPdebugMsg(scip, "expr %p is not propagable and in presolving -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
    }
 
@@ -279,7 +281,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
     * delete this
     */
    if( !propagable )
+   {
+      SCIPdebugMsg(scip, "expr %p is not propagable -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    /* store quadratic in nlhdlrexprdata */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -308,7 +313,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
    /* for now, we do not care about separation if we are not solving */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -317,7 +325,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
     */
    SCIP_CALL( SCIPgetBoolParam(scip, "constraints/expr/nlhdlr/convex/cvxquadratic", &nlhdlrconvexdoesquadratic) );
    if( nlhdlrconvexdoesquadratic )
+   {
+      SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate, nlhldr_convex will separate\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    /* check if we can do something more: check curvature of quadratic function stored in nlexprdata
     * this is currently only used to decide whether we want to separate, so it can be skipped if in presolve
@@ -378,6 +389,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
          SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &quadexpr, NULL, NULL, NULL, NULL);
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, quadexpr, NULL) );
       }
+
+      SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate and separate\n", (void*)expr);
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate only\n", (void*)expr);
    }
 
    if( SCIPareConsExprQuadraticExprsVariables(quaddata) )
