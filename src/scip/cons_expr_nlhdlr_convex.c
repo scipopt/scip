@@ -33,6 +33,7 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/dbldblarith.h"
 
 /* fundamental nonlinear handler properties */
 #define CONVEX_NLHDLR_NAME     "convex"
@@ -1374,6 +1375,7 @@ SCIP_RETCODE estimateGradient(
    )
 {
    SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_Real QUAD(constant);
    int i;
 
    assert(nlhdlrexprdata != NULL);
@@ -1402,7 +1404,12 @@ SCIP_RETCODE estimateGradient(
       return SCIP_OKAY;
    }
 
-   /* add gradient underestimator to rowprep: first contribution of each variable, (x - sol) \nabla f(sol) */
+   /* add gradient underestimator to rowprep: f(sol) + (x - sol) \nabla f(sol)
+    * constant will store f(sol) - sol * \nabla f(sol)
+    * to avoid some cancellation errors when linear variables take huge values (like 1e20),
+    * we use double-double arithemtic here
+    */
+   QUAD_ASSIGN(constant, SCIPgetConsExprExprValue(nlexpr)); /* f(sol) */
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
    {
       SCIP_VAR* var;
@@ -1423,13 +1430,12 @@ SCIP_RETCODE estimateGradient(
 
       SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", deriv, SCIPvarGetName(var), varval);
 
-      /* add deriv * (var - varval) to rowprep */
+      /* add deriv * var to rowprep and deriv * (-varval) to constant */
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, deriv) );
-      SCIPaddRowprepConstant(rowprep, -deriv * varval);
+      SCIPquadprecSumQD(constant, constant, -deriv * varval);
    }
 
-   /* next add f(sol) */
-   SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprValue(nlexpr));
+   SCIPaddRowprepConstant(rowprep, QUAD_TO_DBL(constant));
    rowprep->local = FALSE;
 
    *success = TRUE;
