@@ -336,6 +336,7 @@ BEGIN {
    infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
+   certified = 0;
 }
 
 /@03/ {
@@ -775,6 +776,12 @@ BEGIN {
 }
 /^==[0-9]*==    possibly lost:/    {
    valgrindleaks += $4
+}
+#
+# vipr check
+#
+/^Successfully verified/           {
+   certified = 1;
 }
 #
 # solver status overview (in order of priority):
@@ -1320,6 +1327,10 @@ BEGIN {
          {
             modelstat = 1;
             solverstat = 1;
+            if( certified )
+            {
+               status = "vipr-ok"
+            }
          }
          else
          {
