@@ -1385,6 +1385,12 @@ SCIP_RETCODE estimateGradient(
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
 
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "estimate expression ");
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " by gradient\n");
+#endif
+
    *success = FALSE;
 
    /* evaluation error -> skip */
@@ -1478,8 +1484,16 @@ SCIP_RETCODE estimateConvexSecant(
    var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->leafexprs[0]);
    assert(var != NULL);
 
-   /* find out coordinates of var left and right to sol */
    x = SCIPgetSolVal(scip, sol, var);
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "estimate expression ");
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " by secant\n");
+   SCIPinfoMessage(scip, NULL, "integral variable <%s> = %g [%g,%g]\n", SCIPvarGetName(var), x, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+#endif
+
+   /* find out coordinates of var left and right to sol */
    if( SCIPisIntegral(scip, x) )
    {
       x = SCIPround(scip, x);
@@ -1526,6 +1540,19 @@ SCIP_RETCODE estimateConvexSecant(
    if( SCIPisInfinity(scip, REALABS(fright)) )
    {
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", SCIPgetConsExprExprValue(nlexpr), (void*)nlexpr);
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "f(%g)=%g, f(%g)=%g\n", left, fleft, right, fright);
+
+   /* skip if too steep
+    * for clay0204h, this resulted in a wrong cut from f(0)=1e12 f(1)=0.99998,
+    * since due to limited precision, this was handled as if f(1)=1
+    */
+   if( (!SCIPisZero(scip, fleft)  && REALABS(fright/fleft)*SCIPepsilon(scip) > 1.0) ||
+       (!SCIPisZero(scip, fright) && REALABS(fleft/fright)*SCIPepsilon(scip) > 1.0) )
+   {
+      SCIPdebugMsg(scip, "function is too steep, abandoning\n");
       return SCIP_OKAY;
    }
 
@@ -1723,19 +1750,25 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    if( nlhdlrexprdata->nleafs == 1 && SCIPisConsExprExprIntegral(nlhdlrexprdata->leafexprs[0]) )
    {
       SCIP_CALL( estimateConvexSecant(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_%s%d",
+         overestimate ? "over" : "under",
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    /* if secant method was not used or failed, then try with gradient */
    if( !*success )
    {
       SCIP_CALL( estimateGradient(scip, conshdlr, nlhdlrexprdata, sol, auxvalue, rowprep, success) );
-   }
 
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
-      overestimate ? "over" : "under",
-      (void*)expr,
-      sol != NULL ? "sol" : "lp",
-      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%d",
+         overestimate ? "over" : "under",
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
 
    return SCIP_OKAY;
 }
