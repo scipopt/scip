@@ -1713,7 +1713,7 @@ void SCIPgetConsExprQuadraticData(
    SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
    SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
    int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
-   int*                          nbilinexprterms   /**< buffer to store number of bilinear expressions terms, or NULL */
+   int*                          nbilinexprs       /**< buffer to store number of bilinear expressions terms, or NULL */
    );
 
 /** gives the data of a quadratic expression term
