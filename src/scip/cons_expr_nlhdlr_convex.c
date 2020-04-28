@@ -18,8 +18,6 @@
  * @author Benjamin Mueller
  * @author Stefan Vigerske
  *
- * TODO curvature information that have been computed during the detection
- *      of other nonlinear handler can not be used right now
  * TODO convex: perturb reference point if separation fails due to too large numbers
  */
 
