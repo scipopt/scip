@@ -1551,12 +1551,9 @@ SCIP_RETCODE checkConsQuadraticProblem(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_VAR** lintermvars;
-   SCIP_Real* lintermcoefs;
    int nconss = 0;
    SCIP_Real coef;
    SCIP_Real obj;
-   int objind = -1;
 
    SCIP_VAR* origObjVar;
    SCIP_Real origObjConstant = 0.0;
