@@ -96,7 +96,7 @@
 #define DEFAULT_BOUNDSTREPS            0.001 /**< minimal relative improve for strengthening bounds */
 #define DEFAULT_FILTERING_MIN              2 /**< minimal number of filtered bounds to apply another filter
                                               *   round */
-#define DEFAULT_ITLIMITFACTOR            2.5 /**< multiple of root node LP iterations used as total LP iteration
+#define DEFAULT_ITLIMITFACTOR           10.0 /**< multiple of root node LP iterations used as total LP iteration
                                               *   limit for obbt (<= 0: no limit ) */
 #define DEFAULT_MINITLIMIT             5000L /**< minimum LP iteration limit */
 #define DEFAULT_ONLYNONCONVEXVARS      FALSE /**< only apply obbt on non-convex variables */
