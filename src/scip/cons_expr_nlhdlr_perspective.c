@@ -783,10 +783,11 @@ SCIP_RETCODE exprIsSemicontinuous(
       }
    }
 
-   /* this could happen if all children were linear vars and none were semicontinuous,
-    * but since expr is nonlinear, this is impossible
-    */
-   assert(indicators != NULL);
+   /* this can happen if all children are linear vars and none are semicontinuous */
+   if( indicators == NULL )
+   {
+      return SCIP_OKAY;
+   }
    assert(nindicators > 0 && nindicators <= nbnds0);
 
    if( nindicators < nbnds0 )
