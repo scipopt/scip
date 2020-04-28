@@ -7912,7 +7912,8 @@ static
 SCIP_RETCODE addTermBilinExpr(
    SCIP*                 scip,
    SCIP_CONSEXPR_BILINTERM* term,
-   SCIP_CONSEXPR_AUXEXPR* auxexpr
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,
+   SCIP_Bool*            added
 )
 {
    SCIP_Bool found;
@@ -7941,11 +7942,13 @@ SCIP_RETCODE addTermBilinExpr(
       }
       term->auxexprs[pos] = auxexpr;
       ++(term->nauxexprs);
+      *added = TRUE;
    }
    else
    {
       term->auxexprs[pos]->underestimate += auxexpr->underestimate;
       term->auxexprs[pos]->overestimate += auxexpr->overestimate;
+      *added = FALSE;
    }
 
    return SCIP_OKAY;
@@ -8050,8 +8053,8 @@ SCIP_RETCODE bilinearTermsInsertAll(
          /* add term to the arrays and variables to the hash table */
          if( x != NULL && y != NULL )
          {
-            SCIP_CALL( bilinearTermsInsert(scip, conshdlr, x, y, SCIPgetConsExprExprAuxVar(expr), NULL,
-               SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr), FALSE) );
+            SCIP_CALL( bilinearTermsInsertExisting(scip, conshdlr, x, y, SCIPgetConsExprExprAuxVar(expr),
+                  SCIPgetConsExprExprNLocksPos(expr), SCIPgetConsExprExprNLocksNeg(expr)) );
          }
       }
    }
@@ -8070,6 +8073,7 @@ SCIP_RETCODE bilinearTermsFree(
    )
 {
    int i;
+   int j;
 
    assert(conshdlrdata != NULL);
 
@@ -8086,13 +8090,31 @@ SCIP_RETCODE bilinearTermsFree(
    /* release variables */
    for( i = 0; i < conshdlrdata->nbilinterms; ++i )
    {
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].y) );
+      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].x) );
+
+      for( j = 0; j < conshdlrdata->bilinterms[i].nauxexprs; ++j )
+      {
+         if( conshdlrdata->bilinterms[i].auxexprs[j]->auxvar != NULL )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxexprs[j]->auxvar) );
+         }
+         SCIPfreeBlockMemory(scip, &(conshdlrdata->bilinterms[i].auxexprs[j]));
+      }
+
+      if( conshdlrdata->bilinterms[i].nauxexprs > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->bilinterms[i].auxexprs), conshdlrdata->bilinterms[i].sauxexprs);
+         continue;
+      }
+
+      /* the rest is for simple terms with a single auxvar */
+
       /* it might be that there is a bilinear term without a corresponding auxiliary variable */
       if( conshdlrdata->bilinterms[i].auxvar != NULL )
       {
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxvar) );
       }
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].y) );
-      SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].x) );
    }
 
    /* free hash table */
@@ -13456,16 +13478,14 @@ int SCIPgetConsExprBilinTermIdx(
 }
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
-SCIP_RETCODE bilinearTermsInsert(
+SCIP_RETCODE bilinearTermsInsertExisting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
-   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression (for implicit relations) (might be NULL) */
    int                   nlockspos,          /**< number of positive expression locks */
-   int                   nlocksneg,          /**< number of negative expression locks */
-   SCIP_Bool             isimplicit          /**< is this an implicit product relation? */
+   int                   nlocksneg           /**< number of negative expression locks */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -13494,12 +13514,118 @@ SCIP_RETCODE bilinearTermsInsert(
    entry.x = x;
    entry.y = y;
 
-   if( !isimplicit || conshdlrdata->bilinhashtable == NULL )
-   { /* an existing product is always new */
+   idx = -1;
+
+   /* this is the first time we encounter this product */
+   /* ensure size of bilinterms array */
+   SCIP_CALL( bilinearTermsResize(scip, conshdlrdata, conshdlrdata->nbilinterms + 1) );
+
+   /* get term and set values in the created bilinear term */
+   term = &conshdlrdata->bilinterms[conshdlrdata->nbilinterms];
+   assert(term != NULL);
+   term->x = x;
+   term->y = y;
+   term->nauxexprs = 0;
+   term->sauxexprs = 0;
+   term->nlockspos = nlockspos;
+   term->nlocksneg = nlocksneg;
+   term->existing = FALSE;
+
+   /* increase the total number of bilinear terms */
+   ++(conshdlrdata->nbilinterms);
+
+   /* save to the hashtable */
+   if( conshdlrdata->bilinhashtable == NULL )
+   {
+      SCIP_CALL( SCIPhashtableCreate(&conshdlrdata->bilinhashtable, SCIPblkmem(scip), conshdlrdata->nbilinterms,
+                                       bilinearTermsGetHashkey, bilinearTermsIsHashkeyEq, bilinearTermsGetHashkeyVal,
+                                       (void*)conshdlrdata) );
+   }
+   assert(conshdlrdata->bilinhashtable != NULL);
+
+   /* insert the index of the bilinear term into the hash table; note that the index of the i-th element is (i+1)
+    * because zero can not be inserted into hash table
+    */
+   SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)(conshdlrdata->nbilinterms)) );/*lint !e571 !e776*/
+
+   /* capture product variables */
+   SCIP_CALL( SCIPcaptureVar(scip, x) );
+   SCIP_CALL( SCIPcaptureVar(scip, y) );
+
+   /* store the auxiliary variable */
+   assert(term->nauxexprs == 0);
+   term->auxvar = auxvar;
+   term->existing = TRUE;
+
+   /* capture auxuliary variable */
+   if( auxvar != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** stores the variables of a bilinear term in the data of the constraint handler */
+SCIP_RETCODE bilinearTermsInsertImplicit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
+   SCIP_Real             coefaux,
+   SCIP_Real             coefx,
+   SCIP_Real             coefy,
+   SCIP_Real             cst,
+   SCIP_Bool             overestimate
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_BILINTERM* term;
+   SCIP_CONSEXPR_BILINTERM entry;
+   int idx;
+   int nlockspos;
+   int nlocksneg;
+   SCIP_CONSEXPR_AUXEXPR* auxexpr;
+   SCIP_Bool added;
+
+   assert(conshdlr != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   nlockspos = overestimate ? 1 : 0;
+   nlocksneg = overestimate ? 0 : 1;
+
+   /* create auxexpr */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
+   auxexpr->underestimate = !overestimate;
+   auxexpr->overestimate = overestimate;
+   auxexpr->auxvar = auxvar;
+   auxexpr->coefs[0] = coefaux;
+   auxexpr->coefs[1] = coefx;
+   auxexpr->coefs[2] = coefy;
+
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   /* check if the term has already been added */
+   /* use a new entry to find the image in the bilinear hash table */
+   entry.x = x;
+   entry.y = y;
+
+   if( conshdlrdata->bilinhashtable == NULL )
+   {
       idx = -1;
    }
    else
-   { /* but implicit products might be encountered several times if different linearisations are added */
+   { /* implicit products might be encountered several times if different linearisations are added */
       idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
    }
    assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
@@ -13552,44 +13678,40 @@ SCIP_RETCODE bilinearTermsInsert(
       SCIP_CALL( SCIPcaptureVar(scip, y) );
    }
 
-   if( !isimplicit )
+   if( term->existing && term->auxvar != NULL )
    {
-      assert(term->nauxexprs == 0);
-      term->auxvar = auxvar;
-      term->existing = TRUE;
-   }
-   else
-   {
-      assert(auxvar == NULL);
-      assert(auxexpr != NULL);
+      SCIP_CONSEXPR_AUXEXPR* auxvarexpr;
+      /* this is the case where we are adding an implicitly defined relation
+       * for a product that has already been explicitly defined;
+       * convert auxvar into an auxterm */
 
-      if( term->existing && term->auxvar != NULL )
+      SCIP_CALL( SCIPallocBlockMemory(scip, &auxvarexpr) );
+
+      auxvarexpr->cst = 0.0;
+      auxvarexpr->coefs[0] = 1.0;
+      auxvarexpr->coefs[1] = 0.0;
+      auxvarexpr->coefs[2] = 0.0;
+      auxvarexpr->auxvar = term->auxvar;
+      auxvarexpr->underestimate = term->nlocksneg > 0;
+      auxvarexpr->overestimate = term->nlockspos > 0;
+
+      SCIP_CALL( addTermBilinExpr(scip, term, auxvarexpr, &added) );
+
+      if( !added )
       {
-         SCIP_CONSEXPR_AUXEXPR* auxvarexpr;
-         /* this is the case where we are adding an implicitly defined relation
-          * for a product that has already been explicitly defined;
-          * convert auxvar into an auxterm */
-
-         SCIP_CALL( SCIPallocBlockMemory(scip, &auxvarexpr) );
-
-         auxvarexpr->cst = 0.0;
-         auxvarexpr->coefs[0] = 1.0;
-         auxvarexpr->coefs[1] = 0.0;
-         auxvarexpr->coefs[2] = 0.0;
-         auxvarexpr->auxvar = term->auxvar;
-         auxvarexpr->underestimate = term->nlocksneg > 0;
-         auxvarexpr->overestimate = term->nlockspos > 0;
-
-         SCIP_CALL( addTermBilinExpr(scip, term, auxvarexpr) );
+         SCIPfreeBlockMemory(scip, &auxvarexpr);
       }
-
-      SCIP_CALL( addTermBilinExpr(scip, term, auxexpr) );
    }
 
-   /* capture auxuliary variable */
-   if( (isimplicit ? auxexpr->auxvar : auxvar) != NULL )
+   SCIP_CALL( addTermBilinExpr(scip, term, auxexpr, &added) );
+
+   if( !added )
    {
-      SCIP_CALL( SCIPcaptureVar(scip, isimplicit ? auxexpr->auxvar : auxvar) );
+      SCIPfreeBlockMemory(scip, &auxexpr);
+   }
+   else if( auxvar != NULL )
+   { /* capture auxuliary variable */
+      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
    return SCIP_OKAY;
