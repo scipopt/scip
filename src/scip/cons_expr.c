@@ -17005,8 +17005,8 @@ void SCIPgetConsExprQuadraticData(
       *lincoefs = quaddata->lincoefs;
    if( nquadexprs != NULL )
       *nquadexprs = quaddata->nquadexprs;
-   if( nbilinexprterms != NULL )
-      *nbilinexprterms = quaddata->nbilinexprterms;
+   if( nbilinexprs != NULL )
+      *nbilinexprs = quaddata->nbilinexprterms;
 }
 
 /** gives the data of a quadratic expression term
