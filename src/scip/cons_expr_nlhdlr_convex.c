@@ -1884,14 +1884,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    assert(nlhdlrdata != NULL);
    assert(!nlhdlrdata->isnlhdlrconvex);
 
-   /* ignore sums if > 1 children for now
-    * - for f(x) + g(y), i.e., distinct variables, it's better to handle f(x) and g(y) separately, as this keeps the estimation problem smaller and doesn't make the estimators worse
-    * - for f(x) + g(x), i.e., same variables, it could actually be better to handle them jointly, because we might get tighter estimators (?)
-    * - but we have no simple check which situation we are in (could well be something in between), so I'm going for the first way by default for now
-    */
-   if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
-      return SCIP_OKAY;
-
    /* ignore pure constants and variables */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
