@@ -1789,7 +1789,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< curvature of quadratics */
+   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
    );
 
 /** @} */
