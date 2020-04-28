@@ -7908,6 +7908,49 @@ SCIP_RETCODE ensureBilinTermSize(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE addTermBilinExpr(
+   SCIP*                 scip,
+   SCIP_CONSEXPR_BILINTERM* term,
+   SCIP_CONSEXPR_AUXEXPR* auxexpr
+)
+{
+   SCIP_Bool found;
+   int pos;
+   int i;
+
+   if( term->nauxexprs == 0 )
+   {
+      found = FALSE;
+      pos = 0;
+      term->auxexprs = NULL;
+   }
+   else
+   {
+      found = SCIPsortedvecFindPtr((void**)term->auxexprs, SCIPauxexprComp, auxexpr, term->nauxexprs, &pos);
+   }
+
+   if( !found )
+   {
+      SCIP_CALL( ensureBilinTermSize(scip, term, term->nauxexprs + 1) );
+
+      /* insert expression at the correct position */
+      for( i = term->nauxexprs; i > pos; --i )
+      {
+         term->auxexprs[i] = term->auxexprs[i-1];
+      }
+      term->auxexprs[pos] = auxexpr;
+      ++(term->nauxexprs);
+   }
+   else
+   {
+      term->auxexprs[pos]->underestimate += auxexpr->underestimate;
+      term->auxexprs[pos]->overestimate += auxexpr->overestimate;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** resizes array of bilinear terms */
 static
 SCIP_RETCODE bilinearTermsResize(
@@ -13429,8 +13472,6 @@ SCIP_RETCODE bilinearTermsInsert(
    SCIP_CONSEXPR_BILINTERM* term;
    SCIP_CONSEXPR_BILINTERM entry;
    int idx;
-   int i;
-   /* TODO adding implicit product to existing */
 
    assert(conshdlr != NULL);
    assert(x != NULL);
@@ -13453,7 +13494,7 @@ SCIP_RETCODE bilinearTermsInsert(
    entry.x = x;
    entry.y = y;
 
-   if( !isimplicit )
+   if( !isimplicit || conshdlrdata->bilinhashtable == NULL )
    { /* an existing product is always new */
       idx = -1;
    }
@@ -13484,8 +13525,10 @@ SCIP_RETCODE bilinearTermsInsert(
       term->x = x;
       term->y = y;
       term->nauxexprs = 0;
+      term->sauxexprs = 0;
       term->nlockspos = nlockspos;
       term->nlocksneg = nlocksneg;
+      term->existing = FALSE;
 
       /* increase the total number of bilinear terms */
       ++(conshdlrdata->nbilinterms);
@@ -13503,54 +13546,47 @@ SCIP_RETCODE bilinearTermsInsert(
        * because zero can not be inserted into hash table
        */
       SCIP_CALL( SCIPhashtableInsert(conshdlrdata->bilinhashtable, (void*)(size_t)(conshdlrdata->nbilinterms)) );/*lint !e571 !e776*/
+
+      /* capture product variables */
+      SCIP_CALL( SCIPcaptureVar(scip, x) );
+      SCIP_CALL( SCIPcaptureVar(scip, y) );
    }
 
    if( !isimplicit )
    {
       assert(term->nauxexprs == 0);
       term->auxvar = auxvar;
+      term->existing = TRUE;
    }
    else
    {
-      int pos;
-      SCIP_Bool found;
-
       assert(auxvar == NULL);
       assert(auxexpr != NULL);
 
-      if( term->nauxexprs == 0 )
+      if( term->existing && term->auxvar != NULL )
       {
-         found = FALSE;
-         pos = 0;
-      }
-      else
-      {
-         found = SCIPsortedvecFindPtr((void**)term->auxexprs, SCIPauxexprComp, auxexpr, term->nauxexprs, &pos);
+         SCIP_CONSEXPR_AUXEXPR* auxvarexpr;
+         /* this is the case where we are adding an implicitly defined relation
+          * for a product that has already been explicitly defined;
+          * convert auxvar into an auxterm */
+
+         SCIP_CALL( SCIPallocBlockMemory(scip, &auxvarexpr) );
+
+         auxvarexpr->cst = 0.0;
+         auxvarexpr->coefs[0] = 1.0;
+         auxvarexpr->coefs[1] = 0.0;
+         auxvarexpr->coefs[2] = 0.0;
+         auxvarexpr->auxvar = term->auxvar;
+         auxvarexpr->underestimate = term->nlocksneg > 0;
+         auxvarexpr->overestimate = term->nlockspos > 0;
+
+         SCIP_CALL( addTermBilinExpr(scip, term, auxvarexpr) );
       }
 
-      if( !found )
-      {
-         SCIP_CALL( ensureBilinTermSize(scip, term, term->nauxexprs + 1) );
-
-
-         /* insert expression at the correct position */
-         for( i = term->nauxexprs; i > pos; --i )
-         {
-            term->auxexprs[i] = term->auxexprs[i-1];
-         }
-         term->auxexprs[pos] = auxexpr;
-         ++(term->nauxexprs);
-      }
-      else
-      {
-         term->auxexprs[pos]->underestimate += auxexpr->underestimate;
-         term->auxexprs[pos]->overestimate += auxexpr->overestimate;
-      }
+      SCIP_CALL( addTermBilinExpr(scip, term, auxexpr) );
    }
 
-   /* capture variables */
-   SCIP_CALL( SCIPcaptureVar(scip, x) );
-   SCIP_CALL( SCIPcaptureVar(scip, y) );
+   /* capture auxuliary variable */
    if( (isimplicit ? auxexpr->auxvar : auxvar) != NULL )
    {
       SCIP_CALL( SCIPcaptureVar(scip, isimplicit ? auxexpr->auxvar : auxvar) );

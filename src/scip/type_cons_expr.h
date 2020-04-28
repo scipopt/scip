@@ -86,6 +86,7 @@ struct SCIP_ConsExpr_BilinTerm
    int                   sauxexprs;          /**< size of the auxexprs array */
    int                   nlockspos;          /**< number of positive expression locks */
    int                   nlocksneg;          /**< number of negative expression locks */
+   SCIP_Bool             existing;           /**< does the product exist explicitly in the problem? */
 };
 typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
 
