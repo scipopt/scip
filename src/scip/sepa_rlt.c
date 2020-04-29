@@ -417,6 +417,9 @@ SCIP_RETCODE addProductVars(
    int ypos;
    int xidx;
    int yidx;
+   int pos;
+   int i;
+   SCIP_Bool found;
 
    xidx = SCIPvarGetIndex(x);
    yidx = SCIPvarGetIndex(y);
@@ -432,10 +435,28 @@ SCIP_RETCODE addProductVars(
    {
       xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
    }
+   int nxvars = sepadata->nvarbilinvars[xpos];
    if( sepadata->nvarbilinvars[xpos] == 0 )
+   {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip)) );
-   sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
-   ++sepadata->nvarbilinvars[xpos];
+      found = FALSE;
+      pos = 0;
+   }
+   else
+   {
+      found = SCIPsortedvecFindPtr((void**) sepadata->varbilinvars[xpos], SCIPvarComp, y, sepadata->nvarbilinvars[xpos],
+                                   &pos);
+   }
+
+   if( !found )
+   {
+      for( i = sepadata->nvarbilinvars[xpos]; i > pos; --i )
+      {
+         sepadata->varbilinvars[xpos][i] = sepadata->varbilinvars[xpos][i - 1];
+      }
+      sepadata->varbilinvars[xpos][pos] = y;
+      ++sepadata->nvarbilinvars[xpos];
+   }
 
    if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
    {
@@ -448,12 +469,30 @@ SCIP_RETCODE addProductVars(
    {
       ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
    }
-   if( sepadata->nvarbilinvars[ypos] == 0 )
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip)) );
    if( xidx != yidx )
    {
-      sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
-      ++sepadata->nvarbilinvars[ypos];
+      int nyvars = sepadata->nvarbilinvars[ypos];
+      if( sepadata->nvarbilinvars[ypos] == 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip)) );
+         found = FALSE;
+         pos = 0;
+      }
+      else
+      {
+         found = SCIPsortedvecFindPtr((void**) sepadata->varbilinvars[ypos], SCIPvarComp, x, sepadata->nvarbilinvars[ypos],
+                                      &pos);
+      }
+
+      if( !found )
+      {
+         for( i = sepadata->nvarbilinvars[ypos]; i > pos; --i )
+         {
+            sepadata->varbilinvars[ypos][i] = sepadata->varbilinvars[ypos][i - 1];
+         }
+         sepadata->varbilinvars[ypos][pos] = y;
+         ++sepadata->nvarbilinvars[ypos];
+      }
    }
 
    /* add locks to priorities of both variables */
@@ -714,13 +753,12 @@ SCIP_RETCODE extractProducts(
    SCIP_Real sign1;
    SCIP_Real sign2;
    SCIP_Real mult;
-   SCIP_CONSEXPR_EXPR* linexpr;
    SCIP_Real lincoefs[3];
    SCIP_VAR* w;
    SCIP_VAR* x;
    SCIP_VAR* y;
    SCIP_Bool overest; /* does linexpr overestimate the product? */
-   SCIP_CONSEXPR_AUXEXPR auxexpr;
+   SCIP_Real cst;
 
    /* x must be binary */
    assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
@@ -814,12 +852,10 @@ SCIP_RETCODE extractProducts(
       lincoefs[1] = (-side2*sign1*coefs1[1] + side1*sign2*coefs2[1])*mult;
       lincoefs[2] = sign2*coefs2[1]*sign1*coefs1[2]*mult;
 
-      SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? ">=" : "<=",
+      SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? "<=" : ">=",
          lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs2[1]*side1*mult);
 
-      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[1]*side1*mult, &linexpr,
-            !overest, overest, &auxexpr) );
-      SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, !overest, overest, varmap) );
+      cst = -sign2*coefs2[1]*side1*mult;
    }
    else /* f == TRUE */
    {
@@ -845,13 +881,13 @@ SCIP_RETCODE extractProducts(
       SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? "<=" : ">=",
          lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs1[1]*side2*mult);
 
-      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[1]*side2*mult, &linexpr,
-            !overest, overest, &auxexpr) );
-      SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, !overest, overest, varmap) );
-      SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) ); /* TODO check nlocks */
-      /* TODO call add bilin from consexpr */
-      SCIP_CALL( bilinearTermsInsert(scip, sepadata->conshdlr, x, y, w, ) );
+      cst = -sign1*coefs1[1]*side2*mult;
    }
+
+   SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
+
+   SCIP_CALL( bilinearTermsInsertImplicit(scip, sepadata->conshdlr, x, y, w, lincoefs[0], lincoefs[1], lincoefs[2],
+                                            cst, overest) );
 
    return SCIP_OKAY;
 }
@@ -1749,7 +1785,7 @@ SCIP_RETCODE createSepaData(
 
    if( sepadata->detecthidden )
    {
-      int oldnterms = sepadata->nbilinterms;
+      int oldnterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
       /* find maximum variable index */
       for( i = 0; i < SCIPgetNVars(scip); ++i )
@@ -1759,8 +1795,11 @@ SCIP_RETCODE createSepaData(
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
       if( sepadata->nbilinterms - oldnterms > 0 )
+      {
          SCIPinfoMessage(scip, NULL, "\nFound hidden products");
-      SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d", sepadata->nbilinterms - oldnterms);
+         SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d",
+                                      SCIPgetConsExprNBilinTerms(sepadata->conshdlr) - oldnterms);
+      }
    }
 
    /* reallocate arrays to fit actual sizes */
@@ -1797,7 +1836,7 @@ SCIP_RETCODE createSepaData(
    sepadata->iscreated = TRUE;
    sepadata->isinitialround = TRUE;
 
-   if( sepadata->nbilinterms > 0 )
+   if( SCIPgetConsExprNBilinTerms(sepadata->conshdlr) > 0 )
       SCIPinfoMessage(scip, NULL, "\nFound bilinear terms\n");
    else
       SCIPinfoMessage(scip, NULL, "\nNo bilinear terms");
@@ -1911,6 +1950,67 @@ SCIP_RETCODE updateBestEstimators(
       sepadata->eqlinexpr[pos] = sepadata->nlinexprs[pos];
 
    return SCIP_OKAY;
+}
+
+/** get the positions of the most violated linear under- and overestimators for all products */
+static
+void getBestEstimators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< solution at which to evaluate the expressions */
+   int*                  bestunderestimators,/**< array of indices of best underestimators for each term */
+   int*                  bestoverestimators  /**< array of indices of best overestimators for each term */
+)
+{
+   SCIP_Real prodval;
+   SCIP_Real linval;
+   SCIP_Real prodviol;
+   SCIP_Real viol_below;
+   SCIP_Real viol_above;
+   int i;
+   int j;
+   SCIP_CONSEXPR_BILINTERM* terms;
+
+   assert(bestunderestimators != NULL);
+   assert(bestoverestimators != NULL);
+
+   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+
+   for( j = 0; j < SCIPgetConsExprNBilinTerms(sepadata->conshdlr); ++j )
+   {
+      viol_below = -SCIPinfinity(scip);
+      viol_above = -SCIPinfinity(scip);
+
+      /* evaluate the product expression */
+      prodval = SCIPgetSolVal(scip, sol, terms[j].x) * SCIPgetSolVal(scip, sol, terms[j].y);
+
+      bestunderestimators[j] = -1;
+      bestoverestimators[j] = -1;
+
+      /* look for the best under- and overestimator, store their positions */
+
+      /* if there are any auxexprs, look there */
+      for( i = 0; i < terms[j].nauxexprs; ++i )
+      {
+         linval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].auxexprs[i], sol);
+         prodviol = linval - prodval;
+
+         if( terms[j].auxexprs[i]->underestimate && prodviol > viol_below )
+         {
+            viol_below = prodviol;
+            bestunderestimators[j] = i;
+         }
+         if( terms[j].auxexprs[i]->overestimate && -prodviol > viol_above )
+         {
+            viol_above = -prodviol;
+            bestoverestimators[j] = i;
+         }
+
+         /* TODO also used to find equality relations here - move this elsewhere */
+      }
+
+      /* if the term has a plain auxvar, it will be treated differently - do nothing here */
+   }
 }
 
 /** tests if a row contains too many unknown bilinear terms w.r.t. the parameters */
@@ -2670,7 +2770,8 @@ SCIP_RETCODE markRowsXj(
    SCIP_VAR* xj;
    SCIP_Real vlb;
    SCIP_Real vub;
-   SCIP_Real val;
+   SCIP_Real vali;
+   SCIP_Real valj;
    SCIP_Real a;
    SCIP_Real prodval;
    SCIP_COL* coli;
@@ -2686,14 +2787,14 @@ SCIP_RETCODE markRowsXj(
    xj = sepadata->varssorted[j];
    assert(xj != NULL);
 
-   val = SCIPgetSolVal(scip, sol, xj);
+   valj = SCIPgetSolVal(scip, sol, xj);
    vlb = local ? SCIPvarGetLbLocal(xj) : SCIPvarGetLbGlobal(xj);
    vub = local ? SCIPvarGetUbLocal(xj) : SCIPvarGetUbGlobal(xj);
 
-   if( sepadata->useprojection && (vlb == val || vub == val) )
+   if( sepadata->useprojection && (vlb == valj || vub == valj) )
    {
       /* we don't want to multiply by variables that are at bound */
-      SCIPdebugMsg(scip, "Rejected multiplier %s in [%g,%g] because it is at bound (current value %g)\n", SCIPvarGetName(xj), vlb, vub, val);
+      SCIPdebugMsg(scip, "Rejected multiplier %s in [%g,%g] because it is at bound (current value %g)\n", SCIPvarGetName(xj), vlb, vub, valj);
       return SCIP_OKAY;
    }
 
@@ -2705,29 +2806,29 @@ SCIP_RETCODE markRowsXj(
       if( SCIPvarGetStatus(xi) != SCIP_VARSTATUS_COLUMN )
          continue;
 
-         val = SCIPgetSolVal(scip, sol, xi);
+      vali = SCIPgetSolVal(scip, sol, xi);
       vlb = local ? SCIPvarGetLbLocal(xi) : SCIPvarGetLbGlobal(xi);
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
-      if( sepadata->useprojection && (vlb == val || vub == val) ) /* we aren't interested in products with variables that are at bound */
+      if( sepadata->useprojection && (vlb == vali || vub == vali) ) /* we aren't interested in products with variables that are at bound */
          break;
 
-      /* find the bilinear product */
-      if( SCIPvarComp(xj, xi) < 0 )
-         idx = SCIPvarGetIndex(xj) * sepadata->maxvarindex + SCIPvarGetIndex(xi);
-      else
-         idx = SCIPvarGetIndex(xi) * sepadata->maxvarindex + SCIPvarGetIndex(xj);
-      assert( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t)idx) );
-      img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
-      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0) );
+//      /* find the bilinear product */
+//      if( SCIPvarComp(xj, xi) < 0 )
+//         idx = SCIPvarGetIndex(xj) * sepadata->maxvarindex + SCIPvarGetIndex(xi);
+//      else
+//         idx = SCIPvarGetIndex(xi) * sepadata->maxvarindex + SCIPvarGetIndex(xj);
+//      assert( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t)idx) );
+//      img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
+//      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0) );
 
       /* get largest violations on both sides, update bestunder- and overestimator for this product */
       /* if equality cuts are computed, we might end up using a different linearisation;
        * so this is an optimistic (i.e. taking the largest possible violation) estimation */
-      SCIP_CALL( updateBestEstimators(scip, sepadata, img, sol) );
+      SCIP_CALL( updateBestEstimators(scip, sepadata, img, sol) ); /* TODO img replace by term */
       posunder = sepadata->bestunderestimator[img];
       posover = sepadata->bestoverestimator[img];
-      prodval = SCIPgetConsExprExprValue(sepadata->bilinterms[img]);
+      prodval = valj * vali;
       if( posunder == sepadata->nlinexprs[img] )
       {
          prod_viol_below = 0.0;
@@ -2789,6 +2890,8 @@ SCIP_RETCODE markRowsXj(
    return SCIP_OKAY;
 }
 
+
+
 /** builds and adds the RLT cuts */
 static
 SCIP_RETCODE separateRltCuts(
@@ -2821,14 +2924,21 @@ SCIP_RETCODE separateRltCuts(
    SCIP_Bool accepted;
    SCIP_Bool buildeqcut;
    SCIP_Bool iseqrow;
+   int* bestunderestimators;
+   int* bestoverestimators;
 
    assert(projlp != NULL);
 
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestunderestimators, SCIPgetConsExprNBilinTerms(sepadata->conshdlr)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestoverestimators, SCIPgetConsExprNBilinTerms(sepadata->conshdlr)) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &row_marks, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &row_idcs, nrows) );
+
+   /* update best under- and overestimators */
+   getBestEstimators(scip, sepadata, sol, bestunderestimators, bestoverestimators);
 
    /* loop through all variables that appear in bilinear products */
    for( j = 0; j < sepadata->nbilinvars && (sepadata->maxusedvars < 0 || j < sepadata->maxusedvars); ++j )
@@ -2975,16 +3085,10 @@ SCIP_RETCODE separateRltCuts(
    SCIPdebugMsg(scip, "exit separator because cut calculation is finished\n");
 
    TERMINATE:
-   for( j = 0; j < sepadata->nbilinterms; ++j )
-   {
-      /* reset the values of bestunder- and overestimator */
-      sepadata->bestunderestimator[j] = -1;
-      sepadata->bestoverestimator[j] = -1;
-      sepadata->eqlinexpr[j] = -1;
-   }
-
    SCIPfreeBufferArray(scip, &row_idcs);
    SCIPfreeCleanBufferArray(scip, &row_marks);
+   SCIPfreeBufferArray(scip, &bestoverestimators);
+   SCIPfreeBufferArray(scip, &bestunderestimators);
 
    return SCIP_OKAY;
 }
