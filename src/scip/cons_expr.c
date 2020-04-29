@@ -13477,6 +13477,24 @@ int SCIPgetConsExprBilinTermIdx(
    return idx;
 }
 
+SCIP_Real SCIPevalConsExprBilinAuxExpr(
+   SCIP*                 scip,
+   SCIP_VAR*             x,
+   SCIP_VAR*             y,
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,
+   SCIP_SOL*             sol
+   )
+{
+   assert(scip != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(auxexpr != NULL);
+   assert(auxexpr->auxvar != NULL);
+
+   return auxexpr->cst + auxexpr->coefs[0] * SCIPgetSolVal(scip, sol, auxexpr->auxvar) +
+          auxexpr->coefs[1] * SCIPgetSolVal(scip, sol, x) + auxexpr->coefs[2] * SCIPgetSolVal(scip, sol, y);
+}
+
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_RETCODE bilinearTermsInsertExisting(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13599,6 +13617,14 @@ SCIP_RETCODE bilinearTermsInsertImplicit(
    nlockspos = overestimate ? 1 : 0;
    nlocksneg = overestimate ? 0 : 1;
 
+   /* ensure that x.index <= y.index */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+      SCIPswapReals(&coefx, &coefy);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
    /* create auxexpr */
    SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
    auxexpr->underestimate = !overestimate;
@@ -13607,13 +13633,7 @@ SCIP_RETCODE bilinearTermsInsertImplicit(
    auxexpr->coefs[0] = coefaux;
    auxexpr->coefs[1] = coefx;
    auxexpr->coefs[2] = coefy;
-
-   /* ensure that x.index <= y.index */
-   if( SCIPvarCompare(x, y) == 1 )
-   {
-      SCIPswapPointers((void**)&x, (void**)&y);
-   }
-   assert(SCIPvarCompare(x, y) < 1);
+   auxexpr->cst = cst;
 
    /* check if the term has already been added */
    /* use a new entry to find the image in the bilinear hash table */

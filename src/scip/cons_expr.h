@@ -1187,6 +1187,22 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_VAR*                  y               /**< second variable */
    );
 
+SCIP_EXPORT
+int SCIPgetConsExprBilinTermIdx(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   );
+
+SCIP_EXPORT
+SCIP_Real SCIPevalConsExprBilinAuxExpr(
+   SCIP*                 scip,
+   SCIP_VAR*             x,
+   SCIP_VAR*             y,
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,
+   SCIP_SOL*             sol
+   );
+
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE bilinearTermsInsertExisting(
