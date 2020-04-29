@@ -1271,9 +1271,9 @@ void RatPrint(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      std::cout << rational->val.sign() << "inf";
+      std::cout << rational->val.sign() << "inf" << "\n";
    else
-      std::cout << rational->val;
+      std::cout << rational->val << "\n";
 }
 
 

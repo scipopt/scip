@@ -202,14 +202,16 @@ struct SCIP_Negate
    SCIP_Real             constant;           /**< constant shift c in negation */
 };
 
+/** exact variable domains and further information */
 struct SCIP_ExVarData
 {
-   SCIP_Rational*        obj;
-   SCIP_DOMEX            locdom;
-   SCIP_DOMEX            glbdom;
-   SCIP_DOMEX            origdom;
-   SCIP_COLEX*           excol;
-   SCIP_VARSTATUS        exvarstatus;
+   SCIP_Rational*        obj;                /**< exact rational objective */
+   SCIP_DOMEX            locdom;             /**< exact local bounds */
+   SCIP_DOMEX            glbdom;             /**< exact global bound */
+   SCIP_DOMEX            origdom;            /**< original domain */
+   SCIP_COLEX*           excol;              /**< column in exact lp */
+   SCIP_VARSTATUS        exvarstatus;        /**< status in exact lp */
+   int                   origvarindex;       /**< index of original variable (needed for certificate), or -1 */
 };
 
 /** variable of the problem */

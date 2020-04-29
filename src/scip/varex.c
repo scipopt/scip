@@ -701,6 +701,7 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    var->exactdata->excol = NULL;
    var->exactdata->exvarstatus = var->varstatus;
+   var->exactdata->origvarindex = var->index;
 
    if( obj != NULL )
       SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
@@ -900,4 +901,15 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
    assert(var->exactdata != NULL);
 
    return var->exactdata->exvarstatus;
+}
+
+/** return the index of the original variable */
+int SCIPvarGetOrigIndex(
+   SCIP_VAR*             var                 /**< scip variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+
+   return var->exactdata->origvarindex;
 }

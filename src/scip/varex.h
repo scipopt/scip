@@ -141,6 +141,11 @@ SCIP_Rational* SCIPvarGetSolex(
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
+/** return the index of the original variable */
+int SCIPvarGetOrigIndex(
+   SCIP_VAR*             var                 /**< scip variable */
+   );
+
 #ifdef __cplusplus
 }
 #endif
