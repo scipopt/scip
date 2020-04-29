@@ -39,6 +39,7 @@
 #include "scip/solex.h"
 #include "scip/struct_scip.h"
 #include "scip/pub_varex.h"
+#include "scip/varex.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
@@ -270,7 +271,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       if( !RatIsZero(vals[i]) )
       {
          /* print the solution into certificate */
-         SCIPcertificatePrintProblemMessage(certificate, " %d ", SCIPvarGetIndex(vars[i]) - SCIPgetNVars(scip));
+         SCIPcertificatePrintProblemMessage(certificate, " %d ", SCIPvarGetOrigIndex(vars[i]));
          SCIPcertificatePrintProblemRational(certificate, vals[i], 10);
       }
    }
@@ -1337,7 +1338,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
             certificate->workbound->isupper = FALSE;
             RatSet(certificate->workbound->boundval, SCIPcolexGetLb(col));
          }
-         certificate->workbound->varindex = SCIPvarGetIndex(SCIPcolGetVar(col->fpcol)) - SCIPprobGetNVars(prob);
+         certificate->workbound->varindex = SCIPvarGetOrigIndex(SCIPcolGetVar(col->fpcol));
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
 
@@ -1479,7 +1480,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
 
          /* retrieve the line in the certificate of the bound */
          RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
-         certificate->workbound->varindex = SCIPvarGetIndex(vars[i])  - SCIPprobGetNVars(prob);
+         certificate->workbound->varindex = SCIPvarGetOrigIndex(vars[i]);
          certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
@@ -1626,7 +1627,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
    if( branchvar != NULL )
    {
-      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetIndex(branchvar) - SCIPprobGetNVars(prob),
+      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetOrigIndex(branchvar),
          branchbound, boundtype);
    }
 

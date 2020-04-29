@@ -570,6 +570,8 @@ SCIP_RETCODE SCIPprobTransform(
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
       /* if in exact mode copy the exact data */
       SCIP_CALL( SCIPvarCopyExactData(set, blkmem, targetvar, source->vars[v], source->objsense == SCIP_OBJSEN_MAXIMIZE) );
+      /** @todo exip: if this should stay probably wrap it */
+      targetvar->exactdata->origvarindex = source->vars[v]->index;
 
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
