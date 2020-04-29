@@ -71,9 +71,6 @@ void setup(void)
 
    cr_assert_not_null(nlhdlr);
 
-   /* enable experimental quadratic convexity check */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/convex/cvxquadratic", TRUE) );
-
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 

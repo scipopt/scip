@@ -44,7 +44,8 @@
 
 #define DEFAULT_DETECTSUM      FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
-#define DEFAULT_CVXQUADRATIC   TRUE
+#define DEFAULT_CVXQUADRATIC_CONVEX   TRUE
+#define DEFAULT_CVXQUADRATIC_CONCAVE  FALSE
 #define DEFAULT_CVXSIGNOMIAL   TRUE
 #define DEFAULT_CVXPRODCOMP    TRUE
 #define DEFAULT_HANDLETRIVIAL  FALSE
@@ -1813,7 +1814,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
-      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC, NULL, NULL) );
+      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC_CONVEX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
@@ -2158,7 +2159,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
-      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC, NULL, NULL) );
+      &nlhdlrdata->cvxquadratic, TRUE, DEFAULT_CVXQUADRATIC_CONCAVE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
