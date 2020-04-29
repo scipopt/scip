@@ -283,7 +283,7 @@ SCIP_RETCODE estimate(
          x3coef = rowprep->coefs[i];
       else
       {
-         cr_log_error("unexpected variable in rowprep");
+         SCIPerrorMessage("unexpected variable in rowprep");
          cr_assert(0);
       }
    }
