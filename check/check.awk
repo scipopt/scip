@@ -1329,7 +1329,7 @@ BEGIN {
             solverstat = 1;
             if( certified )
             {
-               status = "vipr-ok"
+               status = "ok (vipr verified)"
             }
          }
          else
