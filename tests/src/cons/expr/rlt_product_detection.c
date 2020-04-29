@@ -20,7 +20,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
+#include "scip/cons_expr.c"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -192,19 +194,47 @@ void checkLinearisation(
          "linearisation expression [%d][%d] should %soverestimate", prodidx, linidx, overestimate ? "" : "NOT ");
 }
 
+/* check a linearisation by comparing simplified expressions */
+static
+void checkAuxExpr(
+   SCIP_CONSEXPR_BILINTERM term,
+   int                   auxidx,
+   SCIP_VAR*             auxvar,             /* expected auxiliary variable */
+   SCIP_Real*            vals,               /* expected coefficients in the order w, x, y */
+   SCIP_Real             cst,                /* expected constant */
+   SCIP_Bool             underestimate,      /* should the linearisation underestimate the product? */
+   SCIP_Bool             overestimate        /* should the linearisation overestimate the product? */
+)
+{
+   int i;
+
+   cr_expect_eq(auxvar, term.auxexprs[auxidx]->auxvar);
+
+   for( i = 0; i < 3; ++i )
+   {
+      cr_expect(SCIPisEQ(scip, vals[i], term.auxexprs[auxidx]->coefs[i]), "\ni = %d: expected != given: %g != %g", i,
+                                                                           vals[i],
+                                                                           term.auxexprs[auxidx]->coefs[i]);
+   }
+   cr_expect(SCIPisEQ(scip, cst, term.auxexprs[auxidx]->cst), "\nexpected != given: %g != %g", cst,
+                                                               term.auxexprs[auxidx]->cst);
+
+   cr_expect(term.auxexprs[auxidx]->underestimate == underestimate,
+             "linearisation expression [%d] should %sunderestimate", auxidx, underestimate ? "" : "NOT ");
+   cr_expect(term.auxexprs[auxidx]->overestimate == overestimate,
+             "linearisation expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
+}
+
 Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
 {
    SCIP_CONS* cons1;
    SCIP_CONS* cons2;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSEXPR_EXPR* expr;
    SCIP_VAR* vars[3];
    SCIP_Real coefs1[3];
    SCIP_Real coefs2[3];
    SCIP_Bool cutoff;
-   SCIP_VAR* var;
-   SCIP_Real* coefs_expected;
-   SCIP_VAR** vars_expected;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    vars[0] = x1; /* w or y */
    vars[1] = x2; /* y or w */
@@ -250,56 +280,36 @@ Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .descript
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
-   cr_expect_eq(sepadata->nlinexprs[0], 4, "\nExpected 4 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
-   cr_expect_eq(sepadata->nlinexprs[1], 4, "\nExpected 4 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
+   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+
+   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   cr_assert(terms != NULL);
+
+   cr_expect_eq(terms[0].nauxexprs, 4, "\nExpected 4 linear expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 linear expressions for product 1, got %d", terms[1].nauxexprs);
 
    /* check the product expressions */
-   cr_assert(sepadata->bilinterms[0] != NULL);
-   cr_assert(sepadata->bilinterms[1] != NULL);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+   cr_expect_eq(terms[0].x, b1, "x var of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
+   cr_expect_eq(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
+   cr_expect_eq(terms[1].x, b1, "x var of product 1 should be b1, got %s", SCIPvarGetName(terms[1].x));
+   cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
-   cr_expect_eq(var, x2, "Var 1 of product 0 should be x2, got %s", SCIPvarGetName(var));
+   /* check the (sorted) auxiliary expressions and sides */
+   cr_assert(terms[0].auxexprs[0] != NULL);
+   cr_assert(terms[1].auxexprs[0] != NULL);
 
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
-   cr_expect_eq(var, x1, "Var 1 of product 1 should be x1, got %s", SCIPvarGetName(var));
+   /* first product: b1 * x2 */
+   /* check 4 expressions with binary variable = b1: 1) from two implied relations, 2) from 1st implied relation (rhs)
+    * and x1 upper bound, 3) from 1st implied relation (lhs) and x1 lower bound, 4) from implied relation and bound
+    */
+   checkAuxExpr(terms[0], 0, x1, (SCIP_Real[3]) {-4.0, -5.0, -2.0}, 1.0, FALSE, TRUE);
+   checkAuxExpr(terms[0], 1, x1, (SCIP_Real[3]) {-4.0/3.0, -8.0, 0.0}, 20.0/3.0, FALSE, TRUE);
+   checkAuxExpr(terms[0], 2, x1, (SCIP_Real[3]) {4.0/3.0, 4.0/3.0, 1.0}, 0.0, FALSE, TRUE);
+   checkAuxExpr(terms[0], 3, x1, (SCIP_Real[3]) {2.0, -9.5, 1.0}, -0.5, TRUE, FALSE);
 
-   /* check the (sorted) linear expressions and sides */
-   cr_assert(sepadata->linexprs[0][0] != NULL);
-   cr_assert(sepadata->linexprs[1][0] != NULL);
-
-   /* first product: b1x2 */
-   /* first linear expression (from first implied relation (rhs) and x1 upper bound, binary variable = b1) */
-   vars_expected = (SCIP_VAR*[2]) {b1, x1};
-   coefs_expected = (SCIP_Real[2]) {-8.0, -4.0/3.0};
-   checkLinearisation(sepadata, 0, 0, vars_expected, coefs_expected, 2, 20.0/3.0, FALSE, TRUE);
-
-   /* second linear expression (from two implied relations, binary variable = x1) */
-   vars_expected = (SCIP_VAR*[3]) {b1, x1, x2};
-   coefs_expected = (SCIP_Real[3]) {-5.0, -4.0, -2.0};
-   checkLinearisation(sepadata, 0, 1, vars_expected, coefs_expected, 3, 1.0, FALSE, TRUE);
-
-   /* third linear expression (from first implied relation (lhs) and x1 lower bound, binary variable = x1) */
-   vars_expected = (SCIP_VAR*[3]) {b1, x1, x2};
-   coefs_expected = (SCIP_Real[3]) {4.0/3.0, 4.0/3.0, 1.0};
-   checkLinearisation(sepadata, 0, 2, vars_expected, coefs_expected, 3, 0.0, FALSE, TRUE);
-
-   /* fourth linear expression (from implied relation and bound) */
-   vars_expected = (SCIP_VAR*[3]) {b1, x1, x2};
-   coefs_expected = (SCIP_Real[3]) {-9.5, 2.0, 1.0};
-   checkLinearisation(sepadata, 0, 3, vars_expected, coefs_expected, 3, -0.5, TRUE, FALSE);
-
-   /* second product: b1x1 */
-   /* second linear expression */
-   vars_expected = (SCIP_VAR*[3]) {b1, x1, x2};
-   coefs_expected = (SCIP_Real[3]) {2.75, 3.0, 1.5};
-   checkLinearisation(sepadata, 1, 3, vars_expected, coefs_expected, 3, -0.75, TRUE, FALSE);
+   /* second product: b1 * x1 */
+   checkAuxExpr(terms[1], 3, x2, (SCIP_Real[3]) {1.5, 2.75, 3.0}, -0.75, TRUE, FALSE);
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -312,15 +322,12 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSEXPR_EXPR* expr;
    SCIP_VAR* vars[3];
    SCIP_Real coefs[3];
    int nbdchgs;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
-   SCIP_VAR* var;
-   SCIP_Real* coefs_expected;
-   SCIP_VAR** vars_expected;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    vars[0] = x1; /* w or y */
    vars[1] = x2; /* y or w */
@@ -367,35 +374,22 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
+   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+
+   terms = SCIPgetConsExprBilinTerms(conshdlr);
 
    /* check the product expressions */
-   cr_assert(sepadata->bilinterms[0] != NULL);
-   cr_assert(sepadata->bilinterms[1] != NULL);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+   cr_expect_eq(terms[0].x, b1, "x var of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
+   cr_expect_eq(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
+   cr_expect_eq(terms[1].x, b1, "x var of product 1 should be b1, got %s", SCIPvarGetName(terms[1].x));
+   cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
-   cr_expect_eq(var, x2, "Var 1 of product 0 should be x2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 linear expressions for product b1x2, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 2, "\nExpected 2 linear expressions for product b1x1, got %d", terms[1].nauxexprs);
 
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
-   cr_expect_eq(var, x1, "Var 1 of product 1 should be x1, got %s", SCIPvarGetName(var));
-
-   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expressions for product b1x2, got %d", sepadata->nlinexprs[0]);
-   cr_expect_eq(sepadata->nlinexprs[1], 2, "\nExpected 2 linear expressions for product b1x1, got %d", sepadata->nlinexprs[1]);
-
-   /* check the linear expressions obtained from the implied relation and the implied bound */
-   cr_assert(sepadata->linexprs[0][1] != NULL);
-   cr_assert(sepadata->linexprs[1][0] != NULL);
-
-   /* first linear expression */
-   vars_expected = (SCIP_VAR*[2]) {b1, x1};
-   coefs_expected = (SCIP_Real[2]) {-4.0, -1.0};
-   checkLinearisation(sepadata, 0, 1, vars_expected, coefs_expected, 2, 3.0, FALSE, TRUE);
+   /* check expression from implied relation and a variable bound */
+   checkAuxExpr(terms[0], 1, x1, (SCIP_Real[3]) {-1.0, -4.0, 0.0}, 3.0, FALSE, TRUE);
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -406,19 +400,15 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
 Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
 {
    SCIP_CONS* cons1;
-   SCIP_CONS* cons2;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSEXPR_EXPR* expr;
    SCIP_VAR* vars[3];
    SCIP_Real coefs1[3];
    int nbdchgs;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
-   SCIP_VAR* var;
    SCIP_VAR* clique_vars[2];
    SCIP_Bool clique_vals[2];
-   SCIP_Real* coefs_expected;
-   SCIP_VAR** vars_expected;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    vars[0] = x1; /* w or y */
    vars[1] = b1; /* y or w */
@@ -456,7 +446,7 @@ Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .des
    SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
 
    /* construct the LP */
-   SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* TODO remove this? */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
    /* create separator data - this will also detect the products */
    SCIP_CALL( createSepaData(scip, sepadata) ); /*a1 = 2; den = a1c2 - c1a2 = 2*0 - 2.0 < 0*/
@@ -465,47 +455,31 @@ Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .des
     * or, substituting the given values: xy <= (-1/2)*(2w + (3 - 1 + 2*3)x - 2*3)
     * xy <= -w - 4x + 3
     * the second product: xy >= 3x + 1y - 3 (x = b1, y = x1)
-    * /
+    */
+
+   terms = SCIPgetConsExprBilinTerms(conshdlr);
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nbilinterms, 3, "\nExpected 3 bilinear terms, got %d", sepadata->nbilinterms);
-   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
-   cr_expect_eq(sepadata->nlinexprs[1], 4, "\nExpected 4 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
-   cr_expect_eq(sepadata->nlinexprs[2], 3, "\nExpected 3 linear expressions for product 2, got %d", sepadata->nlinexprs[2]);
+   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 linear expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 linear expressions for product 1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[2].nauxexprs, 3, "\nExpected 3 linear expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
-   cr_assert(sepadata->bilinterms[0] != NULL);
-   cr_assert(sepadata->bilinterms[1] != NULL);
-   cr_assert(sepadata->bilinterms[2] != NULL);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[2]) == 2);
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
-   cr_expect_eq(var, x1, "Var 1 of product 0 should be x1, got %s", SCIPvarGetName(var));
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
-   cr_expect_eq(var, b2, "Var 1 of product 1 should be b2, got %s", SCIPvarGetName(var));
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[0]);
-   cr_expect_eq(var, b2, "Var 0 of product 2 should be b2, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[1]);
-   cr_expect_eq(var, x1, "Var 1 of product 2 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(terms[0].x, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
+   cr_expect_eq(terms[0].y, x1, "Var 1 of product 0 should be x1, got %s", SCIPvarGetName(terms[0].y));
+   cr_expect_eq(terms[1].x, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(terms[1].x));
+   cr_expect_eq(terms[1].y, b2, "Var 1 of product 1 should be b2, got %s", SCIPvarGetName(terms[1].y));
+   cr_expect_eq(terms[2].x, b2, "Var 0 of product 2 should be b2, got %s", SCIPvarGetName(terms[2].x));
+   cr_expect_eq(terms[2].y, x1, "Var 1 of product 2 should be x1, got %s", SCIPvarGetName(terms[2].y));
 
    /* t_b1t_x1 <= 1.5t_b2 - 1.5t_b1 + t_x1 (from constraint and clique, (x,w,y) = (b1,b2,x1)) */
-   vars_expected = (SCIP_VAR*[3]) {b1, b2, x1};
-   coefs_expected = (SCIP_Real[3]) {-1.5, 1.5, 1.0};
-   checkLinearisation(sepadata, 0, 2, vars_expected, coefs_expected, 3, 0.0, FALSE, TRUE);
+   checkAuxExpr(terms[0], 1, b2, (SCIP_Real[3]) {1.5, -1.5, 1.0}, 0.0, FALSE, TRUE);
 
    /* t_b2t_x1 <= -t_b1 - t_b2 (from constraint and clique, (x,w,y) = (b2,b1,x1)) */
-   vars_expected = (SCIP_VAR*[2]) {b1, b2};
-   coefs_expected = (SCIP_Real[3]) {-1.0, -1.0};
-   checkLinearisation(sepadata, 2, 1, vars_expected, coefs_expected, 2, 0.0, FALSE, TRUE);
+   checkAuxExpr(terms[2], 1, b1, (SCIP_Real[3]) {-1.0, -1.0, 0.0}, 0.0, FALSE, TRUE);
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -517,15 +491,12 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSEXPR_EXPR* expr;
    SCIP_VAR* vars[2];
    SCIP_Real coefs[2];
    int nbdchgs;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
-   SCIP_VAR* var;
-   SCIP_Real* coefs_expected;
-   SCIP_VAR** vars_expected;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    vars[0] = x1;
    vars[1] = x2;
@@ -564,64 +535,36 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
    /* create separator data - this will also detect the products */
    SCIP_CALL( createSepaData(scip, sepadata) );
 
+   terms = SCIPgetConsExprBilinTerms(conshdlr);
+
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nbilinterms, 3, "\nExpected 3 bilinear terms, got %d", sepadata->nbilinterms);
-   cr_expect_eq(sepadata->nlinexprs[0], 2, "\nExpected 3 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
-   cr_expect_eq(sepadata->nlinexprs[1], 1, "\nExpected 3 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
-   cr_expect_eq(sepadata->nlinexprs[2], 1, "\nExpected 3 linear expressions for product 2, got %d", sepadata->nlinexprs[2]);
+   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(terms[0].nauxexprs, 2, "\nExpected 2 linear expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 1, "\nExpected 1 linear expressions for product 1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[2].nauxexprs, 1, "\nExpected 1 linear expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
-   cr_assert(sepadata->bilinterms[0] != NULL);
-   cr_assert(sepadata->bilinterms[1] != NULL);
-   cr_assert(sepadata->bilinterms[2] != NULL);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
-   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[2]) == 2);
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
-   cr_expect_eq(var, b2, "Var 1 of product 0 should be b2, got %s", SCIPvarGetName(var));
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
-   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
-   cr_expect_eq(var, x2, "Var 1 of product 1 should be x2, got %s", SCIPvarGetName(var));
-
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[0]);
-   cr_expect_eq(var, b2, "Var 0 of product 1 should be b2, got %s", SCIPvarGetName(var));
-   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[1]);
-   cr_expect_eq(var, x2, "Var 1 of product 1 should be x2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(terms[0].x, b1, "x var of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
+   cr_expect_eq(terms[0].y, b2, "y var of product 0 should be b2, got %s", SCIPvarGetName(terms[0].y));
+   cr_expect_eq(terms[1].x, b1, "x var of product 1 should be b1, got %s", SCIPvarGetName(terms[1].x));
+   cr_expect_eq(terms[1].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[1].y));
+   cr_expect_eq(terms[2].x, b2, "x var of product 1 should be b2, got %s", SCIPvarGetName(terms[2].x));
+   cr_expect_eq(terms[2].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[2].y));
 
    /* check the linear expressions obtained from the implied relation and the implied bound */
-   cr_assert(sepadata->linexprs[0][1] != NULL);
-   cr_assert(sepadata->linexprs[1][0] != NULL);
-   cr_assert(sepadata->linexprs[2][0] != NULL);
+   /* expression from two implied bounds on x1: should be t_b1t_b2 <= -1t_x1 + -1t_b1 + 1t_b2 + 0 */
+   checkAuxExpr(terms[0], 0, x1, (SCIP_Real[3]) {-1.0, -1.0, 1.0}, 0.0, FALSE, TRUE);
 
-   /* first linear expression (from two implied bounds on x1) */
-   /* should be t_b1t_b2 <= -1t_x1 + -1t_b1 + 1t_b2 + 0 */
-   vars_expected = (SCIP_VAR*[3]) {b1, b2, x1};
-   coefs_expected = (SCIP_Real[3]) {-1.0, 1.0, -1.0};
-   checkLinearisation(sepadata, 0, 0, vars_expected, coefs_expected, 3, 0.0, FALSE, TRUE);
+   /* from two implied bounds on x1: should be t_b2t_b1 <= -0.5t_x1 + 0.5t_b2 */
+   checkAuxExpr(terms[0], 1, x1, (SCIP_Real[3]) {-0.5, 0.0, 0.5}, 0.0, FALSE, TRUE);
 
-   /* second linear expression (from two implied bounds on x1) */
-   /* should be t_b2t_b1 <= -0.5t_x1 + 0.5t_b2 */
-   vars_expected = (SCIP_VAR*[2]) {b2, x1};
-   coefs_expected = (SCIP_Real[2]) {0.5, -0.5};
-   checkLinearisation(sepadata, 0, 1, vars_expected, coefs_expected, 2, 0.0, FALSE, TRUE);
+   /* from implied bound on x1 (with b1) and unconditional: should be t_b1t_x2 >= 1t_x1 + 1.5t_b1 + 1t_x2 + -0.5 */
+   checkAuxExpr(terms[1], 0, x1, (SCIP_Real[3]) {1.0, 1.5, 1.0}, -0.5, TRUE, FALSE);
 
-   /* third linear expression (from implied bound on x1 (with b1) and unconditional) */
-   /* should be t_b1t_x2 >= 1t_x1 + 1.5t_b1 + 1t_x2 + -0.5 */
-   vars_expected = (SCIP_VAR*[3]) {b1, x1, x2};
-   coefs_expected = (SCIP_Real[3]) {1.5, 1.0, 1.0};
-   checkLinearisation(sepadata, 1, 0, vars_expected, coefs_expected, 3, -0.5, TRUE, FALSE);
-
-   /* fourth linear expression (from implied bound on x1 (with b2) and unconditional) */
-   /* should be t_b2t_x2 <= -1t_x1 + 0.5t_b2 */
-   vars_expected = (SCIP_VAR*[2]) {b2, x1};
-   coefs_expected = (SCIP_Real[2]) {0.5, -1.0};
-   checkLinearisation(sepadata, 2, 0, vars_expected, coefs_expected, 2, 0.0, FALSE, TRUE);
+   /* from implied bound on x1 (with b2) and unconditional: should be t_b2t_x2 <= -1t_x1 + 0.5t_b2 */
+   checkAuxExpr(terms[2], 0, x1, (SCIP_Real[3]) {-1.0, 0.5, 0.0}, 0.0, FALSE, TRUE);
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -636,8 +579,6 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
    SCIP_VAR* vars[3];
    SCIP_Real* coefs;
    SCIP_Bool cutoff;
-   SCIP_VAR* var;
-   SCIP_Real coef;
    int nrows;
    int i;
    int nvars_in_2rels;

@@ -180,6 +180,8 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
    }
 
+   SCIP_CALL( SCIPcollectConsExprBilinTerms(scip, conshdlr, &cons, 1) );
+
    SCIP_CALL( createSepaData(scip, sepadata) );
 
    cr_expect_eq(sepadata->nbilinvars, 4, "\nExpected 4 bilinear vars, got %d", sepadata->nbilinvars);

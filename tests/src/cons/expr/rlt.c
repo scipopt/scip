@@ -206,27 +206,28 @@ SCIP_VAR* getBilinVar(
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, x)][0]), xx);
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, y)][0]), xy);
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, z)][0]), xz);
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, y, x)][0]), xy);
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, z, x)][0]), xz);
-   cr_expect_eq(getBilinPos(scip, sepadata, y, z), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, z, y), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, y, y), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, z, z), -1);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->auxvar, xx);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, y)->auxvar, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, z)->auxvar, xz);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, x)->auxvar, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, x)->auxvar, xz);
+
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, z), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, y), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, y), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, logvar, logvar)][0]), powvar);
-   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, absvar, powvar)][0]), prodvar);
-   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, prodvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, absvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, powvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, logvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, absvar, absvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, absvar, logvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, powvar, powvar), -1);
-   cr_expect_eq(getBilinPos(scip, sepadata, powvar, logvar), -1);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, logvar, logvar)->auxvar, powvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, powvar)->auxvar, prodvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, prodvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, absvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, powvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, logvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, absvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, logvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, powvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
 }
 
 Test(rlt, separation)
