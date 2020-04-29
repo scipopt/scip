@@ -71,6 +71,7 @@ REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
 VISUALIZE       =       false
+WITHCERTIFICATE =       false
 MAXJOBS         =       1
 EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
