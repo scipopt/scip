@@ -1393,7 +1393,7 @@ SCIP_RETCODE estimateGradient(
    *success = FALSE;
 
    /* evaluation error -> skip */
-   if( auxvalue == SCIP_INVALID )  /* lint !e777 */
+   if( auxvalue == SCIP_INVALID )  /*lint !e777*/
    {
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)nlexpr);
       return SCIP_OKAY;
@@ -1512,7 +1512,7 @@ SCIP_RETCODE estimateConvexSecant(
       left = SCIPfloor(scip, x);
       right = SCIPceil(scip, x);
    }
-   assert(left != right);
+   assert(left != right); /*lint !e777*/
 
    /* now evaluate at left and right */
    if( nlhdlrdata->evalsol == NULL )
