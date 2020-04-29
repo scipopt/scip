@@ -336,6 +336,7 @@ BEGIN {
    infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
+   certified = 0;
 }
 
 /@03/ {
@@ -777,6 +778,12 @@ BEGIN {
    valgrindleaks += $4
 }
 #
+# vipr check
+#
+/^Successfully verified/           {
+   certified = 1;
+}
+#
 # solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
 # 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
@@ -1074,6 +1081,11 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( certified )
+      {
+         status = "ok (vipr-verified)";
+         pass++;
+      }
       else if( solstatus[prob] == "opt" )
       {
          # in case a solution was found we compare primal and dual bound
@@ -1316,7 +1328,7 @@ BEGIN {
             modelstat = 8;
             solverstat = 1;
          }
-         else if( status == "ok" || status == "solved not verified" )
+         else if( status == "ok" || status == "solved not verified" || status == "ok (vipr verified)" )
          {
             modelstat = 1;
             solverstat = 1;

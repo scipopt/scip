@@ -61,7 +61,8 @@ OPTCOMMAND=${26}
 SETCUTOFF=${27}
 VISUALIZE=${28}
 CLUSTERNODES=${29}
-SLURMACCOUNT=${30}
+WITHCERTIFICATE=${30}
+SLURMACCOUNT=${31}
 
 # check if all variables defined (by checking the last one)
 if test -z $SLURMACCOUNT
@@ -95,6 +96,7 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
+    echo "WITHCERTIFICATE = $WITHCERTIFICATE"
     echo "CLUSTERNODES  = $CLUSTERNODES"
     echo "SLURMACCOUNT  = $SLURMACCOUNT"
     exit 1;
@@ -194,7 +196,7 @@ do
 		# this may modify the EXECNAME environment variable
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
                     $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND \
-                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
+                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE $WITHCERTIFICATE
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 		# additional environment variables needed by run.sh
