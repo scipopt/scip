@@ -2870,7 +2870,7 @@ SCIP_RETCODE applyBounding(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
-      /* exip: we don't print the pseudoobj here, since we have to print it immediatly when branching anyway */
+      /* exip: we don't print the pseudoobj to certificate here, since we have to print it immediatly when branching anyway */
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjval);
       SCIPsetDebugMsg(set, " -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(transprob, origprob, set, SCIPnodeGetLowerbound(focusnode)) + SCIPgetOrigObjoffset(set->scip),

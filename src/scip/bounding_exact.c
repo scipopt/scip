@@ -3294,7 +3294,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat) )
       lpex->forceexactsolve = TRUE;
 
-   /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result 
+   /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result
       @todo exip maybe it makes more sense to just disable objlimit alltogether? */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
       lpex->forceexactsolve = TRUE;

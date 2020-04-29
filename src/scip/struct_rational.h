@@ -20,7 +20,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #ifndef __SCIP_STRUCT_RATIONAL_H__
 #define __SCIP_STRUCT_RATIONAL_H__
 
@@ -37,16 +36,17 @@ extern "C" {
 /** rational wrapper struct */
 struct SCIP_Rational
 {
-   Rational val;
-   unsigned int isinf:1;
-   unsigned int isfprepresentable:2;
+   Rational val;                             /**< value of the rational */
+   unsigned int isinf:1;                     /**< is the value infinite? sign is determined by val */
+   unsigned int isfprepresentable:2;         /**< is the value exactly representable as floating point number?
+                                              *   (0 - unknown, 1 - yes, 2 - no) */
 };
 
-/** rational array struct */
+/** rational array struct, essentially a std vector with all indices offset by firstidx*/
 struct SCIP_RationalArray
 {
-   std::vector<SCIP_Rational> vals;
-   int firstidx;
+   std::vector<SCIP_Rational> vals;          /**< values of the array */
+   int firstidx;                             /**< first used index */
 };
 
 #ifdef __cplusplus
