@@ -1862,7 +1862,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* get quadratic representation of the expression constraint, if possible */
    SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
 
-   if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+   if( quaddata == NULL )
    {
       SCIPdebugMsg(scip, "expression constraint is not quadratic -> skip\n");
       return SCIP_OKAY;
