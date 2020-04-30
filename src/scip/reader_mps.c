@@ -4348,7 +4348,7 @@ SCIP_RETCODE SCIPwriteMps(
             assert( !SCIPisInfinity(scip, rhss[c]) );
 
             /* get linear vars */
-            SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nquadexprs) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinexprs) );
             for( j = 0; j < nlinexprs; ++j )
                linvars[j] = SCIPgetConsExprExprVarVar(linexprs[j]);
 
