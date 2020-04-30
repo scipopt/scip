@@ -23,7 +23,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
-#include "pub_heur.h"
+#include "scip/pub_heur.h"
 
 /* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"

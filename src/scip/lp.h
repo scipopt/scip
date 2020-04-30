@@ -1580,6 +1580,64 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** checks, if absolute difference of values is in range of LP primal feastol */
+SCIP_Bool SCIPlpIsFeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+SCIP_Bool SCIPlpIsFeasZero(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is greater than LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasPositive(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is lower than -LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasNegative(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1609,6 +1667,15 @@ SCIP_Bool SCIPlpDivingRowsChanged(
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 #define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
 #define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivechgsides > 0)
+
+#define SCIPlpIsFeasEQ(set, lp, val1, val2) ( EPSEQ(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasLT(set, lp, val1, val2) ( EPSLT(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasLE(set, lp, val1, val2) ( EPSLE(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasGT(set, lp, val1, val2) ( EPSGT(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasGE(set, lp, val1, val2) ( EPSGE(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasZero(lp, val)        ( EPSZ(val, (lp)->feastol) )
+#define SCIPlpIsFeasPositive(lp, val)    ( EPSP(val, (lp)->feastol) )
+#define SCIPlpIsFeasNegative(lp, val)    ( EPSN(val, (lp)->feastol) )
 
 #endif
 

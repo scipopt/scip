@@ -141,6 +141,56 @@ struct SCIP_ConsExpr_Expr
 
    /* integrality information */
    SCIP_Bool               isintegral;     /**< flag to store whether an expression is integral */
+
+   SCIP_CONSEXPR_QUADEXPR* quaddata;       /**< representation of expression as a quadratic, if checked and being quadratic */
+   SCIP_Bool               quadchecked;    /**< whether we checked whether the expression is quadratic */
+};
+
+typedef struct SCIP_ConsExpr_QuadExprTerm  SCIP_CONSEXPR_QUADEXPRTERM;  /**< a single term associated to a quadratic variable */
+typedef struct SCIP_ConsExpr_BilinExprTerm SCIP_CONSEXPR_BILINEXPRTERM; /**< a single bilinear term */
+
+/** data for representation of an expression as quadratic */
+struct SCIP_ConsExpr_QuadExpr
+{
+   SCIP_Real                    constant;        /**< a constant term */
+
+   int                          nlinexprs;       /**< number of expressions that appear linearly */
+   SCIP_CONSEXPR_EXPR**         linexprs;        /**< expressions that appear linearly */
+   SCIP_Real*                   lincoefs;        /**< coefficients of expressions that appear linearly */
+
+   int                          nquadexprs;      /**< number of expressions in quadratic terms */
+   SCIP_CONSEXPR_QUADEXPRTERM*  quadexprterms;   /**< array with quadratic expression terms */
+
+   int                          nbilinexprterms; /**< number of bilinear expressions terms */
+   SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterms;  /**< bilinear expression terms array */
+
+   SCIP_Bool                    allexprsarevars; /**< whether all arguments (linexprs, quadexprterms[.].expr) are variable expressions */
+
+   SCIP_EXPRCURV                curvature;       /**< curvature of the quadratic representation of the expression */
+   SCIP_Bool                    curvaturechecked;/**< whether curvature has been checked */
+};
+
+/** data structure to store a single term associated to a quadratic variable */
+struct SCIP_ConsExpr_QuadExprTerm
+{
+   SCIP_CONSEXPR_EXPR*   expr;               /**< quadratic expression */
+   SCIP_Real             lincoef;            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
+
+   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
+   int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
+   int*                  adjbilin;           /**< indices of associated bilinear terms */
+};
+
+/** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_CONSEXPR_QUADELEM)
+ * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
+ */
+struct SCIP_ConsExpr_BilinExprTerm
+{
+   SCIP_CONSEXPR_EXPR*   expr1;              /**< first factor of bilinear term */
+   SCIP_CONSEXPR_EXPR*   expr2;              /**< second factor of bilinear term */
+   SCIP_Real             coef;               /**< coefficient of bilinear term */
+   int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
 };
 
 /** generic data and callback methods of an nonlinear handler */

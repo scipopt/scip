@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,7 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.c"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_setppc.h"
 
 #include "include/scip_test.h"
 
@@ -194,4 +195,61 @@ Test(presolve, singlelockedvars3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
+}
+
+/* test for presolveImplint()
+ *
+ * consider x + 2 y^2 - 3 y^3 - 4 z == 5 with x continuous, y integer, and z binary
+ */
+Test(presolve, implint)
+{
+   SCIP_Bool infeasible;
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_INTEGER, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add expression constraint */
+   SCIP_CALL( addCons("<x> + 2*<y>^2 - 3*<y>^3 - 4*<z>", 5.0, 5.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+}
+
+/* tests setppc upgrade */
+Test(presolve, setppcupg)
+{
+   SCIP_Bool infeasible;
+
+   /* include setppc constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
+
+   /* change bounds of all variables */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 1.0) );
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, y, 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, y, 1.0) );
+   SCIP_CALL( SCIPchgVarObj(scip, x, -1.0) );
+   SCIP_CALL( SCIPchgVarObj(scip, y, -1.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_BINARY, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add expression constraint -2xy + 2x + 2y -6 = -4, which is equivalent to (x-1)(y-1) = 0 */
+   SCIP_CALL( addCons("-2 * <x> * <y> + 2 * <x> + 2 * <y> - 6", -4.0, -4.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* only the setppc and expression constraint handler have been added; thus, the only possible upgrade is exprUpgdSetppc */
+   cr_expect_eq(SCIPconshdlrGetNUpgdConss(SCIPfindConshdlr(scip, "expr")), 1);
 }

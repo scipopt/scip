@@ -1023,6 +1023,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    if( !MULTCUTS || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
    {
+      SCIP_VAR* bvar;
+
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
@@ -1030,6 +1032,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
 
       success = TRUE; /* think positive */
+      bvar = NULL;
 
       /* handle convex terms */
       for( i = 0; i < nlhdlrexprdata->nconvterms && success; ++i )
@@ -1040,7 +1043,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       /* handle on/off terms */
       for( i = 0; i < nlhdlrexprdata->nonoffterms && success; ++i )
       {
-         SCIP_VAR* bvar;
          SCIP_Real minbval = 1, bval;
 
          /* heuristically choose the most promising binary variable (one closest to 0) */
@@ -1063,6 +1065,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( success )
       {
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                             overestimate ? "over" : "under",
+                             (void*)expr,
+                             SCIPgetNLPs(scip),
+                             SCIPvarGetName(bvar));
+
          SCIP_CALL( addCut(scip, cons, rowprep, sol, result) );
       }
 
@@ -1083,6 +1091,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          if( success )
          {
+            (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                                overestimate ? "over" : "under",
+                                (void*)expr,
+                                SCIPgetNLPs(scip),
+                                SCIPvarGetName(nlhdlrexprdata->termbvars[0][i]));
+
             SCIP_CALL( addCut(scip, cons, rowprep, sol, result) );
          }
 
