@@ -106,7 +106,7 @@
 #define PRESOL_DESC            "adds KKT conditions to (mixed-binary) quadratic programs"
 #define PRESOL_PRIORITY              -1 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers);
                                          *   combined with propagators */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+#define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
