@@ -69,7 +69,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
  */
 
 
-/** returns whether a quadratic from is "propagable"
+/** returns whether a quadratic form is "propagable"
  *
  * It is propagable, if a variable (aka child expr) appears at least twice, which is the case if at least two of the following hold:
  * - it appears as a linear term (coef*expr)
@@ -812,9 +812,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          nlhdlrexprdata->nposinfinityquadact > 0 ?  SCIP_INTERVAL_INFINITY : nlhdlrexprdata->maxquadfiniteact);
 
    SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprActivity(scip, expr), quadactivity);
-   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlinexprs,
-            linexprs, lincoefs, constant,
-            rhs, reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlinexprs, linexprs, lincoefs, constant, rhs,
+            reversepropqueue, infeasible, nreductions, force) );
 
    /* stop if we find infeasibility */
    if( *infeasible )
@@ -981,11 +980,11 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          return SCIP_OKAY;
 
       /* handle special case: check if the quadratic expr is of the form expr_i * expr_k and expr_i appears only once
-       * (if nadjbilin == 1, then expr1, expr2, bilincoef, pos2 are still set to SCIPgetConsExprQuadraticBilinTermData(&bilinexprterms[adjbilin[0]], ...))
+       * (if nadjbilin == 1, then expr1, expr2, bilincoef, pos2 are still set to SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], ...))
        */
       if( lincoef == 0.0 && sqrcoef == 0.0 && nadjbilin == 1 && expr1 == qexpr )
       {
-         /* this expr (expr_k) should also only appear in expr_i * expr_k */
+         /* expr_k should also only appear in expr_i * expr_k */
          SCIP_Real sqrcoef2;
 #ifndef NDEBUG
          SCIP_Real lincoef2;

@@ -17025,7 +17025,7 @@ void SCIPgetConsExprQuadraticQuadTermData(
 /** gives the data of a bilinear expression term
  *
  * For a term a*expr1*expr2, returns
- * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ * expr1, expr2, a, and the position of the quadratic expression term of expr2 in the quadratic expressions quadexprterms.
  */
 void SCIPgetConsExprQuadraticBilinTermData(
    SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
