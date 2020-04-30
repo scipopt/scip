@@ -398,7 +398,8 @@ DECL_CURVCHECK(curvCheckQuadratic)
          SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(child)) );
       }
       else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
-         SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(expr)[i]) == 2 )  /* using original version of child here as NChildren(child)==0 atm */
+         SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(expr)[i]) == 2 )
+         /* using original version of child here as NChildren(child)==0 atm */
       {
          /* bilinear term */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
@@ -1216,7 +1217,7 @@ SCIP_RETCODE createNlhdlrExprData(
 #endif
 
    /* If we don't work on the extended formulation, then set curvature also in original expression
-    * (in case someone wants to pick this up; this might be remove again).
+    * (in case someone wants to pick this up; this might be removed again).
     * This doesn't ensure that every convex or concave original expression is actually marked here.
     * Not only because our tests are incomprehensive, but also because we may not detect on sums,
     * prefer extended formulations (in nlhdlr_convex), or introduce auxvars for linear subexpressions

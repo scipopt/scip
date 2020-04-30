@@ -837,8 +837,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          nlhdlrexprdata->nposinfinityquadact > 0 ?  SCIP_INTERVAL_INFINITY : nlhdlrexprdata->maxquadfiniteact);
 
    SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprActivity(scip, expr), quadactivity);
-   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlinexprs, linexprs, lincoefs, constant, rhs,
-            reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlinexprs,
+            linexprs, lincoefs, constant, rhs, reversepropqueue, infeasible, nreductions, force) );
 
    /* stop if we find infeasibility */
    if( *infeasible )
