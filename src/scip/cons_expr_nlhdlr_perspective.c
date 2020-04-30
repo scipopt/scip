@@ -1483,6 +1483,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                             overestimate ? "over" : "under",
+                             (void*)expr,
+                             SCIPgetNLPs(scip),
+                             SCIPvarGetName(indicator));
+
          SCIP_CALL( addCut(scip, cons, rowprep, sol, result) );
          SCIPfreeRowprep(scip, &rowprep);
 
@@ -1587,6 +1594,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPprintRowprep(scip, rowprep, NULL);
 #endif
          rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
+
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                             overestimate ? "over" : "under",
+                             (void*)expr,
+                             SCIPgetNLPs(scip),
+                             SCIPvarGetName(indicator));
 
          SCIP_CALL( SCIPconsExprCutAndScore(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
                auxvalue, allowweakcuts, addedbranchscores, addbranchscores, sol, result) );
@@ -1789,6 +1802,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
 #endif
 
             *success = TRUE;
+
+            (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                                overestimate ? "over" : "under",
+                                (void*)expr,
+                                SCIPgetNLPs(scip),
+                                SCIPvarGetName(indicator));
+
             SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, nrowpreps, rowprep) );
             ++nrowpreps;
          }

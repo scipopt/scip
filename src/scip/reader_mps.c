@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -2106,7 +2107,7 @@ SCIP_RETCODE readQMatrix(
          rhs = SCIPinfinity(scip);
       }
 
-      retcode = SCIPcreateConsQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+      retcode = SCIPcreateConsExprQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
 
       if( retcode == SCIP_OKAY )
@@ -2280,7 +2281,7 @@ SCIP_RETCODE readQCMatrix(
    {
       SCIP_CONS* cons = NULL;
 
-      retcode = SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons),
+      retcode = SCIPcreateConsExprQuadratic(scip, &cons, SCIPconsGetName(lincons),
             SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
             cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
             SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
