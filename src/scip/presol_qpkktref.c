@@ -1320,7 +1320,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
          SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
 
          if( i == 1 )
-            SCIPswapPointers((void*)&bilvar1, (void*)&bilvar2);
+            SCIPswapPointers((void**)&bilvar1, (void**)&bilvar2);
 
          /* create/get dual constraint associated to variable 'bilvar1';
           * if variable does not already exist in hashmap then create dual variables for its bounds */
