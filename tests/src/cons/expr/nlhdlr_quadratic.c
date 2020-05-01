@@ -74,6 +74,8 @@ void setup(void)
       }
    cr_assert_not_null(nlhdlr);
 
+   /* we still want to test nlhdlr_quadratic estimating convex quadratics */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/convex/cvxquadratic", FALSE) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
