@@ -240,6 +240,18 @@ Test(rlt, separation)
    SCIP_Bool result;
    SCIP_Bool success;
    int currentnunknown;
+   int* bestunder;
+   int* bestover;
+   int i;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestunder, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestover, 3) );
+
+   for( i = 0; i < 3; ++i )
+   {
+      bestunder[i] = -1;
+      bestover[i] = -1;
+   }
 
    /* create test row1: -10 <= 4x - 7y + z <= 5 */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row1, "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
@@ -254,11 +266,13 @@ Test(rlt, separation)
    /*
     * cut for row1 and (x-0)
     */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, &currentnunknown, &result, NULL) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, &currentnunknown, &result) );
    cr_expect(result);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, TRUE, TRUE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
+         TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, x, &success, TRUE, FALSE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
+         TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);
@@ -278,9 +292,11 @@ Test(rlt, separation)
    /*
     * cut for row1 and (2-x)
     */
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, FALSE, TRUE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, bestunder, bestover, x, &success, FALSE,
+         TRUE, TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, x, &success, FALSE, FALSE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, bestunder, bestover, x, &success, FALSE,
+         FALSE, TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);
@@ -298,8 +314,10 @@ Test(rlt, separation)
    SCIP_CALL( SCIPreleaseRow(scip, &cutrhs) );
 
    /* check for not acceptable row */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, &currentnunknown, &result, NULL) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, &currentnunknown, &result) );
    cr_expect(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 
+   SCIPfreeBufferArray(scip, &bestover);
+   SCIPfreeBufferArray(scip, &bestunder);
 }

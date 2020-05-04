@@ -28,6 +28,7 @@
 #include "scip/var.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_scip.h"
+#include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
 #include "include/scip_test.h"
 
@@ -283,7 +284,6 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(sepadata->conshdlr != NULL);
-   SCIP_CALL( createSepaData(scip, sepadata) );
    sepadata->maxusedvars = 4;
 
    /* create projected LP with row -10 <= x1 + 2x2 - x3 <= 20 */
@@ -311,7 +311,8 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    projlp->rhss[0] = 20.0;
 
    /* compute a cut with x1, lb and lhs */
-   computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, x1, &success, TRUE, TRUE, FALSE, FALSE);
+   SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, NULL, NULL, x1, &success, TRUE, TRUE,
+         FALSE, FALSE) );
 
    /* the cut should be -8 <= 8x1 */
    cut_val = 8.0;
@@ -320,7 +321,6 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    /* free memory */
    SCIPreleaseRow(scip, &cut);
    freeProjLP(scip, &projlp, 1);
-   SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBuffer(scip, &sepadata);
    SCIPfreeSol(scip, &sol);
    SCIPfreeBufferArray(scip, &vals);
@@ -332,7 +332,6 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   PROJLP* projlp;
    SCIP_SEPADATA* sepadata;
    SCIP_ROW* cut;
    SCIP_ROW** rows;
@@ -366,7 +365,6 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(sepadata->conshdlr != NULL);
-   SCIP_CALL( createSepaData(scip, sepadata) );
 
    /*add a clique (1-b1) + (1-b2) <= 1*/
    clique_vars[0] = b1;
@@ -378,7 +376,8 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
 
    /* compute a cut with b1, lb and lhs */
-   computeRltCuts(scip, sepa, sepadata, &cut, rows[0], sol, b1, &success, TRUE, TRUE, FALSE, FALSE);
+   SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[0], sol, NULL, NULL, b1, &success, TRUE, TRUE, FALSE,
+         FALSE) );
 
    /* the cut should be 1 <= 11b1 + b2 */
    cut_vars = (SCIP_VAR*[4]) {b2, b1};
@@ -390,7 +389,6 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
       SCIPreleaseRow(scip, &cut);
    SCIPreleaseRow(scip, &rows[0]);
 
-   SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBuffer(scip, &sepadata);
    SCIPfreeSol(scip, &sol);
    SCIPfreeBufferArray(scip, &vals);
