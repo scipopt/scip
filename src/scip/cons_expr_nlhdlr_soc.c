@@ -522,11 +522,15 @@ SCIP_RETCODE generateCutSol(
    if( disaggidx < nterms - 1 )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
+
+      assert(4.0 * SQR(lhsval) + SQR(rhsval - disvarval) >= 0);
       denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
    }
    else
    {
       lhsval = nlhdlrexprdata->constant;
+
+      assert(4.0 * lhsval + SQR(rhsval - disvarval) >= 0);
       denominator = SQRT(4.0 * lhsval + SQR(rhsval - disvarval));
    }
 
@@ -1047,6 +1051,7 @@ SCIP_RETCODE detectSocNorm(
    SCIP_Real* childcoefs;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
+   SCIP_Bool issoc; /* TODO: make this an argument of the function and then avoid calling other detect methods */
    int* transcoefsidx;
    int* termbegins;
    int* nnonzeroes;
@@ -1062,6 +1067,7 @@ SCIP_RETCODE detectSocNorm(
    assert(success != NULL);
 
    *success = FALSE;
+   issoc = TRUE;
 
    /* relation is not "<=" -> skip */
    if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
@@ -1121,6 +1127,11 @@ SCIP_RETCODE detectSocNorm(
             SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) squarearg, nvars) );
          }
 
+         if( childcoefs[i] < 0.0 )
+         {
+            issoc = FALSE;
+            break;
+         }
          transcoefs[nvars] = SQRT(childcoefs[i]);
 
          SCIP_CALL( SCIPhashsetRemove(linexprs, (void*) squarearg) );
@@ -1134,6 +1145,11 @@ SCIP_RETCODE detectSocNorm(
 
          SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) children[i], nvars) );
 
+         if( childcoefs[i] < 0.0 )
+         {
+            issoc = FALSE;
+            break;
+         }
          transcoefs[nvars] = SQRT(childcoefs[i]);
 
          ++nvars;
@@ -1147,8 +1163,8 @@ SCIP_RETCODE detectSocNorm(
       }
    }
 
-   /* there are linear terms without corresponding quadratic terms */
-   if( SCIPhashsetGetNElements(linexprs) > 0 )
+   /* there are linear terms without corresponding quadratic terms or it was detected not to be soc */
+   if( SCIPhashsetGetNElements(linexprs) > 0 || ! issoc )
    {
       SCIPfreeBufferArray(scip, &transcoefs);
       SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
