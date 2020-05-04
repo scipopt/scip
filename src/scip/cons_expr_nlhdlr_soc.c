@@ -1226,11 +1226,18 @@ SCIP_RETCODE detectSocNorm(
          vars[nextentry] = argauxvar;
          ++nextentry;
       }
+      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      {
+         /* handle binary variable children: no need to create auxvar */
+         assert(SCIPhashmapGetImageInt(expr2idx, (void*) children[i]) == nextentry);
+         vars[nextentry] = SCIPgetConsExprExprVarVar(children[i]);
+         ++nextentry;
+      }
       else
       {
          int auxvarpos;
 
-         assert(SCIPhashmapExists(expr2idx, (void*) children[i]) );
+         assert(SCIPhashmapExists(expr2idx, (void*) children[i]));
          auxvarpos = SCIPhashmapGetImageInt(expr2idx, (void*) children[i]);
 
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], &argauxvar) );
