@@ -103,6 +103,7 @@ struct SCIP_SepaData
    int                   nbilinterms;        /**< total number of bilinear terms */
    int                   sbilinterms;        /**< size of bilinear terms arrays */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
+   int                   nconsexprterms;
 
    /* information on linearisations of bilinear products */
    SCIP_Bool*            isimplicit;         /**< whether bilinterms[i] is an implicit bilinear relation */
@@ -265,9 +266,13 @@ SCIP_RETCODE freeSepaData(
       SCIPfreeBlockMemoryArrayNull(scip, &sepadata->varbilinvars[i], sepadata->nvarbilinvars[i]);
    }
 
+   if( sepadata->nconsexprterms > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nconsexprterms);
+   }
+
    if( sepadata->sbilinterms > 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->sbilinterms);
       SCIPfreeBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->sbilinterms);
       SCIPfreeBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->sbilinterms);
       SCIPfreeBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->sbilinterms);
@@ -321,7 +326,6 @@ SCIP_RETCODE ensureBilinSizes(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->sbilinterms, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->sbilinterms, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->sbilinterms, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->sbilinterms, newsize) );
 
       sepadata->sbilinterms = newsize;
    }
@@ -1722,7 +1726,9 @@ SCIP_RETCODE createSepaData(
 
    /* skip if there are no bilinear terms and implicit product detection is off */
    if( nbilinterms == 0 && sepadata->detecthidden == FALSE )
+   {
       return SCIP_OKAY;
+   }
 
    nvars = SCIPgetNVars(scip);
 
@@ -1792,7 +1798,7 @@ SCIP_RETCODE createSepaData(
 
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
-      if( sepadata->nbilinterms - oldnterms > 0 )
+      if( SCIPgetConsExprNBilinTerms(sepadata->conshdlr) - oldnterms > 0 )
       {
          SCIPinfoMessage(scip, NULL, "\nFound hidden products");
          SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d",
@@ -1800,7 +1806,35 @@ SCIP_RETCODE createSepaData(
       }
    }
 
-   /* reallocate arrays to fit actual sizes */
+   /* (re)allocate arrays to fit actual sizes */
+   sepadata->nconsexprterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
+   if( sepadata->nconsexprterms > 0 )
+   {
+      SCIP_CONSEXPR_BILINTERM* terms;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nconsexprterms) );
+
+      terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+
+      /* find positions of equality relations */
+      for( i = 0; i < sepadata->nconsexprterms; ++i )
+      {
+         int j;
+
+         sepadata->eqlinexpr[i] = -1;
+         for( j = 0; j < terms[i].nauxexprs; ++j )
+         {
+            assert(terms[i].auxexprs[j] != NULL);
+
+            if( terms[i].auxexprs[j]->underestimate && terms[i].auxexprs[j]->overestimate )
+            {
+               sepadata->eqlinexpr[i] = j;
+               break;
+            }
+         }
+      }
+   }
+
    if( sepadata->nbilinvars < nvars )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, nvars, sepadata->nbilinvars) );
@@ -2019,35 +2053,35 @@ SCIP_RETCODE isAcceptableRow(
    SCIP_ROW*             row,                /**< the row to be tested */
    SCIP_VAR*             var,                /**< the variable that is to be multiplied with row */
    int*                  currentnunknown,    /**< number of unknown terms in current row */
-   SCIP_Bool*            acceptable,         /**< buffer to store the result */
-   SCIP_SOL*             sol                 /**< solution to be separated */
+   SCIP_Bool*            acceptable          /**< buffer to store the result */
    )
 {
    int i;
-   int linpos;
-
-   *currentnunknown = 0;
+   int idx;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    assert(row != NULL);
    assert(var != NULL);
 
+   *currentnunknown = 0;
+   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms); ++i )
    {
-      linpos = getBilinPos(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
+      idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
 
       /* if the product hasn't been found, no linearisations for it are known */
-      if( linpos == -1 )
+      if( idx < 0 )
       {
          ++(*currentnunknown);
          continue;
       }
 
-      if( sepadata->eqlinexpr[linpos] == -1 )
-         updateBestEstimators(scip, sepadata, linpos, sol);
-
       /* known terms are only those that have equality estimators */
-      if( sepadata->eqlinexpr[linpos] == sepadata->nlinexprs[linpos] )
+      if( sepadata->eqlinexpr[idx] == -1 && !(terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL) )
+      {
          ++(*currentnunknown);
+      }
    }
 
    *acceptable = sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms;
@@ -2090,6 +2124,36 @@ SCIP_RETCODE addLinearisationToRow(
    return SCIP_OKAY;
 }
 
+/** adds an auxiliary expression (coef*linexpr) for a product term to the cut */
+static
+SCIP_RETCODE addAuxexprToRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             cut,                /**< cut to add the linearisation to */
+   SCIP_VAR*             x,                  /**< first product variable */
+   SCIP_VAR*             y,                  /**< second product variable */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
+   SCIP_Real             coef,               /**< coefficient of the linearisation */
+   SCIP_Real*            finalside           /**< buffer that stores the side of the cut */
+)
+{
+   assert(auxexpr->auxvar != NULL);
+
+   /* make sure we have x and y in the correct order */
+   if( SCIPvarCompare(x, y) == 1 )
+   {
+      SCIPswapPointers((void**)&x, (void**)&y);
+   }
+   assert(SCIPvarCompare(x, y) < 1);
+
+   SCIP_CALL( SCIPaddVarToRow(scip, cut, auxexpr->auxvar, auxexpr->coefs[0] * coef) );
+   SCIP_CALL( SCIPaddVarToRow(scip, cut, x, auxexpr->coefs[1] * coef) );
+   SCIP_CALL( SCIPaddVarToRow(scip, cut, y, auxexpr->coefs[2] * coef) );
+
+   *finalside += coef * auxexpr->cst;
+
+   return SCIP_OKAY;
+}
+
 /* add a linearisation of term coef*colvar*var to cut
  *
  * adds the linear term involving colvar to cut and updates coefvar and finalside
@@ -2099,6 +2163,8 @@ SCIP_RETCODE addRltTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
+   int*                  bestoverest,        /**< positions of most violated overestimators for each product term */
    SCIP_ROW*             cut,                /**< cut to which the term is to be added */
    SCIP_VAR*             var,                /**< multiplier variable */
    SCIP_VAR*             colvar,             /**< row variable to be multiplied */
@@ -2122,6 +2188,10 @@ SCIP_RETCODE addRltTerm(
    SCIP_Real coefcolvar;
    int auxpos;
    int linpos;
+   int idx;
+   SCIP_CONSEXPR_BILINTERM* terms;
+
+   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
    lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
    ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
@@ -2134,54 +2204,42 @@ SCIP_RETCODE addRltTerm(
    coefauxvar = coef * signfactor;
    coefcolvar = coef * boundfactor;
 
-   auxpos = getBilinPos(scip, sepadata, var, colvar);
+   idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
    linexpr = NULL;
+   linpos = -1;
 
-   if( auxpos != -1 )
+   if( idx >= 0 && terms[idx].nauxexprs > 0 )
    {
-      linpos = -1;
-      SCIP_CALL( updateBestEstimators(scip, sepadata, auxpos, sol) ); /* TODO isn't this repeating? */
-
-      assert(sepadata->bestunderestimator[auxpos] >= 0 && sepadata->bestunderestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
-      assert(sepadata->bestoverestimator[auxpos] >= 0 && sepadata->bestoverestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
-      assert(sepadata->eqlinexpr[auxpos] >= 0 && sepadata->eqlinexpr[auxpos] <= sepadata->nlinexprs[auxpos]);
-
       if( computeEqCut )
       { /* use an equality linearisation (which should exist for computeEqCut to be TRUE) */
-         assert(sepadata->eqlinexpr[auxpos] != sepadata->nlinexprs[auxpos]);
-         linpos = sepadata->eqlinexpr[auxpos];
+         assert(sepadata->eqlinexpr[idx] >= 0);
+         linpos = sepadata->eqlinexpr[idx];
       }
       else if( (uselhs && coefauxvar > 0) || (!uselhs && coefauxvar < 0) )
       { /* use an overestimator */
-         if( sepadata->bestoverestimator[auxpos] != sepadata->nlinexprs[auxpos] )
-         {
-            linpos = sepadata->bestoverestimator[auxpos];
-         }
+         linpos = bestoverest[idx];
       }
       else
       { /* use an underestimator */
-         if( sepadata->bestunderestimator[auxpos] != sepadata->nlinexprs[auxpos] )
-         {
-            linpos = sepadata->bestunderestimator[auxpos];
-         }
+         linpos = bestunderest[idx];
       }
-
-      if( linpos != -1 )
-         linexpr = sepadata->linexprs[auxpos][linpos];
    }
 
-   /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
-   if( linexpr != NULL )
+   /* if a suitable linearisation for this term exists, add it to the cut with the previous coefficient */
+   if( linpos >= 0 )
    {
-      SCIPdebugMsg(scip, "linearisation expression for %s and %s found, will be added to cut:\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
-#ifdef SCIP_DEBUG
-      SCIPprintConsExprExpr(scip, sepadata->conshdlr, linexpr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
+      SCIPdebugMsg(scip, "linearisation for %s and %s found, will be added to cut:\n",
+                          SCIPvarGetName(colvar), SCIPvarGetName(var));
       assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
-      SCIP_CALL( addLinearisationToRow(scip, sepadata->conshdlr, cut, linexpr, coefauxvar, finalside) );
+      SCIP_CALL( addAuxexprToRow(scip, cut, var, colvar, terms[idx].auxexprs[linpos], coefauxvar, finalside) );
    }
-
+   else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
+   {
+      SCIPdebugMsg(scip, "auxvar for %s and %s found, will be added to cut:\n",
+                   SCIPvarGetName(colvar), SCIPvarGetName(var));
+      assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[idx].auxvar, coefauxvar) );
+   }
    /* otherwise, use the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
    {
@@ -2314,6 +2372,8 @@ SCIP_RETCODE computeRltCuts(
    SCIP_ROW**            cut,                /**< buffer to store the cut */
    SCIP_ROW*             row,                /**< the row that is used for the rlt cuts */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
+   int*                  bestoverest,        /**< positions of most violated overestimators for each product term */
    SCIP_VAR*             var,                /**< the variable that is used for the rlt cuts */
    SCIP_Bool*            success,            /**< buffer to store whether cut was created successfully */
    SCIP_Bool             uselb,              /**< whether we multiply with (var - lb) or (ub - var) */
@@ -2394,8 +2454,8 @@ SCIP_RETCODE computeRltCuts(
    {
       SCIP_VAR* colvar;
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-      SCIP_CALL( addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
-         computeEqCut, &coefvar, &finalside, success) );
+      SCIP_CALL( addRltTerm(scip, sepadata, sol, bestunderest, bestoverest, *cut, var, colvar, SCIProwGetVals(row)[i],
+            uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -2447,6 +2507,8 @@ SCIP_RETCODE computeProjRltCut(
    PROJLP*               projlp,             /**< projected lp */
    int                   idx,                /**< index of the row that is used for the rlt cut */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
+   int*                  bestoverest,        /**< positions of most violated overestimators for each product term */
    SCIP_VAR*             var,                /**< the variable that is used for the rlt cuts */
    SCIP_Bool*            success,            /**< buffer to store whether cut was created successfully */
    SCIP_Bool             uselb,              /**< whether we multiply with (var - lb) or (ub - var) */
@@ -2504,8 +2566,8 @@ SCIP_RETCODE computeProjRltCut(
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < projlp->nNonz[idx]; ++i )
    {
-      SCIP_CALL( addRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i],
-         uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
+      SCIP_CALL( addRltTerm(scip, sepadata, sol, bestunderest, bestoverest, *cut, var, projlp->vars[idx][i],
+            projlp->coefs[idx][i], uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -2753,6 +2815,8 @@ SCIP_RETCODE markRowsXj(
    int                   j,                  /**< index of the multiplier variable in sepadata */
    SCIP_Bool             local,              /**< are local cuts allowed? */
    SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
+   int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
+   int*                  bestoverest,        /**< positions of most violated overestimators for each product term */
    int*                  row_marks,          /**< sparse array storing the row marks */
    int*                  row_idcs,           /**< sparse array storing the marked row positions */
    int*                  nmarked             /**< number of marked rows */
@@ -2779,6 +2843,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_ROW** colrows;
    int posunder;
    int posover;
+   SCIP_CONSEXPR_BILINTERM* terms;
 
    *nmarked = 0;
 
@@ -2796,6 +2861,8 @@ SCIP_RETCODE markRowsXj(
       return SCIP_OKAY;
    }
 
+   terms = SCIPgetConsExprBilinTerms(conshdlr);
+
    /* for each var which appears in a bilinear product together with xj, mark rows */
    for( i = 0; i < sepadata->nvarbilinvars[j]; ++i )
    {
@@ -2811,47 +2878,53 @@ SCIP_RETCODE markRowsXj(
       if( sepadata->useprojection && (vlb == vali || vub == vali) ) /* we aren't interested in products with variables that are at bound */
          break;
 
-//      /* find the bilinear product */
-//      if( SCIPvarComp(xj, xi) < 0 )
-//         idx = SCIPvarGetIndex(xj) * sepadata->maxvarindex + SCIPvarGetIndex(xi);
-//      else
-//         idx = SCIPvarGetIndex(xi) * sepadata->maxvarindex + SCIPvarGetIndex(xj);
-//      assert( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t)idx) );
-//      img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
-//      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0) );
+      /* get the index of the bilinear product */
+      idx = SCIPgetConsExprBilinTermIdx(conshdlr, xj, xi);
+      assert(idx >= 0 && idx < SCIPgetConsExprNBilinTerms(conshdlr));
 
-      /* get largest violations on both sides, update bestunder- and overestimator for this product */
-      /* if equality cuts are computed, we might end up using a different linearisation;
-       * so this is an optimistic (i.e. taking the largest possible violation) estimation */
-      SCIP_CALL( updateBestEstimators(scip, sepadata, img, sol) ); /* TODO img replace by term */
-      posunder = sepadata->bestunderestimator[img];
-      posover = sepadata->bestoverestimator[img];
-      prodval = valj * vali;
-      if( posunder == sepadata->nlinexprs[img] )
+      /* use the most violated under- and overestimators for this product;
+       * if equality cuts are computed, we might end up using a different linearisation;
+       * so this is an optimistic (i.e. taking the largest possible violation) estimation
+       */
+      if( bestunderest[idx] == -1 )
       {
-         prod_viol_below = 0.0;
+         if( terms[j].nauxexprs == 0 && terms[j].auxvar != NULL )
+         {
+            assert(terms[j].existing);
+            prod_viol_below = SCIPgetSolVal(scip, sol, terms[j].auxvar) - valj * vali;
+         }
+         else
+         {
+            prod_viol_below = 0.0;
+         }
       }
       else
       {
-         assert(posunder >= 0 && posunder < sepadata->nlinexprs[img]);
-         prod_viol_below = SCIPgetConsExprExprValue(sepadata->linexprs[img][posunder]) - prodval;
+         assert(bestunderest[idx] >= 0 && bestunderest[idx] < terms[idx].nauxexprs);
+         prod_viol_below = SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+               terms[idx].auxexprs[bestunderest[idx]], sol) - valj * vali;
       }
 
-      if( posover == sepadata->nlinexprs[img] )
+      if( bestoverest[idx] == -1 )
       {
-         prod_viol_above = 0.0;
+         if( terms[j].nauxexprs == 0 && terms[j].auxvar != NULL )
+         {
+            assert(terms[j].existing);
+            prod_viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[j].auxvar);
+         }
+         else
+         {
+            prod_viol_above = 0.0;
+         }
       }
       else
       {
-         assert(posover >= 0 && posover < sepadata->nlinexprs[img]);
-         prod_viol_above = prodval - SCIPgetConsExprExprValue(sepadata->linexprs[img][posover]);
+         assert(bestoverest[idx] >= 0 && bestoverest[idx] < terms[idx].nauxexprs);
+         prod_viol_above = valj * vali - SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+               terms[idx].auxexprs[bestoverest[idx]], sol);
       }
 
-      SCIPdebugMsg(scip, "most violated underestimator: pos = %d, value = %g\n", posunder,
-                   posunder < sepadata->nlinexprs[img] ? SCIPgetConsExprExprValue(sepadata->linexprs[img][posunder]) : 0.0);
-      SCIPdebugMsg(scip, "most violated overestimator: pos = %d, value = %g\n", posover,
-                   posover < sepadata->nlinexprs[img] ? SCIPgetConsExprExprValue(sepadata->linexprs[img][posover]) : 0.0);
-      SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", prodval, prod_viol_below, prod_viol_above);
+      SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", valj * vali, prod_viol_below, prod_viol_above);
 
       /* we are interested only in violated product relations */
       if( SCIPisFeasLE(scip, prod_viol_below, 0.0) && SCIPisFeasLE(scip, prod_viol_above, 0.0) )
@@ -2944,7 +3017,8 @@ SCIP_RETCODE separateRltCuts(
       xj = sepadata->varssorted[j];
 
       /* mark all rows for multiplier xj */
-      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, j, allowlocal, row_to_pos, row_marks, row_idcs, &nmarked) );
+      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, j, allowlocal, row_to_pos, bestunderestimators,
+                              bestoverestimators, row_marks, row_idcs, &nmarked) );
 
       assert(nmarked <= nrows);
 
@@ -2962,7 +3036,7 @@ SCIP_RETCODE separateRltCuts(
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, &currentnunknown, &accepted, sol) );
+         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, &currentnunknown, &accepted) );
          if( !accepted )
          {
             SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
@@ -2999,6 +3073,7 @@ SCIP_RETCODE separateRltCuts(
             }
 
             success = TRUE;
+            cut = NULL;
 
             SCIPdebugMsg(scip, "row %s, uselb = %d, uselhs = %d\n", SCIProwGetName(row), uselb[k], uselhs[k]);
 
@@ -3009,8 +3084,8 @@ SCIP_RETCODE separateRltCuts(
                   continue;
 
                /* compute the rlt cut for a projected row first */
-               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, xj, &success, uselb[k],
-                  uselhs[k], allowlocal, buildeqcut) );
+               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, bestunderestimators,
+                     bestoverestimators, xj, &success, uselb[k], uselhs[k], allowlocal, buildeqcut) );
 
                /* if the projected cut is not violated, set success to FALSE */
                if( cut != NULL )
@@ -3029,8 +3104,10 @@ SCIP_RETCODE separateRltCuts(
             /* if we don't use projection or if the projected cut was generated successfully and is violated,
              * generate the actual cut */
             if( success )
-               SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, row, sol, xj, &success, uselb[k], uselhs[k],
-                  allowlocal, buildeqcut) );
+            {
+               SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, row, sol, bestunderestimators,
+                     bestoverestimators, xj, &success, uselb[k], uselhs[k], allowlocal, buildeqcut) );
+            }
 
             /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )

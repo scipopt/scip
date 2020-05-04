@@ -13416,6 +13416,11 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
+   if( conshdlrdata->bilinhashtable == NULL )
+   {
+      return NULL;
+   }
+
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
    {
@@ -13460,6 +13465,11 @@ int SCIPgetConsExprBilinTermIdx(
 
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->bilinhashtable == NULL )
+   {
+      return -1;
+   }
 
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
