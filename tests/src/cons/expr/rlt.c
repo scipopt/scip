@@ -189,20 +189,6 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-/* helper method to check whether a bilinear term appears in the problem */
-static
-SCIP_VAR* getBilinVar(
-   SCIP_VAR*             x_,                 /**< first variable */
-   SCIP_VAR*             y_                  /**< second variable */
-   )
-{
-   SCIP_CONSEXPR_BILINTERM* bilinterm;
-
-   bilinterm = SCIPgetConsExprBilinTerm(conshdlr, x_, y_);
-
-   return bilinterm == NULL ? NULL : bilinterm->auxvar;
-}
-
 Test(rlt, collect)
 {
    /* check original variables */
@@ -266,7 +252,7 @@ Test(rlt, separation)
    /*
     * cut for row1 and (x-0)
     */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, &currentnunknown, &result) );
+   SCIP_CALL( isAcceptableRow(sepadata, row1, x, &currentnunknown, &result) );
    cr_expect(result);
    cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
          TRUE, FALSE), SCIP_OKAY);
@@ -314,7 +300,7 @@ Test(rlt, separation)
    SCIP_CALL( SCIPreleaseRow(scip, &cutrhs) );
 
    /* check for not acceptable row */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, &currentnunknown, &result) );
+   SCIP_CALL( isAcceptableRow(sepadata, row1, y, &currentnunknown, &result) );
    cr_expect(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 

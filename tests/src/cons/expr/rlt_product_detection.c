@@ -115,90 +115,9 @@ void teardown(void)
 
 /* check a linearisation by comparing simplified expressions */
 static
-void checkLinearisation(
-   SCIP_SEPADATA*        sepadata,           /* separator data */
-   int                   prodidx,            /* product index */
-   int                   linidx,             /* linearisation index */
-   SCIP_VAR**            vars,               /* expected variables */
-   SCIP_Real*            vals,               /* expected coefficients */
-   int                   nvars,              /* expected number of variables */
-   SCIP_Real             cst,                /* expected constant */
-   SCIP_Bool             underestimate,      /* should the linearisation underestimate the product? */
-   SCIP_Bool             overestimate        /* should the linearisation overestimate the product? */
-   )
-{
-   SCIP_CONSEXPR_EXPR* linexpr;
-   SCIP_CONSEXPR_EXPR* linchildren[3];
-   SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_Bool changed;
-   SCIP_Bool infeasible;
-   int i;
-   int datanvars;
-   SCIP_CONSEXPR_EXPR** datachildren;
-   SCIP_Real* datacoefs;
-   SCIP_Real datacst;
-   int compare;
-
-   datacoefs = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[prodidx][linidx]);
-   datanvars = SCIPgetConsExprExprNChildren(sepadata->linexprs[prodidx][linidx]);
-   datacst = SCIPgetConsExprExprSumConstant(sepadata->linexprs[prodidx][linidx]);
-
-   cr_expect(datanvars == nvars, "linearisation expression [%d][%d] should have %d vars, got %d", prodidx, linidx, nvars, datanvars);
-
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &linchildren[i], vars[i]) );
-
-      /* we don't want to fail if an expected number is different than the actual number by less than epsilon */
-      if( SCIPisEQ(scip, vals[i], datacoefs[i]) )
-      {
-         vals[i] = datacoefs[i];
-      }
-   }
-
-   if( SCIPisEQ(scip, cst, datacst) )
-   {
-      cst = datacst;
-   }
-
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &linexpr, nvars, linchildren, vals, cst) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, linexpr, &simplified, &changed, &infeasible) );
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linexpr) );
-   linexpr = simplified;
-
-   compare = SCIPcompareConsExprExprs(linexpr, sepadata->linexprs[prodidx][linidx]);
-
-   if( compare != 0 )
-   {
-      SCIPinfoMessage(scip, NULL, "\n\nprinting the two non-matching exprs (compare = %d):\n", compare);
-      SCIPprintConsExprExpr(scip, conshdlr, linexpr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-      SCIPprintConsExprExpr(scip, conshdlr, sepadata->linexprs[prodidx][linidx], NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-      SCIPinfoMessage(scip, NULL, "\n");
-   }
-
-   cr_expect(compare == 0, "linearisation expression [%d][%d] doesn't match expected", prodidx, linidx);
-
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linchildren[i]) );
-   }
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linexpr) );
-
-   cr_expect(sepadata->linunderestimate[prodidx][linidx] == underestimate,
-         "linearisation expression [%d][%d] should %sunderestimate", prodidx, linidx, underestimate ? "" : "NOT ");
-   cr_expect(sepadata->linoverestimate[prodidx][linidx] == overestimate,
-         "linearisation expression [%d][%d] should %soverestimate", prodidx, linidx, overestimate ? "" : "NOT ");
-}
-
-/* check a linearisation by comparing simplified expressions */
-static
 void checkAuxExpr(
    SCIP_CONSEXPR_BILINTERM term,
-   int                   auxidx,
+   int                   auxidx,             /* index of the term */
    SCIP_VAR*             auxvar,             /* expected auxiliary variable */
    SCIP_Real*            vals,               /* expected coefficients in the order w, x, y */
    SCIP_Real             cst,                /* expected constant */
@@ -518,10 +437,10 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
 
    /* b1 == 0  =>  x1 <= 1 */
    /* x1 <= -2b1 + 1 */
-   SCIPaddVarVub(scip, x1, b1, -2.0, 1.0, &infeasible, &nbdchgs);
+   SCIP_CALL( SCIPaddVarVub(scip, x1, b1, -2.0, 1.0, &infeasible, &nbdchgs) );
 
    /* x1 <= b2 + 0.0 */
-   SCIPaddVarVub(scip, x1, b2, 1.0, 0.0, &infeasible, &nbdchgs);
+   SCIP_CALL( SCIPaddVarVub(scip, x1, b2, 1.0, 0.0, &infeasible, &nbdchgs) );
 
    SCIPinfoMessage(scip, NULL, "\nvar x1 has %d vubs:", SCIPvarGetNVubs(x1));
    for( int i = 0; i < SCIPvarGetNVubs(x1); ++i )

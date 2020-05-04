@@ -207,7 +207,7 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
-   SCIPreleaseCons(scip, &cons);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIPfreeBuffer(scip, &sepadata);
 }
 
@@ -219,9 +219,9 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_Real* vals;
    PROJLP* projlp;
 
-   SCIPallocBufferArray(scip, &rows, 1);
-   SCIPallocBufferArray(scip, &vars, 3);
-   SCIPallocBufferArray(scip, &vals, 3);
+   SCIP_CALL( SCIPallocBufferArray(scip, &rows, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
 
    /* create test row1: -10 <= 4x1 - 7x2 + x3 <= 5 */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &rows[0], "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
@@ -230,14 +230,14 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
 
    /* specify solution (only x3 is not at bound) */
-   SCIPcreateSol(scip, &sol, NULL);
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    vars[0] = x1; vals[0] = 5.0;
    vars[1] = x2; vals[1] = -6.0;
    vars[2] = x3; vals[2] = 2.0;
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
    cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
-   createProjLP(scip, rows, 1, sol, &projlp, TRUE);
+   SCIP_CALL( createProjLP(scip, rows, 1, sol, &projlp, TRUE) );
    printProjLP(scip, projlp, 1, NULL);
 
    /* check results */
@@ -252,8 +252,8 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
 
    /* free memory */
    freeProjLP(scip, &projlp, 1);
-   SCIPfreeSol(scip, &sol);
-   SCIPreleaseRow(scip, &rows[0]);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPreleaseRow(scip, &rows[0]) );
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &rows);
@@ -270,11 +270,11 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_Bool success;
    SCIP_Real cut_val;
 
-   SCIPallocBufferArray(scip, &vars, 3);
-   SCIPallocBufferArray(scip, &vals, 3);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
 
    /* specify solution (only x3 is not at bound) */
-   SCIPcreateSol(scip, &sol, NULL);
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    vars[0] = x1; vals[0] = 0.0;
    vars[1] = x2; vals[1] = -1.0;
    vars[2] = x3; vals[2] = 2.0;
@@ -319,10 +319,10 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    checkCut(cut, &x1, &cut_val, 1, -8.0, SCIPinfinity(scip));
 
    /* free memory */
-   SCIPreleaseRow(scip, &cut);
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    freeProjLP(scip, &projlp, 1);
    SCIPfreeBuffer(scip, &sepadata);
-   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 }
@@ -343,9 +343,9 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIP_VAR** cut_vars;
    SCIP_Real* cut_vals;
 
-   SCIPallocBufferArray(scip, &rows, 1);
-   SCIPallocBufferArray(scip, &vars, 2);
-   SCIPallocBufferArray(scip, &vals, 2);
+   SCIP_CALL( SCIPallocBufferArray(scip, &rows, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
 
    /* create test row1: -10 <= b2 <= 5 */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &rows[0], "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
@@ -354,7 +354,7 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    scip->stat->nnz = 1;
 
    /* specify solution */
-   SCIPcreateSol(scip, &sol, NULL);
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    vars[0] = b1;
    vals[0] = 1;
    vars[1] = b2;
@@ -386,11 +386,12 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
 
    /* free memory */
    if( cut != NULL )
-      SCIPreleaseRow(scip, &cut);
-   SCIPreleaseRow(scip, &rows[0]);
-
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   }
+   SCIP_CALL( SCIPreleaseRow(scip, &rows[0]) );
    SCIPfreeBuffer(scip, &sepadata);
-   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &rows);
