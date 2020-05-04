@@ -435,7 +435,6 @@ SCIP_RETCODE addProductVars(
    {
       xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
    }
-   int nxvars = sepadata->nvarbilinvars[xpos];
    if( sepadata->nvarbilinvars[xpos] == 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip)) );
@@ -471,7 +470,6 @@ SCIP_RETCODE addProductVars(
    }
    if( xidx != yidx )
    {
-      int nyvars = sepadata->nvarbilinvars[ypos];
       if( sepadata->nvarbilinvars[ypos] == 0 )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip)) );
@@ -490,7 +488,7 @@ SCIP_RETCODE addProductVars(
          {
             sepadata->varbilinvars[ypos][i] = sepadata->varbilinvars[ypos][i - 1];
          }
-         sepadata->varbilinvars[ypos][pos] = y;
+         sepadata->varbilinvars[ypos][pos] = x;
          ++sepadata->nvarbilinvars[ypos];
       }
    }
