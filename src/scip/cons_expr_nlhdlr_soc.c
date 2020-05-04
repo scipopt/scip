@@ -1017,9 +1017,15 @@ void tryFillNlhdlrExprDataQuad(
    assert(nextlhsterm == nposeigvals + nnegeigvals - 1);
    assert(nexttranscoef == ntranscoefs - nrhstranscoefs);
 
-   /* if the lhs constant is nonnegative, it is a SOC */
+   /* if the lhs constant is nonnegative, it is a SOC... */
    if( !SCIPisNegative(scip, *lhsconstant) )
+   {
       *success = TRUE;
+
+      /* ... however, we need lhsconstant to be >= 0 */
+      if( *lhsconstant < 0.0 )
+         *lhsconstant = 0.0;
+   }
 }
 
 /** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar */
