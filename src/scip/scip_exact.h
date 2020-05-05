@@ -185,6 +185,22 @@ SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** branches on an LP solution exactly; does not call branching rules, since fractionalities are assumed to small;
+ *  if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPbranchLPexact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
 #ifdef __cplusplus
 }
 #endif

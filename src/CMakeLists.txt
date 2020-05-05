@@ -232,6 +232,7 @@ set(scipsources
     scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
+    scip/branchexact.c
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
@@ -484,6 +485,7 @@ set(scipheaders
     scip/branch_distribution.h
     scip/branch_fullstrong.h
     scip/branch.h
+    scip/branchexact.h
     scip/branch_inference.h
     scip/branch_leastinf.h
     scip/branch_lookahead.h

@@ -48,6 +48,7 @@
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"
+#include "scip/branchexact.h"
 #include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
@@ -313,6 +314,31 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
 
    SCIP_CALL( SCIPlpexCheckIntegralityExact(scip->lp, scip->lpex,
          scip->set, scip->stat, result) );
+
+   return SCIP_OKAY;
+}
+
+/** branches on an LP solution exactly; does not call branching rules, since fractionalities are assumed to small;
+ *  if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPbranchLPexact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPexact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbranchExecLPexact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
+         TRUE, result) );
 
    return SCIP_OKAY;
 }
