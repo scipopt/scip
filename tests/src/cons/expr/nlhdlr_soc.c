@@ -112,23 +112,29 @@ void checkData(
    int*                  nnonzeroes,
    int                   nvars,
    int                   nterms,
-   int                   ntranscoefs,
-   SCIP_Real             constant
+   int                   ntranscoefs
    )
 {
    int i;
 
    cr_assert_not_null(nlhdlrexprdata->vars);
    cr_assert_not_null(nlhdlrexprdata->offsets);
-   cr_assert_not_null(nlhdlrexprdata->nnonzeroes);
    cr_assert_not_null(nlhdlrexprdata->transcoefs);
    cr_assert_not_null(nlhdlrexprdata->transcoefsidx);
 
    cr_expect_eq(nlhdlrexprdata->nvars, nvars);
    cr_expect_eq(nlhdlrexprdata->nterms, nterms);
-   cr_expect_eq(nlhdlrexprdata->ntranscoefs, ntranscoefs);
-   cr_expect(SCIPisEQ(scip, nlhdlrexprdata->constant, constant), "expected constant %f, but got %f\n",
-      constant, nlhdlrexprdata->constant);
+   cr_expect_eq(nlhdlrexprdata->termbegins[nlhdlrexprdata->nterms], ntranscoefs);
+
+   printf("begin array: ");
+   for( i = 0; i < nlhdlrexprdata->nterms + 1; ++i )
+      printf("%d, ", nlhdlrexprdata->termbegins[i]);
+   printf("\n");
+
+   printf("transcoefs array: ");
+   for( i = 0; i < ntranscoefs; ++i )
+      printf("%g, ", nlhdlrexprdata->transcoefs[i]);
+   printf("\n");
 
    for( i = 0; i < nvars; ++i )
    {
@@ -145,19 +151,20 @@ void checkData(
 
    for( i = 0; i < nterms; ++i )
    {
-      cr_expect_eq(nlhdlrexprdata->nnonzeroes[i], nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
-         i + 1, nnonzeroes[i], nlhdlrexprdata->nnonzeroes[i]);
+      int nnz = nlhdlrexprdata->termbegins[i + 1] - nlhdlrexprdata->termbegins[i];
+      cr_expect_eq(nnz, nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
+         i + 1, nnonzeroes[i], nnz);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
-      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef %d to be %f, but got %f\n",
+      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef[%d] to be %f, but got %f\n",
          i + 1, transcoefs[i], nlhdlrexprdata->transcoefs[i]);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
-      cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefsidx[i], "expected transcoefsidx %d to be %d, but got %d\n",
+      cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefsidx[i], "expected transcoefsidx[%d] to be %d, but got %d\n",
          i + 1, transcoefsidx[i], nlhdlrexprdata->transcoefsidx[i]);
    }
 }
@@ -230,7 +237,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
    int nnonzeroes[4] = {1, 1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -278,7 +285,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    int nnonzeroes[4] = {1, 1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -324,13 +331,14 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* setup expected data */
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[2]);
    SCIP_VAR* vars[3] = {x, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
-   SCIP_Real offsets[3] = {SQRT(2.0), -4.0, 0.0};
+   int nterms = 4;
+   SCIP_Real offsets[4] = {SQRT(2.0), -4.0, SQRT(8.0) /* constant */, 0.0};
+   int nnonzeroes[4] = {1, 1, 0, 1};
    SCIP_Real transcoefs[3] = {SQRT(2.0), 2.0, 1.0};
    int transcoefsidx[3] = {0, 1, 2};
-   int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 8.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, nterms, 3);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -380,7 +388,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 0.0);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -425,13 +433,14 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
-   SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
+   int nterms = 4;
+   SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
+   int nnonzeroes[4] = {1, 1, 0, 1};
    SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
-   int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, nterms, 3);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -513,13 +522,14 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
+   int nterms = 5;
+   SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0}; /* hyperbolic, constant is second to last of lhs */
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
-   int nnonzeroes[4] = {1, 1, 2, 2};
+   int nnonzeroes[5] = {1, 1, 0, 2, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, nterms, 6);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -603,13 +613,14 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
-   SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
+   int nterms = 4;
+   SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
+   int nnonzeroes[4] = {1, 1, 0, 1};
    SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
-   int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, nterms, 3);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -652,13 +663,14 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 
    /* setup expected data */
    SCIP_VAR* vars[4] = {x, z, y, u};
-   SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
+   int nterms = 5;
+   SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0};
+   int nnonzeroes[5] = {1, 1, 0, 2, 2};
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
-   int nnonzeroes[4] = {1, 1, 2, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, nterms, 6);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -702,15 +714,16 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
 
    /* setup expected data */
    SCIP_VAR* vars[3] = {z, y, x};
-   SCIP_Real offsets[3] = {-0.5321193159399078, -1.1644355645349063, 3.275663328435811};
+   int nterms = 4;
+   SCIP_Real offsets[4] = {-0.5321193159399078, -1.1644355645349063, SQRT(17.0909090909091), 3.275663328435811};
+   int nnonzeroes[4] = {3, 3, 0, 3};
    SCIP_Real transcoefs[9] = { 0.8403540860560068, -0.8715100046656585, -0.15866733787070855,
                               -1.5723379860224058, -1.2601695810081268, -1.4058990135251308,
-                              -1.0008633075190196,  0.5895397027601558,  0.42242364072103755};
-   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
-   int nnonzeroes[3] = {3, 3, 3};
+                              0.42242364072103755,  0.5895397027601558, -1.0008633075190196};
+   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 0, 1, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, nterms, 9);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -754,15 +767,16 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
 
    /* setup expected data */
    SCIP_VAR* vars[3] = {z, y, x};
-   SCIP_Real offsets[3] = {-1.1644355645349063, 0.5321193159399078, 3.275663328435811};
+   int nterms = 4;
+   int nnonzeroes[4] = {3, 3, 0, 3};
+   SCIP_Real offsets[4] = {-1.1644355645349063, 0.5321193159399078, SQRT(17.0909090909091), 3.275663328435811};
    SCIP_Real transcoefs[9] = {-1.5723379860224058, -1.2601695810081268, -1.4058990135251308,
                               -0.8403540860560068,  0.8715100046656585,  0.15866733787070855,
-                              -1.0008633075190196,  0.5895397027601558,  0.42242364072103755};
-   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
-   int nnonzeroes[3] = {3, 3, 3};
+                              0.42242364072103755,  0.5895397027601558, -1.0008633075190196};
+   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 0, 1, 2};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
+   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, nterms, 9);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -907,8 +921,9 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), nlhdlrexprdata->vars[2]);
 
    cr_expect_eq(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
-   cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0);
+   cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0, "expected 0 got %g\n", SCIProwGetRhs(nlhdlrexprdata->disrow));
 
+   /* TODO: there seems to be a memory leak, either free row here or figure out why exit sepa is not being called */
    /* free expr and cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }

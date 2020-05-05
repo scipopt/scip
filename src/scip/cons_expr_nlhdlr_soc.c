@@ -17,13 +17,14 @@
  * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller
+ * @author Felipe Serrano
  * @author Fabian Wegscheider
  *
  * This is a nonlinear handler for second order cone constraints of the form
  *
- * \f$\sqrt{\gamma + \sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
+ * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
- * where \f$\gamma \geq 0\f$ and \f$v_{n+1}^T x +\beta_{n+1} \geq 0\f$.
+ * Note that v_i, for i <= n, could be 0, thus allowing a positive constant terms inside the root
  *
  * @TODO: Don't disaggregate if n = 1. This requires a separate separation method for this case.
  */
@@ -63,18 +64,17 @@
  *  - offsets contains the constants beta_i of each term
  *  - transcoefs contains the non-zero values of the transformation vectors v_i of each term
  *  - transcoefsidx contains for each entry of transcoefs the position of the respective variable in vars
- *  - termbegins contains the index at which the transcoefs of each term start
- *  - nnonzeroes contains the number of non-zeroes in v_i of each term
- *  - constant is gamma which is the constant inside the square root
- *  - nvars is the total number of unique variables appearing (length of vars)
+ *  - termbegins contains the index at which the transcoefs of each term start, with a sentinel value
  *  - nterms is the total number of terms appearing on both sides
- *  - ntranscoefs is the total number of entries in transcoefs and transcoefsidx
+ *  - nvars is the total number of unique variables appearing (length of vars)
+ *
+ *  Note that the numbers of nonzeroes in v_i is termbegins[i+1] - termbegins[i] and that
+ *  the total number of entries in transcoefs and transcoefsidx is termbegins[nterms]
  *
  *  The disaggregation is implicitly stored in the variables disvars and disrow. An SOC as
- *  described above is replaced by n+1 (or n if gamma = 0) smaller SOCs
+ *  described above is replaced by n smaller SOCs
  *
  *              (v_i^T x + beta_i)^2 <= disvar_i     * (v_{n+1}^T x + beta_{n+1})
- *                             gamma <= disvar_{n+1} * (v_{n+1}^T x + beta_{n+1})
  *
  *  and the row       sum_i disvar_i <= v_{n+1}^T x + beta_{n+1}.
  *
@@ -83,15 +83,12 @@
  *           results in the following nlhdlrexprdata:
  *
  *           vars = {x, y, z}
- *           offsets = {2, 0, 0, -1}
+ *           offsets = {2, 0, 0, SQRT(5), -1}
  *           transcoefs = {3, -4, 1, SQRT(7), 5, -1}
  *           transcoefsidx = {0, 1, 1, 2, 0, 1}
- *           termbegins = {0, 2, 3, 4}
- *           nnonzeroes = {2, 1, 1, 2}
- *           constant = 5
+ *           termbegins = {0, 2, 3, 4, 4, 6}
  *           nvars = 3
- *           nterms = 4
- *           ntranscoefs = 6
+ *           nterms = 5
  */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
@@ -100,15 +97,11 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real*            transcoefs;         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  termbegins;         /**< starting indices of transcoefs for each term */
-   int*                  nnonzeroes;         /**< number of non-zeroes in each v_i */
-   SCIP_Real             constant;           /**< constant on left hand side (gamma) */
    int                   nvars;              /**< total number of variables appearing */
-   int                   nterms;             /**< number of summands in the SQRT (excluding gamma) +1 for RHS (n+1) */
-   int                   ntranscoefs;        /**< total number of entries in transcoefs */
+   int                   nterms;             /**< number of summands in the SQRT +1 for RHS (n+1) */
 
    /* variables for cone disaggregation */
-   SCIP_VAR**            disvars;            /**< disaggregation variables for each expression; the last entry
-                                               *  corresponds to the constant term */
+   SCIP_VAR**            disvars;            /**< disaggregation variables for each term in lhs */
    SCIP_ROW*             disrow;             /**< disaggregation row */
 };
 
@@ -141,25 +134,33 @@ void printNlhdlrExprData(
 
    nterms = nlhdlrexprdata->nterms;
 
-   SCIPinfoMessage(scip, NULL, "SQRT( ", nlhdlrexprdata->constant);
-   if( nlhdlrexprdata->constant != 0.0 )
-      SCIPinfoMessage(scip, NULL, "%f + ", nlhdlrexprdata->constant);
+   SCIPinfoMessage(scip, NULL, "SQRT( ");
 
    for( i = 0; i < nterms - 1; ++i )
    {
       int startidx;
 
-      SCIPinfoMessage(scip, NULL, "(");
-
       startidx = nlhdlrexprdata->termbegins[i];
 
-      for( j = startidx; j < startidx + nlhdlrexprdata->nnonzeroes[i]; ++j )
+      /* v_i is 0 */
+      if( startidx == nlhdlrexprdata->termbegins[i + 1] )
+      {
+         assert(nlhdlrexprdata->offsets[i] != 0.0);
+
+         SCIPinfoMessage(scip, NULL, "%f", SQR(nlhdlrexprdata->offsets[i]));
+         continue;
+      }
+
+      /* v_i is not 0 */
+      SCIPinfoMessage(scip, NULL, "(");
+
+      for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
       {
          if( nlhdlrexprdata->transcoefs[j] != 1.0 )
             SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
          SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
 
-         if( j < startidx + nlhdlrexprdata->nnonzeroes[i] - 1 )
+         if( j < nlhdlrexprdata->termbegins[i + 1] - 1 )
             SCIPinfoMessage(scip, NULL, " + ");
          else if( nlhdlrexprdata->offsets[i] != 0.0 )
             SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[i]);
@@ -173,13 +174,13 @@ void printNlhdlrExprData(
 
    SCIPinfoMessage(scip, NULL, " ) <= ");
 
-   for( j = nlhdlrexprdata->termbegins[nterms-1]; j < nlhdlrexprdata->ntranscoefs; ++j )
+   for( j = nlhdlrexprdata->termbegins[nterms-1]; j < nlhdlrexprdata->termbegins[nterms]; ++j )
    {
       if( nlhdlrexprdata->transcoefs[j] != 1.0 )
          SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
       SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]));
 
-      if( j < nlhdlrexprdata->ntranscoefs - 1 )
+      if( j < nlhdlrexprdata->termbegins[nterms] - 1 )
          SCIPinfoMessage(scip, NULL, " + ");
       else if( nlhdlrexprdata->offsets[nterms-1] != 0.0 )
          SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[nterms-1]);
@@ -199,21 +200,17 @@ SCIP_RETCODE createDisaggrVars(
 {
    char name[SCIP_MAXSTRLEN];
    int ndisvars;
-   int nterms;
    int i;
 
    assert(nlhdlrexprdata != NULL);
 
-   nterms = nlhdlrexprdata->nterms;
-
-   /* check whether constant has a separate entry */
-   ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
+   ndisvars = nlhdlrexprdata->nterms - 1;
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars) );
 
    /* create disaggregation variables representing the epigraph of (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1}) */
-   for( i = 0; i < nterms - 1; ++i )
+   for( i = 0; i < ndisvars; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0,
@@ -222,18 +219,6 @@ SCIP_RETCODE createDisaggrVars(
 
       SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[i]);
       SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, 1, 1) );
-   }
-
-   /* create disaggregation variable representing the epigraph of gamma / (v_{n+1}^T x + beta_{n+1}) */
-   if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_const", (void*) expr);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[ndisvars - 1], name, 0.0, SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_CONTINUOUS) );
-      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[ndisvars - 1]) );
-
-      SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[ndisvars - 1]);
-      SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[ndisvars - 1], SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    return SCIP_OKAY;
@@ -246,28 +231,31 @@ SCIP_RETCODE freeDisaggrVars(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
+   int ndisvars;
    int i;
-   int size;
 
    assert(nlhdlrexprdata != NULL);
 
-   /* check whether constant has a separate entry */
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
+   ndisvars = nlhdlrexprdata->nterms - 1;
 
    /* release variables */
-   for( i = 0; i < size; ++i )
+   for( i = 0; i < ndisvars; ++i )
    {
       SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, -1, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
    /* free memory */
-   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, size);
+   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, ndisvars);
 
    return SCIP_OKAY;
 }
 
-/** helper method to create the disaggregation row */
+/** helper method to create the disaggregation row:
+ * disvars_i <= v_{n+1}^T x + \beta_{n+1}
+ * In SCIP we create it like:
+ * disvars_i - v_{n+1}^T x <= \beta_{n+1}
+ */
 static
 SCIP_RETCODE createDisaggrRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -276,10 +264,9 @@ SCIP_RETCODE createDisaggrRow(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
-   SCIP_Real disrowrhs;
+   SCIP_Real beta;
    char name[SCIP_MAXSTRLEN];
    int ndisvars;
-   int nrhsvars;
    int nterms;
    int i;
 
@@ -289,16 +276,14 @@ SCIP_RETCODE createDisaggrRow(
    assert(nlhdlrexprdata->disrow == NULL);
 
    nterms = nlhdlrexprdata->nterms;
-   nrhsvars = nlhdlrexprdata->nnonzeroes[nterms-1];
-   disrowrhs = nlhdlrexprdata->offsets[nterms - 1];
+   beta = nlhdlrexprdata->offsets[nterms - 1];
 
-   /* check whether constant has a separate entry */
-   ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms - 1 : nterms;
+   ndisvars = nterms - 1;
 
-   /* create row */
+   /* create row 0 <= beta_{n+1} */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_row", (void*) expr);
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->disrow, conshdlr, name,
-         -SCIPinfinity(scip), disrowrhs, FALSE, FALSE, TRUE) );
+         -SCIPinfinity(scip), beta, FALSE, FALSE, TRUE) );
 
    /* add disvars to row */
    for( i = 0; i < ndisvars; ++i )
@@ -307,7 +292,7 @@ SCIP_RETCODE createDisaggrRow(
    }
 
    /* add rhs vars to row */
-   for( i = nlhdlrexprdata->ntranscoefs - nrhsvars; i < nlhdlrexprdata->ntranscoefs; ++i )
+   for( i = nlhdlrexprdata->termbegins[nterms - 1]; i < nlhdlrexprdata->termbegins[nterms]; ++i )
    {
       SCIP_VAR* var;
       SCIP_Real coef;
@@ -330,14 +315,12 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  termbegins,         /**< starting indices of transcoefs for each term */
-   int*                  nnonzeroes,         /**< number of non-zeroes in each v_i */
-   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
    int                   nvars,              /**< total number of variables appearing */
-   int                   nterms,             /**< number of summands in the SQRT (excluding gamma) +1 for RHS */
-   int                   ntranscoefs,        /**< total number of entries in transcoefs */
+   int                   nterms,             /**< number of summands in the SQRT +1 for RHS */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
    )
 {
+   int ntranscoefs;
    int i;
 
    assert(vars != NULL);
@@ -345,23 +328,20 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(transcoefs != NULL);
    assert(transcoefsidx != NULL);
    assert(termbegins != NULL);
-   assert(nnonzeroes != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(constant >= 0.0);
+
+   ntranscoefs = termbegins[nterms];
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, vars, nvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->offsets, offsets, nterms) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, termbegins, nterms) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->nnonzeroes, nnonzeroes, nterms) );
-   (*nlhdlrexprdata)->constant = constant;
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, termbegins, nterms + 1) );
    (*nlhdlrexprdata)->nvars = nvars;
    (*nlhdlrexprdata)->nterms = nterms;
-   (*nlhdlrexprdata)->ntranscoefs = ntranscoefs;
 
-   /* capture variables on LHS */
+   /* capture variables */
    for( i = 0; i < nvars; ++i )
    {
       assert(vars[i] != NULL);
@@ -387,6 +367,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nonlinear handler expression data */
    )
 {
+   int ntranscoefs;
    int i;
 
    assert(nlhdlrexprdata != NULL);
@@ -401,10 +382,11 @@ SCIP_RETCODE freeNlhdlrExprData(
       SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[i]) );
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->nnonzeroes, (*nlhdlrexprdata)->nterms);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, (*nlhdlrexprdata)->nterms);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, (*nlhdlrexprdata)->ntranscoefs);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, (*nlhdlrexprdata)->ntranscoefs);
+   ntranscoefs = (*nlhdlrexprdata)->termbegins[(*nlhdlrexprdata)->nterms];
+
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, (*nlhdlrexprdata)->nterms + 1);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, ntranscoefs);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->offsets, (*nlhdlrexprdata)->nterms);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
@@ -422,20 +404,18 @@ SCIP_Real evalSingleTerm(
    )
 {
    SCIP_Real result;
-   int termstart;
    int i;
 
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(0 <= k && k < nlhdlrexprdata->nterms);
 
-   termstart = nlhdlrexprdata->termbegins[k];
    result = nlhdlrexprdata->offsets[k];
 
-   for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+   for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k + 1]; ++i )
    {
-      SCIP_Real varval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i]]);
-      result += nlhdlrexprdata->transcoefs[termstart + i] * varval;
+      SCIP_Real varval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
+      result += nlhdlrexprdata->transcoefs[i] * varval;
    }
 
    return result;
@@ -443,27 +423,25 @@ SCIP_Real evalSingleTerm(
 
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation
  *
- *  After the soc constraint \f$\sqrt{\gamma + \sum_i^n (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$
- *  is disggregated into the row \f$\sum_i^{n+1} y_i \leq v_{n+1}^T x + \beta_{n+1}\f$ and the smaller soc constraints
+ *  After the soc constraint \f$\sqrt{\sum_{i = 0}^{n-1} (v_i^T x + \beta_i)^2} \leq v_n^T x + \beta_n\f$
+ *  is disggregated into the row \f$\sum_{i = 0}^{n-1} y_i \leq v_n^T x + \beta_n\f$ and the smaller soc constraints
  *
- *  \f{align*}{
- *    (v_i^T x + \beta_i)^2 &\leq (v_{n+1}^T x + \beta_{n+1}) y_i & \text{for } i \in [n] \\
- *    \gamma                &\leq (v_{n+1}^T x + \beta_{n+1}) y_{n+1} &
- *  \f}
+ *  \f[
+ *    (v_i^T x + \beta_i)^2 \leq (v_n^T x + \beta_n) y_i \text{ for } i \in \{0, \ldots, n -1\}
+ *  \f]
  *
  *  Now we want to separate one of the small rotated cones. We first transform it into standard form:
  *  \f[
- *    \sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2} - v_{n+1}^T x - \beta_{n+1} - y_i \leq 0.
+ *    \sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2} - v_n^T x - \beta_n - y_i \leq 0.
  *  \f]
  *
- *  Let the left-hand-side be called \f$f(x,y)\f$. We now compute the gradient by
+ *  Let \f$f(x,y)\f$ be the left-hand-side. We now compute the gradient by
  *  \f{align*}{
- *    \frac{\delta f}{\delta x_j} &= \frac{(v_i)_j(4v_i^T x + 4\beta_i) + (v_{n+1})_j(v_{n+1}^T x + \beta_{n+1} - y_i)}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2}} - (v_{n+1})_j \\
- *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_{n+1}^T x -\beta_{n+1}}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_{n+1}^T x + \beta_{n+1} - y_i)^2}} - 1
+ *    \frac{\delta f}{\delta x_j} &= \frac{(v_i)_j(4v_i^T x + 4\beta_i) + (v_n})_j(v_n^T x + \beta_n - y_i)}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - (v_n)_j \\
+ *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_n^T x -\beta_n}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - 1
  *  \f}
  *
  *  and the gradient cut is then \f$f(x^*, y^*) + \nabla f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
- *  For the \f$\gamma\f$-cone the formula is similar.
  */
 static
 SCIP_RETCODE generateCutSol(
@@ -483,7 +461,6 @@ SCIP_RETCODE generateCutSol(
    SCIP_Real* transcoefs;
    int* transcoefsidx;
    int* termbegins;
-   int* nnonzeroes;
    SCIP_ROWPREP* rowprep;
    SCIP_VAR* cutvar;
    SCIP_Real cutcoef;
@@ -508,36 +485,24 @@ SCIP_RETCODE generateCutSol(
    transcoefs = nlhdlrexprdata->transcoefs;
    transcoefsidx = nlhdlrexprdata->transcoefsidx;
    termbegins = nlhdlrexprdata->termbegins;
-   nnonzeroes = nlhdlrexprdata->nnonzeroes;
    nterms = nlhdlrexprdata->nterms;
 
-   /* nterms is equal to n+1 in the description and disaggidx is in {0,...,n}
-    * disaggidx = n corresponds to the disaggregation of gamma
-    */
+   /* nterms is equal to n in the description and disaggidx is in {0, ..., n - 1} */
 
    *cut = NULL;
 
    disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
 
-   if( disaggidx < nterms - 1 )
-   {
-      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
+   lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
 
-      assert(4.0 * SQR(lhsval) + SQR(rhsval - disvarval) >= 0);
-      denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
-   }
-   else
-   {
-      lhsval = nlhdlrexprdata->constant;
-
-      assert(4.0 * lhsval + SQR(rhsval - disvarval) >= 0);
-      denominator = SQRT(4.0 * lhsval + SQR(rhsval - disvarval));
-   }
+   assert(4.0 * SQR(lhsval) + SQR(rhsval - disvarval) >= 0);
+   denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
 
    /* compute value of function to be separated (f(x*,y*)) */
    fvalue = denominator - rhsval - disvarval;
 
    /* if the soc is not violated don't compute cut */
+   /* TODO: should this be >= SCIPfeastol ? */
    if( !SCIPisPositive(scip, fvalue) )
    {
       SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below feastol\n", disaggidx, fvalue);
@@ -546,9 +511,11 @@ SCIP_RETCODE generateCutSol(
 
    /* if the denominator is 0 -> the constraint can't be violated */
    assert(!SCIPisZero(scip, denominator));
+   /* if v_disaggidx^T x + beta_disaggidx is 0 -> the constraint can't be violated */
+   assert(!SCIPisZero(scip, lhsval));
 
-   /* compute maximum number of variables in cut */
-   ncutvars = nnonzeroes[nterms - 1] + 1 + (disaggidx < nterms - 1 ? nnonzeroes[disaggidx] : 0);
+   /* compute upper bound on the number of variables in cut: vars in rhs +  vars in term + disagg var */
+   ncutvars = (termbegins[nterms] - termbegins[nterms-1]) + (termbegins[disaggidx + 1] - termbegins[disaggidx]) + 1;
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -559,44 +526,33 @@ SCIP_RETCODE generateCutSol(
 
    /* a variable could appear on the lhs and rhs, but we add the coefficients separately  */
 
-   /* add terms for v_{disaggidx+1} (disaggidx corresponds to v_{disaggidx+1} in the description) */
-   if( disaggidx < nterms - 1 && !SCIPisZero(scip, lhsval) )
+   /* add terms for v_disaggidx */
+   for( i = termbegins[disaggidx]; i < termbegins[disaggidx + 1]; ++i )
    {
-      for( i = 0; i < nnonzeroes[disaggidx]; ++i )
-      {
-         int idx;
+      cutvar = vars[transcoefsidx[i]];
 
-         idx = termbegins[disaggidx] + i;
-         cutvar = vars[transcoefsidx[idx]];
-
-         /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
-         cutcoef = 4.0 * lhsval * transcoefs[idx] / denominator;
-
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
-
-         constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
-      }
-   }
-
-   /* add terms for v_{n+1} */
-   for( i = 0; i < nnonzeroes[nterms - 1]; ++i )
-   {
-      int idx;
-
-      idx = termbegins[nterms - 1] + i;
-      cutvar = vars[transcoefsidx[idx]];
-
-      /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
-      cutcoef = (rhsval - disvarval) * transcoefs[idx] / denominator - transcoefs[idx];
+      /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
+      cutcoef = 4.0 * lhsval * transcoefs[i] / denominator;
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
       constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
    }
 
-   /* add term for disvar */
+   /* add terms for v_n */
+   for( i = termbegins[nterms - 1]; i < termbegins[nterms]; ++i )
+   {
+      cutvar = vars[transcoefsidx[i]];
 
-   /* cutcoef is the the partial derivative w.r.t. the disaggregation variable */
+      /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
+      cutcoef = (rhsval - disvarval) * transcoefs[i] / denominator - transcoefs[i];
+
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+      constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+   }
+
+   /* add term for disvar: cutcoef is the the partial derivative w.r.t. the disaggregation variable */
    cutcoef = (disvarval - rhsval) / denominator - 1.0;
    cutvar = disvars[disaggidx];
 
@@ -843,21 +799,19 @@ void tryFillNlhdlrExprDataQuad(
    SCIP_Real*            eigvals,            /**< array containing the Eigenvalues */
    SCIP_Real*            bp,                 /**< product of linear vector b * P (eigvecmatrix^t) */
    int                   nvars,              /**< number of variables */
-   int                   nposeigvals,        /**< number of positive Eigenvalues */
-   int                   nnegeigvals,        /**< number of negative Eigenvalues */
-   int*                  nnonzeroes,         /**< pointer to store the nnonzeroes */
    int*                  termbegins,         /**< pointer to store the termbegins */
    SCIP_Real*            transcoefs,         /**< pointer to store the transcoefs */
    int*                  transcoefsidx,      /**< pointer to store the transcoefsidx */
    SCIP_Real*            offsets,            /**< pointer to store the offsets */
-   int                   ntranscoefs,        /**< number of transcoefs */
    SCIP_Real*            lhsconstant,        /**< pointer to store the lhsconstant */
+   int*                  nterms,             /**< pointer to store the total number of terms */
    SCIP_Bool*            success             /**< whether the expression is indeed a SOC */
    )
 {
-   int nextlhsterm = 0;
+   SCIP_Real sqrteigval;
+   int nextterm = 0;
    int nexttranscoef = 0;
-   int nrhstranscoefs = 0;
+   int specialtermidx;
    int i;
    int j;
 
@@ -866,7 +820,6 @@ void tryFillNlhdlrExprDataQuad(
    assert(eigvecmatrix != NULL);
    assert(eigvals != NULL);
    assert(bp != NULL);
-   assert(nnonzeroes != NULL);
    assert(termbegins != NULL);
    assert(transcoefs != NULL);
    assert(transcoefsidx != NULL);
@@ -875,164 +828,185 @@ void tryFillNlhdlrExprDataQuad(
    assert(success != NULL);
 
    *success = FALSE;
+   *nterms = 0;
 
-   /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc */
+   /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc;
+    * we now store all the v_i^T x + beta_i on the lhs, and compute the constant
+    */
+   specialtermidx = -1;
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_Real sqrteigval;
-
       if( SCIPisZero(scip, eigvals[i]) )
          continue;
 
-      if( eigvals[i] > 0.0 )
+      if( eigvals[i] < 0.0 )
       {
-         sqrteigval = SQRT(eigvals[i]);
+         assert(specialtermidx == -1); /* there should only be one negative eigenvalue */
 
-         offsets[nextlhsterm] = bp[i] / (2.0 * sqrteigval);
-         *lhsconstant -= bp[i] * bp[i] / (4.0 * eigvals[i]);
-         termbegins[nextlhsterm] = nexttranscoef;
+         specialtermidx = i;
 
-
-         /* set transcoefs */
-         for( j = 0; j < nvars; ++j )
-         {
-            if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
-            {
-               transcoefs[nexttranscoef] = sqrteigval * eigvecmatrix[i * nvars + j];
-               transcoefsidx[nexttranscoef] = j;
-               ++nnonzeroes[nextlhsterm];
-
-               ++nexttranscoef;
-            }
-         }
-
-         ++nextlhsterm;
-      }
-      else
-      {
-         SCIP_Real rhsvarlb;
-         SCIP_Real rhsvarub;
-         SCIP_Real signfactor;
-
-         sqrteigval = SQRT(-eigvals[i]);
-
-         offsets[nposeigvals + nnegeigvals - 1] = -bp[i] / (2.0 * sqrteigval);
-
-         rhsvarlb = 0.0;
-         rhsvarub = 0.0;
-
-         /* the expression can only be an soc if the resulting rhs term does not change sign;
-          * the rhs term is a linear combination of variables, so estimate its bounds
-          */
-         for( j = 0; j < nvars; ++j )
-         {
-            SCIP_Real aux;
-
-            if( SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
-               continue;
-
-            if( eigvecmatrix[i * nvars + j] > 0.0 )
-            {
-               aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
-               assert(!SCIPisInfinity(scip, aux));
-            }
-            else
-            {
-               aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
-               assert(!SCIPisInfinity(scip, -aux));
-            }
-
-            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
-            {
-               rhsvarlb = -SCIPinfinity(scip);
-               break;
-            }
-            else
-               rhsvarlb += sqrteigval * eigvecmatrix[i * nvars + j] * aux;
-         }
-         rhsvarlb += offsets[nposeigvals + nnegeigvals - 1];
-
-         for( j = 0; j < nvars; ++j )
-         {
-            SCIP_Real aux;
-
-            if( SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
-               continue;
-
-            if( eigvecmatrix[i * nvars + j] > 0.0 )
-            {
-               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
-               assert(!SCIPisInfinity(scip, -aux));
-            }
-            else
-            {
-               aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
-               assert(!SCIPisInfinity(scip, aux));
-            }
-
-            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
-            {
-               rhsvarub = SCIPinfinity(scip);
-               break;
-            }
-            else
-               rhsvarub += sqrteigval * eigvecmatrix[i * nvars + j] * aux;
-         }
-         rhsvarub += offsets[nposeigvals + nnegeigvals - 1];
-
-         /* since we are just interested in obtaining an interval that contains the real bounds
-          * and is tight enough so that we can identify that the rhsvar does not change sign,
-          * we swap the bounds in case of numerical troubles
-          */
-         if( rhsvarub < rhsvarlb )
-         {
-            assert(SCIPisEQ(scip, rhsvarub, rhsvarlb));
-            SCIPswapReals(&rhsvarub, &rhsvarlb);
-         }
-
-         /* check whether rhsvar changes sign */
-         if( SCIPisLT(scip, rhsvarlb, 0.0) && SCIPisGT(scip, rhsvarub, 0.0) )
-            return;
-
-         signfactor = SCIPisLE(scip, rhsvarub, 0.0) ? -1.0 : 1.0;
-
-         offsets[nposeigvals + nnegeigvals - 1] *= signfactor;
          *lhsconstant -= bp[i] * bp[i] / (4.0 * eigvals[i]);
 
-         nrhstranscoefs = 0;
-
-         /* set transcoefs for rhs term */
-         for( j = 0; j < nvars; ++j )
-         {
-            if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
-            {
-               transcoefs[ntranscoefs - nrhstranscoefs - 1] = signfactor * sqrteigval * eigvecmatrix[i * nvars + j];
-               transcoefsidx[ntranscoefs - nrhstranscoefs - 1] = j;
-               ++nnonzeroes[nposeigvals + nnegeigvals - 1];
-
-               ++nrhstranscoefs;
-            }
-         }
-         assert(nrhstranscoefs > 0);
-
-         termbegins[nposeigvals + nnegeigvals - 1] = ntranscoefs - nrhstranscoefs;
+         continue;
       }
+
+      assert(eigvals[i] > 0.0);
+      sqrteigval = SQRT(eigvals[i]);
+
+      offsets[nextterm] = bp[i] / (2.0 * sqrteigval);
+      *lhsconstant -= bp[i] * bp[i] / (4.0 * eigvals[i]);
+      termbegins[nextterm] = nexttranscoef;
+
+      /* set transcoefs */
+      for( j = 0; j < nvars; ++j )
+      {
+         if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+         {
+            transcoefs[nexttranscoef] = sqrteigval * eigvecmatrix[i * nvars + j];
+            transcoefsidx[nexttranscoef] = j;
+
+            ++nexttranscoef;
+         }
+      }
+      ++nextterm;
    }
-   assert(nextlhsterm == nposeigvals + nnegeigvals - 1);
-   assert(nexttranscoef == ntranscoefs - nrhstranscoefs);
+   assert(specialtermidx > -1);
 
-   /* if the lhs constant is nonnegative, it is a SOC... */
-   if( !SCIPisNegative(scip, *lhsconstant) )
+   /* process constant; if constant is negative -> no soc */
+   if( SCIPisNegative(scip, *lhsconstant) )
+      return;
+
+   /* we need lhsconstant to be >= 0 */
+   if( *lhsconstant < 0.0 )
+      *lhsconstant = 0.0;
+
+   /* store constant term */
+   if( *lhsconstant > 0.0 )
    {
-      *success = TRUE;
-
-      /* ... however, we need lhsconstant to be >= 0 */
-      if( *lhsconstant < 0.0 )
-         *lhsconstant = 0.0;
+      offsets[nextterm] = SQRT( *lhsconstant );
+      termbegins[nextterm] = nexttranscoef;
+      ++nextterm;
    }
+
+   /* now process rhs */
+   {
+      SCIP_Real rhstermlb;
+      SCIP_Real rhstermub;
+      SCIP_Real signfactor;
+
+      assert(-eigvals[specialtermidx] > 0.0);
+      sqrteigval = SQRT(-eigvals[specialtermidx]);
+
+      offsets[nextterm] = -bp[specialtermidx] / (2.0 * sqrteigval);
+      termbegins[nextterm] = nexttranscoef;
+
+      /* the expression can only be an soc if the resulting rhs term does not change sign;
+       * the rhs term is a linear combination of variables, so estimate its bounds
+       */
+      rhstermlb = offsets[nextterm];
+      for( j = 0; j < nvars; ++j )
+      {
+         SCIP_Real aux;
+
+         if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
+            continue;
+
+         if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
+         {
+            aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
+            assert(!SCIPisInfinity(scip, aux));
+         }
+         else
+         {
+            aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
+            assert(!SCIPisInfinity(scip, -aux));
+         }
+
+         if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+         {
+            rhstermlb = -SCIPinfinity(scip);
+            break;
+         }
+         else
+            rhstermlb += sqrteigval * eigvecmatrix[specialtermidx * nvars + j] * aux;
+      }
+
+      rhstermub = offsets[nextterm];
+      for( j = 0; j < nvars; ++j )
+      {
+         SCIP_Real aux;
+
+         if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
+            continue;
+
+         if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
+         {
+            aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
+            assert(!SCIPisInfinity(scip, -aux));
+         }
+         else
+         {
+            aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
+            assert(!SCIPisInfinity(scip, aux));
+         }
+
+         if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+         {
+            rhstermub = SCIPinfinity(scip);
+            break;
+         }
+         else
+            rhstermub += sqrteigval * eigvecmatrix[specialtermidx * nvars + j] * aux;
+      }
+
+      /* since we are just interested in obtaining an interval that contains the real bounds
+       * and is tight enough so that we can identify that the rhsvar does not change sign,
+       * we swap the bounds in case of numerical troubles
+       */
+      if( rhstermub < rhstermlb )
+      {
+         assert(SCIPisEQ(scip, rhstermub, rhstermlb));
+         SCIPswapReals(&rhstermub, &rhstermlb);
+      }
+
+      /* if rhs changes sign -> not a SOC */
+      if( SCIPisLT(scip, rhstermlb, 0.0) && SCIPisGT(scip, rhstermub, 0.0) )
+         return;
+
+      signfactor = SCIPisLE(scip, rhstermub, 0.0) ? -1.0 : 1.0;
+
+      offsets[nextterm] *= signfactor;
+
+      /* set transcoefs for rhs term */
+      for( j = 0; j < nvars; ++j )
+      {
+         if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
+            continue;
+
+         transcoefs[nexttranscoef] = signfactor * sqrteigval * eigvecmatrix[specialtermidx * nvars + j];
+         transcoefsidx[nexttranscoef] = j;
+
+         ++nexttranscoef;
+      }
+
+      /* if rhs is a constant this method shouldn't have been called */
+      assert(nexttranscoef > termbegins[nextterm]);
+
+      /* finish processing term */
+      ++nextterm;
+   }
+
+   *nterms = nextterm;
+
+   /* sentinel value */
+   termbegins[nextterm] = nexttranscoef;
+
+   *success = TRUE;
 }
 
-/** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar */
+/** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar
+ * @note if a user inputs the above expression with const = -epsilon, then const is going to be set to 0.
+ */
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1051,12 +1025,12 @@ SCIP_RETCODE detectSocNorm(
    SCIP_Real* childcoefs;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
+   SCIP_Real constant;
    SCIP_Bool issoc; /* TODO: make this an argument of the function and then avoid calling other detect methods */
    int* transcoefsidx;
    int* termbegins;
-   int* nnonzeroes;
-   SCIP_Real constant;
    int nchildren;
+   int nterms;
    int nvars;
    int nextentry;
    int i;
@@ -1102,7 +1076,7 @@ SCIP_RETCODE detectSocNorm(
    /* we create coefs array here already, since we have to fill it in first loop in case of success */
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nchildren) );
 
-   nvars = 0;
+   nterms = 0;
 
    /* check if all children are squares or linear terms with matching square term:
     * if the i-th child is (pow, expr, 2) we store the association <|expr -> i|> in expr2idx and if expr was in
@@ -1124,7 +1098,7 @@ SCIP_RETCODE detectSocNorm(
 
          if( !SCIPhashmapExists(expr2idx, (void*) squarearg) )
          {
-            SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) squarearg, nvars) );
+            SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) squarearg, nterms) );
          }
 
          if( childcoefs[i] < 0.0 )
@@ -1132,10 +1106,10 @@ SCIP_RETCODE detectSocNorm(
             issoc = FALSE;
             break;
          }
-         transcoefs[nvars] = SQRT(childcoefs[i]);
+         transcoefs[nterms] = SQRT(childcoefs[i]);
 
          SCIP_CALL( SCIPhashsetRemove(linexprs, (void*) squarearg) );
-         ++nvars;
+         ++nterms;
       }
       /* handle binary variable children */
       else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
@@ -1143,16 +1117,16 @@ SCIP_RETCODE detectSocNorm(
          assert(!SCIPhashmapExists(expr2idx, (void*) children[i]));
          assert(!SCIPhashsetExists(linexprs, (void*) children[i]));
 
-         SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) children[i], nvars) );
+         SCIP_CALL( SCIPhashmapInsertInt(expr2idx, (void *) children[i], nterms) );
 
          if( childcoefs[i] < 0.0 )
          {
             issoc = FALSE;
             break;
          }
-         transcoefs[nvars] = SQRT(childcoefs[i]);
+         transcoefs[nterms] = SQRT(childcoefs[i]);
 
-         ++nvars;
+         ++nterms;
       }
       else
       {
@@ -1172,8 +1146,8 @@ SCIP_RETCODE detectSocNorm(
       return SCIP_OKAY;
    }
 
-   /* add one to variable counter for auxvar */
-   ++nvars;
+   /* add one to terms counter for auxvar */
+   ++nterms;
 
    constant = SCIPgetConsExprExprSumConstant(child);
 
@@ -1207,26 +1181,54 @@ SCIP_RETCODE detectSocNorm(
    /* at this point, we have found an SOC structure */
    *success = TRUE;
 
+   nvars = nterms;
+
+   /* add one to terms counter for constant term */
+   if( constant > 0.0 )
+      ++nterms;
+
    /* allocate temporary memory to collect data */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nterms + 1) );
 
-   /* initialize arrays */
-   for( i = 0; i < nvars; ++i )
+   /* fill in data for non constant terms of lhs; initialize their offsets */
+   for( i = 0; i < nvars - 1; ++i )
    {
       transcoefsidx[i] = i;
       termbegins[i] = i;
       offsets[i] = 0.0;
-      nnonzeroes[i] = 1;
    }
 
-   /* add data for the auxiliary variable (RHS) */
+   /* add constant term and rhs */
    vars[nvars - 1] = auxvar;
-   transcoefs[nvars - 1] = 1.0;
+   if( constant > 0.0 )
+   {
+      /* constant term */
+      termbegins[nterms - 2] = nterms - 2;
+      offsets[nterms - 2] = SQRT(constant);
 
+      /* rhs */
+      termbegins[nterms - 1] = nterms - 2;
+      offsets[nterms - 1] = 0.0;
+      transcoefsidx[nterms - 2] = nvars - 1;
+      transcoefs[nterms - 2] = 1.0;
+
+      /* sentinel value */
+      termbegins[nterms] = nterms - 1;
+   }
+   else
+   {
+      /* rhs */
+      termbegins[nterms - 1] = nterms - 1;
+      transcoefsidx[nterms - 1] = nvars - 1;
+      transcoefs[nterms - 1] = 1.0;
+      offsets[nterms - 1] = 0.0;
+
+      /* sentinel value */
+      termbegins[nterms] = nterms;
+   }
 
    /* create required auxiliary variables and fill offsets array */
    nextentry = 0;
@@ -1277,14 +1279,13 @@ SCIP_RETCODE detectSocNorm(
 #endif
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes, constant,
-            nvars, nvars, nvars, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins,
+            nvars, nterms, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
    /* free memory */
    SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
    SCIPhashmapFree(&expr2idx);
-   SCIPfreeBufferArray(scip, &nnonzeroes);
    SCIPfreeBufferArray(scip, &termbegins);
    SCIPfreeBufferArray(scip, &transcoefsidx);
    SCIPfreeBufferArray(scip, &offsets);
@@ -1318,12 +1319,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real* transcoefs = NULL;
    int* transcoefsidx = NULL;
    int* termbegins = NULL;
-   int* nnonzeroes = NULL;
    SCIP_Real constant;
    SCIP_Real lhsconstant;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real rhssign;
+   int ntranscoefs;
    int nposquadterms;
    int nnegquadterms;
    int nposbilinterms;
@@ -1332,8 +1333,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int lhsidx;
    int specialtermidx;
    int nchildren;
-   int ntranscoefs;
+   int nnzinterms;
    int nterms;
+   int nvars;
    int nextentry;
    int i;
    SCIP_Bool ishyperbolic;
@@ -1476,6 +1478,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       for( i = 0; i < nchildren; ++i )
          childcoefs[i] = -childcoefs[i];
    }
+   assert(childcoefs[specialtermidx] != 0.0);
 
    if( ishyperbolic )
    {
@@ -1523,45 +1526,51 @@ SCIP_RETCODE detectSocQuadraticSimple(
       lhsconstant = 0.0;
 
    /*
-    * we have found an soc-representable expression. Now build the nlhdlrexprdata
+    * we have found an SOC-representable expression. Now build the nlhdlrexprdata
     *
     * in the non-hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k^2 <= 0 is transformed to
     * SQRT( c + sum_i coef_i expr_i^2 ) <= coef_k expr_k
+    * so there are nchildren many vars, nchildren (+ 1 if c != 0) many terms, nchildren many coefficients in the vs
+    * in SOC representation
     *
     * in the hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0 is transformed to
     * SQRT( 4(c + sum_i coef_i expr_i^2) + (expr_k - expr_l)^2 ) <= expr_k + expr_l
+    * so there are nchildren + 1many vars, nchildren + 1(+ 1 if c != 0) many terms, nchildren + 3 many coefficients in
+    * the vs in SOC representation
     */
 
-   nterms = ishyperbolic ? nchildren + 1 : nchildren;
    ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
+   nvars = ishyperbolic ? nchildren + 1 : nchildren;
+   nterms = nvars;
+
+   /* constant term */
+   if( lhsconstant > 0.0 )
+      nterms++;
 
    /* SOC was detected, allocate temporary memory for data to collect */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nterms) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &offsets, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nterms) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nterms + 1) );
 
    *success = TRUE;
    nextentry = 0;
 
+   /* collect all the v_i and beta_i */
+   nnzinterms = 0;
    for( i = 0; i < nchildren; ++i )
    {
-      assert(childcoefs[specialtermidx] != 0.0);
-
-      transcoefsidx[i] = i;
-      termbegins[i] = i;
-      nnonzeroes[i] = 1;
-
       /* variable and coef for rhs have to be set to the last entry */
       if( i == specialtermidx )
          continue;
 
+      /* extract (unique) variable appearing in term */
       if( SCIPisConsExprExprVar(children[i]) )
       {
-         vars[nextentry] = SCIPgetConsExprExprVarVar(children[i]);
          assert(SCIPvarIsBinary(vars[nextentry]));
+
+         vars[nextentry] = SCIPgetConsExprExprVarVar(children[i]);
       }
       else
       {
@@ -1571,66 +1580,111 @@ SCIP_RETCODE detectSocQuadraticSimple(
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[i])[0],
                   &vars[nextentry]) );
       }
+      assert(vars[nextentry] != NULL);
 
+      /* store v_i and beta_i */
+      offsets[nextentry] = 0.0;
+      termbegins[nextentry] = nnzinterms;
+
+      transcoefsidx[nnzinterms] = nextentry;
       if( ishyperbolic )
       {
          /* we eliminate the coefficient of the bilinear term to arrive at standard form */
          assert(4.0 * childcoefs[i] / -childcoefs[specialtermidx] > 0.0);
-         transcoefs[nextentry] = SQRT(4.0 * childcoefs[i] / -childcoefs[specialtermidx]);
+         transcoefs[nnzinterms] = SQRT(4.0 * childcoefs[i] / -childcoefs[specialtermidx]);
       }
       else
       {
          assert(childcoefs[i] > 0.0);
-         transcoefs[nextentry] = SQRT(childcoefs[i]);
+         transcoefs[nnzinterms] = SQRT(childcoefs[i]);
       }
 
-      assert(vars[nextentry] != NULL);
+      /* finish adding nonzeros */
+      ++nnzinterms;
 
+      /* finish processing term */
+      ++nextentry;
+   }
+   assert(nextentry == nchildren - 1);
+
+   /* store term for constant (v_i = 0) */
+   if( lhsconstant > 0.0 )
+   {
+      offsets[nextentry] = SQRT(lhsconstant);
+      termbegins[nextentry] = nnzinterms;
+
+      /* finish processing term; this term has 0 nonzero thus we do not increase nnzinterms */
       ++nextentry;
    }
 
-   assert(nextentry == nchildren - 1);
-
    if( !ishyperbolic )
    {
-      /* add data for the rhs variable */
+      /* store rhs term */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0],
-               &vars[nchildren - 1]) );
-      assert(vars[nchildren - 1] != NULL);
+               &vars[nvars - 1]) );
+      assert(vars[nvars - 1] != NULL);
 
       assert(childcoefs[specialtermidx] < 0.0);
-      transcoefs[nchildren - 1] = rhssign * SQRT(-childcoefs[specialtermidx]);
+      termbegins[nextentry] = nnzinterms;
+      transcoefs[nnzinterms] = rhssign * SQRT(-childcoefs[specialtermidx]);
+      transcoefsidx[nnzinterms] = nvars - 1;
+
+      /* finish adding nonzeros */
+      ++nnzinterms;
+
+      /* finish processing term */
+      ++nextentry;
    }
    else
    {
-      /* add data for variables coming from bilinear term */
+      /* store last lhs term and rhs term coming from the bilinear term */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0],
-               &vars[nchildren - 1]) );
-      assert(vars[nchildren - 1] != NULL);
+               &vars[nvars - 2]) );
+      assert(vars[nvars - 2] != NULL);
 
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1],
-               &vars[nchildren]) );
-      assert(vars[nchildren] != NULL);
+               &vars[nvars - 1]) );
+      assert(vars[nvars - 1] != NULL);
 
-      /* on the lhs we have the term (expr_k - expr_l)^2 and the rhs we have +/-(expr_k + expr_l)
-       * at this point, vars[nchildren-1] = auxvar(expr_k) and vars[nchildren] = auxvar(expr_l)
+      /* at this point, vars[nvars - 2] = auxvar(expr_k) and vars[nvars - 1] = auxvar(expr_l);
+       * on the lhs we have the term (expr_k - expr_l)^2
        */
+      termbegins[nextentry] = nnzinterms;
 
-      termbegins[nterms - 1] = ntranscoefs - 2;
+      /* expr_k */
+      transcoefsidx[nnzinterms] = nvars - 2;
+      transcoefs[nnzinterms] = 1.0;
+      ++nnzinterms;
 
-      nnonzeroes[nterms - 2] = 2;
-      nnonzeroes[nterms - 1] = 2;
+      /* - expr_l */
+      transcoefsidx[nnzinterms] = nvars - 1;
+      transcoefs[nnzinterms] = -1.0;
+      ++nnzinterms;
 
-      transcoefsidx[ntranscoefs - 4] = nchildren - 1;
-      transcoefsidx[ntranscoefs - 3] = nchildren;
-      transcoefsidx[ntranscoefs - 2] = nchildren - 1;
-      transcoefsidx[ntranscoefs - 1] = nchildren;
+      /* finish processing term */
+      ++nextentry;
 
-      transcoefs[ntranscoefs - 4] = 1.0;
-      transcoefs[ntranscoefs - 3] = -1.0;
-      transcoefs[ntranscoefs - 2] = rhssign;
-      transcoefs[ntranscoefs - 1] = rhssign;
+      /* on rhs we have +/-(expr_k + expr_l) */
+      termbegins[nextentry] = nnzinterms;
+
+      /* rhssing * expr_k */
+      transcoefsidx[nnzinterms] = nvars - 2;
+      transcoefs[nnzinterms] = rhssign;
+      ++nnzinterms;
+
+      /* rhssing * expr_l */
+      transcoefsidx[nnzinterms] = nvars - 1;
+      transcoefs[nnzinterms] = rhssign;
+      ++nnzinterms;
+
+      /* finish processing term */
+      ++nextentry;
    }
+   assert(nextentry == nterms);
+   assert(nnzinterms == ntranscoefs);
+
+   /* sentinel value */
+   termbegins[nextentry] = nnzinterms;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
@@ -1639,12 +1693,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
 #endif
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes, lhsconstant,
-            nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nvars, nterms,
+            nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &nnonzeroes);
    SCIPfreeBufferArrayNull(scip, &termbegins);
    SCIPfreeBufferArrayNull(scip, &transcoefsidx);
    SCIPfreeBufferArrayNull(scip, &transcoefs);
@@ -1669,6 +1722,9 @@ CLEANUP:
  * @todo: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by soc, Currently, the
  * datastructure can only handle one soc. If this should appear more often, it could be worth to extend it,
  * such that both sides can be handled (see e.g. instance chp_partload).
+ * FS: this shouldn't be possible. for a <= b + x^2 - y^2 <= c to be SOC representable on both sides, we would need
+ * that a - b >= 0 and b -c >= 0, but this implies that a >= c and assuming the constraint is not trivially infeasible,
+ * a <= b. Thus, a = b = c and the constraint is x^2 == y^2.
  *
  * @todo: Since consexpr multiplies as many terms out as possible during presolving, some soc-representable
  * structures cannot be detected, (see e.g. instances bearing or wager). There is currently no obvious way
@@ -1697,12 +1753,12 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_Real* bp;
    int* transcoefsidx;
    int* termbegins;
-   int* nnonzeroes;
    SCIP_Real constant;
    SCIP_Real lhsconstant;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nvars;
+   int nterms;
    int nchildren;
    int npos;
    int nneg;
@@ -1735,7 +1791,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
    offsets = NULL;
    transcoefs = NULL;
    transcoefsidx = NULL;
-   nnonzeroes = NULL;
    termbegins = NULL;
    bp = NULL;
    lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs); /*lint !e777*/
@@ -1842,23 +1897,24 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
 
    /* initialize remaining datastructures for nonlinear handler */
-   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, npos + nneg) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, npos + nneg + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nnonzeroes, npos + nneg) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 1) );
 
    /* try to fill the nlhdlrexprdata (at this point, it can still fail) */
-   tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, npos, nneg, nnonzeroes,
-      termbegins, transcoefs, transcoefsidx, offsets, ntranscoefs, &lhsconstant, success);
+   tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
+         transcoefsidx, offsets, &lhsconstant, &nterms, success);
 
    if( !(*success) )
       goto CLEANUP;
 
+   assert(0 < nterms && nterms <= npos + nneg + 1);
+   assert(ntranscoefs == termbegins[nterms]);
+
    /*
     * at this point, the expression passed all checks and is SOC-representable
     */
-
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
    /* create or get all auxiliary variables */
@@ -1875,13 +1931,12 @@ SCIP_RETCODE detectSocQuadraticComplex(
 #endif
 
    /* finally, create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx,
-         termbegins, nnonzeroes, lhsconstant, nvars, npos + nneg, ntranscoefs, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, offsets, transcoefs, transcoefsidx, termbegins, nvars, nterms,
+            nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 CLEANUP:
    SCIPfreeBufferArrayNull(scip, &vars);
-   SCIPfreeBufferArrayNull(scip, &nnonzeroes);
    SCIPfreeBufferArrayNull(scip, &termbegins);
    SCIPfreeBufferArrayNull(scip, &transcoefsidx);
    SCIPfreeBufferArrayNull(scip, &transcoefs);
@@ -2071,7 +2126,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
          /*  the debug solution value of the disaggregation variables is set to
           *      (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1})
-          *  or                 gamma / (v_{n+1}^T x + beta_{n+1})
           *  if (v_{n+1}^T x + beta_{n+1}) is different from 0.
           *  Otherwise, the debug solution value is set to 0.
           */
@@ -2079,10 +2133,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
          nterms = (*nlhdlrexprdata)->nterms;
 
          /* set value of rhs */
-         termstart = (*nlhdlrexprdata)->termbegins[nterms - 1];
          rhsval = (*nlhdlrexprdata)->offsets[nterms - 1];
-
-         for( i = termstart; i < termstart + (*nlhdlrexprdata)->nnonzeroes[nterms - 1]; ++i )
+         for( i = (*nlhdlrexprdata)->termbegins[nterms - 1]; i < (*nlhdlrexprdata)->termbegins[nterms]; ++i )
          {
             SCIP_VAR* var;
             SCIP_Real varval;
@@ -2108,7 +2160,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
                termstart = (*nlhdlrexprdata)->termbegins[k];
                lhsval = (*nlhdlrexprdata)->offsets[k];
 
-               for( i = termstart; i < termstart + (*nlhdlrexprdata)->nnonzeroes[k]; ++i )
+               for( i = (*nlhdlrexprdata)->termbegins[k]; i < (*nlhdlrexprdata)->termbegins[k + 1]; ++i )
                {
                   SCIP_VAR* var;
                   SCIP_Real varval;
@@ -2122,14 +2174,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
                disvarval = SQR(lhsval) / rhsval;
 
                SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[k], disvarval) );
-            }
-
-            /* set value for disaggregation variable corresponding to constant */
-            if( !SCIPisZero(scip, (*nlhdlrexprdata)->constant) )
-            {
-               disvarval = (*nlhdlrexprdata)->constant / rhsval;
-
-               SCIP_CALL( SCIPdebugAddSolVal(scip, (*nlhdlrexprdata)->disvars[nterms - 1], disvarval) );
             }
          }
       }
@@ -2151,7 +2195,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    assert(nlhdlrexprdata->vars != NULL);
    assert(nlhdlrexprdata->transcoefs != NULL);
    assert(nlhdlrexprdata->transcoefsidx != NULL);
-   assert(nlhdlrexprdata->nnonzeroes != NULL);
    assert(nlhdlrexprdata->nterms > 1);
 
    conshdlr = SCIPfindConshdlr(scip, "expr");
@@ -2162,9 +2205,8 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    {
       assert(SCIPgetConsExprExprPowExponent(expr) == 0.5);
 
-      /* compute sum_i coef_i expr_i^2 + constant */
-      *auxvalue = nlhdlrexprdata->constant;
-
+      /* compute sum_i coef_i expr_i^2 */
+      *auxvalue = 0.0;
       for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
       {
          SCIP_Real termval;
@@ -2175,7 +2217,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 
       assert(*auxvalue >= 0.0);
 
-      /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
+      /* compute SQRT(sum_i coef_i expr_i^2) */
       *auxvalue = SQRT(*auxvalue);
    }
    /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
@@ -2277,7 +2319,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Real rhsval;
    int depth;
-   int naggrs;
+   int ndisaggrs;
    int k;
    SCIP_Bool infeasible;
 
@@ -2310,14 +2352,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
    ++nlhdlrdata->nenfocalls;
 
-   naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
+   ndisaggrs = nlhdlrexprdata->nterms - 1;
 
    /* check whether the aggregation row is in the LP */
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
                sol), SCIPgetLPFeastol(scip) ) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
-      SCIPdebugMsg(scip, "added aggregation row to LP, cutoff=%d\n", infeasible);
+      SCIPdebugMsg(scip, "added disaggregation row to LP, cutoff=%d\n", infeasible);
 
       if( infeasible )
       {
@@ -2330,7 +2372,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
 
-   for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
+   for( k = 0; k < ndisaggrs && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_ROW* row;
 
@@ -2343,14 +2385,16 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         SCIPdebugMsg(scip, "generated row for aggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+         SCIPdebugMsg(scip, "generated row for disaggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
             k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-            SCIPdebugMsg(scip, "added cut with efficacy %g\n", cutefficacy);
+            SCIPdebugMsg(scip, "added the following cut with efficacy %g\n", cutefficacy);
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
 
             if( infeasible )
                *result = SCIP_CUTOFF;
