@@ -5025,8 +5025,13 @@ SCIP_RETCODE tryAggregateIntVars(
    }
    c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
 
-   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+   /* check that the scalar and constant in the aggregation are not too large to avoid numerical problems */
+   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) /*lint !e653*/
+      || REALABS((SCIP_Real)(b)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) /*lint !e653*/
+      || REALABS((SCIP_Real)(a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+   {
       return SCIP_OKAY;
+   }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
    if( (a == 1 || a == -1) && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
