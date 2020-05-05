@@ -34,6 +34,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpex.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
@@ -294,6 +295,16 @@ void SCIPnodeUpdateLowerbound(
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
+/** updates exact lower bound of node using lower bound of exact LP */
+SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
+   SCIP_NODE*            node,               /**< node to set lower bound for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** updates lower bound of node using lower bound of LP */

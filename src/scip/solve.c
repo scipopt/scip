@@ -2889,8 +2889,7 @@ SCIP_RETCODE applyBounding(
             SCIP_CALL( RatCreateBuffer(set->buffer, &bound) );
             SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
 
-            if( !RatIsGE(bound, primal->cutoffboundex) &&
-               SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+            if( RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundex) )
             {
                RatFreeBuffer(set->buffer, &bound);
                return SCIP_OKAY;

@@ -167,7 +167,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
 
-   if( SCIPisExactSolve(scip) && result == SCIP_DIDNOTRUN )
+   if( SCIPisExactSolve(scip) && *result == SCIP_DIDNOTRUN )
    {
       SCIP_CALL( SCIPbranchLPexact(scip, result) );
    }

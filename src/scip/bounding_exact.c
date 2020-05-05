@@ -2940,7 +2940,7 @@ SCIP_RETCODE boundShift(
    SCIP_ROUNDMODE roundmode;
    SCIP_INTERVAL* rhslhsrow; // the rhs or lhs of row depending on sign of dual solution
    SCIP_INTERVAL* ublbcol; // the ub or lb of col depending on sign of dual solution
-   SCIP_INTERVAL* constantinter; 
+   SCIP_INTERVAL* constantinter;
    SCIP_INTERVAL* lpcolvals; // values in a column of the constraint matrix
    SCIP_INTERVAL* productcoldualval; // scalar product of lp column with dual solution vector
    SCIP_INTERVAL* obj; // objective (or 0 in farkas proof)
@@ -3223,8 +3223,9 @@ SCIP_RETCODE boundShift(
          else
             RatSetReal(lpex->cols[j]->redcost, value);
       }
-      RatSetReal(lpex->lpobjval, SCIPintervalGetInf(safeboundinterval));
    }
+
+   RatSetReal(lpex->lpobjval, SCIPintervalGetInf(safeboundinterval));
 
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &ublbcol);

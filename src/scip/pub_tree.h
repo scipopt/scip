@@ -158,6 +158,12 @@ SCIP_Real SCIPnodeGetLowerbound(
    SCIP_NODE*            node                /**< node */
    );
 
+/** gets the rational lower bound of the node */
+SCIP_EXPORT
+SCIP_Rational* SCIPnodeGetLowerboundExact(
+   SCIP_NODE*            node                /**< node */
+   );
+
 /** gets the estimated value of the best feasible solution in subtree of the node */
 SCIP_EXPORT
 SCIP_Real SCIPnodeGetEstimate(

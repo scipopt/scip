@@ -133,6 +133,7 @@ struct SCIP_Node
 {
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
+   SCIP_Rational*        lowerboundexact;    /**< lower (dual) rational bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
    union
    {

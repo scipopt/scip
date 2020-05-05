@@ -32,6 +32,7 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/pub_varex.h"
@@ -977,6 +978,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->cutoff = FALSE;
    (*node)->reprop = FALSE;
    (*node)->repropsubtreemark = 0;
+   if( set->misc_exactsolve )
+      RatCreateBlock(blkmem, &(*node)->lowerboundexact);
 
    return SCIP_OKAY;
 }
@@ -1169,6 +1172,9 @@ SCIP_RETCODE SCIPnodeFree(
       assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE);
       tree->probingroot = NULL;
    }
+
+   if( set->misc_exactsolve )
+      RatFreeBlock(blkmem, &(*node)->lowerboundexact);
 
    BMSfreeBlockMemory(blkmem, node);
 
@@ -2409,6 +2415,41 @@ void SCIPnodeUpdateLowerbound(
    }
 }
 
+/** updates exact lower bound of node using lower bound of exact LP */
+SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
+   SCIP_NODE*            node,               /**< node to set lower bound for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_LP  *            lp                  /**< LP data */
+   )
+{
+   SCIP_Rational* lpobjval;
+
+   assert(set != NULL);
+   assert(lp->hasprovedbound);
+   assert(set->misc_exactsolve);
+
+   /* in case of iteration or time limit, the LP value may not be a valid dual bound */
+   /* @todo check for dual feasibility of LP solution and use sub-optimal solution if they are dual feasible */
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
+      return SCIP_OKAY;
+
+   if( set->misc_exactsolve && !lp->hasprovedbound )
+   {
+      SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
+      SCIPABORT();
+   }
+
+   RatCreateBuffer(set->buffer, &lpobjval);
+
+   SCIPlpexGetObjval(lp->lpex, set, transprob, lpobjval);
+   RatSet(node->lowerboundexact, lpobjval);
+
+   return SCIP_OKAY;
+}
+
 /** updates lower bound of node using lower bound of LP */
 SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
@@ -2441,6 +2482,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+      SCIPnodeUpdateExactLowerboundLP(node, set, stat, transprob, origprob, lp);
       SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, node, transprob, usefarkas) );
    }
 
@@ -7480,6 +7522,16 @@ SCIP_Real SCIPnodeGetLowerbound(
    assert(node != NULL);
 
    return node->lowerbound;
+}
+
+/** gets the lower bound of the node */
+SCIP_Rational* SCIPnodeGetLowerboundExact(
+   SCIP_NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->lowerboundexact;
 }
 
 /** gets the estimated value of the best feasible solution in subtree of the node */
