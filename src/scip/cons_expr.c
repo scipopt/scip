@@ -14751,6 +14751,7 @@ SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
    {
       SCIP_CONSEXPR_ITERATOR* it;
 
+      /* create and initialize iterator */
       SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
       SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
@@ -14759,6 +14760,9 @@ SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
          if( SCIPisConsExprExprVar(expr) )
             ++(expr->ndomainuses);
       }
+
+      /* free iterator */
+      SCIPexpriteratorFree(&it);
    }
 
    return SCIP_OKAY;
