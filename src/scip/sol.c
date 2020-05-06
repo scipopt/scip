@@ -409,13 +409,14 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
+
+   /* copy rational values if solution is exact */
    if( SCIPsolIsExactSol(sourcesol) )
    {
       SCIP_CALL( SCIPvalsexCopy( &(*sol)->valsex, blkmem, set, stat, sourcesol->valsex) );
    }
    else
       (*sol)->valsex = NULL;
-
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
