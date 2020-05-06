@@ -2656,7 +2656,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
       if( SCIPhashmapExists(var2expr, (void*) var) )
       {
-         SCIP_CONSEXPR_EXPR* expr = SCIPhashmapGetImage(var2expr, (void*) var);
+         SCIP_CONSEXPR_EXPR* expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, (void*) var);
          assert(expr != NULL);
          assert(SCIPisConsExprExprVar(expr));
 
