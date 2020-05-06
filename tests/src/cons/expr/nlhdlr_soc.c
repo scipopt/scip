@@ -126,16 +126,6 @@ void checkData(
    cr_expect_eq(nlhdlrexprdata->nterms, nterms);
    cr_expect_eq(nlhdlrexprdata->termbegins[nlhdlrexprdata->nterms], ntranscoefs);
 
-   printf("begin array: ");
-   for( i = 0; i < nlhdlrexprdata->nterms + 1; ++i )
-      printf("%d, ", nlhdlrexprdata->termbegins[i]);
-   printf("\n");
-
-   printf("transcoefs array: ");
-   for( i = 0; i < ntranscoefs; ++i )
-      printf("%g, ", nlhdlrexprdata->transcoefs[i]);
-   printf("\n");
-
    for( i = 0; i < nvars; ++i )
    {
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
@@ -923,8 +913,12 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    cr_expect_eq(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
    cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0, "expected 0 got %g\n", SCIProwGetRhs(nlhdlrexprdata->disrow));
 
-   /* TODO: there seems to be a memory leak, either free row here or figure out why exit sepa is not being called */
-   /* free expr and cons */
+   /* free row, expr, and cons (freeing of the row doesn't happen automatically because we call createDisaggrRow
+    * directly and not through the initlp callback. Thus, the enforce doesn't know that sepainit has been called and so
+    * it doesn't call sepaexit in freeEnfoData)
+    */
+   SCIPreleaseRow(scip, &nlhdlrexprdata->disrow);
+
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -1013,6 +1007,71 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvals[1] = -8.0 / SQRT(17.0);
    cutvals[2] = -1.0 / SQRT(17.0) - 1.0;
    rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
+
+   checkCut(cut, cutvars, cutvals, rhs, 3);
+   SCIPreleaseRow(scip, &cut);
+
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* free expr and cons */
+   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* separates simple norm function from different points */
+Test(nlhdlrsoc, separation2, .description = "test separation for simple norm expression without disagg")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_SOL* sol;
+   SCIP_ROW* cut;
+   SCIP_VAR* cutvars[3];
+   SCIP_VAR* auxvar;
+   SCIP_Real cutvals[3];
+   SCIP_Bool infeasible;
+   SCIP_Real rhs;
+   int i;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "((<x> + 0.5)^2 + <y>^2)^0.5", NULL, &expr) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+
+   /* create solution */
+   SCIPcreateSol(scip, &sol, NULL);
+   SCIPsetSolVal(scip, sol, x, 1.0);
+   SCIPsetSolVal(scip, sol, y, 2.0);
+   SCIPsetSolVal(scip, sol, auxvar, 1.0);
+
+   /* check cut */
+   SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, 0.0, &cut) );
+
+   cutvars[0] = auxvar;
+   cutvars[1] = y;
+   cutvars[2] = x;
+   cutvals[0] = -1.0;
+   cutvals[1] = 4.0 / 5;
+   cutvals[2] = 3.0 / 5;
+   rhs = -3.0 / 10;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPreleaseRow(scip, &cut);

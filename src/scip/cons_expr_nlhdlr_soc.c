@@ -25,8 +25,6 @@
  * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
  * Note that v_i, for i <= n, could be 0, thus allowing a positive constant terms inside the root
- *
- * @TODO: Don't disaggregate if n = 1. This requires a separate separation method for this case.
  */
 
 #include <string.h>
@@ -78,6 +76,7 @@
  *
  *  and the row       sum_i disvar_i <= v_{n+1}^T x + beta_{n+1}.
  *
+ *  The disaggregation only happens if we have more than 3 terms.
  *
  *  Example: The constraint SQRT(5 + (3x - 4y + 2)^2 + y^2 + 7z^2) <= 5x - y - 1
  *           results in the following nlhdlrexprdata:
@@ -235,6 +234,9 @@ SCIP_RETCODE freeDisaggrVars(
    int i;
 
    assert(nlhdlrexprdata != NULL);
+
+   if( nlhdlrexprdata->disvars == NULL )
+      return SCIP_OKAY;
 
    ndisvars = nlhdlrexprdata->nterms - 1;
 
@@ -421,6 +423,123 @@ SCIP_Real evalSingleTerm(
    return result;
 }
 
+/** computes gradient cut for a 3D SOC
+ *  \f[
+ *    \sqrt{ (v_1^T x + \beta_1)^2 + (v_1^T x + \beta_1)^2 } \leq v_3^T x + \beta_3
+ *  \f]
+ *
+ *  Let \f$f(x)\f$ be the left-hand-side. The partial derivatives of \f$f\f$ are given by
+ *  \f[
+ *    \frac{\delta f}{\delta x_j} = \frac{(v_1)_j(v_1^T x + \beta_1) + (v_2)_j (v_2^T x + \beta_2)}{f(x)}
+ *  \f]
+ *
+ *  and the gradient cut is then \f$f(x^*) + \nabla f(x^*)(x - x^*) \leq v_3^T x + \beta_3\f$.
+ */
+static
+SCIP_RETCODE generateCutSolSOC3(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONS*            cons,               /**< the constraint that expr is part of */
+   SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_Real             mincutviolation,    /**< minimal required cut violation */
+   SCIP_ROW**            cut                 /**< pointer to store a cut */
+   )
+{
+   SCIP_ROWPREP* rowprep;
+   SCIP_Real* transcoefs;
+   SCIP_Real cutcoef;
+   SCIP_Real fvalue;
+   SCIP_Real valterms[2];
+   SCIP_Real cutrhs;
+   SCIP_VAR** vars;
+   SCIP_VAR* cutvar;
+   int* transcoefsidx;
+   int* termbegins;
+   int nterms;
+   int i;
+   int j;
+
+   assert(expr != NULL);
+   assert(cons != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(mincutviolation >= 0.0);
+   assert(cut != NULL);
+
+   vars = nlhdlrexprdata->vars;
+   transcoefs = nlhdlrexprdata->transcoefs;
+   transcoefsidx = nlhdlrexprdata->transcoefsidx;
+   termbegins = nlhdlrexprdata->termbegins;
+   nterms = nlhdlrexprdata->nterms;
+
+   *cut = NULL;
+
+   /* evaluate lhs terms */
+   valterms[0] = evalSingleTerm(scip, nlhdlrexprdata, sol, 0);
+   valterms[1] = evalSingleTerm(scip, nlhdlrexprdata, sol, 1);
+
+   /* compute f(x*) */
+   fvalue = SQRT( SQR( valterms[0] ) + SQR( valterms[1] ) );
+
+   /* if f(x*) then SOC can't be violated and we shouldn't be here */
+   assert(fvalue > 0.0);
+
+   /* create cut */
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, termbegins[nterms]) );
+
+   /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_3^T x + \beta_3, i.e.,
+    * \nabla f(x*)^T x - v_3^T x \leq \beta_3 + \nabla f(x*)^T x* - f(x*)
+    * thus cutrhs is \beta_3 - f(x*) + \nabla f(x*)^T x* */
+   cutrhs = nlhdlrexprdata->offsets[nterms - 1] - fvalue;
+
+   /* add terms for v_1 and v_2, and compute cut's rhs */
+   for( j = 0; j < 2; ++j )
+   {
+      for( i = termbegins[j]; i < termbegins[j + 1]; ++i )
+      {
+         cutvar = vars[transcoefsidx[i]];
+
+         /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
+         cutcoef = transcoefs[i] * valterms[j] / fvalue;
+
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+         cutrhs += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      }
+   }
+
+   /* add terms for v_n */
+   for( i = termbegins[nterms - 1]; i < termbegins[nterms]; ++i )
+   {
+      cutvar = vars[transcoefsidx[i]];
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, -transcoefs[i]) );
+
+   }
+
+   /* add side */
+   SCIPaddRowprepSide(rowprep, cutrhs);
+
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+
+   if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
+   {
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc3_%p_%d", (void*) expr, SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol,
+               NULL), mincutviolation);
+      /* SCIPprintRowprep(scip, rowprep, NULL); */
+   }
+
+   /* free memory */
+   SCIPfreeRowprep(scip, &rowprep);
+
+   return SCIP_OKAY;
+}
+
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation
  *
  *  After the soc constraint \f$\sqrt{\sum_{i = 0}^{n-1} (v_i^T x + \beta_i)^2} \leq v_n^T x + \beta_n\f$
@@ -514,7 +633,7 @@ SCIP_RETCODE generateCutSol(
    /* if v_disaggidx^T x + beta_disaggidx is 0 -> the constraint can't be violated */
    assert(!SCIPisZero(scip, lhsval));
 
-   /* compute upper bound on the number of variables in cut: vars in rhs +  vars in term + disagg var */
+   /* compute upper bound on the number of variables in cut: vars in rhs + vars in term + disagg var */
    ncutvars = (termbegins[nterms] - termbegins[nterms-1]) + (termbegins[disaggidx + 1] - termbegins[disaggidx]) + 1;
 
    /* create cut */
@@ -2108,9 +2227,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
-   if( *success )
+   /* TODO: what to do if soc has only 2 terms?? */
+   assert(! (*success) || (*nlhdlrexprdata)->nterms > 2);
+
+   /* if we have 3 or more terms in lhs create variable for disaggregation */
+   if( *success && (*nlhdlrexprdata)->nterms > 3 )
    {
-      /* create variables for cone disaggregation. @TODO: don't do this if nvars = 2 */
+      /* create variables for cone disaggregation */
       SCIP_CALL( createDisaggrVars(scip, expr, (*nlhdlrexprdata)) );
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -2289,8 +2412,11 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   /* create the disaggregation row and store it in nlhdlrexprdata */
-   SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
+   if( nlhdlrexprdata->nterms > 3 )
+   {
+      /* create the disaggregation row and store it in nlhdlrexprdata */
+      SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2324,7 +2450,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    SCIP_Bool infeasible;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->disrow != NULL);
+   assert(nlhdlrexprdata->nterms == 3 || nlhdlrexprdata->disrow != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -2351,6 +2477,45 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    }
 
    ++nlhdlrdata->nenfocalls;
+
+   /* if there are only three terms just compute gradient cut */
+   if( nlhdlrexprdata->nterms == 3 )
+   {
+      SCIP_ROW* row;
+
+      /* compute gradient cut */
+      SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, SCIPgetLPFeastol(scip), &row) );
+
+      /* TODO this code repeats below, factorize out */
+      if( row != NULL )
+      {
+         SCIP_Real cutefficacy;
+
+         cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
+
+         SCIPdebugMsg(scip, "generated row for normal SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+            k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
+
+         /* check whether cut is applicable */
+         if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
+         {
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+            SCIPdebugMsg(scip, "added the following cut with efficacy %g\n", cutefficacy);
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+
+            if( infeasible )
+               *result = SCIP_CUTOFF;
+            else
+               *result = SCIP_SEPARATED;
+         }
+
+         /* release row */
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      return SCIP_OKAY;
+   }
 
    ndisaggrs = nlhdlrexprdata->nterms - 1;
 
