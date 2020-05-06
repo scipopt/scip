@@ -1965,7 +1965,6 @@ void SCIPprimalSetUpdateViolations(
    primal->updateviolations = updateviolations;
 }
 
-
 /** adds exact primal solution to solution storage at given position */
 static
 SCIP_RETCODE primalAddSolex(
