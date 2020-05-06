@@ -49,7 +49,7 @@ extern "C" {
 #endif
 
 
-/** creates primal CIP solution, initialized to zero */
+/** creates primal CIP solution with exact rational values, initialized to zero */
 SCIP_RETCODE SCIPsolexCreate(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPsolexCreate(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the current LP solution */
+/** creates primal CIP solution with exact rational values, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolexCreateLPexSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPsolexCreateLPexSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the current solution */
+/** creates primal CIP solution with exact rational values, initialized to the current solution */
 SCIP_RETCODE SCIPsolexCreateCurrentSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
