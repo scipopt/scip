@@ -14920,7 +14920,7 @@ SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
 
    ++(expr->ndomainuses);
 
-   /* increase the ndomainuses counter for all variable expressions in the given expression */
+   /* increase the ndomainuses counter for all sub-expressions of the given expression */
    if( SCIPgetConsExprExprNChildren(expr) > 0 )
    {
       SCIP_CONSEXPR_ITERATOR* it;
@@ -14931,8 +14931,7 @@ SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
 
       for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         if( SCIPisConsExprExprVar(expr) )
-            ++(expr->ndomainuses);
+         ++(expr->ndomainuses);
       }
 
       /* free iterator */
