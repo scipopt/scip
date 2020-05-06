@@ -40,6 +40,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_iterator.h"
 #include "scip/cons_expr_var.h"
 #include "scip/intervalarith.h"
 #include "scip/prop_genvbounds.h"
@@ -2618,75 +2619,120 @@ unsigned int getScore(
    return score;
 }
 
-/** count how often each variable appears in a non-convex term */
+/** count how often each variable is used in a nonconvex term
+ *
+ * the method propagates the ndomainuses counters to variables; it iterates through every expression tree and compute
+ * the nonconvexity score as follows:
+ *
+ *  i) initialize nccounts[x] = 0 for all variables x in c
+ *  for all expressions v:
+ *     ii) nccounts[v.var] += v.ndomainuses
+ *     for all children w of v:
+ *        iii) nccounts[w.var] += nccounts[v.var]
+ *
+ * due to the presence of common sub-expressions, the result of the algorithm depends on the order of the
+ * expressions in the first loop
+ */
 static
 SCIP_RETCODE getNLPVarsNonConvexity(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  nlcounts            /**< store the number each variable appears in a
+   int*                  nccounts            /**< store the number each variable appears in a
                                               *   non-convex term */
    )
 {
-   SCIP_CONSEXPR_EXPR** varexprs;
+
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
    int nvars;
    int c;
 
    assert(scip != NULL);
-   assert(nlcounts != NULL);
+   assert(nccounts != NULL);
 
    nvars = SCIPgetNVars(scip);
-   BMSclearMemoryArray(nlcounts, nvars);
+
+   /* initialize nccounts to zero */
+   BMSclearMemoryArray(nccounts, nvars);
 
    /* get expression constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "expr");
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
-   /* allocate memory to store variable expressions */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nvars) );
+   /* create and initialize iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
    /* iterate through all expression constraints and collect the corresponding variable expressions */
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
-      SCIP_CONSEXPR_EXPR* root;
       SCIP_CONS* cons;
-      int nvarexprs;
-      int i;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_EXPR* root;
 
       cons = SCIPconshdlrGetConss(conshdlr)[c];
       assert(cons != NULL);
-
-      /* get root expression */
       root = SCIPgetExprConsExpr(scip, cons);
       assert(root != NULL);
 
-      /* get all variable expressions; note this method captures the variable expressions */
-      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, root, varexprs, &nvarexprs) );
-
-      for( i = 0; i < nvarexprs; ++i )
+      for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIP_VAR* var;
          int ndomainuses;
 
-         assert(varexprs[i] != NULL);
-         assert(SCIPisConsExprExprVar(varexprs[i]));
+         /* get auxiliary variable of the child; skip expression if there is none */
+         var = SCIPgetConsExprExprAuxVar(expr);
+         if( var == NULL )
+            continue;
 
-         var = SCIPgetConsExprExprVarVar(varexprs[i]);
-         assert(var != NULL);
+         switch( SCIPexpriteratorGetStageDFS(it) )
+         {
+            SCIP_CONSEXPR_EXPR* child;
+            SCIP_VAR* childvar;
 
-         ndomainuses = SCIPgetConsExprExprNDomainUses(varexprs[i]);
-         assert(ndomainuses >= 0);
+            /* ii) nccounts[v.var] += v.ndomainuses */
+            case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+               nccounts[SCIPvarGetProbindex(var)] += SCIPgetConsExprExprNDomainUses(expr);
+               break;
 
-         nlcounts[SCIPvarGetProbindex(var)] = ndomainuses;
-         SCIPdebugMsg(scip, "nlcounts[%s] = %d\n", SCIPvarGetName(var), ndomainuses);
+            /* iii) nccounts[w.var] += nccounts[v.var] */
+            case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
 
-         /* release variable expression */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+               /* get child */
+               child = SCIPexpriteratorGetChildExprDFS(it);
+               assert(child != NULL);
+
+               /* get auxiliary variable of the child */
+               childvar = SCIPgetConsExprExprAuxVar(child);
+               if( childvar != NULL )
+                  nccounts[SCIPvarGetProbindex(childvar)] += nccounts[SCIPvarGetProbindex(var)];
+
+               break;
+
+            default:
+               /* shouldn't be here */
+               SCIPABORT();
+               break;
+         }
       }
    }
 
-   /* free memory */
-   SCIPfreeBufferArray(scip, &varexprs);
+   /* free iterator */
+   SCIPexpriteratorFree(&it);
+
+#ifdef SCIP_DEBUG
+   {
+      int i;
+
+      for( i = 0; i < SCIPgetNVars(scip); ++i)
+      {
+         SCIP_VAR* var = SCIPgetVars(scip)[i];
+         assert(var != NULL);
+         SCIPdebugMsg(scip, "nccounts[%s] = %d\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
