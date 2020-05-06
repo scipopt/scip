@@ -15021,6 +15021,17 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    return conshdlrdata->lastboundrelax;
 }
 
+/** returns the hashmap that is used to map variables to their corresponding variable expressions */
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   assert(consexprhdlr != NULL);
+
+   return (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
+}
+
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
