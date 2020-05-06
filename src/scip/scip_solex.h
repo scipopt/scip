@@ -417,50 +417,6 @@ SCIP_RETCODE SCIPprintSolex(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
-
-/** returns dual solution value of a constraint */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetDualSolexVal(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
-   SCIP_Rational*        dualsolval,         /**< pointer to store the dual solution value */
-   SCIP_Bool*            boundconstraint     /**< pointer to store whether the constraint is a bound constraint (or NULL) */
-   );
-
-/** check whether the dual solution is available
- *
- * @note This is used when calling \ref SCIPprintDualSolex()
- *
- * @return is dual solution available?
- *
- * @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVED
- */
-SCIP_EXPORT
-SCIP_Bool SCIPisDualSolexAvailable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
-   );
-
-/** outputs dual solution from LP solver to file stream
- *
- *  @note This only works if no presolving has been performed, which can be checked by calling method \ref
- *        SCIPhasPerformedPresolve().
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVED
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprintDualSolex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
-   );
-
-
 /** outputs non-zero variables of solution representing a ray in original problem space to file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -579,7 +535,6 @@ SCIP_RETCODE SCIPretransformSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
-
 
 /** adds feasible primal solution to solution storage by copying it
  *
