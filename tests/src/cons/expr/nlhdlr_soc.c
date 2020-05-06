@@ -1083,3 +1083,68 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+
+/* separates simple function */
+Test(nlhdlrsoc, separation3, .description = "test separation for simple expression without disagg")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_SOL* sol;
+   SCIP_ROW* cut;
+   SCIP_VAR* cutvars[3];
+   SCIP_Real cutvals[3];
+   SCIP_Bool infeasible;
+   SCIP_Real rhs;
+   int i;
+
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, z, 0.0) );
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "<x> ^2 - <y> * <z>", NULL, &expr) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* create solution */
+   SCIPcreateSol(scip, &sol, NULL);
+   SCIPsetSolVal(scip, sol, x, 1.0);
+   SCIPsetSolVal(scip, sol, y, 1.0);
+   SCIPsetSolVal(scip, sol, z, 0.0);
+
+   /* check cut */
+   SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, 0.0, &cut) );
+
+   cutvars[0] = x;
+   cutvars[1] = y;
+   cutvars[2] = z;
+   cutvals[0] = 4.0 / SQRT( 5.0 );
+   cutvals[1] = -1.0 + 1.0 / SQRT( 5.0 );
+   cutvals[2] = -(5.0 + SQRT( 5.0 )) / 5.0;
+   rhs = 0.0;
+
+   checkCut(cut, cutvars, cutvals, rhs, 3);
+   SCIPreleaseRow(scip, &cut);
+
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* free expr and cons */
+   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}

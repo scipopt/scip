@@ -425,7 +425,7 @@ SCIP_Real evalSingleTerm(
 
 /** computes gradient cut for a 3D SOC
  *  \f[
- *    \sqrt{ (v_1^T x + \beta_1)^2 + (v_1^T x + \beta_1)^2 } \leq v_3^T x + \beta_3
+ *    \sqrt{ (v_1^T x + \beta_1)^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
  *  \f]
  *
  *  Let \f$f(x)\f$ be the left-hand-side. The partial derivatives of \f$f\f$ are given by
@@ -514,7 +514,6 @@ SCIP_RETCODE generateCutSolSOC3(
    {
       cutvar = vars[transcoefsidx[i]];
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, -transcoefs[i]) );
-
    }
 
    /* add side */
@@ -972,9 +971,9 @@ void tryFillNlhdlrExprDataQuad(
       assert(eigvals[i] > 0.0);
       sqrteigval = SQRT(eigvals[i]);
 
+      termbegins[nextterm] = nexttranscoef;
       offsets[nextterm] = bp[i] / (2.0 * sqrteigval);
       *lhsconstant -= bp[i] * bp[i] / (4.0 * eigvals[i]);
-      termbegins[nextterm] = nexttranscoef;
 
       /* set transcoefs */
       for( j = 0; j < nvars; ++j )
@@ -1002,8 +1001,8 @@ void tryFillNlhdlrExprDataQuad(
    /* store constant term */
    if( *lhsconstant > 0.0 )
    {
-      offsets[nextterm] = SQRT( *lhsconstant );
       termbegins[nextterm] = nexttranscoef;
+      offsets[nextterm] = SQRT( *lhsconstant );
       ++nextterm;
    }
 
@@ -1016,8 +1015,8 @@ void tryFillNlhdlrExprDataQuad(
       assert(-eigvals[specialtermidx] > 0.0);
       sqrteigval = SQRT(-eigvals[specialtermidx]);
 
-      offsets[nextterm] = -bp[specialtermidx] / (2.0 * sqrteigval);
       termbegins[nextterm] = nexttranscoef;
+      offsets[nextterm] = -bp[specialtermidx] / (2.0 * sqrteigval);
 
       /* the expression can only be an soc if the resulting rhs term does not change sign;
        * the rhs term is a linear combination of variables, so estimate its bounds
@@ -1341,9 +1340,9 @@ SCIP_RETCODE detectSocNorm(
    {
       /* rhs */
       termbegins[nterms - 1] = nterms - 1;
+      offsets[nterms - 1] = 0.0;
       transcoefsidx[nterms - 1] = nvars - 1;
       transcoefs[nterms - 1] = 1.0;
-      offsets[nterms - 1] = 0.0;
 
       /* sentinel value */
       termbegins[nterms] = nterms;
@@ -1702,8 +1701,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(vars[nextentry] != NULL);
 
       /* store v_i and beta_i */
-      offsets[nextentry] = 0.0;
       termbegins[nextentry] = nnzinterms;
+      offsets[nextentry] = 0.0;
 
       transcoefsidx[nnzinterms] = nextentry;
       if( ishyperbolic )
@@ -1729,8 +1728,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* store term for constant (v_i = 0) */
    if( lhsconstant > 0.0 )
    {
-      offsets[nextentry] = SQRT(lhsconstant);
       termbegins[nextentry] = nnzinterms;
+      offsets[nextentry] = SQRT(lhsconstant);
 
       /* finish processing term; this term has 0 nonzero thus we do not increase nnzinterms */
       ++nextentry;
@@ -1744,7 +1743,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(vars[nvars - 1] != NULL);
 
       assert(childcoefs[specialtermidx] < 0.0);
+
       termbegins[nextentry] = nnzinterms;
+      offsets[nextentry] = 0.0;
       transcoefs[nnzinterms] = rhssign * SQRT(-childcoefs[specialtermidx]);
       transcoefsidx[nnzinterms] = nvars - 1;
 
@@ -1769,6 +1770,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
        * on the lhs we have the term (expr_k - expr_l)^2
        */
       termbegins[nextentry] = nnzinterms;
+      offsets[nextentry] = 0.0;
 
       /* expr_k */
       transcoefsidx[nnzinterms] = nvars - 2;
@@ -1785,6 +1787,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       /* on rhs we have +/-(expr_k + expr_l) */
       termbegins[nextentry] = nnzinterms;
+      offsets[nextentry] = 0.0;
 
       /* rhssing * expr_k */
       transcoefsidx[nnzinterms] = nvars - 2;
@@ -2494,15 +2497,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
          SCIPdebugMsg(scip, "generated row for normal SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
-            k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
+            cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-            SCIPdebugMsg(scip, "added the following cut with efficacy %g\n", cutefficacy);
-            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
 
             if( infeasible )
                *result = SCIP_CUTOFF;
@@ -2557,9 +2557,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-            SCIPdebugMsg(scip, "added the following cut with efficacy %g\n", cutefficacy);
-            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
 
             if( infeasible )
                *result = SCIP_CUTOFF;
