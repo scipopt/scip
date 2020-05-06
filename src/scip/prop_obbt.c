@@ -2679,7 +2679,6 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIP_VAR* var;
-         int ndomainuses;
 
          /* get auxiliary variable of the child; skip expression if there is none */
          var = SCIPgetConsExprExprAuxVar(expr);
