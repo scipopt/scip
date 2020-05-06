@@ -14734,14 +14734,34 @@ int SCIPgetConsExprExprNDomainUses(
 }
 
 /** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
-void SCIPincrementConsExprExprNDomainUses(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
    )
 {
+   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(expr->ndomainuses >= 0);
 
    ++(expr->ndomainuses);
+
+   /* increase the ndomainuses counter for all variable expressions in the given expression */
+   if( SCIPgetConsExprExprNChildren(expr) > 0 )
+   {
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+      for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         if( SCIPisConsExprExprVar(expr) )
+            ++(expr->ndomainuses);
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns the total number of variables in an expression
@@ -15021,7 +15041,7 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    return conshdlrdata->lastboundrelax;
 }
 
-/** returns the hashmap that is used to map variables to their corresponding variable expressions */
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
 SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */

@@ -40,7 +40,6 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_expr.h"
-#include "scip/cons_expr_iterator.h"
 #include "scip/cons_expr_var.h"
 #include "scip/intervalarith.h"
 #include "scip/prop_genvbounds.h"
@@ -2619,20 +2618,7 @@ unsigned int getScore(
    return score;
 }
 
-/** count how often each variable is used in a nonconvex term
- *
- * the method propagates the ndomainuses counters to variables; it iterates through every expression tree and compute
- * the nonconvexity score as follows:
- *
- *  i) initialize nccounts[x] = 0 for all variables x in c
- *  for all expressions v:
- *     ii) nccounts[v.var] += v.ndomainuses
- *     for all children w of v:
- *        iii) nccounts[w.var] += nccounts[v.var]
- *
- * due to the presence of common sub-expressions, the result of the algorithm depends on the order of the
- * expressions in the first loop
- */
+/** count how often each variable is used in a nonconvex term */
 static
 SCIP_RETCODE getNLPVarsNonConvexity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2640,11 +2626,10 @@ SCIP_RETCODE getNLPVarsNonConvexity(
                                               *   non-convex term */
    )
 {
-
-   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_HASHMAP* var2expr;
    int nvars;
-   int c;
+   int i;
 
    assert(scip != NULL);
    assert(nccounts != NULL);
@@ -2659,66 +2644,26 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
-   /* create and initialize iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD);
+   var2expr = SCIPgetConsExprVarHashmap(scip, conshdlr);
+   assert(var2expr != NULL);
 
-   /* iterate through all expression constraints and collect the corresponding variable expressions */
-   for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      SCIP_CONS* cons;
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_EXPR* root;
+      SCIP_VAR* var;
 
-      cons = SCIPconshdlrGetConss(conshdlr)[c];
-      assert(cons != NULL);
-      root = SCIPgetExprConsExpr(scip, cons);
-      assert(root != NULL);
+      var = SCIPgetVars(scip)[i];
+      assert(var != NULL);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      if( SCIPhashmapExists(var2expr, (void*) var) )
       {
-         SCIP_VAR* var;
+         SCIP_CONSEXPR_EXPR* expr = SCIPhashmapGetImage(var2expr, (void*) var);
+         assert(expr != NULL);
+         assert(SCIPisConsExprExprVar(expr));
 
-         /* get auxiliary variable of the child; skip expression if there is none */
-         var = SCIPgetConsExprExprAuxVar(expr);
-         if( var == NULL )
-            continue;
-
-         switch( SCIPexpriteratorGetStageDFS(it) )
-         {
-            SCIP_CONSEXPR_EXPR* child;
-            SCIP_VAR* childvar;
-
-            /* ii) nccounts[v.var] += v.ndomainuses */
-            case SCIP_CONSEXPRITERATOR_ENTEREXPR:
-               nccounts[SCIPvarGetProbindex(var)] += SCIPgetConsExprExprNDomainUses(expr);
-               break;
-
-            /* iii) nccounts[w.var] += nccounts[v.var] */
-            case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
-
-               /* get child */
-               child = SCIPexpriteratorGetChildExprDFS(it);
-               assert(child != NULL);
-
-               /* get auxiliary variable of the child */
-               childvar = SCIPgetConsExprExprAuxVar(child);
-               if( childvar != NULL )
-                  nccounts[SCIPvarGetProbindex(childvar)] += nccounts[SCIPvarGetProbindex(var)];
-
-               break;
-
-            default:
-               /* shouldn't be here */
-               SCIPABORT();
-               break;
-         }
+         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNDomainUses(expr);
+         assert(nccounts[SCIPvarGetProbindex(var)] >= 0);
       }
    }
-
-   /* free iterator */
-   SCIPexpriteratorFree(&it);
 
 #ifdef SCIP_DEBUG
    {

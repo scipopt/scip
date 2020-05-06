@@ -194,7 +194,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
          if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
          {
             for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-               SCIPincrementConsExprExprNDomainUses(SCIPgetConsExprExprChildren(expr)[c]);
+            {
+               SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr,
+                  SCIPgetConsExprExprChildren(expr)[c]) );
+            }
          }
 
          /* free memory */

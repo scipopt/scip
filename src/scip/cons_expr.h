@@ -1044,8 +1044,10 @@ int SCIPgetConsExprExprNDomainUses(
 
 /** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
 SCIP_EXPORT
-void SCIPincrementConsExprExprNDomainUses(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
    );
 
 /** returns the total number of variables in an expression
