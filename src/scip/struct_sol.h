@@ -63,7 +63,6 @@ struct SCIP_Viol
  */
 struct SCIP_Sol
 {
-   SCIP_VALSEX*          valsex;             /**< exact solution values if this is an exact solution */
    SCIP_Real             obj;                /**< objective value of solution */
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */
@@ -91,6 +90,7 @@ struct SCIP_Sol
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
+   SCIP_VALSEX*          valsex;             /**< exact solution values if this is an exact solution */
 };
 
 /** exact primal CIP solution
