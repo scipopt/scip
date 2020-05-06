@@ -1039,6 +1039,23 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   );
+
 /** returns the total number of variables in an expression
  *
  * The function counts variables in common sub-expressions only once.
@@ -1173,6 +1190,13 @@ unsigned int SCIPgetConsExprCurBoundsTag(
 /** gets the curboundstag at the last time where variable bounds were relaxed */
 SCIP_EXPORT
 unsigned int SCIPgetConsExprLastBoundRelaxTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_EXPORT
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 

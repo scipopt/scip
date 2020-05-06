@@ -38,10 +38,6 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include quadratic and nonlinear conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
-   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
-
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 

@@ -504,6 +504,7 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
+   expr->ndomainuses = 0;
 
    return SCIP_OKAY;
 }
@@ -14894,6 +14895,53 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    return expr->isintegral;
 }
 
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->ndomainuses;
+}
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(expr->ndomainuses >= 0);
+
+   ++(expr->ndomainuses);
+
+   /* increase the ndomainuses counter for all variable expressions in the given expression */
+   if( SCIPgetConsExprExprNChildren(expr) > 0 )
+   {
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      /* create and initialize iterator */
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+      for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         if( SCIPisConsExprExprVar(expr) )
+            ++(expr->ndomainuses);
+      }
+
+      /* free iterator */
+      SCIPexpriteratorFree(&it);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** returns the total number of variables in an expression
  *
  * The function counts variables in common sub-expressions only once.
@@ -15169,6 +15217,17 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
 
    return conshdlrdata->lastboundrelax;
+}
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   assert(consexprhdlr != NULL);
+
+   return (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
 }
 
 /** collects all bilinear terms for a given set of constraints
