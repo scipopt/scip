@@ -294,6 +294,18 @@ SCIP_RETCODE primalSetCutoffbound(
 
    primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
 
+   /* possibly update the exact cutoffbound */
+   if( set->misc_exactsolve )
+   {
+      SCIP_Rational* tmp;
+
+      RatCreateBuffer(set->buffer, &tmp);
+      RatSetReal(tmp, primal->cutoffbound);
+      if( RatIsGT(primal->cutoffboundex, tmp) )
+         RatSet(primal->cutoffboundex, tmp);
+      RatFreeBuffer(set->buffer, &tmp);
+   }
+
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
 

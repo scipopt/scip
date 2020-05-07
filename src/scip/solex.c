@@ -264,7 +264,6 @@ SCIP_RETCODE SCIPvalsexCopy(
    )
 {
    assert(valsex != NULL);
-   assert(*valsex != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsex) );
    SCIP_CALL( SCIPrationalarrayCopy(&(*valsex)->vals, blkmem, sourcevals->vals) );
