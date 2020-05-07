@@ -32,6 +32,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/pub_varex.h"
 #include "scip/relax.h"
 #include "scip/set.h"
 #include "scip/sol.h"
@@ -409,13 +410,14 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
-   if( SCIPsolIsExactSol(sourcesol) )
+
+   /* copy rational values if solution is exact */
+   if( SCIPsolIsExact(sourcesol) )
    {
       SCIP_CALL( SCIPvalsexCopy( &(*sol)->valsex, blkmem, set, stat, sourcesol->valsex) );
    }
    else
       (*sol)->valsex = NULL;
-
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -457,20 +459,19 @@ SCIP_RETCODE SCIPsolTransform(
    sol->valid = tsol->valid;
    tsol->vals = tmpvals;
    tsol->valid = tmpvalid;
-
-   /* copy solorigin and objective (should be the same, only to avoid numerical issues);
-    * we keep the other statistics of the original solution, since that was the first time that this solution as found
-    */
-   sol->solorigin = tsol->solorigin;
-   sol->obj = tsol->obj;
-
-   if( set->misc_exactsolve )
+   if( SCIPsolIsExact(sol) )
    {
       SCIP_VALSEX* tmpvalsex;
       tmpvalsex = sol->valsex;
       sol->valsex = tsol->valsex;
       tsol->valsex = tmpvalsex;
    }
+
+   /* copy solorigin and objective (should be the same, only to avoid numerical issues);
+    * we keep the other statistics of the original solution, since that was the first time that this solution as found
+    */
+   sol->solorigin = tsol->solorigin;
+   sol->obj = tsol->obj;
 
    SCIP_CALL( SCIPsolFree(transsol, blkmem, primal) );
 
@@ -823,7 +824,7 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
-   if( SCIPsolIsExactSol(*sol) )
+   if( SCIPsolIsExact(*sol) )
    {
       SCIP_CALL( SCIPvalsexFree(&((*sol)->valsex), blkmem) );
    }
@@ -1654,6 +1655,135 @@ SCIP_RETCODE SCIPsolMarkPartial(
    return SCIP_OKAY;
 }
 
+/** checks primal CIP solution for exact feasibility */
+static
+SCIP_RETCODE solCheckExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
+   )
+{
+   SCIP_RESULT result;
+   SCIP_Rational* solval;
+   int h;
+
+   assert(sol != NULL);
+   assert(!SCIPsolIsOriginal(sol));
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(feasible != NULL);
+
+   SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
+      RatApproxReal(sol->valsex->obj), sol->nodenum, sol->solorigin);
+
+   *feasible = TRUE;
+
+   if( !printreason )
+      completely = FALSE;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
+
+   /* check whether the solution respects the global bounds of the variables */
+   if( checkbounds || sol->hasinfval )
+   {
+      int v;
+
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
+      {
+         SCIP_VAR* var;
+
+         var = prob->vars[v];
+         if( SCIPsolIsExact(sol) )
+            SCIPsolexGetVal(solval, sol, set, stat, var);
+         else
+            RatSetReal(solval, SCIPsolGetVal(sol, set, stat, var));
+
+         if( !RatIsAbsInfinity(solval) ) /*lint !e777*/
+         {
+            SCIP_Rational* lb;
+            SCIP_Rational* ub;
+
+            lb = SCIPvarGetLbGlobalExact(var);
+            ub = SCIPvarGetUbGlobalExact(var);
+
+            /* if we have to check bound and one of the current bounds is violated */
+            if( checkbounds && ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
+                     || (!RatIsInfinity(ub) && RatIsGT(solval, ub))) )
+            {
+               *feasible = FALSE;
+
+               if( printreason )
+               {
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(RatApproxReal(lb) - RatApproxReal(solval), 0.0) + MAX(RatApproxReal(solval) - RatApproxReal(ub), 0.0));
+               }
+#ifdef SCIP_DEBUG
+               else
+               {
+                  SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", RgetRealApprox(solval), SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               }
+#endif
+            }
+
+            /* check whether there are infinite variable values that lead to an objective value of +infinity */
+            if( *feasible && sol->hasinfval )
+            {
+               *feasible = *feasible && (!RatIsInfinity(solval) || !RatIsPositive(SCIPvarGetObjExact(var)) );
+               *feasible = *feasible && (!RatIsNegInfinity(solval) || !RatIsNegative(SCIPvarGetObjExact(var)) );
+
+               if( ((RatIsInfinity(solval) && RatIsPositive(SCIPvarGetObjExact(var))))
+                     || (RatIsNegInfinity(solval) && RatIsNegative(SCIPvarGetObjExact(var))) )
+               {
+                  if( printreason )
+                  {
+                     SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        RgetRealApprox(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                  }
+#endif
+               }
+            }
+         }
+      }
+   }
+
+   /* check whether the solution fulfills all constraints */
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
+   {
+      /** @todo: exip turn this into checkExact new callback */
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+            checkintegrality, checklprows, printreason, completely, &result) );
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
+
+#ifdef SCIP_DEBUG
+      if( !(*feasible) )
+      {
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+            SCIPconshdlrGetName(set->conshdlrs[h]));
+      }
+#endif
+   }
+
+   RatFreeBuffer(set->buffer, &solval);
+
+   return SCIP_OKAY;
+}
+
 /** checks primal CIP solution for feasibility
  *
  *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
@@ -1917,7 +2047,7 @@ SCIP_RETCODE SCIPsolRetransform(
    /* transform exact values first (needs unchanged solorigin) */
    /** @todo exip: presolving extension this works only now because we do not presolve, and so solvals do not change.
     * might need to be more sophisticated later */
-   if( set->misc_exactsolve && SCIPsolIsExactSol(sol) )
+   if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolexRetransform(sol, set, stat, origprob, transprob, hasinfval) );
    }
@@ -2050,6 +2180,83 @@ void SCIPsolRecomputeObj(
       sol->obj = -SCIPsetInfinity(set);
 }
 
+/** returns whether the given exact solutions are equal */
+static
+SCIP_Bool solsAreEqualExact(
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2,               /**< second primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
+                                              *   defined in the original problem space */
+   )
+{
+   SCIP_PROB* prob;
+   SCIP_Rational* tmp1;
+   SCIP_Rational* tmp2;
+   int v;
+   SCIP_Bool result = TRUE;
+
+   assert(sol1 != NULL);
+   assert(sol2 != NULL);
+   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp1) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
+   /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
+   if( (sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) == (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) )
+   {
+      SCIPsolIsExact(sol1) ? RatSet(tmp1, sol1->valsex->obj) : RatSetReal(tmp1, sol1->obj);
+      SCIPsolIsExact(sol2) ? RatSet(tmp2, sol2->valsex->obj) : RatSetReal(tmp2, sol2->obj);
+   }
+   /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
+   else
+   {
+      if( SCIPsolIsExact(sol1) )
+         RatSet(tmp1, SCIPsolexGetObj(sol1, set, transprob, origprob));
+      else
+         RatSetReal(tmp1, SCIPsolGetObj(sol1, set, transprob, origprob));
+      if( SCIPsolIsExact(sol2) )
+         RatSet(tmp2, SCIPsolexGetObj(sol2, set, transprob, origprob));
+      else
+         RatSetReal(tmp2, SCIPsolGetObj(sol2, set, transprob, origprob));
+   }
+
+   /* solutions with different objective values cannot be the same */
+   if( !RatIsEqual(tmp1, tmp2) )
+      result = FALSE;
+
+   /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
+    * space
+    */
+   prob = transprob;
+   if( sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+      prob = origprob;
+   assert(prob != NULL);
+
+   /* compare each variable value */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      if( SCIPsolIsExact(sol1) )
+         SCIPsolexGetVal(tmp1, sol1, set, stat, prob->vars[v]);
+      else
+         RatSetReal(tmp1, SCIPsolGetVal(sol1, set, stat, prob->vars[v]));
+      if( SCIPsolIsExact(sol2) )
+         SCIPsolexGetVal(tmp2, sol2, set, stat, prob->vars[v]);
+      else
+         RatSetReal(tmp2, SCIPsolGetVal(sol2, set, stat, prob->vars[v]));
+
+      if( !RatIsEqual(tmp1, tmp2) )
+         result = FALSE;
+   }
+
+   RatFreeBuffer(set->buffer, &tmp2);
+   RatFreeBuffer(set->buffer, &tmp1);
+
+   return result;
+}
+
 /** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
@@ -2070,6 +2277,12 @@ SCIP_Bool SCIPsolsAreEqual(
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
+
+   /* exact solutions should be checked exactly */
+   if( set->misc_exactsolve )
+   {
+      return solsAreEqualExact(sol1, sol2, set, stat, origprob, transprob);
+   }
 
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( SCIPsolIsOriginal(sol1) == SCIPsolIsOriginal(sol2) )

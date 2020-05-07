@@ -49,7 +49,7 @@ extern "C" {
 #endif
 
 
-/** creates primal CIP solution, initialized to zero */
+/** creates primal CIP solution with exact rational values, initialized to zero */
 SCIP_RETCODE SCIPsolexCreate(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPsolexCreate(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the current LP solution */
+/** creates primal CIP solution with exact rational values, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolexCreateLPexSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPsolexCreateLPexSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to the current solution */
+/** creates primal CIP solution with exact rational values, initialized to the current solution */
 SCIP_RETCODE SCIPsolexCreateCurrentSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -155,17 +155,6 @@ SCIP_Rational* SCIPsolexGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns whether the given solutions are equal */
-SCIP_Bool SCIPsolexsAreEqual(
-   SCIP_SOL*             sol1,               /**< first primal CIP solution */
-   SCIP_SOL*             sol2,               /**< second primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
-                                              *   defined in the original problem space */
-   );
-
 /** outputs non-zero elements of solution to file stream */
 SCIP_RETCODE SCIPsolexPrint(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -193,50 +182,8 @@ SCIP_RETCODE SCIPsolexLinkPseudoSol(
    SCIP_LPEX*            lp                  /**< current LP data */
    );
 
-/** hard-set the obj value of a solution  */
-void SCIPsolSetObjVal(
-   SCIP_SOL*             sol,                /**< primal solution */
-   SCIP_Real             val                 /**< objective value */
-   );
-
-/** returns whether the given solution is defined on original variables */
-SCIP_Bool SCIPsolexIsOriginal(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** checks primal CIP solution for feasibility
- *
- *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
- *        differently. There might be some variables which do not have an original counter part (e.g. in
- *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
- */
-SCIP_RETCODE SCIPsolexCheck(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
-   SCIP_Bool             completely,         /**< Should all violations be checked? */
-   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
-   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
-   );
-
-/** gets current position of solution in array of existing solutions of primal data */
-int SCIPsolexGetPrimalexIndex(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** sets current position of solution in array of existing solutions of primal data */
-void SCIPsolexSetPrimalexIndex(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   primalindex         /**< new primal index of solution */
-   );
-
-SCIP_Bool SCIPsolIsExactSol(
+/** checks whether soltion has exact rational solution values */
+SCIP_Bool SCIPsolIsExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 

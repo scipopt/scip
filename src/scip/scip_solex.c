@@ -468,7 +468,7 @@ SCIP_Bool SCIPisExactSol(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPsolIsExactSol(sol);
+   return SCIPsolIsExact(sol);
 }
 
 /** checks solution for exact feasibility without adding it to the solution store
@@ -520,7 +520,7 @@ SCIP_RETCODE SCIPcheckSolex(
    }
    else
    {
-      SCIP_CALL( SCIPsolexCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob,
+      SCIP_CALL( SCIPsolCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob,
             printreason, completely, checkbounds, checkintegrality, checklprows, feasible) );
    }
 
