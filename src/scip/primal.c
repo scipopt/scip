@@ -2069,7 +2069,7 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
    if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
    {
       /* check solution for feasibility */
-      SCIP_CALL( SCIPsolexCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
+      SCIP_CALL( SCIPsolCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
             checkintegrality, checklprows, &feasible) );
    }
    else

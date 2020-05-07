@@ -2447,6 +2447,8 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
    SCIPlpexGetObjval(lp->lpex, set, transprob, lpobjval);
    RatSet(node->lowerboundexact, lpobjval);
 
+   RatFreeBuffer(set->buffer, &lpobjval);
+
    return SCIP_OKAY;
 }
 
