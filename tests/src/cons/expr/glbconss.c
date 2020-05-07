@@ -1,0 +1,654 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   glbconss.c
+ * @brief  test for generating globally valid expression constraints
+ * @author Benjamin Mueller
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <assert.h>
+
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
+#include "include/scip_test.h"
+
+/* fundamental constraint handler properties */
+#define CONSHDLR_NAME          "cpp"
+#define CONSHDLR_DESC          "constraint handler for circle packing problem structure"
+#define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+/*
+ * forward declarations
+ */
+
+/*
+ * constraint specific interface methods
+ */
+static
+SCIP_RETCODE SCIPincludeConshdlrCpp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates and captures a circle packing constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+static
+SCIP_RETCODE SCIPcreateConsCpp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            xs,                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys,                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs,                 /**< radius of each circle */
+   int                   ncircles,           /**< total number of circles */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures a circle packing constraint in its most basic form */
+static
+SCIP_RETCODE SCIPcreateConsBasicCpp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            xs,                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys,                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs,                 /**< radius of each circle */
+   int                   ncircles            /**< total number of circles */
+   );
+
+/*
+ * Data structures
+ */
+
+/** constraint data for cpp constraints */
+struct SCIP_ConsData
+{
+   SCIP_VAR**            xs;                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys;                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs;                 /**< radius of each circle */
+   int                   ncircles;           /**< total number of circles */
+   SCIP_HASHMAP*         map;                /**< hashmap to store which expression constraints have been generated */
+};
+
+/*
+ * Local methods
+ */
+
+/** creates constraint data */
+static
+SCIP_RETCODE consdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to constraint data */
+   SCIP_VAR**            xs,                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys,                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs,                 /**< radius of each circle */
+   int                   ncircles            /**< total number of circles */
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+   assert(xs != NULL);
+   assert(ys != NULL);
+   assert(rs != NULL);
+   assert(ncircles > 0);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, consdata) );
+
+   /* duplicate data */
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->xs, xs, ncircles) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->ys, ys, ncircles) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->rs, rs, ncircles) );
+   (*consdata)->ncircles = ncircles;
+
+   /* transform variables, if necessary */
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->ncircles, (*consdata)->xs, (*consdata)->xs) );
+      SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->ncircles, (*consdata)->ys, (*consdata)->ys) );
+   }
+
+   /* capture variables */
+   for( i = 0; i < ncircles; ++i )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->xs[i]) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->ys[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees constraint data */
+static
+SCIP_RETCODE consdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata            /**< pointer to constraint data */
+   )
+{
+   int i;
+
+   /* release variables */
+   for( i = 0; i < (*consdata)->ncircles; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->xs[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->ys[i]) );
+   }
+
+   /* free memory */
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->xs, (*consdata)->ncircles);
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->ys, (*consdata)->ncircles);
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->rs, (*consdata)->ncircles);
+   SCIPfreeBlockMemory(scip, consdata);
+
+   return SCIP_OKAY;
+}
+
+/** helper method to check whether a solution satisfies a circle packing constraint */
+static
+SCIP_RESULT checkCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to check (NULL for the LP solution) */
+   SCIP_CONS*            cons,               /**< circle packing constraint */
+   int*                  violi,              /**< index of the first circle that violates the constraint (might be NULL) */
+   int*                  violj               /**< index of the second circle that violates the constraint (might be NULL) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->ncircles - 1; ++i )
+   {
+      SCIP_Real xi;
+      SCIP_Real yi;
+      SCIP_Real ri;
+      int j;
+
+      xi = SCIPgetSolVal(scip, sol, consdata->xs[i]);
+      yi = SCIPgetSolVal(scip, sol, consdata->ys[i]);
+      ri = consdata->rs[i];
+
+      for( j = i+1; j < consdata->ncircles; ++j )
+      {
+         SCIP_Real xj;
+         SCIP_Real yj;
+         SCIP_Real rj;
+
+         xj = SCIPgetSolVal(scip, sol, consdata->xs[j]);
+         yj = SCIPgetSolVal(scip, sol, consdata->ys[j]);
+         rj = consdata->rs[j];
+
+         if( SCIPisFeasLT(scip, SQRT(SQR(xi - xj) + SQR(yi - yj)) - (ri + rj), 0.0) )
+         {
+            SCIPdebugMsg(scip, "solution is infeasible for constraint %s (%d,%d)\n", SCIPconsGetName(cons), i, j);
+            return SCIP_INFEASIBLE;
+
+            /* store the index of the circles that violate the constraint */
+            if( violi != NULL )
+               *violi = i;
+            if( violj != NULL )
+               *violj = i;
+         }
+      }
+   }
+
+   return SCIP_FEASIBLE;
+}
+
+/** helper method to enforce a given set of constraints
+ *
+ * Note that the circle packing constraint handler has a smaller enforce priority than the expression constraint handler.
+ */
+static
+SCIP_RETCODE enfoConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_CONS**           conss,              /**< circle packing constraints */
+   int                   nconss              /**< total number of circle packing constraints */
+   )
+{
+   int c;
+
+   assert(conss != NULL);
+   assert(nconss > 0);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+      int violi;
+      int violj;
+
+      assert(conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->map != NULL);
+
+      /* only consider violated constraints */
+      if( checkCons(scip, sol, conss[c], &violi, &violj) == SCIP_INFEASIBLE )
+      {
+         int hash = violi * consdata->ncircles + violj;
+
+         /* make sure that every expression constraint is only added once */
+         if( !SCIPhashmapExists(consdata->map, (void*)(size_t)hash) )
+         {
+            SCIP_CALL( SCIPhashmapInsert(consdata->map, (void*)(size_t)hash) );
+
+            /* create an expression constraint */
+
+            *result = SCIP_CONSADDED;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/*
+ * Callback methods of constraint handler
+ */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCpp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrCpp(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees specific constraint data */
+static
+SCIP_DECL_CONSDELETE(consDeleteCpp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* free constraint data */
+   SCIP_CALL( consdataFree(scip, consdata) );
+
+   return SCIP_OKAY;
+}
+
+
+/** transforms constraint data into data belonging to the transformed problem */
+static
+SCIP_DECL_CONSTRANS(consTransCpp)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(sourcecons != NULL);
+   assert(targetcons != NULL);
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   /* create constraint data for target constraint */
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->xs, sourcedata->ys, sourcedata->rs, sourcedata->ncircles) );
+
+   /* create target constraint */
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+SCIP_DECL_CONSENFOLP(consEnfolpCpp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of cpp constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+SCIP_DECL_CONSENFOPS(consEnfopsCpp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of cpp constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+SCIP_DECL_CONSCHECK(consCheckCpp)
+{  /*lint --e{715}*/
+   int c;
+
+   *result = SCIP_FEASIBLE;
+
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE); ++c )
+   {
+      *result = checkCons(scip, sol, conss[c], NULL, NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding lock method of constraint handler */
+static
+SCIP_DECL_CONSLOCK(consLockCpp)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->ncircles; ++i )
+   {
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->xs[i], locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->ys[i], locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolCpp)
+{  /*lint --e{715}*/
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->map == NULL);
+
+      SCIP_CALL( SCIPhashmapCreate(&consdata->map, SCIPblkmem(scip), SQR(consdata->ncircles)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_CONSEXITSOL(consExitsolCpp)
+{  /*lint --e{715}*/
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->map != NULL);
+
+      SCIPhashmapFree(&consdata->map);
+   }
+
+   return SCIP_OKAY;
+
+}
+
+/*
+ * constraint specific interface methods
+ */
+static
+SCIP_RETCODE SCIPincludeConshdlrCpp(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+
+   SCIP_CONSHDLR* conshdlr;
+
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpCpp, consEnfopsCpp, consCheckCpp, consLockCpp,
+         NULL) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCpp) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteCpp) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCpp) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCpp) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a circle packing constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+static
+SCIP_RETCODE SCIPcreateConsCpp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            xs,                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys,                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs,                 /**< radius of each circle */
+   int                   ncircles,           /**< total number of circles */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   /* find the cpp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("cpp constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( consdataCreate(scip, &consdata, xs, ys, rs, ncircles) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a circle packing constraint in its most basic form */
+static
+SCIP_RETCODE SCIPcreateConsBasicCpp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            xs,                 /**< variables representing the x-coordinate of each circle */
+   SCIP_VAR**            ys,                 /**< variables representing the y-coordinate of each circle */
+   SCIP_Real*            rs,                 /**< radius of each circle */
+   int                   ncircles            /**< total number of circles */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsCpp(scip, cons, name, xs, ys, rs, ncircles,
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/*
+ * TESTS
+ */
+
+static SCIP* scip;
+
+/** setup of test run */
+static
+void setup(void)
+{
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include default plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* include circle packing constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrCpp(scip) );
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+}
+
+/** deinitialization method */
+static
+void teardown(void)
+{
+   /* free SCIP */
+   SCIP_CALL( SCIPfree(&scip) );
+
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+}
+
+/** helper method to create x- and y-variables */
+static
+SCIP_RETCODE createVars(
+   SCIP_Real             lbx,                /**< lower bound of each x-variable */
+   SCIP_Real             ubx,                /**< upper bound of each x-variable */
+   SCIP_Real             objx,               /**< objective coefficient of each x-variable */
+   SCIP_Real             lby,                /**< lower bound of each y-variable */
+   SCIP_Real             uby,                /**< upper bound of each y-variable */
+   SCIP_Real             objy,               /**< objective coefficient of each y-variable */
+   int                   nvars,              /**< total number of x- and y-variables */
+   SCIP_VAR**            xs,                 /**< array to store x-variables */
+   SCIP_VAR**            ys                  /**< array to store y-variables */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   int i;
+
+   for( i = 0; i < nvars; ++i )
+   {
+      (void) SCIPsnprintf(name , SCIP_MAXSTRLEN, "x_%d", i);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &xs[i], name, lbx, ubx, objx, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, xs[i]) );
+
+      (void) SCIPsnprintf(name , SCIP_MAXSTRLEN, "y_%d", i);
+      SCIP_CALL( SCIPcreateVarBasic(scip, &ys[i], name, lby, uby, objy, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, ys[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/* define test suite */
+TestSuite(glbconss, .init = setup, .fini = teardown);
+
+/*
+ * define tests
+ */
+
+Test(glbconss, cpp1)
+{
+   SCIP_CONS* cons;
+   SCIP_VAR* xs[3];
+   SCIP_VAR* ys[3];
+   SCIP_Real rs[3] = {1.0, 1.0, 1.0};
+   int i;
+
+   /* create variables */
+   SCIP_CALL( createVars(0.0, 10.0, -1.0, 0.0, 10.0, 0.0, 3, xs, ys) );
+
+   /* create circle packing constraint */
+   SCIP_CALL( SCIPcreateConsBasicCpp(scip, &cons, "cpp", xs, ys, rs, 3) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* solve problem */
+   SCIP_CALL( SCIPsolve(scip) );
+
+   /* release variables */
+   for( i = 0; i < 3; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &xs[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &ys[i]) );
+   }
+}
