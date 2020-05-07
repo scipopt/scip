@@ -475,7 +475,7 @@ SCIP_RETCODE computeReducedProbSolution(
 
    /* run local heuristic with original costs! */
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
-         && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
+         && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_NWPTSPG )
    {
       SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
       assert(solstp_isValid(scip, solgraph, soledges));
@@ -1474,10 +1474,12 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          assert(graph_valid(scip, solgraph));
 
          /* reduce new graph */
-         if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
+         if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP )
             SCIP_CALL( reduce(scip, solgraph, &offsetdummy, 0, 5, FALSE) );
          else
+         {
             SCIP_CALL( reduce(scip, solgraph, &offsetdummy, 2, 5, FALSE) );
+         }
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, &offsetdummy, FALSE) );
 
