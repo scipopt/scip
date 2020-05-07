@@ -3299,8 +3299,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       for( k = 0; k < norgnodes; k++ )
          if( orgnodes[k] == TRUE )
-
-	   SCIPinfoMessage(scip, file, "V %d\n", k + 1);
+            SCIPinfoMessage(scip, file, "V %d\n", k + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
 

@@ -2466,7 +2466,7 @@ void graph_pc_subtractPrize(
    assert(SCIPisGE(scip, g->prize[i], 0.0) || graph_pc_isPcMw(g));
 
    /* do we need to adapt edge cost as well? */
-   if( !graph_pc_termIsNonLeafTerm(g, i) )
+   if( graph_pc_isMw(g) || !graph_pc_termIsNonLeafTerm(g, i) )
    {
       const int twinterm = graph_pc_getTwinTerm(g, i);
       const int root2twin = graph_pc_getRoot2PtermEdge(g, twinterm);
