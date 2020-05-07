@@ -25,6 +25,8 @@
  * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
  * Note that v_i, for i <= n, could be 0, thus allowing a positive constant terms inside the root
+ *
+ * @todo: test if it makes sense to only disaggregate when nterms > some parameter
  */
 
 #include <string.h>
