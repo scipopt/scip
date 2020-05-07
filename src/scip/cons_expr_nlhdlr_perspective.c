@@ -1489,6 +1489,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_Bool doprobingind;
 
       indicator = nlhdlrexprdata->indicators[i];
+
       probingvars = NULL;
       probingdoms = NULL;
       nprobingvars = 0;
@@ -1591,15 +1592,20 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             {
                SCIP_CALL( SCIPchgVarUbProbing(scip, var, newub) );
             }
+         }
 
-            if( solcopy == NULL )
+         if( solcopy == NULL )
+         {
+            SCIP_CALL( SCIPcreateSol(scip, &solcopy, NULL) );
+            for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
             {
-               SCIP_CALL( SCIPcreateSol(scip, &solcopy, NULL) );
-               for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
-               {
-                  var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
-                  SCIP_CALL( SCIPsetSolVal(scip, solcopy, var, SCIPgetSolVal(scip, sol, var)) );
-               }
+               var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+               SCIP_CALL( SCIPsetSolVal(scip, solcopy, var, SCIPgetSolVal(scip, sol, var)) );
+            }
+            for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
+            {
+               var = nlhdlrexprdata->indicators[v];
+               SCIP_CALL( SCIPsetSolVal(scip, solcopy, var, SCIPgetSolVal(scip, sol, var)) );
             }
          }
 
@@ -1647,6 +1653,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          for( r = minidx; r <= maxidx; ++r )
          {
+            SCIP_Real maxcoef;
+
             rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
 
             assert(rowprep != NULL);
@@ -1664,9 +1672,16 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
             cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
 
+            maxcoef = 0.0;
+
             for( v = 0; v < rowprep->nvars; ++v )
             {
                var = rowprep->vars[v];
+
+               if( REALABS( rowprep->coefs[v]) > maxcoef )
+               {
+                  maxcoef = REALABS(rowprep->coefs[v]);
+               }
 
                /* is var sc with respect to this indicator? */
                SCIP_CALL(varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
@@ -1677,9 +1692,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                cst0 -= rowprep->coefs[v] * val0;
             }
 
-            /* update the rowprep by adding cst0 - cst0*z */
-            SCIPaddRowprepConstant(rowprep, cst0);
-            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
+            /* only perspectivy when the absolute value of cst0 is not too small */
+            if( maxcoef / REALABS(cst0) <= SCIP_CONSEXPR_CUTMAXRANGE )
+            {
+               /* update the rowprep by adding cst0 - cst0*z */
+               SCIPaddRowprepConstant(rowprep, cst0);
+               SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
+            }
 
             SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
 
