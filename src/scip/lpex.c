@@ -44,7 +44,6 @@
 #include "scip/rational.h"
 #include "scip/set.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/struct_event.h"
@@ -3981,7 +3980,7 @@ void SCIProwexGetSolActivity(
       assert((i < rowex->nlpcols) == (rowex->linkpos[i] >= 0
          && colex->lppos >= 0));
       if( useexact )
-         SCIPsolexGetVal(solval, sol, set, stat, colex->var);
+         SCIPsolGetValExact(solval, sol, set, stat, colex->var);
       else
          RatSetReal(solval, SCIPsolGetVal(sol, set, stat, colex->var));
 
@@ -6003,7 +6002,7 @@ SCIP_RETCODE SCIPlpexCheckIntegralityExact(
    SCIP_Real primsol;
    SCIP_Real frac;
    SCIP_VAR* var;
-   SCIP_Rational* primsolex;
+   SCIP_Rational* primsolexact;
    SCIP_Bool exintegral = TRUE;
 
    assert(result != NULL);
@@ -6013,7 +6012,7 @@ SCIP_RETCODE SCIPlpexCheckIntegralityExact(
    cols = lp->cols;
    ncols = lp->ncols;
 
-   RatCreateBuffer(set->buffer, &primsolex);
+   RatCreateBuffer(set->buffer, &primsolexact);
 
    for( c = 0; c < ncols; ++c )
    {
@@ -6026,9 +6025,9 @@ SCIP_RETCODE SCIPlpexCheckIntegralityExact(
 
       primsol = SCIPcolGetPrimsol(col);
       if( lpex->solved )
-         RatSet(primsolex, colex->primsol);
+         RatSet(primsolexact, colex->primsol);
       else
-         RatSetReal(primsolex, primsol);
+         RatSetReal(primsolexact, primsol);
 
       assert(primsol < SCIP_INVALID);
       assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
@@ -6045,7 +6044,7 @@ SCIP_RETCODE SCIPlpexCheckIntegralityExact(
       if( vartype == SCIP_VARTYPE_CONTINUOUS )
          continue;
 
-      exintegral = RatIsIntegral(primsolex);
+      exintegral = RatIsIntegral(primsolexact);
       if( !exintegral )
          break;
    }
@@ -6055,7 +6054,7 @@ SCIP_RETCODE SCIPlpexCheckIntegralityExact(
    else
       *result = SCIP_INFEASIBLE;
 
-   RatFreeBuffer(set->buffer, &primsolex);
+   RatFreeBuffer(set->buffer, &primsolexact);
 
    return SCIP_OKAY;
 }

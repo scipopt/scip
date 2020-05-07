@@ -99,7 +99,6 @@
 #include "scip/sepastore.h"
 #include "scip/set.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/syncstore.h"
@@ -198,7 +197,7 @@ SCIP_RETCODE checkSolexOrig(
          SCIP_VAR* var;
 
          var = scip->origprob->vars[v];
-         SCIPsolexGetVal(solval, sol, scip->set, scip->stat, var);
+         SCIPsolGetValExact(solval, sol, scip->set, scip->stat, var);
 
          lb = SCIPvarGetLbOriginalExact(var);
          ub = SCIPvarGetUbOriginalExact(var);
@@ -328,7 +327,7 @@ void SCIPgetSolexVal(
 
    if( sol != NULL )
    {
-      SCIPsolexGetVal(res, sol, scip->set, scip->stat, var);
+      SCIPsolGetValExact(res, sol, scip->set, scip->stat, var);
    }
    else
    {
@@ -364,7 +363,7 @@ void SCIPgetSolexTransObj(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( sol != NULL )
-      RatSet(res, SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob));
+      RatSet(res, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj(sol==NULL)", \
@@ -392,7 +391,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPsol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+   SCIP_CALL( SCIPsolOverwriteFPSolExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
    return SCIP_OKAY;
 }
@@ -420,7 +419,7 @@ SCIP_RETCODE SCIPprintSolex(
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
-      SCIP_CALL( SCIPsolexCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+      SCIP_CALL( SCIPsolCreateCurrentSolExact(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
             scip->tree, scip->lpex, NULL) );
    }
 
@@ -434,14 +433,14 @@ SCIP_RETCODE SCIPprintSolex(
 
    /** @todo exip: convert to origobj, or extern objval respectively */
    if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolexGetOrigObj(sol);
+      objvalue = SCIPsolGetOrigObjExact(sol);
    else
-      objvalue = SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob);
+      objvalue = SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob);
 
    RatMessage(scip->messagehdlr, file, objvalue);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
-   SCIP_CALL( SCIPsolexPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
+   SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
          printzeros) );
 
    if( file != NULL && scip->messagehdlr != NULL )

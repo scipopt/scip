@@ -40,7 +40,6 @@
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
-#include "scip/solex.h"
 #include "scip/sol.h"
 #include "scip/pub_varex.h"
 #include "scip/primal.h"

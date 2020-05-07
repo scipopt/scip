@@ -332,7 +332,6 @@ set(scipsources
     scip/sepastoreex.c
     scip/set.c
     scip/sol.c
-    scip/solex.c
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
@@ -819,7 +818,6 @@ set(scipheaders
     scip/sepa_zerohalf.h
     scip/set.h
     scip/sol.h
-    scip/solex.h
     scip/solve.h
     scip/stat.h
     scip/struct_bandit.h
@@ -926,7 +924,6 @@ set(scipheaders
     scip/type_sepastore.h
     scip/type_set.h
     scip/type_sol.h
-    scip/type_solex.h
     scip/type_stat.h
     scip/type_syncstore.h
     scip/type_table.h

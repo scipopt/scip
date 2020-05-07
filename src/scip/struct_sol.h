@@ -90,7 +90,7 @@ struct SCIP_Sol
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
-   SCIP_VALSEX*          valsex;             /**< exact solution values if this is an exact solution */
+   SCIP_VALSEXACT*       valsexact;          /**< exact solution values if this is an exact solution */
 };
 
 /** exact primal CIP solution
@@ -98,7 +98,7 @@ struct SCIP_Sol
  *  Solutions with origin ORIGINAL contain the values for original variables. The stored objective value also
  *  corresponds to the original problem.
  */
-struct SCIP_Valsex
+struct SCIP_ValsExact
 {
    SCIP_Rational*        obj;                /**< objective value of solution */
    SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */

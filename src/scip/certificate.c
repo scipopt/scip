@@ -36,7 +36,6 @@
 #include "scip/certificate.h"
 #include "scip/struct_certificate.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/struct_scip.h"
 #include "scip/pub_varex.h"
 #include "scip/varex.h"
@@ -259,7 +258,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    nnonz = 0;
    for( i = 0; i < nvars; i++)
    {
-      SCIPsolexGetVal(vals[i], sol, scip->set, scip->stat, vars[i]);
+      SCIPsolGetValExact(vals[i], sol, scip->set, scip->stat, vars[i]);
       if( !RatIsZero(vals[i]) )
          nnonz++;
    }
@@ -765,7 +764,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 
       assert(SCIPisExactSol(scip, bestsol));
 
-      RatSet(primalbound, SCIPsolexGetObj(bestsol, set, scip->transprob, scip->origprob));
+      RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
       assert(!RatIsAbsInfinity(primalbound));
 
       /* print RTP range (same when optimal solution found) */
@@ -1885,7 +1884,7 @@ void SCIPcertificatePrintSolex(
    nnonz = 0;
    for( i = 0; i < nvars; i ++)
    {
-      SCIPsolexGetVal(solval, sol, scip->set, scip->stat, vars[i]);
+      SCIPsolGetValExact(solval, sol, scip->set, scip->stat, vars[i]);
       if( !RatIsZero(solval) )
          nnonz++;
    }
@@ -1894,7 +1893,7 @@ void SCIPcertificatePrintSolex(
 
    for( i = 0; i < nvars; i ++)
    {
-      SCIPsolexGetVal(solval, sol, scip->set, scip->stat, vars[i]);
+      SCIPsolGetValExact(solval, sol, scip->set, scip->stat, vars[i]);
       if( !RatIsZero(solval) )
       {
          SCIPcertificatePrintProblemMessage(certificate, " %d ", i);

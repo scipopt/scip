@@ -68,7 +68,6 @@
 #include "scip/struct_scip.h"
 #include "scip/set.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
@@ -4785,7 +4784,7 @@ SCIP_RETCODE addCurrentSolution(
       /* add solution to storage */
       if( set->misc_exactsolve && lp->lpex->solved )
       {
-         SCIP_CALL( SCIPsolexCreateLPexSol(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
+         SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
 
          SCIP_CALL( SCIPprimalTrySolexFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );

@@ -33,7 +33,6 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
@@ -2016,21 +2015,21 @@ SCIP_RETCODE primalAddSolex(
 
    sol = *solptr;
    assert(sol != NULL);
-   obj = SCIPsolexGetObj(sol, set, transprob, origprob);
+   obj = SCIPsolGetObjExact(sol, set, transprob, origprob);
    fpobj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, RatApproxReal(obj), insertpos, replace);
 
-   SCIPdebug( SCIP_CALL( SCIPsolexPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
+   SCIPdebug( SCIP_CALL( SCIPsolPrintExact(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
-   SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
+   SCIP_CALL( SCIPsolUnlinkExact(sol, set, transprob) );
 
-   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, set, stat, origprob, transprob, tree) );
+   SCIP_CALL( SCIPsolOverwriteFPSolExact(sol, set, stat, origprob, transprob, tree) );
 
-   RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
-   RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+   RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );
+   RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
