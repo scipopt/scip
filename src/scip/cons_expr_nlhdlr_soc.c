@@ -26,7 +26,11 @@
  *
  * Note that v_i, for i <= n, could be 0, thus allowing a positive constant terms inside the root
  *
+ * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2\| \leq a_n x_n+ b_n\f$
+ * as the default nlhdlr will do an extended formulation.
+ *
  * @todo: test if it makes sense to only disaggregate when nterms > some parameter
+ *
  */
 
 #include <string.h>
@@ -2135,8 +2139,16 @@ SCIP_RETCODE detectSOC(
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   /* check whether expression is given as norm as described in case 1 above */
-   SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+   *success = FALSE;
+
+   /* check whether expression is given as norm as described in case 1 above: if we have a contraint
+    * sqrt(sum x_i^2) <= constant, then it might be better not to handle this here; thus, we only call detectSocNorm
+    * when the expr is _not_ the root of a constraint
+    */
+   if( conslhs == SCIP_INVALID && consrhs == SCIP_INVALID )
+   {
+      SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+   }
 
    if( !(*success) )
    {
