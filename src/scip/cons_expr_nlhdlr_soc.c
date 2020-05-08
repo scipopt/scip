@@ -1714,9 +1714,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
       /* extract (unique) variable appearing in term */
       if( SCIPisConsExprExprVar(children[i]) )
       {
-         assert(SCIPvarIsBinary(vars[nextentry]));
-
          vars[nextentry] = SCIPgetConsExprExprVarVar(children[i]);
+
+         assert(SCIPvarIsBinary(vars[nextentry]));
       }
       else
       {
