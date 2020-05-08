@@ -62,6 +62,20 @@
 -emacro(505,SCIPtpiInitCondition)
 -emacro(505,SCIPtpiWaitCondition)
 
+// constant value used in Boolean context
+-emacro(506,SCIPdebugMsg)
+-emacro(506,SCIPdebugMsgPrint)
+-emacro(506,SCIPdebugMessage)
+-emacro(506,SCIPdebugPrintf)
+-emacro(506,SCIPstatisticPrintf)
+-emacro(506,SCIPstatisticMessage)
+-emacro(506,SCIPsetDebugMsg)
+-emacro(506,SCIPsetDebugMsgPrint)
+-emacro(506,SCIPstatDebugMsg)
+-emacro(506,debugMessage)
+-emacro(506,SCIPABORT)
+
+
 // is likely uninitialized
 -emacro(530,va_*)
 -ecall(530,vsnprintf)
