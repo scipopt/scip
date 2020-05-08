@@ -425,7 +425,7 @@ SCIP_Real evalSingleTerm(
    return result;
 }
 
-/** computes gradient cut for a 3D SOC
+/** computes gradient cut for a 2D or 3D SOC. A 3D SOC looks like
  *  \f[
  *    \sqrt{ (v_1^T x + \beta_1)^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
  *  \f]
@@ -436,15 +436,22 @@ SCIP_Real evalSingleTerm(
  *  \f]
  *
  *  and the gradient cut is then \f$f(x^*) + \nabla f(x^*)(x - x^*) \leq v_3^T x + \beta_3\f$.
+ *
+ *  A 2D SOC is
+ *  \f[
+ *    |v_1^T x + \beta_1| \leq v_2^T x + \beta_2
+ *  \f]
+ *  but we build the cut using the same procedure as for 3D.
  */
 static
-SCIP_RETCODE generateCutSolSOC3(
+SCIP_RETCODE generateCutSolSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
    SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
+   SCIP_Real             rhsval,             /**< value of last term at sol */
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
@@ -476,27 +483,35 @@ SCIP_RETCODE generateCutSolSOC3(
 
    *cut = NULL;
 
-   /* evaluate lhs terms */
-   valterms[0] = evalSingleTerm(scip, nlhdlrexprdata, sol, 0);
-   valterms[1] = evalSingleTerm(scip, nlhdlrexprdata, sol, 1);
+   /* evaluate lhs terms and compute f(x*) */
+   fvalue = 0.0;
+   for( i = 0; i < nterms - 1; ++i )
+   {
+      valterms[i] = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+      fvalue += SQR( valterms[i] );
+   }
+   fvalue = SQRT( fvalue );
 
-   /* compute f(x*) */
-   fvalue = SQRT( SQR( valterms[0] ) + SQR( valterms[1] ) );
-
-   /* if f(x*) then SOC can't be violated and we shouldn't be here */
+   /* if f(x*) = 0 then SOC can't be violated and we shouldn't be here */
    assert(fvalue > 0.0);
+
+   /* don't generate cut if we are not violated @todo: remove this once core detects better when a nlhdlr's cons is
+    * violated
+    */
+   if( fvalue - rhsval <= mincutviolation )
+      return SCIP_OKAY;
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, termbegins[nterms]) );
 
-   /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_3^T x + \beta_3, i.e.,
-    * \nabla f(x*)^T x - v_3^T x \leq \beta_3 + \nabla f(x*)^T x* - f(x*)
-    * thus cutrhs is \beta_3 - f(x*) + \nabla f(x*)^T x* */
+   /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_n^T x + \beta_n, i.e.,
+    * \nabla f(x*)^T x - v_n^T x \leq \beta_n + \nabla f(x*)^T x* - f(x*)
+    * thus cutrhs is \beta_n - f(x*) + \nabla f(x*)^T x* */
    cutrhs = nlhdlrexprdata->offsets[nterms - 1] - fvalue;
 
-   /* add terms for v_1 and v_2, and compute cut's rhs */
-   for( j = 0; j < 2; ++j )
+   /* add cut coefficients from lhs terms and compute cut's rhs */
+   for( j = 0; j < nterms - 1; ++j )
    {
       for( i = termbegins[j]; i < termbegins[j + 1]; ++i )
       {
@@ -523,15 +538,15 @@ SCIP_RETCODE generateCutSolSOC3(
 
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
-   if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
+   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc3_%p_%d", (void*) expr, SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
    {
-      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol,
-               NULL), mincutviolation);
+      SCIPdebugMsg(scip, "%d-SOC rowprep violation %g below mincutviolation %g\n", nterms, SCIPgetRowprepViolation(scip,
+               rowprep, sol, NULL), mincutviolation);
       /* SCIPprintRowprep(scip, rowprep, NULL); */
    }
 
@@ -564,7 +579,7 @@ SCIP_RETCODE generateCutSolSOC3(
  *  and the gradient cut is then \f$f(x^*, y^*) + \nabla f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
  */
 static
-SCIP_RETCODE generateCutSol(
+SCIP_RETCODE generateCutSolDisagg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
@@ -621,7 +636,7 @@ SCIP_RETCODE generateCutSol(
    /* compute value of function to be separated (f(x*,y*)) */
    fvalue = denominator - rhsval - disvarval;
 
-   /* if the soc is not violated don't compute cut */
+   /* if the disagg soc is not violated don't compute cut */
    /* TODO: should this be >= SCIPfeastol ? */
    if( !SCIPisPositive(scip, fvalue) )
    {
@@ -685,7 +700,7 @@ SCIP_RETCODE generateCutSol(
 
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
-   if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
+   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
@@ -2232,9 +2247,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
-   /* TODO: what to do if soc has only 2 terms?? */
-   assert(! (*success) || (*nlhdlrexprdata)->nterms > 2);
-
    /* if we have 3 or more terms in lhs create variable for disaggregation */
    if( *success && (*nlhdlrexprdata)->nterms > 3 )
    {
@@ -2455,7 +2467,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    SCIP_Bool infeasible;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nterms == 3 || nlhdlrexprdata->disrow != NULL);
+   assert(nlhdlrexprdata->nterms < 4 || nlhdlrexprdata->disrow != NULL);
+   assert(nlhdlrexprdata->nterms > 1);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -2483,13 +2496,16 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
    ++nlhdlrdata->nenfocalls;
 
-   /* if there are only three terms just compute gradient cut */
-   if( nlhdlrexprdata->nterms == 3 )
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
+
+
+   /* if there are three or two terms just compute gradient cut */
+   if( nlhdlrexprdata->nterms < 4 )
    {
       SCIP_ROW* row;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, SCIPgetLPFeastol(scip), &row) );
+      SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, SCIPgetLPFeastol(scip), rhsval, &row) );
 
       /* TODO this code repeats below, factorize out */
       if( row != NULL )
@@ -2498,8 +2514,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         SCIPdebugMsg(scip, "generated row for normal SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
-            cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
+         SCIPdebugMsg(scip, "generated row for %d-SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+            nlhdlrexprdata->nterms, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
@@ -2537,14 +2553,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
       *result = SCIP_SEPARATED;
    }
 
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
-
    for( k = 0; k < ndisaggrs && *result != SCIP_CUTOFF; ++k )
    {
       SCIP_ROW* row;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), rhsval, &row) );
+      SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), rhsval, &row) );
 
       if( row != NULL )
       {
