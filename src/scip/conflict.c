@@ -1650,8 +1650,8 @@ SCIP_RETCODE conflictsetAddBounds(
    confrelaxedbds = conflictset->relaxedbds;
    confsortvals = conflictset->sortvals;
 
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE);/*lint !e641*/ /*lint !e506*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/ /*lint !e506*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    for( i = 0; i < nbdchginfos; ++i )
    {
@@ -2290,8 +2290,8 @@ SCIP_RETCODE detectImpliedBounds(
    assert(sortvals != NULL);
 
    /* check if the boolean representation of boundtypes matches the 'standard' definition */
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/ /*lint !e506*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e641*/ /*lint !e506*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    ntrivialredvars = 0;
 

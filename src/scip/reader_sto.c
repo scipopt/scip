@@ -756,8 +756,7 @@ SCIP_RETCODE addScenariosToReaderdata(
    assert(scenarios != NULL);
 
    numstages = SCIPtimGetNStages(scip);
-   if( numstages != numscenariostages + 1 )
-      assert(FALSE); /*lint !e506*/
+   assert(numstages == numscenariostages + 1); /*lint !e506*/
 
    SCIP_CALL( buildScenarioTree(scip, &readerdata->scenariotree, scenarios, numscenarios, numscenariostages, 0) );
 

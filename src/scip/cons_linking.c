@@ -2391,7 +2391,7 @@ SCIP_DECL_CONSPROP(consPropLinking)
 
       SCIP_CALL( processRealBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
-   }/*lint !e438*/
+   } /*lint !e438*/
 
    /* return the correct result */
    if( cutoff )
