@@ -16568,7 +16568,11 @@ SCIP_Bool SCIPisRowprepViolationReliable(
    return reliable;
 }
 
-/** Merge terms that use same variable and eliminate zero coefficients.
+/** Merge terms that use same variable and eliminate zero coefficients and fixed variables.
+ *
+ * Removes a variable if its bounds have a relative difference of below epsilon.
+ * Local bounds are checked for local rows, otherwise global bounds are used.
+ * If the bounds are not absolute equal, the bound that relaxes the row is used.
  *
  * Terms are sorted by variable (@see SCIPvarComp) after return.
  */
@@ -16602,6 +16606,24 @@ void SCIPmergeRowprepTerms(
          continue;
       }
 
+      /* move term i into side if fixed */
+      if( rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbLocal(rowprep->vars[i]), SCIPvarGetUbLocal(rowprep->vars[i])) )
+      {
+         if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbLocal(rowprep->vars[i]);
+         else
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbLocal(rowprep->vars[i]);
+         rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+      }
+      else if( !rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbGlobal(rowprep->vars[i]), SCIPvarGetUbGlobal(rowprep->vars[i])) )
+      {
+         if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbGlobal(rowprep->vars[i]);
+         else
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbGlobal(rowprep->vars[i]);
+         rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+      }
+
       if( rowprep->coefs[i] == 0.0 )
       {
          /* move term j to position i */
@@ -16619,6 +16641,24 @@ void SCIPmergeRowprepTerms(
       }
       ++i;
       ++j;
+   }
+
+   /* move term i into side if fixed */
+   if( rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbLocal(rowprep->vars[i]), SCIPvarGetUbLocal(rowprep->vars[i])) )
+   {
+      if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbLocal(rowprep->vars[i]);
+      else
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbLocal(rowprep->vars[i]);
+      rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+   }
+   else if( !rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbGlobal(rowprep->vars[i]), SCIPvarGetUbGlobal(rowprep->vars[i])) )
+   {
+      if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbGlobal(rowprep->vars[i]);
+      else
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbGlobal(rowprep->vars[i]);
+      rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
    }
 
    /* remaining term can have coef zero -> forget about it */
