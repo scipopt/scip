@@ -7907,7 +7907,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
                ++ndisabled;
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
-         }
+         } /*lint !e438*/
 
          assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
@@ -7961,7 +7961,7 @@ int SCIPlinConsStatsGetTypeCount(
    )
 {
    assert(linconsstats != NULL);
-   assert((int)linconstype < SCIP_NLINCONSTYPES);
+   assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587*/
    assert(linconsstats->counter != NULL);
 
    return linconsstats->counter[(int)linconstype];
@@ -7986,7 +7986,7 @@ void SCIPlinConsStatsIncTypeCount(
 {
    assert(linconsstats != NULL);
    assert(increment >= 1);
-   assert((int)linconstype < SCIP_NLINCONSTYPES);
+   assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587*/
    assert(linconsstats->counter != NULL);
 
    linconsstats->counter[(int)linconstype] += increment;

@@ -1304,7 +1304,7 @@ SCIP_RETCODE checkMemGlbCons(
    assert(blkmem != NULL);
    assert(mem > 0);
 
-   if( mem > 0 )
+   if( mem > 0 ) /*lint !e774*/
    {
       if( reopt->glbconss == NULL )
       {
@@ -8043,7 +8043,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    assert(set != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
-   assert(REOPT_CONSTYPE_CUT || boundtypes != NULL);
+   assert(constype == REOPT_CONSTYPE_CUT || boundtypes != NULL);
    assert(nvars > 0);
    assert(blkmem != NULL);
 

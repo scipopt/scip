@@ -461,7 +461,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    {
       if( (!filterdominated || !dominated[c]) && c != referencevar )
       {
-         if( !bestbranchratio.valid || hasBetterRatio(scip, &bestbranchratio, mingains[c], maxgains[c]) )
+         if( !bestbranchratio.valid || hasBetterRatio(scip, &bestbranchratio, mingains[c], maxgains[c]) ) /*lint !e644*/
          {
             computeVarRatio(scip, treemodel, branchcands[c], mingains[c], maxgains[c], &branchratio);
             if( branchratio.valid )
@@ -549,7 +549,7 @@ SCIP_Real computeSVTS(
             SCIP_RATIO branchratio;
             computeVarRatio(scip, treemodel, var, mingain, maxgain, &branchratio);
 
-            if( branchratio.valid )
+            if( branchratio.valid ) /*lint !e644*/
                prediction = treesize * pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft);
          }
       }
@@ -691,10 +691,10 @@ SCIP_Real computeSampleTreesize(
 
    computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
 
-   if( branchratio.valid )
+   if( branchratio.valid ) /*lint !e644*/
    {
       SCIP_Real phi_l = branchratio.upratio;
-      SCIP_Real phi_r = pow(branchratio.upratio, rightgain * branchratio.invleft);
+      SCIP_Real phi_r = pow(branchratio.upratio, rightgain * branchratio.invleft); /*lint !e644*/
       int kl = (int)ceil(absgap / leftgain);
       int kr = (int)ceil(absgap / rightgain);
       int k = (int)ceil(absgap / (leftgain + rightgain));

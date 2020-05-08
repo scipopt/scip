@@ -536,8 +536,8 @@ void SCIPintervalIntersect(
 {
    assert(resultant != NULL);
 
-   resultant->inf = MAX(operand1.inf, operand2.inf);
-   resultant->sup = MIN(operand1.sup, operand2.sup);
+   resultant->inf = MAX(operand1.inf, operand2.inf); /*lint !e644*/
+   resultant->sup = MIN(operand1.sup, operand2.sup); /*lint !e644*/
 }
 
 /** interval enclosure of the union of two intervals */

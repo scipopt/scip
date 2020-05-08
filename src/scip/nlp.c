@@ -66,7 +66,7 @@
 extern "C" {
 #endif
 
-/* avoid inclusion of scip.h */
+/* avoid inclusion of scip.h */ /*lint -e{2701}*/
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3665,7 +3665,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    else if( nlp->solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
       nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** updates bounds on a variable in the NLPI problem */

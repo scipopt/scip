@@ -678,7 +678,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
          break;
       default:
-         assert(FALSE);
+         assert(FALSE); /*lint !e506*/
       }  /*lint !e788*/
    }
 

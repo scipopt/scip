@@ -162,7 +162,7 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
       break;
    default:
       SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
-      assert(FALSE);
+      assert(FALSE); /*lint !e506*/
    }
 
    return norm;

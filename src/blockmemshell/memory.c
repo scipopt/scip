@@ -762,7 +762,7 @@ void BMSalignMemsize(
    size_t*               size                /**< pointer to the size to align */
    )
 {
-   assert(ALIGNMENT == sizeof(void*));
+   assert(ALIGNMENT == sizeof(void*)); /*lint !e506*/
    alignSize(size);
 }
 
@@ -771,7 +771,7 @@ int BMSisAligned(
    size_t                size                /**< size to check for alignment */
    )
 {
-   assert(ALIGNMENT == sizeof(void*));
+   assert(ALIGNMENT == sizeof(void*)); /*lint !e506*/
    return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
 }
 

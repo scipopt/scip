@@ -40,7 +40,7 @@ const char* SYMsymmetryGetDesc(void)
    return "";
 }
 
-/** compute generators of symmetry group */
+/** compute generators of symmetry group */ /*lint -e{715}*/
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */

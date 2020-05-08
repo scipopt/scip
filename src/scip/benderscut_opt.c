@@ -457,10 +457,8 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
    (*success) = FALSE;
 
-   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
-         && row2idx == NULL && var2idx == NULL)
-      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
-         && row2idx != NULL && var2idx != NULL) )
+   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL && row2idx == NULL && var2idx == NULL)
+      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL && row2idx != NULL && var2idx != NULL) ) /*lint !e845*/
    {
       SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
       (*success) = FALSE;

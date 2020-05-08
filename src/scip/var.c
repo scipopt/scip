@@ -2454,7 +2454,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, endptr, success) );
 
-   if( *success )
+   if( *success ) /*lint !e774*/
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -2517,7 +2517,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
 
-   if( *success )
+   if( *success ) /*lint !e744*/
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -3076,7 +3076,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3255,7 +3255,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -5140,8 +5140,8 @@ SCIP_RETCODE tryAggregateIntVars(
    /* release z */
    SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY;  /*lint !e438*/
+}
 
 /** performs second step of SCIPaggregateVars():
  *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
