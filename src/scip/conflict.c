@@ -1872,7 +1872,7 @@ SCIP_Bool conflictsetIsRedundant(
       assert(i2 == 0 || conflictset2->sortvals[i2-1] < conflictset2->sortvals[i2]);
 
       sortval = conflictset2->sortvals[i2];
-      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 )
+      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 ) /*lint !e445*/
       {
          /* while scanning conflictset1, check consistency */
          assert(i1 == 0 || conflictset1->sortvals[i1-1] < conflictset1->sortvals[i1]);

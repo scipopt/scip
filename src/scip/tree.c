@@ -7555,9 +7555,9 @@ void SCIPnodeGetNDomchg(
          if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             (*nbranchings)++;
          else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-            (*nconsprop)++;
+            (*nconsprop)++; /*lint !e413*/
          else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-            (*nprop)++;
+            (*nprop)++; /*lint !e413*/
       }
    }
 }

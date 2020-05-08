@@ -2517,7 +2517,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
 
-   if( *success ) /*lint !e744*/
+   if( *success ) /*lint !e774*/
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -3198,7 +3198,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )

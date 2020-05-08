@@ -1499,7 +1499,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* display parameters */
-   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL)); /*lint !e1502*/
+   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "display/verblevel",
          "verbosity level of output",
