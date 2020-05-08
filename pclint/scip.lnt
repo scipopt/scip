@@ -73,6 +73,7 @@
 -emacro(506,SCIPsetDebugMsgPrint)
 -emacro(506,SCIPstatDebugMsg)
 -emacro(506,debugMessage)
+-emacro(506,debugPrintf)
 -emacro(506,SCIPABORT)
 
 
