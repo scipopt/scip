@@ -187,7 +187,7 @@ void checkCut(
    }
 }
 
-/* detects ||x|| < 1 as soc expression */
+/* norm <= constant shouldn't be handled by soc */
 Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 {
    SCIP_CONS* cons;
@@ -217,17 +217,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
       if( expr->enfos[i]->nlhdlr == nlhdlr )
          nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
    }
-   cr_assert_not_null(nlhdlrexprdata);
-
-   /* setup expected data */
-   SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(expr)};
-   SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
-   int transcoefsidx[4] = {0, 1, 2, 3};
-   int nnonzeroes[4] = {1, 1, 1, 1};
-
-   /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4);
+   cr_assert_null(nlhdlrexprdata);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -927,6 +917,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* rootexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
    SCIP_ROW* cut;
@@ -938,16 +929,18 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "(<x>^2 + <y>^2 + <z>^2)^0.5", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "exp((<x>^2 + <y>^2 + <z>^2)^0.5)", NULL, &rootexpr) );
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", rootexpr, -SCIPinfinity(scip), 2.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
    cr_assert_not(infeasible);
+
+   expr = rootexpr->children[0];
 
    /* find the nlhdlr expr data */
    for( i = 0; i < expr->nenfos; ++i )
@@ -970,7 +963,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, auxvar, 2.0);
 
    /* check cut w.r.t. x */
-   SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, 2.0, &cut) );
 
    cutvars[0] = nlhdlrexprdata->disvars[0];
    cutvars[1] = x;
@@ -984,7 +977,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPreleaseRow(scip, &cut);
 
    /* check cut w.r.t. y */
-   SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 1, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 1, 0.0, 2.0, &cut) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -998,7 +991,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPreleaseRow(scip, &cut);
 
    /* check cut w.r.t. z */
-   SCIP_CALL( generateCutSol(scip, expr, cons, sol, nlhdlrexprdata, 2, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 2, 0.0, 2.0, &cut) );
 
    cutvars[0] = auxvar;
    cutvars[1] = z;
@@ -1016,7 +1009,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
 }
 
 /* separates simple norm function from different points */
@@ -1024,6 +1017,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* rootexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_SOL* sol;
    SCIP_ROW* cut;
@@ -1035,16 +1029,19 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "((<x> + 0.5)^2 + <y>^2)^0.5", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "exp( ((<x> + 0.5)^2 + <y>^2)^0.5 )", NULL, &rootexpr) );
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", rootexpr, -SCIPinfinity(scip), 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
    cr_assert_not(infeasible);
+
+   /* get norm expression */
+   expr = rootexpr->children[0];
 
    /* find the nlhdlr expr data */
    for( i = 0; i < expr->nenfos; ++i )
@@ -1063,7 +1060,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, auxvar, 1.0);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, 0.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -1081,7 +1078,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
 }
 
 /* separates simple function */
@@ -1128,7 +1125,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIPsetSolVal(scip, sol, z, 0.0);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC3(scip, expr, cons, sol, nlhdlrexprdata, 0.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
 
    cutvars[0] = x;
    cutvars[1] = y;
