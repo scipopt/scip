@@ -467,7 +467,7 @@ SCIP_RETCODE generateCutSolSOC(
    SCIP_Real* transcoefs;
    SCIP_Real cutcoef;
    SCIP_Real fvalue;
-   SCIP_Real valterms[2];
+   SCIP_Real valterms[2] = {0.0, 0.0}; /* for lint */
    SCIP_Real cutrhs;
    SCIP_VAR** vars;
    SCIP_VAR* cutvar;
@@ -2152,7 +2152,7 @@ SCIP_RETCODE detectSOC(
     * sqrt(sum x_i^2) <= constant, then it might be better not to handle this here; thus, we only call detectSocNorm
     * when the expr is _not_ the root of a constraint
     */
-   if( conslhs == SCIP_INVALID && consrhs == SCIP_INVALID )
+   if( conslhs == SCIP_INVALID && consrhs == SCIP_INVALID ) /*lint !e777*/
    {
       SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
    }
