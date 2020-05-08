@@ -5075,7 +5075,7 @@ SCIP_RETCODE tryAggregateIntVars(
       b = -b;
       c = -c;
    }
-   assert(0 <= a);
+   assert(a > 0);
 
    /* search upwards from ysol = 0 */
    ysol = 0;
