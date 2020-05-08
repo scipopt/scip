@@ -80,6 +80,7 @@ enum BoundStatus
    SOLVEDLB = 2,                             /**< solved LB problem */
    SOLVEDUB = 4                              /**< solved UB problem */
 };
+typedef enum BoundStatus Boundstatus;
 
 /** propagator data */
 struct SCIP_PropData
@@ -90,7 +91,7 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   int*                  status;             /**< array containing a bound status for each candidate (type int* is
+   Boundstatus*          status;             /**< array containing a bound status for each candidate (type int* is
                                               *   necessary to use sort functions) */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
@@ -550,7 +551,7 @@ SCIP_RETCODE applyNlobbt(
    /* sort variables w.r.t. their nlscores if we did not solve any NLP for this node */
    if( propdata->currpos == 0 )
    {
-      SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void**)propdata->nlpivars, propdata->nlpinvars);
+      SCIPsortDownRealPtrPtr(propdata->nlscore, (void*)propdata->status, (void**)propdata->nlpivars, propdata->nlpinvars);
    }
 
    /* set parameters of NLP solver */
