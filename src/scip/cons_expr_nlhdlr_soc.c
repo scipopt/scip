@@ -94,6 +94,10 @@
  *           termbegins = {0, 2, 3, 4, 4, 6}
  *           nvars = 3
  *           nterms = 5
+ *
+ * @note: due to the current implementation, the constant term is the second to last term, except when the SOC was a rotated
+ * SOC, e.g., 1 + x^2 - y*z, i.e., when detected by detectSocQuadraticSimple. In that case, the constant is third to
+ * last term.
  */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
@@ -1438,6 +1442,9 @@ SCIP_RETCODE detectSocNorm(
  *  and c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0
  *
  *  binary linear variables are interpreted as quadratic terms.
+ *
+ *  @todo: extend this function to detect  c + sum_i coef_i (expr_i + const_i)^2 - ...
+ *  this would probably share a lot of code with detectSocNorm
  */
 static
 SCIP_RETCODE detectSocQuadraticSimple(
