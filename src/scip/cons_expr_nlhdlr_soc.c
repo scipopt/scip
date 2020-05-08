@@ -1169,7 +1169,7 @@ SCIP_RETCODE detectSocNorm(
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    SCIP_Real constant;
-   SCIP_Bool issoc; /* TODO: make this an argument of the function and then avoid calling other detect methods */
+   SCIP_Bool issoc;
    int* transcoefsidx;
    int* termbegins;
    int nchildren;
@@ -1455,6 +1455,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+                                               valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -1602,12 +1604,16 @@ SCIP_RETCODE detectSocQuadraticSimple(
       assert(nnegbilinterms == 1 || nnegquadterms == 1);
       assert(rhsidx != -1);
 
-      /* if rhs is infinity, it can't be soc */
+      /* if rhs is infinity, it can't be soc
+       * TODO: if it can't be soc, then we should enforce the caller so that we do not try the more complex quadratic
+       * method
+       */
       if( SCIPisInfinity(scip, rhs) )
          goto CLEANUP;
 
       specialtermidx = rhsidx;
       lhsconstant = constant - rhs;
+      *enforcebelow = TRUE; /* enforce expr <= rhs */
    }
    else
    {
@@ -1623,6 +1629,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       /* negate all coefficients */
       for( i = 0; i < nchildren; ++i )
          childcoefs[i] = -childcoefs[i];
+      *enforcebelow = FALSE; /* enforce lhs <= expr */
    }
    assert(childcoefs[specialtermidx] != 0.0);
 
@@ -1889,6 +1896,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+                                               valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -2040,10 +2049,12 @@ SCIP_RETCODE detectSocQuadraticComplex(
          eigvals[i] = -eigvals[i];
          bp[i] = -bp[i];
       }
+      *enforcebelow = FALSE; /* enforce lhs <= expr */
    }
    else
    {
       lhsconstant = constant - rhs;
+      *enforcebelow = TRUE; /* enforce expr <= rhs */
    }
 
    /* initialize remaining datastructures for nonlinear handler */
@@ -2132,6 +2143,8 @@ SCIP_RETCODE detectSOC(
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+                                               valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -2155,18 +2168,21 @@ SCIP_RETCODE detectSOC(
    if( conslhs == SCIP_INVALID && consrhs == SCIP_INVALID ) /*lint !e777*/
    {
       SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+      *enforcebelow = *success;
    }
 
    if( !(*success) )
    {
       /* check whether expression is a simple soc-respresentable quadratic expression as described in case 2 above */
-      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, enforcebelow,
+               success) );
    }
 
    if( !(*success) && nlhdlrdata->compeigenvalues )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression as described in case 3 */
-      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata,
+               enforcebelow, success) );
    }
 
    return SCIP_OKAY;
@@ -2251,6 +2267,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    SCIP_VAR* auxvar;
    SCIP_Real conslhs;
    SCIP_Real consrhs;
+   SCIP_Bool enforcebelow;
 
    assert(expr != NULL);
 
@@ -2264,10 +2281,28 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsExpr(scip, cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsExpr(scip, cons));
 
-   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
+   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, success) );
+
+   if( ! *success )
+      return SCIP_OKAY;
+
+   /* inform what we can do */
+   if( enforcebelow )
+   {
+      *enforcedbelow = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+   }
+   else
+   {
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   }
+
+
+
 
    /* if we have 3 or more terms in lhs create variable for disaggregation */
-   if( *success && (*nlhdlrexprdata)->nterms > 3 )
+   if( (*nlhdlrexprdata)->nterms > 3 )
    {
       /* create variables for cone disaggregation */
       SCIP_CALL( createDisaggrVars(scip, expr, (*nlhdlrexprdata)) );
