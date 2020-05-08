@@ -31,6 +31,7 @@ add_executable(scipstp
     src/graph_sol.c
     src/graph_trans.c
     src/graph_util.c
+    src/graph_vnoi.c
     src/heur_ascendprune.c
     src/heur_local.c
     src/heur_prune.c
