@@ -3444,7 +3444,7 @@ static CREATE_CONSTRAINT((*constypes[])) =  {
 };
 
 /** size of the function pointer array */
-static int nconstypes = 7;
+static const int nconstypes = 7;
 
 
 /** parse constraint expression */
