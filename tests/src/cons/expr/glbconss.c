@@ -29,7 +29,7 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "cpp"
 #define CONSHDLR_DESC          "constraint handler for circle packing problem structure"
-#define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY       -50 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -221,16 +221,16 @@ SCIP_RESULT checkCons(
          yj = SCIPgetSolVal(scip, sol, consdata->ys[j]);
          rj = consdata->rs[j];
 
-         if( SCIPisFeasLT(scip, SQRT(SQR(xi - xj) + SQR(yi - yj)) - (ri + rj), 0.0) )
+         if( SCIPisFeasLT(scip, xi*xi + xj*xj + yi*yi + yj*yj -2.0*xi*xj -2.0*yi*yj, SQR(ri+rj)) )
          {
-            SCIPdebugMsg(scip, "solution is infeasible for constraint %s (%d,%d)\n", SCIPconsGetName(cons), i, j);
-            return SCIP_INFEASIBLE;
-
             /* store the index of the circles that violate the constraint */
             if( violi != NULL )
                *violi = i;
             if( violj != NULL )
-               *violj = i;
+               *violj = j;
+
+            SCIPdebugMsg(scip, "solution is infeasible for constraint %s (%d,%d)\n", SCIPconsGetName(cons), i, j);
+            return SCIP_INFEASIBLE;
          }
       }
    }
@@ -247,13 +247,17 @@ SCIP_RETCODE enfoConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_CONS**           conss,              /**< circle packing constraints */
-   int                   nconss              /**< total number of circle packing constraints */
+   int                   nconss,             /**< total number of circle packing constraints */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
    int c;
 
    assert(conss != NULL);
    assert(nconss > 0);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -270,14 +274,48 @@ SCIP_RETCODE enfoConss(
       /* only consider violated constraints */
       if( checkCons(scip, sol, conss[c], &violi, &violj) == SCIP_INFEASIBLE )
       {
-         int hash = violi * consdata->ncircles + violj;
+         SCIP_VAR* xi;
+         SCIP_VAR* yi;
+         SCIP_VAR* xj;
+         SCIP_VAR* yj;
+         SCIP_Real ri;
+         SCIP_Real rj;
+         int hash;
+
+         *result = SCIP_INFEASIBLE;
+
+         assert(violi >= 0 && violi < consdata->ncircles);
+         assert(violj >= 0 && violj < consdata->ncircles);
+
+         xi = consdata->xs[violi];
+         yi = consdata->ys[violi];
+         xj = consdata->xs[violj];
+         yj = consdata->ys[violj];
+         ri = consdata->rs[violi];
+         rj = consdata->rs[violj];
+         hash = violi * consdata->ncircles + violj;
 
          /* make sure that every expression constraint is only added once */
          if( !SCIPhashmapExists(consdata->map, (void*)(size_t)hash) )
          {
-            SCIP_CALL( SCIPhashmapInsert(consdata->map, (void*)(size_t)hash) );
+            SCIP_VAR* quadvars1[6] = {xi, xj, xi, yi, yj, yi};
+            SCIP_VAR* quadvars2[6] = {xi, xj, xj, yi, yj, yj};
+            SCIP_Real quadcoefs[6] = {1.0, 1.0, -2.0, 1.0, 1.0, -2.0};
+            SCIP_Real lhs = SQR(ri + rj);
+            SCIP_CONS* cons;
+            char name[SCIP_MAXSTRLEN];
+
+            SCIP_CALL( SCIPhashmapInsert(consdata->map, (void*)(size_t)hash, NULL) );
 
             /* create an expression constraint */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPconsGetName(conss[c]), violi, violj);
+            SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
+               quadcoefs, lhs, SCIPinfinity(scip),
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+            /* add and release constraint */
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
             *result = SCIP_CONSADDED;
             return SCIP_OKAY;
@@ -359,8 +397,8 @@ SCIP_DECL_CONSTRANS(consTransCpp)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpCpp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of cpp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( enfoConss(scip, NULL, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -370,8 +408,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpCpp)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsCpp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of cpp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( enfoConss(scip, NULL, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -629,16 +667,17 @@ TestSuite(glbconss, .init = setup, .fini = teardown);
 Test(glbconss, cpp1)
 {
    SCIP_CONS* cons;
-   SCIP_VAR* xs[3];
-   SCIP_VAR* ys[3];
-   SCIP_Real rs[3] = {1.0, 1.0, 1.0};
+   SCIP_VAR* xs[6];
+   SCIP_VAR* ys[6];
+   SCIP_Real rs[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+   int ncircles = 4;
    int i;
 
    /* create variables */
-   SCIP_CALL( createVars(0.0, 10.0, -1.0, 0.0, 10.0, 0.0, 3, xs, ys) );
+   SCIP_CALL( createVars(0.0, 10.0, -1.0, 0.0, 2.0, 0.0, ncircles, xs, ys) );
 
    /* create circle packing constraint */
-   SCIP_CALL( SCIPcreateConsBasicCpp(scip, &cons, "cpp", xs, ys, rs, 3) );
+   SCIP_CALL( SCIPcreateConsBasicCpp(scip, &cons, "cpp", xs, ys, rs, ncircles) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -646,7 +685,7 @@ Test(glbconss, cpp1)
    SCIP_CALL( SCIPsolve(scip) );
 
    /* release variables */
-   for( i = 0; i < 3; ++i )
+   for( i = 0; i < ncircles; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &xs[i]) );
       SCIP_CALL( SCIPreleaseVar(scip, &ys[i]) );
