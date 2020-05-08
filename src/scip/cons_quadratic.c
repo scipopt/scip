@@ -16669,7 +16669,7 @@ void SCIPmergeRowprepTerms(
    rowprep->nvars = i+1;
 }
 
-/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled */
+/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled and the variable is not fixed */
 static
 SCIP_RETCODE rowprepRecordModifiedVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16680,6 +16680,10 @@ SCIP_RETCODE rowprepRecordModifiedVar(
    int oldsize;
 
    if( !rowprep->recordmodifications )
+      return SCIP_OKAY;
+
+   /* do not record for fixed variables, as they are not suitable for branching */
+   if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       return SCIP_OKAY;
 
    /* increase modifiedvars array size */
