@@ -1673,6 +1673,7 @@ SCIP_RETCODE graph_dijkLimited_init(
    graph_heap_create(scip, nnodes, NULL, NULL, &(dijkdata->dheap));
 
    dijkdata->nvisits = -1;
+   dijkdata->edgelimit = -1;
 
    distance = dijkdata->distance;
    visited = dijkdata->visited;
@@ -1748,6 +1749,7 @@ void graph_dijkLimited_clean(
    STP_Bool* const visited = dijkdata->visited;
    SCIP_Real* const distance = dijkdata->distance;
    dijkdata->nvisits = -1;
+   dijkdata->edgelimit = -1;
 
    for( int k = 0; k < nnodes; k++ )
    {

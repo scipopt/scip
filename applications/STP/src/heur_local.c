@@ -3812,8 +3812,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    /* now call the actual heuristics */
 
-   if( mwpc )
+   if( graph_pc_isPc(graph) )
+   {
       SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
+   }
 
    markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
 

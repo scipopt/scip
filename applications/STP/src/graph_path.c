@@ -1273,6 +1273,163 @@ void graph_sdStar(
   *success = (nstarhits > 0);
 }
 
+#if 0
+
+/** limited Dijkstra with node bias; ignores terminals */
+void graph_sdStarBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Bool             with_zero_edges,    /**< telling name */
+   int                   star_root,          /**< root of the start */
+   int*                  star_base,          /**< star base node, must be initially set to SDSTAR_BASE_UNSET */
+   DIJK*                 dijkdata,           /**< Dijkstra data */
+   SCIP_Bool*            success             /**< will be set to TRUE iff at least one edge can be deleted */
+   )
+{
+   int nchecks;
+   int nstarhits;
+
+   SCIP_Real* restrict dist = dijkdata->distance;
+   int* restrict visitlist = dijkdata->visitlist;
+   STP_Bool* restrict visited = dijkdata->visited;
+   DHEAP* dheap = dijkdata->dheap;
+   const SCIP_Real* const nodebias = dijkdata->pc_costshift;
+   int* const state = dheap->position;
+   DCSR* const dcsr = g->dcsr_storage;
+   const RANGE* const RESTRICT range_csr = dcsr->range;
+   const int* const RESTRICT head_csr = dcsr->head;
+   const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
+   int nvisits = 0;
+   SCIP_Real distlimit;
+   const int edgelimit = dijkdata->edgelimit;
+   /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
+   const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : SCIPepsilon(scip);
+
+   int todo; // graph_voronoi.c
+
+   assert(dcsr && g && dist && visitlist && visited && dheap && success);
+   assert(!g->extended);
+   assert(g->mark[star_root] && star_degree >= 1);
+   assert(dheap->size == 0);
+   assert(edgelimit >= 1);
+
+   nvisits = 0;
+   *success = FALSE;
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+   {
+      assert(dist[k] == FARAWAY);
+      assert(star_base[k] == SDSTAR_BASE_UNSET);
+      assert(state[k] == UNKNOWN);
+   }
+#endif
+
+   distlimit = 0.0;
+   dist[star_root] = 0.0;
+   state[star_root] = CONNECT;
+   visitlist[(nvisits)++] = star_root;
+
+   for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
+   {
+      const int m = head_csr[e];
+
+      assert(g->mark[m]);
+      assert(!visited[m]);
+
+      visitlist[(nvisits)++] = m;
+      visited[m] = TRUE;
+      dist[m] = cost_csr[e];
+      star_base[m] = m;
+
+      /*  add epsilon to make sure that m is removed from the heap last in case of equality */
+      graph_heap_correct(m, cost_csr[e] + eps, dheap);
+
+      if( cost_csr[e] > distlimit )
+         distlimit = cost_csr[e];
+   }
+
+   nchecks = 0;
+   nstarhits = 0;
+
+   while( dheap->size > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labeled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+
+      assert(k != star_root);
+      assert(state[k] == CONNECT);
+      assert(LE(dist[k], distlimit));
+
+      if( with_zero_edges && k == star_base[k] )
+         state[k] = UNKNOWN;
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+         assert(g->mark[m] && star_base[k] >= 0);
+
+         if( state[m] != CONNECT )
+         {
+            const SCIP_Real bias = MIN(cost_csr[e], nodebias[k]);
+            const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
+
+            if( GT(distnew, distlimit) )
+               continue;
+
+            if( distnew < dist[m] )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               if( star_base[m] == m )
+                  nstarhits++;
+
+               dist[m] = distnew;
+               star_base[m] = star_base[k];
+               graph_heap_correct(m, distnew, dheap);
+
+               assert(star_base[m] != m);
+            }
+            else if( EQ(distnew, dist[m]) && star_base[m] == m )
+            {
+               if( with_zero_edges && star_base[k] == star_base[m] )
+                  continue;
+
+               assert(visited[m]);
+               nstarhits++;
+
+               assert(star_base[m] != star_base[k]);
+
+               dist[m] = distnew;
+               star_base[m] = star_base[k];
+               graph_heap_correct(m, distnew, dheap);
+
+               assert(star_base[m] != m);
+            }
+
+            /* all star nodes hit already? */
+            if( nstarhits == star_degree )
+            {
+               nchecks = edgelimit + 1;
+               break;
+            }
+         }
+         nchecks++;
+      }
+   }
+
+  dijkdata->nvisits = nvisits;
+  *success = (nstarhits > 0);
+}
+#endif
 
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
 SCIP_Bool graph_sdWalks(

@@ -264,6 +264,7 @@ typedef struct dijkstra_data
    STP_Bool*             visited;            /**< stores whether a node has been visited, initially set to FALSE */
    SCIP_Real*            pc_costshift;       /**< cost shift per node for PC or NULL */
    int                   nvisits;            /**< number of visited nodes, initially set to -1 */
+   int                   edgelimit;          /**< number of edges to consider */
 } DIJK;
 
 /* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */

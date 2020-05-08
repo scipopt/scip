@@ -475,7 +475,8 @@ SCIP_RETCODE computeReducedProbSolution(
 
    /* run local heuristic with original costs! */
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
-         && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_NWPTSPG )
+         && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_NWPTSPG
+         && probtype != STP_RMWCSP)
    {
       SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
       assert(solstp_isValid(scip, solgraph, soledges));
