@@ -8048,7 +8048,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    assert(blkmem != NULL);
 
    /* the constraint can be interpreted as a normal bound change */
-   if( nvars == 1 )
+   if( nvars == 1 && constype != REOPT_CONSTYPE_CUT )
    {
       assert(constype == REOPT_CONSTYPE_DUALREDS || constype == REOPT_CONSTYPE_INFSUBTREE);
 
@@ -8065,6 +8065,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
          SCIP_BOUNDTYPE newboundtype;
 
          assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_INTEGER);
+         assert(boundtypes != NULL);
 
          if( boundtypes[0] == SCIP_BOUNDTYPE_UPPER )
          {
