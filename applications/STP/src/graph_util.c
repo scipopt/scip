@@ -1655,28 +1655,33 @@ SCIP_Bool graph_valid_dcsr(
 SCIP_RETCODE graph_dijkLimited_init(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
-   DIJK*                 dijkdata            /**< data for limited Dijkstra */
+   DIJK**                dijkdata            /**< data for limited Dijkstra */
 )
 {
+   DIJK* dijk;
    const int nnodes = g->knots;
-   SCIP_Real* distance;
-   STP_Bool* visited;
+   SCIP_Real* RESTRICT distance;
+   STP_Bool* RESTRICT visited;
 
    assert(scip && g && dijkdata);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->distance), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visitlist), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visited), nnodes) );
+   SCIP_CALL( SCIPallocMemory(scip, dijkdata) );
 
-   dijkdata->pc_costshift = NULL;
+   dijk = *dijkdata;
 
-   graph_heap_create(scip, nnodes, NULL, NULL, &(dijkdata->dheap));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->distance), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->visitlist), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->visited), nnodes) );
 
-   dijkdata->nvisits = -1;
-   dijkdata->edgelimit = -1;
+   dijk->pc_costshift = NULL;
 
-   distance = dijkdata->distance;
-   visited = dijkdata->visited;
+   graph_heap_create(scip, nnodes, NULL, NULL, &(dijk->dheap));
+
+   dijk->nvisits = -1;
+   dijk->edgelimit = -1;
+
+   distance = dijk->distance;
+   visited = dijk->visited;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1799,15 +1804,19 @@ void graph_dijkLimited_reset(
 
 
 /** frees limited Dijkstra structure member */
-void graph_dijkLimited_freeMembers(
+void graph_dijkLimited_free(
    SCIP*                 scip,               /**< SCIP */
-   DIJK*                 dijkdata            /**< data for limited Dijkstra */
+   DIJK**                dijkdata            /**< data for limited Dijkstra */
 )
 {
-   SCIPfreeMemoryArrayNull(scip, &(dijkdata->pc_costshift));
-   SCIPfreeMemoryArray(scip, &(dijkdata->distance));
-   SCIPfreeMemoryArray(scip, &(dijkdata->visitlist));
-   SCIPfreeMemoryArray(scip, &(dijkdata->visited));
+   DIJK* dijk = *dijkdata;
 
-   graph_heap_free(scip, TRUE, TRUE, &(dijkdata->dheap));
+   SCIPfreeMemoryArrayNull(scip, &(dijk->pc_costshift));
+   SCIPfreeMemoryArray(scip, &(dijk->distance));
+   SCIPfreeMemoryArray(scip, &(dijk->visitlist));
+   SCIPfreeMemoryArray(scip, &(dijk->visited));
+
+   graph_heap_free(scip, TRUE, TRUE, &(dijk->dheap));
+
+   SCIPfreeMemoryArray(scip, dijkdata);
 }

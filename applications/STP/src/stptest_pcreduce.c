@@ -741,7 +741,7 @@ SCIP_RETCODE testSdStarPcKillsEdge(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   DIJK dijkdata;
+   DIJK* dijkdata;
    GRAPH* graph;
    int* star_base;
    const int nnodes_org = 4;
@@ -774,7 +774,7 @@ SCIP_RETCODE testSdStarPcKillsEdge(
    SCIP_CALL( SCIPallocMemoryArray(scip, &star_base, nnodes) );
 
    /* actual test: edge 0 should have been deleted */
-   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata.distance, star_base, dijkdata.visitlist, dijkdata.visited, dijkdata.dheap, &nelims) );
+   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata->distance, star_base, dijkdata->visitlist, dijkdata->visited, dijkdata->dheap, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
@@ -782,7 +782,7 @@ SCIP_RETCODE testSdStarPcKillsEdge(
       STPTEST_ASSERT(graph->oeat[e] != EAT_FREE);
 
    SCIPfreeMemoryArray(scip, &star_base);
-   graph_dijkLimited_freeMembers(scip, &dijkdata);
+   graph_dijkLimited_free(scip, &dijkdata);
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;

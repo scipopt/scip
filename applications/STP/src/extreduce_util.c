@@ -1112,9 +1112,8 @@ SCIP_RETCODE extreduce_distDataInit(
    distDataInitSizes(g, maxnclosenodes, distdata);
    SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, distdata) );
 
-   SCIP_CALL( SCIPallocMemory(scip, &distdata->dijkdata) );
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &(distdata->dijkdata)) );
    dijkdata = distdata->dijkdata;
-   SCIP_CALL( graph_dijkLimited_init(scip, g, dijkdata) );
 
    if( graph_pc_isPc(g) )
    {
@@ -1307,9 +1306,7 @@ void extreduce_distDataFreeMembers(
    SCIPfreeMemoryArrayNull(scip, &(distdata->closenodes_prededges));
 
    distDataPathRootsFree(scip, graph, distdata);
-   graph_dijkLimited_freeMembers(scip, distdata->dijkdata);
-
-   SCIPfreeMemory(scip, &(distdata->dijkdata));
+   graph_dijkLimited_free(scip, &(distdata->dijkdata));
 }
 
 

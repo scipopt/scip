@@ -401,11 +401,11 @@ extern void           graph_dcsr_deleteEdgeBi(SCIP*, DCSR*, int);
 extern void           graph_free_dcsr(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 /* misc: */
-extern SCIP_RETCODE  graph_dijkLimited_init(SCIP*, const GRAPH*, DIJK*);
+extern SCIP_RETCODE  graph_dijkLimited_init(SCIP*, const GRAPH*, DIJK**);
 extern SCIP_RETCODE  graph_dijkLimited_initPcShifts(SCIP*, const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_reset(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_clean(const GRAPH*, DIJK*);
-extern void          graph_dijkLimited_freeMembers(SCIP*, DIJK*);
+extern void          graph_dijkLimited_free(SCIP*, DIJK**);
 
 /* graph_base.c
  */

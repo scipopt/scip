@@ -39,21 +39,102 @@
 #include "portab.h"
 
 
-
 #define STP_BD_MAXDEGREE 4
 #define STP_BD_MAXDNEDGES 6
 #define STP_SDWALK_MAXNPREVS 8
 
 
+/** initializes data needed for SD star tests */
 static
-void sdstar_reset(
+SCIP_RETCODE sdStarInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   edgelimit,          /**< limit */
+   DIJK**                dijkdata,           /**< data to be allocated */
+   int*RESTRICT*         star_base,          /**< data to be allocated */
+   SCIP_Bool*RESTRICT*   edge_deletable      /**< data to be allocated */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   int* RESTRICT star_base_d;
+   SCIP_Bool* RESTRICT edge_deletable_d;
+
+   assert(!graph_pc_isPcMw(g) || !g->extended);
+
+   SCIP_CALL( graph_dijkLimited_init(scip, g, dijkdata) );
+   (*dijkdata)->edgelimit = edgelimit;
+
+#ifndef NDEBUG
+   {
+      SCIP_Real* dist = (*dijkdata)->distance;
+      STP_Bool* visited = (*dijkdata)->visited;
+      assert(graph_heap_isClean((*dijkdata)->dheap));
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         assert(!visited[i]);
+         assert(EQ(dist[i], FARAWAY));
+      }
+   }
+#endif
+
+   SCIP_CALL( SCIPallocBufferArray(scip, star_base, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, edge_deletable, nedges / 2) );
+
+   edge_deletable_d = *edge_deletable;
+   for( int e = 0; e < nedges / 2; e++ )
+      edge_deletable_d[e] = FALSE;
+
+   star_base_d = *star_base;
+   for( int i = 0; i < nnodes; i++ )
+      star_base_d[i] = SDSTAR_BASE_UNSET;
+
+   return SCIP_OKAY;
+}
+
+
+/** finalizes SD star tests */
+static
+void sdStarFinalize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   DIJK**                dijkdata,           /**< data to be freed */
+   int*RESTRICT*         star_base,          /**< data to be freed */
+   SCIP_Bool*RESTRICT*   edge_deletable      /**< data to be freed */
+)
+{
+#ifndef NDEBUG
+   const int nedges = graph_get_nEdges(g);
+   DCSR* dcsr = g->dcsr_storage;
+
+   for( int e = 0; e < nedges / 2; e++ )
+   {
+      if( edge_deletable[e] )
+         assert(dcsr->id2csredge[e * 2] == -1);
+      else if( g->oeat[e * 2] != EAT_FREE )
+         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+   }
+#endif
+
+   graph_edge_delBlocked(scip, g, *edge_deletable, TRUE);
+   SCIPfreeBufferArray(scip, edge_deletable);
+   SCIPfreeBufferArray(scip, star_base);
+
+   graph_dijkLimited_free(scip, dijkdata);
+}
+
+
+/** resets data needed for SD star tests */
+static inline
+void sdStarReset(
    int                   nnodes,
    int                   nvisits,
    const int*            visitlist,
-   int*                  star_base,
-   SCIP_Real*            dist,
-   STP_Bool*             visited,
-   DHEAP*                dheap               /**< Dijkstra heap */
+   int* RESTRICT         star_base,
+   SCIP_Real* RESTRICT   dist,
+   STP_Bool* RESTRICT    visited,
+   DHEAP* RESTRICT       dheap               /**< Dijkstra heap */
 )
 {
    int* const state = dheap->position;
@@ -80,15 +161,15 @@ void sdstar_reset(
 #endif
 }
 
-
-static
-void sdwalk_reset(
+/** resets data needed for SD walk tests */
+static inline
+void sdwalkReset(
    int                   nnodes,
    int                   nvisits,
-   const  int*           visitlist,
-   SCIP_Real*            dist,
-   int*                  state,
-   STP_Bool*             visited
+   const int*            visitlist,
+   SCIP_Real* RESTRICT   dist,
+   int* RESTRICT         state,
+   STP_Bool* RESTRICT    visited
 )
 {
    for( int k = 0; k < nvisits; k++ )
@@ -109,15 +190,15 @@ void sdwalk_reset(
 #endif
 }
 
-static
-void sdwalk_resetExt(
+static inline
+void sdwalkResetExt(
    int                   nnodes,
    int                   nvisits,
    const  int*           visitlist,
-   SCIP_Real*            dist,
-   int*                  nprevterms,
-   int*                  state,
-   STP_Bool*             visited
+   SCIP_Real* RESTRICT   dist,
+   int* RESTRICT         nprevterms,
+   int* RESTRICT         state,
+   STP_Bool* RESTRICT    visited
 )
 {
    for( int k = 0; k < nvisits; k++ )
@@ -140,8 +221,8 @@ void sdwalk_resetExt(
 #endif
 }
 
-static
-void sdwalk_resetExt2(
+static inline
+void sdwalkResetExt2(
    int                   nnodes,
    int                   nvisits,
    const  int*           visitlist,
@@ -2565,7 +2646,7 @@ SCIP_RETCODE reduce_sdWalk_csr(
          }
 
          success = graph_sdWalks_csr(scip, g, termmark, ecost, i, i2, edgelimit, dist, visitlist, &nvisits, dheap, visited);
-         sdwalk_reset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
+         sdwalkReset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
          graph_heap_clean(FALSE, dheap);
 
          if( success )
@@ -2758,10 +2839,10 @@ SCIP_RETCODE reduce_sdWalkTriangle(
             }
 
             dheap->position = state;
-            sdwalk_reset(nnodes, nvisits2, visitlist2, dist2, state2, visited2);
+            sdwalkReset(nnodes, nvisits2, visitlist2, dist2, state2, visited2);
          }
 
-         sdwalk_reset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
+         sdwalkReset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
          graph_heap_clean(FALSE, dheap);
 
          if( success )
@@ -2924,7 +3005,7 @@ SCIP_RETCODE reduce_sdStar(
             } /* traverse star nodes */
          } /* if success */
 
-         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+         sdStarReset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
       }
    }
 
@@ -2947,57 +3028,41 @@ SCIP_RETCODE reduce_sdStar(
    return SCIP_OKAY;
 }
 
-#if 0
+#if 1
 /** SD star test for PcMw and SPG */
 SCIP_RETCODE reduce_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */
    const int*            edgestate,          /**< state array or NULL */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  star_base,          /**< array of size nnodes */
    int*                  nelims              /**< point to store number of deleted edges */
    )
 {
+   DIJK* dijkdata;
    DCSR* dcsr;
-   RANGE* range_csr;
-   int* head_csr;
-   int* edgeid_csr;
-   SCIP_Bool* edge_deletable;
-   const int nnodes = g->knots;
-   const int nedges = g->edges;
+   RANGE* RESTRICT range_csr;
+   int* RESTRICT head_csr;
+   int* RESTRICT edgeid_csr;
+   int* RESTRICT star_base;
+   SCIP_Bool* RESTRICT edge_deletable;
+   const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(g && scip && nelims && visited && visitlist && dheap && star_base);
-   assert(!graph_pc_isPcMw(g) || !g->extended);
+   assert(scip && nelims && star_base);
+   assert(edgelimit > 0);
 
-   if( edgelimit <= 0 )
-      return SCIP_OKAY;
-
-   graph_heap_clean(TRUE, dheap);
    graph_init_dcsr(scip, g);
-
    dcsr = g->dcsr_storage;
    range_csr = dcsr->range;
    head_csr = dcsr->head;
    edgeid_csr = dcsr->edgeid;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
-
-   for( int e = 0; e < nedges / 2; e++ )
-      edge_deletable[e] = FALSE;
-
    assert(dcsr && range_csr && edgeid_csr);
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      visited[i] = FALSE;
-      dist[i] = FARAWAY;
-      star_base[i] = SDSTAR_BASE_UNSET;
-   }
+   SCIP_CALL( sdStarInit(scip, g, edgelimit, &dijkdata, &star_base, &edge_deletable) );
 
    for( int i = 0; i < nnodes; i++ )
    {
-      SCIP_Bool runloop;
+      SCIP_Bool runloop = TRUE;
 
       if( !g->mark[i] )
       {
@@ -3005,21 +3070,20 @@ SCIP_RETCODE reduce_sdStarBiased(
          continue;
       }
 
-      runloop = TRUE;
-
       while( runloop )
       {
          SCIP_Bool success;
          int nvisits;
          const int start = range_csr[i].start;
 
+         /* not more than one edge? */
          if( range_csr[i].end - start <= 1 )
             break;
 
          runloop = FALSE;
 
          /* do the actual star run */
-         graph_sdStar(scip, g, FALSE, i, edgelimit, star_base, dist, visitlist, &nvisits, dheap, visited, &success);
+         graph_sdStarBiased(scip, g, TRUE, i, star_base, dijkdata, &success);
 
          if( success )
          {
@@ -3031,7 +3095,7 @@ SCIP_RETCODE reduce_sdStarBiased(
                const int starnode = head_csr[e];
                const int starbase = star_base[starnode];
                assert(star_base[starnode] >= 0);
-               assert(SCIPisLE(scip, dist[starnode], dcsr->cost[e]));
+               assert(SCIPisLE(scip, dijkdata->distance[starnode], dcsr->cost[e]));
                assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
 
                enext = e + 1;
@@ -3066,23 +3130,11 @@ SCIP_RETCODE reduce_sdStarBiased(
             } /* traverse star nodes */
          } /* if success */
 
-         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+         sdStarReset(nnodes, nvisits, dijkdata->visitlist, star_base, dijkdata->distance, dijkdata->visited, dijkdata->dheap);
       }
    }
 
-#ifndef NDEBUG
-   for( int e = 0; e < nedges / 2; e++ )
-   {
-      if( edge_deletable[e] )
-         assert(dcsr->id2csredge[e * 2] == -1);
-      else if( g->oeat[e * 2] != EAT_FREE )
-         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
-   }
-#endif
-
-   graph_edge_delBlocked(scip, g, edge_deletable, TRUE);
-
-   SCIPfreeBufferArray(scip, &edge_deletable);
+   sdStarFinalize(scip, g, &dijkdata, &star_base, &edge_deletable);
 
    graph_free_dcsr(scip, g);
 
@@ -3226,7 +3278,7 @@ SCIP_RETCODE reduce_sdStarPc2(
             } /* traverse star nodes */
          } /* if success */
 
-         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+         sdStarReset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
       }
    }
 
@@ -3352,7 +3404,7 @@ SCIP_RETCODE reduce_sdStarPc(
                star_base_out[head_csr[e]] = star_base[head_csr[e]];
          }
 
-         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+         sdStarReset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
 
          if( success )
          {
@@ -3419,7 +3471,7 @@ SCIP_RETCODE reduce_sdStarPc(
          for( int k = 0; k < nvisits; k++ )
             star_base_out[visitlist[k]] = SDSTAR_BASE_UNSET;
 
-         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
+         sdStarReset(nnodes, nvisits, visitlist, star_base, dist, visited, dheap);
 
 #ifndef NDEBUG
          for( int k = 0; k < nnodes; k++ )
@@ -3520,7 +3572,7 @@ SCIP_RETCODE reduce_sdWalk(
          }
 
          success = graph_sdWalks(scip, g, g->cost, termmark, ecost, i2, i, edgelimit, dist, heap, state, visitlist, &nvisits, visited);
-         sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
+         sdwalkReset(nnodes, nvisits, visitlist, dist, state, visited);
 
          if( success )
          {
@@ -3608,7 +3660,7 @@ SCIP_RETCODE reduce_sdWalkExt(
          }
 
          success = graph_sdWalksExt(scip, g, g->cost, ecost, i2, i, edgelimit, STP_SDWALK_MAXNPREVS, dist, prevterms, nprevterms, heap, state, visitlist, &nvisits, visited);
-         sdwalk_resetExt(nnodes, nvisits, visitlist, dist, nprevterms, state, visited);
+         sdwalkResetExt(nnodes, nvisits, visitlist, dist, nprevterms, state, visited);
 
          if( success )
          {
@@ -3714,7 +3766,7 @@ SCIP_RETCODE reduce_sdWalkExt2(
 
          success = graph_sdWalksExt2(scip, g, g->cost, termmark, ecost, i2, i, edgelimit, STP_SDWALK_MAXNPREVS, dist, prevterms, nprevterms,
                prevNPterms, nprevNPterms, prevedges, nprevedges, heap, state, visitlist, &nvisits, visited);
-         sdwalk_resetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
+         sdwalkResetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
 
          if( success )
          {
