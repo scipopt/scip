@@ -107,10 +107,11 @@ void sdStarFinalize(
 #ifndef NDEBUG
    const int nedges = graph_get_nEdges(g);
    DCSR* dcsr = g->dcsr_storage;
+   SCIP_Bool* RESTRICT edge_deletable_d = *edge_deletable;
 
    for( int e = 0; e < nedges / 2; e++ )
    {
-      if( edge_deletable[e] )
+      if( edge_deletable_d[e] )
          assert(dcsr->id2csredge[e * 2] == -1);
       else if( g->oeat[e * 2] != EAT_FREE )
          assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
@@ -3048,7 +3049,7 @@ SCIP_RETCODE reduce_sdStarBiased(
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(scip && nelims && star_base);
+   assert(scip && nelims);
    assert(edgelimit > 0);
 
    graph_init_dcsr(scip, g);
@@ -3073,7 +3074,6 @@ SCIP_RETCODE reduce_sdStarBiased(
       while( runloop )
       {
          SCIP_Bool success;
-         int nvisits;
          const int start = range_csr[i].start;
 
          /* not more than one edge? */
@@ -3083,7 +3083,7 @@ SCIP_RETCODE reduce_sdStarBiased(
          runloop = FALSE;
 
          /* do the actual star run */
-         graph_sdStarBiased(scip, g, TRUE, i, star_base, dijkdata, &success);
+         graph_sdStarBiased(scip, g, i, star_base, dijkdata, &success);
 
          if( success )
          {
@@ -3130,7 +3130,7 @@ SCIP_RETCODE reduce_sdStarBiased(
             } /* traverse star nodes */
          } /* if success */
 
-         sdStarReset(nnodes, nvisits, dijkdata->visitlist, star_base, dijkdata->distance, dijkdata->visited, dijkdata->dheap);
+         sdStarReset(nnodes, dijkdata->nvisits, dijkdata->visitlist, star_base, dijkdata->distance, dijkdata->visited, dijkdata->dheap);
       }
    }
 

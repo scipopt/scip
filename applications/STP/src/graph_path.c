@@ -1278,7 +1278,6 @@ void graph_sdStar(
 void graph_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Bool             with_zero_edges,    /**< telling name */
    int                   star_root,          /**< root of the start */
    int*                  star_base,          /**< star base node, must be initially set to SDSTAR_BASE_UNSET */
    DIJK*                 dijkdata,           /**< Dijkstra data */
@@ -1303,7 +1302,7 @@ void graph_sdStarBiased(
    SCIP_Real distlimit;
    const int edgelimit = dijkdata->edgelimit;
    /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
-   const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : SCIPepsilon(scip);
+   const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : 2.0 * SCIPepsilon(scip);
 
    assert(dcsr && g && dist && visitlist && visited && dheap && success);
    assert(!g->extended);
@@ -1361,7 +1360,7 @@ void graph_sdStarBiased(
       assert(state[k] == CONNECT);
       assert(LE(dist[k], distlimit));
 
-      if( with_zero_edges && k == star_base[k] )
+      if( k == star_base[k] )
          state[k] = UNKNOWN;
 
       /* correct incident nodes */
@@ -1372,7 +1371,7 @@ void graph_sdStarBiased(
 
          if( state[m] != CONNECT )
          {
-            const SCIP_Real bias = MIN(cost_csr[e], nodebias[k]);
+            const SCIP_Real bias = 0.0; //MIN(cost_csr[e], nodebias[k]);
             const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
 
             if( GT(distnew, distlimit) )
@@ -1397,7 +1396,7 @@ void graph_sdStarBiased(
             }
             else if( EQ(distnew, dist[m]) && star_base[m] == m )
             {
-               if( with_zero_edges && star_base[k] == star_base[m] )
+               if( star_base[k] == star_base[m] )
                   continue;
 
                assert(visited[m]);
