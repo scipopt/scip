@@ -1669,19 +1669,20 @@ SCIP_RETCODE graph_dijkLimited_init(
 
    dijk = *dijkdata;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->distance), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->node_distance), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->visitlist), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->visited), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->node_visited), nnodes) );
 
-   dijk->pc_costshift = NULL;
+   dijk->node_bias = NULL;
+   dijk->node_biassource = NULL;
 
    graph_heap_create(scip, nnodes, NULL, NULL, &(dijk->dheap));
 
    dijk->nvisits = -1;
    dijk->edgelimit = -1;
 
-   distance = dijk->distance;
-   visited = dijk->visited;
+   distance = dijk->node_distance;
+   visited = dijk->node_visited;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1703,16 +1704,16 @@ SCIP_RETCODE graph_dijkLimited_initPcShifts(
    const int nnodes = graph_get_nNodes(g);
    const int pseudoroot = graph_pc_isRootedPcMw(g) ? -1 : g->source;
    const SCIP_Real* const costs = g->cost;
-   SCIP_Real* pc_costshift;
+   SCIP_Real* RESTRICT pc_costshift;
 
    assert(scip && dijkdata);
-   assert(!dijkdata->pc_costshift);
+   assert(!dijkdata->node_bias);
    assert(graph_pc_isPc(g));
    assert(!g->extended);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->pc_costshift), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_bias), nnodes) );
 
-   pc_costshift = dijkdata->pc_costshift;
+   pc_costshift = dijkdata->node_bias;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1744,6 +1745,89 @@ SCIP_RETCODE graph_dijkLimited_initPcShifts(
    return SCIP_OKAY;
 }
 
+
+/** initializes bias per node */
+SCIP_RETCODE graph_dijkLimited_initSdBias(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
+   const SCIP_Real* const costs = g->cost;
+   SCIP_Real* RESTRICT node_bias;
+   int* RESTRICT node_biassource;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+
+   assert(scip && dijkdata);
+   assert(!dijkdata->node_bias);
+   assert(!dijkdata->node_biassource);
+   assert(isPcMw || !g->extended);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_bias), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_biassource), nnodes) );
+
+   node_bias = dijkdata->node_bias;
+   node_biassource = dijkdata->node_biassource;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      node_bias[k] = 0.0;
+      node_biassource[k] = UNKNOWN;
+   }
+
+   /* main loop */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && k != pseudoroot )
+      {
+         int minneighbor = -1;
+         SCIP_Real mincost = isPcMw ? g->prize[k] : FARAWAY;
+         SCIP_Real mincost2 = mincost;
+
+         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            const int neighbor = g->tail[e];
+
+            if( neighbor == pseudoroot )
+               continue;
+
+            if( costs[e] < mincost )
+            {
+               assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
+
+               minneighbor = neighbor;
+               mincost = costs[e];
+               mincost2 = mincost;
+            }
+            else if( costs[e] < mincost2 )
+            {
+               mincost2 = costs[e];
+            }
+         }
+
+         assert(minneighbor >= 0 || isPcMw || g->terms == 1);
+
+         if( minneighbor >= 0 )
+         {
+            const SCIP_Real bias = mincost2 - mincost;
+
+            assert(GE(bias, 0.0));
+
+            if( bias > node_bias[minneighbor] )
+            {
+               node_bias[minneighbor] = bias;
+               node_biassource[minneighbor] = k;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** cleans limited Dijkstra structure members */
 void graph_dijkLimited_clean(
    const GRAPH*          g,                  /**< the graph */
@@ -1751,8 +1835,8 @@ void graph_dijkLimited_clean(
 )
 {
    const int nnodes = g->knots;
-   STP_Bool* const visited = dijkdata->visited;
-   SCIP_Real* const distance = dijkdata->distance;
+   STP_Bool* const visited = dijkdata->node_visited;
+   SCIP_Real* const distance = dijkdata->node_distance;
    dijkdata->nvisits = -1;
    dijkdata->edgelimit = -1;
 
@@ -1772,10 +1856,10 @@ void graph_dijkLimited_reset(
    DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
-   STP_Bool* const visited = dijkdata->visited;
+   STP_Bool* const visited = dijkdata->node_visited;
    int* const visitlist = dijkdata->visitlist;
    int* const state = dijkdata->dheap->position;
-   SCIP_Real* const distance = dijkdata->distance;
+   SCIP_Real* const distance = dijkdata->node_distance;
    const int nvisits = dijkdata->nvisits;
 
    assert(dijkdata && g);
@@ -1811,10 +1895,11 @@ void graph_dijkLimited_free(
 {
    DIJK* dijk = *dijkdata;
 
-   SCIPfreeMemoryArrayNull(scip, &(dijk->pc_costshift));
-   SCIPfreeMemoryArray(scip, &(dijk->distance));
+   SCIPfreeMemoryArrayNull(scip, &(dijk->node_biassource));
+   SCIPfreeMemoryArrayNull(scip, &(dijk->node_bias));
+   SCIPfreeMemoryArray(scip, &(dijk->node_distance));
    SCIPfreeMemoryArray(scip, &(dijk->visitlist));
-   SCIPfreeMemoryArray(scip, &(dijk->visited));
+   SCIPfreeMemoryArray(scip, &(dijk->node_visited));
 
    graph_heap_free(scip, TRUE, TRUE, &(dijk->dheap));
 

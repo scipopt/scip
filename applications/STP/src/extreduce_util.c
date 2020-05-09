@@ -506,7 +506,7 @@ SCIP_RETCODE closeNodesRunInit(
    SCIP_Bool**           edgemark            /**< debug only */
 )
 {
-   SCIP_Real* const dist = dijkdata->distance;
+   SCIP_Real* const dist = dijkdata->node_distance;
    DHEAP* const dheap = dijkdata->dheap;
    const int nnodes = g->knots;
 
@@ -555,16 +555,16 @@ SCIP_RETCODE closeNodesRunCompute(
    )
 {
    int* const visitlist = dijkdata->visitlist;
-   SCIP_Real* const dist = dijkdata->distance;
+   SCIP_Real* const dist = dijkdata->node_distance;
    DHEAP* const dheap = dijkdata->dheap;
-   STP_Bool* const visited = dijkdata->visited;
+   STP_Bool* const visited = dijkdata->node_visited;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const RESTRICT range_csr = dcsr->range;
    const int* const RESTRICT head_csr = dcsr->head;
    const int* const edgeid = dcsr->edgeid;
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
-   const SCIP_Real* const pc_costshifts = dijkdata->pc_costshift;
+   const SCIP_Real* const pc_costshifts = dijkdata->node_bias;
    RANGE* const range_closenodes = distdata->closenodes_range;
    int* const closenodes_indices = distdata->closenodes_indices;
    int* const closenodes_prededges = distdata->closenodes_prededges;

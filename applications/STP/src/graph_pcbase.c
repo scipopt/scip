@@ -2812,6 +2812,18 @@ int graph_pc_getTwinTerm(
 }
 
 
+/** is this graph a un-rooted prize-collecting or rooted maximum-weight variant? */
+SCIP_Bool graph_pc_isUnrootedPcMw(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const int type = g->stp_type;
+   assert(g != NULL);
+
+   return (type == STP_PCSPG || type == STP_MWCSP);
+}
+
+
 /** is this graph a rooted prize-collecting or rooted maximum-weight variant? */
 SCIP_Bool graph_pc_isRootedPcMw(
    const GRAPH*          g                   /**< the graph */

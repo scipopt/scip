@@ -258,11 +258,12 @@ typedef struct dijkstra_heap
 /** Dijkstra data */
 typedef struct dijkstra_data
 {
-   SCIP_Real*            distance;           /**< distances array for each node, initially set to FARAWAY */
+   SCIP_Real*            node_distance;      /**< distances array for each node, initially set to FARAWAY */
    int*                  visitlist;          /**< stores all visited nodes */
    DHEAP*                dheap;              /**< Dijkstra heap, initially cleaned */
-   STP_Bool*             visited;            /**< stores whether a node has been visited, initially set to FALSE */
-   SCIP_Real*            pc_costshift;       /**< cost shift per node for PC or NULL */
+   STP_Bool*             node_visited;       /**< stores whether a node has been visited, initially set to FALSE */
+   SCIP_Real*            node_bias;          /**< bias per node (e.g. cost shift per node for PC) or NULL */
+   int*                  node_biassource;    /**< bias terminal per node or NULL */
    int                   nvisits;            /**< number of visited nodes, initially set to -1 */
    int                   edgelimit;          /**< number of edges to consider */
 } DIJK;
@@ -403,6 +404,7 @@ extern SCIP_Bool      graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 /* misc: */
 extern SCIP_RETCODE  graph_dijkLimited_init(SCIP*, const GRAPH*, DIJK**);
 extern SCIP_RETCODE  graph_dijkLimited_initPcShifts(SCIP*, const GRAPH*, DIJK*);
+extern SCIP_RETCODE  graph_dijkLimited_initSdBias(SCIP*, const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_reset(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_clean(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_free(SCIP*, DIJK**);
@@ -546,6 +548,7 @@ extern SCIP_Bool graph_pc_isPc(const GRAPH*);
 extern SCIP_Bool graph_pc_isMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
+extern SCIP_Bool graph_pc_isUnrootedPcMw(const GRAPH*);
 extern SCIP_Real graph_pc_solGetObj(SCIP*, const GRAPH*, const int*, SCIP_Real);
 
 
@@ -573,7 +576,7 @@ extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern void   graph_sdStar(SCIP*, const GRAPH*, SCIP_Bool, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);
-extern void   graph_sdStarBiased(SCIP*, const GRAPH*, int, int*, DIJK*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_sdStarBiased(SCIP*, const GRAPH*, int, int*, DIJK*, SCIP_Bool*);
 extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, STP_Bool*, SCIP_Bool);
 extern SCIP_Bool graph_sdWalks(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);

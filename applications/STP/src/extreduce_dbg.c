@@ -302,7 +302,7 @@ SCIP_RETCODE distCloseNodesCompute(
    const RANGE* const RESTRICT range_csr = dcsr->range;
    const int* const RESTRICT head_csr = dcsr->head;
    const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
-   const SCIP_Real* const pc_costshifts = distdata->dijkdata->pc_costshift;
+   const SCIP_Real* const pc_costshifts = distdata->dijkdata->node_bias;
    const int nnodes = g->knots;
    const SCIP_Real closenodes_maxcost = distCloseNodesGetMaxCost(startvertex, distdata);
    int clodenode_count;
@@ -440,8 +440,8 @@ void distCloseNodesPrintLostNodeInfo(
 
          graph_edge_printInfo(g, prededge);
 
-         if( distdata->dijkdata->pc_costshift )
-            printf("vertex %d shift=%f \n", vertex, distdata->dijkdata->pc_costshift[vertex]);
+         if( distdata->dijkdata->node_bias )
+            printf("vertex %d shift=%f \n", vertex, distdata->dijkdata->node_bias[vertex]);
 
          assert(vertex == g->head[prededge] || vertex == g->tail[prededge]);
 

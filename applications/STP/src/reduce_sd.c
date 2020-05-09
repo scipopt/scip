@@ -67,8 +67,8 @@ SCIP_RETCODE sdStarInit(
 
 #ifndef NDEBUG
    {
-      SCIP_Real* dist = (*dijkdata)->distance;
-      STP_Bool* visited = (*dijkdata)->visited;
+      SCIP_Real* dist = (*dijkdata)->node_distance;
+      STP_Bool* visited = (*dijkdata)->node_visited;
       assert(graph_heap_isClean((*dijkdata)->dheap));
 
       for( int i = 0; i < nnodes; i++ )
@@ -3060,6 +3060,7 @@ SCIP_RETCODE reduce_sdStarBiased(
    assert(dcsr && range_csr && edgeid_csr);
 
    SCIP_CALL( sdStarInit(scip, g, edgelimit, &dijkdata, &star_base, &edge_deletable) );
+   SCIP_CALL( graph_dijkLimited_initSdBias(scip, g, dijkdata) );
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -3083,7 +3084,7 @@ SCIP_RETCODE reduce_sdStarBiased(
          runloop = FALSE;
 
          /* do the actual star run */
-         graph_sdStarBiased(scip, g, i, star_base, dijkdata, &success);
+         SCIP_CALL( graph_sdStarBiased(scip, g, i, star_base, dijkdata, &success) );
 
          if( success )
          {
@@ -3095,7 +3096,7 @@ SCIP_RETCODE reduce_sdStarBiased(
                const int starnode = head_csr[e];
                const int starbase = star_base[starnode];
                assert(star_base[starnode] >= 0);
-               assert(SCIPisLE(scip, dijkdata->distance[starnode], dcsr->cost[e]));
+               assert(SCIPisLE(scip, dijkdata->node_distance[starnode], dcsr->cost[e]));
                assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
 
                enext = e + 1;
@@ -3130,7 +3131,7 @@ SCIP_RETCODE reduce_sdStarBiased(
             } /* traverse star nodes */
          } /* if success */
 
-         sdStarReset(nnodes, dijkdata->nvisits, dijkdata->visitlist, star_base, dijkdata->distance, dijkdata->visited, dijkdata->dheap);
+         sdStarReset(nnodes, dijkdata->nvisits, dijkdata->visitlist, star_base, dijkdata->node_distance, dijkdata->node_visited, dijkdata->dheap);
       }
    }
 

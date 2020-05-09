@@ -1274,8 +1274,9 @@ void graph_sdStar(
 }
 
 
-/** limited Dijkstra with node bias; ignores terminals */
-void graph_sdStarBiased(
+/** limited Dijkstra with node bias; ignores terminals
+ * todo if it works, split up! */
+SCIP_RETCODE graph_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    int                   star_root,          /**< root of the start */
@@ -1286,12 +1287,14 @@ void graph_sdStarBiased(
 {
    int nchecks;
    int nstarhits;
-
-   SCIP_Real* restrict dist = dijkdata->distance;
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Real* restrict dist = dijkdata->node_distance;
    int* restrict visitlist = dijkdata->visitlist;
-   STP_Bool* restrict visited = dijkdata->visited;
+   STP_Bool* restrict visited = dijkdata->node_visited;
+   STP_Bool* is_starnode;
    DHEAP* dheap = dijkdata->dheap;
-   const SCIP_Real* const nodebias = dijkdata->pc_costshift;
+   const SCIP_Real* const nodebias = dijkdata->node_bias;
+   const int* const nodebias_source = dijkdata->node_biassource;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const RESTRICT range_csr = dcsr->range;
@@ -1304,7 +1307,8 @@ void graph_sdStarBiased(
    /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
    const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : 2.0 * SCIPepsilon(scip);
 
-   assert(dcsr && g && dist && visitlist && visited && dheap && success);
+   assert(dcsr && dist && visitlist && visited && dheap && success);
+   assert(nodebias && nodebias_source);
    assert(!g->extended);
    assert(g->mark[star_root] && star_degree >= 1);
    assert(dheap->size == 0);
@@ -1313,12 +1317,15 @@ void graph_sdStarBiased(
    nvisits = 0;
    *success = FALSE;
 
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &is_starnode, nnodes) );
+
 #ifndef NDEBUG
    for( int k = 0; k < g->knots; k++ )
    {
       assert(dist[k] == FARAWAY);
       assert(star_base[k] == SDSTAR_BASE_UNSET);
       assert(state[k] == UNKNOWN);
+      assert(is_starnode[k] == FALSE);
    }
 #endif
 
@@ -1326,6 +1333,7 @@ void graph_sdStarBiased(
    dist[star_root] = 0.0;
    state[star_root] = CONNECT;
    visitlist[(nvisits)++] = star_root;
+   is_starnode[star_root] = TRUE;
 
    for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
    {
@@ -1334,6 +1342,7 @@ void graph_sdStarBiased(
       assert(g->mark[m]);
       assert(!visited[m]);
 
+      is_starnode[m] = TRUE;
       visitlist[(nvisits)++] = m;
       visited[m] = TRUE;
       dist[m] = cost_csr[e];
@@ -1369,9 +1378,15 @@ void graph_sdStarBiased(
          const int m = head_csr[e];
          assert(g->mark[m] && star_base[k] >= 0);
 
+         /* ignore all terminals that are not in original star */
+         if( Is_term(g->term[m]) && !is_starnode[m] )
+         {
+            continue;
+         }
+
          if( state[m] != CONNECT )
          {
-            const SCIP_Real bias = 0.0; //MIN(cost_csr[e], nodebias[k]);
+            const SCIP_Real bias = (is_starnode[nodebias_source[m]])? 0.0 : MIN(cost_csr[e], nodebias[k]);
             const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
 
             if( GT(distnew, distlimit) )
@@ -1392,7 +1407,7 @@ void graph_sdStarBiased(
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
 
-               assert(star_base[m] != m);
+               assert(star_base[m] != m && m != star_root);
             }
             else if( EQ(distnew, dist[m]) && star_base[m] == m )
             {
@@ -1408,7 +1423,7 @@ void graph_sdStarBiased(
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
 
-               assert(star_base[m] != m);
+               assert(star_base[m] != m && m != star_root);
             }
 
             /* all star nodes hit already? */
@@ -1424,6 +1439,24 @@ void graph_sdStarBiased(
 
   dijkdata->nvisits = nvisits;
   *success = (nstarhits > 0);
+
+  for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
+  {
+     const int m = head_csr[e];
+     assert(is_starnode[m]);
+
+     is_starnode[m] = FALSE;
+  }
+  is_starnode[star_root] = FALSE;
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+      assert(is_starnode[k] == FALSE);
+#endif
+
+  SCIPfreeCleanBufferArray(scip, &is_starnode);
+
+  return SCIP_OKAY;
 }
 
 

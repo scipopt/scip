@@ -774,7 +774,7 @@ SCIP_RETCODE testSdStarPcKillsEdge(
    SCIP_CALL( SCIPallocMemoryArray(scip, &star_base, nnodes) );
 
    /* actual test: edge 0 should have been deleted */
-   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata->distance, star_base, dijkdata->visitlist, dijkdata->visited, dijkdata->dheap, &nelims) );
+   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata->node_distance, star_base, dijkdata->visitlist, dijkdata->node_visited, dijkdata->dheap, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
