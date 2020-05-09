@@ -133,6 +133,7 @@
 -emacro(737,SCIPfreeBlockMemoryArrayNull)
 -emacro(737,BMSfreeBlockMemoryArray)
 -emacro(737,BMSfreeBlockMemoryArrayNull)
+-emacro(737,BMSreallocBlockMemorySize)
 -emacro(737,BMSallocMemorySize)
 
 // cannot turn off warning otherwise: local macro not referenced
