@@ -1273,7 +1273,6 @@ void graph_sdStar(
   *success = (nstarhits > 0);
 }
 
-#if 0
 
 /** limited Dijkstra with node bias; ignores terminals */
 void graph_sdStarBiased(
@@ -1305,8 +1304,6 @@ void graph_sdStarBiased(
    const int edgelimit = dijkdata->edgelimit;
    /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
    const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : SCIPepsilon(scip);
-
-   int todo; // graph_voronoi.c
 
    assert(dcsr && g && dist && visitlist && visited && dheap && success);
    assert(!g->extended);
@@ -1429,7 +1426,7 @@ void graph_sdStarBiased(
   dijkdata->nvisits = nvisits;
   *success = (nstarhits > 0);
 }
-#endif
+
 
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
 SCIP_Bool graph_sdWalks(

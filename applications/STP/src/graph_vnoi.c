@@ -15,7 +15,7 @@
 
 /**@file   graph_vnoi.c
  * @brief  Voronoi graph algorithms for Steiner problems
- * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  *
  * This file encompasses various Voronoi diagram algorithms.
  *
