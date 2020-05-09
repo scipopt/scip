@@ -986,7 +986,7 @@ SCIP_RETCODE paramCreate(
    return SCIP_OKAY;
 }
 
-/** creates a SCIP_Bool parameter, and sets its value to default */ /*lint !e2701*/
+/** creates a SCIP_Bool parameter, and sets its value to default */
 static
 SCIP_RETCODE paramCreateBool(
    SCIP_PARAM**          param,              /**< pointer to the parameter */
