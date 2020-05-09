@@ -1062,7 +1062,7 @@ int createChunk(
 
    /* the store is allocated directly behind the chunk header */
    newchunk->store = (void*) ((char*) newchunk + sizeof(CHUNK));
-   newchunk->storeend = (void*) ((char*) newchunk->store + storesize * chkmem->elemsize);
+   newchunk->storeend = (void*) ((char*) newchunk->store + (ptrdiff_t)storesize * chkmem->elemsize);
    newchunk->eagerfree = NULL;
    newchunk->nexteager = NULL;
    newchunk->preveager = NULL;
@@ -1072,7 +1072,7 @@ int createChunk(
    newchunk->eagerfreesize = 0;
 
    if( memsize != NULL )
-      (*memsize) += ((long long)(sizeof(CHUNK) + (long long)storesize * chkmem->elemsize));
+      (*memsize) += ((long long)((long long)sizeof(CHUNK) + (long long)storesize * chkmem->elemsize));
 
    debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
@@ -1081,11 +1081,11 @@ int createChunk(
     */
    for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freelist = (FREELIST*) newchunk->store + i * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
-      freelist->next = (FREELIST*) newchunk->store + (i + 1) * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
+      freelist = (FREELIST*) newchunk->store + (ptrdiff_t)i * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
+      freelist->next = (FREELIST*) newchunk->store + ((ptrdiff_t)i + 1) * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
    }
 
-   freelist = (FREELIST*) newchunk->store + (newchunk->storesize - 1) * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
+   freelist = (FREELIST*) newchunk->store + ((ptrdiff_t) newchunk->storesize - 1) * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
    freelist->next = chkmem->lazyfree;
    chkmem->lazyfree = (FREELIST*) (newchunk->store);
    chkmem->lazyfreesize += newchunk->storesize;
