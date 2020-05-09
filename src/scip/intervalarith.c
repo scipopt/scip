@@ -655,7 +655,7 @@ void SCIPintervalAddScalar(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
    )
-{
+{  /*lint --e{644}*/
    SCIP_ROUNDMODE roundmode;
 
    assert(resultant != NULL);
@@ -735,7 +735,7 @@ void SCIPintervalSub(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
-{
+{  /*lint --e{644}*/
    SCIP_ROUNDMODE roundmode;
 
    assert(resultant != NULL);
@@ -2957,11 +2957,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    }
 
    /* find x>=0 s.t. a.sup x^2 + b.sup x >= c.inf */
-   if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity )
+   if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity ) /*lint !e644*/
    {
       SCIP_INTERVAL res2;
       /* coverity[uninit_use_in_call] */
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf, xbnds);
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf, xbnds); /*lint !e644*/
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
       SCIPdebugMessage("intersection of [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
@@ -4234,7 +4234,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          if( lincoef.inf == 0.0 && lincoef.sup == 0.0 )
          {
             /* equation became 0.0 \in myrhs */
-            if( myrhs.inf <= 0.0 && myrhs.sup >= 0.0 )
+            if( myrhs.inf <= 0.0 && myrhs.sup >= 0.0 ) /*lint !e644*/
                *resultant = xbnds;
             else
                SCIPintervalSetEmpty(resultant);

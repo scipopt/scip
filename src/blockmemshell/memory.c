@@ -1414,7 +1414,7 @@ void garbagecollectChkmem(
    checkChkmem(chkmem);
 }
 
-/** frees a memory element and returns it to the lazy freelist of the chunk block */
+/** frees a memory element and returns it to the lazy freelist of the chunk block */ /*lint -e715*/
 static
 void freeChkmemElement(
    BMS_CHKMEM*           chkmem,             /**< chunk block */

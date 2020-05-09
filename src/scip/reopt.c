@@ -3100,7 +3100,7 @@ SCIP_RETCODE addNode(
          }
       }
 #endif
-   }
+   } /*lint !e438*/
 
    switch( reopttype )
    {
