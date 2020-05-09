@@ -50,6 +50,9 @@
 // for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
 -e666
 
+// turn off all warnings for exprinterpret_cppad.cpp because the code is not ours
+-efile(*,src/nlpi/exprinterpret_cppad.cpp)
+
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
