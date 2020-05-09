@@ -91,8 +91,7 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   Boundstatus*          status;             /**< array containing a bound status for each candidate (type int* is
-                                              *   necessary to use sort functions) */
+   Boundstatus*          status;             /**< array containing a bound status for each candidate */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
