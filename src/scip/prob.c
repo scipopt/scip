@@ -1933,6 +1933,28 @@ SCIP_RETCODE SCIPprobExitSolve(
    }
    assert(prob->ncolvars == 0);
 
+   if( restart )
+   {
+      /* mark relaxation-only variables for deletion
+       * if restart, then initPresolve will call SCIPprobPerformVarDeletions
+       * if no restart, then the whole transformed problem will be deleted anyway
+       */
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         var = prob->vars[v];
+         if( SCIPvarIsRelaxationOnly(var) )
+         {
+            SCIP_Bool deleted;
+
+            assert(SCIPvarIsDeletable(var));
+
+            SCIPsetDebugMsg(set, "mark relaxation-only variable <%s> for deletion\n", SCIPvarGetName(var));
+            SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
+            assert(deleted);
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 
