@@ -1774,7 +1774,7 @@ SCIP_RETCODE graph_dijkLimited_initSdBias(
    for( int k = 0; k < nnodes; k++ )
    {
       node_bias[k] = 0.0;
-      node_biassource[k] = UNKNOWN;
+      node_biassource[k] = k;
    }
 
    /* main loop */
@@ -1798,8 +1798,8 @@ SCIP_RETCODE graph_dijkLimited_initSdBias(
                assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
 
                minneighbor = neighbor;
-               mincost = costs[e];
                mincost2 = mincost;
+               mincost = costs[e];
             }
             else if( costs[e] < mincost2 )
             {

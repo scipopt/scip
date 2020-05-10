@@ -1386,7 +1386,7 @@ SCIP_RETCODE graph_sdStarBiased(
 
          if( state[m] != CONNECT )
          {
-            const SCIP_Real bias = (is_starnode[nodebias_source[m]])? 0.0 : MIN(cost_csr[e], nodebias[k]);
+            const SCIP_Real bias = (is_starnode[nodebias_source[k]])? 0.0 : MIN(cost_csr[e], nodebias[k]);
             const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
 
             if( GT(distnew, distlimit) )
