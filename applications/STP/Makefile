@@ -115,6 +115,7 @@ CMAINOBJ	=	cmain.o \
 			stptest_heurtm.o \
 			stptest_misc.o \
 			stptest_pcreduce.o \
+			stptest_reducesd.o \
 			stptest_reduceutils.o \
 			prop_stp.o \
 			branch_stp.o \

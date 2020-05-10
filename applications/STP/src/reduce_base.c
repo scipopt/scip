@@ -1798,11 +1798,27 @@ SCIP_RETCODE redLoopStp(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
 
+#if 1
 #if 0
-         int nelimsx = 0;
-         SCIP_CALL( reduce_sdStarBiased(scip, 400, NULL, g, &nelimsx));
+         SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
+                           ((inner_rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL));
 
-       //  printf("nelimsx=%d \n", nelimsx);
+
+
+         SCIP_CALL( reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
+                          nodereplacing, NULL));
+
+         SCIP_CALL(reduce_ledge(scip, g, vnoi, heap, state, vbase, &lenelims, NULL));
+         printf("lenelims=%d, sdnelims=%d, sdcnelims=%d \n", lenelims, sdnelims, sdcnelims);
+
+#endif
+
+         int nelimsx = 0;
+         SCIP_CALL( reduce_sdStarBiased(scip, STP_RED_SDSPBOUND, NULL, g, &nelimsx));
+
+         printf("nelimsx=%d \n", nelimsx);
+
+       //  exit(1);
 #endif
 
 

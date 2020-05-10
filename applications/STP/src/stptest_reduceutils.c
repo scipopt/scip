@@ -31,8 +31,6 @@
 #include "stptest.h"
 #include "graph.h"
 #include "reduce.h"
-#include "heur_local.h"
-#include "heur_tm.h"
 #include "portab.h"
 
 

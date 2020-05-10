@@ -37,6 +37,7 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
+   SCIP_CALL( stptest_reduceSdStarBias(scip) );
    SCIP_CALL( stptest_reduceStar(scip) );
    SCIP_CALL( stptest_testHeurTm(scip) );
    SCIP_CALL( stptest_testSolPrune(scip) );

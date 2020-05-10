@@ -70,6 +70,8 @@
  */
 extern SCIP_RETCODE    stptest_testAll(SCIP*);
 
+
+
 /* stptest_graph.c
  */
 extern SCIP_RETCODE    stptest_csrdepo(SCIP*);
@@ -93,6 +95,11 @@ extern SCIP_RETCODE    stptest_extmldists(SCIP*);
  */
 extern SCIP_RETCODE    stptest_dcmst(SCIP*);
 extern SCIP_RETCODE    stptest_reduceStar(SCIP*);
+
+/* stptest_reducesd.c
+ */
+extern SCIP_RETCODE    stptest_reduceSdStarBias(SCIP*);
+
 
 /* stptest_pcreduce.c
  */

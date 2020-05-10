@@ -63,6 +63,7 @@ add_executable(scipstp
     src/stptest_heurtm.c
     src/stptest_misc.c
     src/stptest_pcreduce.c
+    src/stptest_reducesd.c
     src/stptest_reduceutils.c
     src/solpool.c
     src/solstp.c
