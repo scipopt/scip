@@ -1942,11 +1942,9 @@ SCIP_RETCODE SCIPprobExitSolve(
       for( v = 0; v < prob->nvars; ++v )
       {
          var = prob->vars[v];
-         if( SCIPvarIsRelaxationOnly(var) )
+         if( SCIPvarIsRelaxationOnly(var) && SCIPvarIsDeletable(var) )
          {
             SCIP_Bool deleted;
-
-            assert(SCIPvarIsDeletable(var));
 
             SCIPsetDebugMsg(set, "mark relaxation-only variable <%s> for deletion\n", SCIPvarGetName(var));
             SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
