@@ -661,8 +661,7 @@ void handleDecl(
    {
       const char* name;
       XMLSECTION  what;
-   }
-   key[] =
+   } key[] =
    {
       { "--",       IS_COMMENT  },
       { "ATTLIST",  IS_ATTLIST  },
