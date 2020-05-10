@@ -14366,13 +14366,14 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
       MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
-   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
     * or to copy the variable to a subscip
     */
    SCIPvarMarkRelaxationOnly(expr->auxvar);
+
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
