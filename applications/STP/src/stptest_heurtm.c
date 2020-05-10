@@ -359,7 +359,7 @@ SCIP_RETCODE testPrunedSolIsImprovedPc2(
 
 
 
-
+#if 0
 /** tests that RMW solution is improved by pruning */
 static
 SCIP_RETCODE testPrunedSolIsImprovedRmw1(
@@ -383,10 +383,10 @@ SCIP_RETCODE testPrunedSolIsImprovedRmw1(
 
    graph->source = 0;
 
-   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0,1
-   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2,3
-   graph_edge_addBi(scip, graph, 2, 3, 1.0);
-   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 0, 1, 0.0); // 0,1
+   graph_edge_addBi(scip, graph, 0, 2, 0.0); // 2,3
+   graph_edge_addBi(scip, graph, 2, 3, 0.0);
+   graph_edge_addBi(scip, graph, 2, 4, 0.0);
 
    graph_pc_initPrizes(scip, graph, nnodes_org);
    graph->prize[0] = FARAWAY; /* the root */
@@ -417,7 +417,7 @@ SCIP_RETCODE testPrunedSolIsImprovedRmw1(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 /** test pruning of solution */
 SCIP_RETCODE stptest_testSolPrune(
@@ -425,7 +425,7 @@ SCIP_RETCODE stptest_testSolPrune(
 )
 {
    assert(scip);
-   SCIP_CALL(testPrunedSolIsImprovedRmw1(scip));
+ //  SCIP_CALL(testPrunedSolIsImprovedRmw1(scip));
    SCIP_CALL(testPrunedSolIsImprovedPc2(scip));
    SCIP_CALL(testPrunedSolIsImprovedPc1(scip));
 
