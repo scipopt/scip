@@ -40,7 +40,6 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
-#include "scip/pub_varex.h"
 #include "scip/rational.h"
 #include "scip/set.h"
 #include "scip/sol.h"
@@ -53,7 +52,6 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/var.h"
-#include "scip/varex.h"
 #include <string.h>
 #include <inttypes.h>
 

@@ -96,7 +96,6 @@
 #include "scip/table.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/varex.h"
 #include "scip/visual.h"
 #include "xml/xml.h"
 

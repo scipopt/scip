@@ -276,7 +276,7 @@ void SCIPcertificatePrintRtpInfeas(
    );
 
 /** prints SOL header and exact solution to certificate file */
-void SCIPcertificatePrintSolex(
+void SCIPcertificatePrintSolExact(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */

@@ -4786,7 +4786,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
 
-         SCIP_CALL( SCIPprimalTrySolexFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+         SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else

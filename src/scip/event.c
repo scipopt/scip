@@ -40,7 +40,6 @@
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
 #include "scip/var.h"
-#include "scip/varex.h"
 
 /* timing the execution methods for event handling takes a lot of time, so it is disabled */
 /* #define TIMEEVENTEXEC */

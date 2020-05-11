@@ -41,7 +41,6 @@
 #include "scip/prob.h"
 #include "scip/scip.h"
 #include "scip/sol.h"
-#include "scip/pub_varex.h"
 #include "scip/primal.h"
 #include "scip/sepastoreex.h"
 #include "scip/struct_scip.h"

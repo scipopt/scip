@@ -200,6 +200,66 @@ SCIP_RETCODE SCIPcreateVarBasic(
    return SCIP_OKAY;
 }
 
+/** Add exact data to variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddVarExactData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< pointer to variable */
+   SCIP_Rational*        lb,                 /**< lower bounf of variable */
+   SCIP_Rational*        ub,                 /**< upper bound of variable */
+   SCIP_Rational*        obj                 /**< objective function value */
+   )
+{
+   assert(var != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   assert(RatIsLE(lb, ub));
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* forbid infinite objective function values */
+   if( obj != NULL && RatIsAbsInfinity(obj) )
+   {
+      SCIPerrorMessage("invalid objective function value: value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPvarAddExactData(var, scip->mem->probmem, lb, ub, obj) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPvarAddExactData(var, scip->mem->probmem, lb, ub, obj) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
 /** outputs the variable name to the file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -358,6 +418,69 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
             SCIPinfoMessage(scip, file, " -");
          else
             SCIPinfoMessage(scip, file, " %+.15g", vals[v]);
+      }
+      else if( nvars > 0 )
+         SCIPinfoMessage(scip, file, " +");
+
+      /* print variable name */
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v], type) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** print the given variables and rational coefficients as linear sum in the following form
+ *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note The printing process is done via the message handler system.
+ */
+SCIP_RETCODE SCIPwriteVarsLinearsumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to output */
+   SCIP_Rational**       vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             type                /**< should the variable type be also posted */
+   )
+{
+   int v;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteVarsLinearsumExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( vals != NULL )
+      {
+         if( RatIsEqualReal(vals[v], 1.0) )
+         {
+            if( v > 0 )
+               SCIPinfoMessage(scip, file, " +");
+         }
+         else if( RatIsEqualReal(vals[v], -1.0) )
+            SCIPinfoMessage(scip, file, " -");
+         else
+         {
+            char buf[SCIP_MAXSTRLEN];
+            RatToString(vals[v], buf, SCIP_MAXSTRLEN);
+            SCIPinfoMessage(scip, file, " %s", buf);
+         }
       }
       else if( nvars > 0 )
          SCIPinfoMessage(scip, file, " +");
@@ -4541,6 +4664,54 @@ SCIP_RETCODE SCIPchgVarObj(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+}
+
+/** changes variable's objective value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_RETCODE SCIPchgVarObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the objective value for */
+   SCIP_Rational*        newobj              /**< new objective value */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarObjExact", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   /* forbid infinite objective values */
+   if( RatIsAbsInfinity(newobj) )
+   {
+      SCIPerrorMessage("invalid objective value: objective value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set, scip->origprob, scip->primal, scip->lpex, scip->eventqueue, newobj) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lpex, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    default:

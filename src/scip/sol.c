@@ -33,7 +33,6 @@
 #include "scip/pub_message.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
-#include "scip/pub_varex.h"
 #include "scip/relax.h"
 #include "scip/set.h"
 #include "scip/sol.h"
@@ -46,8 +45,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/varex.h"
-
 
 
 /** clears solution arrays of primal CIP solution */
@@ -293,11 +290,11 @@ void solGetArrayValExact(
          break;
 
       case SCIP_SOLORIGIN_LPSOL:
-         RatSet(res, SCIPvarGetLPexSolex(var));
+         RatSet(res, SCIPvarGetLPSolExact(var));
          break;
 
       case SCIP_SOLORIGIN_PSEUDOSOL:
-         RatSet(res, SCIPvarGetPseudoSolex(var));
+         RatSet(res, SCIPvarGetPseudoSolExact(var));
          break;
 
       case SCIP_SOLORIGIN_PARTIAL:
@@ -404,11 +401,11 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetLPexSolex(var) ) );
+      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetLPSolExact(var) ) );
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
-      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetPseudoSolex(var)) );
+      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetPseudoSolExact(var)) );
       return SCIP_OKAY;
 
    default:

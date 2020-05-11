@@ -1978,7 +1978,7 @@ void SCIPprimalSetUpdateViolations(
 
 /** adds exact primal solution to solution storage at given position */
 static
-SCIP_RETCODE primalAddSolex(
+SCIP_RETCODE primalAddSolExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2040,7 +2040,7 @@ SCIP_RETCODE primalAddSolex(
 }
 
 /** adds exact primal solution to solution storage, frees the solution afterwards */
-SCIP_RETCODE SCIPprimalTrySolexFree(
+SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2088,7 +2088,7 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
 
    if( feasible )
    {
-      SCIP_CALL( primalAddSolex(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+      SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */

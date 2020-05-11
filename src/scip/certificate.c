@@ -37,8 +37,7 @@
 #include "scip/struct_certificate.h"
 #include "scip/sol.h"
 #include "scip/struct_scip.h"
-#include "scip/pub_varex.h"
-#include "scip/varex.h"
+#include "scip/var.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
@@ -1853,7 +1852,7 @@ void SCIPcertificatePrintRtpInfeas(
  }
 
 /** prints SOL header and exact solution to certificate file */
-void SCIPcertificatePrintSolex(
+void SCIPcertificatePrintSolExact(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution, may be NULL */

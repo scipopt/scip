@@ -38,7 +38,6 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
-#include "scip/pub_varex.h"
 #include "scip/rational.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
@@ -57,7 +56,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
-#include "scip/scip_solex.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
@@ -1128,7 +1126,7 @@ SCIP_RETCODE consdataPrint(
    else
    {
       /* post linear sum of the linear constraint */
-      SCIP_CALL( SCIPwriteVarsExactLinearsum(scip, file, consdata->vars, consdata->vals, consdata->nvars, TRUE) );
+      SCIP_CALL( SCIPwriteVarsLinearsumExact(scip, file, consdata->vars, consdata->vals, consdata->nvars, TRUE) );
    }
 
    /* print right hand side */
@@ -1221,7 +1219,7 @@ SCIP_RETCODE consPrintConsSol(
          {
             SCIP_Rational* tmp;
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
-            SCIPgetSolexVal(scip, sol, consdata->vars[v], tmp);
+            SCIPgetSolValExact(scip, sol, consdata->vars[v], tmp);
             RatMessage(scip->messagehdlr, file, tmp);
             RatFreeBuffer(SCIPbuffer(scip), &tmp);
          }
@@ -2963,7 +2961,7 @@ void consdataGetActivity(
       for( v = 0; v < consdata->nvars; ++v )
       {
          if( useexact )
-            SCIPgetSolexVal(scip, sol, consdata->vars[v], solval);
+            SCIPgetSolValExact(scip, sol, consdata->vars[v], solval);
          else
             RatSetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
 

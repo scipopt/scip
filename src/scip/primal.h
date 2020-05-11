@@ -379,7 +379,7 @@ void SCIPprimalSetUpdateViolations(
    );
    
 /** adds exact primal solution to solution storage, frees the solution afterwards */
-SCIP_RETCODE SCIPprimalTrySolexFree(
+SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

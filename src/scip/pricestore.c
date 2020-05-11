@@ -36,8 +36,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/varex.h"
-
 
 
 /*

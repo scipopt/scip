@@ -241,14 +241,6 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
-/** adds correct bound-data to negated variable */
-SCIP_RETCODE SCIPvarNegateExactData(
-   SCIP_VAR*             negvar,             /**< the negated variable */
-   SCIP_VAR*             origvar,            /**< the original variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 /** create and set the exact variable bounds and objective value */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
@@ -395,6 +387,16 @@ SCIP_RETCODE SCIPvarColumn(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** converts transformed variable into column variable and creates LP column */
+SCIP_RETCODE SCIPvarColumnExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LPEX*            lp                  /**< current LP data */
    );
 
 /** converts column transformed variable back into loose variable, frees LP column */
@@ -655,6 +657,18 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newobj              /**< new objective value for variable */
+   );
+
+/** changes objective value of variable */
+SCIP_RETCODE SCIPvarChgObjExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Rational*        newobj              /**< new objective value for variable */
    );
 
 /** adds value to objective value of variable */
@@ -1225,6 +1239,18 @@ SCIP_RETCODE SCIPvarAddToRow(
    SCIP_Real             val                 /**< value of coefficient */
    );
 
+/** resolves variable to columns and adds them with the coefficient to the */
+SCIP_RETCODE SCIPvarAddToRowExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LPEX*            lpex,               /**< current LP data */
+   SCIP_ROWEX*           rowex,              /**< LP row */
+   SCIP_Rational*        val                 /**< value of coefficient */
+   );
 
 /** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
  *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
@@ -1576,6 +1602,11 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
+   );
+
+/** return the index of the original variable */
+int SCIPvarGetOrigIndex(
+   SCIP_VAR*             var                 /**< scip variable */
    );
 
 #ifdef NDEBUG

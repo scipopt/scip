@@ -314,7 +314,6 @@ set(scipsources
     scip/scip_reopt.c
     scip/scip_sepa.c
     scip/scip_sol.c
-    scip/scip_solex.c
     scip/scip_solve.c
     scip/scip_solvingstats.c
     scip/scip_table.c
@@ -322,7 +321,6 @@ set(scipsources
     scip/scip_tree.c
     scip/scip_validation.c
     scip/scip_var.c
-    scip/scip_varex.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -339,7 +337,6 @@ set(scipsources
     scip/table.c
     scip/tree.c
     scip/var.c
-    scip/varex.c
     scip/visual.c
     scip/rbtree.c
     tclique/tclique_branch.c
@@ -711,7 +708,6 @@ set(scipheaders
     scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
-    scip/pub_varex.h
     scip/rational.h
     scip/rbtree.h
     scip/reader_bnd.h
@@ -787,7 +783,6 @@ set(scipheaders
     scip/scip_reopt.h
     scip/scip_sepa.h
     scip/scip_sol.h
-    scip/scip_solex.h
     scip/scip_solve.h
     scip/scip_solvingstats.h
     scip/scip_table.h
@@ -795,7 +790,6 @@ set(scipheaders
     scip/scip_tree.h
     scip/scip_validation.h
     scip/scip_var.h
-    scip/scip_varex.h
     scip/scipshell.h
     scip/sepa_cgmip.h
     scip/sepa_clique.h
@@ -932,7 +926,6 @@ set(scipheaders
     scip/type_var.h
     scip/type_visual.h
     scip/var.h
-    scip/varex.h
     scip/visual.h
 )
 

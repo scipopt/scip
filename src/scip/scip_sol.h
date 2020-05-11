@@ -540,6 +540,33 @@ SCIP_Real SCIPgetSolVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
+/** returns value of variable in primal CIP solution, or in current LP/pseudo solution
+ *
+ *  @return value of variable in primal CIP solution, or in current LP/pseudo solution
+ *
+ *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
+ *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
+ *       can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_VAR*             var,                /**< variable to get value for */
+   SCIP_Rational*        res                 /**< resulting rational */
+   );
+
 /** gets values of multiple variables in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -613,6 +640,29 @@ SCIP_EXPORT
 SCIP_Real SCIPgetSolTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
+   );
+
+/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+ *
+ *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolTransObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_Rational*        res                 /**< result pointer to store rational */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
@@ -837,6 +887,14 @@ SCIP_RETCODE SCIPadjustImplicitSolVals(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+/** print a rational solution */
+SCIP_RETCODE SCIPprintSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1492,6 +1550,12 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPupdatePrimalRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             primalray           /**< the new primal ray */
+   );
+
+/** returns TRUE if the solution is an exact rational solution */
+SCIP_Bool SCIPisExactSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /**@} */

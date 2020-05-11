@@ -41,10 +41,10 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
-#include "scip/scip_solex.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_exact.h"
+#include "scip/rational.h"
 
 /** validate the result of the solve
  *
@@ -259,7 +259,7 @@ SCIP_RETCODE SCIPvalidateSolveExact(
 
       assert(bestsol != NULL);
 
-      SCIP_CALL( SCIPcheckSolexOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
+      SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
    }
    else
    {

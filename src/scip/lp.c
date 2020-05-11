@@ -46,7 +46,6 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
-#include "scip/pub_varex.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"

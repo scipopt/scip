@@ -35,7 +35,6 @@
 #include "scip/lpex.h"
 #include "scip/relax.h"
 #include "scip/var.h"
-#include "scip/pub_varex.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
