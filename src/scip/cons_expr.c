@@ -420,16 +420,8 @@ SCIP_RETCODE freeAuxVar(
 
    SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-   /* check that if not finishing up, noone else is still using the auxvar
-    * once we release it, noone else would take care of unlocking it
-    * note that we do not free auxvars in exitsolve if we are restarting
-    * TODO: this doesn't work when run from unittests, so should find a safer way to define exceptions than checking the stage
-    */
-   /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
-
-   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
-    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
-    * variable might be still captured by SCIP's NLP or some other plugin
+   /* remove variable locks
+    * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
     */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
