@@ -210,7 +210,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE, FALSE) );
 
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
@@ -229,7 +229,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE, FALSE) );
 
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));

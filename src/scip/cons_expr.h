@@ -828,7 +828,8 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   SCIP_Bool               validsufficient,  /**< whether any valid activity is sufficient */
+   SCIP_Bool               global            /**< whether to evaluate expressions w.r.t. global bounds */
    );
 
 /** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)

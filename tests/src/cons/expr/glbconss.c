@@ -670,11 +670,11 @@ Test(glbconss, cpp1)
    SCIP_VAR* xs[6];
    SCIP_VAR* ys[6];
    SCIP_Real rs[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-   int ncircles = 4;
+   int ncircles = 6;
    int i;
 
    /* create variables */
-   SCIP_CALL( createVars(0.0, 10.0, -1.0, 0.0, 2.0, 0.0, ncircles, xs, ys) );
+   SCIP_CALL( createVars(0.0, 20.0, -1.0, 0.0, 2.0, 0.0, ncircles, xs, ys) );
 
    /* create circle packing constraint */
    SCIP_CALL( SCIPcreateConsBasicCpp(scip, &cons, "cpp", xs, ys, rs, ncircles) );
