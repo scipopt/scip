@@ -26,7 +26,7 @@
 
 
 #include "lpi/type_lpi.h"
-#include "lpi/type_lpiex.h"
+#include "lpi/type_lpiexact.h"
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"

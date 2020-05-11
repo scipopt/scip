@@ -36,7 +36,7 @@
 #include "scip/clock.h"
 #include "lpi/lpi.h"
 #include "scip/lp.h"
-#include "lpi/lpiex.h"
+#include "lpi/lpiexact.h"
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
@@ -108,7 +108,7 @@ SCIP_RETCODE evaluateLPExact(
     *    should be added, include it here as well.
     */
    /* evaluate solution status */
-   if( SCIPlpiexIsOptimal(lpexact->lpiex) )
+   if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
    {
       SCIPdebugMessage("   exact LP solved to optimality\n");
 
@@ -117,7 +117,7 @@ SCIP_RETCODE evaluateLPExact(
          SCIP_Bool primalfeasible;
          SCIP_Bool dualfeasible;
 
-         SCIP_CALL( SCIPlpiexGetSolFeasibility(lpexact->lpiex, &primalfeasible, &dualfeasible) );
+         SCIP_CALL( SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &primalfeasible, &dualfeasible) );
          assert(primalfeasible);
          assert(dualfeasible);
       }
@@ -127,29 +127,29 @@ SCIP_RETCODE evaluateLPExact(
        */
       assert(*result == SCIP_CUTOFF || *result == SCIP_BRANCHED || *result == SCIP_SOLVELP );
    }
-   else if( SCIPlpiexIsObjlimExc(lpexact->lpiex) )
+   else if( SCIPlpiExactIsObjlimExc(lpexact->lpiexact) )
    {
       /* CERT: for now we don't trust the exact LP solver on this, so we do not need to print anything here */
       SCIPdebugMessage("   exact LP exceeds upper objective limit\n");
       *result = SCIP_CUTOFF;
    }
-   else if( SCIPlpiexIsPrimalInfeasible(lpexact->lpiex) )
+   else if( SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) )
    {
       SCIPdebugMessage("   exact LP is primal infeasible\n");
       *result = SCIP_CUTOFF;
    }
-   else if( SCIPlpiexExistsPrimalRay(lpexact->lpiex) )
+   else if( SCIPlpiExactExistsPrimalRay(lpexact->lpiexact) )
    {
       /* CERT: for now we don't need to handle the unbounded case */
       SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
       return SCIP_ERROR;
    }
-   else if( SCIPlpiexIsIterlimExc(lpexact->lpiex) )
+   else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
    {
       SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
       return SCIP_ERROR;
    }
-   else if( SCIPlpiexIsTimelimExc(lpexact->lpiex) )
+   else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
    {
       /* CERT: for now we should not activate the buggy time limit support of QSopt_ex */
       SCIPdebugMessage("   exact LP exceeds time limit\n");
@@ -158,7 +158,7 @@ SCIP_RETCODE evaluateLPExact(
    else
    {
       SCIPerrorMessage(" error or unknown return status in current exact LP (internal status: %d)\n",
-         SCIPlpiexGetInternalStatus(lpexact->lpiex));
+         SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
       return SCIP_LPERROR;
    }
 
@@ -211,16 +211,16 @@ SCIP_RETCODE solveLpExact(
 
    /* set the correct basis information for warmstart */
    SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
-   SCIP_CALL( SCIPlpiexSetBase(lpexact->lpiex, cstat, rstat) );
+   SCIP_CALL( SCIPlpiExactSetBase(lpexact->lpiexact, cstat, rstat) );
 
    /* solve the lp exactly */
    switch(lpalgo)
    {
       case SCIP_LPALGO_PRIMALSIMPLEX:
-         retcode = SCIPlpiexSolvePrimal(lpexact->lpiex);
+         retcode = SCIPlpiExactSolvePrimal(lpexact->lpiexact);
          break;
       case SCIP_LPALGO_DUALSIMPLEX:
-         retcode = SCIPlpiexSolveDual(lpexact->lpiex);
+         retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
          break;
       default:
          SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", lpalgo);
@@ -234,34 +234,34 @@ SCIP_RETCODE solveLpExact(
 
    lpexact->solved = TRUE;
 
-   SCIPlpiexGetIterations(lpexact->lpiex, &niterations);
+   SCIPlpiExactGetIterations(lpexact->lpiexact, &niterations);
    if( usefarkas )
       stat->niterationsexlpinf += niterations;
    else
       stat->niterationsexlp += niterations;
 
-   if( SCIPlpiexIsOptimal(lpexact->lpiex) )
+   if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
    {
       /* evaluate solution status and set safe bound correctly */
       SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, &primalfeasible, &dualfeasible) );
 
       assert(primalfeasible && dualfeasible);
 
-      SCIP_CALL( SCIPlpiexGetObjval(lpexact->lpiex, lpexact->lpobjval) );
+      SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, lpexact->lpobjval) );
       SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
             RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
       lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
-   else if( SCIPlpiexIsPrimalUnbounded(lpexact->lpiex) )
+   else if( SCIPlpiExactIsPrimalUnbounded(lpexact->lpiexact) )
    {
       /** @todo exip: where to save the ray? */
       SCIP_CALL( SCIPlpExactGetPrimalRay(lpexact, set, NULL) );
       lp->hasprovedbound = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
    }
-   else if( SCIPlpiexIsPrimalInfeasible(lpexact->lpiex) )
+   else if( SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) )
    {
       SCIP_Bool valid;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
@@ -276,7 +276,7 @@ SCIP_RETCODE solveLpExact(
    else
    {
       lp->hasprovedbound = FALSE;
-      SCIPdebugMessage("Exact lp solve failed. Terminated with status %d \n", SCIPlpiexGetInternalStatus(lpexact->lpiex));
+      SCIPdebugMessage("Exact lp solve failed. Terminated with status %d \n", SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
       if( usefarkas )
          stat->nfailexlpinf++;
       else
@@ -435,7 +435,7 @@ SCIP_RETCODE psChooseS(
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
-      SCIP_CALL( SCIPlpiexGetSol(lpexact->lpiex, NULL, rootprimal, NULL, rootactivity, NULL) );
+      SCIP_CALL( SCIPlpiExactGetSol(lpexact->lpiexact, NULL, rootprimal, NULL, rootactivity, NULL) );
 
       /* determine which dual variables to include in the problem
        * (primal constraints active at optimal solution found at root node)
@@ -645,39 +645,39 @@ SCIP_RETCODE psFactorizeD(
    return SCIP_OKAY;
 }
 
-/** prints error related to the current lpiex status, if there is one */
+/** prints error related to the current lpiexact status, if there is one */
 static
-SCIP_RETCODE printlpiexerr(
-   SCIP_LPIEX*           lpiex              /**< lpiex interface */
+SCIP_RETCODE printlpiexacterr(
+   SCIP_LPIEXACT*        lpiexact              /**< lpiexact interface */
    )
 {
-   if( SCIPlpiexIsOptimal(lpiex) )
+   if( SCIPlpiExactIsOptimal(lpiexact) )
    {
       return SCIP_OKAY;
    }
-   else if( SCIPlpiexIsObjlimExc(lpiex) )
+   else if( SCIPlpiExactIsObjlimExc(lpiexact) )
    {
       SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
    }
-   else if( SCIPlpiexIsPrimalInfeasible(lpiex) )
+   else if( SCIPlpiExactIsPrimalInfeasible(lpiexact) )
    {
       SCIPerrorMessage(" Exact LP infeas.\n");
    }
-   else if( SCIPlpiexExistsPrimalRay(lpiex) )
+   else if( SCIPlpiExactExistsPrimalRay(lpiexact) )
    {
       SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
    }
-   else if( SCIPlpiexIsIterlimExc(lpiex) )
+   else if( SCIPlpiExactIsIterlimExc(lpiexact) )
    {
       SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
    }
-   else if( SCIPlpiexIsTimelimExc(lpiex) )
+   else if( SCIPlpiExactIsTimelimExc(lpiexact) )
    {
       SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
    }
    else
    {
-      SCIPerrorMessage("lpiex not solved, or other error\n");
+      SCIPerrorMessage("lpiexact not solved, or other error\n");
    }
    return SCIP_OKAY;
 }
@@ -1512,8 +1512,8 @@ SCIP_RETCODE psComputeSintPointRay(
    SCIP_Rational* alpha; 
    SCIP_Rational* beta;  
 
-   /* lpiex and data used for the aux. problem */
-   SCIP_LPIEX* pslpiex;
+   /* lpiexact and data used for the aux. problem */
+   SCIP_LPIEXACT* pslpiexact;
    SCIP_LPISTATE* lpistate;
    SCIP_Rational** psobj = NULL;
    SCIP_Rational** pslb = NULL;
@@ -1637,23 +1637,23 @@ SCIP_RETCODE psComputeSintPointRay(
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
       /* build aux LP using the exact LP interface */
-      SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, "pslpiex", SCIP_OBJSEN_MAXIMIZE) );
+      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
 
       /* add all columns to the exact LP */
-      SCIP_CALL( SCIPlpiexAddCols(pslpiex, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
 
       /* add all constraints to the exact LP */
-      SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
+      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
-      SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
+      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
 
       /* recover the optimal solution and set interior point and slack in constraint handler data */
-      if( SCIPlpiexIsOptimal(pslpiex) )
+      if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
          SCIPdebugMessage("   exact LP solved to optimality\n");
          /* get optimal dual solution */
-         SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
          RatSet(psdata->commonslack, sol[psncols - 1]);
          if( RatIsZero(psdata->commonslack) )
@@ -1680,7 +1680,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexerr( pslpiex ) );
+         SCIP_CALL( printlpiexacterr( pslpiexact ) );
       }
    }
    /* use 'a'rbitrary interior point */
@@ -1740,28 +1740,28 @@ SCIP_RETCODE psComputeSintPointRay(
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, nobjnz, findintpoint) );
 
-      SCIPdebugMessage("building LPIEX for aux. problem\n");
+      SCIPdebugMessage("building LPIEXACT for aux. problem\n");
 
       /* build aux LP using the exact LP interface */
-      SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, "lpiexps", SCIP_OBJSEN_MINIMIZE) );
+      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "lpiexactps", SCIP_OBJSEN_MINIMIZE) );
 
       /* add all columns to the exact LP */
-      SCIP_CALL( SCIPlpiexAddCols(pslpiex, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
 
       /* add all constraints to the exact LP */
-      SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnrows, pslhs, psrhs,              /**< right hand sides */
+      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,              /**< right hand sides */
             NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
-      SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
+      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
 
-      if( SCIPlpiexIsOptimal(pslpiex) )
+      if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
          SCIPdebugMessage("   exact LP solved to optimality\n");
 
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
-         SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, NULL, sol, NULL, NULL) );
+         SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, NULL, sol, NULL, NULL) );
          if( !RatIsZero(sol[psnrows - 1]) )
             RatInvert(psdata->commonslack, sol[psnrows - 1]);
          else
@@ -1789,7 +1789,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexerr( pslpiex ) );
+         SCIP_CALL( printlpiexacterr( pslpiexact ) );
       }
    }
    /* use 'A'rbitrary interior point in transposed form*/
@@ -1830,28 +1830,28 @@ SCIP_RETCODE psComputeSintPointRay(
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
-      SCIPdebugMessage("building LPIEX for aux. problem\n");
+      SCIPdebugMessage("building LPIEXACT for aux. problem\n");
 
       /* build aux LP using the exact LP interface */
-      SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, "pslpiex", SCIP_OBJSEN_MINIMIZE) );
+      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MINIMIZE) );
 
       /* add all columns to the exact LP */
-      SCIP_CALL( SCIPlpiexAddCols(pslpiex, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
 
       /* add all constraints to the exact LP */
-      SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnrows, pslhs, psrhs,              /**< right hand sides */
+      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,              /**< right hand sides */
             NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
-      SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
+      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
 
-      if( SCIPlpiexIsOptimal(pslpiex) )
+      if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
          SCIPdebugMessage("   exact LP solved to optimality\n");
 
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
-         SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
          if( !RatIsZero(sol[ndvarmap]) )
             RatInvert(psdata->commonslack, sol[ndvarmap]);
          else
@@ -1897,7 +1897,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
       else
       {
-         printlpiexerr( pslpiex );
+         printlpiexacterr( pslpiexact );
          psdata->psdatafail = TRUE;
       }
    }
@@ -1935,31 +1935,31 @@ SCIP_RETCODE psComputeSintPointRay(
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
       /* build aux LP using the exact LP interface */
-      if( pslpiex != NULL )
+      if( pslpiexact != NULL )
       {
-         SCIP_CALL( SCIPlpiexFree(&pslpiex) );
+         SCIP_CALL( SCIPlpiExactFree(&pslpiexact) );
       }
-      pslpiex = NULL;
-      SCIP_CALL( SCIPlpiexCreate(&pslpiex, NULL, "pslpiex", SCIP_OBJSEN_MAXIMIZE) );
+      pslpiexact = NULL;
+      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
 
 #ifdef PS_OUT
       /* activate extra output from exact LP solver */
-      SCIPlpiexSetIntpar(pslpiex, SCIP_LPPAR_LPINFO, TRUE);
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, TRUE);
 #endif
 
       /* add all columns to the exact LP */
-      SCIP_CALL( SCIPlpiexAddCols(pslpiex, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
 
       /* add all constraints to the exact LP */
-      SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnrows, pslhs, psrhs,              /**< right hand sides */
+      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,              /**< right hand sides */
             NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
-      SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
+      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
 
-      /* get state and solution of lpiex that was just solved */
-      SCIP_CALL( SCIPlpiexGetState(pslpiex, blkmem, &lpistate) );
-      SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, NULL, NULL, NULL, NULL) );
+      /* get state and solution of lpiexact that was just solved */
+      SCIP_CALL( SCIPlpiExactGetState(pslpiexact, blkmem, &lpistate) );
+      SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, NULL, NULL, NULL, NULL) );
 
       /* now reset the objective value to be the original objective */
       pos = 0;
@@ -2004,23 +2004,23 @@ SCIP_RETCODE psComputeSintPointRay(
       /* reuse the psind array to pass indices to updated the bounds and objective */
       for( i = 0; i < psncols; i++ )
          psind[i] = i;
-      SCIP_CALL( SCIPlpiexChgBounds(pslpiex, psncols, psind, pslb, NULL) );
-      SCIP_CALL( SCIPlpiexChgObj(pslpiex, psncols, psind, psobj) );
+      SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, psncols, psind, pslb, NULL) );
+      SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, psncols, psind, psobj) );
 
       /* reload state and solve new LP */
-      SCIP_CALL( SCIPlpiexSetState(pslpiex, blkmem, lpistate) );
+      SCIP_CALL( SCIPlpiExactSetState(pslpiexact, blkmem, lpistate) );
 
       /* reoptimizing using primal simplex seems MUCH faster here, warm start basis is primal feasible */
-      SCIP_CALL( SCIPlpiexSolvePrimal(pslpiex) );
-      SCIP_CALL( SCIPlpiexFreeState(pslpiex, blkmem, &lpistate) );
+      SCIP_CALL( SCIPlpiExactSolvePrimal(pslpiexact) );
+      SCIP_CALL( SCIPlpiExactFreeState(pslpiexact, blkmem, &lpistate) );
 
         /* recover the optimal solution and set interior point and slack in constraint handler data */
-      if( SCIPlpiexIsOptimal(pslpiex) )
+      if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
          SCIPdebugMessage("   exact LP solved to optimality\n");
 
          /* get optimal dual solution */
-         SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
          /* assign interior point solution to constraint handler data */
          RatSet(psdata->commonslack, sol[psncols - 1]);
@@ -2039,7 +2039,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexerr(pslpiex) );
+         SCIP_CALL( printlpiexacterr(pslpiexact) );
       }
    }
    else
@@ -2058,19 +2058,19 @@ SCIP_RETCODE psComputeSintPointRay(
    }
 
    /* free memory */
-   if( pslpiex != NULL )
+   if( pslpiexact != NULL )
    {
       int nlpirows, nlpicols;
-      SCIP_CALL( SCIPlpiexGetNRows(pslpiex, &nlpirows) );
-      SCIP_CALL( SCIPlpiexDelRows(pslpiex, 0, nlpirows - 1) );
+      SCIP_CALL( SCIPlpiExactGetNRows(pslpiexact, &nlpirows) );
+      SCIP_CALL( SCIPlpiExactDelRows(pslpiexact, 0, nlpirows - 1) );
 
-      SCIP_CALL( SCIPlpiexGetNCols(pslpiex, &nlpicols) );
-      SCIP_CALL( SCIPlpiexDelCols(pslpiex, 0, nlpicols - 1) );
+      SCIP_CALL( SCIPlpiExactGetNCols(pslpiexact, &nlpicols) );
+      SCIP_CALL( SCIPlpiExactDelCols(pslpiexact, 0, nlpicols - 1) );
 
-      SCIP_CALL( SCIPlpiexClear(pslpiex) );
-      SCIP_CALL( SCIPlpiexFree(&pslpiex) );
+      SCIP_CALL( SCIPlpiExactClear(pslpiexact) );
+      SCIP_CALL( SCIPlpiExactFree(&pslpiexact) );
    }
-   assert(pslpiex == NULL);
+   assert(pslpiexact == NULL);
    for( i = psncols - 1; i >= 0; i--)
       SCIPsetFreeBufferArray(set, &colnames[i] );
    SCIPsetFreeBufferArray(set, &colnames);

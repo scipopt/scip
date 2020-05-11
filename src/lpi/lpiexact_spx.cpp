@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpiex_spx.cpp
+/**@file   lpiexact_spx.cpp
  * @ingroup LPIS
  * @brief  LP interface for SoPlex version 2.0 and higher
  * @author Leon Eifler
@@ -28,8 +28,8 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
-#include "lpi/type_lpiex.h"
-#include "lpi/lpiex.h"
+#include "lpi/type_lpiexact.h"
+#include "lpi/lpiexact.h"
 #include "scip/rational.h"
 #include "scip/config.h"
 
@@ -179,16 +179,16 @@ using namespace soplex;
 
 /* Set the value of a SCIP_Rational* from a SoPlex Rational */
 static void RsetSpxR(
-      SCIP_LPIEX*    lpi,
+      SCIP_LPIEXACT* lpi,
       SCIP_Rational* r,
       Rational       spxr
    )
 {
-   if( SCIPlpiexIsInfinity(lpi, double(spxr)) )
+   if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
    {
       RatSetString(r, "inf");
    }
-   else if( SCIPlpiexIsInfinity(lpi, -double(spxr)) )
+   else if( SCIPlpiExactIsInfinity(lpi, -double(spxr)) )
    {
       RatSetString(r, "-inf");
    }
@@ -203,7 +203,7 @@ static void RsetSpxR(
 }
 
 static void RsetSpxVector(
-   SCIP_LPIEX*     lpi,
+   SCIP_LPIEXACT*  lpi,
    SCIP_Rational** r,
    VectorRational  src
    )
@@ -218,7 +218,7 @@ static void RsetSpxVector(
 
 /** @todo exip: there seems to be something wrong with the = of spx rational */
 static void SpxRSetRat(
-   SCIP_LPIEX*       lpi,
+   SCIP_LPIEXACT*    lpi,
    Rational          spxr,
    SCIP_Rational*    src
 )
@@ -226,9 +226,9 @@ static void SpxRSetRat(
    if( RatIsAbsInfinity(src) )
    {
       if( RatIsPositive(src) )
-         spxr = SCIPlpiexInfinity(lpi);
+         spxr = SCIPlpiExactInfinity(lpi);
       else
-         spxr = -SCIPlpiexInfinity(lpi);
+         spxr = -SCIPlpiExactInfinity(lpi);
    }
    else
    {
@@ -525,7 +525,7 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-#include "lpi/lpiex.h"
+#include "lpi/lpiexact.h"
 #include "scip/bitencode.h"
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -536,7 +536,7 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 
 /** LP interface */
-struct SCIP_LPiEx
+struct SCIP_LPiExact
 {
    SPxexSCIP*            spx;                /**< our SoPlex implementation */
    int*                  cstat;              /**< array for storing column basis status */
@@ -576,7 +576,7 @@ struct SCIP_LPiNorms
 /** resizes cstat array to have at least num entries */
 static
 SCIP_RETCODE ensureCstatMem(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   num                 /**< minimal number of entries in array */
    )
 {
@@ -598,7 +598,7 @@ SCIP_RETCODE ensureCstatMem(
 /** resizes rstat array to have at least num entries */
 static
 SCIP_RETCODE ensureRstatMem(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   num                 /**< minimal number of entries in array */
    )
 {
@@ -727,7 +727,7 @@ void lpistateFree(
 
 /** marks the current LP to be unsolved */
 static
-void invalidateSolution(SCIP_LPIEX* lpi)
+void invalidateSolution(SCIP_LPIEXACT* lpi)
 {
    assert(lpi != NULL);
    lpi->solved = FALSE;
@@ -751,11 +751,11 @@ static char spxdesc[200];
 /**@{ */
 
 /** gets name and version of LP solver */
-const char* SCIPlpiexGetSolverName(
+const char* SCIPlpiExactGetSolverName(
    void
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetSolverName()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
    snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
@@ -766,7 +766,7 @@ const char* SCIPlpiexGetSolverName(
 }
 
 /** gets description of LP solver (developer, webpage, ...) */
-const char* SCIPlpiexGetSolverDesc(
+const char* SCIPlpiExactGetSolverDesc(
    void
    )
 {
@@ -776,16 +776,16 @@ const char* SCIPlpiexGetSolverDesc(
 }
 
 /** gets pointer for LP solver - use only with great care */
-void* SCIPlpiexGetSolverPointer(
-   SCIP_LPIEX*           lpi                 /**< pointer to an LP interface structure */
+void* SCIPlpiExactGetSolverPointer(
+   SCIP_LPIEXACT*        lpi                 /**< pointer to an LP interface structure */
    )
 {
    return (void*) lpi->spx;
 }
 
 /** pass integrality information about variables to the solver */
-SCIP_RETCODE SCIPlpiexSetIntegralityInformation(
-   SCIP_LPIEX*           lpi,                /**< pointer to an LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetIntegralityInformation(
+   SCIP_LPIEXACT*        lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
@@ -796,7 +796,7 @@ SCIP_RETCODE SCIPlpiexSetIntegralityInformation(
 }
 
 /** informs about availability of a primal simplex solving method */
-SCIP_Bool SCIPlpiexHasPrimalSolve(
+SCIP_Bool SCIPlpiExactHasPrimalSolve(
    void
    )
 {
@@ -804,7 +804,7 @@ SCIP_Bool SCIPlpiexHasPrimalSolve(
 }
 
 /** informs about availability of a dual simplex solving method */
-SCIP_Bool SCIPlpiexHasDualSolve(
+SCIP_Bool SCIPlpiExactHasDualSolve(
    void
    )
 {
@@ -812,7 +812,7 @@ SCIP_Bool SCIPlpiexHasDualSolve(
 }
 
 /** informs about availability of a barrier solving method */
-SCIP_Bool SCIPlpiexHasBarrierSolve(
+SCIP_Bool SCIPlpiExactHasBarrierSolve(
    void
    )
 {
@@ -830,8 +830,8 @@ SCIP_Bool SCIPlpiexHasBarrierSolve(
 /**@{ */
 
 /** creates an LP problem object */
-SCIP_RETCODE SCIPlpiexCreate(
-   SCIP_LPIEX**          lpi,                /**< pointer to an LP interface structure */
+SCIP_RETCODE SCIPlpiExactCreate(
+   SCIP_LPIEXACT**       lpi,                /**< pointer to an LP interface structure */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
@@ -864,10 +864,10 @@ SCIP_RETCODE SCIPlpiexCreate(
    invalidateSolution(*lpi);
 
    /* set objective sense */
-   SCIP_CALL( SCIPlpiexChgObjsen(*lpi, objsen) );
+   SCIP_CALL( SCIPlpiExactChgObjsen(*lpi, objsen) );
 
    /* set default pricing */
-   SCIP_CALL( SCIPlpiexSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
+   SCIP_CALL( SCIPlpiExactSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    {
       SPxOut::Verbosity verbosity = (*lpi)->spx->spxout.getVerbosity();
@@ -880,8 +880,8 @@ SCIP_RETCODE SCIPlpiexCreate(
 }
 
 /** deletes an LP problem object */
-SCIP_RETCODE SCIPlpiexFree(
-   SCIP_LPIEX**          lpi                 /**< pointer to an LP interface structure */
+SCIP_RETCODE SCIPlpiExactFree(
+   SCIP_LPIEXACT**       lpi                 /**< pointer to an LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -911,8 +911,8 @@ SCIP_RETCODE SCIPlpiexFree(
 /**@{ */
 
 /** copies LP data with column matrix into LP solver */
-SCIP_RETCODE SCIPlpiexLoadColLP(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactLoadColLP(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   ncols,              /**< number of columns */
    SCIP_Rational**       obj,                /**< objective function values of columns */
@@ -940,7 +940,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
    }
 #endif
 
-   SCIPdebugMessage("calling SCIPlpiexLoadColLP()\n");
+   SCIPdebugMessage("calling SCIPlpiExactLoadColLP()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
       spx->addRowsRational(rows);
 
       /* create column vectors with coefficients and bounds */
-      SCIP_CALL( SCIPlpiexAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+      SCIP_CALL( SCIPlpiExactAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
       //spx->syncLPReal();
    }
 #ifndef NDEBUG
@@ -1000,8 +1000,8 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
 }
 
 /** adds columns to the LP */
-SCIP_RETCODE SCIPlpiexAddCols(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactAddCols(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to be added */
    SCIP_Rational**       obj,                /**< objective function values of new columns */
    SCIP_Rational**       lb,                 /**< lower bounds of new columns */
@@ -1092,8 +1092,8 @@ SCIP_RETCODE SCIPlpiexAddCols(
 }
 
 /** deletes all columns in the given range from LP */
-SCIP_RETCODE SCIPlpiexDelCols(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactDelCols(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to be deleted */
    int                   lastcol             /**< last column to be deleted */
    )
@@ -1115,7 +1115,7 @@ SCIP_RETCODE SCIPlpiexDelCols(
 
 /** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
 SCIP_RETCODE SCIPlpiDelColset(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  dstat               /**< deletion status of columns
                                               *   input:  1 if column should be deleted, 0 if not
                                               *   output: new position of column, -1 if column was deleted */
@@ -1146,8 +1146,8 @@ SCIP_RETCODE SCIPlpiDelColset(
 }
 
 /** adds rows to the LP */
-SCIP_RETCODE SCIPlpiexAddRows(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactAddRows(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to be added */
    SCIP_Rational**       lhs,                /**< left hand sides of new rows */
    SCIP_Rational**       rhs,                /**< right hand sides of new rows */
@@ -1232,8 +1232,8 @@ SCIP_RETCODE SCIPlpiexAddRows(
 }
 
 /** deletes all rows in the given range from LP */
-SCIP_RETCODE SCIPlpiexDelRows(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactDelRows(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to be deleted */
    int                   lastrow             /**< last row to be deleted */
    )
@@ -1254,8 +1254,8 @@ SCIP_RETCODE SCIPlpiexDelRows(
 }
 
 /** deletes rows from SCIP_LP; the new position of a row must not be greater that its old position */
-SCIP_RETCODE SCIPlpiexDelRowset(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactDelRowset(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  dstat               /**< deletion status of rows
                                               *   input:  1 if row should be deleted, 0 if not
                                               *   output: new position of row, -1 if row was deleted */
@@ -1285,11 +1285,11 @@ SCIP_RETCODE SCIPlpiexDelRowset(
 }
 
 /** clears the whole LP */
-SCIP_RETCODE SCIPlpiexClear(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactClear(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexClear()\n");
+   SCIPdebugMessage("calling SCIPlpiExactClear()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1303,8 +1303,8 @@ SCIP_RETCODE SCIPlpiexClear(
 }
 
 /** changes lower and upper bounds of columns */
-SCIP_RETCODE SCIPlpiexChgBounds(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactChgBounds(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
    int*                  ind,                /**< column indices or NULL if ncols is zero */
    SCIP_Rational**       lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
@@ -1363,8 +1363,8 @@ SCIP_RETCODE SCIPlpiexChgBounds(
 }
 
 /** changes left and right hand sides of rows */
-SCIP_RETCODE SCIPlpiexChgSides(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactChgSides(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to change sides for */
    int*                  ind,                /**< row indices */
    SCIP_Rational**       lhs,                /**< new values for left hand sides */
@@ -1412,8 +1412,8 @@ SCIP_RETCODE SCIPlpiexChgSides(
 }
 
 /** changes a single coefficient */
-SCIP_RETCODE SCIPlpiexChgCoef(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactChgCoef(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient to change */
    int                   col,                /**< column number of coefficient to change */
    SCIP_Rational*        newval              /**< new value of coefficient */
@@ -1436,8 +1436,8 @@ SCIP_RETCODE SCIPlpiexChgCoef(
 }
 
 /** changes the objective sense */
-SCIP_RETCODE SCIPlpiexChgObjsen(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactChgObjsen(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
@@ -1456,8 +1456,8 @@ SCIP_RETCODE SCIPlpiexChgObjsen(
 }
 
 /** changes objective values of columns in the LP */
-SCIP_RETCODE SCIPlpiexChgObj(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactChgObj(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
    int*                  ind,                /**< column indices to change objective value for */
    SCIP_Rational**       obj                 /**< new objective values for columns */
@@ -1502,8 +1502,8 @@ SCIP_RETCODE SCIPlpiexChgObj(
 
 #if 0
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
-SCIP_RETCODE SCIPlpiexScaleRow(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactScaleRow(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number to scale */
    SCIP_Rational*        scaleval            /**< scaling multiplier */
    )
@@ -1577,7 +1577,7 @@ SCIP_RETCODE SCIPlpiexScaleRow(
  *  are divided by the scalar; for negative scalars, the column's bounds are switched
  */
 SCIP_RETCODE SCIPlpiScaleCol(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column number to scale */
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
@@ -1664,12 +1664,12 @@ SCIP_RETCODE SCIPlpiScaleCol(
 /**@{ */
 
 /** gets the number of rows in the LP */
-SCIP_RETCODE SCIPlpiexGetNRows(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetNRows(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  nrows               /**< pointer to store the number of rows */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetNRows()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetNRows()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1681,12 +1681,12 @@ SCIP_RETCODE SCIPlpiexGetNRows(
 }
 
 /** gets the number of columns in the LP */
-SCIP_RETCODE SCIPlpiexGetNCols(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetNCols(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  ncols               /**< pointer to store the number of cols */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetNCols()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetNCols()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1698,14 +1698,14 @@ SCIP_RETCODE SCIPlpiexGetNCols(
 }
 
 /** gets the number of nonzero elements in the LP constraint matrix */
-SCIP_RETCODE SCIPlpiexGetNNonz(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetNNonz(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  nnonz               /**< pointer to store the number of nonzeros */
    )
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexGetNNonz()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetNNonz()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1731,8 +1731,8 @@ SCIP_RETCODE SCIPlpiexGetNNonz(
  *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
  *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
  */
-SCIP_RETCODE SCIPlpiexGetCols(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetCols(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get from LP */
    int                   lastcol,            /**< last column to get from LP */
    SCIP_Rational**       lb,                 /**< buffer to store the lower bound vector, or NULL */
@@ -1746,7 +1746,7 @@ SCIP_RETCODE SCIPlpiexGetCols(
    int i;
    int j;
 
-   SCIPdebugMessage("calling SCIPlpiexGetCols()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetCols()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1811,8 +1811,8 @@ SCIP_RETCODE SCIPlpiexGetCols(
  *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
  *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
  */
-SCIP_RETCODE SCIPlpiexGetRows(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetRows(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
    SCIP_Rational**       lhs,                /**< buffer to store left hand side vector, or NULL */
@@ -1826,7 +1826,7 @@ SCIP_RETCODE SCIPlpiexGetRows(
    int i;
    int j;
 
-   SCIPdebugMessage("calling SCIPlpiexGetRows()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetRows()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1880,8 +1880,8 @@ SCIP_RETCODE SCIPlpiexGetRows(
 }
 
 /** gets column names */
-SCIP_RETCODE SCIPlpiexGetColNames(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetColNames(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
    char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
@@ -1906,8 +1906,8 @@ SCIP_RETCODE SCIPlpiexGetColNames(
 }
 
 /** gets row names */
-SCIP_RETCODE SCIPlpiexGetRowNames(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetRowNames(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
    char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
@@ -1932,12 +1932,12 @@ SCIP_RETCODE SCIPlpiexGetRowNames(
 }
 
 /** gets objective sense of the LP */
-SCIP_RETCODE SCIPlpiexGetObjsen(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetObjsen(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetObjsen()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetObjsen()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1949,8 +1949,8 @@ SCIP_RETCODE SCIPlpiexGetObjsen(
 }
 
 /** gets objective coefficients from LP problem object */
-SCIP_RETCODE SCIPlpiexGetObj(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetObj(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective coefficient for */
    int                   lastcol,            /**< last column to get objective coefficient for */
    SCIP_Rational**       vals                /**< array to store objective coefficients */
@@ -1958,7 +1958,7 @@ SCIP_RETCODE SCIPlpiexGetObj(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexGetObj()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetObj()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1975,8 +1975,8 @@ SCIP_RETCODE SCIPlpiexGetObj(
 }
 
 /** gets current bounds from LP problem object */
-SCIP_RETCODE SCIPlpiexGetBounds(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBounds(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective value for */
    int                   lastcol,            /**< last column to get objective value for */
    SCIP_Rational**       lbs,                /**< array to store lower bound values, or NULL */
@@ -1985,7 +1985,7 @@ SCIP_RETCODE SCIPlpiexGetBounds(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexGetBounds()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBounds()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2009,8 +2009,8 @@ SCIP_RETCODE SCIPlpiexGetBounds(
 }
 
 /** gets current row sides from LP problem object */
-SCIP_RETCODE SCIPlpiexGetSides(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetSides(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get sides for */
    int                   lastrow,            /**< last row to get sides for */
    SCIP_Rational**       lhss,               /**< array to store left hand side values, or NULL */
@@ -2019,7 +2019,7 @@ SCIP_RETCODE SCIPlpiexGetSides(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexGetSides()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetSides()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2043,14 +2043,14 @@ SCIP_RETCODE SCIPlpiexGetSides(
 }
 
 /** gets a single coefficient */
-SCIP_RETCODE SCIPlpiexGetCoef(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetCoef(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient */
    int                   col,                /**< column number of coefficient */
    SCIP_Rational*        val                 /**< pointer to store the value of the coefficient */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetCoef()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetCoef()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2075,7 +2075,7 @@ SCIP_RETCODE SCIPlpiexGetCoef(
 /** solves LP -- used for both, primal and dual simplex, because SoPlex doesn't distinct the two cases */
 static
 SCIP_RETCODE spxSolve(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    assert( lpi != NULL );
@@ -2146,8 +2146,8 @@ SCIP_RETCODE spxSolve(
 }
 
 /** calls primal simplex to solve the LP */
-SCIP_RETCODE SCIPlpiexSolvePrimal(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSolvePrimal(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiSolvePrimal()\n");
@@ -2160,8 +2160,8 @@ SCIP_RETCODE SCIPlpiexSolvePrimal(
 }
 
 /** calls dual simplex to solve the LP */
-SCIP_RETCODE SCIPlpiexSolveDual(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSolveDual(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiSolveDual()\n");
@@ -2174,8 +2174,8 @@ SCIP_RETCODE SCIPlpiexSolveDual(
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
-SCIP_RETCODE SCIPlpiexSolveBarrier(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSolveBarrier(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Bool             crossover           /**< perform crossover */
    )
 {  /*lint --e{715}*/
@@ -2185,12 +2185,12 @@ SCIP_RETCODE SCIPlpiexSolveBarrier(
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
 
    /* Since SoPlex does not support barrier we switch to DUAL */
-   return SCIPlpiexSolveDual(lpi);
+   return SCIPlpiExactSolveDual(lpi);
 }
 
 /** start strong branching - call before any strongbranching */
-SCIP_RETCODE SCIPlpiexStartStrongbranch(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactStartStrongbranch(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -2203,8 +2203,8 @@ SCIP_RETCODE SCIPlpiexStartStrongbranch(
 }
 
 /** end strong branching - call after any strongbranching */
-SCIP_RETCODE SCIPlpiexEndStrongbranch(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactEndStrongbranch(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -2220,8 +2220,8 @@ SCIP_RETCODE SCIPlpiexEndStrongbranch(
 #if 0
 /** performs strong branching iterations on one arbitrary candidate */
 static
-SCIP_RETCODE lpiexStrongbranch(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE lpiExactStrongbranch(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
@@ -2486,7 +2486,7 @@ SCIP_RETCODE lpiexStrongbranch(
 
 /** performs strong branching iterations on one @b fractional candidate */
 SCIP_RETCODE SCIPlpiStrongbranchFrac(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< fractional current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
@@ -2516,7 +2516,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
 /** performs strong branching iterations on given @b fractional candidates */
 SCIP_RETCODE SCIPlpiStrongbranchesFrac(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  cols,               /**< columns to apply strong branching on */
    int                   ncols,              /**< number of columns */
    SCIP_Rational**       psols,              /**< fractional current primal solution values of columns */
@@ -2560,7 +2560,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 
 /** performs strong branching iterations on one candidate with @b integral value */
 SCIP_RETCODE SCIPlpiStrongbranchInt(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current integral primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
@@ -2590,7 +2590,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
 /** performs strong branching iterations on given candidates with @b integral values */
 SCIP_RETCODE SCIPlpiStrongbranchesInt(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  cols,               /**< columns to apply strong branching on */
    int                   ncols,              /**< number of columns */
    SCIP_Rational**       psols,              /**< current integral primal solution values of columns */
@@ -2644,8 +2644,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 /**@{ */
 
 /** returns whether a solve method was called after the last modification of the LP */
-SCIP_Bool SCIPlpiexWasSolved(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactWasSolved(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -2663,20 +2663,20 @@ SCIP_Bool SCIPlpiexWasSolved(
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
  */
-SCIP_RETCODE SCIPlpiexGetSolFeasibility(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetSolFeasibility(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
    SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetSolFeasibility()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetSolFeasibility()\n");
 
    assert(lpi != NULL);
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
-   *primalfeasible = SCIPlpiexIsPrimalFeasible(lpi);
-   *dualfeasible = SCIPlpiexIsDualFeasible(lpi);
+   *primalfeasible = SCIPlpiExactIsPrimalFeasible(lpi);
+   *dualfeasible = SCIPlpiExactIsDualFeasible(lpi);
 
    return SCIP_OKAY;
 }
@@ -2684,11 +2684,11 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
  *  this does not necessarily mean, that the solver knows and can return the primal ray
  */
-SCIP_Bool SCIPlpiexExistsPrimalRay(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactExistsPrimalRay(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiExistsPrimalRay()\n");
+   SCIPdebugMessage("calling SCIPlpiExactExistsPrimalRay()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2699,8 +2699,8 @@ SCIP_Bool SCIPlpiexExistsPrimalRay(
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
  *  and the solver knows and can return the primal ray
  */
-SCIP_Bool SCIPlpiexHasPrimalRay(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactHasPrimalRay(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiHasPrimalRay()\n");
@@ -2712,8 +2712,8 @@ SCIP_Bool SCIPlpiexHasPrimalRay(
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
-SCIP_Bool SCIPlpiexIsPrimalUnbounded(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsPrimalUnbounded(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsPrimalUnbounded()\n");
@@ -2730,8 +2730,8 @@ SCIP_Bool SCIPlpiexIsPrimalUnbounded(
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
-SCIP_Bool SCIPlpiexIsPrimalInfeasible(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsPrimalInfeasible(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsPrimalInfeasible()\n");
@@ -2743,8 +2743,8 @@ SCIP_Bool SCIPlpiexIsPrimalInfeasible(
 }
 
 /** returns TRUE iff LP is proven to be primal feasible */
-SCIP_Bool SCIPlpiexIsPrimalFeasible(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsPrimalFeasible(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SPxBasis::SPxStatus basestatus;
@@ -2767,11 +2767,11 @@ SCIP_Bool SCIPlpiexIsPrimalFeasible(
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
  *  this does not necessarily mean, that the solver knows and can return the dual ray
  */
-SCIP_Bool SCIPlpiexExistsDualRay(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactExistsDualRay(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiExistsDualRay()\n");
+   SCIPdebugMessage("calling SCIPlpiExactExistsDualRay()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2782,8 +2782,8 @@ SCIP_Bool SCIPlpiexExistsDualRay(
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
  *  and the solver knows and can return the dual ray
  */
-SCIP_Bool SCIPlpiexHasDualRay(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactHasDualRay(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiHasDualRay()\n");
@@ -2795,8 +2795,8 @@ SCIP_Bool SCIPlpiexHasDualRay(
 }
 
 /** returns TRUE iff LP is dual unbounded */
-SCIP_Bool SCIPlpiexIsDualUnbounded(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsDualUnbounded(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsDualUnbounded()\n");
@@ -2808,8 +2808,8 @@ SCIP_Bool SCIPlpiexIsDualUnbounded(
 }
 
 /** returns TRUE iff LP is dual infeasible */
-SCIP_Bool SCIPlpiexIsDualInfeasible(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsDualInfeasible(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsDualInfeasible()\n");
@@ -2821,8 +2821,8 @@ SCIP_Bool SCIPlpiexIsDualInfeasible(
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
-SCIP_Bool SCIPlpiexIsDualFeasible(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsDualFeasible(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
@@ -2839,8 +2839,8 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
 }
 
 /** returns TRUE iff LP was solved to optimality */
-SCIP_Bool SCIPlpiexIsOptimal(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsOptimal(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
@@ -2848,7 +2848,7 @@ SCIP_Bool SCIPlpiexIsOptimal(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
-      == (SCIPlpiexIsPrimalFeasible(lpi) && SCIPlpiexIsDualFeasible(lpi)));
+      == (SCIPlpiExactIsPrimalFeasible(lpi) && SCIPlpiExactIsDualFeasible(lpi)));
 
    /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
     * still return true as long as perturbation plus violation is within tolerances
@@ -2864,8 +2864,8 @@ SCIP_Bool SCIPlpiexIsOptimal(
  *  SCIPlpiIsStable() should return false.
  */
 #if 0
-SCIP_Bool SCIPlpiexIsStable(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsStable(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsStable()\n");
@@ -2882,12 +2882,12 @@ SCIP_Bool SCIPlpiexIsStable(
    /* only if we have a regular basis and the condition limit is set, we compute the condition number of the basis;
     * everything above the specified threshold is then counted as instable
     */
-   if( lpi->checkcondition && (SCIPlpiexIsOptimal(lpi) || SCIPlpiexIsObjlimExc(lpi)) )
+   if( lpi->checkcondition && (SCIPlpiExactIsOptimal(lpi) || SCIPlpiExactIsObjlimExc(lpi)) )
    {
       SCIP_RETCODE retcode;
       SCIP_Real kappa;
 
-      retcode = SCIPlpiexGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      retcode = SCIPlpiExactGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
       if( retcode != SCIP_OKAY )
       {
          SCIPABORT();
@@ -2902,8 +2902,8 @@ SCIP_Bool SCIPlpiexIsStable(
 #endif
 
 /** returns TRUE iff the objective limit was reached */
-SCIP_Bool SCIPlpiexIsObjlimExc(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsObjlimExc(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsObjlimExc()\n");
@@ -2915,8 +2915,8 @@ SCIP_Bool SCIPlpiexIsObjlimExc(
 }
 
 /** returns TRUE iff the iteration limit was reached */
-SCIP_Bool SCIPlpiexIsIterlimExc(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsIterlimExc(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsIterlimExc()\n");
@@ -2928,8 +2928,8 @@ SCIP_Bool SCIPlpiexIsIterlimExc(
 }
 
 /** returns TRUE iff the time limit was reached */
-SCIP_Bool SCIPlpiexIsTimelimExc(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsTimelimExc(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
@@ -2941,11 +2941,11 @@ SCIP_Bool SCIPlpiexIsTimelimExc(
 }
 
 /** returns the internal solution status of the solver */
-int SCIPlpiexGetInternalStatus(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+int SCIPlpiExactGetInternalStatus(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetInternalStatus()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetInternalStatus()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2954,8 +2954,8 @@ int SCIPlpiexGetInternalStatus(
 }
 
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
-SCIP_RETCODE SCIPlpiexIgnoreInstability(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactIgnoreInstability(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Bool*            success             /**< pointer to store, whether the instability could be ignored */
    )
 {  /*lint --e{715}*/
@@ -2975,12 +2975,12 @@ SCIP_RETCODE SCIPlpiexIgnoreInstability(
 }
 
 /** gets objective value of solution */
-SCIP_RETCODE SCIPlpiexGetObjval(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetObjval(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Rational*        objval              /**< stores the objective value */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetObjval()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetObjval()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -2997,8 +2997,8 @@ SCIP_RETCODE SCIPlpiexGetObjval(
  *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
  *  SCIPlpiIsOptimal() returns true.
  */
-SCIP_RETCODE SCIPlpiexGetSol(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetSol(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Rational*        objval,             /**< stores the objective value, may be NULL if not needed */
    SCIP_Rational**       primsol,            /**< primal solution vector, may be NULL if not needed */
    SCIP_Rational**       dualsol,            /**< dual solution vector, may be NULL if not needed */
@@ -3007,7 +3007,7 @@ SCIP_RETCODE SCIPlpiexGetSol(
    )
 {
    DVectorRational* tmpvec;
-   SCIPdebugMessage("calling SCIPlpiexGetSol()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetSol()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3064,13 +3064,13 @@ SCIP_RETCODE SCIPlpiexGetSol(
 
 
 /** gets primal ray for unbounded LPs */
-SCIP_RETCODE SCIPlpiexGetPrimalRay(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetPrimalRay(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Rational**       ray                 /**< primal ray */
    )
 {  /*lint --e{715}*/
    DVectorRational* tmpvec;
-   SCIPdebugMessage("calling SCIPlpiexGetPrimalRay()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetPrimalRay()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3103,13 +3103,13 @@ SCIP_RETCODE SCIPlpiexGetPrimalRay(
 }
 
 /** gets dual farkas proof for infeasibility */
-SCIP_RETCODE SCIPlpiexGetDualfarkas(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetDualfarkas(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Rational**       dualfarkas          /**< dual farkas row multipliers */
    )
 {
    DVectorRational* tmpvec;
-   SCIPdebugMessage("calling SCIPlpiexGetDualfarkas()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetDualfarkas()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3141,12 +3141,12 @@ SCIP_RETCODE SCIPlpiexGetDualfarkas(
 }
 
 /** gets the number of LP iterations of the last solve call */
-SCIP_RETCODE SCIPlpiexGetIterations(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetIterations(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetIterations()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetIterations()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3163,13 +3163,13 @@ SCIP_RETCODE SCIPlpiexGetIterations(
  *  Such information is usually only available, if also a (maybe not optimal) solution is available.
  *  The LPI should return SCIP_INVALID for @p quality, if the requested quantity is not available.
  */
-SCIP_RETCODE SCIPlpiexGetRealSolQuality(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetRealSolQuality(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Rational**       quality             /**< pointer to store quality number */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetRealSolQuality()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetRealSolQuality()\n");
 
    assert(lpi != NULL);
    assert(quality != NULL);
@@ -3214,15 +3214,15 @@ SCIP_RETCODE SCIPlpiexGetRealSolQuality(
 
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
-SCIP_RETCODE SCIPlpiexGetBase(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBase(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  cstat,              /**< array to store column basis status, or NULL */
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexGetBase()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3303,8 +3303,8 @@ SCIP_RETCODE SCIPlpiexGetBase(
 }
 
 /** sets current basis status for columns and rows */
-SCIP_RETCODE SCIPlpiexSetBase(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetBase(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  cstat,              /**< array with column basis status */
    int*                  rstat               /**< array with row basis status */
    )
@@ -3313,13 +3313,13 @@ SCIP_RETCODE SCIPlpiexSetBase(
    int ncols;
    int nrows;
 
-   SCIPdebugMessage("calling SCIPlpiexSetBase()\n");
+   SCIPdebugMessage("calling SCIPlpiExactSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   SCIP_CALL( SCIPlpiexGetNRows(lpi, &nrows) );
-   SCIP_CALL( SCIPlpiexGetNCols(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiExactGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiExactGetNCols(lpi, &ncols) );
 
    assert(cstat != NULL || ncols == 0);
    assert(rstat != NULL || nrows == 0);
@@ -3386,12 +3386,12 @@ SCIP_RETCODE SCIPlpiexSetBase(
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-SCIP_RETCODE SCIPlpiexGetBasisInd(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBasisInd(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetBasisInd()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBasisInd()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3410,8 +3410,8 @@ SCIP_RETCODE SCIPlpiexGetBasisInd(
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
  */
-SCIP_RETCODE SCIPlpiexGetBInvRow(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBInvRow(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    SCIP_Rational**       coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
@@ -3421,7 +3421,7 @@ SCIP_RETCODE SCIPlpiexGetBInvRow(
 {
    int i;
    SSVectorBase<Rational> tmpvec(0);
-   SCIPdebugMessage("calling SCIPlpiexGetBInvRow()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBInvRow()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3451,10 +3451,10 @@ SCIP_RETCODE SCIPlpiexGetBInvRow(
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
  */
-SCIP_RETCODE SCIPlpiexGetBInvCol(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBInvCol(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
-                                              *   you have to call SCIPlpiexGetBasisInd() to get the array which links the
+                                              *   you have to call SCIPlpiExactGetBasisInd() to get the array which links the
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
@@ -3467,7 +3467,7 @@ SCIP_RETCODE SCIPlpiexGetBInvCol(
    int i;
    SSVectorRational tmpvec(0);
 
-   SCIPdebugMessage("calling SCIPlpiexGetBInvCol()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBInvCol()\n");
 
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
@@ -3496,10 +3496,10 @@ SCIP_RETCODE SCIPlpiexGetBInvCol(
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
  */
-SCIP_RETCODE SCIPlpiexGetBInvARow(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBInvARow(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Rational**       binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiexGetBInvRow(), or NULL */
+   SCIP_Rational**       binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiExactGetBInvRow(), or NULL */
    SCIP_Rational**       coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
@@ -3512,7 +3512,7 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
    int ncols;
    int c;
 
-   SCIPdebugMessage("calling SCIPlpiexGetBInvARow()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBInvARow()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3527,7 +3527,7 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
    if( binvrow == NULL )
    {
       RatCreateArray(&buf, nrows);
-      SCIP_CALL( SCIPlpiexGetBInvRow(lpi, r, buf, inds, ninds) );
+      SCIP_CALL( SCIPlpiExactGetBInvRow(lpi, r, buf, inds, ninds) );
       binv = buf;
    }
    else
@@ -3561,8 +3561,8 @@ SCIP_RETCODE SCIPlpiexGetBInvARow(
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
  */
-SCIP_RETCODE SCIPlpiexGetBInvACol(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetBInvACol(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Rational**       coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
@@ -3578,7 +3578,7 @@ SCIP_RETCODE SCIPlpiexGetBInvACol(
    DSVectorRational colsparse;
 #endif
 
-   SCIPdebugMessage("calling SCIPlpiexGetBInvACol()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetBInvACol()\n");
 
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
@@ -3617,8 +3617,8 @@ SCIP_RETCODE SCIPlpiexGetBInvACol(
 /**@{ */
 
 /** stores LPi state (like basis information) into lpistate object */
-SCIP_RETCODE SCIPlpiexGetState(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetState(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
@@ -3626,7 +3626,7 @@ SCIP_RETCODE SCIPlpiexGetState(
    int ncols;
    int nrows;
 
-   SCIPdebugMessage("calling SCIPlpiexGetState()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetState()\n");
 
    assert(blkmem != NULL);
    assert(lpi != NULL);
@@ -3648,7 +3648,7 @@ SCIP_RETCODE SCIPlpiexGetState(
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    /* get unpacked basis information */
-   SCIP_CALL( SCIPlpiexGetBase(lpi, lpi->cstat, lpi->rstat) );
+   SCIP_CALL( SCIPlpiExactGetBase(lpi, lpi->cstat, lpi->rstat) );
 
    /* pack LPi state data */
    (*lpistate)->ncols = ncols;
@@ -3659,10 +3659,10 @@ SCIP_RETCODE SCIPlpiexGetState(
 }
 
 /** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
- *  columns and rows since the state was stored with SCIPlpiexGetState()
+ *  columns and rows since the state was stored with SCIPlpiExactGetState()
  */
-SCIP_RETCODE SCIPlpiexSetState(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetState(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information), or NULL */
    )
@@ -3671,7 +3671,7 @@ SCIP_RETCODE SCIPlpiexSetState(
    int lpnrows;
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiexSetState()\n");
+   SCIPdebugMessage("calling SCIPlpiExactSetState()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3696,11 +3696,11 @@ SCIP_RETCODE SCIPlpiexSetState(
    for( i = lpistate->ncols; i < lpncols; ++i )
    {
       SCIP_Real bnd = lpi->spx->lowerReal(i);
-      if ( SCIPlpiexIsInfinity(lpi, REALABS(bnd)) )
+      if ( SCIPlpiExactIsInfinity(lpi, REALABS(bnd)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
          bnd = lpi->spx->lowerReal(i);
-         if ( SCIPlpiexIsInfinity(lpi, REALABS(bnd)) )
+         if ( SCIPlpiExactIsInfinity(lpi, REALABS(bnd)) )
             /* variable is free */
             lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /*lint !e641*/
          else
@@ -3715,14 +3715,14 @@ SCIP_RETCODE SCIPlpiexSetState(
       lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
    /* load basis information */
-   SCIP_CALL( SCIPlpiexSetBase(lpi, lpi->cstat, lpi->rstat) );
+   SCIP_CALL( SCIPlpiExactSetBase(lpi, lpi->cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
 
 /** clears current LPi state (like basis information) of the solver */
-SCIP_RETCODE SCIPlpiexClearState(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactClearState(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiClearState()\n");
@@ -3751,8 +3751,8 @@ SCIP_RETCODE SCIPlpiexClearState(
 }
 
 /** frees LPi state information */
-SCIP_RETCODE SCIPlpiexFreeState(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactFreeState(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
@@ -3770,8 +3770,8 @@ SCIP_RETCODE SCIPlpiexFreeState(
 }
 
 /** checks, whether the given LP state contains simplex basis information */
-SCIP_Bool SCIPlpiexHasStateBasis(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_Bool SCIPlpiExactHasStateBasis(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
@@ -3780,8 +3780,8 @@ SCIP_Bool SCIPlpiexHasStateBasis(
 }
 
 /** reads LP state (like basis information from a file */
-SCIP_RETCODE SCIPlpiexReadState(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactReadState(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
@@ -3799,8 +3799,8 @@ SCIP_RETCODE SCIPlpiexReadState(
 }
 
 /** writes LPi state (i.e. basis information) to a file */
-SCIP_RETCODE SCIPlpiexWriteState(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactWriteState(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
@@ -3833,8 +3833,8 @@ SCIP_RETCODE SCIPlpiexWriteState(
 /** stores LPi pricing norms information
  *  @todo should we store norm information?
  */
-SCIP_RETCODE SCIPlpiexGetNorms(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetNorms(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
@@ -3886,10 +3886,10 @@ SCIP_RETCODE SCIPlpiexGetNorms(
 }
 
 /** loads LPi pricing norms into solver; note that the LP might have been extended with additional
- *  columns and rows since the state was stored with SCIPlpiexGetNorms()
+ *  columns and rows since the state was stored with SCIPlpiExactGetNorms()
  */
-SCIP_RETCODE SCIPlpiexSetNorms(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetNorms(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
@@ -3920,7 +3920,7 @@ SCIP_RETCODE SCIPlpiexSetNorms(
 
 /** frees pricing norms information */
 SCIP_RETCODE SCIPlpiFreeNorms(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
@@ -3951,15 +3951,15 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@{ */
 
 /** gets integer parameter of LP */
-SCIP_RETCODE SCIPlpiexGetIntpar(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetIntpar(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
    int*                  ival                /**< buffer to store the parameter value */
    )
 {
    int scaleparam;
 
-   SCIPdebugMessage("calling SCIPlpiexGetIntpar()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetIntpar()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -4028,13 +4028,13 @@ SCIP_RETCODE SCIPlpiexGetIntpar(
 }
 
 /** sets integer parameter of LP */
-SCIP_RETCODE SCIPlpiexSetIntpar(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetIntpar(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
    int                   ival                /**< parameter value */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexSetIntpar()\n");
+   SCIPdebugMessage("calling SCIPlpiExactSetIntpar()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -4133,13 +4133,13 @@ SCIP_RETCODE SCIPlpiexSetIntpar(
 }
 
 /** gets floating point parameter of LP */
-SCIP_RETCODE SCIPlpiexGetRealpar(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactGetRealpar(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexGetRealpar()\n");
+   SCIPdebugMessage("calling SCIPlpiExactGetRealpar()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -4164,7 +4164,7 @@ SCIP_RETCODE SCIPlpiexGetRealpar(
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->spx->realParam(SoPlex::REPRESENTATION_SWITCH);
-      if( *dval >= SCIPlpiexInfinity(lpi) )
+      if( *dval >= SCIPlpiExactInfinity(lpi) )
          *dval = -1.0;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
@@ -4178,13 +4178,13 @@ SCIP_RETCODE SCIPlpiexGetRealpar(
 }
 
 /** sets floating point parameter of LP */
-SCIP_RETCODE SCIPlpiexSetRealpar(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactSetRealpar(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiexSetRealpar()\n");
+   SCIPdebugMessage("calling SCIPlpiExactSetRealpar()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -4207,7 +4207,7 @@ SCIP_RETCODE SCIPlpiexSetRealpar(
       /* 0 <= dval <= inf */
       assert( dval >= 0.0 || dval == -1.0 );
       if( dval == -1 )
-         (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiexInfinity(lpi));
+         (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiExactInfinity(lpi));
       else
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
       break;
@@ -4235,8 +4235,8 @@ SCIP_RETCODE SCIPlpiexSetRealpar(
 /**@{ */
 
 /** returns value treated as infinity in the LP solver */
-SCIP_Real SCIPlpiexInfinity(
-   SCIP_LPIEX*           lpi                 /**< LP interface structure */
+SCIP_Real SCIPlpiExactInfinity(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -4246,13 +4246,13 @@ SCIP_Real SCIPlpiexInfinity(
 }
 
 /** checks if given value is treated as infinity in the LP solver */
-SCIP_Bool SCIPlpiexIsInfinity(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_Bool SCIPlpiExactIsInfinity(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_Real             val                 /**< the value */
    )
 {
    assert(lpi != NULL);
-   SCIPdebugMessage("calling SCIPlpiexIsInfinity()\n");
+   SCIPdebugMessage("calling SCIPlpiExactIsInfinity()\n");
 
    return (val >= lpi->spx->realParam(SoPlex::INFTY));
 }
@@ -4285,8 +4285,8 @@ SCIP_Bool fileExists(
 }
 
 /** reads LP from a file */
-SCIP_RETCODE SCIPlpiexReadLP(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactReadLP(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {
@@ -4323,8 +4323,8 @@ SCIP_RETCODE SCIPlpiexReadLP(
 }
 
 /** writes LP to a file */
-SCIP_RETCODE SCIPlpiexWriteLP(
-   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+SCIP_RETCODE SCIPlpiExactWriteLP(
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    )
 {

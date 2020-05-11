@@ -74,7 +74,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
-#include "lpi/type_lpiex.h"
+#include "lpi/type_lpiexact.h"
 #include "scip/rational.h"
 #include "rectlu/rectlu.h"
 
@@ -215,7 +215,7 @@ struct SCIP_LpExact
                                               *   ignoring variables, with infinite best bound */
    SCIP_Rational*        cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    SCIP_Rational*        lpiobjlim;          /**< current objective limit in LPI */
-   SCIP_LPIEX*           lpiex;              /**< exact LP solver interface */
+   SCIP_LPIEXACT*        lpiexact;              /**< exact LP solver interface */
    SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROWEXACT**       lpirows;            /**< array with rows currently stored in the LP solver */
    SCIP_COLEXACT**       chgcols;            /**< array of changed columns not yet applied to the LP solver */

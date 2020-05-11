@@ -26,7 +26,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "lpi/lpi.h"
-#include "lpi/lpiex.h"
+#include "lpi/lpiexact.h"
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/event.h"
@@ -523,7 +523,7 @@ SCIP_RETCODE ensureChgcolsSize(
 
 /** ensures, that lpicols array can store at least num entries */
 static
-SCIP_RETCODE ensureLpiexcolsSize(
+SCIP_RETCODE ensureLpiExactcolsSize(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
@@ -1861,7 +1861,7 @@ SCIP_RETCODE lpExactFlushDelCols(
 
       assert(!lp->fplp->diving);
       SCIPdebugMessage("flushing col deletions: shrink exact LP from %d to %d columns\n", lp->nlpicols, lp->lpifirstchgcol);
-      SCIP_CALL( SCIPlpiexDelCols(lp->lpiex, lp->lpifirstchgcol, lp->nlpicols-1) );
+      SCIP_CALL( SCIPlpiExactDelCols(lp->lpiexact, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
       {
          markColexDeleted(lp->lpicols[i]);
@@ -1918,7 +1918,7 @@ SCIP_RETCODE lpExactFlushAddCols(
    /* add the additional columns */
    assert(!lp->fplp->diving);
    assert(lp->ncols > lp->nlpicols);
-   SCIP_CALL( ensureLpiexcolsSize(lp, set, lp->ncols) );
+   SCIP_CALL( ensureLpiExactcolsSize(lp, set, lp->ncols) );
 
    /* count the (maximal) number of added coefficients, calculate the number of added columns */
    naddcols = lp->ncols - lp->nlpicols;
@@ -1999,7 +1999,7 @@ SCIP_RETCODE lpExactFlushAddCols(
 
    /* call LP interface */
    SCIPsetDebugMsg(set, "flushing col additions: enlarge exact LP from %d to %d columns\n", lp->nlpicols, lp->ncols);
-   SCIP_CALL( SCIPlpiexAddCols(lp->lpiex, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiExactAddCols(lp->lpiexact, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
 
@@ -2065,7 +2065,7 @@ SCIP_RETCODE lpExactFlushDelRows(
       int i;
 
       SCIPsetDebugMsg(set, "flushing row deletions: shrink exact LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
-      SCIP_CALL( SCIPlpiexDelRows(lp->lpiex, lp->lpifirstchgrow, lp->nlpirows-1) );
+      SCIP_CALL( SCIPlpiExactDelRows(lp->lpiexact, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
          markRowexDeleted(lp->lpirows[i]);
@@ -2195,7 +2195,7 @@ SCIP_RETCODE lpExactFlushAddRows(
 
    /* call LP interface */
    SCIPsetDebugMsg(set, "flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
-   SCIP_CALL( SCIPlpiexAddRows(lp->lpiex, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiExactAddRows(lp->lpiexact, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
 
@@ -2274,8 +2274,8 @@ SCIP_RETCODE lpExactFlushChgCols(
             SCIP_CALL( RatCreateBuffer(set->buffer, &lpilb) );
             SCIP_CALL( RatCreateBuffer(set->buffer, &lpiub) );
 
-            SCIP_CALL( SCIPlpiexGetObj(lp->lpiex, col->lpipos, col->lpipos, &lpiobj) );
-            SCIP_CALL( SCIPlpiexGetBounds(lp->lpiex, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            SCIP_CALL( SCIPlpiExactGetObj(lp->lpiexact, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiExactGetBounds(lp->lpiexact, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(RatIsEqual(lpiobj, col->flushedobj));
             RatFreeBuffer(set->buffer, &lpiub);
             RatFreeBuffer(set->buffer, &lpilb);
@@ -2319,7 +2319,7 @@ SCIP_RETCODE lpExactFlushChgCols(
    if( nobjchg > 0 )
    {
       SCIPsetDebugMsg(set, "flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
-      SCIP_CALL( SCIPlpiexChgObj(lp->lpiex, nobjchg, objind, obj) );
+      SCIP_CALL( SCIPlpiExactChgObj(lp->lpiexact, nobjchg, objind, obj) );
 
       /* mark the LP unsolved */
       lp->solved = FALSE;
@@ -2331,7 +2331,7 @@ SCIP_RETCODE lpExactFlushChgCols(
    if( nbdchg > 0 )
    {
       SCIPsetDebugMsg(set, "flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
-      SCIP_CALL( SCIPlpiexChgBounds(lp->lpiex, nbdchg, bdind, lb, ub) );
+      SCIP_CALL( SCIPlpiExactChgBounds(lp->lpiexact, nbdchg, bdind, lb, ub) );
 
       /* mark the LP unsolved */
       lp->solved = FALSE;
@@ -2397,7 +2397,7 @@ SCIP_RETCODE lpExactFlushChgRows(
             SCIP_CALL( RatCreateBuffer(set->buffer, &lpilhs) );
             SCIP_CALL( RatCreateBuffer(set->buffer, &lpirhs) );
 
-            SCIP_CALL( SCIPlpiexGetSides(lp->lpiex, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            SCIP_CALL( SCIPlpiExactGetSides(lp->lpiexact, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
             assert(RatIsEqual(lpilhs, row->flushedlhs));
             assert(RatIsEqual(lpirhs, row->flushedrhs));
 
@@ -2438,7 +2438,7 @@ SCIP_RETCODE lpExactFlushChgRows(
    if( nchg > 0 )
    {
       SCIPsetDebugMsg(set, "flushing side changes: change %d sides of %d exact rows\n", nchg, lp->nchgrows);
-      SCIP_CALL( SCIPlpiexChgSides(lp->lpiex, nchg, ind, lhs, rhs) );
+      SCIP_CALL( SCIPlpiExactChgSides(lp->lpiexact, nchg, ind, lhs, rhs) );
 
       /* mark the LP unsolved */
       lp->solved = FALSE;
@@ -3078,8 +3078,8 @@ SCIP_RETCODE SCIPlpExactFlush(
       int ncols;
       int nrows;
 
-      SCIP_CALL( SCIPlpiexGetNCols(lp->lpiex, &ncols) );
-      SCIP_CALL( SCIPlpiexGetNRows(lp->lpiex, &nrows) );
+      SCIP_CALL( SCIPlpiExactGetNCols(lp->lpiexact, &ncols) );
+      SCIP_CALL( SCIPlpiExactGetNRows(lp->lpiexact, &nrows) );
       assert(ncols == lp->ncols);
       assert(nrows == lp->nrows);
    }
@@ -3240,7 +3240,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    SCIP_ALLOC( BMSallocMemory(lp) );
 
    /* open LP Solver interface */
-   SCIP_CALL( SCIPlpiexCreate(&(*lp)->lpiex, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiExactCreate(&(*lp)->lpiexact, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
    SCIP_CALL( SCIPlpPsdataCreate(*lp, set, blkmem) );
 
    (*lp)->fplp = fplp;
@@ -3337,9 +3337,9 @@ SCIP_RETCODE SCIPlpExactFree(
       SCIP_CALL( SCIProwExactRelease(&(*lp)->lpirows[i], blkmem, set, *lp) );
    }
 
-   if( (*lp)->lpiex != NULL )
+   if( (*lp)->lpiexact != NULL )
    {
-      SCIP_CALL( SCIPlpiexFree(&(*lp)->lpiex) );
+      SCIP_CALL( SCIPlpiExactFree(&(*lp)->lpiexact) );
    }
 
    RatFreeBlock(blkmem, &(*lp)->lpobjval);
@@ -5120,10 +5120,10 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, lp->lpobjval, primsol, dualsol, activity, redcost) );
+   SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, lp->lpobjval, primsol, dualsol, activity, redcost) );
    if( lp->solisbasic )
    {
-      SCIP_CALL( SCIPlpiexGetBase(lp->lpiex, cstat, rstat) );
+      SCIP_CALL( SCIPlpiExactGetBase(lp->lpiexact, cstat, rstat) );
    }
    else
    {
@@ -5328,7 +5328,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
       *rayfeasible = TRUE;
 
    /* check if the LP solver is able to provide a primal unbounded ray */
-   if( !SCIPlpiexHasPrimalRay(lp->lpiex) )
+   if( !SCIPlpiExactHasPrimalRay(lp->lpiexact) )
    {
       SCIPerrorMessage("LP solver has no primal ray to prove unboundedness\n");
       return SCIP_LPERROR;
@@ -5345,7 +5345,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIP_CALL( RcreateArrayTemp(set->buffer, &ray, lp->nlpicols) );
 
    /* get primal unbounded ray */
-   SCIP_CALL( SCIPlpiexGetPrimalRay(lp->lpiex, ray) );
+   SCIP_CALL( SCIPlpiExactGetPrimalRay(lp->lpiexact, ray) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -5437,7 +5437,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    if( r < nlpirows )
    {
       /* get primal feasible point */
-      SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, NULL, primsol, NULL, activity, NULL) );
+      SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, NULL, activity, NULL) );
 
       /* determine feasibility status */
       if( primalfeasible != NULL )
@@ -5569,7 +5569,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
    assert(RatIsNegInfinity(lp->lpobjval));
 
    /* check if the LP solver is able to provide a primal unbounded ray */
-   if( !SCIPlpiexHasPrimalRay(lp->lpiex) )
+   if( !SCIPlpiExactHasPrimalRay(lp->lpiexact) )
    {
       SCIPerrorMessage("LP solver has no primal ray for unbounded LP\n");
       return SCIP_LPERROR;
@@ -5581,7 +5581,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
    SCIPsetDebugMsg(set, "getting primal ray values\n");
 
    /* get primal unbounded ray */
-   SCIP_CALL( SCIPlpiexGetPrimalRay(lp->lpiex, lpiray) );
+   SCIP_CALL( SCIPlpiExactGetPrimalRay(lp->lpiexact, lpiray) );
 
    lpicols = lp->lpicols;
    nlpicols = lp->nlpicols;
@@ -5652,7 +5652,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       SCIP_CALL( RatCreateBufferArray(set->buffer, &farkascoefs, lp->nlpicols) );
 
    /* get dual Farkas infeasibility proof */
-   SCIP_CALL( SCIPlpiexGetDualfarkas(lp->lpiex, dualfarkas) );
+   SCIP_CALL( SCIPlpiExactGetDualfarkas(lp->lpiexact, dualfarkas) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;

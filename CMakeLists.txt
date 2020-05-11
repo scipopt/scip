@@ -219,7 +219,7 @@ if(EXACTSOLVE)
         add_definitions(-DSCIP_WITH_BOOST)
         if(SOPLEX_FOUND)
             set(TEST_MIPEX on)
-            set(lpiex lpi/lpiex_spx.cpp)
+            set(lpiexact lpi/lpiexact_spx.cpp)
         else()
             message(WARNING "SoPlex is needed as exact LP solver to compile with exact solving support.\
                 No SoPlex was found. Continuing without support for exact solving.")

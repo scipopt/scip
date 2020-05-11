@@ -382,8 +382,8 @@ set(lpisources
    ${lpi}
    )
 
-set(lpiexsources
-   ${lpiex}
+set(lpiexactsources
+   ${lpiexact}
    )
 
 set(symsources
@@ -400,9 +400,9 @@ set(blockmemshellheader
 
 set(lpiheaders
     lpi/lpi.h
-    lpi/lpiex.h
+    lpi/lpiexact.h
     lpi/type_lpi.h
-    lpi/type_lpiex.h
+    lpi/type_lpiexact.h
 )
 
 set(rectluheaders
@@ -963,7 +963,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -991,12 +991,12 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(liblpiex EXCLUDE_FROM_ALL
-    ${lpiexsources}
+add_library(liblpiexact EXCLUDE_FROM_ALL
+    ${lpiexactsources}
     scip/bitencode.c
     blockmemshell/memory.c
     scip/message.c)
-setLibProperties(liblpiex "lpiex")
+setLibProperties(liblpiexact "lpiexact")
 
 add_library(librectlu EXCLUDE_FROM_ALL
     ${rectlusources}
@@ -1005,7 +1005,7 @@ add_library(librectlu EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(librectlu "rectlu")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources})
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
 if(MSVC)
    # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
    setLibProperties(libscip "libscip")
@@ -1027,7 +1027,7 @@ if(SHARED)
     set(SOPLEX_NEEDED 0)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})

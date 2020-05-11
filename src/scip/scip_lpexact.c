@@ -32,7 +32,7 @@
 #endif
 
 
-#include "lpi/lpiex.h"
+#include "lpi/lpiexact.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
 #include "scip/benders.h"
