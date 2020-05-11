@@ -1936,6 +1936,11 @@ SCIP_RETCODE SCIPprobExitSolve(
 
          if( SCIPvarIsRelaxationOnly(var) )
          {
+            /* relaxation variables should be unlocked and only captured by prob at this moment */
+            assert(SCIPvarGetNLocksDown(var) == 0);
+            assert(SCIPvarGetNLocksUp(var) == 0);
+            assert(SCIPvarGetNUses(var) == 1);
+
             if( SCIPvarIsDeletable(var) )
             {
                SCIP_Bool deleted;
