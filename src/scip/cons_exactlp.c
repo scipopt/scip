@@ -192,7 +192,7 @@ struct SCIP_ConsData
    uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
    uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   SCIP_ROWEX*           exrow;              /**< Exact rational lp row */
+   SCIP_ROWEXACT*        rowexact;           /**< Exact rational lp row */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Rational**       vals;               /**< coefficients of constraint entries */
    SCIP_Real*            valsreal;
@@ -7105,7 +7105,7 @@ SCIP_RETCODE checkCons(
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
-         SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, useexactsol, activity);
+         SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity);
    }
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
@@ -7177,9 +7177,9 @@ SCIP_RETCODE createRows(
       SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->valsreal) );
 
       /** create exact row */
-      SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->exrow, consdata->row, consdata->lhs, consdata->rhs) );
+      SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
 
-      SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->exrow, consdata->nvars, consdata->vars, consdata->vals) );
+      SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
    }
    else
    {
@@ -7213,7 +7213,7 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRows(scip, cons) );
    }
    assert(consdata->row != NULL);
-   assert(consdata->exrow != NULL);
+   assert(consdata->rowexact != NULL);
 
    if( consdata->nvars == 0 )
    {
@@ -7225,13 +7225,13 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintRowex(scip, consdata->exrow, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRowex(scip, consdata->rowexact, NULL)) );
       /* if presolving is turned off, the row might be trivial */
       if ( !RatIsNegInfinity(consdata->lhs) || !RatIsInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
          SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreex, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lpex, consdata->exrow, &infeasible) );
+         scip->eventfilter, scip->lpexact, consdata->rowexact, &infeasible) );
       }
 #ifndef NDEBUG
       else
@@ -14716,7 +14716,7 @@ SCIP_RETCODE enforceConstraint(
 
    checkrelmaxabs = conshdlrdata->checkrelmaxabs;
    if( sol == NULL )
-      checkexact = SCIPlpexIsSolved(scip);
+      checkexact = SCIPlpExactIsSolved(scip);
    else
       checkexact = SCIPisExactSol(scip, sol);
 
@@ -15345,7 +15345,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
-         SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->exrow) );
+         SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->rowexact) );
       }
    }
 
@@ -15480,8 +15480,8 @@ SCIP_RETCODE printCertificateConsLinear(
 {
    SCIP_CERTIFICATE* certificate;
    SCIP_CONSDATA* consdata;
-   SCIP_ROWEX* row;
-   SCIP_COLEX** cols;
+   SCIP_ROWEXACT* row;
+   SCIP_COLEXACT** cols;
    SCIP_VAR* var;
    SCIP_Rational** vals;
    SCIP_Rational* lhs;
@@ -15508,7 +15508,7 @@ SCIP_RETCODE printCertificateConsLinear(
       /* in case the row is a bound change (i.e. a row with only one variable), we add the bound change to the variable
        * hashtable
        */
-      if( !SCIProwexIsModifiable(row) && SCIProwexGetNNonz(row) == 1)
+      if( !SCIProwExactIsModifiable(row) && SCIProwExactGetNNonz(row) == 1)
       {
          var = consdata->vars[0];
          vals = consdata->vals;
@@ -18165,8 +18165,8 @@ void SCIPgetActivityExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->exrow != NULL )
-      SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, FALSE, ret);
+   if( consdata->rowexact != NULL )
+      SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret);
    else
       consdataGetActivity(scip, consdata, sol, FALSE, ret);
 }
@@ -18192,8 +18192,8 @@ void SCIPgetFeasibilityExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->exrow != NULL )
-      return SCIPgetRowSolFeasibilityExact(scip, consdata->exrow, sol, ret);
+   if( consdata->rowexact != NULL )
+      return SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret);
    else
       return consdataGetFeasibility(scip, consdata, sol, ret);
 }
@@ -18281,7 +18281,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
 /** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-SCIP_ROWEX* SCIPgetRowexExactLinear(
+SCIP_ROWEXACT* SCIPgetRowexExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -18300,7 +18300,7 @@ SCIP_ROWEX* SCIPgetRowexExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return consdata->exrow;
+   return consdata->rowexact;
 }
 
 #if 0

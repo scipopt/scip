@@ -1730,9 +1730,9 @@ void SCIPgetSolTransObjExact(
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-         SCIPlpexGetObjval(scip->lpex, scip->set, scip->transprob, res);
+         SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, res);
       else
-         SCIPlpexGetPseudoObjval(scip->lpex, scip->set, scip->transprob, res);
+         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, scip->transprob, res);
    }
 }
 
@@ -2090,7 +2090,7 @@ SCIP_RETCODE SCIPprintSolExact(
 
       /* create a temporary solution that is linked to the current solution */
       SCIP_CALL( SCIPsolCreateCurrentSolExact(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
-            scip->tree, scip->lpex, NULL) );
+            scip->tree, scip->lpexact, NULL) );
    }
 
    if( file != NULL && scip->messagehdlr != NULL )

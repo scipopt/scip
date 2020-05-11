@@ -209,7 +209,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 /** Print a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_NODE*            node,               /**< the current node */
    SCIP_PROB*            prob,               /**< problem data */
@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 /** Print a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */

@@ -90,9 +90,9 @@ SCIP_Bool fpLPisIntFeasible(
 
 /** evaluates the result of the exact LP */
 static
-SCIP_RETCODE evaluateLPEX(
+SCIP_RETCODE evaluateLPExact(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -108,7 +108,7 @@ SCIP_RETCODE evaluateLPEX(
     *    should be added, include it here as well.
     */
    /* evaluate solution status */
-   if( SCIPlpiexIsOptimal(lpex->lpiex) )
+   if( SCIPlpiexIsOptimal(lpexact->lpiex) )
    {
       SCIPdebugMessage("   exact LP solved to optimality\n");
 
@@ -117,7 +117,7 @@ SCIP_RETCODE evaluateLPEX(
          SCIP_Bool primalfeasible;
          SCIP_Bool dualfeasible;
 
-         SCIP_CALL( SCIPlpiexGetSolFeasibility(lpex->lpiex, &primalfeasible, &dualfeasible) );
+         SCIP_CALL( SCIPlpiexGetSolFeasibility(lpexact->lpiex, &primalfeasible, &dualfeasible) );
          assert(primalfeasible);
          assert(dualfeasible);
       }
@@ -127,29 +127,29 @@ SCIP_RETCODE evaluateLPEX(
        */
       assert(*result == SCIP_CUTOFF || *result == SCIP_BRANCHED || *result == SCIP_SOLVELP );
    }
-   else if( SCIPlpiexIsObjlimExc(lpex->lpiex) )
+   else if( SCIPlpiexIsObjlimExc(lpexact->lpiex) )
    {
       /* CERT: for now we don't trust the exact LP solver on this, so we do not need to print anything here */
       SCIPdebugMessage("   exact LP exceeds upper objective limit\n");
       *result = SCIP_CUTOFF;
    }
-   else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
+   else if( SCIPlpiexIsPrimalInfeasible(lpexact->lpiex) )
    {
       SCIPdebugMessage("   exact LP is primal infeasible\n");
       *result = SCIP_CUTOFF;
    }
-   else if( SCIPlpiexExistsPrimalRay(lpex->lpiex) )
+   else if( SCIPlpiexExistsPrimalRay(lpexact->lpiex) )
    {
       /* CERT: for now we don't need to handle the unbounded case */
       SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
       return SCIP_ERROR;
    }
-   else if( SCIPlpiexIsIterlimExc(lpex->lpiex) )
+   else if( SCIPlpiexIsIterlimExc(lpexact->lpiex) )
    {
       SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
       return SCIP_ERROR;
    }
-   else if( SCIPlpiexIsTimelimExc(lpex->lpiex) )
+   else if( SCIPlpiexIsTimelimExc(lpexact->lpiex) )
    {
       /* CERT: for now we should not activate the buggy time limit support of QSopt_ex */
       SCIPdebugMessage("   exact LP exceeds time limit\n");
@@ -158,7 +158,7 @@ SCIP_RETCODE evaluateLPEX(
    else
    {
       SCIPerrorMessage(" error or unknown return status in current exact LP (internal status: %d)\n",
-         SCIPlpiexGetInternalStatus(lpex->lpiex));
+         SCIPlpiexGetInternalStatus(lpexact->lpiex));
       return SCIP_LPERROR;
    }
 
@@ -168,7 +168,7 @@ SCIP_RETCODE evaluateLPEX(
 static
 SCIP_RETCODE solveLpExact(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -191,7 +191,7 @@ SCIP_RETCODE solveLpExact(
    int niterations = 0;
 
    assert(lp != NULL);
-   assert(lpex != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(set->misc_exactsolve);
 
@@ -201,26 +201,26 @@ SCIP_RETCODE solveLpExact(
       SCIPclockStart(stat->provedfeaslptime, set);
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
-   SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
-   assert(SCIPlpexIsSynced(lpex, set, messagehdlr));
+   assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, lp->nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, lp->nlpirows) );
 
    /* set the correct basis information for warmstart */
    SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
-   SCIP_CALL( SCIPlpiexSetBase(lpex->lpiex, cstat, rstat) );
+   SCIP_CALL( SCIPlpiexSetBase(lpexact->lpiex, cstat, rstat) );
 
    /* solve the lp exactly */
    switch(lpalgo)
    {
       case SCIP_LPALGO_PRIMALSIMPLEX:
-         retcode = SCIPlpiexSolvePrimal(lpex->lpiex);
+         retcode = SCIPlpiexSolvePrimal(lpexact->lpiex);
          break;
       case SCIP_LPALGO_DUALSIMPLEX:
-         retcode = SCIPlpiexSolveDual(lpex->lpiex);
+         retcode = SCIPlpiexSolveDual(lpexact->lpiex);
          break;
       default:
          SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", lpalgo);
@@ -232,41 +232,41 @@ SCIP_RETCODE solveLpExact(
       SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
    }
 
-   lpex->solved = TRUE;
+   lpexact->solved = TRUE;
 
-   SCIPlpiexGetIterations(lpex->lpiex, &niterations);
+   SCIPlpiexGetIterations(lpexact->lpiex, &niterations);
    if( usefarkas )
       stat->niterationsexlpinf += niterations;
    else
       stat->niterationsexlp += niterations;
 
-   if( SCIPlpiexIsOptimal(lpex->lpiex) )
+   if( SCIPlpiexIsOptimal(lpexact->lpiex) )
    {
       /* evaluate solution status and set safe bound correctly */
-      SCIP_CALL( SCIPlpexGetSol(lpex, set, stat, &primalfeasible, &dualfeasible) );
+      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, &primalfeasible, &dualfeasible) );
 
       assert(primalfeasible && dualfeasible);
 
-      SCIP_CALL( SCIPlpiexGetObjval(lpex->lpiex, lpex->lpobjval) );
+      SCIP_CALL( SCIPlpiexGetObjval(lpexact->lpiex, lpexact->lpobjval) );
       SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
-            RatRoundReal(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
-      lp->lpobjval = RatRoundReal(lpex->lpobjval, SCIP_ROUND_DOWNWARDS);
+            RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
+      lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
-      lpex->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
-   else if( SCIPlpiexIsPrimalUnbounded(lpex->lpiex) )
+   else if( SCIPlpiexIsPrimalUnbounded(lpexact->lpiex) )
    {
       /** @todo exip: where to save the ray? */
-      SCIP_CALL( SCIPlpexGetPrimalRay(lpex, set, NULL) );
+      SCIP_CALL( SCIPlpExactGetPrimalRay(lpexact, set, NULL) );
       lp->hasprovedbound = TRUE;
-      lpex->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
    }
-   else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
+   else if( SCIPlpiexIsPrimalInfeasible(lpexact->lpiex) )
    {
       SCIP_Bool valid;
-      lpex->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
 
-      SCIP_CALL( SCIPlpexGetDualfarkas(lpex, set, stat, &valid) );
+      SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &valid) );
       if( valid )
       {
          lp->hasprovedbound = TRUE;
@@ -276,7 +276,7 @@ SCIP_RETCODE solveLpExact(
    else
    {
       lp->hasprovedbound = FALSE;
-      SCIPdebugMessage("Exact lp solve failed. Terminated with status %d \n", SCIPlpiexGetInternalStatus(lpex->lpiex));
+      SCIPdebugMessage("Exact lp solve failed. Terminated with status %d \n", SCIPlpiexGetInternalStatus(lpexact->lpiex));
       if( usefarkas )
          stat->nfailexlpinf++;
       else
@@ -303,16 +303,16 @@ SCIP_RETCODE solveLpExact(
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
-   SCIP_LPEX* lpex
+   SCIP_LPEXACT* lpexact
    )
 {
    int ret = 0;
    int i = 0;
 
-   assert(lpex != NULL);
+   assert(lpexact != NULL);
 
-   for( i = 0; i < lpex->nrows; ++i )
-      ret+= lpex->rows[i]->len;
+   for( i = 0; i < lpexact->nrows; ++i )
+      ret+= lpexact->rows[i]->len;
 
    return ret;
 }
@@ -370,7 +370,7 @@ SCIP_RETCODE allocIntMem(
 static
 SCIP_RETCODE psChooseS(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -391,9 +391,9 @@ SCIP_RETCODE psChooseS(
    SCIP_Bool lperror;
    SCIP_PSDATA* psdata;
 
-   nrows = lpex->nrows;
-   ncols = lpex->ncols;
-   psdata = lpex->psdata;
+   nrows = lpexact->nrows;
+   ncols = lpexact->ncols;
+   psdata = lpexact->psdata;
 
    assert(psdata != NULL);
 
@@ -410,16 +410,16 @@ SCIP_RETCODE psChooseS(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( !RatIsNegInfinity(lpex->rows[i]->lhs) )
+         if( !RatIsNegInfinity(lpexact->rows[i]->lhs) )
             psdata->includedrows[i] = 1;
-         if( !RatIsInfinity(lpex->rows[i]->rhs) )
+         if( !RatIsInfinity(lpexact->rows[i]->rhs) )
             psdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( !RatIsNegInfinity(lpex->cols[i]->lb) )
+         if( !RatIsNegInfinity(lpexact->cols[i]->lb) )
             psdata->includedrows[2*nrows + i] = 1;
-         if( !RatIsInfinity(lpex->cols[i]->ub) )
+         if( !RatIsInfinity(lpexact->cols[i]->ub) )
             psdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
@@ -429,29 +429,29 @@ SCIP_RETCODE psChooseS(
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval);
+      solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval);
 
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
-      SCIP_CALL( SCIPlpiexGetSol(lpex->lpiex, NULL, rootprimal, NULL, rootactivity, NULL) );
+      SCIP_CALL( SCIPlpiexGetSol(lpexact->lpiex, NULL, rootprimal, NULL, rootactivity, NULL) );
 
       /* determine which dual variables to include in the problem
        * (primal constraints active at optimal solution found at root node)
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( RatIsEqual(rootactivity[i], lpex->rows[i]->lhs) )
+         if( RatIsEqual(rootactivity[i], lpexact->rows[i]->lhs) )
             psdata->includedrows[i] = 1;
-         if( RatIsEqual(rootactivity[i], lpex->rows[i]->rhs) )
+         if( RatIsEqual(rootactivity[i], lpexact->rows[i]->rhs) )
             psdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( RatIsEqual(rootprimal[i], lpex->cols[i]->lb) )
+         if( RatIsEqual(rootprimal[i], lpexact->cols[i]->lb) )
             psdata->includedrows[2*nrows + i] = 1;
-         if( RatIsEqual(rootprimal[i], lpex->cols[i]->ub) )
+         if( RatIsEqual(rootprimal[i], lpexact->cols[i]->ub) )
             psdata->includedrows[2*nrows + ncols + i] = 1;
       }
 
@@ -493,7 +493,7 @@ SCIP_RETCODE psChooseS(
 static
 SCIP_RETCODE psFactorizeD(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -518,12 +518,12 @@ SCIP_RETCODE psFactorizeD(
    SCIP_Rational** projval;
    SCIP_PSDATA* psdata;
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
-   nrows = lpex->nrows;
-   ncols = lpex->ncols;
+   nrows = lpexact->nrows;
+   ncols = lpexact->ncols;
    nextendedrows = psdata->nextendedrows;
-   nnonz = getNNonz(lpex);
+   nnonz = getNNonz(lpexact);
 
    /* allocate memory for the projection factorization */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projbeg, nextendedrows) );
@@ -558,24 +558,24 @@ SCIP_RETCODE psFactorizeD(
       /* A part (lhs constraints) */
       if(i < nrows)
       {
-         projlen[i] = lpex->rows[i]->len;
+         projlen[i] = lpexact->rows[i]->len;
          projbeg[i] = pos;
          for(j = 0; j < projlen[i]; j++)
          {
-            projind[ projbeg[i] + j ] = lpex->rows[i]->cols_index[j];
-            RatSet( projval[ projbeg[i] + j], lpex->rows[i]->vals[j]);
+            projind[ projbeg[i] + j ] = lpexact->rows[i]->cols_index[j];
+            RatSet( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
          }
          pos += projlen[i];
       }
       /* -A part (rhs constraints) */
       else if(i < 2 * nrows)
       {
-         projlen[i] = lpex->rows[i - nrows]->len;
+         projlen[i] = lpexact->rows[i - nrows]->len;
          projbeg[i] = pos;
          for(j = 0; j < projlen[i]; j++)
          {
-            projind[ projbeg[i] + j ] = lpex->rows[i - nrows]->cols_index[j];
-            RatNegate( projval[ projbeg[i] + j], lpex->rows[i - nrows]->vals[j]);
+            projind[ projbeg[i] + j ] = lpexact->rows[i - nrows]->cols_index[j];
+            RatNegate( projval[ projbeg[i] + j], lpexact->rows[i - nrows]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -686,7 +686,7 @@ SCIP_RETCODE printlpiexerr(
 static
 SCIP_RETCODE setupPsOpt(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Rational**       psobj,              /**< obj function */
@@ -718,7 +718,7 @@ SCIP_RETCODE setupPsOpt(
    int j;
    int indx;
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
    /* set up the objective */
    pos = 0;
@@ -726,7 +726,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[i] )
       {
-         RatSet(psobj[pos], lpex->rows[i]->lhs);
+         RatSet(psobj[pos], lpexact->rows[i]->lhs);
          pos++;
       }
    }
@@ -734,7 +734,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[nrows + i] )
       {
-         RatNegate(psobj[pos], lpex->rows[i]->rhs);
+         RatNegate(psobj[pos], lpexact->rows[i]->rhs);
          pos++;
       }
    }
@@ -742,7 +742,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[2*nrows + i] )
       {
-         RatSet(psobj[pos], lpex->cols[i]->lb);
+         RatSet(psobj[pos], lpexact->cols[i]->lb);
          pos++;
       }
    }
@@ -750,7 +750,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[2*nrows + ncols + i])
       {
-         RatNegate(psobj[pos], lpex->cols[i]->ub);
+         RatNegate(psobj[pos], lpexact->cols[i]->ub);
          pos++;
       }
    }
@@ -793,8 +793,8 @@ SCIP_RETCODE setupPsOpt(
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      RatSet(pslhs[i], lpex->cols[i]->obj);
-      RatSet(psrhs[i], lpex->cols[i]->obj);
+      RatSet(pslhs[i], lpexact->cols[i]->obj);
+      RatSet(psrhs[i], lpexact->cols[i]->obj);
    }
    for( i = 0; i < psdata->npsbasis; i++ )
    {
@@ -814,9 +814,9 @@ SCIP_RETCODE setupPsOpt(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for( j = 0; j < lpex->rows[indx]->len; j++ )
+         for( j = 0; j < lpexact->rows[indx]->len; j++ )
          {
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -851,15 +851,15 @@ SCIP_RETCODE setupPsOpt(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for(j = 0; j < lpex->rows[indx]->len; j++)
+         for(j = 0; j < lpexact->rows[indx]->len; j++)
          {
-            pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
+            pos = psbeg[lpexact->rows[indx]->cols_index[j]] + pslen[lpexact->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpexact->rows[indx]->vals[j]);
             else
-               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+               RatNegate(psval[pos], lpexact->rows[indx]->vals[j]);
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -931,7 +931,7 @@ SCIP_RETCODE setupPsOpt(
 static
 SCIP_RETCODE setupPsArb(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Rational**       psobj,              /**< obj function */
@@ -965,7 +965,7 @@ SCIP_RETCODE setupPsArb(
    int indx;
    int nextendedrows;
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
    nextendedrows = psdata->nextendedrows;
 
    /* set objective */
@@ -1019,26 +1019,26 @@ SCIP_RETCODE setupPsArb(
          {
             if(indx >= nrows)
                indx -= nrows;
-            pslen[i] = lpex->rows[indx]->len + 1;
+            pslen[i] = lpexact->rows[indx]->len + 1;
             psbeg[i] = pos;
 
             /* set A,-A part of row */
             for(j = 0; j < pslen[i] - 1; j++)
             {
-               psind[ psbeg[i] + j ] = lpex->rows[indx]->cols_index[j];
+               psind[ psbeg[i] + j ] = lpexact->rows[indx]->cols_index[j];
                /* if it is an LHS constraint */
                if( dvarmap[i] < nrows )
-                  RatSet( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
+                  RatSet( psval[ psbeg[i] + j], lpexact->rows[indx]->vals[j]);
                /* otherwise it is the RHS of the constraint */
                else
-                  RatNegate( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
+                  RatNegate( psval[ psbeg[i] + j], lpexact->rows[indx]->vals[j]);
             }
             /* set I part of row */
             psind[ psbeg[i] + pslen[i] - 1] = ncols + i ;
             RatSetInt( psval[psbeg[i] + pslen[i] - 1 ], -1, 1);
 
             /* update pos */
-            pos += lpex->rows[indx]->len + 1;
+            pos += lpexact->rows[indx]->len + 1;
          }
          /* current row comes from lower bound constraints of original problem */
          else if ( indx < 2*nrows + ncols )
@@ -1084,9 +1084,9 @@ SCIP_RETCODE setupPsArb(
       j = psbeg[ 2 * nextendedrows ];
       for( i = 0; i < ncols; i++ )
       {
-         if( !RatIsZero(lpex->cols[i]->obj) )
+         if( !RatIsZero(lpexact->cols[i]->obj) )
          {
-            RatNegate(psval[pos], lpex->cols[i]->obj);
+            RatNegate(psval[pos], lpexact->cols[i]->obj);
             psind[pos] = i;
             pos++;
          }
@@ -1104,7 +1104,7 @@ SCIP_RETCODE setupPsArb(
 static
 SCIP_RETCODE setupPsArbDual(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Rational**       psobj,              /**< obj function */
@@ -1136,7 +1136,7 @@ SCIP_RETCODE setupPsArbDual(
    int j;
    int indx;
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
    /* set up the objective*/
    for( i = 0; i < ndvarmap + 1; i++ )
@@ -1187,9 +1187,9 @@ SCIP_RETCODE setupPsArbDual(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for( j = 0 ; j <lpex->rows[indx]->len; j++)
+         for( j = 0 ; j <lpexact->rows[indx]->len; j++)
          {
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -1231,15 +1231,15 @@ SCIP_RETCODE setupPsArbDual(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for(j = 0; j < lpex->rows[indx]->len; j++)
+         for(j = 0; j < lpexact->rows[indx]->len; j++)
          {
-            pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
+            pos = psbeg[lpexact->rows[indx]->cols_index[j]] + pslen[lpexact->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpexact->rows[indx]->vals[j]);
             else
-               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+               RatNegate(psval[pos], lpexact->rows[indx]->vals[j]);
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -1259,7 +1259,7 @@ SCIP_RETCODE setupPsArbDual(
    }
    for( i = 0; i < ncols; i++ )
    {
-      RatNegate(psval[psbeg[i] + pslen[i]], lpex->cols[i]->obj);
+      RatNegate(psval[psbeg[i] + pslen[i]], lpexact->cols[i]->obj);
       psind[psbeg[i] + pslen[i]] = ndvarmap;
       pslen[i]++;
    }
@@ -1287,7 +1287,7 @@ SCIP_RETCODE setupPsArbDual(
 static
 SCIP_RETCODE setupPsTwoStage(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Rational**       psobj,              /**< obj function */
@@ -1319,7 +1319,7 @@ SCIP_RETCODE setupPsTwoStage(
    int j;
    int indx;
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
    /* the representation of the problem will be:
        * max:              [0,1]*[y|d]'
@@ -1351,8 +1351,8 @@ SCIP_RETCODE setupPsTwoStage(
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      RatSet(pslhs[i], lpex->cols[i]->obj);
-      RatSet(psrhs[i], lpex->cols[i]->obj);
+      RatSet(pslhs[i], lpexact->cols[i]->obj);
+      RatSet(psrhs[i], lpexact->cols[i]->obj);
    }
    for( i = 0; i < psdata->npsbasis; i++ )
    {
@@ -1372,9 +1372,9 @@ SCIP_RETCODE setupPsTwoStage(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for(j = 0; j < lpex->rows[indx]->len; j++)
+         for(j = 0; j < lpexact->rows[indx]->len; j++)
          {
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -1410,15 +1410,15 @@ SCIP_RETCODE setupPsTwoStage(
       {
          if( indx >= nrows )
             indx -= nrows;
-         for(j = 0; j < lpex->rows[indx]->len; j++)
+         for(j = 0; j < lpexact->rows[indx]->len; j++)
          {
-            pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
+            pos = psbeg[lpexact->rows[indx]->cols_index[j]] + pslen[lpexact->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpexact->rows[indx]->vals[j]);
             else
-               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
-            pslen[lpex->rows[indx]->cols_index[j]]++;
+               RatNegate(psval[pos], lpexact->rows[indx]->vals[j]);
+            pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
       else
@@ -1459,21 +1459,21 @@ SCIP_RETCODE setupPsTwoStage(
 /** subroutine to compute number of nonzeros in lp-matrix */
 static
 int computePsNnonz(
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    int*                  dvarincidence       /**< the columns with existing bounds */
    )
 {
    int ret = 0;
    int i;
-   int nrows = lpex->nrows;
-   int ncols = lpex->ncols;
+   int nrows = lpexact->nrows;
+   int ncols = lpexact->ncols;
 
    for( i = 0; i < nrows; i++ )
    {
       if( dvarincidence[i] )
-         ret += lpex->rows[i]->len;
+         ret += lpexact->rows[i]->len;
       if( dvarincidence[nrows + i] )
-         ret += lpex->rows[i]->len;
+         ret += lpexact->rows[i]->len;
    }
    for( i = 0; i < ncols; i++ )
    {
@@ -1490,7 +1490,7 @@ int computePsNnonz(
 static
 SCIP_RETCODE psComputeSintPointRay(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1519,8 +1519,8 @@ SCIP_RETCODE psComputeSintPointRay(
    SCIP_Rational** pslb = NULL;
    SCIP_Rational** psub = NULL;
    SCIP_PSDATA* psdata;
-   SCIP_ROWEX** lprows;
-   SCIP_COLEX** lpcols;
+   SCIP_ROWEXACT** lprows;
+   SCIP_COLEXACT** lpcols;
 
    SCIP_Rational** pslhs = NULL;
    SCIP_Rational** psrhs = NULL;
@@ -1538,9 +1538,9 @@ SCIP_RETCODE psComputeSintPointRay(
    int* dvarmap;
    int* dvarincidence;
 
-   psdata = lpex->psdata;
-   nrows = lpex->nrows;
-   ncols = lpex->ncols;
+   psdata = lpexact->psdata;
+   nrows = lpexact->nrows;
+   ncols = lpexact->ncols;
 
    assert(psdata != NULL);
    nextendedrows = psdata->nextendedrows;
@@ -1548,8 +1548,8 @@ SCIP_RETCODE psComputeSintPointRay(
    psncols = 0;
    psnrows = 0;
    psnnonz = 0;
-   lprows = lpex->rows;
-   lpcols = lpex->cols;
+   lprows = lpexact->rows;
+   lpcols = lpexact->cols;
 
    /* set up dvarmap - mapping between variables and original problem
     * - use the rows that are used for aux. problem
@@ -1612,7 +1612,7 @@ SCIP_RETCODE psComputeSintPointRay(
 
       psncols =  ndvarmap + 1;
       psnrows = ncols + psdata->npsbasis;
-      psnnonz = computePsNnonz(lpex, dvarincidence);
+      psnnonz = computePsNnonz(lpexact, dvarincidence);
       psnnonz += 2*psdata->npsbasis;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
@@ -1632,7 +1632,7 @@ SCIP_RETCODE psComputeSintPointRay(
        * alpha := (1-beta)/||OBJ||
        */
 
-      SCIP_CALL( setupPsOpt(lp, lpex, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
+      SCIP_CALL( setupPsOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1723,20 +1723,20 @@ SCIP_RETCODE psComputeSintPointRay(
       /* count the number of nonzeros of the aux problem: psnnonz*/
       for( i = 0; i < ncols; i++ )
       {
-         if( !RatIsZero(lpex->cols[i]->obj) )
+         if( !RatIsZero(lpexact->cols[i]->obj) )
          {
             nobjnz++;
          }
       }
 
-      psnnonz = computePsNnonz(lpex, dvarincidence);
+      psnnonz = computePsNnonz(lpexact, dvarincidence);
       psnnonz += nobjnz + 1 + 3 * ndvarmap;
 
       /* allocate memory for aux problem */
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsArb(lp, lpex, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
+      SCIP_CALL( setupPsArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, nobjnz, findintpoint) );
 
@@ -1820,13 +1820,13 @@ SCIP_RETCODE psComputeSintPointRay(
        */
       psncols =  ndvarmap + 1 + psdata->npsbasis;
       psnrows = ncols + psdata->npsbasis;
-      psnnonz = computePsNnonz(lpex, dvarincidence);
+      psnnonz = computePsNnonz(lpexact, dvarincidence);
       psnnonz += 2*psdata->npsbasis + ncols;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsArbDual(lp, lpex, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
+      SCIP_CALL( setupPsArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1924,13 +1924,13 @@ SCIP_RETCODE psComputeSintPointRay(
        */
       psncols =  ndvarmap + 1;
       psnrows = ncols + psdata->npsbasis;
-      psnnonz = computePsNnonz(lpex, dvarincidence);
+      psnnonz = computePsNnonz(lpexact, dvarincidence);
       psnnonz += 2*psdata->npsbasis;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsTwoStage(lp, lpex, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
+      SCIP_CALL( setupPsTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,              /**< matrix values */
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,            /**< numer of non-zeros */
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1967,7 +1967,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[i] )
          {
-            RatSet(psobj[pos], lpex->rows[i]->lhs);
+            RatSet(psobj[pos], lpexact->rows[i]->lhs);
             pos++;
          }
       }
@@ -1975,7 +1975,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[nrows + i] )
          {
-            RatNegate(psobj[pos], lpex->rows[i]->rhs);
+            RatNegate(psobj[pos], lpexact->rows[i]->rhs);
             pos++;
          }
       }
@@ -1983,7 +1983,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[2*nrows + i] )
          {
-            RatSet(psobj[pos], lpex->cols[i]->lb);
+            RatSet(psobj[pos], lpexact->cols[i]->lb);
             pos++;
          }
       }
@@ -1991,7 +1991,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[2*nrows + ncols + i])
          {
-            RatNegate(psobj[pos], lpex->cols[i]->ub);
+            RatNegate(psobj[pos], lpexact->cols[i]->ub);
             pos++;
          }
       }
@@ -2102,7 +2102,7 @@ SCIP_RETCODE psComputeSintPointRay(
 static
 SCIP_RETCODE constructPSData(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2115,10 +2115,10 @@ SCIP_RETCODE constructPSData(
    int i;
    SCIP_PSDATA* psdata;
 
-   assert(lpex != NULL);
-   assert(lpex->psdata != NULL);
+   assert(lpexact != NULL);
+   assert(lpexact->psdata != NULL);
 
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
    /* consider the primal problem as
     * min c'x
@@ -2148,18 +2148,18 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( RatCreateBlock(blkmem, &psdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
-   SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
-   assert(lpex->nrows > 0);
+   assert(lpexact->nrows > 0);
 
-   psdata->nextendedrows = 2*lpex->nrows + 2*lpex->ncols;
+   psdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
-   SCIP_CALL( psChooseS(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+   SCIP_CALL( psChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( psFactorizeD(lp, lpex, set, prob, blkmem, psdata->psuseintpoint) );
+   SCIP_CALL( psFactorizeD(lp, lpexact, set, prob, blkmem, psdata->psuseintpoint) );
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !psdata->psdatafail )
@@ -2168,13 +2168,13 @@ SCIP_RETCODE constructPSData(
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
          SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorray, psdata->nextendedrows) );
-         SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, FALSE) );
+         SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
       }
       if( psdata->psuseintpoint || !psdata->pshasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
          SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorpt, psdata->nextendedrows) );
-         SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, TRUE) );
+         SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
       }
    }
 
@@ -2184,9 +2184,9 @@ SCIP_RETCODE constructPSData(
       psdata->psdatafail = TRUE;
    }
 
-   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->violation, lpex->ncols) );
+   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->violation, lpexact->ncols) );
    SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->correction, psdata->nextendedrows) );
-   psdata->violationsize = lpex->ncols;
+   psdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
    SCIPdebugMessage("exiting constructPSdata()\n");
@@ -2198,7 +2198,7 @@ SCIP_RETCODE constructPSData(
 static
 SCIP_RETCODE getPSdual(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2248,7 +2248,7 @@ SCIP_RETCODE getPSdual(
     */
 
    /* if data has not been constructed, or it failed, then exit */
-   psdata = lpex->psdata;
+   psdata = lpexact->psdata;
 
    assert(psdata->psdatacon);
    if( (psdata->psdatafail && !usefarkas) || (usefarkas && !psdata->pshasray) )
@@ -2297,12 +2297,12 @@ SCIP_RETCODE getPSdual(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
-   SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = psdata->nextendedrows;
-   nrows = lpex->nrows;
-   ncols = lpex->ncols;
+   nrows = lpexact->nrows;
+   ncols = lpexact->ncols;
    nrowsps = psdata->nextendedrows/2 - ncols;
    shift = nrows - nrowsps;
 
@@ -2317,9 +2317,9 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < nrows + ncols; ++i )
    {
       if( i < nrows )
-         approxdual[i] = usefarkas ? lpex->rows[i]->dualfarkas : lpex->rows[i]->dualsol;
+         approxdual[i] = usefarkas ? lpexact->rows[i]->dualfarkas : lpexact->rows[i]->dualsol;
       else
-         approxdual[i] = usefarkas ? lpex->cols[i - nrows]->redcost : lpex->cols[i - nrows]->farkascoef;
+         approxdual[i] = usefarkas ? lpexact->cols[i - nrows]->redcost : lpexact->cols[i - nrows]->farkascoef;
 
       RatSetInt(approxdual[i], 0, 1);
       if( i < ncols )
@@ -2386,9 +2386,9 @@ SCIP_RETCODE getPSdual(
       SCIP_Rational* val;
 
        if( !isupper[i] )
-         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+         val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
-         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+         val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       if( RatIsAbsInfinity(val) )
          RatSetInt(approxdual[i], 0, 1);
@@ -2403,9 +2403,9 @@ SCIP_RETCODE getPSdual(
       SCIP_Rational* val;
 
       if( !isupper[i] )
-         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+         val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
-         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+         val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       printf("   i=%d: ", i);
       RatPrint(approxdual[i]);
@@ -2433,7 +2433,7 @@ SCIP_RETCODE getPSdual(
       if( !usefarkas )
       {
          /* set to obj - bound-redcost */
-         RatDiff(violation[i], lpex->cols[i]->obj, approxdual[i + nrows]);
+         RatDiff(violation[i], lpexact->cols[i]->obj, approxdual[i + nrows]);
       }
       else
       {
@@ -2445,10 +2445,10 @@ SCIP_RETCODE getPSdual(
    /* A^ty for y corresponding to primal constraints */
    for( i = 0; i < nrows; i++ )
    {
-      for( j = 0; j < lpex->rows[i]->len; j++)
+      for( j = 0; j < lpexact->rows[i]->len; j++)
       {
-         currentrow = lpex->rows[i]->cols_index[j];
-         RatMult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
+         currentrow = lpexact->rows[i]->cols_index[j];
+         RatMult(tmp, approxdual[i], lpexact->rows[i]->vals[j]);
          RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
@@ -2706,16 +2706,16 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-        RatSet(violation[i], lpex->cols[i]->obj);
+        RatSet(violation[i], lpexact->cols[i]->obj);
       else
          RatSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nrows; i++ )
    {
-      for( j = 0; j < lpex->rows[i]->len; j++ )
+      for( j = 0; j < lpexact->rows[i]->len; j++ )
       {
-         currentrow = lpex->rows[i]->cols_index[j];
-         RatMult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
+         currentrow = lpexact->rows[i]->cols_index[j];
+         RatMult(tmp, approxdual[i], lpexact->rows[i]->vals[j]);
          RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
@@ -2742,9 +2742,9 @@ SCIP_RETCODE getPSdual(
    {
       SCIP_Rational* val;
       if( RatIsPositive(approxdual[i]) )
-         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+         val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
-         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+         val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       RatMult(tmp, approxdual[i], val);
       RatAdd(dualbound, dualbound, tmp);
@@ -2752,7 +2752,7 @@ SCIP_RETCODE getPSdual(
 
    if( !usefarkas )
    {
-      RatSet(lpex->lpobjval, dualbound);
+      RatSet(lpexact->lpobjval, dualbound);
       lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
    }
@@ -2761,7 +2761,7 @@ SCIP_RETCODE getPSdual(
       /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
       if( RatIsPositive(dualbound) )
       {
-         RatSetString(lpex->lpobjval, "inf");
+         RatSetString(lpexact->lpobjval, "inf");
          lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
       }
@@ -2835,7 +2835,7 @@ SCIP_RETCODE getPSdual(
 static
 char chooseBoundingMethod(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -2851,20 +2851,20 @@ char chooseBoundingMethod(
 {
    char dualboundmethod;
 
-   assert(!lpex->fplp->hasprovedbound);
+   assert(!lpexact->fplp->hasprovedbound);
 
    if( dualfarkas )
    {
       /* check if neumair-scher is possible */
-      if( SCIPlpexBSpossible(lpex) )
+      if( SCIPlpExactBSpossible(lpexact) )
          dualboundmethod = 'n';
       /* check if project and shift is possible */
 #ifdef SCIP_WITH_GMP
-      else if( SCIPlpexPSpossible(lpex) )
+      else if( SCIPlpExactPSpossible(lpexact) )
       {
-         SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
+         SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem) );
-         if( !lpex->psdata->psdatafail )
+         if( !lpexact->psdata->psdatafail )
             dualboundmethod = 'p';
          else
             dualboundmethod = 'e';
@@ -2881,25 +2881,25 @@ char chooseBoundingMethod(
        * or
        * - Neumair Shcherbina bound only nearly able to cutoff node
        */
-      if( (lpex->interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpex->fplp)) && SCIPgetDepth(set->scip) > 0
-            && SCIPgetDepth(set->scip) % (lpex->interleavedbfreq) == 0)
-         || (lpex->interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpex->fplp, set, prob), SCIPlpGetCutoffbound(lpex->fplp))
-            && SCIPlpGetObjval(lpex->fplp, set, prob) < SCIPlpGetCutoffbound(lpex->fplp)) )
+      if( (lpexact->interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpexact->fplp)) && SCIPgetDepth(set->scip) > 0
+            && SCIPgetDepth(set->scip) % (lpexact->interleavedbfreq) == 0)
+         || (lpexact->interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
+            && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp)) )
       {
          dualboundmethod = 'e';
       }
       else
       {
          /* check if neumair-scher is possible */
-         if( SCIPlpexBSpossible(lpex) )
+         if( SCIPlpExactBSpossible(lpexact) )
             dualboundmethod = 'n';
 #ifdef SCIP_WITH_GMP
          /* check if project and shift is possible */
-         else if( SCIPlpexPSpossible(lpex) )
+         else if( SCIPlpExactPSpossible(lpexact) )
          {
-            SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
+            SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                            prob, blkmem) );
-            if( !lpex->psdata->psdatafail )
+            if( !lpexact->psdata->psdatafail )
                dualboundmethod = 'p';
             else
                dualboundmethod = 'e';
@@ -2923,7 +2923,7 @@ char chooseBoundingMethod(
 static
 SCIP_RETCODE boundShift(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -2952,7 +2952,7 @@ SCIP_RETCODE boundShift(
    int i;
    int j;
 
-   assert(lpex != NULL);
+   assert(lpexact != NULL);
    assert(lp != NULL);
    assert(lp->solved);
    assert(set != NULL);
@@ -3043,15 +3043,15 @@ SCIP_RETCODE boundShift(
       for( i = 0; i < col->nlprows; ++i )
       {
          SCIP_INTERVAL val;
-         SCIP_ROWEX* rowex;
+         SCIP_ROWEXACT* rowexact;
 
          assert(col->rows[i] != NULL);
          assert(col->rows[i]->lppos >= 0);
          assert(col->linkpos[i] >= 0);
 
-         rowex = SCIProwGetExRow(lpex, col->rows[i]);
+         rowexact = SCIProwGetExRow(lpexact, col->rows[i]);
 
-         val = rowex->valsinterval[col->linkpos[i]];
+         val = rowexact->valsinterval[col->linkpos[i]];
          assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
 
          SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
@@ -3084,15 +3084,15 @@ SCIP_RETCODE boundShift(
       for( i = 0; i < col->nlprows; ++i )
       {
          SCIP_INTERVAL val;
-         SCIP_ROWEX* rowex;
+         SCIP_ROWEXACT* rowexact;
 
          assert(col->rows[i] != NULL);
          assert(col->rows[i]->lppos >= 0);
          assert(col->linkpos[i] >= 0);
 
-         rowex = SCIProwGetExRow(lpex, col->rows[i]);
+         rowexact = SCIProwGetExRow(lpexact, col->rows[i]);
 
-         val = rowex->valsinterval[col->linkpos[i]];
+         val = rowexact->valsinterval[col->linkpos[i]];
 
          assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
 
@@ -3189,41 +3189,41 @@ SCIP_RETCODE boundShift(
       }
    }
 
-   /* if certificate is active, save the corrected dual solution into the lpex data */
+   /* if certificate is active, save the corrected dual solution into the lpexact data */
    if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
    {
       SCIP_INTERVAL tmp, tmp2;
       SCIP_Real cand1, cand2;
       SCIP_Real value;
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
-      SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
-      for( j = 0; j < lpex->nrows; j++ )
+      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+      SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
+      for( j = 0; j < lpexact->nrows; j++ )
       {
          if( usefarkas )
-            RatSetReal(lpex->rows[j]->dualfarkas, fpdual[j]);
+            RatSetReal(lpexact->rows[j]->dualfarkas, fpdual[j]);
          else
-            RatSetReal(lpex->rows[j]->dualsol, fpdual[j]);
+            RatSetReal(lpexact->rows[j]->dualsol, fpdual[j]);
       }
-      for( j = 0; j < lpex->ncols; j++ )
+      for( j = 0; j < lpexact->ncols; j++ )
       {
          cand1 = productcoldualval[j].inf;
          cand2 = productcoldualval[j].sup;
          SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, ublbcol[j], cand1);
          SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, ublbcol[j], cand2);
-         if( ((tmp.inf) < (tmp2.inf)) == RatIsPositive(lpex->cols[j]->obj))
+         if( ((tmp.inf) < (tmp2.inf)) == RatIsPositive(lpexact->cols[j]->obj))
             value = cand1;
          else
             value = cand2;
 
          if( usefarkas )
-            RatSetReal(lpex->cols[j]->farkascoef, value);
+            RatSetReal(lpexact->cols[j]->farkascoef, value);
          else
-            RatSetReal(lpex->cols[j]->redcost, value);
+            RatSetReal(lpexact->cols[j]->redcost, value);
       }
    }
 
-   RatSetReal(lpex->lpobjval, SCIPintervalGetInf(safeboundinterval));
+   RatSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
 
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &ublbcol);
@@ -3263,9 +3263,9 @@ SCIP_RETCODE basisVerification(
 }
 #endif
 
-SCIP_RETCODE SCIPlpexComputeSafeBound(
+SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3291,22 +3291,22 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
 
    /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat) )
-      lpex->forceexactsolve = TRUE;
+      lpexact->forceexactsolve = TRUE;
 
    /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result
       @todo exip maybe it makes more sense to just disable objlimit alltogether? */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
-      lpex->forceexactsolve = TRUE;
+      lpexact->forceexactsolve = TRUE;
 
    /* choose which bounding method to use. only needed if automatic is enabled. */
-   if( lpex->forceexactsolve )
+   if( lpexact->forceexactsolve )
    {
       dualboundmethod = 'e';
-      lpex->forceexactsolve = FALSE;
+      lpexact->forceexactsolve = FALSE;
    }
    else if( set->misc_dbmethod == 'a' )
    {
-      dualboundmethod = chooseBoundingMethod(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+      dualboundmethod = chooseBoundingMethod(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                               prob, itlim, lperror, dualfarkas, safebound);
    }
    else
@@ -3318,7 +3318,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    {
       /* neumaier and scherbina */
       case 'n':
-         SCIP_CALL( boundShift(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+         SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, dualfarkas, safebound) );
          break;
       /* basis verification */
@@ -3334,15 +3334,15 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
 #ifdef SCIP_WITH_GMP
       /* project and shift */
       case 'p':
-         SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
+         SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem) );
-         SCIP_CALL( getPSdual(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
+         SCIP_CALL( getPSdual(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem, dualfarkas, safebound) );
          break;
 #endif
       /* exact LP */
       case 'e':
-         SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+         SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas, safebound) );
          break;
       default:
@@ -3353,7 +3353,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
 
    if( !lp->hasprovedbound )
    {
-      SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+      SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas, safebound) );
    }
 #endif

@@ -877,7 +877,7 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -972,7 +972,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSolExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -1020,7 +1020,7 @@ SCIP_RETCODE SCIPsolCreateCurrentSolExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -1196,7 +1196,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current exact LP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -1329,7 +1329,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -1338,7 +1338,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSolExact(
    SCIP_CALL( solClearArrays(sol) );
 
    /* link solution to pseudo solution */
-   SCIPlpexGetPseudoObjval(lp, set, prob, sol->valsexact->obj);
+   SCIPlpExactGetPseudoObjval(lp, set, prob, sol->valsexact->obj);
 
    SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 

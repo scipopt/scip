@@ -209,7 +209,7 @@ struct SCIP_ExVarData
    SCIP_DOMEX            locdom;             /**< exact local bounds */
    SCIP_DOMEX            glbdom;             /**< exact global bound */
    SCIP_DOMEX            origdom;            /**< original domain */
-   SCIP_COLEX*           excol;              /**< column in exact lp */
+   SCIP_COLEXACT*        colexact;              /**< column in exact lp */
    SCIP_VARSTATUS        exvarstatus;        /**< status in exact lp */
    int                   origvarindex;       /**< index of original variable (needed for certificate), or -1 */
 };

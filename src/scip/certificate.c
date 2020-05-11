@@ -1254,7 +1254,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
 /** Print a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_NODE*            node,               /**< the current node */
    SCIP_PROB*            prob,               /**< problem data */
@@ -1275,38 +1275,38 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    if( certificate->file == NULL )
       return SCIP_OKAY;
    /* only print line if bound improved */
-   if( !usefarkas && SCIPlpGetObjval(lpex->fplp, set, prob) < SCIPnodeGetLowerbound(node) )
+   if( !usefarkas && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPnodeGetLowerbound(node) )
       return SCIP_OKAY;
 
    /* if at root node set, objintegral flag */
    if( SCIPnodeGetParent(node) == NULL )
       certificate->objintegral = SCIPprobIsObjIntegral(prob);
 
-   assert(lpex!= NULL);
+   assert(lpexact!= NULL);
    assert(certificate->file != NULL);
 
    vals = certificate->vals;
    /* if needed extend vals array */
-   if( lpex->ncols + lpex->nrows > certificate->valssize )
+   if( lpexact->ncols + lpexact->nrows > certificate->valssize )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->vals,
-         certificate->valssize, lpex->ncols + lpex->nrows) );
-      for( i = certificate->valssize; i < lpex->ncols + lpex->nrows; i++ )
+         certificate->valssize, lpexact->ncols + lpexact->nrows) );
+      for( i = certificate->valssize; i < lpexact->ncols + lpexact->nrows; i++ )
       {
          SCIP_CALL( RatCreateBlock(certificate->blkmem, &(certificate->vals[i])) );
       }
-      certificate->valssize =  lpex->ncols + lpex->nrows;
+      certificate->valssize =  lpexact->ncols + lpexact->nrows;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
-   SCIPsetAllocBufferArray(set, &ind, lpex->nrows + lpex->ncols);
+   SCIPsetAllocBufferArray(set, &ind, lpexact->nrows + lpexact->ncols);
 
    len = 0;
-   for( i = 0; i < lpex->ncols; ++i )
+   for( i = 0; i < lpexact->ncols; ++i )
    {
-      SCIP_COLEX* col = lpex->cols[i];
+      SCIP_COLEXACT* col = lpexact->cols[i];
       if( usefarkas )
          val = col->farkascoef;
       else
@@ -1315,7 +1315,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       /* this should not need to be recomputed. However, since vipr does only detect
          that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c'
          we need to recompute the exact coefficients here. */
-      SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
+      SCIPcolExactCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
 
       assert(!RatIsAbsInfinity(val));
 
@@ -1329,12 +1329,12 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( RatIsNegative(vals[len]) )
          {
             certificate->workbound->isupper = TRUE;
-            RatSet(certificate->workbound->boundval, SCIPcolexGetUb(col));
+            RatSet(certificate->workbound->boundval, SCIPcolExactGetUb(col));
          }
          else
          {
             certificate->workbound->isupper = FALSE;
-            RatSet(certificate->workbound->boundval, SCIPcolexGetLb(col));
+            RatSet(certificate->workbound->boundval, SCIPcolExactGetLb(col));
          }
          certificate->workbound->varindex = SCIPvarGetOrigIndex(SCIPcolGetVar(col->fpcol));
 
@@ -1362,10 +1362,10 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          len++;
       }
    }
-   for( i = 0; i < lpex->nrows; ++i )
+   for( i = 0; i < lpexact->nrows; ++i )
    {
-      SCIP_ROWEX* row;
-      row = lpex->rows[i];
+      SCIP_ROWEXACT* row;
+      row = lpexact->rows[i];
       val = usefarkas ? row->dualfarkas : row->dualsol;
       assert(!RatIsAbsInfinity(val));
 
@@ -1388,7 +1388,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
          SCIPdebugMessage("Row (index %d, %s has index %lld and farkas coef ", row->index, row->fprow->name, ind[len]);
          SCIPdebug(RatPrint(val));
-         SCIPdebug(SCIProwexPrint(row, set->scip->messagehdlr, NULL) );
+         SCIPdebug(SCIProwExactPrint(row, set->scip->messagehdlr, NULL) );
 
          /* update farkasrhs */
          if( usefarkas )
@@ -1410,7 +1410,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          RatDiv(vals[i], vals[i], farkasrhs);
    }
    else
-      RatSet(lowerbound, lpex->lpobjval);
+      RatSet(lowerbound, lpexact->lpobjval);
 
    SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, len, ind, vals);
    SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
@@ -1427,7 +1427,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 /** Print a dual bound from the pseudo solution */
 SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */

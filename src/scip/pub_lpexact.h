@@ -21,8 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PUB_LPEX_H__
-#define __SCIP_PUB_LPEX_H__
+#ifndef __SCIP_PUB_LPEXACT_H__
+#define __SCIP_PUB_LPEXACT_H__
 
 
 #include "lpi/type_lpi.h"
@@ -45,18 +45,18 @@ extern "C" {
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_EXPORT
-SCIP_DECL_SORTPTRCOMP(SCIProwexComp);
+SCIP_DECL_SORTPTRCOMP(SCIProwExactComp);
 
 /** returns the left hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwexGetLhs(
-   SCIP_ROWEX*           row                 /**< LP row */
+SCIP_Rational* SCIProwExactGetLhs(
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns the right hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwexGetRhs(
-   SCIP_ROWEX*           row                 /**< LP row */
+SCIP_Rational* SCIProwExactGetRhs(
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 

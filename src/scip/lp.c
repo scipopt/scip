@@ -5350,7 +5350,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->removable = removable;
    (*row)->inglobalcutpool = FALSE;
    (*row)->storedsolvals = NULL;
-   (*row)->rowex = NULL;
+   (*row)->rowexact = NULL;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);
@@ -9326,7 +9326,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->lpirandomseed = set->random_randomseed;
    (*lp)->storedsolvals = NULL;
-   (*lp)->lpex = NULL;
+   (*lp)->lpexact = NULL;
 
    /* allocate arrays for diving */
    SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
@@ -12634,7 +12634,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
-         SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
@@ -12713,7 +12713,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
                /* in exact solving mode, the farkas proof has to be corrected to be exact */
-               SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+               SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
@@ -12886,7 +12886,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             }
 
             /* the objval has to be safe (if in exact solving mode) */
-            SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+            SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
                   eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
@@ -12921,7 +12921,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
                /* the objval has to be safe (if in exact solving mode) */
-               SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+               SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
                      eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
 
                /* get solution status for the lp */
@@ -12951,7 +12951,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
                   /* the objval has to be safe (if in exact solving mode) */
-                  SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+                  SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
                         eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
 
                   /* get solution status for the lp */
@@ -13058,7 +13058,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      {
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
-                        SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                        SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                               prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved

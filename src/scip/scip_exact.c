@@ -276,12 +276,12 @@ SCIP_RETCODE SCIPcomputeSafeBound(
 
    assert(scip != NULL);
    assert(scip->stat != NULL);
-   assert(scip->lp != NULL && scip->lpex != NULL);
+   assert(scip->lp != NULL && scip->lpexact != NULL);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcomputeSafeBound", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPlpexComputeSafeBound(scip->lp, scip->lpex, scip->set, scip->messagehdlr, SCIPblkmem(scip),
-         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpex->lpiitlim,
+   SCIP_CALL( SCIPlpExactComputeSafeBound(scip->lp, scip->lpexact, scip->set, scip->messagehdlr, SCIPblkmem(scip),
+         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpexact->lpiitlim,
          &lperror, proveinfeas, safebound) );
 
    if( lperror )
@@ -296,9 +296,9 @@ SCIP_RETCODE SCIPforceExactSolve(
    )
 {
    assert(scip != NULL);
-   assert(scip->lpex != NULL);
+   assert(scip->lpexact != NULL);
 
-   scip->lpex->forceexactsolve = TRUE;
+   scip->lpexact->forceexactsolve = TRUE;
 
    return SCIP_OKAY;
 }
@@ -310,9 +310,9 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
    )
 {
    assert(scip != NULL);
-   assert(scip->lp != NULL && scip->lpex != NULL);
+   assert(scip->lp != NULL && scip->lpexact != NULL);
 
-   SCIP_CALL( SCIPlpexactcheckIntegralityExact(scip->lp, scip->lpex,
+   SCIP_CALL( SCIPlpExactcheckIntegralityExact(scip->lp, scip->lpexact,
          scip->set, scip->stat, result) );
 
    return SCIP_OKAY;

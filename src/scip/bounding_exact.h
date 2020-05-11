@@ -48,9 +48,9 @@
 extern "C" {
 #endif
 
-SCIP_RETCODE SCIPlpexComputeSafeBound(
+SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */

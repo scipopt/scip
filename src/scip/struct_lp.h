@@ -192,7 +192,7 @@ struct SCIP_Col
  */
 struct SCIP_Row
 {
-   SCIP_ROWEX*           rowex;              /**< pointer to exact row if it exists, or NULL in fp-scip */
+   SCIP_ROWEXACT*        rowexact;              /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    SCIP_Real             lhs;                /**< left hand side of row */
    SCIP_Real             rhs;                /**< right hand side of row */
@@ -393,7 +393,7 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
    SCIP_Bool             hasprovedbound;      /**< is the bound of the lp proved to be exactly dual feasible */
-   SCIP_LPEX*            lpex;                /**< pointer to exact rational lp, or null if in normal fp soliving mode */
+   SCIP_LPEXACT*         lpexact;                /**< pointer to exact rational lp, or null if in normal fp soliving mode */
 };
 
 #ifdef __cplusplus

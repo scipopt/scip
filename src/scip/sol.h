@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPsolCreateCurrentSolExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current exact LP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** copies current NLP solution into CIP solution by linking */
@@ -279,7 +279,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */

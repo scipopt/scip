@@ -66,8 +66,8 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LPEX*            lp,                 /**< LP data */
-   SCIP_ROWEX*           cut,                /**< separated cut */
+   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_ROWEXACT*        cut,                /**< separated cut */
    SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    );
 
@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEX*            lp,                 /**< LP data */
+   SCIP_LPEXACT*         lp,                 /**< LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
@@ -89,11 +89,11 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LPEX*            lp                  /**< LP data */
+   SCIP_LPEXACT*         lp                  /**< LP data */
    );
 
 /** get cuts in the separation storage */
-SCIP_ROWEX** SCIPsepastoreexGetCuts(
+SCIP_ROWEXACT** SCIPsepastoreexGetCuts(
    SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    );
 

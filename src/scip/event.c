@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
 static
 SCIP_RETCODE updateLpexBdChg(
    SCIP_VAR*             var,                /**< variable that gets changed */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENT*           event,              /**< event */
    SCIP_Bool             isUb,               /**< is it an upper bound */
@@ -101,20 +101,20 @@ SCIP_RETCODE updateLpexBdChg(
       {
          if( isUb )
          {
-            SCIP_CALL( SCIPcolexChgUb(SCIPvarGetColExact(var), set, lp, newbound) );
+            SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp, newbound) );
          }
          else
          {
-            SCIP_CALL( SCIPcolexChgLb(SCIPvarGetColExact(var), set, lp, newbound) );
+            SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp, newbound) );
          }
       }
       if( isUb )
       {
-         SCIP_CALL( SCIPlpexUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
       }
       else
       {
-         SCIP_CALL( SCIPlpexUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
       }
 
       RatFreeBuffer(set->buffer, &oldbound);
@@ -1718,9 +1718,9 @@ SCIP_RETCODE SCIPeventProcess(
 
          if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
          {
-            SCIP_CALL( SCIPcolexChgObj(SCIPvarGetColExact(var), set, lp->lpex, newobj) );
+            SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lp->lpexact, newobj) );
          }
-         SCIP_CALL( SCIPlpexUpdateVarObj(lp->lpex, set, var, oldobj, newobj) );
+         SCIP_CALL( SCIPlpExactUpdateVarObj(lp->lpexact, set, var, oldobj, newobj) );
 
          RatFreeBuffer(set->buffer, &oldobj);
          RatFreeBuffer(set->buffer, &newobj);
@@ -1787,7 +1787,7 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, FALSE, FALSE) );
+         SCIP_CALL( updateLpexBdChg(var, lp->lpexact, set, event, FALSE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -1812,7 +1812,7 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, TRUE, FALSE) );
+         SCIP_CALL( updateLpexBdChg(var, lp->lpexact, set, event, TRUE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 

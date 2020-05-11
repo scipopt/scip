@@ -980,7 +980,7 @@ SCIP_RETCODE SCIPprobAddVar(
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
-      SCIP_CALL( SCIPlpexUpdateAddVar(lp->lpex, set, var) );
+      SCIP_CALL( SCIPlpExactUpdateAddVar(lp->lpexact, set, var) );
    }
 
    SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
@@ -1614,7 +1614,7 @@ SCIP_RETCODE varScaleObjExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             scale               /**< new objective value for variable */
    )
@@ -1756,7 +1756,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   {
                      SCIPsetDebugMsg(set, " -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                      SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
-                     SCIP_CALL( varScaleObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpex, eventqueue, intscalar) );
+                     SCIP_CALL( varScaleObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, intscalar) );
                   }
                   transprob->objoffset *= intscalar;
                   transprob->objscale /= intscalar;

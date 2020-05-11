@@ -141,8 +141,8 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LPEX*            lp,                 /**< LP data */
-   SCIP_ROWEX*           cut,                /**< separated cut */
+   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_ROWEXACT*        cut,                /**< separated cut */
    SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    assert(sepastoreex != NULL);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(!RatIsNegInfinity(SCIProwexGetLhs(cut)) || !RatIsInfinity(SCIProwexGetRhs(cut)));
+   assert(!RatIsNegInfinity(SCIProwExactGetLhs(cut)) || !RatIsInfinity(SCIProwExactGetRhs(cut)));
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
 
@@ -175,7 +175,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
    /* capture the cut */
-   SCIProwexCapture(cut);
+   SCIProwExactCapture(cut);
 
    pos = sepastoreex->ncuts;
 
@@ -195,14 +195,14 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEX*            lpex,               /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_LP* fplp;
    SCIP_ROW** fprows;
-   SCIP_ROWEX* rowex;
+   SCIP_ROWEXACT* rowexact;
    SCIP_CONS* origcons;
    int nrowsfp;
    int nrowsex;
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
-   fplp = lpex->fplp;
+   fplp = lpexact->fplp;
    nreleases = 0;
    nadded = 0;
 
@@ -221,7 +221,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
 
    fprows = SCIPlpGetRows(fplp);
    nrowsfp = SCIPlpGetNRows(fplp);
-   nrowsex = SCIPlexGetNRows(lpex);
+   nrowsex = SCIPlexGetNRows(lpexact);
 
    assert(fprows != NULL);
 
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
    /* remove all rows from exact lp that are not in the floating point lp */
    for( i = nrowsex - 1; i >= 0; --i )
    {
-      SCIP_ROW* fprow =lpex->rows[i]->fprow;
+      SCIP_ROW* fprow =lpexact->rows[i]->fprow;
       assert(fprow != NULL);
 
       if( !SCIProwIsInLP(fprow) )
@@ -239,19 +239,19 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
          assert(i == nrowsex - nreleases);
       }
    }
-   SCIPlpexactshrinkRows(lpex, blkmem, set, eventqueue, eventfilter, lpex->nrows - nreleases);
+   SCIPlpExactshrinkRows(lpexact, blkmem, set, eventqueue, eventfilter, lpexact->nrows - nreleases);
 
    for( i = 0; i < nrowsfp; ++i )
    {
-      rowex = SCIProwGetExRow(lpex, fplp->rows[i]);
-      if( rowex != NULL )
+      rowexact = SCIProwGetExRow(lpexact, fplp->rows[i]);
+      if( rowexact != NULL )
       {
          /* if the row is already in lp, do nothing */
-         if( !SCIProwexIsInLP(rowex) )
+         if( !SCIProwExactIsInLP(rowexact) )
          {
             /* add the exact row to the exact lp */
-            SCIP_CALL( SCIPlpexAddRow(lpex, blkmem, set, eventqueue,
-                eventfilter, rowex, 0) );
+            SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue,
+                eventfilter, rowexact, 0) );
          }
       }
       else
@@ -261,9 +261,9 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
       }
    }
 
-   //assert(SCIPlpexIsSynced(lpex, set, SCIPgetMessagehdlr(set->scip)));
+   //assert(SCIPlpExactIsSynced(lpexact, set, SCIPgetMessagehdlr(set->scip)));
 
-   SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpex) );
+   SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpexact) );
 
    return SCIP_OKAY;
 }
@@ -275,7 +275,7 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LPEX*            lp                  /**< LP data */
+   SCIP_LPEXACT*         lp                  /**< LP data */
    )
 {
    int c;
@@ -290,7 +290,7 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    /* release cuts */
    for( c = 0; c < sepastoreex->ncuts; ++c )
    {
-      SCIP_CALL( SCIProwexRelease(&sepastoreex->cuts[c], blkmem, set, lp) );
+      SCIP_CALL( SCIProwExactRelease(&sepastoreex->cuts[c], blkmem, set, lp) );
    }
 
    /* reset counters */
@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
 
 
 /** get cuts in the separation storage */
-SCIP_ROWEX** SCIPsepastoreexGetCuts(
+SCIP_ROWEXACT** SCIPsepastoreexGetCuts(
    SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
    )
 {

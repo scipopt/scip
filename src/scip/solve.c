@@ -2782,7 +2782,7 @@ SCIP_RETCODE priceAndCutLoop(
    if( *cutoff && tree->focusnodehaslp )
    {
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-      SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE);
+      SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE);
    }
    else if( !(*lperror) )
    {
@@ -2886,7 +2886,7 @@ SCIP_RETCODE applyBounding(
             assert(lp->hasprovedbound);
 
             SCIP_CALL( RatCreateBuffer(set->buffer, &bound) );
-            SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
+            SCIPlpExactGetObjval(lp->lpexact, set, transprob, bound);
 
             if( RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundex) )
             {
@@ -3914,7 +3914,7 @@ SCIP_RETCODE propAndSolve(
 
       if( focusnode->parent == NULL )
       {
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex, focusnode, set,
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
             transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );
       }
 
@@ -4684,9 +4684,9 @@ SCIP_RETCODE solveNode(
 
       /** @todo exip: these ifs are temporary */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
-         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
       else if( focusnodehaslp )
-         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;
@@ -4782,11 +4782,11 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStart(stat->lpsoltime, set);
 
       /* add solution to storage */
-      if( set->misc_exactsolve && lp->lpex->solved )
+      if( set->misc_exactsolve && lp->lpexact->solved )
       {
-         SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
+         SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpexact, NULL) );
 
-         SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+         SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpexact,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else

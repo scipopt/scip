@@ -52,7 +52,7 @@ struct SCIP_SepaStore
 
 struct SCIP_SepaStoreEx
 {
-   SCIP_ROWEX**          cuts;
+   SCIP_ROWEXACT**       cuts;
    int                   cutssize;
    int                   ncuts;
    int                   ncutsfound;

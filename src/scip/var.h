@@ -265,7 +265,7 @@ SCIP_RETCODE SCIPvarFreeExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
-   SCIP_LPEX*            lp                  /**< current LP data (may be NULL, if it's not a column variable) */
+   SCIP_LPEXACT*         lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
@@ -396,7 +396,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** converts column transformed variable back into loose variable, frees LP column */
@@ -666,7 +666,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Rational*        newobj              /**< new objective value for variable */
    );
@@ -1247,8 +1247,8 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LPEX*            lpex,               /**< current LP data */
-   SCIP_ROWEX*           rowex,              /**< LP row */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_Rational*        val                 /**< value of coefficient */
    );
 

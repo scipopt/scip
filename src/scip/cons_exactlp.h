@@ -356,7 +356,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
  *  the user must not modify the row!
  */
 SCIP_EXPORT
-SCIP_ROWEX* SCIPgetRowexExactLinear(
+SCIP_ROWEXACT* SCIPgetRowexExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

@@ -550,7 +550,7 @@ SCIP_COL* SCIPvarGetCol(
 
 /** gets column of COLUMN variable */
 SCIP_EXPORT
-SCIP_COLEX* SCIPvarGetColExact(
+SCIP_COLEXACT* SCIPvarGetColExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

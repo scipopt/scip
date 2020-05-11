@@ -81,7 +81,7 @@ struct Scip
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
-   SCIP_LPEX*            lpex;               /**< exact LP data */
+   SCIP_LPEXACT*         lpexact;               /**< exact LP data */
    SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */

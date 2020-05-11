@@ -2108,7 +2108,7 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
 
-   var->exactdata->excol = NULL;
+   var->exactdata->colexact = NULL;
    var->exactdata->exvarstatus = var->varstatus;
    var->exactdata->origvarindex = var->index;
 
@@ -2126,7 +2126,7 @@ SCIP_RETCODE SCIPvarFreeExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
-   SCIP_LPEX*            lp                  /**< current LP data (may be NULL, if it's not a column variable) */
+   SCIP_LPEXACT*         lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
    assert(blkmem != NULL);
@@ -2140,7 +2140,7 @@ SCIP_RETCODE SCIPvarFreeExactData(
 
    if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
    {
-      SCIP_CALL( SCIPcolexFree(&(var->exactdata->excol), blkmem, set, eventqueue, lp) );
+      SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
    }
    /* free exact variable data if it was created */
    if( var->exactdata != NULL )
@@ -2187,7 +2187,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
-   targetvar->exactdata->excol = NULL;
+   targetvar->exactdata->colexact = NULL;
    targetvar->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
 
    return SCIP_OKAY;
@@ -3626,14 +3626,14 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LPEX*            lp                  /**< current LP data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
    assert(var != NULL);
-   assert(var->exactdata->excol == NULL);
+   assert(var->exactdata->colexact == NULL);
    assert(var->scip == set->scip);
    assert(var->exactdata != NULL);
 
@@ -3643,12 +3643,12 @@ SCIP_RETCODE SCIPvarColumnExact(
    var->exactdata->exvarstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    /* create column of variable */
-   SCIP_CALL( SCIPcolexCreate(&(var->exactdata->excol), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+   SCIP_CALL( SCIPcolExactCreate(&(var->exactdata->colexact), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
 
    if( var->probindex != -1 )
    {
       /* inform LP, that problem variable is now a column variable and no longer loose */
-      SCIP_CALL( SCIPlpexUpdateVarColumn(lp, set, var) );
+      SCIP_CALL( SCIPlpExactUpdateVarColumn(lp, set, var) );
    }
 
    return SCIP_OKAY;
@@ -6352,7 +6352,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Rational*        newobj              /**< new objective value for variable */
    )
@@ -13308,7 +13308,7 @@ SCIP_Rational* SCIPvarGetLPSolExact_rec(
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
-      return SCIPcolexGetPrimsol(var->exactdata->excol);
+      return SCIPcolExactGetPrimsol(var->exactdata->colexact);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
@@ -14599,8 +14599,8 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LPEX*            lpex,               /**< current LP data */
-   SCIP_ROWEX*           rowex,              /**< LP row */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_Rational*        val                 /**< value of coefficient */
    )
 {
@@ -14610,7 +14610,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(rowex != NULL);
+   assert(rowexact != NULL);
    assert(!RatIsAbsInfinity(val));
 
    //SCIPsetDebugMsg(set, "adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
@@ -14623,10 +14623,10 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
       {
-         SCIPerrorMessage("cannot add untransformed original variable <%s> to excact LP row <%s>\n", var->name, rowex->fprow->name);
+         SCIPerrorMessage("cannot add untransformed original variable <%s> to excact LP row <%s>\n", var->name, rowexact->fprow->name);
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarAddToRowExact(var->data.original.transvar, blkmem, set, stat, eventqueue, prob, lpex, rowex, val) );
+      SCIP_CALL( SCIPvarAddToRowExact(var->data.original.transvar, blkmem, set, stat, eventqueue, prob, lpexact, rowexact, val) );
       break;;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -14635,19 +14635,19 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       {
          SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
          RatMult(tmp, val, var->exactdata->glbdom.lb);
-         SCIP_CALL( SCIProwexAddConstant(rowex, blkmem, set, stat, eventqueue, lpex, tmp) );
+         SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
          RatFreeBuffer(set->buffer, &tmp);
          break;;
       }
       /* convert loose variable into column */
-      SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lpex) );
+      SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lpexact) );
       assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       /*lint -fallthrough*/
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       assert(var->data.col->var == var);
-      SCIP_CALL( SCIProwexIncCoef(rowex, blkmem, set, eventqueue, lpex, var->exactdata->excol, val) );
+      SCIP_CALL( SCIProwExactIncCoef(rowexact, blkmem, set, eventqueue, lpexact, var->exactdata->colexact, val) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -14659,7 +14659,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatMult(tmp, val, var->exactdata->locdom.lb);
-      SCIP_CALL( SCIProwexAddConstant(rowex, blkmem, set, stat, eventqueue, lpex, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 
@@ -14681,10 +14681,10 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatNegate(tmp, val);
-      SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpex, rowex, tmp) );
+      SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpexact, rowexact, tmp) );
 
       RatMultReal(tmp, val, var->data.negate.constant);
-      SCIP_CALL( SCIProwexAddConstant(rowex, blkmem, set, stat, eventqueue, lpex, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 
@@ -17968,7 +17968,7 @@ SCIP_COL* SCIPvarGetCol(
 }
 
 /** gets column of COLUMN variable */
-SCIP_COLEX* SCIPvarGetColExact(
+SCIP_COLEXACT* SCIPvarGetColExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -17976,7 +17976,7 @@ SCIP_COLEX* SCIPvarGetColExact(
    assert(var->exactdata != NULL);
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
 
-   return var->exactdata->excol;
+   return var->exactdata->colexact;
 }
 
 /** returns whether the variable is a COLUMN variable that is member of the current LP */
@@ -18849,7 +18849,7 @@ SCIP_Rational* SCIPvarGetLPSolExact(
    assert(var != NULL);
 
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPcolexGetPrimsol(var->exactdata->excol);
+      return SCIPcolExactGetPrimsol(var->exactdata->colexact);
    else
       return SCIPvarGetLPSolExact_rec(var);
 }

@@ -4704,14 +4704,14 @@ SCIP_RETCODE SCIPchgVarObjExact(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set, scip->origprob, scip->primal, scip->lpex, scip->eventqueue, newobj) );
+      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set, scip->origprob, scip->primal, scip->lpexact, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lpex, scip->eventqueue, newobj) );
+      SCIP_CALL( SCIPvarChgObjExact(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lpexact, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    default:

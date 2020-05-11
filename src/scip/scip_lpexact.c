@@ -135,19 +135,19 @@
  */
 SCIP_RETCODE SCIPreleaseRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX**          row                 /**< pointer to LP row */
+   SCIP_ROWEXACT**       row                 /**< pointer to LP row */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPreleaseRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwexRelease(row, scip->mem->probmem, scip->set, scip->lpex) );
+   SCIP_CALL( SCIProwExactRelease(row, scip->mem->probmem, scip->set, scip->lpexact) );
 
    return SCIP_OKAY;
 }
 
 static
-void SCIProwexForceSort(
-   SCIP_ROWEX*           row,                /**< LP row */
+void SCIProwExactForceSort(
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set                 /**< SCIP settings */
    )
 {
@@ -160,14 +160,14 @@ void SCIProwexForceSort(
    /* do nothing on empty rows; if row is sorted, nothing has to be done */
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
    {
-      SCIP_COLEX** cols;
+      SCIP_COLEXACT** cols;
       int* cols_index;
       SCIP_Rational** vals;
       int s;
       int t;
 
       /* make sure, the row is sorted */
-      SCIProwexSort(row);
+      SCIProwExactSort(row);
       assert(row->lpcolssorted);
       assert(row->nonlpcolssorted);
 
@@ -250,7 +250,7 @@ void SCIProwexForceSort(
  */
 SCIP_RETCODE SCIPaddVarsToRowEx(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
    SCIP_Rational**       vals                /**< values of coefficients */
@@ -264,20 +264,20 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRowEx", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
-   SCIP_CALL( SCIProwexEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
+   SCIP_CALL( SCIProwExactEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
 
    /* add the variables to the row */
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPvarAddToRowExact(vars[v], scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpex,
+      SCIP_CALL( SCIPvarAddToRowExact(vars[v], scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact,
             row, vals[v]) );
    }
    SCIPdebug(SCIProwPrint(row->fprow, SCIPgetMessagehdlr(scip), NULL));
-   SCIPdebug(SCIProwexPrint(row, SCIPgetMessagehdlr(scip), NULL));
+   SCIPdebug(SCIProwExactPrint(row, SCIPgetMessagehdlr(scip), NULL));
 
    /* force the row sorting */
-   SCIProwexForceSort(row, scip->set);
-   row->fprow->rowex = row;
+   SCIProwExactForceSort(row, scip->set);
+   row->fprow->rowexact = row;
 
    return SCIP_OKAY;
 }
@@ -293,7 +293,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
  */
 SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX**          rowex,              /**< pointer to row */
+   SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp-row */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs                 /**< right hand side of row */
@@ -301,8 +301,8 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreateExact(rowex, fprow, scip->mem->probmem, scip->set,
-                                 scip->stat, scip->lpex, 0, NULL, NULL, lhs, rhs,
+   SCIP_CALL( SCIProwCreateExact(rowexact, fprow, scip->mem->probmem, scip->set,
+                                 scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs,
                                  SCIP_ROWORIGINTYPE_CONS, SCIProwGetOriginCons(fprow)) );
 
    return SCIP_OKAY;
@@ -317,7 +317,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
  */
 void SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        result              /**< result pointer */
    )
@@ -325,11 +325,11 @@ void SCIPgetRowSolFeasibilityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibilityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwexGetSolFeasibility(row, scip->set, scip->stat, sol, result);
+      SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      SCIProwexGetLPFeasibility(row, scip->set, scip->stat, scip->lpex, result);
+      SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result);
    else
-      SCIProwexGetPseudoFeasibility(row, scip->set, scip->stat, result);
+      SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result);
 }
 
 /** returns the activity of a row for the given primal solution
@@ -341,7 +341,7 @@ void SCIPgetRowSolFeasibilityExact(
  */
 void SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
    SCIP_Rational*        result              /**< result pointer */
@@ -350,11 +350,11 @@ void SCIPgetRowSolActivityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwexGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
+      SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      RatSet(result, SCIProwexGetLPActivity(row, scip->set, scip->stat, scip->lpex));
+      RatSet(result, SCIProwExactGetLPActivity(row, scip->set, scip->stat, scip->lpexact));
    else
-      RatSet(result, SCIProwexGetPseudoActivity(row, scip->set, scip->stat));
+      RatSet(result, SCIProwExactGetPseudoActivity(row, scip->set, scip->stat));
 }
 
 
@@ -370,7 +370,7 @@ void SCIPgetRowSolActivityExact(
  */
 SCIP_RETCODE SCIPprintRowex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -378,19 +378,19 @@ SCIP_RETCODE SCIPprintRowex(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowex", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   SCIProwexPrint(row, scip->messagehdlr, file);
+   SCIProwExactPrint(row, scip->messagehdlr, file);
 
    return SCIP_OKAY;
 }
 
 
 /** returns whether the exact lp was solved */
-SCIP_Bool SCIPlpexIsSolved(
+SCIP_Bool SCIPlpExactIsSolved(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
-   assert(scip->lpex != NULL);
+   assert(scip->lpexact != NULL);
 
-   return scip->lpex->solved && scip->lpex->flushed;
+   return scip->lpexact->solved && scip->lpexact->flushed;
 }

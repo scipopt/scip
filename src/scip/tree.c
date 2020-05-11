@@ -2044,7 +2044,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSetReal(bound, newbound);
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpex,
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact,
          node, set, transprob, newpseudoobjval) );
          RatSetReal(bound, oldbound);
       }
@@ -2443,7 +2443,7 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
 
    RatCreateBuffer(set->buffer, &lpobjval);
 
-   SCIPlpexGetObjval(lp->lpex, set, transprob, lpobjval);
+   SCIPlpExactGetObjval(lp->lpexact, set, transprob, lpobjval);
    RatSet(node->lowerboundexact, lpobjval);
 
    RatFreeBuffer(set->buffer, &lpobjval);
@@ -2484,7 +2484,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
       SCIPnodeUpdateExactLowerboundLP(node, set, stat, transprob, origprob, lp);
-      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, node, transprob, usefarkas) );
+      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, node, transprob, usefarkas) );
    }
 
    SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
