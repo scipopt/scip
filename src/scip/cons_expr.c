@@ -5845,6 +5845,11 @@ void addConsExprExprsViolScore(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          *success = TRUE;
       }
+      else
+      {
+         SCIPdebugMsg(scip, "skip score for fixed variable <%s>[%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      }
    }
 }
 
