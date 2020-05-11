@@ -1917,9 +1917,9 @@ SCIP_RETCODE SCIPprobExitSolve(
    }
 
    /* - convert all COLUMN variables back into LOOSE variables
-    * - mark relaxation-only variables for deletion, if possible
-    *   - if restart, then initPresolve will call SCIPprobPerformVarDeletions
-    *   - if no restart, then the whole transformed problem will be deleted anyway, so we may skip this loop
+    * - mark relaxation-only variables for deletion, if possible and restarting
+    *   - initPresolve will then call SCIPprobPerformVarDeletions
+    *   - if no restart, then the whole transformed problem will be deleted anyway
     */
    if( prob->ncolvars > 0 || restart )
    {
@@ -1934,7 +1934,7 @@ SCIP_RETCODE SCIPprobExitSolve(
          /* invalided root reduced cost, root reduced solution, and root LP objective value for each variable */
          SCIPvarSetBestRootSol(var, 0.0, 0.0, SCIP_INVALID);
 
-         if( SCIPvarIsRelaxationOnly(var) )
+         if( SCIPvarIsRelaxationOnly(var) && restart )
          {
             /* relaxation variables should be unlocked and only captured by prob at this moment */
             assert(SCIPvarGetNLocksDown(var) == 0);
