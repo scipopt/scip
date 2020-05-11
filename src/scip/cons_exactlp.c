@@ -59,7 +59,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_certificate.h"
 #include <ctype.h>
@@ -7230,7 +7230,7 @@ SCIP_RETCODE addRelaxation(
       if ( !RatIsNegInfinity(consdata->lhs) || !RatIsInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
-         SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreex, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+         SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
          scip->eventfilter, scip->lpexact, consdata->rowexact, &infeasible) );
       }
 #ifndef NDEBUG

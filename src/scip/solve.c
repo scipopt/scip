@@ -64,7 +64,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/sepa.h"
 #include "scip/sepastore.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
 #include "scip/set.h"
 #include "scip/sol.h"

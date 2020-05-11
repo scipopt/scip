@@ -70,7 +70,7 @@
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
@@ -1632,7 +1632,7 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPsepastoreexCreate(&scip->sepastoreex, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPsepastoreExactCreate(&scip->sepastoreexact, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue,
@@ -1800,8 +1800,8 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPsepastoreexClearCuts(scip->sepastoreex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpexact) );
-      SCIP_CALL( SCIPsepastoreexFree(&scip->sepastoreex, scip->mem->probmem) );
+      SCIP_CALL( SCIPsepastoreExactClearCuts(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpexact) );
+      SCIP_CALL( SCIPsepastoreExactFree(&scip->sepastoreexact, scip->mem->probmem) );
    }
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 

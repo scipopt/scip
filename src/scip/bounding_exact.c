@@ -42,7 +42,7 @@
 #include "scip/scip.h"
 #include "scip/sol.h"
 #include "scip/primal.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
 #include "rectlu/rectlu.h"
 
@@ -201,7 +201,7 @@ SCIP_RETCODE solveLpExact(
       SCIPclockStart(stat->provedfeaslptime, set);
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
@@ -2148,7 +2148,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( RatCreateBlock(blkmem, &psdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -2297,7 +2297,7 @@ SCIP_RETCODE getPSdual(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = psdata->nextendedrows;
@@ -3196,7 +3196,7 @@ SCIP_RETCODE boundShift(
       SCIP_Real cand1, cand2;
       SCIP_Real value;
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
       SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
       for( j = 0; j < lpexact->nrows; j++ )
       {

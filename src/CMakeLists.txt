@@ -327,7 +327,7 @@ set(scipsources
     scip/scipshell.c
     scip/sepa.c
     scip/sepastore.c
-    scip/sepastoreex.c
+    scip/sepastoreexact.c
     scip/set.c
     scip/sol.c
     scip/solve.c
@@ -807,7 +807,7 @@ set(scipheaders
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepastore.h
-    scip/sepastoreex.h
+    scip/sepastoreexact.h
     scip/sepa_strongcg.h
     scip/sepa_zerohalf.h
     scip/set.h

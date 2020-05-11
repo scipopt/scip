@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepastoreex.c
+/**@file   sepastoreexact.c
  * @brief  internal methods for storing separated exact cuts
  * @author Leon Eifler
  */
@@ -30,7 +30,7 @@
 #include "scip/var.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/event.h"
 #include "scip/sepa.h"
 #include "scip/cons.h"
@@ -45,31 +45,31 @@
 
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
-SCIP_RETCODE sepastoreexEnsureCutsMem(
-   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
+SCIP_RETCODE sepastoreExactEnsureCutsMem(
+   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimal number of slots in array */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
    assert(set != NULL);
 
-   if( num > sepastoreex->cutssize )
+   if( num > sepastoreexact->cutssize )
    {
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastoreex->cuts, newsize) );
-      sepastoreex->cutssize = newsize;
+      SCIP_ALLOC( BMSreallocMemoryArray(&sepastoreexact->cuts, newsize) );
+      sepastoreexact->cutssize = newsize;
    }
-   assert(num <= sepastoreex->cutssize);
+   assert(num <= sepastoreexact->cutssize);
 
    return SCIP_OKAY;
 }
 
 /** creates separation storage */
-SCIP_RETCODE SCIPsepastoreexCreate(
-   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
+SCIP_RETCODE SCIPsepastoreExactCreate(
+   SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -77,65 +77,65 @@ SCIP_RETCODE SCIPsepastoreexCreate(
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(sepastoreex) );
+   SCIP_ALLOC( BMSallocMemory(sepastoreexact) );
 
-   (*sepastoreex)->cuts = NULL;
-   (*sepastoreex)->cutssize = 0;
-   (*sepastoreex)->ncuts = 0;
-   (*sepastoreex)->ncutsfound = 0;
-   (*sepastoreex)->ncutsfoundround = 0;
-   (*sepastoreex)->ncutsapplied = 0;
+   (*sepastoreexact)->cuts = NULL;
+   (*sepastoreexact)->cutssize = 0;
+   (*sepastoreexact)->ncuts = 0;
+   (*sepastoreexact)->ncutsfound = 0;
+   (*sepastoreexact)->ncutsfoundround = 0;
+   (*sepastoreexact)->ncutsapplied = 0;
 
-   (*sepastoreex)->initiallp = FALSE;
+   (*sepastoreexact)->initiallp = FALSE;
 
    return SCIP_OKAY;
 }
 
 /** frees separation storage */
-SCIP_RETCODE SCIPsepastoreexFree(
-   SCIP_SEPASTOREEX**    sepastoreex,        /**< pointer to store separation storage */
+SCIP_RETCODE SCIPsepastoreExactFree(
+   SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   assert(sepastoreex != NULL);
-   assert(*sepastoreex != NULL);
-   assert((*sepastoreex)->ncuts == 0);
+   assert(sepastoreexact != NULL);
+   assert(*sepastoreexact != NULL);
+   assert((*sepastoreexact)->ncuts == 0);
 
-   BMSfreeMemoryArrayNull(&(*sepastoreex)->cuts);
-   BMSfreeMemory(sepastoreex);
+   BMSfreeMemoryArrayNull(&(*sepastoreexact)->cuts);
+   BMSfreeMemory(sepastoreexact);
 
    return SCIP_OKAY;
 }
 
 /** informs separation storage that the setup of the initial LP starts now */
-void SCIPsepastoreexStartInitialLP(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+void SCIPsepastoreExactStartInitialLP(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
-   assert(!sepastoreex->initiallp);
-   assert(sepastoreex->ncuts == 0);
+   assert(sepastoreexact != NULL);
+   assert(!sepastoreexact->initiallp);
+   assert(sepastoreexact->ncuts == 0);
 
-   sepastoreex->initiallp = TRUE;
+   sepastoreexact->initiallp = TRUE;
 }
 
 /** informs separation storage that the setup of the initial LP is now finished */
-void SCIPsepastoreexEndInitialLP(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+void SCIPsepastoreExactEndInitialLP(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
-   assert(sepastoreex->initiallp);
-   assert(sepastoreex->ncuts == 0);
+   assert(sepastoreexact != NULL);
+   assert(sepastoreexact->initiallp);
+   assert(sepastoreexact->ncuts == 0);
 
-   sepastoreex->initiallp = FALSE;
+   sepastoreexact->initiallp = FALSE;
 }
 
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreexAddCut(
-   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_Bool redundant;
    int pos;
 
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
    assert(set != NULL);
    assert(cut != NULL);
    assert(!RatIsNegInfinity(SCIProwExactGetLhs(cut)) || !RatIsInfinity(SCIProwExactGetRhs(cut)));
@@ -160,38 +160,38 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_CALL( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
-   if( !sepastoreex->initiallp )
+   if( !sepastoreexact->initiallp )
    {
-      sepastoreex->ncutsfound++;
-      sepastoreex->ncutsfoundround++;
+      sepastoreexact->ncutsfound++;
+      sepastoreexact->ncutsfoundround++;
    }
 
    /* get enough memory to store the cut */
-   SCIP_CALL( sepastoreexEnsureCutsMem(sepastoreex, set, sepastoreex->ncuts+1) );
-   assert(sepastoreex->ncuts < sepastoreex->cutssize);
+   SCIP_CALL( sepastoreExactEnsureCutsMem(sepastoreexact, set, sepastoreexact->ncuts+1) );
+   assert(sepastoreexact->ncuts < sepastoreexact->cutssize);
 
    SCIPsetDebugMsg(set, "adding cut <%s> to exact separation storage of size %d (forcecut=%u, len=%d)\n",
-      SCIProwGetName(cut->fprow), sepastoreex->ncuts, SCIProwGetNNonz(cut->fprow));
+      SCIProwGetName(cut->fprow), sepastoreexact->ncuts, SCIProwGetNNonz(cut->fprow));
    /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
    /* capture the cut */
    SCIProwExactCapture(cut);
 
-   pos = sepastoreex->ncuts;
+   pos = sepastoreexact->ncuts;
 
-   sepastoreex->cuts[pos] = cut;
-   sepastoreex->ncuts++;
+   sepastoreexact->cuts[pos] = cut;
+   sepastoreexact->ncuts++;
 
    /* If the duals need to be collected, then the infeasible flag is set to FALSE. This ensures that the LP is solved */
-   if( set->lp_alwaysgetduals && sepastoreex->initiallp )
+   if( set->lp_alwaysgetduals && sepastoreexact->initiallp )
       (*infeasible) = FALSE;
 
    return SCIP_OKAY;
 }
 
 /** adds cuts to the LP and clears separation storage */
-SCIP_RETCODE SCIPsepastoreexSyncLPs(
-   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
+SCIP_RETCODE SCIPsepastoreExactSyncLPs(
+   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -263,14 +263,14 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
 
    //assert(SCIPlpExactIsSynced(lpexact, set, SCIPgetMessagehdlr(set->scip)));
 
-   SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpexact) );
+   SCIP_CALL( SCIPsepastoreExactClearCuts(sepastoreexact, blkmem, set, eventqueue, eventfilter, lpexact) );
 
    return SCIP_OKAY;
 }
 
 /** clears the separation storage without adding the cuts to the LP */
-SCIP_RETCODE SCIPsepastoreexClearCuts(
-   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
+SCIP_RETCODE SCIPsepastoreExactClearCuts(
+   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -283,25 +283,25 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   SCIPsetDebugMsg(set, "clearing %d cuts\n", sepastoreex->ncuts);
+   SCIPsetDebugMsg(set, "clearing %d cuts\n", sepastoreexact->ncuts);
 
    /* release cuts */
-   for( c = 0; c < sepastoreex->ncuts; ++c )
+   for( c = 0; c < sepastoreexact->ncuts; ++c )
    {
-      SCIP_CALL( SCIProwExactRelease(&sepastoreex->cuts[c], blkmem, set, lp) );
+      SCIP_CALL( SCIProwExactRelease(&sepastoreexact->cuts[c], blkmem, set, lp) );
    }
 
    /* reset counters */
-   sepastoreex->ncuts = 0;
-   sepastoreex->ncutsfoundround = 0;
+   sepastoreexact->ncuts = 0;
+   sepastoreexact->ncutsfoundround = 0;
 
    /* if we have just finished the initial LP construction, free the (potentially large) cuts array */
-   if( sepastoreex->initiallp )
+   if( sepastoreexact->initiallp )
    {
-      BMSfreeMemoryArrayNull(&sepastoreex->cuts);
-      sepastoreex->cutssize = 0;
+      BMSfreeMemoryArrayNull(&sepastoreexact->cuts);
+      sepastoreexact->cutssize = 0;
    }
 
    return SCIP_OKAY;
@@ -309,51 +309,51 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
 
 
 /** get cuts in the separation storage */
-SCIP_ROWEXACT** SCIPsepastoreexGetCuts(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+SCIP_ROWEXACT** SCIPsepastoreExactGetCuts(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   return sepastoreex->cuts;
+   return sepastoreexact->cuts;
 }
 
 /** get number of cuts in the separation storage */
-int SCIPsepastoreexGetNCuts(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+int SCIPsepastoreExactGetNCuts(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   return sepastoreex->ncuts;
+   return sepastoreexact->ncuts;
 }
 
 /** get total number of cuts found so far */
-int SCIPsepastoreexGetNCutsFound(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+int SCIPsepastoreExactGetNCutsFound(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   return sepastoreex->ncutsfound;
+   return sepastoreexact->ncutsfound;
 }
 
 /** get number of cuts found so far in current separation round */
-int SCIPsepastoreexGetNCutsFoundRound(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+int SCIPsepastoreExactGetNCutsFoundRound(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   return sepastoreex->ncutsfoundround;
+   return sepastoreexact->ncutsfoundround;
 }
 
 /** get total number of cuts applied to the LPs */
-int SCIPsepastoreexGetNCutsApplied(
-   SCIP_SEPASTOREEX*     sepastoreex         /**< separation storage */
+int SCIPsepastoreExactGetNCutsApplied(
+   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
    )
 {
-   assert(sepastoreex != NULL);
+   assert(sepastoreexact != NULL);
 
-   return sepastoreex->ncutsapplied;
+   return sepastoreexact->ncutsapplied;
 }

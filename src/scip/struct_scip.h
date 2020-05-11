@@ -94,7 +94,7 @@ struct Scip
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
    SCIP_SEPASTORE*       sepastoreprobing;   /**< storage for separated cuts during probing mode */
-   SCIP_SEPASTOREEX*     sepastoreex;        /**< storage for exact cuts */
+   SCIP_SEPASTOREEXACT*  sepastoreexact;        /**< storage for exact cuts */
    SCIP_CONFLICTSTORE*   conflictstore;      /**< storage for conflicts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
    SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */
