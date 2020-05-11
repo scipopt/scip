@@ -206,8 +206,6 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
 
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
-
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
@@ -265,8 +263,6 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
 
    cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
    cr_expect_eq(nlhdlrexprdata->ntermbvars[0], 2, "Expecting 2 binary vars for term 0, got %d\n", nlhdlrexprdata->ntermbvars[0]);
-
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
@@ -344,7 +340,6 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIPfreeSol(scip, &sol);
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

@@ -5603,48 +5603,6 @@ int nlhdlrCmp(
    return strcmp(h1->name, h2->name);
 }
 
-/** frees auxiliary variables which have been added to compute an outer approximation */
-static
-SCIP_RETCODE freeAuxVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSDATA* consdata;
-   int i;
-
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      if( consdata->expr == NULL )
-         continue;
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
 /** calls separation initialization callback for each expression */
 static
 SCIP_RETCODE initSepa(
@@ -10237,14 +10195,6 @@ static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
-   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables
-    */
-   if( SCIPgetNRuns(scip) > 1 )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -10380,8 +10330,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, !restart) );
+         /* remove nonlinear handlers in expression and their data and auxiliary variables */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
          /* remove quadratic info */
          quadFree(scip, expr);
