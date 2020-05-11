@@ -29,7 +29,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
-#include "scip/scip_lpex.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"

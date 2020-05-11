@@ -38,7 +38,7 @@
 #include "scip/heur.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/nodesel.h"
 #include "scip/pricer.h"
 #include "scip/pricestore.h"

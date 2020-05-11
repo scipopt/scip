@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpex.h
+/**@file   lpexact.h
  * @ingroup INTERNALAPI
  * @brief  internal methods for exact LP management
  * @author Leon Eifler
@@ -33,13 +33,13 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_misc.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
 #include "scip/pub_lp.h"
 
-#include "scip/struct_lpex.h"
+#include "scip/struct_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -610,14 +610,14 @@ void SCIPlpexGetPseudoObjval(
    );
 
 /** removes all columns after the given number of cols from the LP */
-SCIP_RETCODE SCIPlpexShrinkCols(
+SCIP_RETCODE SCIPlpexactshrinkCols(
    SCIP_LPEX*            lpex,               /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    );
 
 /** removes and releases all rows after the given number of rows from the LP */
-SCIP_RETCODE SCIPlpexShrinkRows(
+SCIP_RETCODE SCIPlpexactshrinkRows(
    SCIP_LPEX*            lpex,               /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -650,7 +650,7 @@ SCIP_RETCODE SCIPlpexClear(
 /** checks whether primal solution satisfies all integrality restrictions exactly.
  * This checks either the fp solution exactly or checks the exact solution, if one exists.
  */
-SCIP_RETCODE SCIPlpexCheckIntegralityExact(
+SCIP_RETCODE SCIPlpexactcheckIntegralityExact(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEX*            lpex,               /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */

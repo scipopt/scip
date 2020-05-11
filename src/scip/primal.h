@@ -31,7 +31,7 @@
 #include "scip/type_set.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"

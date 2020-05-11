@@ -40,9 +40,9 @@
 
 #include "scip/struct_lp.h"
 
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {

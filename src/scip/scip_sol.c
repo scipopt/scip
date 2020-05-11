@@ -45,7 +45,7 @@
 #include "scip/cons_linear.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"
 #include "scip/prob.h"

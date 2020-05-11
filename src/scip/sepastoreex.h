@@ -33,7 +33,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
 #include "scip/type_reopt.h"

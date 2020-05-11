@@ -50,7 +50,7 @@
 #include "scip/implics.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/nlp.h"
 #include "scip/presol.h"
 #include "scip/pricestore.h"

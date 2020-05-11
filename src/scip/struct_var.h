@@ -34,7 +34,7 @@
 #include "scip/type_prop.h"
 #include "scip/type_lp.h"
 #include "scip/rational.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {

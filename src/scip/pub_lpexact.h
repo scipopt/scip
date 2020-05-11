@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_lpex.h
+/**@file   pub_lpexact.h
  * @ingroup PUBLICCOREAPI
  * @brief  public methods for LP management
  * @author Leon Eifler
@@ -30,13 +30,13 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
 
 #ifdef NDEBUG
-#include "scip/struct_lpex.h"
+#include "scip/struct_lpexact.h"
 #endif
 
 #ifdef __cplusplus

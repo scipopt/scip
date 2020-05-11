@@ -14,7 +14,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_lpex.h
+/**@file   scip_lpexact.h
  * @ingroup PUBLICCOREAPI
  * @brief  public methods for the LP relaxation, rows and columns
  * @author Leon Eifler
@@ -31,7 +31,7 @@
 #include "scip/rational.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"

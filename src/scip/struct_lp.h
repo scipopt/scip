@@ -71,7 +71,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {

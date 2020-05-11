@@ -34,7 +34,7 @@
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_lpex.c
+/**@file   scip_lpexact.c
  * @brief  public methods for the exact LP relaxation, rows and columns
  * @author Leon Eifler
  *
@@ -64,7 +64,7 @@
 #include "scip/implics.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
 #include "scip/misc.h"

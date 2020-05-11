@@ -254,7 +254,7 @@ set(scipsources
     scip/interrupt.c
     scip/intervalarith.c
     scip/lp.c
-    scip/lpex.c
+    scip/lpexact.c
     scip/matrix.c
     scip/mem.c
     scip/misc.c
@@ -295,7 +295,7 @@ set(scipsources
     scip/scip_general.c
     scip/scip_heur.c
     scip/scip_lp.c
-    scip/scip_lpex.c
+    scip/scip_lpexact.c
     scip/scip_mem.c
     scip/scip_message.c
     scip/scip_nlp.c
@@ -616,7 +616,7 @@ set(scipheaders
     scip/interrupt.h
     scip/intervalarith.h
     scip/lp.h
-    scip/lpex.h
+    scip/lpexact.h
     scip/mem.h
     scip/message_default.h
     scip/message.h
@@ -764,7 +764,7 @@ set(scipheaders
     scip/scip_general.h
     scip/scip_heur.h
     scip/scip_lp.h
-    scip/scip_lpex.h
+    scip/scip_lpexact.h
     scip/scip_mem.h
     scip/scip_message.h
     scip/scip_nlp.h
@@ -835,7 +835,7 @@ set(scipheaders
     scip/struct_history.h
     scip/struct_implics.h
     scip/struct_lp.h
-    scip/struct_lpex.h
+    scip/struct_lpexact.h
     scip/struct_matrix.h
     scip/struct_mem.h
     scip/struct_message.h
@@ -893,7 +893,7 @@ set(scipheaders
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
-    scip/scip_lpex.h
+    scip/scip_lpexact.h
     scip/type_matrix.h
     scip/type_mem.h
     scip/type_message.h

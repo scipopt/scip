@@ -29,7 +29,7 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"

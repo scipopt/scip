@@ -23,7 +23,7 @@
 
 #include "scip/clock.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/pricestore.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"

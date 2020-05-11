@@ -31,7 +31,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
 #include "scip/type_sol.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"

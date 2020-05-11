@@ -26,7 +26,7 @@
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
 #include "scip/pub_cons.h"

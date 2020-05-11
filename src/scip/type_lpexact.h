@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_lpex.h
+/**@file   type_lpexact.h
  * @brief  type definitions for exact LP management
  * @author Leon Eifler
  */

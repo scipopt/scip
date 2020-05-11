@@ -28,7 +28,7 @@
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/primal.h"
 #include "scip/pub_event.h"
 #include "scip/pub_message.h"

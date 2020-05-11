@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
    assert(scip != NULL);
    assert(scip->lp != NULL && scip->lpex != NULL);
 
-   SCIP_CALL( SCIPlpexCheckIntegralityExact(scip->lp, scip->lpex,
+   SCIP_CALL( SCIPlpexactcheckIntegralityExact(scip->lp, scip->lpex,
          scip->set, scip->stat, result) );
 
    return SCIP_OKAY;

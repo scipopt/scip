@@ -39,9 +39,9 @@
 #include "scip/cuts.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/rational.h"
-#include "scip/pub_lpex.h"
+#include "scip/pub_lpexact.h"
 
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
@@ -239,7 +239,7 @@ SCIP_RETCODE SCIPsepastoreexSyncLPs(
          assert(i == nrowsex - nreleases);
       }
    }
-   SCIPlpexShrinkRows(lpex, blkmem, set, eventqueue, eventfilter, lpex->nrows - nreleases);
+   SCIPlpexactshrinkRows(lpex, blkmem, set, eventqueue, eventfilter, lpex->nrows - nreleases);
 
    for( i = 0; i < nrowsfp; ++i )
    {

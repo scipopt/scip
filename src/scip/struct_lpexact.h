@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_lpex.h
+/**@file   struct_lpexact.h
  * @ingroup INTERNALAPI
  * @brief  data structures for exact LP management
  * @author Tobias Achterberg
@@ -69,7 +69,7 @@
 #include "scip/def.h"
 #include "scip/scip_exact.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_event.h"

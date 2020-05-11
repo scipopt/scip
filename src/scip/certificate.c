@@ -30,7 +30,7 @@
 #include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/pub_misc.h"
 #include "scip/prob.h"
 #include "scip/certificate.h"

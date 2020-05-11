@@ -24,7 +24,7 @@
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/misc.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"

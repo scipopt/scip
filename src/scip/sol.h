@@ -33,7 +33,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
