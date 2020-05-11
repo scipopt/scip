@@ -468,6 +468,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  */
 #define SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_QUEUE* reversepropqueue, \
    SCIP_Bool* infeasible, \
@@ -785,6 +786,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -959,6 +961,8 @@ typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< 
 /** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
 #define SCIP_MAXVERTEXPOLYDIM 14
 
+
+typedef struct SCIP_ConsExpr_QuadExpr      SCIP_CONSEXPR_QUADEXPR;      /**< representation of expression as quadratic */
 
 #ifdef __cplusplus
 }

@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** creates the multinode branching rule and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleMultinode(
    SCIP*                 scip                /**< SCIP data structure */
    );

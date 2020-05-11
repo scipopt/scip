@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -293,8 +293,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-   SCIPinfoMessage(scip, NULL, " -> %gx%+gy%+gxy%+gx^2%+gy^2%+g (x=<%s>, y=<%s>)\n", exprdata.xcoef, exprdata.ycoef, exprdata.xycoef, exprdata.xxcoef, exprdata.yycoef, exprdata.constant, SCIPvarGetName(exprdata.varx), SCIPvarGetName(exprdata.vary));
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, " -> %gx%+gy%+gxy%+gx^2%+gy^2%+g (x=<%s>, y=<%s>)\n", exprdata.xcoef, exprdata.ycoef, exprdata.xycoef, exprdata.xxcoef, exprdata.yycoef, exprdata.constant, SCIPvarGetName(exprdata.varx), exprdata.vary != NULL ? SCIPvarGetName(exprdata.vary) : "na");
 #endif
 
    /* separable function is not of interest (for this unittest) */
@@ -344,6 +344,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
    *auxvalue += nlhdlrexprdata->xxcoef * xval * xval;
    *auxvalue += nlhdlrexprdata->ycoef * yval;
    *auxvalue += nlhdlrexprdata->yycoef * yval * yval;
+   *auxvalue += nlhdlrexprdata->xycoef * xval * yval;
 
    return SCIP_OKAY;
 }
@@ -472,13 +473,13 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
 
    /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
 
    if( !*infeasible )
    {
       /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
       SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx));
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
    }
 
    return SCIP_OKAY;
@@ -582,7 +583,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, evalauxHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
@@ -591,7 +592,9 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, enfoHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
+#ifndef SCIP_DEBUG
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+#endif
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
 /*
    SCIP_CALL( SCIPpresolve(scip) );
@@ -600,6 +603,10 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 */
    SCIP_CALL( SCIPsolve(scip) );
    /* SCIP_CALL( SCIPprintBestSol(scip, NULL, TRUE) ); */
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+#endif
 
    cr_assert(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
    cr_assert(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(scip));

@@ -1870,10 +1870,6 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       {
          /* constraint should not be deleted and is kept on position c */
          delstats[c] = c;
-
-         if( c == lastgood )
-            break;
-
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
@@ -1887,9 +1883,9 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       assert(oracle->conss[c] != NULL);
       delstats[lastgood] = c; /* mark that lastgood constraint is now at position c */
       oracle->conss[lastgood] = NULL;
+      --lastgood;
 
       /* move lastgood forward, delete constraints on the way */
-      --lastgood;
       while( lastgood > c && delstats[lastgood] == 1)
       {
          freeConstraint(oracle->blkmem, &oracle->conss[lastgood]);
@@ -1898,7 +1894,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
          --lastgood;
       }
    }
-   assert(c == lastgood);
+   assert(c == lastgood+1);
 
    oracle->nconss = lastgood+1;
 

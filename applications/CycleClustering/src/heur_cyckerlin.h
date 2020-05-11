@@ -31,13 +31,11 @@ extern "C" {
 #endif
 
 /** creates the oneopt primal heuristic and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurCycKerlin(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** External method that adds a solution to the list of candidate-solutions that should be improved */
-SCIP_EXPORT
 SCIP_RETCODE addCandSolCyckerlin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< The given solution */

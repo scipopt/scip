@@ -7905,7 +7905,6 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    int*                  narticulations      /**< number of the computed articulation points, or NULL */
    )
 {
-
    BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
    SCIP_Bool* articulationflag;

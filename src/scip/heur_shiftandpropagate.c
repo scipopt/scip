@@ -779,9 +779,8 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
 
-
-     (*matrix)->nrows = 0;
-     (*matrix)->ncols = 0;
+      (*matrix)->nrows = 0;
+      (*matrix)->ncols = 0;
    }
 
    /* free matrix */

@@ -4244,7 +4244,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayReoptStatistics, NULL, NULL,
-            "reoptstatistics", "display reoptimitazion statistics", FALSE, NULL) );
+            "reoptstatistics", "display reoptimization statistics", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -5122,7 +5122,6 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
-
 
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )

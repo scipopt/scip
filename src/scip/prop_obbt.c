@@ -38,11 +38,9 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/cons_abspower.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_bivariate.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
+#include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
 #include "scip/intervalarith.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
@@ -80,58 +78,50 @@
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
-#define PROP_PRIORITY                -1000000      /**< propagator priority */
-#define PROP_FREQ                           0      /**< propagator frequency */
-#define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
-                                                    *   found reductions? */
+#define PROP_PRIORITY               -1000000 /**< propagator priority */
+#define PROP_FREQ                          0 /**< propagator frequency */
+#define PROP_DELAY                      TRUE /**< should propagation method be delayed, if other propagators
+                                              *   found reductions? */
 
-#define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
-#define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
-                                                    *   domains sizes? */
-#define DEFAULT_APPLY_FILTERROUNDS      FALSE      /**< try to filter bounds in so-called filter rounds by solving
-                                                    *   auxiliary LPs? */
-#define DEFAULT_APPLY_TRIVIALFITLERING   TRUE      /**< should obbt try to use the LP solution to filter some bounds? */
-#define DEFAULT_GENVBDSDURINGFILTER      TRUE      /**< try to genrate genvbounds during trivial and aggressive filtering? */
-#define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
-                                                    *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
-#define DEFAULT_BOUNDSTREPS             0.001      /**< minimal relative improve for strengthening bounds */
-#define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
-                                                    *   round */
-#define DEFAULT_ITLIMITFACTOR            10.0      /**< multiple of root node LP iterations used as total LP iteration
-                                                    *   limit for obbt (<= 0: no limit ) */
-#define DEFAULT_MINITLIMIT              5000L      /**< minimum LP iteration limit */
-#define DEFAULT_ONLYNONCONVEXVARS       FALSE      /**< only apply obbt on non-convex variables */
-#define DEFAULT_TIGHTINTBOUNDSPROBING    TRUE      /**< should bounds of integral variables be tightened during
-                                                    *   the probing mode? */
-#define DEFAULT_TIGHTCONTBOUNDSPROBING  FALSE      /**< should bounds of continuous variables be tightened during
-                                                    *   the probing mode? */
-#define DEFAULT_ORDERINGALGO                1      /**< which type of ordering algorithm should we use?
-                                                    *   (0: no, 1: greedy, 2: greedy reverse) */
-#define OBBT_SCOREBASE                      5      /**< base that is used to calculate a bounds score value */
-#define GENVBOUND_PROP_NAME             "genvbounds"
-#define INTERVALINFTY                   1E+43      /**< value for infinity in interval operations */
+#define DEFAULT_CREATE_GENVBOUNDS       TRUE /**< should obbt try to provide genvbounds if possible? */
+#define DEFAULT_FILTERING_NORM          TRUE /**< should coefficients in filtering be normalized w.r.t. the
+                                              *   domains sizes? */
+#define DEFAULT_APPLY_FILTERROUNDS     FALSE /**< try to filter bounds in so-called filter rounds by solving
+                                              *   auxiliary LPs? */
+#define DEFAULT_APPLY_TRIVIALFITLERING  TRUE /**< should obbt try to use the LP solution to filter some bounds? */
+#define DEFAULT_GENVBDSDURINGFILTER     TRUE /**< try to genrate genvbounds during trivial and aggressive filtering? */
+#define DEFAULT_DUALFEASTOL             1e-9 /**< feasibility tolerance for reduced costs used in obbt; this value
+                                              *   is used if SCIP's dual feastol is greater */
+#define DEFAULT_CONDITIONLIMIT          -1.0 /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_BOUNDSTREPS            0.001 /**< minimal relative improve for strengthening bounds */
+#define DEFAULT_FILTERING_MIN              2 /**< minimal number of filtered bounds to apply another filter
+                                              *   round */
+#define DEFAULT_ITLIMITFACTOR           10.0 /**< multiple of root node LP iterations used as total LP iteration
+                                              *   limit for obbt (<= 0: no limit ) */
+#define DEFAULT_MINITLIMIT             5000L /**< minimum LP iteration limit */
+#define DEFAULT_ONLYNONCONVEXVARS      FALSE /**< only apply obbt on non-convex variables */
+#define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
+                                              *   the probing mode? */
+#define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during
+                                              *   the probing mode? */
+#define DEFAULT_ORDERINGALGO               1 /**< which type of ordering algorithm should we use?
+                                              *   (0: no, 1: greedy, 2: greedy reverse) */
+#define OBBT_SCOREBASE                     5 /**< base that is used to calculate a bounds score value */
+#define GENVBOUND_PROP_NAME    "genvbounds"
 
-#define DEFAULT_SEPARATESOL             FALSE      /**< should the obbt LP solution be separated? note that that by
-                                                    *   separating solution OBBT will apply all bound tightenings
-                                                    *   immediatly */
-#define DEFAULT_SEPAMINITER                 0      /**< minimum number of iteration spend to separate an obbt LP solution */
-#define DEFAULT_SEPAMAXITER                10      /**< maximum number of iteration spend to separate an obbt LP solution */
-#define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
-#define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
-                                                    *   (0: no propagation) */
-#define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
-#define DEFAULT_CREATE_LINCONS          FALSE      /**< create linear constraints from inequalities for bilinear terms? */
-#define DEFAULT_ITLIMITFAC_BILININEQS     3.0      /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
-#define DEFAULT_MINNONCONVEXITY          1e-1      /**< minimum nonconvexity for choosing a bilinear term */
-#define DEFAULT_RANDSEED                  149      /**< initial random seed */
-
-
-/** translate from one value of infinity to another
- *
- *  if val is >= infty1, then give infty2, else give val
- */
-#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
+#define DEFAULT_SEPARATESOL            FALSE /**< should the obbt LP solution be separated? note that that by
+                                              *   separating solution OBBT will apply all bound tightenings
+                                              *   immediatly */
+#define DEFAULT_SEPAMINITER                0 /**< minimum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_SEPAMAXITER               10 /**< maximum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_GENVBDSDURINGSEPA       TRUE /**< try to create genvbounds during separation process? */
+#define DEFAULT_PROPAGATEFREQ              0 /**< trigger a propagation round after that many bound tightenings
+                                              *   (0: no propagation) */
+#define DEFAULT_CREATE_BILININEQS       TRUE /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_CREATE_LINCONS         FALSE /**< create linear constraints from inequalities for bilinear terms? */
+#define DEFAULT_ITLIMITFAC_BILININEQS    3.0 /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
+#define DEFAULT_MINNONCONVEXITY         1e-1 /**< minimum nonconvexity for choosing a bilinear term */
+#define DEFAULT_RANDSEED                 149 /**< initial random seed */
 
 /*
  * Data structures
@@ -1114,7 +1104,7 @@ SCIP_RETCODE filterRound(
    int*                  nfiltered,          /**< how many bounds were filtered this round */
    SCIP_Real*            objcoefs,           /**< array to store the nontrivial objective coefficients */
    int*                  objcoefsinds,       /**< array to store bound indices for which their corresponding variables
-                                               *  has a nontrivial objective coefficient */
+                                              *   has a nontrivial objective coefficient */
    int                   nobjcoefs           /**< number of nontrivial objective coefficients */
    )
 {
@@ -1691,7 +1681,7 @@ SCIP_RETCODE applySeparation(
 
    for( i = 0; i <= propdata->sepamaxiter; ++i )
    {
-      SCIP_Longint nlpiter;
+      SCIPdebug( SCIP_Longint nlpiter; )
       SCIP_Real oldval;
       SCIP_Bool cutoff;
       SCIP_Bool delayed;
@@ -1715,7 +1705,7 @@ SCIP_RETCODE applySeparation(
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
-      SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
+      SCIPdebug( SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter); )
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
       /* leave if we did not solve the LP to optimality or an error occured */
@@ -2628,227 +2618,65 @@ unsigned int getScore(
    return score;
 }
 
-/** count the variables which appear in non-convex term of nlrow  */
-static
-SCIP_RETCODE countNLRowVarsNonConvexity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int*                  nlcounts,           /**< store the number each variable appears in a
-                                              *   non-convex term */
-   SCIP_NLROW*           nlrow               /**< nonlinear row */
-   )
-{
-   int t;
-   int nexprtreevars;
-   SCIP_VAR** exprtreevars;
-   SCIP_EXPRTREE* exprtree;
-
-   assert(scip != NULL);
-   assert(nlcounts != NULL);
-   assert(nlrow != NULL);
-
-   /* go through all quadratic terms */
-   for( t = SCIPnlrowGetNQuadElems(nlrow) - 1; t >= 0; --t )
-   {
-      SCIP_QUADELEM* quadelem;
-      SCIP_VAR* bilinvar1;
-      SCIP_VAR* bilinvar2;
-
-      /* get quadratic term */
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[t];
-
-      /* get involved variables */
-      bilinvar1 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
-      bilinvar2 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
-
-      assert(bilinvar1 != NULL);
-      assert(bilinvar2 != NULL);
-
-      /* we have a non-convex square term */
-      if( bilinvar1 == bilinvar2 && !(quadelem->coef >= 0 ? SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) : SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow))) )
-      {
-         ++nlcounts[SCIPvarGetProbindex(bilinvar1)];
-         ++nlcounts[SCIPvarGetProbindex(bilinvar2)];
-      }
-
-      /* bilinear terms are in general non-convex */
-      if( bilinvar1 != bilinvar2 )
-      {
-         ++nlcounts[SCIPvarGetProbindex(bilinvar1)];
-         ++nlcounts[SCIPvarGetProbindex(bilinvar2)];
-      }
-   }
-
-   exprtree = SCIPnlrowGetExprtree(nlrow);
-   if( exprtree != NULL )
-   {
-      nexprtreevars = SCIPexprtreeGetNVars(exprtree);
-      exprtreevars = SCIPexprtreeGetVars(exprtree);
-
-      /* assume that the expression tree represents a non-convex constraint */
-      for( t = 0; t < nexprtreevars; ++t)
-      {
-         SCIP_VAR* var;
-         var = exprtreevars[t];
-         assert(var != NULL);
-
-         ++nlcounts[SCIPvarGetProbindex(var)];
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** count how often each variable appears in a non-convex term */
+/** count how often each variable is used in a nonconvex term */
 static
 SCIP_RETCODE getNLPVarsNonConvexity(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  nlcounts            /**< store the number each variable appears in a
+   int*                  nccounts            /**< store the number each variable appears in a
                                               *   non-convex term */
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS** conss;
+   SCIP_HASHMAP* var2expr;
    int nvars;
-   int nconss;
    int i;
 
    assert(scip != NULL);
-   assert(nlcounts != NULL);
+   assert(nccounts != NULL);
 
    nvars = SCIPgetNVars(scip);
-   BMSclearMemoryArray(nlcounts, nvars);
 
-   /* quadratic constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "quadratic");
-   if( conshdlr != NULL )
+   /* initialize nccounts to zero */
+   BMSclearMemoryArray(nccounts, nvars);
+
+   /* get expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   var2expr = SCIPgetConsExprVarHashmap(scip, conshdlr);
+   assert(var2expr != NULL);
+
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
+      SCIP_VAR* var;
 
-      SCIPdebugMsg(scip, "nconss(quadratic) = %d\n", nconss);
+      var = SCIPgetVars(scip)[i];
+      assert(var != NULL);
 
-      for( i = 0; i < nconss; ++i )
+      if( SCIPhashmapExists(var2expr, (void*) var) )
       {
-         SCIP_Bool isnonconvex;
+         SCIP_CONSEXPR_EXPR* expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, (void*) var);
+         assert(expr != NULL);
+         assert(SCIPisConsExprExprVar(expr));
 
-         isnonconvex = (!SCIPisConvexQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, conss[i])))
-            || (!SCIPisConcaveQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, conss[i])));
-
-         /* only check the nlrow if the constraint is not convex */
-         if( isnonconvex )
-         {
-            SCIP_NLROW* nlrow;
-            SCIP_CALL( SCIPgetNlRowQuadratic(scip, conss[i], &nlrow) );
-            assert(nlrow != NULL);
-
-            SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-         }
+         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNDomainUses(expr);
+         assert(nccounts[SCIPvarGetProbindex(var)] >= 0);
       }
    }
 
-   /* nonlinear constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   if( conshdlr != NULL )
+#ifdef SCIP_DEBUG
    {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
+      int i;
 
-      SCIPdebugMsg(scip, "nconss(nonlinear) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
+      for( i = 0; i < SCIPgetNVars(scip); ++i)
       {
-         SCIP_EXPRCURV curvature;
-         SCIP_Bool isnonconvex;
-
-         SCIP_CALL( SCIPgetCurvatureNonlinear(scip, conss[i], TRUE, &curvature) );
-
-         isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, conss[i])))
-            || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, conss[i])));
-
-         /* only check the nlrow if the constraint is not convex */
-         if( isnonconvex )
-         {
-            SCIP_NLROW* nlrow;
-            SCIP_CALL( SCIPgetNlRowNonlinear(scip, conss[i], &nlrow) );
-            assert(nlrow != NULL);
-
-            SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-         }
+         SCIP_VAR* var = SCIPgetVars(scip)[i];
+         assert(var != NULL);
+         SCIPdebugMsg(scip, "nccounts[%s] = %d\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
       }
    }
-
-   /* bivariate constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "bivariate");
-   if( conshdlr != NULL )
-   {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
-
-      SCIPdebugMsg(scip, "nconss(bivariate) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_EXPRCURV curvature;
-         SCIP_INTERVAL* varbounds;
-         SCIP_EXPRTREE* exprtree;
-         int j;
-
-         exprtree = SCIPgetExprtreeBivariate(scip, conss[i]);
-         if( exprtree != NULL )
-         {
-            SCIP_Bool isnonconvex;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &varbounds, SCIPexprtreeGetNVars(exprtree)) );
-            for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
-            {
-               SCIP_VAR* var;
-               var = SCIPexprtreeGetVars(exprtree)[j];
-
-               SCIPintervalSetBounds(&varbounds[j],
-                  -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -MIN(SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var))),    /*lint !e666*/
-                  +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  MAX(SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var))) );  /*lint !e666*/
-            }
-
-            SCIP_CALL( SCIPexprtreeCheckCurvature(exprtree, SCIPinfinity(scip), varbounds, &curvature, NULL) );
-
-            isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, conss[i])))
-               || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, conss[i])));
-
-            /* increase counter for all variables in the expression tree if the constraint is non-convex */
-            if( isnonconvex )
-            {
-               for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
-               {
-                  SCIP_VAR* var;
-                  var = SCIPexprtreeGetVars(exprtree)[j];
-
-                  ++nlcounts[SCIPvarGetProbindex(var)];
-               }
-            }
-            SCIPfreeBufferArray(scip, &varbounds);
-         }
-      }
-   }
-
-   /* abspower constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "abspower");
-   if( conshdlr != NULL )
-   {
-      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      conss = SCIPconshdlrGetConss(conshdlr);
-
-      SCIPdebugMsg(scip, "nconss(abspower) = %d\n", nconss);
-
-      for( i = 0; i < nconss; ++i )
-      {
-         /* constraint is non-convex in general */
-         SCIP_NLROW* nlrow;
-         SCIP_CALL( SCIPgetNlRowAbspower(scip, conss[i], &nlrow) );
-         assert(nlrow != NULL);
-
-         SCIP_CALL( countNLRowVarsNonConvexity(scip, nlcounts, nlrow) );
-      }
-   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -2860,8 +2688,8 @@ SCIP_Bool varIsInteresting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to check */
    int                   nlcount             /**< number of nonlinear constraints containing the variable
-                                               *  or number of non-convex terms containing the variable
-                                               * (depends on propdata->onlynonconvexvars)  */
+                                              *   or number of non-convex terms containing the variable
+                                              *  (depends on propdata->onlynonconvexvars)  */
    )
 {
    assert(SCIPgetDepth(scip) == 0);

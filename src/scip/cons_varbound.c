@@ -3176,7 +3176,6 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
          SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
                !SCIPisInfinity(scip, consdata->rhs)) );
-
       }
 
       /* apply aggregation on y */
@@ -3296,8 +3295,8 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, varscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, varconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, varconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
@@ -3322,16 +3321,16 @@ SCIP_RETCODE applyFixings(
 	 assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 	 assert(SCIPisZero(scip, vbdvarscalar)); /* this means that var was fixed */
 
-	 /* add offset that results of the fixed variable */
-	 if( SCIPisZero(scip, vbdvarconstant) != 0 )
+	 /* add offset that results from the fixed variable */
+	 if( ! SCIPisZero(scip, vbdvarconstant) )
 	 {
 	    if( !SCIPisInfinity(scip, rhs) )
 	    {
-	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	    if( !SCIPisInfinity(scip, -lhs) )
 	    {
-	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - vbdvarconstant) );
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - consdata->vbdcoef * vbdvarconstant) );
 	    }
 	 }
       }

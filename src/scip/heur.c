@@ -317,7 +317,6 @@ SCIP_RETCODE SCIPdivesetCreate(
 
    SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
-
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
@@ -844,7 +843,6 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
    assert(set != NULL);
    assert(diveset != NULL);
    assert(available != NULL);
-
 
    if( diveset->divesetavailable == NULL )
       *available = TRUE;

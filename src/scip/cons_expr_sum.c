@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -983,7 +983,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSum)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, SCIPgetConsExprExprNChildren(expr),
+   SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, SCIPgetConsExprExprNChildren(expr),
             SCIPgetConsExprExprChildren(expr), exprdata->coefficients, exprdata->constant,
             SCIPgetConsExprExprActivity(scip, expr), reversepropqueue, infeasible, nreductions, force) );
 
@@ -1230,6 +1230,7 @@ void SCIPmultiplyConsExprExprSumByConstant(
 /** reverse propagate a weighted sum of expressions in the given interval */
 SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nexprs,             /**< number of expressions to propagate */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions to propagate */
    SCIP_Real*            weights,            /**< weights of expressions in sum */
@@ -1359,7 +1360,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       SCIPdebugMsgPrint(scip, " -> x = [%.20g,%.20g]\n", childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, exprs[c], childbounds, force, reversepropqueue,
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, exprs[c], childbounds, force, reversepropqueue,
             infeasible, nreductions) );  /*lint !e613 */
    }
 

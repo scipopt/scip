@@ -782,7 +782,6 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
       SCIPinfoMessage(scip, file, " ");
    }
 
-
    return SCIP_OKAY;
 }
 

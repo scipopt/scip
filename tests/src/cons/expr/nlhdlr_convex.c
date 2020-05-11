@@ -71,7 +71,6 @@ void setup(void)
 
    cr_assert_not_null(nlhdlr);
 
-
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
@@ -80,7 +79,7 @@ void setup(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x_1, "x1", 0.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x_2, "x2", 0.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x_3, "x3", 1.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x_3, "x3", 1.0, 4.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPaddVar(scip, x_1) );
    SCIP_CALL( SCIPaddVar(scip, x_2) );
    SCIP_CALL( SCIPaddVar(scip, x_3) );
@@ -90,6 +89,8 @@ void setup(void)
 static
 void teardown(void)
 {
+   nlhdlrExitConvex(scip, nlhdlr);
+
    SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_2) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_3) );
@@ -192,4 +193,187 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, TRUE);
    detect("log(4-<x1>)*<x1>", SCIP_EXPRCURV_CONCAVE, TRUE);   /* similar to arki0017 */
+
+   /* quadratic */
+   detect("exp(<x1>^2+<x2>^2)", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
+}
+
+/** given a string for f(x) and its curvature, run nlhdlr_convex detect on f(x) = 0 and estimate on the enforced side and check whether the estimator is as expected */
+static
+SCIP_RETCODE estimate(
+   const char*           exprstr,
+   SCIP_Bool             simplify,
+   SCIP_SOL*             sol,
+   SCIP_Real             x1coef_expected,
+   SCIP_Real             x2coef_expected,
+   SCIP_Real             x3coef_expected,
+   SCIP_Real             constant_expected
+)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* oexpr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_INTERVAL activity;
+   SCIP_Real auxvalue;
+   SCIP_Real targetvalue;
+   SCIP_ROWPREP* rowprep;
+   SCIP_Bool changed;
+   SCIP_Bool infeas;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success;
+   SCIP_Bool addedbranchscores;
+   SCIP_CONS* cons;
+   SCIP_Real x1coef = 0.0;
+   SCIP_Real x2coef = 0.0;
+   SCIP_Real x3coef = 0.0;
+   SCIP_Real constant;
+   int i;
+
+   /* create expression and constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
+   if( simplify )
+   {
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+      cr_expect(!infeas);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+   }
+   else
+      expr = oexpr;
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+
+   SCIPprintCons(scip, cons, NULL);
+   SCIPinfoMessage(scip, NULL, " at x1=%g x2=%g x3=%g\n",
+      SCIPgetSolVal(scip, sol, x_1), SCIPgetSolVal(scip, sol, x_2), SCIPgetSolVal(scip, sol, x_3));
+
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   cr_expect(success);
+   cr_expect(!enforcebelow || (provided & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
+   cr_expect(!enforceabove || (provided & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
+   cr_expect(enforcebelow || enforceabove);
+
+   /* estimate on enforced side */
+   targetvalue = enforceabove ? SCIPinfinity(scip) : -SCIPinfinity(scip);
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, enforceabove ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
+   SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove, targetvalue, rowprep, &success, FALSE, &addedbranchscores) );
+
+   cr_assert(success);
+   cr_assert(!rowprep->local);  /* nlhdlr should have set rowprep->local to FALSE */
+
+   SCIPmergeRowprepTerms(scip, rowprep);
+   constant = -rowprep->side;
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      if( rowprep->vars[i] == x_1 )
+         x1coef = rowprep->coefs[i];
+      else if( rowprep->vars[i] == x_2 )
+         x2coef = rowprep->coefs[i];
+      else if( rowprep->vars[i] == x_3 )
+         x3coef = rowprep->coefs[i];
+      else
+      {
+         SCIPerrorMessage("unexpected variable in rowprep");
+         cr_assert(0);
+      }
+   }
+
+   cr_expect_float_eq(x1coef, x1coef_expected, 1e-9, "x1 coef wrong. Expected %g, but got %g", x1coef_expected, x1coef);
+   cr_expect_float_eq(x2coef, x2coef_expected, 1e-9, "x2 coef wrong. Expected %g, but got %g", x2coef_expected, x2coef);
+   cr_expect_float_eq(x3coef, x3coef_expected, 1e-9, "x3 coef wrong. Expected %g, but got %g", x3coef_expected, x3coef);
+   cr_expect_float_eq(constant, constant_expected, 1e-9, "Constant wrong. Expected %g, but got %g", constant_expected, constant);
+
+   SCIPfreeRowprep(scip, &rowprep);
+
+   cr_assert_not_null(nlhdlrexprdata);
+   SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+static
+void gradest_univariate(
+   SCIP_Real x,
+   SCIP_Real fx,
+   SCIP_Real fp,
+   SCIP_Real* xcoef,
+   SCIP_Real* constant
+   )
+{
+   *xcoef = fp;
+   *constant = fx - fp * x;
+}
+
+static
+void gradest_bivariate(
+   SCIP_Real x,
+   SCIP_Real y,
+   SCIP_Real fxy,
+   SCIP_Real fpx,
+   SCIP_Real fpy,
+   SCIP_Real* xcoef,
+   SCIP_Real* ycoef,
+   SCIP_Real* constant
+   )
+{
+   *xcoef = fpx;
+   *ycoef = fpy;
+   *constant = fxy - fpx * x - fpy * y;
+}
+
+static
+void secantest(
+   SCIP_Real left,
+   SCIP_Real fleft,
+   SCIP_Real right,
+   SCIP_Real fright,
+   SCIP_Real* xcoef,
+   SCIP_Real* constant
+   )
+{
+   *xcoef = (fright - fleft) / (right - left);
+   *constant = fleft - *xcoef * left;
+}
+
+/* tests detection of convex/concave subexpressions */
+Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
+{
+   SCIP_Real x1coef = 0.0;
+   SCIP_Real x2coef = 0.0;
+   SCIP_Real x3coef = 0.0;
+   SCIP_Real constant = 0.0;
+   SCIP_SOL* sol;
+
+   SCIPcreateSol(scip, &sol, NULL);
+
+   /* convex exp(exp(x)) at x=2 */
+   SCIPsetSolVal(scip, sol, x_1, 2.0);
+   gradest_univariate(2.0, exp(exp(2.0)), exp(2.0)*exp(exp(2.0)), &x1coef, &constant);
+   estimate("exp(exp(<x1>))", FALSE, sol, x1coef, 0.0, 0.0, constant);
+
+   /* concave sqrt(x1*x2) at x1=4, x2=9 */
+   SCIPsetSolVal(scip, sol, x_1, 4.0);
+   SCIPsetSolVal(scip, sol, x_2, 9.0);
+   gradest_bivariate(4.0, 9.0, 2.0*3.0, 0.5*3.0/2.0, 0.5*2.0/3.0, &x1coef, &x2coef, &constant);
+   estimate("<x1>^0.5*<x2>^0.5)", FALSE, sol, x1coef, x2coef, 0.0, constant);
+
+   /* convex x3*exp(x3) with x3 being integer */
+   SCIPsetSolVal(scip, sol, x_3, 2.5);
+   secantest(2.0, 2.0*exp(2.0), 3.0, 3.0*exp(3.0), &x3coef, &constant);
+   estimate("<x3>*exp(<x3>)", FALSE, sol, 0.0, 0.0, x3coef, constant);
+
+   SCIPfreeSol(scip, &sol);
 }

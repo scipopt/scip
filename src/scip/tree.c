@@ -1827,7 +1827,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_Bool useglobal;
 
    useglobal = (int) node->depth <= tree->effectiverootdepth;
-/*
    if( useglobal )
    {
       oldlb = SCIPvarGetLbGlobal(var);
@@ -1838,7 +1837,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       oldlb = SCIPvarGetLbLocal(var);
       oldub = SCIPvarGetUbLocal(var);
    }
-*/
+
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
@@ -1852,8 +1851,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
-   /* assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb))
-         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))); */
+   assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb))
+         || (boundtype == SCIP_BOUNDTYPE_LOWER && newbound > oldlb && newbound * oldlb <= 0.0)
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < oldub && newbound * oldub <= 0.0));
 
    SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),

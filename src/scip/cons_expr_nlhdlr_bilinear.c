@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1271,7 +1271,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
             SCIPgetConsExprExprActivity(scip, childx).inf, SCIPgetConsExprExprActivity(scip, childx).sup,
             intervalx.inf, intervalx.sup);
 
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], intervalx, force,
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], intervalx, force,
             reversepropqueue, infeasible, nreductions) );
 
          if( !(*infeasible) )
@@ -1280,7 +1280,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
             SCIPdebugMsg(scip, "try to tighten bounds of y: [%g,%g] -> [%g,%g]\n",
                SCIPgetConsExprExprActivity(scip, childx).inf, SCIPgetConsExprExprActivity(scip, childx).sup,
                intervalx.inf, intervalx.sup);
-            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[1], intervaly, force,
+            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[1], intervaly, force,
                reversepropqueue, infeasible, nreductions) );
          }
       }

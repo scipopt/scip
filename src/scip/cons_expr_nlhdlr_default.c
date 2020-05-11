@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,7 @@
 
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "default"
@@ -155,6 +156,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    if( *success )
    {
+      SCIP_Bool sepabelow;
+      SCIP_Bool sepaabove;
+
       /* remember in the nlhdlr exprdata (pointer) which methods we advertised */
       *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
       /* augment mymethods in enforcemethods */
@@ -165,6 +169,40 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
        */
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
+
+      sepabelow = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0;
+      sepaabove = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
+
+      /* update ndomainuses counter for the children if under- or overestimators will be computed */
+      if( sepabelow || sepaabove )
+      {
+         SCIP_EXPRCURV* childcurv;
+         SCIP_Bool isconvex;
+         SCIP_Bool isconcave;
+
+         /* allocate memory to store the required curvature of the children */
+         SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
+
+         /* check whether the expression is convex and concave
+          *
+          * TODO add a method that computes the curvature of an expression when the children are considered to be variables
+          */
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
+
+         /* use the curvature to decide whether bounds on the children are used to refine under- or overestimates */
+         if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
+         {
+            for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+            {
+               SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr,
+                  SCIPgetConsExprExprChildren(expr)[c]) );
+            }
+         }
+
+         /* free memory */
+         SCIPfreeBufferArray(scip, &childcurv);
+      }
    }
 
    return SCIP_OKAY;
@@ -274,20 +312,35 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    {
       SCIP_Real violation;
 
-#ifdef BRSCORE_RELVIOL
+#ifndef BRSCORE_ABSVIOL
       SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
 #else
       SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violation, NULL, NULL) );
 #endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
-      for( c = 0; c < nchildren; ++c )
+      if( nchildren == 1 )
       {
-         if( branchcand[c] )
+         if( branchcand[0] )
          {
-            SCIPaddConsExprExprBranchScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], violation);
-            *addedbranchscores = TRUE;
+            SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, SCIPgetConsExprExprChildren(expr), 1, violation, sol, addedbranchscores) );
          }
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR** exprs;
+         int nexprs = 0;
+
+         /* get list of those children that have the branchcand-flag set */
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
+
+         for( c = 0; c < nchildren; ++c )
+            if( branchcand[c] )
+               exprs[nexprs++] = SCIPgetConsExprExprChildren(expr)[c];
+
+         SCIP_CALL( SCIPaddConsExprExprsViolScore(scip, conshdlr, exprs, nexprs, violation, sol, addedbranchscores) );
+
+         SCIPfreeBufferArray(scip, &exprs);
       }
 
       if( *addedbranchscores )
@@ -339,7 +392,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
    assert(expr != NULL);
 
    /* call the reverse propagation callback of the expression handler */
-   SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, expr, reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, reversepropqueue, infeasible, nreductions, force) );
 
    return SCIP_OKAY;
 }
