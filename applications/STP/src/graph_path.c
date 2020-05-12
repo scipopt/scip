@@ -403,9 +403,9 @@ inline static int nearest(
 /*--- Returns  : Nummer des bewussten Knotens                             ---*/
 /*---------------------------------------------------------------------------*/
 inline static int nearestX(
-   int* heap,
-   int* state,
-   int* count,    /* pointer to store the number of elements on the heap */
+   int* RESTRICT heap,
+   int* RESTRICT state,
+   int* RESTRICT count,    /* pointer to store the number of elements on the heap */
    const SCIP_Real* pathdist)
 {
    int   k;
@@ -509,11 +509,11 @@ inline static void correct(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 inline static void correctX(
-   int* heap,
-   int* state,
-   int* count,    /* pointer to store the number of elements on the heap */
-   SCIP_Real*  pathdist,
-   int*   pathedge,
+   int* RESTRICT heap,
+   int* RESTRICT state,
+   int* RESTRICT count,    /* pointer to store the number of elements on the heap */
+   SCIP_Real* RESTRICT pathdist,
+   int* RESTRICT pathedge,
    int    l,
    int    k,
    int    e,
@@ -555,10 +555,10 @@ inline static void correctX(
 
 inline static void correctXwalk(
    SCIP* scip,
-   int* heap,
-   int* state,
-   int* count,    /* pointer to store the number of elements on the heap */
-   SCIP_Real*  pathdist,
+   int* RESTRICT heap,
+   int* RESTRICT state,
+   int* RESTRICT count,    /* pointer to store the number of elements on the heap */
+   SCIP_Real* RESTRICT pathdist,
    int    l,
    SCIP_Real newcost
    )
@@ -594,10 +594,10 @@ inline static void correctXwalk(
 
 
 inline static void resetX(
-   SCIP_Real* pathdist,
-   int* heap,
-   int* state,
-   int* count,
+   SCIP_Real* RESTRICT pathdist,
+   int* RESTRICT heap,
+   int* RESTRICT state,
+   int* RESTRICT count,
    int node,
    SCIP_Real distnew
    )
@@ -1274,8 +1274,7 @@ void graph_sdStar(
 }
 
 
-/** limited Dijkstra with node bias; ignores terminals
- * todo if it works, split up! */
+/** limited Dijkstra with node bias */
 SCIP_RETCODE graph_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -1291,7 +1290,7 @@ SCIP_RETCODE graph_sdStarBiased(
    SCIP_Real* restrict dist = dijkdata->node_distance;
    int* restrict visitlist = dijkdata->visitlist;
    STP_Bool* restrict visited = dijkdata->node_visited;
-   STP_Bool* is_starnode;
+   int* node_preds;
    DHEAP* dheap = dijkdata->dheap;
    const SCIP_Real* const nodebias = dijkdata->node_bias;
    const int* const nodebias_source = dijkdata->node_biassource;
@@ -1317,15 +1316,15 @@ SCIP_RETCODE graph_sdStarBiased(
    nvisits = 0;
    *success = FALSE;
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &is_starnode, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &node_preds, nnodes) );
 
 #ifndef NDEBUG
-   for( int k = 0; k < g->knots; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       assert(dist[k] == FARAWAY);
       assert(star_base[k] == SDSTAR_BASE_UNSET);
       assert(state[k] == UNKNOWN);
-      assert(is_starnode[k] == FALSE);
+      node_preds[k] = UNKNOWN;
    }
 #endif
 
@@ -1333,7 +1332,6 @@ SCIP_RETCODE graph_sdStarBiased(
    dist[star_root] = 0.0;
    state[star_root] = CONNECT;
    visitlist[(nvisits)++] = star_root;
-   is_starnode[star_root] = TRUE;
 
    for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
    {
@@ -1342,11 +1340,11 @@ SCIP_RETCODE graph_sdStarBiased(
       assert(g->mark[m]);
       assert(!visited[m]);
 
-      is_starnode[m] = TRUE;
       visitlist[(nvisits)++] = m;
       visited[m] = TRUE;
       dist[m] = cost_csr[e];
       star_base[m] = m;
+      node_preds[m] = star_root;
 
       /*  add epsilon to make sure that m is removed from the heap last in case of equality */
       graph_heap_correct(m, cost_csr[e] + eps, dheap);
@@ -1364,8 +1362,10 @@ SCIP_RETCODE graph_sdStarBiased(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
+      const int k_pred = node_preds[k];
 
       assert(k != star_root);
+      assert(k_pred >= 0 && k_pred < nnodes);
       assert(state[k] == CONNECT);
       assert(LE(dist[k], distlimit));
 
@@ -1378,15 +1378,11 @@ SCIP_RETCODE graph_sdStarBiased(
          const int m = head_csr[e];
          assert(g->mark[m] && star_base[k] >= 0);
 
-         /* ignore all terminals that are not in original star */
-         if( Is_term(g->term[m]) && !is_starnode[m] )
-         {
-            continue;
-         }
-
          if( state[m] != CONNECT )
          {
-            const SCIP_Real bias = (is_starnode[nodebias_source[k]])? 0.0 : MIN(cost_csr[e], nodebias[k]);
+            const int source = nodebias_source[k];
+            const SCIP_Bool useBias = (source != m && source != k_pred);
+            const SCIP_Real bias = (useBias)? MIN(cost_csr[e], nodebias[k]) : 0.0;
             const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
 
             if( GT(distnew, distlimit) )
@@ -1403,6 +1399,7 @@ SCIP_RETCODE graph_sdStarBiased(
                if( star_base[m] == m )
                   nstarhits++;
 
+               node_preds[m] = k;
                dist[m] = distnew;
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
@@ -1419,6 +1416,7 @@ SCIP_RETCODE graph_sdStarBiased(
 
                assert(star_base[m] != star_base[k]);
 
+               node_preds[m] = k;
                dist[m] = distnew;
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
@@ -1440,21 +1438,7 @@ SCIP_RETCODE graph_sdStarBiased(
   dijkdata->nvisits = nvisits;
   *success = (nstarhits > 0);
 
-  for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
-  {
-     const int m = head_csr[e];
-     assert(is_starnode[m]);
-
-     is_starnode[m] = FALSE;
-  }
-  is_starnode[star_root] = FALSE;
-
-#ifndef NDEBUG
-   for( int k = 0; k < g->knots; k++ )
-      assert(is_starnode[k] == FALSE);
-#endif
-
-  SCIPfreeCleanBufferArray(scip, &is_starnode);
+  SCIPfreeBufferArray(scip, &node_preds);
 
   return SCIP_OKAY;
 }

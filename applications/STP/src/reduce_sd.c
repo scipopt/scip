@@ -162,6 +162,100 @@ void sdStarReset(
 #endif
 }
 
+
+/** checks node */
+static
+SCIP_RETCODE sdStarBiasedProcessNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   node,               /**< node to process */
+   const int*            edgestate,          /**< state array or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   DIJK*                 dijkdata,           /**< data */
+   int* RESTRICT         star_base,          /**< data to be freed */
+   SCIP_Bool *RESTRICT   edge_deletable,     /**< data to be freed */
+   int*                  nelims              /**< point to store number of deleted edges */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool runloop = TRUE;
+   DCSR *dcsr;
+   RANGE *RESTRICT range_csr;
+   int *RESTRICT head_csr;
+   int *RESTRICT edgeid_csr;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   dcsr = g->dcsr_storage;
+   range_csr = dcsr->range;
+   head_csr = dcsr->head;
+   edgeid_csr = dcsr->edgeid;
+
+   assert(g->mark[node]);
+
+   while( runloop )
+   {
+      SCIP_Bool success;
+      const int start = range_csr[node].start;
+
+      /* not more than one edge? */
+      if( range_csr[node].end - start <= 1 )
+         break;
+
+      runloop = FALSE;
+
+      /* do the actual star run */
+      SCIP_CALL( graph_sdStarBiased(scip, g, node, star_base, dijkdata, &success) );
+
+      if( success )
+      {
+         int enext;
+
+         /* check all star nodes (neighbors of i) */
+         for( int e = start; e < range_csr[node].end; e = enext )
+         {
+            const int starnode = head_csr[e];
+            const int starbase = star_base[starnode];
+            assert(star_base[starnode] >= 0);
+            assert(SCIPisLE(scip, dijkdata->node_distance[starnode], dcsr->cost[e]));
+            assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
+
+            enext = e + 1;
+
+            if( checkstate )
+            {
+               const int orgedge = edgeid_csr[e];
+               if( edgestate[orgedge] == EDGE_BLOCKED )
+                  continue;
+            }
+
+            /* shorter path to current star node found? */
+            if( starnode != starbase )
+            {
+               assert(star_base[starbase] != SDSTAR_BASE_UNSET);
+
+               /* path still valid? todo really necessary? */
+               if( star_base[starbase] != SDSTAR_BASE_KILLED )
+               {
+                  star_base[starnode] = SDSTAR_BASE_KILLED;
+                  edge_deletable[edgeid_csr[e] / 2] = TRUE;
+                  graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+
+                  (*nelims)++;
+                  enext--;
+               }
+               else
+               {
+                  runloop = TRUE;
+               }
+            }
+         } /* traverse star nodes */
+      } /* if success */
+
+      sdStarReset(nnodes, dijkdata->nvisits, dijkdata->visitlist, star_base, dijkdata->node_distance, dijkdata->node_visited, dijkdata->dheap);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** resets data needed for SD walk tests */
 static inline
 void sdwalkReset(
@@ -3040,31 +3134,21 @@ SCIP_RETCODE reduce_sdStarBiased(
    )
 {
    DIJK* dijkdata;
-   DCSR* dcsr;
-   RANGE* RESTRICT range_csr;
-   int* RESTRICT head_csr;
-   int* RESTRICT edgeid_csr;
+
    int* RESTRICT star_base;
    SCIP_Bool* RESTRICT edge_deletable;
    const int nnodes = graph_get_nNodes(g);
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(scip && nelims);
    assert(edgelimit > 0);
 
    graph_init_dcsr(scip, g);
-   dcsr = g->dcsr_storage;
-   range_csr = dcsr->range;
-   head_csr = dcsr->head;
-   edgeid_csr = dcsr->edgeid;
-   assert(dcsr && range_csr && edgeid_csr);
 
    SCIP_CALL( sdStarInit(scip, g, edgelimit, &dijkdata, &star_base, &edge_deletable) );
    SCIP_CALL( graph_dijkLimited_initSdBias(scip, g, dijkdata) );
 
    for( int i = 0; i < nnodes; i++ )
    {
-      SCIP_Bool runloop = TRUE;
 
       if( !g->mark[i] )
       {
@@ -3072,67 +3156,7 @@ SCIP_RETCODE reduce_sdStarBiased(
          continue;
       }
 
-      while( runloop )
-      {
-         SCIP_Bool success;
-         const int start = range_csr[i].start;
-
-         /* not more than one edge? */
-         if( range_csr[i].end - start <= 1 )
-            break;
-
-         runloop = FALSE;
-
-         /* do the actual star run */
-         SCIP_CALL( graph_sdStarBiased(scip, g, i, star_base, dijkdata, &success) );
-
-         if( success )
-         {
-            int enext;
-
-            /* check all star nodes (neighbors of i) */
-            for( int e = start; e < range_csr[i].end; e = enext )
-            {
-               const int starnode = head_csr[e];
-               const int starbase = star_base[starnode];
-               assert(star_base[starnode] >= 0);
-               assert(SCIPisLE(scip, dijkdata->node_distance[starnode], dcsr->cost[e]));
-               assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
-
-               enext = e + 1;
-
-               if( checkstate )
-               {
-                  const int orgedge = edgeid_csr[e];
-                  if( edgestate[orgedge] == EDGE_BLOCKED )
-                     continue;
-               }
-
-               /* shorter path to current star node found? */
-               if( starnode != starbase )
-               {
-                  assert(star_base[starbase] != SDSTAR_BASE_UNSET);
-
-                  /* path still valid? todo really necessary? */
-                  if( star_base[starbase] != SDSTAR_BASE_KILLED )
-                  {
-                     star_base[starnode] = SDSTAR_BASE_KILLED;
-                     edge_deletable[edgeid_csr[e] / 2] = TRUE;
-                     graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-
-                     (*nelims)++;
-                     enext--;
-                  }
-                  else
-                  {
-                     runloop = TRUE;
-                  }
-               }
-            } /* traverse star nodes */
-         } /* if success */
-
-         sdStarReset(nnodes, dijkdata->nvisits, dijkdata->visitlist, star_base, dijkdata->node_distance, dijkdata->node_visited, dijkdata->dheap);
-      }
+      SCIP_CALL( sdStarBiasedProcessNode(scip, i, edgestate, g, dijkdata, star_base, edge_deletable, nelims) );
    }
 
    sdStarFinalize(scip, g, &dijkdata, &star_base, &edge_deletable);

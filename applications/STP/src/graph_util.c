@@ -1824,6 +1824,26 @@ SCIP_RETCODE graph_dijkLimited_initSdBias(
       }
    }
 
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+         continue;
+
+      if( isPcMw )
+      {
+         if( g->prize[k] >= node_bias[k] )
+         {
+            node_bias[k] = g->prize[k];
+            node_biassource[k] = k;
+         }
+
+         continue;
+      }
+
+      node_bias[k] = FARAWAY;
+      node_biassource[k] = k;
+   }
+
    return SCIP_OKAY;
 }
 

@@ -1814,11 +1814,16 @@ SCIP_RETCODE redLoopStp(
 #endif
 
          int nelimsx = 0;
-         SCIP_CALL( reduce_sdStarBiased(scip, STP_RED_SDSPBOUND, NULL, g, &nelimsx));
+         SCIP_CALL( reduce_sdStarBiased(scip, ((inner_rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND)
+               , NULL, g, &nelimsx));
 
-         printf("nelimsx=%d \n", nelimsx);
-
-       //  exit(1);
+#if 0
+         FILE *fp;
+                       fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redsNew2.txt", "a+");
+                       fprintf(fp, "%s %d \n", SCIPgetProbName(scip), nelimsx);
+                       fclose(fp);
+                       exit(1);
+#endif
 #endif
 
 
