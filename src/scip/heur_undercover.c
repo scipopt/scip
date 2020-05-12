@@ -1083,7 +1083,7 @@ SCIP_RETCODE createCoveringProblem(
    /* go through all expr constraints in the original problem
     * @todo: some expr constraints might be SOC and these only need to have all but one variable fixed in order to be
     * linear; however, by just looking at the nlrow representation of a soc constraint, processNlRow doesn't realize
-    * this. if more specific information is accesible from expr constrains, then this can be improved
+    * this. if more specific information is accessible from expr constrains, then this can be improved
     */
    conshdlr = SCIPfindConshdlr(scip, "expr");
    if( conshdlr != NULL )
