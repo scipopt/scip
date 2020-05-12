@@ -330,23 +330,6 @@ SCIP_RETCODE enfoConss(
  * Callback methods of constraint handler
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCpp)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrCpp(scip) );
-
-   *valid = TRUE;
-
-   return SCIP_OKAY;
-}
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteCpp)
