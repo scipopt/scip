@@ -653,6 +653,7 @@ Test(glbconss, cpp1)
    SCIP_VAR* xs[6];
    SCIP_VAR* ys[6];
    SCIP_Real rs[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+   SCIP_SOL* sol;
    int ncircles = 6;
    int i;
 
@@ -666,6 +667,27 @@ Test(glbconss, cpp1)
 
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
+   cr_expect(SCIPisEQ(scip, SCIPgetPrimalbound(scip), -1.06006273551528e+02));
+   sol = SCIPgetBestSol(scip);
+   cr_assert(sol != NULL);
+
+   /* check whether all circles satisfy the distance requirements */
+   for( i = 0; i < ncircles - 1; ++i )
+   {
+      SCIP_Real xi = SCIPgetSolVal(scip, sol, xs[i]);
+      SCIP_Real yi = SCIPgetSolVal(scip, sol, ys[i]);
+      int j;
+
+      for( j = i + 1; j < ncircles; ++j )
+      {
+         SCIP_Real xj = SCIPgetSolVal(scip, sol, xs[j]);
+         SCIP_Real yj = SCIPgetSolVal(scip, sol, ys[j]);
+         SCIP_Real dist;
+
+         dist = SQR(xi - xj) + SQR(yi - yj);
+         cr_expect(SCIPisFeasGE(scip, dist, SQR(rs[i] + rs[j])));
+      }
+   }
 
    /* release variables */
    for( i = 0; i < ncircles; ++i )
