@@ -2026,7 +2026,7 @@ SCIP_RETCODE primalAddSolExact(
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
    SCIP_CALL( SCIPsolUnlinkExact(sol, set, transprob) );
 
-   SCIP_CALL( SCIPsolOverwriteFPSolExact(sol, set, stat, origprob, transprob, tree) );
+   SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
 
    RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );
    RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );

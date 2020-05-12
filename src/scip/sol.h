@@ -299,11 +299,6 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** clears primal CIP solution */
-SCIP_RETCODE SCIPsolClearExact(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   );
-
 /** declares all entries in the primal CIP solution to be unknown */
 SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -584,7 +579,7 @@ SCIP_Rational* SCIPsolGetOrigObjExact(
    );
 
 /** overwrite FP solution with exact values */
-SCIP_RETCODE SCIPsolOverwriteFPSolExact(
+SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    SCIP_SOL*             sol,                /**< exact primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */

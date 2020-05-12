@@ -228,8 +228,8 @@ SCIP_RETCODE checkSolOrig(
    return SCIP_OKAY;
 }
 
-/** checks solution for exact feasibility in original problem without adding it to the solution store; to improve the
- *  performance we use the following order when checking for violations:
+/** checks solution (fp or exact) for exact feasibility in original problem without adding it to the solution store;
+ * to improve the performance we use the following order when checking for violations:
  *
  *  1. variable bounds
  *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
@@ -260,7 +260,6 @@ SCIP_RETCODE checkSolOrigExact(
    assert(scip != NULL);
    assert(sol != NULL);
    assert(feasible != NULL);
-   assert(SCIPisExactSol(scip, sol));
 
    SCIP_CALL( SCIPcheckStage(scip, "checkSolOrigExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -1523,9 +1522,9 @@ SCIP_Real SCIPgetSolVal(
    return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
 
-/** returns value of variable in primal CIP solution, or in current LP/pseudo solution
+/** returns value of variable in exact primal CIP solution, or in current LP/pseudo solution
  *
- *  @return value of variable in primal CIP solution, or in current LP/pseudo solution
+ *  @return value of variable in primal CIP solution, or in current exaxct LP/pseudo solution
  *
  *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
  *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
@@ -1698,12 +1697,10 @@ SCIP_Real SCIPgetSolTransObj(
    }
 }
 
-/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
- *
- *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+/** returns exact transformed objective value of primal CIP solution, or transformed current exact LP/pseudo objective value
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE _TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -2066,7 +2063,7 @@ SCIP_RETCODE SCIPprintSol(
    return SCIP_OKAY;
 }
 
-/** print a rational solution */
+/** print an exact solution */
 SCIP_RETCODE SCIPprintSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -3919,7 +3916,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPsol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPsolOverwriteFPSolExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+   SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
    return SCIP_OKAY;
 }
