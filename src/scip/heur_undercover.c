@@ -325,7 +325,7 @@ SCIP_RETCODE processNlRow(
    if( onlyconvexify
          && ( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR
             || (SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX )
-            || (SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX)) )
+            || (SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE)) )
    {
       *success = TRUE;
       return SCIP_OKAY;
@@ -3072,7 +3072,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolUndercover)
    assert(heurdata != NULL);
 
    /* free array of nonlinear constraint handlers */
-   SCIPfreeBlockMemoryArray(scip, &heurdata->nlconshdlrs, 7);
+   SCIPfreeBlockMemoryArray(scip, &heurdata->nlconshdlrs, 4);
 
    /* reset timing, if it was changed temporary (at the root node) */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
