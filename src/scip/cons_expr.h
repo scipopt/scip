@@ -1394,6 +1394,14 @@ SCIP_RETCODE SCIPgetQuadExprConsExpr(
    SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
    );
 
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
+   );
+
 /** gets the left hand side of an expression constraint */
 SCIP_EXPORT
 SCIP_Real SCIPgetLhsConsExpr(
