@@ -2120,47 +2120,9 @@ SCIP_RETCODE SCIPvarAddExactData(
    return SCIP_OKAY;
 }
 
-/** free exact variable data, if it exists */
-SCIP_RETCODE SCIPvarFreeExactData(
-   SCIP_VAR*             var,                /**< variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
-   SCIP_LPEXACT*         lp                  /**< current LP data (may be NULL, if it's not a column variable) */
-   )
-{
-   assert(blkmem != NULL);
-   assert(var != NULL);
-
-   if( !set->misc_exactsolve )
-   {
-      assert( var->exactdata == NULL );
-      return SCIP_OKAY;
-   }
-
-   if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
-   {
-      SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
-   }
-   /* free exact variable data if it was created */
-   if( var->exactdata != NULL )
-   {
-      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
-      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
-      RatFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
-      RatFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
-      RatFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
-      RatFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
-      RatFreeBlock(blkmem, &(var)->exactdata->obj );
-
-      BMSfreeBlockMemory(blkmem, &(var)->exactdata);
-      assert((var)->exactdata == NULL);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** copy exact variable data from one variable to another */
+/** copies exact variable data from one variable to another;
+ * can't be integrated into varCopy because it is needed, e.g., when transforming vars
+ */
 SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2173,7 +2135,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
    assert(targetvar != NULL);
    assert(sourcevar != NULL);
 
-   if( !set->misc_exactsolve )
+   if( sourcevar->exactdata == NULL )
       return SCIP_OKAY;
 
    assert(sourcevar->exactdata != NULL);
@@ -2778,6 +2740,48 @@ SCIP_RETCODE varFreeParents(
    return SCIP_OKAY;
 }
 
+/** free exact variable data, if it exists */
+static
+SCIP_RETCODE varFreeExactData(
+   SCIP_VAR*             var,                /**< variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
+   SCIP_LPEXACT*         lp                  /**< current LP data (may be NULL, if it's not a column variable) */
+   )
+{
+   assert(blkmem != NULL);
+   assert(var != NULL);
+
+   if( !set->misc_exactsolve )
+   {
+      assert( var->exactdata == NULL );
+      return SCIP_OKAY;
+   }
+
+   /* free exact variable data if it was created */
+   if( var->exactdata != NULL )
+   {
+      if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
+      }
+
+      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
+      RatFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
+      RatFreeBlock(blkmem, &(var)->exactdata->obj );
+
+      BMSfreeBlockMemory(blkmem, &(var)->exactdata);
+      assert((var)->exactdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees a variable */
 static
 SCIP_RETCODE varFree(
@@ -2876,7 +2880,7 @@ SCIP_RETCODE varFree(
    SCIPvaluehistoryFree(&(*var)->valuehistory, blkmem);
 
    /* free exact data if it exists */
-   SCIP_CALL( SCIPvarFreeExactData(*var, blkmem, set, eventqueue, NULL) );
+   SCIP_CALL( varFreeExactData(*var, blkmem, set, eventqueue, NULL) );
 
    /* free variable data structure */
    BMSfreeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);
@@ -5913,7 +5917,7 @@ SCIP_RETCODE varNegateExactData(
 {
    SCIP_Real constant;
 
-   if( !set->misc_exactsolve )
+   if( origvar->exactdata == NULL )
       return SCIP_OKAY;
 
    assert(negvar != NULL);
@@ -6345,7 +6349,7 @@ SCIP_RETCODE SCIPvarChgObj(
    return SCIP_OKAY;
 }
 
-/** changes objective value of variable */
+/** changes rational objective value of variable */
 SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -13289,7 +13293,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
    }
 }
 
-/** gets primal LP solution value of variable */
+/** gets exact primal LP solution value of variable or value of safe dual solution */
 SCIP_Rational* SCIPvarGetLPSolExact_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -13435,7 +13439,7 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
    }
 }
 
-/** gets pseudo solution value of variable at current node */
+/** gets exact pseudo solution value of variable at current node */
 static
 SCIP_Rational* SCIPvarGetPseudoSolExact_rec(
    SCIP_VAR*             var                 /**< problem variable */
@@ -13480,7 +13484,7 @@ SCIP_Real SCIPvarGetSol(
       return SCIPvarGetPseudoSol(var);
 }
 
-/** gets current LP or pseudo solution value of variable */
+/** gets current exact LP or pseudo solution value of variable */
 SCIP_Rational* SCIPvarGetSolExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
@@ -14591,7 +14595,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    }
 }
 
-/** resolves variable to columns and adds them with the coefficient to the */
+/** resolves variable to exact columns and adds them with the coefficient to the exact Row */
 SCIP_RETCODE SCIPvarAddToRowExact(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -17967,7 +17971,7 @@ SCIP_COL* SCIPvarGetCol(
    return var->data.col;
 }
 
-/** gets column of COLUMN variable */
+/** gets exact column of COLUMN variable */
 SCIP_COLEXACT* SCIPvarGetColExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18112,7 +18116,7 @@ SCIP_Real SCIPvarGetObj(
    return var->obj;
 }
 
-/** gets objective function value of variable */
+/** gets exact objective function value of variable */
 SCIP_Rational* SCIPvarGetObjExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18231,7 +18235,7 @@ SCIP_Real SCIPvarGetLbOriginal(
    }
 }
 
-/** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
+/** gets exact original lower bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_Rational* SCIPvarGetLbOriginalExact(
    SCIP_VAR*             var                 /**< original problem variable */
    )
@@ -18273,7 +18277,7 @@ SCIP_Real SCIPvarGetUbOriginal(
    }
 }
 
-/** gets original upper bound of original problem variable (i.e. the bound set in problem creation) */
+/** gets exact original upper bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_Rational* SCIPvarGetUbOriginalExact(
    SCIP_VAR*             var                 /**< original problem variable */
    )
@@ -18319,7 +18323,7 @@ SCIP_Real SCIPvarGetLbGlobal(
    return var->glbdom.lb;
 }
 
-/** gets global lower bound of variable */
+/** gets exact global lower bound of variable */
 SCIP_Rational* SCIPvarGetLbGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18341,7 +18345,7 @@ SCIP_Real SCIPvarGetUbGlobal(
    return var->glbdom.ub;
 }
 
-/** gets global upper bound of variable */
+/** gets exact global upper bound of variable */
 SCIP_Rational* SCIPvarGetUbGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18376,7 +18380,7 @@ SCIP_Real SCIPvarGetBestBoundGlobal(
       return var->glbdom.ub;
 }
 
-/** gets best global bound of variable with respect to the objective function */
+/** gets best exact global bound of variable with respect to the objective function */
 SCIP_Rational* SCIPvarGetBestBoundGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18406,7 +18410,7 @@ SCIP_Real SCIPvarGetWorstBoundGlobal(
       return var->glbdom.lb;
 }
 
-/** gets worst global bound of variable with respect to the objective function */
+/** gets worst exact global bound of variable with respect to the objective function */
 SCIP_Rational* SCIPvarGetWorstBoundGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18433,7 +18437,7 @@ SCIP_Real SCIPvarGetLbLocal(
    return var->locdom.lb;
 }
 
-/** gets current lower bound of variable */
+/** gets current exact lower bound of variable */
 SCIP_Rational* SCIPvarGetLbLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18455,6 +18459,7 @@ SCIP_Real SCIPvarGetUbLocal(
    return var->locdom.ub;
 }
 
+/** gets current exact upper bound of variable */
 SCIP_Rational* SCIPvarGetUbLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18489,7 +18494,7 @@ SCIP_Real SCIPvarGetBestBoundLocal(
       return var->locdom.ub;
 }
 
-/** gets best local bound of variable with respect to the objective function */
+/** gets best exact local bound of variable with respect to the objective function */
 SCIP_Rational* SCIPvarGetBestBoundLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18519,7 +18524,7 @@ SCIP_Real SCIPvarGetWorstBoundLocal(
       return var->locdom.lb;
 }
 
-/** gets worst local bound of variable with respect to the objective function */
+/** gets worst exact local bound of variable with respect to the objective function */
 SCIP_Rational* SCIPvarGetWorstBoundLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18841,7 +18846,7 @@ SCIP_Real SCIPvarGetLPSol(
       return SCIPvarGetLPSol_rec(var);
 }
 
-/** gets primal LP solution value of variable */
+/** gets exact primal LP solution value of variable */
 SCIP_Rational* SCIPvarGetLPSolExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -18932,7 +18937,7 @@ SCIP_Real SCIPvarGetPseudoSol(
       return SCIPvarGetPseudoSol_rec(var);
 }
 
-/** gets pseudo solution value of variable */
+/** gets exact pseudo solution value of variable */
 SCIP_Rational* SCIPvarGetPseudoSolExact(
    SCIP_VAR*             var                 /**< problem variable */
    )

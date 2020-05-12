@@ -259,15 +259,6 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_Bool             negateobj           /**< should the objective be negated */
    );
 
-/** free exact variable data, if it exists */
-SCIP_RETCODE SCIPvarFreeExactData(
-   SCIP_VAR*             var,                /**< variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
-   SCIP_LPEXACT*         lp                  /**< current LP data (may be NULL, if it's not a column variable) */
-   );
-
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
  *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all
