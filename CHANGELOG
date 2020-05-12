@@ -57,6 +57,9 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- Variables that are marked as relaxation-only are no longer checked against debug solutions if
+  they are captured by the transformed problem only.
+
 Known bugs
 ----------
 
