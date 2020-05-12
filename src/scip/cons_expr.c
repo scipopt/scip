@@ -15979,6 +15979,31 @@ SCIP_RETCODE SCIPgetQuadExprConsExpr(
    return SCIP_OKAY;
 }
 
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
+
+   return SCIP_OKAY;
+}
+
 /** gets the left hand side of an expression constraint */
 SCIP_Real SCIPgetLhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
