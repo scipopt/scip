@@ -420,16 +420,8 @@ SCIP_RETCODE freeAuxVar(
 
    SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-   /* check that if not finishing up, noone else is still using the auxvar
-    * once we release it, noone else would take care of unlocking it
-    * note that we do not free auxvars in exitsolve if we are restarting
-    * TODO: this doesn't work when run from unittests, so should find a safer way to define exceptions than checking the stage
-    */
-   /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
-
-   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
-    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
-    * variable might be still captured by SCIP's NLP or some other plugin
+   /* remove variable locks
+    * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
     */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
@@ -5603,48 +5595,6 @@ int nlhdlrCmp(
    return strcmp(h1->name, h2->name);
 }
 
-/** frees auxiliary variables which have been added to compute an outer approximation */
-static
-SCIP_RETCODE freeAuxVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSDATA* consdata;
-   int i;
-
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      if( consdata->expr == NULL )
-         continue;
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
 /** calls separation initialization callback for each expression */
 static
 SCIP_RETCODE initSepa(
@@ -10242,14 +10192,6 @@ static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
-   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables
-    */
-   if( SCIPgetNRuns(scip) > 1 )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -10385,8 +10327,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, !restart) );
+         /* remove nonlinear handlers in expression and their data and auxiliary variables */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
          /* remove quadratic info */
          quadFree(scip, expr);
@@ -14371,13 +14313,14 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
       MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
-   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
     * or to copy the variable to a subscip
     */
    SCIPvarMarkRelaxationOnly(expr->auxvar);
+
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
