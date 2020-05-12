@@ -6,6 +6,9 @@
 Features
 --------
 
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+
 Performance improvements
 ------------------------
 
@@ -16,6 +19,11 @@ Interface changes
 -----------------
 ### New and changed callbacks
 ### Deleted and changed API methods
+
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
@@ -49,6 +57,8 @@ Miscellaneous
 -------------
 
 - in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
 
 Known bugs
 ----------

@@ -17311,9 +17311,12 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
 
 /** marks that this variable has only been introduced to define a relaxation
  *
- * The variable must not have a coefficient in the objective.
+ * The variable must not have a coefficient in the objective and must be deletable.
+ * If it is not marked deletable, it will be marked as deletable, which is only possible
+ * before the variable is added to a problem.
  *
  * @see SCIPvarIsRelaxationOnly
+ * @see SCIPvarMarkDeletable
  */
 void SCIPvarMarkRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
@@ -17321,6 +17324,9 @@ void SCIPvarMarkRelaxationOnly(
 {
    assert(var != NULL);
    assert(SCIPvarGetObj(var) == 0.0);
+
+   if( !SCIPvarIsDeletable(var) )
+      SCIPvarMarkDeletable(var);
 
    var->relaxationonly = TRUE;
 }
