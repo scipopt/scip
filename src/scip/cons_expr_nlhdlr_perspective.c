@@ -1321,16 +1321,16 @@ SCIP_RETCODE analyseOnoffBounds(
    SCIP_Real*            probinglb,          /**< pointer to store the lower bound to be applied in probing */
    SCIP_Real*            probingub,          /**< pointer to store the upper bound to be applied in probing */
    SCIP_Bool             doprobing,          /**< whether we want to go into probing */
-   SCIP_Bool*            fixedvars           /**< pointer to store whether any variables were fixed */
+   SCIP_Bool*            reduceddom          /**< pointer to store whether any variables were fixed */
 )
 {
    SCVARDATA* scvdata;
    int pos;
-   SCIP_Bool fixed;
    SCIP_Real sclb;
    SCIP_Real scub;
    SCIP_Real loclb;
    SCIP_Real locub;
+   SCIP_Bool bndchgsuccess;
 
    /* shouldn't be called if indicator is fixed to !indvalue */
    assert((indvalue && SCIPvarGetUbLocal(indicator) == 1.0) || (!indvalue && SCIPvarGetLbLocal(indicator) == 0.0));
@@ -1356,6 +1356,7 @@ SCIP_RETCODE analyseOnoffBounds(
    scub = indvalue ? scvdata->ubs1[pos] : scvdata->vals0[pos];
    loclb = SCIPvarGetLbLocal(var);
    locub = SCIPvarGetUbLocal(var);
+   *reduceddom = FALSE;
 
    /* use a non-redundant lower bound */
    if( SCIPisGT(scip, sclb, SCIPvarGetLbLocal(var)) || (sclb >= 0.0 && loclb < 0.0) )
@@ -1363,8 +1364,8 @@ SCIP_RETCODE analyseOnoffBounds(
       /* first check for infeasibility */
       if( SCIPisFeasGT(scip, sclb, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &fixed) );
-         *fixedvars = TRUE;
+         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &bndchgsuccess) );
+         *reduceddom += bndchgsuccess;
          if( *infeas )
          {
             return SCIP_OKAY;
@@ -1373,8 +1374,12 @@ SCIP_RETCODE analyseOnoffBounds(
       else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
       {
          /* if indicator is fixed to indvalue, sclb is valid for the current node */
-         SCIP_CALL( SCIPchgVarLb(scip, var, sclb) );
-         *fixedvars = TRUE;
+         SCIP_CALL( SCIPtightenVarLb(scip, var, sclb, FALSE, infeas, &bndchgsuccess) );
+         *reduceddom += bndchgsuccess;
+         if( *infeas )
+         {
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -1384,8 +1389,8 @@ SCIP_RETCODE analyseOnoffBounds(
       /* first check for infeasibility */
       if( SCIPisFeasLT(scip, scub, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPfixVar(scip, indicator, 0, infeas, &fixed) );
-         *fixedvars = TRUE;
+         SCIP_CALL( SCIPfixVar(scip, indicator, 0, infeas, &bndchgsuccess) );
+         *reduceddom += bndchgsuccess;
          if( *infeas )
          {
             return SCIP_OKAY;
@@ -1394,8 +1399,12 @@ SCIP_RETCODE analyseOnoffBounds(
       else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
       {
          /* if indicator is fixed to indvalue, scub is valid for the current node */
-         SCIP_CALL( SCIPchgVarUb(scip, var, scub) );
-         *fixedvars = TRUE;
+         SCIP_CALL( SCIPtightenVarUb(scip, var, scub, FALSE, infeas, &bndchgsuccess) );
+         *reduceddom += bndchgsuccess;
+         if( *infeas )
+         {
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -1438,7 +1447,7 @@ SCIP_RETCODE prepareProbing(
    SCIP_Real probinglb;
    SCIP_Real probingub;
    SCIP_Bool changed;
-   SCIP_Bool fixed;
+   SCIP_Bool reduceddom;
 
    changed = FALSE;
 
@@ -1465,9 +1474,9 @@ SCIP_RETCODE prepareProbing(
          var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
 
          SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, &probinglb,
-               &probingub, *doprobing, &fixed) );
+               &probingub, *doprobing, &reduceddom) );
 
-         if( fixed )
+         if( reduceddom )
          {
             *result = SCIP_REDUCEDDOM;
          }
@@ -1497,20 +1506,23 @@ SCIP_RETCODE prepareProbing(
          }
       }
 
-      for( v = 0; v < nlhdlrexprdata->nscauxvars; ++v ) {
+      for( v = 0; v < nlhdlrexprdata->nscauxvars; ++v )
+      {
          /* nothing left to do if indicator is already fixed to !indvalue
           * (checked in the inner loop since analyseOnoff bounds might fix the indicator)
           */
-         if ((b == 1 && SCIPvarGetUbLocal(indicator) == 0.0) || (b == 0 && SCIPvarGetLbLocal(indicator) == 1.0)) {
+         if ((b == 1 && SCIPvarGetUbLocal(indicator) == 0.0) || (b == 0 && SCIPvarGetLbLocal(indicator) == 1.0))
+         {
             *doprobing = FALSE;
             continue;
          }
 
          var = nlhdlrexprdata->scauxvars[v];
 
-         SCIP_CALL(analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, NULL, NULL, FALSE, &fixed) );
+         SCIP_CALL(analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, NULL, NULL, FALSE,
+               &reduceddom) );
 
-         if( fixed )
+         if( reduceddom )
          {
             *result = SCIP_REDUCEDDOM;
          }
