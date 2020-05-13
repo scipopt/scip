@@ -2321,8 +2321,8 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   /* ensure that the local bounds are used when evaluating an expression w.r.t. the global variable bounds; this is
-    * only needed if CONSINITLP is called in a local node
+   /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
+    * is called in a local node
     */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
