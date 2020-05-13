@@ -141,9 +141,9 @@ genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
 $(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
 		@echo "-> linking $@"
 ifeq ($(VERBOSE),true)
-		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 else
-		@$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
+		@$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c

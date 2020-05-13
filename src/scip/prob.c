@@ -1931,7 +1931,7 @@ SCIP_RETCODE SCIPprobExitSolve(
             SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
 
-         /* invalided root reduced cost, root reduced solution, and root LP objective value for each variable */
+         /* invalidate root reduced cost, root reduced solution, and root LP objective value for each variable */
          SCIPvarSetBestRootSol(var, 0.0, 0.0, SCIP_INVALID);
 
          if( SCIPvarIsRelaxationOnly(var) && restart )
