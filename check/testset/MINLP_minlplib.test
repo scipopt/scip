@@ -657,9 +657,9 @@ MINLP/instances/minlplib/osil/hydro.osil.gz
 MINLP/instances/minlplib/osil/ibs2.osil.gz
 MINLP/instances/minlplib/osil/immun.osil.gz
 MINLP/instances/minlplib/osil/infeas1.osil.gz
-#MINLP/instances/minlplib/osil/inscribedsquare01.osil.gz
-#MINLP/instances/minlplib/osil/inscribedsquare02.osil.gz
-#MINLP/instances/minlplib/osil/inscribedsquare03.osil.gz
+MINLP/instances/minlplib/osil/inscribedsquare01.osil.gz
+MINLP/instances/minlplib/osil/inscribedsquare02.osil.gz
+MINLP/instances/minlplib/osil/inscribedsquare03.osil.gz
 MINLP/instances/minlplib/osil/ising2_5-300_5555.osil.gz
 MINLP/instances/minlplib/osil/jbearing100.osil.gz
 MINLP/instances/minlplib/osil/jbearing25.osil.gz
