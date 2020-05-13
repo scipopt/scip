@@ -670,7 +670,7 @@ Test(glbconss, cpp1)
 
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPisRelEQ(scip, SCIPgetPrimalbound(scip), -3.60000003185305e+01));
+   cr_expect_float_eq(SCIPgetPrimalbound(scip), -3.60000003185305e+01, 1e-4);
    sol = SCIPgetBestSol(scip);
    cr_assert(sol != NULL);
 
