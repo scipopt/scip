@@ -1614,10 +1614,16 @@ const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
-/** gives priority of nonlinear handler */
+/** gives detection priority of nonlinear handler */
 SCIP_EXPORT
-int SCIPgetConsExprNlhdlrPriority(
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives enforcement priority of nonlinear handler */
+SCIP_EXPORT
+int SCIPgetConsExprNlhdlrEnfoPriority(
+        SCIP_CONSEXPR_NLHDLR*      nlhdlr    /**< nonlinear handler */
 );
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

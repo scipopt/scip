@@ -1724,7 +1724,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
-   int i;
    SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
@@ -1751,6 +1750,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
    assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
 
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
    if( nlhdlrexprdata->nleafs == 1 && SCIPisConsExprExprIntegral(nlhdlrexprdata->leafexprs[0]) )
    {
       SCIP_CALL( estimateConvexSecant(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
@@ -1761,8 +1762,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    /* if secant method was not used or failed, then try with gradient */
    if( !*success )

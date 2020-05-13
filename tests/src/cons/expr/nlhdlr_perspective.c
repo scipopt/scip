@@ -21,11 +21,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#include <nlpi/nlpi_ipopt.h>
-
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_perspective.c"
-#include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_nlhdlr_convex.h"
 
 
 /*
@@ -47,7 +45,7 @@ static SCIP_VAR* z_3;
 
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr_quad = NULL;
+static SCIP_CONSEXPR_NLHDLR* nlhdlr_conv = NULL;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
@@ -77,19 +75,19 @@ void setup(void)
       }
    }
 
-   /* get quadratic nlhdlr */
+   /* get convex nlhdlr */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "convex") == 0 )
       {
-         nlhdlr_quad = conshdlrdata->nlhdlrs[h];
-         if( nlhdlr_quad != NULL )
+         nlhdlr_conv = conshdlrdata->nlhdlrs[h];
+         if( nlhdlr_conv != NULL )
             break;
       }
    }
 
    cr_assert_not_null(nlhdlr);
-   cr_assert_not_null(nlhdlr_quad);
+   cr_assert_not_null(nlhdlr_conv);
 
 
    /* create problem */
@@ -138,7 +136,7 @@ void teardown(void)
 }
 
 static
-void checkCut(SCIP_ROWPREP* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_SIDETYPE sidetype, SCIP_Real side)
+void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_Real lhs, SCIP_Real rhs)
 {
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -147,14 +145,14 @@ void checkCut(SCIP_ROWPREP* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SC
    int j;
 
    cr_assert(cut != NULL);
-   cr_expect_eq(cut->nvars, nvars);
-   cr_expect(SCIPisEQ(scip, cut->sidetype, sidetype));
-   cr_expect(SCIPisEQ(scip, cut->side, side));
+   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d vars, got %d", nvars, SCIProwGetNNonz(cut));
+   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
-   for( i = 0; i < cut->nvars; ++i )
+   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
-      var = cut->vars[i];
-      coef = cut->coefs[i];
+      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
+      coef = SCIProwGetVals(cut)[i];
       found = FALSE;
 
       for( j = 0; j < nvars; ++j )
@@ -288,8 +286,6 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
    cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
-
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
@@ -407,7 +403,7 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata_quad = NULL;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata_conv = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
@@ -417,13 +413,11 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CONS* cons;
    int nbndchgs;
    SCIP_SOL* sol;
-   SCIP_ROW** cuts;
    SCIP_VAR** cutvars;
    SCIP_Real* cutvals;
    SCIP_VAR* auxvar;
    SCIP_PTRARRAY* rowpreps;
-   SCIP_Bool addedbranchscores;
-   SCIP_ROWPREP* rowprep;
+   SCIP_RESULT result;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
@@ -456,23 +450,25 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( nlhdlr_quad->detect(scip, conshdlr, nlhdlr_quad, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata_quad) );
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+   SCIP_CALL( nlhdlr_conv->detect(scip, conshdlr, nlhdlr_conv, expr, FALSE, &provided, &enforcebelow, &enforceabove,
+         &success, &nlhdlrexprdata_conv) );
+   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);
-   cr_assert_not_null(nlhdlrexprdata_quad);
+   cr_assert_not_null(nlhdlrexprdata_conv);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
    expr->nenfos = 1;
-   expr->enfos[0]->nlhdlr = nlhdlr_quad;
-   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_quad;
+   expr->enfos[0]->nlhdlr = nlhdlr_conv;
+   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
 
    /* detect by perspective handler */
    success = FALSE;
-   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove,
+         &success, &nlhdlrexprdata) );
 
    cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
@@ -498,36 +494,27 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
-   SCIP_CALL( nlhdlrEstimatePerspective(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, 4.0,
-         rowpreps, &success, FALSE, &addedbranchscores) );
-   cr_assert(success);
-   cr_assert(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
-   cr_assert(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 1);
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, FALSE,
+         FALSE, FALSE, &result) );
+   cr_assert(result == SCIP_SEPARATED);
+   cr_assert(SCIPgetNCuts(scip) == 2);
 
    /* check the cuts */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    cutvars = (SCIP_VAR*[4]) {z_1, x_2, x_1, auxvar};
    cutvals = (SCIP_Real[4]) {-13.0, 8.0, 4.0, -1.0};
-   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
-
-   checkCut(rowprep, cutvars, cutvals, 4, SCIP_SIDETYPE_RIGHT, 3.0);
+   checkCut(SCIPgetCuts(scip)[0], cutvars, cutvals, 4, -SCIPinfinity(scip), 3.0);
 
    cutvars = (SCIP_VAR*[4]) {x_2, x_1, auxvar, z_2};
    cutvals = (SCIP_Real[4]) {8.0, 4.0, -1.0, -16.0};
-   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 1);
-
-   checkCut(rowprep, cutvars, cutvals, 4, SCIP_SIDETYPE_RIGHT, 0.0);
+   checkCut(SCIPgetCuts(scip)[1], cutvars, cutvals, 4, -SCIPinfinity(scip), 0.0);
 
    /* free memory */
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIPfreeSol(scip, &sol);
-//   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
-//   SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, &nlhdlrexprdata) );
-   /* the quadratic handler is freed when expr is released */
-
-   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
+   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) ); /* convex nlhdlr is freed when expr is released */
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

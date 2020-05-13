@@ -231,6 +231,7 @@ SCIP_RETCODE estimate(
    SCIP_Real x3coef = 0.0;
    SCIP_Real constant;
    int i;
+   SCIP_PTRARRAY* rowpreps;
 
    /* create expression and constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
@@ -264,11 +265,15 @@ SCIP_RETCODE estimate(
 
    /* estimate on enforced side */
    targetvalue = enforceabove ? SCIPinfinity(scip) : -SCIPinfinity(scip);
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, enforceabove ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
-   SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove, targetvalue, rowprep, &success, FALSE, &addedbranchscores) );
+   SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
+         targetvalue, rowpreps, &success, FALSE, &addedbranchscores) );
 
    cr_assert(success);
+   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
+   cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
    cr_assert(!rowprep->local);  /* nlhdlr should have set rowprep->local to FALSE */
 
    SCIPmergeRowprepTerms(scip, rowprep);
@@ -295,6 +300,7 @@ SCIP_RETCODE estimate(
 
    SCIPfreeRowprep(scip, &rowprep);
 
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    cr_assert_not_null(nlhdlrexprdata);
    SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
 

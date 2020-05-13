@@ -16526,6 +16526,16 @@ int SCIPgetConsExprNlhdlrDetectPriority(
    return nlhdlr->detectpriority;
 }
 
+/** gives enforcement priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrEnfoPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->enfopriority;
+}
+
 /** returns a nonlinear handler of a given name (or NULL if not found) */
 SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
