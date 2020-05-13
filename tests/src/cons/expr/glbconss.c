@@ -313,11 +313,14 @@ SCIP_RETCODE enfoConss(
                quadcoefs, lhs, SCIPinfinity(scip),
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
+            SCIPdebugMsg(scip, "add constraint %s in node %lld\n", name, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+
             /* add and release constraint */
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
             *result = SCIP_CONSADDED;
+
             return SCIP_OKAY;
          }
       }
@@ -650,15 +653,15 @@ TestSuite(glbconss, .init = setup, .fini = teardown);
 Test(glbconss, cpp1)
 {
    SCIP_CONS* cons;
-   SCIP_VAR* xs[6];
-   SCIP_VAR* ys[6];
-   SCIP_Real rs[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+   SCIP_VAR* xs[4];
+   SCIP_VAR* ys[4];
+   SCIP_Real rs[4] = {1.0, 1.0, 1.0, 1.0};
    SCIP_SOL* sol;
-   int ncircles = 5;
+   int ncircles = 4;
    int i;
 
    /* create variables */
-   SCIP_CALL( createVars(0.0, 20.0, -1.0, 0.0, 2.0, 0.0, ncircles, xs, ys) );
+   SCIP_CALL( createVars(0.0, 10.0, -1.0, 0.0, 2.0, 0.0, ncircles, xs, ys) );
 
    /* create circle packing constraint */
    SCIP_CALL( SCIPcreateConsBasicCpp(scip, &cons, "cpp", xs, ys, rs, ncircles) );
@@ -667,7 +670,7 @@ Test(glbconss, cpp1)
 
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPisEQ(scip, SCIPgetPrimalbound(scip), -9.82679491923714e+01));
+   cr_expect(SCIPisRelEQ(scip, SCIPgetPrimalbound(scip), -3.60000003185305e+01));
    sol = SCIPgetBestSol(scip);
    cr_assert(sol != NULL);
 

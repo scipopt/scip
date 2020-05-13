@@ -821,6 +821,9 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
+ *
+ * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExprActivity(

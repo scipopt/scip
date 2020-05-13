@@ -2199,7 +2199,9 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
-   /* ensure that activies are recomputed w.r.t. the global variable bounds if a constraint has been added in a local node */
+   /* ensure that activies are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
+    * for example, this happens if globally valid expression constraints are added during the tree search
+    */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
@@ -2317,6 +2319,14 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
+   }
+
+   /* ensure that the local bounds are used when evaluating an expression w.r.t. the global variable bounds; this is
+    * only needed if CONSINITLP is called in a local node
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
 
    SCIPexpriteratorFree(&it);
@@ -13913,6 +13923,9 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
+ *
+ * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
