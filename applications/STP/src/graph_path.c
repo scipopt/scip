@@ -1388,7 +1388,7 @@ SCIP_RETCODE graph_sdStarBiased(
             if( GT(distnew, distlimit) )
                continue;
 
-            if( distnew < dist[m] )
+            if( LT(distnew, dist[m]) )
             {
                if( !visited[m] )
                {
