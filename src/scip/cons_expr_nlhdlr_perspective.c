@@ -950,7 +950,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
    if( nlhdlr->ndetections != 0 )
    {
-      SCIPinfoMessage(scip, NULL, "\nndetects = %d", nlhdlr->ndetections);
+      SCIPinfoMessage(scip, NULL, "\nndetects = %d\n", nlhdlr->ndetections);
    }
 
    return SCIP_OKAY;
@@ -1199,11 +1199,31 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
 { /*lint --e{715}*/
+   int e;
+   SCIP_Real maxviol;
+   SCIP_Real auxval_e;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
-   *auxvalue = SCIPgetConsExprExprValue(expr);
+   maxviol = 0.0;
+
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      if( !SCIPhasConsExprNlhdlrEstimate(expr->enfos[e]->nlhdlr) )
+         continue;
+
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+            &auxval_e, sol) );
+
+      if( auxval_e > maxviol && auxval_e != SCIP_INVALID )
+      {
+         maxviol = auxval_e;
+      }
+   }
+
+   *auxvalue = maxviol;
 
    return SCIP_OKAY;
 }
@@ -1298,7 +1318,7 @@ SCIP_RETCODE analyseOnoffBounds(
    }
 
    /* use a non-redundant upper bound */
-   if( SCIPisLT(scip, scub, SCIPvarGetUbLocal(var)) )
+   if( SCIPisLT(scip, scub, SCIPvarGetUbLocal(var)) || (scub <= 0.0 && locub < 0.0) )
    {
       /* first check for infeasibility */
       if( SCIPisFeasLT(scip, scub, SCIPvarGetLbLocal(var)) )
@@ -1325,8 +1345,8 @@ SCIP_RETCODE analyseOnoffBounds(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "%s in [%g, %g] instead of [%g, %g] (vals0 = %g)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
-                            SCIPvarGetUbLocal(var), loclb, locub, scvdata->vals0[pos]);
+   SCIPdebugMsg(scip, "%s in [%g, %g] instead of [%g, %g] (vals0 = %g)\n", SCIPvarGetName(var), sclb, scub,
+                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), scvdata->vals0[pos]);
 #endif
 
    return SCIP_OKAY;
@@ -1447,7 +1467,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
    /* only do probing if expr is nonconvex and we are not in probing already */
-   if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPinProbing(scip) )
+   if( (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
+       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) ||
+       SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 || addbranchscores )
       doprobing = FALSE;
    else
       doprobing = TRUE;
@@ -1455,7 +1477,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, " at\n");
+   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "%s = %g\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i])),
+              SCIPgetSolVal(scip, sol, SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i])));
+   }
+   SCIPinfoMessage(scip, NULL, "%s = %g", SCIPvarGetName(SCIPgetConsExprExprAuxVar(expr)),
+           SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)));
 #endif
 
    assert(scip != NULL);
@@ -1469,7 +1498,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    nrowpreps = 0;
    *result = SCIP_DIDNOTFIND;
-   solcopy = NULL;
+   solcopy = sol;
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps2) );
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
@@ -1495,11 +1524,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       nprobingvars = 0;
       doprobingind = doprobing;
 
-      if( doprobingind )
-      {
-         SCIP_CALL( prepareProbing(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
-               &nprobingvars, &doprobingind, result) );
-      }
+      SCIP_CALL( prepareProbing(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
+            &nprobingvars, &doprobingind, result) );
 
       /* don't add perspective cuts for fixed indicators since there is no use for perspectivy */
       if( SCIPvarGetLbLocal(indicator) == 1 )
@@ -1517,21 +1543,25 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          assert(!doprobingind);
 
-         /* the cut is trivial, can add it without using other nlhdlrs */
-
          SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, solcopy, 0) );
 
          nchildren = SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ?
                SCIPgetConsExprExprNChildren(expr) : 1;
 
-         SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
-         if( nchildren == 1 )
+         if( nchildren == 1 || SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
          {
-            SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprValue(expr));
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            SCIP_CALL( SCIPfixVar(scip, auxvar, nlhdlrexprdata->exprvals0[i], &infeasible, &fixed) );
+            *result = SCIP_REDUCEDDOM;
          }
          else
          {
+            SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+            /* the cut is trivial, can add it without using other nlhdlrs */
             for( j = 0; j < nchildren; ++j )
             {
                SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[j];
@@ -1550,18 +1580,18 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childauxvar, SCIPgetConsExprExprSumCoefs(child)[j]) );
                }
             }
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+
+            (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
+                                overestimate ? "over" : "under",
+                                (void*)expr,
+                                SCIPgetNLPs(scip),
+                                SCIPvarGetName(indicator));
+
+            SCIP_CALL( SCIPconsExprCutAndScore(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+                                               auxvalue, allowweakcuts, FALSE, addbranchscores, solcopy, result) );
+            SCIPfreeRowprep(scip, &rowprep);
          }
-
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
-
-         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
-                             overestimate ? "over" : "under",
-                             (void*)expr,
-                             SCIPgetNLPs(scip),
-                             SCIPvarGetName(indicator));
-
-         SCIP_CALL( addCut(scip, cons, rowprep, solcopy, result) );
-         SCIPfreeRowprep(scip, &rowprep);
 
          goto TERMINATE;
       }
@@ -1594,7 +1624,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             }
          }
 
-         if( solcopy == NULL )
+         if( solcopy == sol )
          {
             SCIP_CALL( SCIPcreateSol(scip, &solcopy, NULL) );
             for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
@@ -1642,7 +1672,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          /* ask the nonlinear handler for an estimator */
          SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, solcopy, expr->enfos[j]->auxvalue,
-               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2, FALSE, &addedbranchscores2) );
+               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2, addbranchscores, &addedbranchscores2) );
 
          addedbranchscores += addedbranchscores2;
 
