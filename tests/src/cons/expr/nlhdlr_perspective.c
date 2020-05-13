@@ -339,8 +339,6 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
-
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
@@ -397,8 +395,6 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator vars, got %d\n", nlhdlrexprdata->nindicators);
-
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
@@ -526,11 +522,13 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIPfreeSol(scip, &sol);
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
+//   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
-   SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, &nlhdlrexprdata) );
+//   SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, &nlhdlrexprdata) );
    /* the quadratic handler is freed when expr is released */
 
+   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
+   SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

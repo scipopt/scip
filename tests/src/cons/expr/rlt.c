@@ -144,9 +144,6 @@ void teardown(void)
    SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBlockMemory(scip, &sepadata);
 
-   /* free rlt stuff */
-   SCIP_CALL( freeAuxVars(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr)) );
-
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 

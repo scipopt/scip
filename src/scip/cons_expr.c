@@ -420,16 +420,8 @@ SCIP_RETCODE freeAuxVar(
 
    SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-   /* check that if not finishing up, noone else is still using the auxvar
-    * once we release it, noone else would take care of unlocking it
-    * note that we do not free auxvars in exitsolve if we are restarting
-    * TODO: this doesn't work when run from unittests, so should find a safer way to define exceptions than checking the stage
-    */
-   /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
-
-   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
-    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
-    * variable might be still captured by SCIP's NLP or some other plugin
+   /* remove variable locks
+    * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
     */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
@@ -504,6 +496,7 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
+   expr->ndomainuses = 0;
 
    return SCIP_OKAY;
 }
@@ -5642,48 +5635,6 @@ int nlhdlrCmp(
    return strcmp(h1->name, h2->name);
 }
 
-/** frees auxiliary variables which have been added to compute an outer approximation */
-static
-SCIP_RETCODE freeAuxVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSDATA* consdata;
-   int i;
-
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      if( consdata->expr == NULL )
-         continue;
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
 /** calls separation initialization callback for each expression */
 static
 SCIP_RETCODE initSepa(
@@ -5883,6 +5834,11 @@ void addConsExprExprsViolScore(
             100*weight / weightsum, violscore,
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          *success = TRUE;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "skip score for fixed variable <%s>[%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       }
    }
 }
@@ -7008,7 +6964,7 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s>" \
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> " \
             "auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar),
             expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
@@ -10083,14 +10039,6 @@ static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
-   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables
-    */
-   if( SCIPgetNRuns(scip) > 1 )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -10223,8 +10171,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, !restart) );
+         /* remove nonlinear handlers in expression and their data and auxiliary variables */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
          /* remove quadratic info */
          quadFree(scip, expr);
@@ -14209,13 +14157,14 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
       MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
-   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
     * or to copy the variable to a subscip
     */
    SCIPvarMarkRelaxationOnly(expr->auxvar);
+
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
@@ -14693,6 +14642,21 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
+   /* shortcut for expr without children */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
@@ -14721,6 +14685,52 @@ SCIP_Bool SCIPisConsExprExprIntegral(
 {
    assert(expr != NULL);
    return expr->isintegral;
+}
+
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->ndomainuses;
+}
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(expr->ndomainuses >= 0);
+
+   ++(expr->ndomainuses);
+
+   /* increase the ndomainuses counter for all sub-expressions of the given expression */
+   if( SCIPgetConsExprExprNChildren(expr) > 0 )
+   {
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      /* create and initialize iterator */
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+      for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         ++(expr->ndomainuses);
+      }
+
+      /* free iterator */
+      SCIPexpriteratorFree(&it);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns the total number of variables in an expression
@@ -14998,6 +15008,17 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
 
    return conshdlrdata->lastboundrelax;
+}
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   assert(consexprhdlr != NULL);
+
+   return (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
 }
 
 /** collects all bilinear terms for a given set of constraints
@@ -15741,6 +15762,31 @@ SCIP_RETCODE SCIPgetQuadExprConsExpr(
    /* if not quadratic in non-extended formulation, then do not return quaddata */
    if( *quaddata != NULL && !(*quaddata)->allexprsarevars )
       *quaddata = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
 
    return SCIP_OKAY;
 }
@@ -17157,7 +17203,7 @@ void SCIPgetConsExprQuadraticQuadTermData(
 /** gives the data of a bilinear expression term
  *
  * For a term a*expr1*expr2, returns
- * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ * expr1, expr2, a, and the position of the quadratic expression term of expr2 in the quadratic expressions quadexprterms.
  */
 void SCIPgetConsExprQuadraticBilinTermData(
    SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */

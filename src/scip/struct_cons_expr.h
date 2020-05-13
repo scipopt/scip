@@ -104,6 +104,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
+   int                     ndomainuses;   /**< number of nonlinear handlers whose convexification methods depend on the bounds of the expression */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */

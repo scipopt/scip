@@ -1023,6 +1023,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
       *enforcedabove = TRUE;
       *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP
          | SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+
+      /* mark that the bounds of the expression is important to construct the estimators
+       *
+       * TODO check the curvature of the univariate quotient
+       */
+      SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr, (*nlhdlrexprdata)->numexpr) );
    }
 
    return SCIP_OKAY;
