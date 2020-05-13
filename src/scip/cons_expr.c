@@ -16828,7 +16828,7 @@ SCIP_RETCODE SCIPconsExprCutAndScore(
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
    SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
-   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             branchscoresuccess, /**< whether the branching score callback of the estimator was successful */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result */
