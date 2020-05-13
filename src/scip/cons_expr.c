@@ -2769,7 +2769,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
 
          /* if boundchange, then mark constraints to be propagated again */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
+         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
          {
             consdata->ispropagated = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
