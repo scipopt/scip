@@ -654,7 +654,7 @@ Test(glbconss, cpp1)
    SCIP_VAR* ys[6];
    SCIP_Real rs[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
    SCIP_SOL* sol;
-   int ncircles = 6;
+   int ncircles = 5;
    int i;
 
    /* create variables */
@@ -667,7 +667,7 @@ Test(glbconss, cpp1)
 
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPisEQ(scip, SCIPgetPrimalbound(scip), -1.06006273551528e+02));
+   cr_expect(SCIPisEQ(scip, SCIPgetPrimalbound(scip), -9.82679491923714e+01));
    sol = SCIPgetBestSol(scip);
    cr_assert(sol != NULL);
 

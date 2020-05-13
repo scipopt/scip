@@ -2199,6 +2199,12 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
+   /* ensure that activies are recomputed w.r.t. the global variable bounds if a constraint has been added in a local node */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   }
+
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
    {
