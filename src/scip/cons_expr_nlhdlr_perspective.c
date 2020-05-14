@@ -76,11 +76,9 @@ struct SCIP_ConsExpr_NlhdlrExprData
 #endif
 
    SCIP_Real*            exprvals0;          /**< 'off' values of the expression for each indicator variable */
-   SCIP_CONSEXPR_EXPR**  varexprs;           /**< variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   SCIP_VAR**            scauxvars;
-   int                   nscauxvars;
-   int                   sscauxvars;
+   SCIP_VAR**            vars;               /**< expression variables */
+   int                   nvars;              /**< total number of variables in the expression */
+   int                   varssize;           /**< size of the vars array */
    SCIP_VAR**            indicators;         /**< all indicator variables for the expression */
    int                   nindicators;        /**< number of indicator variables */
 };
@@ -677,8 +675,6 @@ SCIP_RETCODE exprIsSemicontinuous(
    )
 {
    int v;
-   int nvarexprs;
-   SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool var_is_sc;
    SCVARDATA* scvdata;
    SCIP_VAR* var;
@@ -689,11 +685,8 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    *res = FALSE;
 
-   nvarexprs = nlhdlrexprdata->nvarexprs;
-   varexprs = nlhdlrexprdata->varexprs;
-
    /* constant expression is not semicontinuous */
-   if( nvarexprs == 0 )
+   if( nlhdlrexprdata->nvars == 0 )
    {
       return SCIP_OKAY;
    }
@@ -707,7 +700,7 @@ SCIP_RETCODE exprIsSemicontinuous(
          int nchildvarexprs;
          SCIP_Bool issc;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, nvarexprs) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, nlhdlrexprdata->nvars) );
          SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, child, childvarexprs, &nchildvarexprs) );
 
          issc = TRUE;
@@ -720,8 +713,7 @@ SCIP_RETCODE exprIsSemicontinuous(
             var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
             SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
 
-            /* TODO for now we accept only actual non-sc vars; with a bit of work this can be extended to auxvars */
-            childacceptable = var_is_sc || SCIPisConsExprExprVar(child); /* || SCIPgetConsExprExprAuxVar(child) != NULL; */
+            childacceptable = var_is_sc || SCIPisConsExprExprVar(child);
 
             if( !childacceptable )
             {
@@ -743,10 +735,9 @@ SCIP_RETCODE exprIsSemicontinuous(
    else
    {
       /* all variables of a non-sum on/off term should be semicontinuous */
-      for( v = 0; v < nvarexprs; ++v )
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
-         var = SCIPgetConsExprExprVarVar(varexprs[v]);
-         SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+         SCIP_CALL( varIsSemicontinuous(scip, nlhdlrexprdata->vars[v], nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
          if( !var_is_sc )
             return SCIP_OKAY;
       }
@@ -757,13 +748,13 @@ SCIP_RETCODE exprIsSemicontinuous(
    indicators = NULL;
    nindicators = 0;
 
-   SCIPdebugMsg(scip, "Array intersection for vars %s, *nbvars = %d\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), nindicators);
-   for( v = 0; v < nvarexprs; ++v )
+   SCIPdebugMsg(scip, "Array intersection for vars %s, *nbvars = %d\n", SCIPvarGetName(nlhdlrexprdata->vars[0]), nindicators);
+   for( v = 0; v < nlhdlrexprdata->nvars; ++v )
    {
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[v])));
+      SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(nlhdlrexprdata->vars[v]));
 #endif
-      scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[v]));
+      scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*) nlhdlrexprdata->vars[v]);
 
       if( scvdata == NULL )
          continue;
@@ -856,10 +847,6 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
    )
 {
-   int c;
-
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->scauxvars), nlhdlrexprdata->sscauxvars);
-
    if( nlhdlrexprdata->nindicators != 0 )
    {
       assert(nlhdlrexprdata->indicators != NULL);
@@ -867,95 +854,69 @@ SCIP_RETCODE freeNlhdlrExprData(
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators);
    }
 
-   if( nlhdlrexprdata->varexprs != NULL )
+   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->vars, nlhdlrexprdata->varssize);
+
+   return SCIP_OKAY;
+}
+
+/** go into probing and set some variable bounds */
+static
+SCIP_RETCODE startProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_VAR**            probingvars,        /**< array of vars whose bounds we will change in probing */
+   SCIP_INTERVAL*        probingdoms,        /**< array of intervals to which bounds of probingvars will be changed in probing */
+   int                   nprobingvars,       /**< number of probing vars */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_SOL**            solcopy             /**< buffer to store a copy of sol before going into probing */
+)
+{
+   int v;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+
+   /* go into probing */
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* create a probing node */
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+
+   /* apply stored bounds */
+   for( v = 0; v < nprobingvars; ++v )
    {
-      for( c = 0; c < nlhdlrexprdata->nvarexprs; ++c )
+      newlb = SCIPintervalGetInf(probingdoms[v]);
+      newub = SCIPintervalGetSup(probingdoms[v]);
+
+      if( SCIPisGT(scip, newlb, SCIPvarGetLbLocal(probingvars[v])) || (newlb >= 0.0 && SCIPvarGetLbLocal(probingvars[v]) < 0.0) )
       {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(nlhdlrexprdata->varexprs[c])) );
+         SCIP_CALL( SCIPchgVarLbProbing(scip, probingvars[v], newlb) );
       }
-      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->varexprs, nlhdlrexprdata->nvarexprs);
+      if( SCIPisLT(scip, newub, SCIPvarGetUbLocal(probingvars[v])) || (newub <= 0.0 && SCIPvarGetUbLocal(probingvars[v]) > 0.0) )
+      {
+         SCIP_CALL( SCIPchgVarUbProbing(scip, probingvars[v], newub) );
+      }
    }
 
-   return SCIP_OKAY;
-}
-
-/*
- * Callback methods of nonlinear handler
- */
-
-/** nonlinear handler copy callback */
-static
-SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
-{ /*lint --e{715}*/
-   assert(targetscip != NULL);
-   assert(targetconsexprhdlr != NULL);
-   assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
-
-   SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(targetscip, targetconsexprhdlr) );
-
-   return SCIP_OKAY;
-}
-
-
-/** callback to free data of handler */
-static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
-{ /*lint --e{715}*/
-   SCIP_HASHMAPENTRY* entry;
-   SCVARDATA* data;
-   int c;
-
-   if( (*nlhdlrdata)->scvars != NULL )
+   if( *solcopy == sol )
    {
-      for( c = 0; c < SCIPhashmapGetNEntries((*nlhdlrdata)->scvars); ++c )
+      SCIP_CALL( SCIPcreateSol(scip, solcopy, NULL) );
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
-         entry = SCIPhashmapGetEntry((*nlhdlrdata)->scvars, c);
-         if( entry != NULL )
-         {
-            data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
-            SCIPfreeBlockMemoryArray(scip, &data->ubs1, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->lbs1, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
-            SCIPfreeBlockMemory(scip, &data);
-         }
+         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->vars[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[v])) );
       }
-      SCIPhashmapFree(&((*nlhdlrdata)->scvars));
+      for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->indicators[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->indicators[v])) );
+      }
    }
 
-   SCIPfreeBlockMemory(scip, nlhdlrdata);
-
-   return SCIP_OKAY;
-}
-
-
-/** callback to free expression specific data */
-static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
-{  /*lint --e{715}*/
-   SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
-   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
-
-   return SCIP_OKAY;
-}
-
-
-/** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-#endif
-
-static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
-{  /*lint --e{715}*/
-   if( nlhdlr->ndetections != 0 )
+   if( SCIPgetDepth(scip) == 0 )
    {
-      SCIPinfoMessage(scip, NULL, "\nndetects = %d\n", nlhdlr->ndetections);
+      SCIP_Longint ndomreds;
+      SCIP_Bool cutoff;
+
+      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff, &ndomreds) );
    }
 
    return SCIP_OKAY;
@@ -964,9 +925,9 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 /* remove an indicator from nonlinear expression data */
 static
 void removeExprIndicator(
-  SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata,  /**< nonlinear expression data */
-  int                    pos                 /**< position of the indicator */
-  )
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata,  /**< nonlinear expression data */
+   int                    pos                 /**< position of the indicator */
+)
 {
    int i;
 
@@ -980,47 +941,37 @@ void removeExprIndicator(
    --nlexprdata->nindicators;
 }
 
+/** adds an auxiliary variable to the vars array in nlhdlrexprdata */
 static
-SCIP_RETCODE addSCAuxVar(
-   SCIP*                 scip,
-   SCIP_CONSEXPR_NLHDLREXPRDATA* exprdata,
-   SCIP_VAR*             auxvar
+SCIP_RETCODE addAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_HASHMAP*         auxvarmap,          /**< hashmap linking auxvars to positions in nlhdlrexprdata->vars */
+   SCIP_VAR*             auxvar              /**< variable to be added */
 )
 {
-   SCIP_Bool found;
    int pos;
    int newsize;
-   int i;
 
-   assert(exprdata != NULL);
+   assert(nlhdlrexprdata != NULL);
 
-   if( exprdata->scauxvars == NULL )
-   {
-      found = FALSE;
-      pos = 0;
-   }
-   else
-   {
-      found = SCIPsortedvecFindPtr((void**)  exprdata->scauxvars, SCIPvarComp, (void*) auxvar, exprdata->nscauxvars, &pos);
-   }
+   pos = SCIPhashmapGetImageInt(auxvarmap, (void*) auxvar);
 
-   if( found )
-   {
+   if( pos != INT_MAX )
       return SCIP_OKAY;
-   }
 
-   if( exprdata->nscauxvars + 1 > exprdata->sscauxvars )
+   /* ensure size */
+   if( nlhdlrexprdata->nvars + 1 > nlhdlrexprdata->varssize )
    {
-      newsize = SCIPcalcMemGrowSize(scip, exprdata->nscauxvars + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &exprdata->scauxvars, exprdata->sscauxvars, newsize) );
-      exprdata->sscauxvars = newsize;
+      newsize = SCIPcalcMemGrowSize(scip, nlhdlrexprdata->nvars + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->vars, nlhdlrexprdata->varssize, newsize) );
+      nlhdlrexprdata->varssize = newsize;
    }
+   assert(nlhdlrexprdata->nvars + 1 <= nlhdlrexprdata->varssize);
 
-   for( i = pos; i < exprdata->nscauxvars; ++i )
-   {
-      exprdata->scauxvars[i + 1] = exprdata->scauxvars[i];
-   }
-   exprdata->scauxvars[pos] = auxvar;
+   nlhdlrexprdata->vars[nlhdlrexprdata->nvars] = auxvar;
+   SCIP_CALL( SCIPhashmapSetImageInt(auxvarmap, (void*) auxvar, nlhdlrexprdata->nvars) );
+   ++(nlhdlrexprdata->nvars);
 
    return SCIP_OKAY;
 }
@@ -1035,47 +986,52 @@ SCIP_RETCODE computeOffValues(
    SCIP_CONSEXPR_NLHDLRDATA* hdlrdata,       /**< nonlinear handler data */
    SCIP_CONSEXPR_NLHDLREXPRDATA* exprdata,   /**< nonlinear expression data */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
+)
 {
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_SOL* sol;
    int i;
    int v;
-   SCIP_Real* vals0;
-   SCIP_VAR** vars;
+   int norigvars;
+   SCIP_Real* origvals0;
+   SCIP_VAR** origvars;
    SCIP_Bool var_is_sc;
    SCVARDATA* scvdata;
    SCIP_VAR* auxvar;
    SCIP_CONSEXPR_EXPR* curexpr;
+   SCIP_HASHMAP* auxvarmap;
 
    assert(expr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(exprdata->exprvals0), exprdata->nindicators) );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, exprdata->nvarexprs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals0, exprdata->nvarexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &origvars, exprdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &origvals0, exprdata->nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&auxvarmap, SCIPblkmem(scip), 10) );
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
-   for( v = 0; v < exprdata->nvarexprs; ++v )
+   for( v = 0; v < exprdata->nvars; ++v )
    {
-      vars[v] = SCIPgetConsExprExprVarVar(exprdata->varexprs[v]);
+      origvars[v] = exprdata->vars[v];
    }
+   norigvars = exprdata->nvars;
 
    for( i = 0; i < exprdata->nindicators; ++i )
    {
       /* set sol to the off value of all expr vars for this indicator */
-      for( v = 0; v < exprdata->nvarexprs; ++v )
+      for( v = 0; v < norigvars; ++v )
       {
-         SCIP_CALL( varIsSemicontinuous(scip, vars[v], hdlrdata->scvars, exprdata->indicators[i], &vals0[v], &var_is_sc) );
+         SCIP_CALL( varIsSemicontinuous(scip, origvars[v], hdlrdata->scvars, exprdata->indicators[i], &origvals0[v],
+               &var_is_sc) );
 
          /* set vals0[v] = 0 if var is non-sc - then it will not contribute to exprvals0[i] since any
           * non-sc var must be linear
           */
          if( !var_is_sc )
-            vals0[v] = 0.0;
+            origvals0[v] = 0.0;
       }
-      SCIPsetSolVals(scip, sol, exprdata->nvarexprs, vars, vals0);
+      SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0);
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
 
       if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
@@ -1116,9 +1072,9 @@ SCIP_RETCODE computeOffValues(
             }
 
             SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr),
-                     SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar)) );
+                  SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar)) );
 
-            SCIP_CALL( addSCAuxVar(scip, exprdata, auxvar) );
+            SCIP_CALL( addAuxVar(scip, exprdata, auxvarmap, auxvar) );
          }
 
          curexpr = SCIPexpriteratorGetNext(it);
@@ -1126,184 +1082,13 @@ SCIP_RETCODE computeOffValues(
    }
 
    SCIPexpriteratorFree(&it);
-   SCIPfreeBufferArray(scip, &vals0);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeSol(scip, &sol);
+   SCIPhashmapFree(&auxvarmap);
+   SCIPfreeBufferArray(scip, &origvals0);
+   SCIPfreeBufferArray(scip, &origvars);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    return SCIP_OKAY;
 }
-
-/** callback to detect structure in expression tree
- *
- *  We are looking for expressions g(x), where x is a vector of semicontinuous variables that all share at least one
- *  indicator variable.
- */
-static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
-{ /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrdata != NULL);
-
-   *success = FALSE;
-
-   /* do not run in presolve, as we only do separation */
-   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
-   {
-      return SCIP_OKAY;
-   }
-
-   if( SCIPgetNBinVars(scip) == 0 )
-   {
-      SCIPdebugMsg(scip, "problem has no binary variables, not running perspective detection\n");
-      return SCIP_OKAY;
-   }
-
-   /* some other nonlinear handler should be able to separate */
-   if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
-   {
-      SCIPdebugMsg(scip, "\nno enforcement method, exiting detect");
-      return SCIP_OKAY;
-   }
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
-   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPdebugMsgPrint(scip, "\n");
-#endif
-
-   /* allocate memory */
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
-   if( nlhdlrdata->scvars == NULL )
-   {
-      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), SCIPgetNVars(scip)) );
-   }
-
-   /* save varexprs to nlhdlrexprdata */
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
-
-   /* check if expr is semicontinuous and save indicator variables */
-   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr, success) );
-
-   if( *success )
-   {
-      int sindicators;
-
-      sindicators = (*nlhdlrexprdata)->nindicators;
-
-      /* compute 'off' values and propagate semicontinuity */
-      SCIP_CALL( computeOffValues(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
-
-      /* some indicator variables might have been removed if evaluation failed, check how many remain */
-      if( (*nlhdlrexprdata)->nindicators == 0 )
-      {
-         *success = FALSE;
-      }
-      else if( (*nlhdlrexprdata)->nindicators < sindicators )
-      {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->indicators, sindicators,
-               (*nlhdlrexprdata)->nindicators) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprvals0, sindicators,
-                 (*nlhdlrexprdata)->nindicators) );
-      }
-   }
-
-   if( *success )
-   {
-      assert((*nlhdlrexprdata)->nindicators > 0);
-
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
-      SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-      /* if we get here, sepa enforcemethods should have already been set by other handler(s) */
-      assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
-         || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
-
-      assert(*nlhdlrexprdata != NULL);
-   }
-   else
-   {
-      SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
-      SCIPfreeBlockMemory(scip, nlhdlrexprdata);
-      *nlhdlrexprdata = NULL;
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** auxiliary evaluation callback of nonlinear handler */
-static
-SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
-{ /*lint --e{715}*/
-   int e;
-   SCIP_Real maxviol;
-   SCIP_Real auxval_e;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(auxvalue != NULL);
-
-   maxviol = 0.0;
-
-   for( e = 0; e < expr->nenfos; ++e )
-   {
-      if( !SCIPhasConsExprNlhdlrEstimate(expr->enfos[e]->nlhdlr) )
-         continue;
-
-      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-            &auxval_e, sol) );
-
-      if( auxval_e > maxviol && auxval_e != SCIP_INVALID )
-      {
-         maxviol = auxval_e;
-      }
-   }
-
-   *auxvalue = maxviol;
-
-   return SCIP_OKAY;
-}
-
-/** callback to detect structure in expression tree */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
-
-
-/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** analyse on/off bounds for: 1) tightening bounds in probing for indicator = 1, 2) fixing indicator / detecting
   * cutoff if one or both states is infeasible 3) tightening local bounds if indicator is fixed
@@ -1460,7 +1245,7 @@ SCIP_RETCODE prepareProbing(
    /* consider each possible value of indicator */
    for( b = 0; b < 2; ++b )
    {
-      for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
          /* nothing left to do if indicator is already fixed to !indvalue
           * (checked in the inner loop since analyseOnoff bounds might fix the indicator)
@@ -1471,7 +1256,7 @@ SCIP_RETCODE prepareProbing(
             break;
          }
 
-         var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+         var = nlhdlrexprdata->vars[v];
 
          SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, &probinglb,
                &probingub, *doprobing, &reduceddom) );
@@ -1504,34 +1289,6 @@ SCIP_RETCODE prepareProbing(
             changed = TRUE;
          }
       }
-
-      for( v = 0; v < nlhdlrexprdata->nscauxvars; ++v )
-      {
-         /* nothing left to do if indicator is already fixed to !indvalue
-          * (checked in the inner loop since analyseOnoff bounds might fix the indicator)
-          */
-         if ((b == 1 && SCIPvarGetUbLocal(indicator) == 0.0) || (b == 0 && SCIPvarGetLbLocal(indicator) == 1.0))
-         {
-            *doprobing = FALSE;
-            break;
-         }
-
-         var = nlhdlrexprdata->scauxvars[v];
-
-         SCIP_CALL(analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, NULL, NULL, FALSE,
-               &reduceddom) );
-
-         if (infeas)
-         {
-            *result = SCIP_CUTOFF;
-            *doprobing = FALSE;
-            return SCIP_OKAY;
-         }
-         else if( reduceddom )
-         {
-            *result = SCIP_REDUCEDDOM;
-         }
-      }
    }
 
    if( !changed )
@@ -1544,71 +1301,268 @@ SCIP_RETCODE prepareProbing(
    return SCIP_OKAY;
 }
 
+/*
+ * Callback methods of nonlinear handler
+ */
+
+/** nonlinear handler copy callback */
 static
-SCIP_RETCODE startProbing(
-   SCIP*                 scip,
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_VAR**            probingvars,
-   SCIP_INTERVAL*        probingdoms,
-   int                   nprobingvars,
-   SCIP_SOL*             sol,
-   SCIP_SOL**            solcopy
-  )
-{
-   int v;
-   SCIP_VAR* var;
-   SCIP_Real newlb;
-   SCIP_Real newub;
+SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
+{ /*lint --e{715}*/
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
 
-   /* go into probing */
-   SCIP_CALL( SCIPstartProbing(scip) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(targetscip, targetconsexprhdlr) );
 
-   /* create a probing node */
-   SCIP_CALL( SCIPnewProbingNode(scip) );
+   return SCIP_OKAY;
+}
 
-   /* apply stored bounds */
-   for( v = 0; v < nprobingvars; ++v )
+
+/** callback to free data of handler */
+static
+SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
+{ /*lint --e{715}*/
+   SCIP_HASHMAPENTRY* entry;
+   SCVARDATA* data;
+   int c;
+
+   if( (*nlhdlrdata)->scvars != NULL )
    {
-      var = probingvars[v];
-      newlb = SCIPintervalGetInf(probingdoms[v]);
-      newub = SCIPintervalGetSup(probingdoms[v]);
-
-      if( SCIPisGT(scip, newlb, SCIPvarGetLbLocal(var)) || (newlb >= 0.0 && SCIPvarGetLbLocal(var) < 0.0) )
+      for( c = 0; c < SCIPhashmapGetNEntries((*nlhdlrdata)->scvars); ++c )
       {
-         SCIP_CALL( SCIPchgVarLbProbing(scip, var, newlb) );
+         entry = SCIPhashmapGetEntry((*nlhdlrdata)->scvars, c);
+         if( entry != NULL )
+         {
+            data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            SCIPfreeBlockMemoryArray(scip, &data->ubs1, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->lbs1, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
+            SCIPfreeBlockMemory(scip, &data);
+         }
       }
-      if( SCIPisLT(scip, newub, SCIPvarGetUbLocal(var)) || (newub <= 0.0 && SCIPvarGetUbLocal(var) > 0.0) )
-      {
-         SCIP_CALL( SCIPchgVarUbProbing(scip, var, newub) );
-      }
+      SCIPhashmapFree(&((*nlhdlrdata)->scvars));
    }
 
-   if( *solcopy == sol )
-   {
-      SCIP_CALL( SCIPcreateSol(scip, solcopy, NULL) );
-      for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
-      {
-         var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
-         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, var, SCIPgetSolVal(scip, sol, var)) );
-      }
-      for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
-      {
-         var = nlhdlrexprdata->indicators[v];
-         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, var, SCIPgetSolVal(scip, sol, var)) );
-      }
-   }
+   SCIPfreeBlockMemory(scip, nlhdlrdata);
 
-   if( SCIPgetDepth(scip) == 0 )
-   {
-      SCIP_Longint ndomreds;
-      SCIP_Bool cutoff;
+   return SCIP_OKAY;
+}
 
-      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff, &ndomreds) );
+
+/** callback to free expression specific data */
+static
+SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
+{  /*lint --e{715}*/
+   SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
+   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
+
+/** callback to be called in initialization */
+#if 0
+static
+SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+#endif
+
+static
+SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
+{  /*lint --e{715}*/
+   if( nlhdlr->ndetections != 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nndetects = %d\n", nlhdlr->ndetections);
    }
 
    return SCIP_OKAY;
 }
+
+/** callback to detect structure in expression tree
+ *
+ *  We are looking for expressions g(x), where x is a vector of semicontinuous variables that all share at least one
+ *  indicator variable.
+ */
+static
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
+{ /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   int i;
+   SCIP_CONSEXPR_EXPR** varexprs;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrdata != NULL);
+
+   *success = FALSE;
+
+   /* do not run in presolve, as we only do separation */
+   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( SCIPgetNBinVars(scip) == 0 )
+   {
+      SCIPdebugMsg(scip, "problem has no binary variables, not running perspective detection\n");
+      return SCIP_OKAY;
+   }
+
+   /* some other nonlinear handler should be able to separate */
+   if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
+   {
+      SCIPdebugMsg(scip, "\nno enforcement method, exiting detect");
+      return SCIP_OKAY;
+   }
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPdebugMsgPrint(scip, "\n");
+#endif
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
+   if( nlhdlrdata->scvars == NULL )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   }
+
+   /* save varexprs to nlhdlrexprdata */
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, (*nlhdlrexprdata)->nvars) );
+   (*nlhdlrexprdata)->varssize = (*nlhdlrexprdata)->nvars;
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &(*nlhdlrexprdata)->nvars) );
+   for( i = 0; i < (*nlhdlrexprdata)->nvars; ++i )
+   {
+      (*nlhdlrexprdata)->vars[i] = SCIPgetConsExprExprVarVar(varexprs[i]);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+   }
+   SCIPfreeBufferArray(scip, &varexprs);
+
+   /* check if expr is semicontinuous and save indicator variables */
+   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr, success) );
+
+   if( *success )
+   {
+      int sindicators;
+
+      sindicators = (*nlhdlrexprdata)->nindicators;
+
+      /* compute 'off' values and propagate semicontinuity */
+      SCIP_CALL( computeOffValues(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
+
+      /* some indicator variables might have been removed if evaluation failed, check how many remain */
+      if( (*nlhdlrexprdata)->nindicators == 0 )
+      {
+         *success = FALSE;
+      }
+      else if( (*nlhdlrexprdata)->nindicators < sindicators )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->indicators, sindicators,
+               (*nlhdlrexprdata)->nindicators) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprvals0, sindicators,
+                 (*nlhdlrexprdata)->nindicators) );
+      }
+   }
+
+   if( *success )
+   {
+      assert((*nlhdlrexprdata)->nindicators > 0);
+
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
+      SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+      /* if we get here, sepa enforcemethods should have already been set by other handler(s) */
+      assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
+         || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
+
+      assert(*nlhdlrexprdata != NULL);
+   }
+   else
+   {
+      SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
+      SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+      *nlhdlrexprdata = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** auxiliary evaluation callback of nonlinear handler */
+static
+SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
+{ /*lint --e{715}*/
+   int e;
+   SCIP_Real maxviol;
+   SCIP_Real auxval_e;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(auxvalue != NULL);
+
+   maxviol = 0.0;
+
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      if( !SCIPhasConsExprNlhdlrEstimate(expr->enfos[e]->nlhdlr) )
+         continue;
+
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+            &auxval_e, sol) );
+
+      if( auxval_e > maxviol && auxval_e != SCIP_INVALID )
+      {
+         maxviol = auxval_e;
+      }
+   }
+
+   *auxvalue = maxviol;
+
+   return SCIP_OKAY;
+}
+
+/** callback to detect structure in expression tree */
+#if 0
+static
+SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
+{ /*lint --e{715}*/
+   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#endif
+
+
+/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
+#if 0
+static
+SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
+{ /*lint --e{715}*/
+   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** nonlinear handler enforcement callback
  *
@@ -1627,7 +1581,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Real cst0;
    SCIP_VAR* indicator;
-   SCIP_VAR* var;
    SCIP_PTRARRAY* rowpreps2;
    SCIP_PTRARRAY* rowpreps;
    int nrowpreps;
@@ -1652,10 +1605,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, " at\n");
-   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
+   for( i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
-      SCIPinfoMessage(scip, NULL, "%s = %g\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i])),
-              SCIPgetSolVal(scip, sol, SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i])));
+      SCIPinfoMessage(scip, NULL, "%s = %g\n", SCIPvarGetName(nlhdlrexprdata->vars[i]),
+              SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]));
    }
    SCIPinfoMessage(scip, NULL, "%s = %g", SCIPvarGetName(SCIPgetConsExprExprAuxVar(expr)),
            SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)));
@@ -1694,7 +1647,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_Bool doprobingind;
 
       indicator = nlhdlrexprdata->indicators[i];
-
       probingvars = NULL;
       probingdoms = NULL;
       nprobingvars = 0;
@@ -1764,7 +1716,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             SCIP_Real maxcoef;
 
             rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
-
             assert(rowprep != NULL);
 
 #ifdef SCIP_DEBUG
@@ -1784,15 +1735,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
             for( v = 0; v < rowprep->nvars; ++v )
             {
-               var = rowprep->vars[v];
-
                if( REALABS( rowprep->coefs[v]) > maxcoef )
                {
                   maxcoef = REALABS(rowprep->coefs[v]);
                }
 
                /* is var sc with respect to this indicator? */
-               SCIP_CALL(varIsSemicontinuous(scip, var, nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
+               SCIP_CALL(varIsSemicontinuous(scip, rowprep->vars[v], nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
 
                if( !var_is_sc )
                   continue;
@@ -1829,10 +1778,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       }
 
       /* add all cuts found for indicator i */
-      minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
-      maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
-
-      for( r = minidx; r <= maxidx && !stop; ++r )
+      for( r = SCIPgetPtrarrayMinIdx(scip, rowpreps); r <= SCIPgetPtrarrayMaxIdx(scip, rowpreps) && !stop; ++r )
       {
          SCIP_RESULT resultr;
 
@@ -1960,7 +1906,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
       SCIPfixVarProbing(scip, indicator, 1);
 
       /* change bounds to those at indicators[i] = 1 */
-      for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
          SCIP_VAR* var;
          SCVARDATA* scvdata;
@@ -1969,7 +1915,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
          SCIP_Real oldub;
 #endif
 
-         var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+         var = nlhdlrexprdata->vars[v];
          scvdata = getSCVarDataInd(nlhdlrdata->scvars, var, indicator, &pos);
          assert(scvdata != NULL);
 
@@ -2249,9 +2195,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalPerspective)
       changed = FALSE;
 
       /* see if we can tighten the bounds for at least one var by setting indicator = 1 */
-      for( v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
-         var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+         var = nlhdlrexprdata->vars[v];
          scvdata = getSCVarDataInd(nlhdlrdata->scvars, var, indicator, &pos);
          assert(scvdata != NULL);
 
