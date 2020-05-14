@@ -1619,13 +1619,13 @@ SCIP_RETCODE readExpression(
       SCIP_CALL( readExpression(scip, consexprhdlr, &args[0], xmlFirstChild(node), vars, nvars, doingfine) );
       if( !*doingfine )
          return SCIP_OKAY;
-      assert(args[1] != NULL);
+      assert(args[0] != NULL);
 
       /* read second child expression */
       SCIP_CALL( readExpression(scip, consexprhdlr, &args[1], xmlNextSibl(xmlFirstChild(node)), vars, nvars, doingfine) );
       if( !*doingfine )
          return SCIP_OKAY;
-      assert(args[0] != NULL);
+      assert(args[1] != NULL);
 
       if( strcmp(exprname, "plus") == 0 )
       {
