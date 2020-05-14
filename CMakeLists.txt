@@ -21,7 +21,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
    # require at least gcc 4.8
    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-      warning("GCC version not supported, should be at least 4.8!")
+     message(WARNING "GCC version not supported, should be at least 4.8!")
    endif()
 endif()
 
