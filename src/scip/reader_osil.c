@@ -505,7 +505,7 @@ SCIP_RETCODE createConstraint(
    }
 
    /* linear constraint */
-   if( nlinvars > 0 && nquadterms == 0 && nlexpr == NULL )
+   if( nlinvars >= 0 && nquadterms == 0 && nlexpr == NULL )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name,
          nlinvars, linvars, lincoefs, lhs, rhs, initialconss,
