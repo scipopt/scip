@@ -636,8 +636,11 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* perform initial reductions? */
    if( reducegraph )
    {
-      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
+      const RPARAMS parameters = { .dualascent = TRUE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                 .reductbound = reductbound, .userec = TRUE, .fullreduce = fullreduce };
+
+      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
    }
 
    /* get number of remaining vertices, edges and terminals */
@@ -709,8 +712,13 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       reductbound = getRedBound(i, anedges);
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
-      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
+      {
+         const RPARAMS parameters = { .dualascent = TRUE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                         .reductbound = reductbound, .userec = TRUE, .fullreduce = fullreduce };
+
+         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
+               vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
+      }
 
       /* graph vanished? */
       if( prunegraph->grad[prunegraph->source] == 0 )

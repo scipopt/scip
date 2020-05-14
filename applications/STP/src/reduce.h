@@ -57,6 +57,21 @@ typedef struct reduce_costs_data
 } REDCOST;
 
 
+
+/** reduction parameters */
+typedef struct reduction_parameters
+{
+   SCIP_Bool             dualascent;         /**< do dual-ascent reduction? */
+   SCIP_Bool             boundreduce;        /**< do bound-based reduction? */
+   SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
+   int                   reductbound;        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   SCIP_Bool             userec;             /**< use recombination heuristic? */
+   SCIP_Bool             fullreduce;         /**< use full reductions? (including extended techniques) */
+} RPARAMS;
+
+
+
+
 /** reduced cost reduction parameters */
 typedef struct reduce_costs_parameters
 {
@@ -84,7 +99,7 @@ extern SCIP_RETCODE reduceMw(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Boo
 extern SCIP_RETCODE reduceHc(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceSap(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceNw(SCIP*, GRAPH*, SCIP_Real*, int);
-extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Real, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE redLoopStp(SCIP*, const RPARAMS*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*);
 extern SCIP_RETCODE redLoopPc(SCIP*, const int*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, GNODE**, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int, SCIP_Bool);

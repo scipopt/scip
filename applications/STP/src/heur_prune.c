@@ -744,8 +744,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, NULL, nodearrreal, state,
                vbase, nodearrint, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
       else
-         SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE) );
+      {
+         const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                      .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
+
+         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
+               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset) );
+      }
    }
 
    /* get number of remaining nodes, edges and terminals */
@@ -842,8 +847,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, NULL, nodearrreal, state,
                   vbase, nodearrint, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
          else
-            SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, heap, state, vbase, nodearrint, edgearrint,
-                  nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE));
+         {
+            const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                 .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
+
+            SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state, vbase, nodearrint, edgearrint,
+                  nodearrint2, solnode, nodearrchar, &offset) );
+         }
 
          /* delete all vertices not reachable from the root */
          if( graph_pc_isRootedPcMw(prunegraph) )

@@ -819,8 +819,13 @@ SCIP_RETCODE reduceStp(
    reductbound = MAX(nedges / 1000, minelims);
 
    /* reduction loop */
-   SCIP_CALL( redLoopStp(scip, g, vnoi, path, nodearrreal, edgearrreal, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, userec, (dualascent && userec)) );
+   {
+      const RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
+                                   .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
+
+      SCIP_CALL( redLoopStp(scip, &parameters, g, vnoi, path, nodearrreal, edgearrreal, heap, state,
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed) );
+   }
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -1711,6 +1716,7 @@ SCIP_RETCODE redLoopPc(
 /** STP loop */
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
+   const RPARAMS*        redparameters,      /**< parameters */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    PATH*                 path,               /**< path data structure */
@@ -1724,14 +1730,7 @@ SCIP_RETCODE redLoopStp(
    int*                  nodearrint2,        /**< nodes-sized array  */
    int*                  solnode,            /**< solution nodes array (or NULL) */
    STP_Bool*             nodearrchar,        /**< nodes-sized array  */
-   SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   SCIP_Real             upperbound,         /**< upper bound */
-   SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
-   SCIP_Bool             boundreduce,        /**< do bound-based reduction? */
-   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_Bool             fullreduce          /**< use full reductions? (including extended techniques) */
+   SCIP_Real*            fixed               /**< pointer to store the offset value */
    )
 {
    SCIP_Real    ub;
@@ -1739,13 +1738,15 @@ SCIP_RETCODE redLoopStp(
    SCIP_Real    timelimit;
    SCIP_Bool    le = TRUE;
    SCIP_Bool    sd = TRUE;
-   SCIP_Bool    da = dualascent;
+   SCIP_Bool    da = redparameters->dualascent;
    SCIP_Bool    sdc = TRUE;
-   SCIP_Bool    bd3 = nodereplacing;
-   SCIP_Bool    bred = boundreduce;
-   SCIP_Bool    nvsl = nodereplacing;
+   SCIP_Bool    bd3 = redparameters->nodereplacing;
+   SCIP_Bool    bred = redparameters->boundreduce;
+   SCIP_Bool    nvsl = redparameters->nodereplacing;
    SCIP_Bool    rerun = TRUE;
-
+   const int reductbound = redparameters->reductbound;
+   const SCIP_Bool fullreduce = redparameters->fullreduce;
+   const SCIP_Bool nodereplacing = redparameters->nodereplacing;
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    int i = 0;
 
@@ -1757,7 +1758,7 @@ SCIP_RETCODE redLoopStp(
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
-   ub = upperbound;
+   ub = -1.0;
    fix = 0.0;
 
    SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
@@ -1787,7 +1788,7 @@ SCIP_RETCODE redLoopStp(
 #if 0
          if( fullreduce && da)
          {
-           const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
+           const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
            int extendedelims = 0;
            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, state, heap, nodearrchar, &extendedelims, randnumgen) );
            printf("debug extendedelims=%d \n", extendedelims);
@@ -1904,7 +1905,7 @@ SCIP_RETCODE redLoopStp(
 
          if( da )
          {
-            const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = FALSE, .nodereplacing = nodereplacing};
+            const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = FALSE, .nodereplacing = nodereplacing};
             SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase,
                   state, heap, nodearrchar, &danelims, randnumgen));
 
@@ -1965,7 +1966,7 @@ SCIP_RETCODE redLoopStp(
       if( fullreduce && !SCIPisStopped(scip) )
       {
          int extendedelims = 0;
-         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
+         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
