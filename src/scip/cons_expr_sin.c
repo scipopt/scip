@@ -344,7 +344,7 @@ SCIP_Bool computeLeftMidTangentSin(
       tangentpoint = ub;
 
       /* check whether affine function is still underestimating */
-      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
+      if( SCIPisLE(scip, SIN(0.5 * (ub + lb)), SIN(lb) + 0.5*(SIN(ub) - SIN(lb))) )
          return FALSE;
 
       *issecant = TRUE;
@@ -430,7 +430,7 @@ SCIP_Bool computeRightMidTangentSin(
       tangentpoint = lb;
 
       /* check whether affine function is still underestimating */
-      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
+      if( SCIPisLE(scip, SIN(0.5 * (ub + lb)), SIN(lb) + 0.5*(SIN(ub) - SIN(lb))) )
          return FALSE;
 
       *issecant = TRUE;
