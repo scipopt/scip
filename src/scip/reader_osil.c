@@ -80,7 +80,7 @@ SCIP_RETCODE readVariables(
    SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* variables;
@@ -291,7 +291,7 @@ SCIP_RETCODE readObjective(
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
    SCIP_Bool             dynamiccols,        /**< should columns be added and removed dynamically to the LP? */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* objective;
@@ -440,7 +440,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* constraints;
@@ -606,7 +606,7 @@ void readMultIncr(
    int*                  mult,               /**< buffer to store mult */
    int*                  incrint,            /**< buffer to store incr as int, or NULL if no int expected */
    SCIP_Real*            incrreal,           /**< buffer to store incr as real, or NULL if no real expected */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const char* attrval;
@@ -675,7 +675,7 @@ SCIP_RETCODE readLinearCoefs(
    SCIP_CONS**           conss,              /**< constraints in order of OSiL indices */
    CONSTYPE*             constypes,          /**< type of constraints (assumed to be LINEAR) */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* lincoef;
@@ -1017,7 +1017,7 @@ SCIP_RETCODE readQuadraticCoefs(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
-   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* quadcoef;
