@@ -29,6 +29,7 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_sos1.h"
@@ -474,6 +475,149 @@ SCIP_RETCODE readNConstraints(
    return SCIP_OKAY;
 }
 
+/** helper method to create and add a constraint (or a nonlinear objective constraint) */
+static
+SCIP_RETCODE createConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            linvars,            /**< array containing the linear variables (might be NULL) */
+   SCIP_Real*            lincoefs,           /**< array containing the coefficients of the linear variables (might be NULL) */
+   int                   nlinvars,           /**< the total number of linear variables */
+   SCIP_VAR**            quadvars1,          /**< array containing the first variables of the quadratic terms (might be NULL) */
+   SCIP_VAR**            quadvars2,          /**< array containing the second variables of the quadratic terms (might be NULL) */
+   SCIP_Real*            quadcoefs,          /**< array containing the coefficients of the quadratic terms (might be NULL) */
+   int                   nquadterms,         /**< the total number of quadratic terms */
+   SCIP_CONSEXPR_EXPR*   nlexprs,            /**< the nonlinear part (might be NULL) */
+   SCIP_Real             lhs,                /**< left-hand side */
+   SCIP_Real             rhs,                /**< right-hand side */
+   const char*           name,               /**< name of the constraint */
+   SCIP_Bool             objcons,            /**< whether to add an objective constraints */
+   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows         /**< should rows be added and removed dynamically to the LP? */
+   )
+{
+   SCIP_CONSHDLR* consexprhdlr;
+   SCIP_CONS* cons;
+   SCIP_VAR* objvar = NULL;
+
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
+
+   /* create objective variable, if requested */
+   if( objcons )
+   {
+      SCIP_CALL( SCIPcreateVar(scip, &objvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, objvar) );
+   }
+
+   /* linear constraint */
+   if( nlinvars > 0 && nquadterms == 0 && nlexprs == NULL )
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name,
+         nlinvars, linvars, lincoefs, lhs, rhs, initialconss,
+         TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+
+      /* add objective variable, if requested */
+      if( objcons )
+      {
+         assert(objvar != NULL);
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, objvar, -1.0) );
+      }
+   }
+   /* nonlinear constraint */
+   else
+   {
+      SCIP_CONSEXPR_EXPR* expr = NULL;
+      SCIP_CONSEXPR_EXPR* varexpr = NULL;
+
+      /* create variable expression for objvar */
+      if( objcons )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, objvar) );
+      }
+
+      /* check whether there is a quadratic part */
+      if( nlinvars > 0 || nquadterms > 0 )
+      {
+         /* create quadratic expression; note that this is always a sum */
+         SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, consexprhdlr, &expr, nlinvars, linvars, lincoefs,
+            nquadterms, quadvars1, quadvars2, quadcoefs) );
+         assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(consexprhdlr));
+
+         /* add nonlinear expression as a child to expr */
+         if( nlexprs != NULL )
+         {
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nlexprs, 1.0) );
+         }
+
+         /* add expression that represents the objective variable as a child to expr */
+         if( varexpr != NULL )
+         {
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexpr, -1.0) );
+         }
+
+         /* create expression constraint */
+         SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, expr, lhs, rhs,
+            initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+
+         /* release created expression */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      }
+
+      /* there is no quadratic part but we might need to take care of the objective variable */
+      else
+      {
+         assert(nlexprs != NULL);
+
+         if( objcons )
+         {
+            SCIP_CONSEXPR_EXPR* sumexpr;
+            SCIP_CONSEXPR_EXPR* children[2];
+            SCIP_Real coefs[2] = {1.0, -1.0};
+
+            assert(varexpr != NULL);
+
+            /* create sum expression */
+            SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 2, children, coefs, 0.0) );
+
+            /* create expression constraint */
+            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, sumexpr, lhs, rhs,
+               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+
+            /* release sum expression */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+         }
+         else
+         {
+            /* create expression constraint */
+            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, nlexprs, lhs, rhs,
+               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+         }
+      }
+
+      /* release variable expression */
+      if( objcons )
+      {
+         assert(varexpr != NULL);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+      }
+   }
+
+   /* add and release constraint */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* release objective variable */
+   if( objcons )
+   {
+      assert(objvar != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** setup constraint sides as linear constraints
  *
@@ -484,14 +628,14 @@ SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    int                   nconss,             /**< total number of constraints */
-   SCIP_VAR***           linvars,            /**< array containing for each constraint the linear variables (might be NULL) */
-   SCIP_Real**           lincoefs,           /**< array containing for each constraint the coefficients of the linear variables (might be NULL) */
+   SCIP_VAR***           linvars,            /**< array containing for each constraint the linear variables */
+   SCIP_Real**           lincoefs,           /**< array containing for each constraint the coefficients of the linear variables */
    int*                  nlinvars,           /**< array containing for each constraint the total number of linear variables */
    SCIP_VAR***           quadvars1,          /**< array containing for each constraint the first variables of the quadratic terms */
    SCIP_VAR***           quadvars2,          /**< array containing for each constraint the second variables of the quadratic terms */
    SCIP_Real**           quadcoefs,          /**< array containing for each constraint the coefficients of the quadratic terms */
    int*                  nquadterms,         /**< array containing for each constraint the total number of quadratic terms */
-   SCIP_CONSEXPR_EXPR**  nlexprs,            /**< array containing for each constraint the nonlinear part (might be NULL) */
+   SCIP_CONSEXPR_EXPR**  nlexprs,            /**< array containing for each constraint the nonlinear part */
    SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
    SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
@@ -502,7 +646,6 @@ SCIP_RETCODE readConstraints(
    const XML_NODE* consnode;
    const char* attrval;
    char name[SCIP_MAXSTRLEN];
-   SCIP_CONS* cons;
    int c = 0;
 
    assert(scip != NULL);
@@ -611,64 +754,10 @@ SCIP_RETCODE readConstraints(
             consrhs -= consconstant;
       }
 
-      /*
-       * create, add, and release constraint
-       */
-
-      /* linear constraint */
-      if( nlinvars[c] > 0 && nquadterms[c] == 0 && nlexprs[c] == NULL )
-      {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname,
-            nlinvars[c], linvars[c], lincoefs[c], conslhs, consrhs, initialconss,
-            TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
-      }
-
-      /* quadratic constraint */
-      else if( nquadterms[c] > 0 && nlexprs[c] == NULL )
-      {
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, consname, nlinvars[c], linvars[c], lincoefs[c],
-            nquadterms[c], quadvars1[c], quadvars2[c], quadcoefs[c], conslhs, consrhs,
-            initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
-      }
-
-      /* nonlinear constraint */
-      else
-      {
-         assert(nlexprs[c] != NULL);
-
-         /* merge quadratic and nonlinear part, if necessary */
-         if( nlinvars[c] > 0 || nquadterms[c] > 0 )
-         {
-            SCIP_CONSEXPR_EXPR* expr;
-            SCIP_CONSHDLR* consexprhdlr;
-
-            consexprhdlr = SCIPfindConshdlr(scip, "expr");
-            assert(consexprhdlr != NULL);
-
-            /* create quadratic expression; note that this is always a sum expression */
-            SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, consexprhdlr, &expr, nlinvars[c], linvars[c], lincoefs[c],
-               nquadterms[c], quadvars1[c], quadvars2[c], quadcoefs[c]) );
-            assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(consexprhdlr));
-
-            /* add nonlinear expression as a child to the sum */
-            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nlexprs[c], 1.0) );
-
-            /* create expression constraint */
-            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, consname, expr, conslhs, consrhs,
-               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
-
-            /* release created expression */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, consname, nlexprs[c], conslhs, consrhs,
-               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
-         }
-      }
-
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* create, add, and release constraint */
+      SCIP_CALL( createConstraint(scip, linvars[c], lincoefs[c], nlinvars[c],
+         quadvars1[c], quadvars2[c], quadcoefs[c], nquadterms[c], nlexprs[c],
+         conslhs, consrhs, consname, FALSE, initialconss, dynamicconss, dynamicrows) );
 
       ++c;
    }
@@ -2653,6 +2742,16 @@ SCIP_DECL_READERREAD(readerReadOsil)
       quadcoefs, nquadterms, nlexprs, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
+
+   /* add nonlinear objective constraint */
+   if( nlinvars[nconss] > 0 || nquadterms[nconss] > 0 || nlexprs[nconss] != NULL )
+   {
+      SCIP_CALL( createConstraint(scip, linvars[nconss], lincoefs[nconss], nlinvars[nconss],
+         quadvars1[nconss], quadvars2[nconss], quadcoefs[nconss], nquadterms[nconss], nlexprs[nconss],
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
+         "objcons", TRUE, TRUE, FALSE, FALSE) );
+   }
 
    /* read sos2 constraints and add to problem */
    SCIP_CALL_TERMINATE( retcode, readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
