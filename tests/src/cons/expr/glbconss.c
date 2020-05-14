@@ -16,6 +16,17 @@
 /**@file   glbconss.c
  * @brief  test for generating globally valid expression constraints
  * @author Benjamin Mueller
+ *
+ * This test adds a constraint handler to separate globally valid expression constraints during the tree search. For a
+ * given set of variables \f$\{(x_i,y_j)\}\f$, the constraint handler enforces the following quadratic constraints
+ *
+ * \f[
+ *     (x_i - x_j)^2 + (y_i - y_j)^2 \ge (r_i + r_j)^2,
+ * \f]
+ *
+ * for every pair \f$i,j\f$ with \f$i < j\f$. The quadratic constraints are motivated by non-overlapping conditions in
+ * the circle packing problem. During the enforcement, the constraint handler checks all of the quadratic constraints
+ * and adds the first one that is violated and has not been separated so far.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
