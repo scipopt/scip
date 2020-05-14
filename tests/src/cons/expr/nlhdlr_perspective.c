@@ -426,8 +426,9 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    /* create expression and constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
 
    /* add implied variable bounds */
    /* -3z1 + 3 <= x1 <= 3*z1 + 3 */
@@ -491,16 +492,16 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPsetSolVal(scip, sol, x_2, 4.0);
    SCIPsetSolVal(scip, sol, z_1, 0.5);
    SCIPsetSolVal(scip, sol, z_2, 0.5);
+   SCIPsetSolVal(scip, sol, auxvar, 10);
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
-   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, FALSE,
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 16.0, FALSE, FALSE,
          FALSE, FALSE, &result) );
-   cr_assert(result == SCIP_SEPARATED);
+   cr_expect_eq(result, SCIP_SEPARATED, "Expected result = %d, got %d", SCIP_SEPARATED, result);
    cr_assert(SCIPgetNCuts(scip) == 2);
 
    /* check the cuts */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
    cutvars = (SCIP_VAR*[4]) {z_1, x_2, x_1, auxvar};
    cutvals = (SCIP_Real[4]) {-13.0, 8.0, 4.0, -1.0};
    checkCut(SCIPgetCuts(scip)[0], cutvars, cutvals, 4, -SCIPinfinity(scip), 3.0);
