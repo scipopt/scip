@@ -638,6 +638,18 @@ int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    );
 
+/** set the infinity threshold to new value */
+SCIP_EXPORT
+void RatSetInfinity(
+   SCIP_Real             inf                 /**< new infinity value */
+   );
+
+/** return the infinity threshold for rationals */
+SCIP_EXPORT
+SCIP_Real RatGetInfinity(
+   void
+   );
+
 #ifdef __cplusplus
 }
 #endif

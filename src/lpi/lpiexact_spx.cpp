@@ -181,7 +181,7 @@ using namespace soplex;
 static void RsetSpxR(
    SCIP_LPIEXACT*        lpi,                /**< exact lpi*/
    SCIP_Rational*        r,                  /**< scip rational */
-   Rational              spxr                /**< soplex rational */
+   const Rational&       spxr                /**< soplex rational */
    )
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
@@ -221,23 +221,23 @@ static void RsetSpxVector(
  * @todo exip: there seems to be something wrong with the = of spx rational */
 static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
-   Rational              spxr,               /**< SoPlex Rational*/
+   soplex::Rational&     spxr,               /**< SoPlex Rational*/
    SCIP_Rational*        src                 /**< SCIP_Rational */
 )
 {
    if( RatIsAbsInfinity(src) )
    {
       if( RatIsPositive(src) )
-         spxr = SCIPlpiExactInfinity(lpi);
+         spxr = Rational(SCIPlpiExactInfinity(lpi));
       else
-         spxr = -SCIPlpiExactInfinity(lpi);
+         spxr = Rational(-SCIPlpiExactInfinity(lpi));
    }
    else
    {
 #if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
-      spxr = *RatGetGMP(src);
+      spxr = Rational(*RatGetGMP(src));
 #else
-      spxr = RatApproxReal(src);
+      spxr = Rational(RatApproxReal(src));
 #endif
    }
 }
@@ -974,8 +974,8 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
       {
-         Rational spxlhs(*RatGetGMP(lhs[i]));
-         Rational spxrhs(*RatGetGMP(rhs[i]));
+         soplex::Rational spxlhs;
+         soplex::Rational spxrhs;
          SpxRSetRat(lpi, spxlhs, lhs[i]);
          SpxRSetRat(lpi, spxlhs, rhs[i]);
          rows.add(spxlhs, emptyVector, spxrhs);
@@ -1059,9 +1059,13 @@ SCIP_RETCODE SCIPlpiExactAddCols(
       for( i = 0; i < ncols; ++i )
       {
          int j;
-         Rational spxlb(*RatGetGMP(lb[i]));
-         Rational spxub(*RatGetGMP(ub[i]));
-         Rational spxobj(*RatGetGMP(obj[i]));
+         Rational spxlb;
+         Rational spxub;
+         Rational spxobj;
+
+         SpxRSetRat(lpi, spxlb, lb[i]);
+         SpxRSetRat(lpi, spxub, ub[i]);
+         SpxRSetRat(lpi, spxobj, obj[i]);
 
          colVector.clear();
          if( nnonz > 0 )
@@ -1070,7 +1074,8 @@ SCIP_RETCODE SCIPlpiExactAddCols(
             last = (i == ncols-1 ? nnonz : beg[i+1]);
             for( j = start; j < last; ++j )
             {
-               Rational spxval(*RatGetGMP(val[j]));
+               Rational spxval;
+               SpxRSetRat(lpi, spxval, val[j]);
                colVector.add(ind[j], spxval);
             }
          }
@@ -1199,8 +1204,11 @@ SCIP_RETCODE SCIPlpiExactAddRows(
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
       {
-          Rational spxlhs(*RatGetGMP(lhs[i]));
-          Rational spxrhs(*RatGetGMP(rhs[i]));
+          Rational spxlhs;
+          Rational spxrhs;
+
+          SpxRSetRat(lpi, spxlhs, lhs[i]);
+          SpxRSetRat(lpi, spxrhs, rhs[i]);
 
          rowVector.clear();
          if( nnonz > 0 )
@@ -1210,7 +1218,8 @@ SCIP_RETCODE SCIPlpiExactAddRows(
             last = (i == nrows-1 ? nnonz : beg[i+1]);
             for( int j = start; j < last; ++j )
             {
-               Rational spxval(*RatGetGMP(val[j]));
+               Rational spxval;
+               SpxRSetRat(lpi, spxval, val[j]);
                rowVector.add(ind[j], spxval);
             }
          }
