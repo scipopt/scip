@@ -1775,13 +1775,14 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
-   SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
-
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
-      overestimate ? "over" : "under",
-      (void*)expr,
-      sol != NULL ? "sol" : "lp",
-      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
+   }
 
    return SCIP_OKAY;
 }
@@ -2088,17 +2089,17 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    if( *success )
    {
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
+         overestimate ? "over" : "under",
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
    else
    {
       SCIPfreeRowprep(scip, &rowprep);
    }
-
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
-      overestimate ? "over" : "under",
-      (void*)expr,
-      sol != NULL ? "sol" : "lp",
-      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
 
    if( addbranchscores )
    {
