@@ -1970,7 +1970,6 @@ SCIP_RETCODE readNonlinearExprs(
    int nnlexprs;
    int count;
    int considx;
-   int i;
 
    assert(scip != NULL);
    assert(datanode != NULL);
