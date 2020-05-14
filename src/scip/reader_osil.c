@@ -1149,6 +1149,7 @@ SCIP_RETCODE readLinearCoefs(
             lincoefs[row][nlinvars[row]] = val[pos];
             ++(nlinvars[row]);
          }
+         assert(nlinvars[row] == nterms);
       }
    }
    else
@@ -1184,7 +1185,7 @@ SCIP_RETCODE readLinearCoefs(
                else
                {
                   linvars[considx][nlinvars[considx]] = vars[col];
-                  lincoefs[considx][nlinvars[considx]] = val[col];
+                  lincoefs[considx][nlinvars[considx]] = val[pos];
                   ++(nlinvars[considx]);
                }
             }
