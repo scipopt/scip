@@ -13160,6 +13160,16 @@ SCIP_Bool SCIPisConsExprExprVar(
    return strcmp(expr->exprhdlr->name, "var") == 0;
 }
 
+/** returns whether an expression is a vallue expression */
+SCIP_Bool SCIPisConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(expr->exprhdlr->name, "val") == 0;
+}
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
