@@ -1667,87 +1667,100 @@ SCIP_RETCODE readExpression(
       }
       else if( strcmp(exprname, "power") == 0 )
       {
-         if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
+         /* case 1: expr^number */
+         if( SCIPisConsExprExprValue(args[1]) )
          {
-            /* expr^number is intpower or realpower */
-            if( SCIPisIntegral(scip, SCIPexprGetOpReal(arg2)) )
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPround(scip, SCIPexprGetOpReal(arg2))) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
-            }
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, args[0], SCIPgetConsExprExprValueValue(args[1])) );
          }
-         else if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
+         /* case 2: number^expr = exp(arg2 * ln(number)) */
+         else if( SCIPisConsExprExprValue(args[0]) )
          {
-            /* number^arg2 is exp(arg2 * ln(number)) */
-            if( SCIPexprGetOpReal(arg1) < 0.0 )
+            SCIP_Real value = SCIPgetConsExprExprValueValue(args[0]);
+
+            if( value < 0.0 )
             {
                SCIPerrorMessage("Negative base in <power> node with nonconstant exponent not allowed in nonlinear expression.\n");
-               SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
-               SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
                *doingfine = FALSE;
                return SCIP_OKAY;
             }
             else
             {
-               SCIP_EXPR* tmp;
+               SCIP_CONSEXPR_EXPR* sumexpr;
+               SCIP_Real coef = log(value);
 
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(SCIPexprGetOpReal(arg1))) );
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, arg2) );
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, tmp) );
-               SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+               SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, &args[1], &coef, 0.0) );
+               SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, sumexpr) );
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
             }
          }
+         /* case 3: arg1^arg2 is exp(arg2 * ln(arg1)) */
          else
          {
-            /* arg1^arg2 is exp(arg2 * ln(arg1)) */
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg1, SCIP_EXPR_LOG, arg1) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg2, SCIP_EXPR_MUL, arg1, arg2) );
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, arg2) );
+            SCIP_CONSEXPR_EXPR* logexpr;
+            SCIP_CONSEXPR_EXPR* prodexpr;
+            SCIP_CONSEXPR_EXPR* tmp[2];
+
+            SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &logexpr, args[0]) );
+            tmp[0] = args[1];
+            tmp[0] = logexpr;
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, tmp, 1.0) );
+            SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, prodexpr) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr) );
          }
       }
       else if( strcmp(exprname, "signpower") == 0 )
       {
          /* signpower(expr,number) with number > 1 is the only one we can handle */
-         if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
+         if( !SCIPisConsExprExprValue(args[1]) )
          {
-            SCIPerrorMessage("Signpower only supported for constant exponents, but got %s.\n", SCIPexpropGetName(SCIPexprGetOperator(arg2)));
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            SCIPerrorMessage("Signpower only supported for constant exponents.\n");
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
-         if( SCIPexprGetOpReal(arg2) <= 1.0 )
+         if( SCIPgetConsExprExprValueValue(args[1]) <= 1.0 )
          {
-            SCIPerrorMessage("Signpower only supported for exponents > 1, but got %g.\n", SCIPexprGetOpReal(arg2));
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            SCIPerrorMessage("Signpower only supported for exponents > 1, but got %g.\n",
+               SCIPgetConsExprExprValueValue(args[1]));
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIGNPOWER, arg1, SCIPexprGetOpReal(arg2)) );
-         SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+         SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, expr, args[0], SCIPgetConsExprExprValueValue(args[1])) );
       }
+      /* logarithm of arg2 w.r.t. base arg1 = ln(arg2) / ln(arg1) */
       else if( strcmp(exprname, "log") == 0 )
       {
-         /* logarithm of arg2 w.r.t. base arg1 = ln(arg2) / ln(arg1) */
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg1, SCIP_EXPR_LOG, arg1) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg2, SCIP_EXPR_LOG, arg2) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_DIV, arg2, arg1) );
+         SCIP_CONSEXPR_EXPR* logexpr0;
+         SCIP_CONSEXPR_EXPR* logexpr1;
+         SCIP_CONSEXPR_EXPR* powexpr;
+         SCIP_CONSEXPR_EXPR* tmp[2];
+
+         /* logarithm of arg2 w.r.t. base arg1 = ln(arg2) / ln(arg1) = ln(arg2) * pow(ln(arg1),-1) */
+         SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &logexpr0, args[0]) );
+         SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &logexpr1, args[1]) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, logexpr0, -1.0) );
+         tmp[0] = logexpr1;
+         tmp[1] = powexpr;
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, tmp, 1.0) );
+
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr1) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr0) );
       }
       else if( strcmp(exprname, "min") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MIN, arg1, arg2) );
+         SCIPerrorMessage("min expressions are not supported\n");
+         *doingfine = FALSE;
+         return SCIP_OKAY;
       }
       else /* if( strcmp(exprname, "max") == 0 ) */
       {
          assert(strcmp(exprname, "max") == 0);
 
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MAX, arg1, arg2) );
+         SCIPerrorMessage("max expressions are not supported\n");
+         *doingfine = FALSE;
+         return SCIP_OKAY;
       }
 
       /* release first and second argument expression */
@@ -1761,14 +1774,16 @@ SCIP_RETCODE readExpression(
    if( strcmp(exprname, "sum") == 0 || strcmp(exprname, "product") == 0 )
    {
       const XML_NODE* argnode;
-      SCIP_EXPR** args;
+      SCIP_CONSEXPR_EXPR** args;
       int nargs;
       int argssize;
+      int i;
 
       /* a sum or product w.r.t. 0 arguments is constant */
       if( xmlFirstChild(node) == NULL )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr,
+            (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0) );
 
          return SCIP_OKAY;
       }
@@ -1801,7 +1816,8 @@ SCIP_RETCODE readExpression(
          {
             case 0:
             {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr,
+                  (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0) );
                break;
             }
             case 1:
@@ -1809,31 +1825,29 @@ SCIP_RETCODE readExpression(
                *expr = args[0];
                break;
             }
-            case 2:
-            {
-               if( strcmp(exprname, "sum") == 0 )
-               {
-                  SCIP_CALL( SCIPexprAdd(SCIPblkmem(scip), expr, 1.0, args[0], 1.0, args[1], 0.0) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, args[0], args[1]) );
-               }
-               break;
-            }
+
             default:
             {
                /* create sum or product expression */
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, (strcmp(exprname, "sum") == 0) ? SCIP_EXPR_SUM : SCIP_EXPR_PRODUCT, nargs, args) );
+               if( strcmp(exprname, "sum") == 0 )
+               {
+                  SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nargs, args, NULL, 0.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nargs, args, 1.0) );
+               }
+
                break;
             }
          }
       }
-      else
+
+      /* release argument expressions */
+      for( i = 0; i < nargs; ++i )
       {
-         /* cleanup if parsing error */
-         for( ; nargs > 0; --nargs )
-            SCIPexprFreeDeep(SCIPblkmem(scip), &args[nargs-1]);
+         assert(args[i] != NULL);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[i]) );
       }
 
       SCIPfreeBufferArray(scip, &args);
@@ -1843,53 +1857,8 @@ SCIP_RETCODE readExpression(
 
    if( strcmp(exprname, "min") == 0 || strcmp(exprname, "max") == 0 )
    {
-      const XML_NODE* argnode;
-      SCIP_EXPROP exprop;
-      SCIP_EXPR* arg2;
-
-      /* check that we have children */
-      if( xmlFirstChild(node) == NULL )
-      {
-         SCIPerrorMessage("Expected at least one child in <%s> node of nonlinear expression.\n", exprname);
-         *doingfine = FALSE;
-         return SCIP_OKAY;
-      }
-
-      /* read expression corresponding to first child and store in expr */
-      argnode = xmlFirstChild(node);
-      SCIP_CALL( readExpression(scip, consexprhdlr, expr, argnode, vars, nvars, doingfine) );
-      if( !*doingfine )
-      {
-         assert(*expr == NULL);
-         return SCIP_OKAY;
-      }
-      arg2 = NULL;
-
-      exprop = (strcmp(exprname, "min") == 0) ? SCIP_EXPR_MIN : SCIP_EXPR_MAX;
-
-      /* read expressions corresponding to other children in arg and store exprop(expr, arg) in expr */
-      for( argnode = xmlNextSibl(argnode); argnode != NULL; argnode = xmlNextSibl(argnode) )
-      {
-         assert(arg2 == NULL);
-         SCIP_CALL( readExpression(scip, consexprhdlr, &arg2, argnode, vars, nvars, doingfine) );
-         if( !*doingfine )
-         {
-            assert(arg2 == NULL);
-            break;
-         }
-
-         assert(*expr != NULL);
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, exprop, *expr, arg2) );
-         arg2 = NULL;
-      }
-
-      if( !*doingfine )
-      {
-         /* cleanup if failure */
-         SCIPexprFreeDeep(SCIPblkmem(scip), expr);
-      }
-      assert(arg2 == NULL);
-
+      SCIPerrorMessage("min or max expressions are not supported\n");
+      *doingfine = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1897,21 +1866,19 @@ SCIP_RETCODE readExpression(
    {
       const char* attrval;
       const XML_NODE* qterm;
-      SCIP_QUADELEM* quadelems;
+      SCIP_VAR** quadvars1;
+      SCIP_VAR** quadvars2;
+      SCIP_Real* quadcoefs;
       int nquadelems;
       int quadelemssize;
-      int* quadvarsidxs;
-      int nquadvars;
+      int idx;
       int i;
 
       quadelemssize = 5;
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, quadelemssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, quadelemssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, quadelemssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, quadelemssize) );
       nquadelems = 0;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvarsidxs, nvars) );
-      for( i = 0; i < nvars; ++i )
-         quadvarsidxs[i] = -1;
-      nquadvars = 0;
 
       /* read quadratic terms */
       for( qterm = xmlFirstChild(node); qterm != NULL; qterm = xmlNextSibl(qterm), ++nquadelems )
@@ -1921,13 +1888,15 @@ SCIP_RETCODE readExpression(
          {
             SCIPerrorMessage("Unexpected <%s> node under <quadratic> node in nonlinear expression, expected <qpTerm>.\n", xmlGetName(qterm));
             *doingfine = FALSE;
-            break;
+            return SCIP_OKAY;
          }
 
          if( nquadelems >= quadelemssize )
          {
             quadelemssize = SCIPcalcMemGrowSize(scip, nquadelems + 1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &quadelems, quadelemssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars1, quadelemssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars2, quadelemssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &quadcoefs, quadelemssize) );
          }
          assert(quadelemssize > nquadelems);
 
@@ -1937,16 +1906,17 @@ SCIP_RETCODE readExpression(
          {
             SCIPerrorMessage("Missing \"idxOne\" attribute in %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", nquadelems);
             *doingfine = FALSE;
-            break;
+            return SCIP_OKAY;
          }
 
-         quadelems[nquadelems].idx1 = (int)strtol(attrval, (char**)&attrval, 10);
-         if( *attrval != '\0' || quadelems[nquadelems].idx1 < 0 || quadelems[nquadelems].idx1 >= nvars )
+         idx = (int)strtol(attrval, (char**)&attrval, 10);
+         if( *attrval != '\0' || idx < 0 || idx >= nvars )
          {
             SCIPerrorMessage("Invalid value '%s' for \"idxOne\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "idxOne"), nquadelems);
             *doingfine = FALSE;
-            break;
+            return SCIP_OKAY;
          }
+         quadvars1[nquadelems] = vars[idx];
 
          /* get index of second variable */
          attrval = xmlGetAttrval(qterm, "idxTwo");
@@ -1954,93 +1924,39 @@ SCIP_RETCODE readExpression(
          {
             SCIPerrorMessage("Missing \"idxTwo\" attribute in %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", nquadelems);
             *doingfine = FALSE;
-            break;
+            return SCIP_OKAY;
          }
 
-         quadelems[nquadelems].idx2 = (int)strtol(attrval, (char**)&attrval, 10);
-         if( *attrval != '\0' || quadelems[nquadelems].idx2 < 0 || quadelems[nquadelems].idx2 >= nvars )
+         idx = (int)strtol(attrval, (char**)&attrval, 10);
+         if( *attrval != '\0' || idx < 0 || idx >= nvars )
          {
             SCIPerrorMessage("Invalid value '%s' for \"idxTwo\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "idxTwo"), nquadelems);
             *doingfine = FALSE;
-            break;
+            return SCIP_OKAY;
          }
+         quadvars2[nquadelems] = vars[idx];
 
          /* get coefficient */
          attrval = xmlGetAttrval(qterm, "coef");
          if( attrval != NULL )
          {
-            quadelems[nquadelems].coef = strtod(attrval, (char**)&attrval);
-            if( *attrval != '\0' || (quadelems[nquadelems].coef != quadelems[nquadelems].coef) )  /*lint !e777*/
+            quadcoefs[nquadelems] = strtod(attrval, (char**)&attrval);
+            if( *attrval != '\0' || (quadcoefs[nquadelems] != quadcoefs[nquadelems]) )  /*lint !e777*/
             {
                SCIPerrorMessage("Invalid value '%s' for \"coef\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "coef"), nquadelems);
                *doingfine = FALSE;
-               break;
+               return SCIP_OKAY;
             }
          }
          else
          {
-            quadelems[nquadelems].coef = 1.0;
-         }
-
-         /* get index for first variable in quadratic element */
-         if( quadvarsidxs[quadelems[nquadelems].idx1] < 0 )
-         {
-            quadvarsidxs[quadelems[nquadelems].idx1] = nquadvars;
-            quadelems[nquadelems].idx1 = nquadvars;
-
-            ++nquadvars;
-         }
-         else
-         {
-            quadelems[nquadelems].idx1 = quadvarsidxs[quadelems[nquadelems].idx1];
-         }
-
-         /* get index for second variable in quadratic element */
-         if( quadvarsidxs[quadelems[nquadelems].idx2] < 0 )
-         {
-            quadvarsidxs[quadelems[nquadelems].idx2] = nquadvars;
-            quadelems[nquadelems].idx2 = nquadvars;
-
-            ++nquadvars;
-         }
-         else
-         {
-            quadelems[nquadelems].idx2 = quadvarsidxs[quadelems[nquadelems].idx2];
-         }
-
-         /* swap indices if in wrong order */
-         if( quadelems[nquadelems].idx1 > quadelems[nquadelems].idx2 )
-         {
-            int tmp;
-
-            tmp = quadelems[nquadelems].idx1;
-            quadelems[nquadelems].idx1 = quadelems[nquadelems].idx2;
-            quadelems[nquadelems].idx2 = tmp;
+            quadcoefs[nquadelems] = 1.0;
          }
       }
 
-      if( *doingfine )
-      {
-         SCIP_EXPR** children;
-
-         /* setup array with children expressions corresponding to variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadvars) );
-         for( i = 0; i < nvars; ++i )
-         {
-            if( quadvarsidxs[i] == -1 )
-               continue;
-
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[quadvarsidxs[i]], SCIP_EXPR_VARIDX, exprvaridx[i]) );  /*lint !e613*/
-         }
-
-         /* create quadratic expression */
-         SCIP_CALL( SCIPexprCreateQuadratic(SCIPblkmem(scip), expr, nquadvars, children, 0.0, NULL, nquadelems, quadelems) );
-
-         SCIPfreeBufferArray(scip, &children);
-      }
-
-      SCIPfreeBufferArray(scip, &quadelems);
-      SCIPfreeBufferArray(scip, &quadvarsidxs);
+      /* create quadratic expression */
+      SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, consexprhdlr, expr, 0, NULL, NULL,
+         nquadelems, quadvars1, quadvars2, quadcoefs) );
    }
 
    SCIPerrorMessage("Expression operand <%s> in nonlinear expression not supported by SCIP so far.\n", exprname);
