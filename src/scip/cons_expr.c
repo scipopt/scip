@@ -10235,7 +10235,8 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
     * if infeasibility was found by our boundtightening, then curvature check may also fail as some exprhdlr (e.g., pow)
     * assumes nonempty activities in expressions
     */
-   if( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+      SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
    {
       SCIP_CONSDATA* consdata;
       int c;
