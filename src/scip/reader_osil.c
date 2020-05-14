@@ -2600,25 +2600,24 @@ SCIP_DECL_READERCOPY(readerCopyOsil)
 static
 SCIP_DECL_READERREAD(readerReadOsil)
 {  /*lint --e{715}*/
-   const char* name;
-   XML_NODE* start;
    const XML_NODE* header;
    const XML_NODE* data;
+   XML_NODE* start;
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
+   SCIP_CONS* objcons;
+   const char* name;
    SCIP_RETCODE retcode;
+   CONSTYPE objconstype;
    SCIP_Bool doingfine;
    SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
-   SCIP_VAR** vars;
+   int nconss;
    int nvars;
-   SCIP_CONS* objcons;
-   CONSTYPE objconstype;
    int c;
    int i;
-
-   SCIP_CONS** conss;
-   int nconss;
 
    /* linear parts */
    SCIP_VAR*** linvars;
