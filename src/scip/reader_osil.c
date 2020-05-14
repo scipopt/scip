@@ -64,19 +64,6 @@
 #define READER_EXTENSION        "osil"
 
 /*
- * Data structures
- */
-
-/** type of constraint */
-typedef enum
-{
-   LINEAR,               /**< linear constraint */
-   QUADRATIC,            /**< quadratic constraint */
-   NONLINEAR             /**< general nonlinear constraint */
-} CONSTYPE;
-
-
-/*
  * Local methods
  */
 
@@ -2296,7 +2283,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_VAR** vars;
    const char* name;
    SCIP_RETCODE retcode;
-   CONSTYPE objconstype;
    SCIP_Bool doingfine;
    SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
@@ -2308,18 +2294,18 @@ SCIP_DECL_READERREAD(readerReadOsil)
    int i;
 
    /* linear parts */
-   SCIP_VAR*** linvars;
-   SCIP_Real** lincoefs;
-   int* nlinvars;
+   SCIP_VAR*** linvars = NULL;
+   SCIP_Real** lincoefs = NULL;
+   int* nlinvars = NULL;
 
    /* quadratic parts */
-   SCIP_VAR*** quadvars1;
-   SCIP_VAR*** quadvars2;
-   SCIP_Real** quadcoefs;
-   int* nquadterms;
+   SCIP_VAR*** quadvars1 = NULL;
+   SCIP_VAR*** quadvars2 = NULL;
+   SCIP_Real** quadcoefs = NULL;
+   int* nquadterms = NULL;
 
    /* nonlinear parts */
-   SCIP_CONSEXPR_EXPR** nlexprs;
+   SCIP_CONSEXPR_EXPR** nlexprs = NULL;
 
    assert(scip != NULL);
    assert(reader != NULL);
