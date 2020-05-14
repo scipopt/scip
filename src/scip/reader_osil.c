@@ -28,7 +28,15 @@
 #include "nlpi/pub_expr.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_log.h"
+#include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
@@ -1382,11 +1390,11 @@ SCIP_RETCODE readQuadraticCoefs(
 static
 SCIP_RETCODE readExpression(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< buffer to store pointer to created expression */
    const XML_NODE*       node,               /**< root node of expression to be read */
-   int*                  exprvaridx,         /**< array with index of problem variables in expression graph */
-   int*                  nexprvars,          /**< number of variables in currently processed expression so far */
-   int                   nvars,              /**< total number of variables in problem (and length of exprvaridx array) */
+   SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
+   int                   nvars,              /**< total number of variables in problem */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
@@ -1395,8 +1403,7 @@ SCIP_RETCODE readExpression(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(node != NULL);
-   assert(exprvaridx != NULL || nvars == 0);
-   assert(nexprvars != NULL);
+   assert(vars != NULL);
    assert(doingfine != NULL);
 
    exprname = xmlGetName(node);
@@ -1445,18 +1452,19 @@ SCIP_RETCODE readExpression(
          coef = 1.0;
       }
 
-      /* assign index to variable, if we see it the first time */
-      if( exprvaridx[idx] == -1 )  /*lint !e613*/
-      {
-         exprvaridx[idx] = *nexprvars;  /*lint !e613*/
-         ++*nexprvars;
-      }
+      /* create variable expression */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, vars[idx]) );
 
-      /* create VARIDX expression, put into LINEAR expression if we have coefficient != 1 */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_VARIDX, exprvaridx[idx]) );  /*lint !e613*/
+      /* create a sum if the coefficient != 1 */
       if( coef != 1.0 )
       {
-         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), expr, 1, expr, &coef, 0.0) );
+         SCIP_CONSEXPR_EXPR* sumexpr;
+
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, expr, &coef, 0.0) );
+
+         /* release the variable expression and store the sum */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, expr) );
+         *expr = sumexpr;
       }
 
       return SCIP_OKAY;
@@ -1494,24 +1502,24 @@ SCIP_RETCODE readExpression(
          val = 0.0;
       }
 
-      /* create CONST expression */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, val) );
+      /* create constant expression */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, val) );
 
       return SCIP_OKAY;
    }
 
    if( strcmp(exprname, "PI") == 0 )
    {
-      /* create CONST expression with PI value*/
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, M_PI) );
+      /* create constant expression with PI value */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, M_PI) );
 
       return SCIP_OKAY;
    }
 
    if( strcmp(exprname, "E") == 0 )
    {
-      /* create CONST expression with E value*/
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_CONST, M_E) );
+      /* create constant expression with PI value */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, M_E) );
 
       return SCIP_OKAY;
    }
@@ -1529,7 +1537,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "cos") == 0
       )
    {
-      SCIP_EXPR* arg;
+      SCIP_CONSEXPR_EXPR* arg;
 
       /* check number of children */
       if( xmlFirstChild(node) == NULL || xmlNextSibl(xmlFirstChild(node)) != NULL )
@@ -1540,9 +1548,11 @@ SCIP_RETCODE readExpression(
       }
 
       /* read child expression */
-      SCIP_CALL( readExpression(scip, &arg, xmlFirstChild(node), exprvaridx, nexprvars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, consexprhdlr, &arg, xmlFirstChild(node), vars, nvars, doingfine) );
+
       if( !*doingfine )
          return SCIP_OKAY;
+      assert(arg != NULL);
 
       /* create SCIP expression according to expression name */
       if( strcmp(exprname, "negate") == 0 )
@@ -1550,47 +1560,49 @@ SCIP_RETCODE readExpression(
          SCIP_Real minusone;
 
          minusone = -1.0;
-         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), expr, 1, &arg, &minusone, 0.0) );
+
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 1, &arg, &minusone, 0.0) );
       }
       else if( strcmp(exprname, "abs") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_ABS, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, expr, arg) );
       }
       else if( strcmp(exprname, "squareRoot") == 0 || strcmp(exprname, "sqrt") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SQRT, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, arg, 0.5) );
       }
       else if( strcmp(exprname, "square") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SQUARE, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, arg, 2.0) );
       }
       else if( strcmp(exprname, "exp") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, arg) );
       }
       else if( strcmp(exprname, "ln") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_LOG, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, expr, arg) );
       }
       else if( strcmp(exprname, "log10") == 0 )
       {
-         /* log10(expr) = ln(expr)*1/ln(10) */
-         SCIP_EXPR* tmp;
+         SCIP_CONSEXPR_EXPR* logexpr;
+         SCIP_Real coef = 1.0/log(10.0);
 
-         assert(strcmp(exprname, "log10") == 0);
-
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, 1.0/log(10.0)) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg, SCIP_EXPR_LOG, arg) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, arg, tmp) );
+         SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &logexpr, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 1, &logexpr, &coef, 0.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr) );
       }
       else if( strcmp(exprname, "sin") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIN, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, arg) );
       }
       else if( strcmp(exprname, "cos") == 0 )
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_COS, arg) );
+         SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, expr, arg) );
       }
+
+      /* release argument expression */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &arg) );
 
       return SCIP_OKAY;
    }
@@ -1605,8 +1617,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "log") == 0
      )
    {
-      SCIP_EXPR* arg1;
-      SCIP_EXPR* arg2;
+      SCIP_CONSEXPR_EXPR* args[2];
 
       /* check number of children */
       if( xmlFirstChild(node) == NULL ||
@@ -1619,57 +1630,40 @@ SCIP_RETCODE readExpression(
       }
 
       /* read first child expression */
-      SCIP_CALL( readExpression(scip, &arg1, xmlFirstChild(node), exprvaridx, nexprvars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, consexprhdlr, &args[0], xmlFirstChild(node), vars, nvars, doingfine) );
       if( !*doingfine )
          return SCIP_OKAY;
+      assert(args[1] != NULL);
 
       /* read second child expression */
-      SCIP_CALL( readExpression(scip, &arg2, xmlNextSibl(xmlFirstChild(node)), exprvaridx, nexprvars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, consexprhdlr, &args[1], xmlNextSibl(xmlFirstChild(node)), vars, nvars, doingfine) );
       if( !*doingfine )
-      {
-         SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
          return SCIP_OKAY;
-      }
+      assert(args[0] != NULL);
 
       if( strcmp(exprname, "plus") == 0 )
       {
-         SCIP_CALL( SCIPexprAdd(SCIPblkmem(scip), expr, 1.0, arg1, 1.0, arg2, 0.0) );
-         /* SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_PLUS, arg1, arg2) ); */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, args, NULL, 0.0) );
       }
       else if( strcmp(exprname, "minus") == 0 )
       {
-         SCIP_CALL( SCIPexprAdd(SCIPblkmem(scip), expr, 1.0, arg1, -1.0, arg2, 0.0) );
-         /* SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MINUS, arg1, arg2) ); */
+         SCIP_Real coefs[2] = {1.0, -1.0};
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, args, coefs, 0.0) );
       }
       else if( strcmp(exprname, "times") == 0 )
       {
-         if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
-         {
-            SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg2, SCIPexprGetOpReal(arg1)) );
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
-         }
-         else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
-         {
-            SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, SCIPexprGetOpReal(arg2)) );
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
-         }
-         else
-         {
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, arg1, arg2) );
-         }
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, args, 1.0) );
       }
       else if( strcmp(exprname, "divide") == 0 )
       {
-         if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
-         {
-            assert(SCIPexprGetOpReal(arg2) != 0.0);
-            SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, 1.0/SCIPexprGetOpReal(arg2)) );
-            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
-         }
-         else
-         {
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_DIV, arg1, arg2) );
-         }
+         SCIP_CONSEXPR_EXPR* tmp[2];
+         SCIP_CONSEXPR_EXPR* powexpr;
+
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, args[1], -1.0) );
+         tmp[0] = args[0];
+         tmp[1] = powexpr;
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, tmp, 1.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
       }
       else if( strcmp(exprname, "power") == 0 )
       {
@@ -1756,6 +1750,10 @@ SCIP_RETCODE readExpression(
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MAX, arg1, arg2) );
       }
 
+      /* release first and second argument expression */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[0]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[1]) );
+
       return SCIP_OKAY;
    }
 
@@ -1789,7 +1787,7 @@ SCIP_RETCODE readExpression(
          }
          assert(nargs < argssize);
 
-         SCIP_CALL( readExpression(scip, &args[nargs], argnode, exprvaridx, nexprvars, nvars, doingfine) );
+         SCIP_CALL( readExpression(scip, consexprhdlr, &args[nargs], argnode, vars, nvars, doingfine) );
          if( !*doingfine )
          {
             assert(args[nargs] == NULL);
@@ -1859,7 +1857,7 @@ SCIP_RETCODE readExpression(
 
       /* read expression corresponding to first child and store in expr */
       argnode = xmlFirstChild(node);
-      SCIP_CALL( readExpression(scip, expr, argnode, exprvaridx, nexprvars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, consexprhdlr, expr, argnode, vars, nvars, doingfine) );
       if( !*doingfine )
       {
          assert(*expr == NULL);
@@ -1873,7 +1871,7 @@ SCIP_RETCODE readExpression(
       for( argnode = xmlNextSibl(argnode); argnode != NULL; argnode = xmlNextSibl(argnode) )
       {
          assert(arg2 == NULL);
-         SCIP_CALL( readExpression(scip, &arg2, argnode, exprvaridx, nexprvars, nvars, doingfine) );
+         SCIP_CALL( readExpression(scip, consexprhdlr, &arg2, argnode, vars, nvars, doingfine) );
          if( !*doingfine )
          {
             assert(arg2 == NULL);
@@ -2032,13 +2030,6 @@ SCIP_RETCODE readExpression(
             if( quadvarsidxs[i] == -1 )
                continue;
 
-            /* assign new index to variable, if we see it the first time in this exprtree */
-            if( exprvaridx[i] == -1 )  /*lint !e613*/
-            {
-               exprvaridx[i] = *nexprvars;  /*lint !e613*/
-               ++*nexprvars;
-            }
-
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[quadvarsidxs[i]], SCIP_EXPR_VARIDX, exprvaridx[i]) );  /*lint !e613*/
          }
 
@@ -2066,22 +2057,17 @@ SCIP_RETCODE readNonlinearExprs(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
-   SCIP_CONS**           conss,              /**< constraints in order of OSiL indices */
-   CONSTYPE*             constypes,          /**< type of constraints (assumed to be LINEAR) */
    int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
-   CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
+   SCIP_CONSEXPR_EXPR**  exprs,              /**< array to store for each constraint a nonlinear expression */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* nlexprs;
    const XML_NODE* nlexpr;
    const char* attrval;
-   SCIP_EXPRTREE* exprtree;
-   SCIP_EXPR* expr;
+   SCIP_CONSHDLR* consexprhdlr;
    SCIP_VAR** exprvars;
    int* exprvaridx;
-   SCIP_RETCODE retcode;
    int nexprvars;
    int nnlexprs;
    int count;
@@ -2091,17 +2077,17 @@ SCIP_RETCODE readNonlinearExprs(
    assert(scip != NULL);
    assert(datanode != NULL);
    assert(vars != NULL || nvars == 0);
-   assert(conss != NULL || nconss == 0);
-   assert(constypes != NULL || nconss == 0);
-   assert(objcons != NULL);
+   assert(exprs != NULL);
    assert(doingfine != NULL);
-
-   retcode = SCIP_OKAY;
 
    nlexprs = xmlFindNodeMaxdepth(datanode, "nonlinearExpressions", 0, 1);
 
    if( nlexprs == NULL )
       return SCIP_OKAY;
+
+   /* get expression constraint handler */
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
 
    /* get number of nonlinear expressions */
    attrval = xmlGetAttrval(nlexprs, "numberOfNonlinearExpressions");
@@ -2163,215 +2149,19 @@ SCIP_RETCODE readNonlinearExprs(
          break;
       }
 
-      expr = NULL;
       nexprvars = 0;
       for( i = 0; i < nvars; ++i )
          exprvaridx[i] = -1;
 
-      /* turn OSiL expression into SCIP expression and assign indices to variables */
-      SCIP_CALL( readExpression(scip, &expr, xmlFirstChild(nlexpr), exprvaridx, &nexprvars, nvars, doingfine) );
+      /* turn OSiL expression into SCIP expression and assign indices to variables; store a nonlinear objective at position nconss */
+      SCIP_CALL( readExpression(scip, consexprhdlr, considx == -1 ? &exprs[nconss] : &exprs[considx],
+         xmlFirstChild(nlexpr), vars, nvars, doingfine) );
       if( !*doingfine )
-      {
-         assert(expr == NULL);
-         break;
-      }
-
-      /* assemble array with SCIP_VAR*'s */
-      for( i = 0; i < nvars; ++i )
-      {
-         assert(exprvaridx[i] < nexprvars );
-
-         if( exprvaridx[i] >= 0 )
-            exprvars[exprvaridx[i]] = vars[i];  /*lint !e613*/
-      }
-
-      /* create expression tree */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, nexprvars, 0, NULL) );
-      SCIP_CALL( SCIPexprtreeSetVars(exprtree, nexprvars, exprvars) );
-
-      /* add expression tree to objective or constraint */
-      if( considx == -1 && *objcons == NULL )
-      {
-         /* create constraint to hold nonlinear part of objective; note that
-          * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and variables,
-          * not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective variable is
-          * loose with infinite best bound, triggering the problem that an LP that is unbounded because of loose
-          * variables with infinite best bound cannot be solved)
-          */
-
-         SCIP_VAR* objvar;
-         SCIP_Real minusone;
-         SCIP_Real one;
-
-         SCIP_CALL( SCIPcreateVar(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-         SCIP_CALL( SCIPaddVar(scip, objvar) );
-
-         minusone = -1.0;
-         one = 1.0;
-         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "nlobj", 1, &objvar, &minusone, 1, &exprtree, &one,
-               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
-               SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE), TERMINATE );
-         *objconstype = NONLINEAR;
-
-         SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
-      }
-      else
-      {
-         SCIP_CONS** cons;
-         SCIP_CONS* oldcons;
-         CONSTYPE* constype;
-
-         if( considx == -1 )
-         {
-            cons = objcons;
-            constype = objconstype;
-         }
-         else
-         {
-            cons = &conss[considx];  /*lint !e613*/
-            constype = &constypes[considx];  /*lint !e613*/
-         }
-         oldcons = *cons;
-
-         /* replace cons by nonlinear constraint or add to already existing nonlinear constraint */
-         switch( *constype )
-         {
-         case LINEAR:
-         {
-            SCIP_Real one;
-
-            one = 1.0;
-            /* coverity[negative_returns] */
-            SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
-                  SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
-                  1, &exprtree, &one,
-                  SCIPgetLhsLinear(scip, *cons), SCIPgetRhsLinear(scip, *cons),
-                  SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
-                  SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
-                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons),
-                  SCIPconsIsStickingAtNode(*cons)), TERMINATE );
-
-            SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
-
-            break;
-         }
-
-         case QUADRATIC:
-         {
-            SCIP_EXPRTREE* exprtrees[2];
-            SCIP_Real exprcoefs[2];
-
-            SCIP_EXPR* quadexpr;
-            SCIP_QUADELEM* quadelems;
-            SCIP_Real* lincoefs;
-            SCIP_EXPR** children;
-            SCIP_QUADVARTERM* quadvarterms;
-            SCIP_BILINTERM* bilinterms;
-            int nquadelems;
-            int nquadvars;
-            int nbilin;
-            int j;
-
-            exprtrees[0] = exprtree;
-            exprcoefs[0] = 1.0;
-
-            /* turn quadratic part into expression tree */
-            SCIP_CALL( SCIPsortQuadVarTermsQuadratic(scip, *cons) );
-
-            quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, *cons);
-            nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, *cons);
-            bilinterms = SCIPgetBilinTermsQuadratic(scip, *cons);
-            nbilin = SCIPgetNBilinTermsQuadratic(scip, *cons);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nquadvars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadvars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nbilin + nquadvars) );
-            nquadelems = 0;
-
-            for( i = 0; i < nquadvars; ++i )
-            {
-               lincoefs[i] = quadvarterms[i].lincoef;
-               exprvars[i] = quadvarterms[i].var;
-
-               if( quadvarterms[i].sqrcoef != 0.0 )
-               {
-                  quadelems[nquadelems].idx1 = i;
-                  quadelems[nquadelems].idx2 = i;
-                  quadelems[nquadelems].coef = quadvarterms[i].sqrcoef;
-                  ++nquadelems;
-               }
-
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[i], SCIP_EXPR_VARIDX, i) );
-
-               for( j = 0; j < quadvarterms[i].nadjbilin; ++j )
-               {
-                  if( bilinterms[quadvarterms[i].adjbilin[j]].var1 == quadvarterms[i].var )
-                  {
-                     int otheridx;
-
-                     assert(bilinterms[quadvarterms[i].adjbilin[j]].var2 != quadvarterms[i].var);
-
-                     SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, *cons, bilinterms[quadvarterms[i].adjbilin[j]].var2, &otheridx) );
-                     assert(otheridx >= 0);
-                     assert(otheridx < nquadvars);
-
-                     quadelems[nquadelems].idx1 = MIN(i, otheridx);
-                     quadelems[nquadelems].idx2 = MAX(i, otheridx);
-                     quadelems[nquadelems].coef = bilinterms[quadvarterms[i].adjbilin[j]].coef;
-                     ++nquadelems;
-                  }
-               }
-            }
-
-            SCIP_CALL( SCIPexprCreateQuadratic(SCIPblkmem(scip), &quadexpr, nquadvars, children, 0.0, lincoefs, nquadelems, quadelems) );
-            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtrees[1], quadexpr, nquadvars, 0, NULL) );
-            SCIP_CALL( SCIPexprtreeSetVars(exprtrees[1], nquadvars, exprvars) );
-            exprcoefs[1] = 1.0;
-
-            SCIPfreeBufferArray(scip, &lincoefs);
-            SCIPfreeBufferArray(scip, &children);
-            SCIPfreeBufferArray(scip, &quadelems);
-
-            SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
-                  SCIPgetNLinearVarsNonlinear(scip, *cons), SCIPgetLinearVarsNonlinear(scip, *cons),
-                  SCIPgetLinearCoefsNonlinear(scip, *cons), 2, exprtrees, exprcoefs,
-                  SCIPgetLhsNonlinear(scip, *cons), SCIPgetRhsNonlinear(scip, *cons),
-                  SCIPconsIsInitial(*cons), SCIPconsIsSeparated(*cons), SCIPconsIsEnforced(*cons),
-                  SCIPconsIsChecked(*cons), SCIPconsIsPropagated(*cons), SCIPconsIsLocal(*cons),
-                  SCIPconsIsModifiable(*cons), SCIPconsIsDynamic(*cons), SCIPconsIsRemovable(*cons),
-                  SCIPconsIsStickingAtNode(*cons)), TERMINATE );
-
-            SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
-
-            break;
-         }
-
-         case NONLINEAR:
-         {
-            SCIP_Real one;
-
-            one = 1.0;
-            SCIP_CALL( SCIPaddExprtreesNonlinear(scip, *cons, 1, &exprtree, &one) );
-            break;
-         }
-         }
-
-         *constype = NONLINEAR;
-      }
-
-   TERMINATE:
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-
-      if( retcode != SCIP_OKAY )
-         break;
+         return SCIP_OKAY;
    }
 
    SCIPfreeBufferArray(scip, &exprvars);
    SCIPfreeBufferArray(scip, &exprvaridx);
-
-   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2603,9 +2393,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    const XML_NODE* header;
    const XML_NODE* data;
    XML_NODE* start;
-   SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SCIP_CONS* objcons;
    const char* name;
    SCIP_RETCODE retcode;
    CONSTYPE objconstype;
@@ -2643,9 +2431,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    doingfine = TRUE;
    vars = NULL;
    nvars = 0;
-   conss = NULL;
    nconss = 0;
-   objcons = NULL;
 
    /* read OSiL xml file */
    start = xmlProcess(filename);
@@ -2731,10 +2517,10 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( !doingfine )
       goto CLEANUP;
 
-   // /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
-   // SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
-   // if( !doingfine )
-   //    goto CLEANUP;
+   /* read nonlinear expressions */
+   SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, nconss, nlexprs, &doingfine), CLEANUP );
+   if( !doingfine )
+      goto CLEANUP;
 
    /* read constraint data; generate constraints */
    SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, nconss, linvars, lincoefs, nlinvars, quadvars1, quadvars2,
@@ -2798,11 +2584,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
       SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );  /*lint !e613*/
    }
    SCIPfreeBufferArrayNull(scip, &vars);
-
-   if( objcons != NULL )
-   {
-      SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
-   }
 
    /* return read error retcode if something went wrong */
    if( !doingfine )
