@@ -12719,7 +12719,7 @@ SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
    {
       assert(linvars != NULL && linvars[i] != NULL);
 
-      /* create variable expression; release variable expression after the constraint has been created */
+      /* create variable expression; release variable expression after the sum expression has been created */
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[nquadterms + i], linvars[i]) );
 
       /* store coefficient */
@@ -12728,6 +12728,13 @@ SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
 
    /* create sum expression */
    SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nquadterms + nlinvars, children, coefs, 0.0) );
+
+   /* release children */
+   for( i = 0; i < nquadterms + nlinvars; ++i )
+   {
+      assert(children[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+   }
 
    /* free memory */
    SCIPfreeBufferArray(scip, &coefs);
