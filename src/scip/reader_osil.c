@@ -1155,24 +1155,54 @@ SCIP_RETCODE readLinearCoefs(
    {
       int col;
       int pos;
-      for( col = 0; col < nvars; ++col )
+      int k;
+
+      /* allocate memory for the coefficients in iteration k=0; in k=1 fill in the data */
+      for( k = 0; k < 2; ++k )
       {
-         /* these asserts were checked above */
-         assert(start[col] >= 0);
-         assert(start[col+1] >= 0);
-         assert(start[col] <= nnz);
-         assert(start[col+1] <= nnz);
-         for( pos = start[col]; pos < start[col+1]; ++pos )
+         for( col = 0; col < nvars; ++col )
          {
             /* these asserts were checked above */
-            assert(pos >= 0);
-            assert(pos < nnz);
-            assert(idx[pos] >= 0);
-            assert(idx[pos] < nconss);
+            assert(start[col] >= 0);
+            assert(start[col+1] >= 0);
+            assert(start[col] <= nnz);
+            assert(start[col+1] <= nnz);
+            for( pos = start[col]; pos < start[col+1]; ++pos )
+            {
+               int considx = idx[pos];
 
-            // assert(constypes[idx[pos]] == LINEAR);  /*lint !e613*/
+               /* these asserts were checked above */
+               assert(pos >= 0);
+               assert(pos < nnz);
+               assert(considx >= 0);
+               assert(considx < nconss);
 
-            // SCIP_CALL( SCIPaddCoefLinear(scip, conss[idx[pos]], vars[col], val[pos]) );  /*lint !e613*/
+               if( k == 0 )
+               {
+                  ++(nlinvars[considx]);
+               }
+               else
+               {
+                  linvars[considx][nlinvars[considx]] = vars[col];
+                  lincoefs[considx][nlinvars[considx]] = val[col];
+                  ++(nlinvars[considx]);
+               }
+            }
+         }
+
+         /* allocate memory to store the linear coefficients for each constraint after the first iteration */
+         if( k == 0 )
+         {
+            int c;
+
+            for( c = 0; c < nconss; ++c )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &linvars[c], nlinvars[c]) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs[c], nlinvars[c]) );
+
+               /* reset nlinvars[c] so it can be used for iteration k=1 */
+               nlinvars[c] = 0;
+            }
          }
       }
    }
