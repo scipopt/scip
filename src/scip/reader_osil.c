@@ -481,7 +481,7 @@ SCIP_RETCODE createConstraint(
    SCIP_VAR**            quadvars2,          /**< array containing the second variables of the quadratic terms (might be NULL) */
    SCIP_Real*            quadcoefs,          /**< array containing the coefficients of the quadratic terms (might be NULL) */
    int                   nquadterms,         /**< the total number of quadratic terms */
-   SCIP_CONSEXPR_EXPR*   nlexprs,            /**< the nonlinear part (might be NULL) */
+   SCIP_CONSEXPR_EXPR*   nlexpr,             /**< the nonlinear part (might be NULL) */
    SCIP_Real             lhs,                /**< left-hand side */
    SCIP_Real             rhs,                /**< right-hand side */
    const char*           name,               /**< name of the constraint */
@@ -507,7 +507,7 @@ SCIP_RETCODE createConstraint(
    }
 
    /* linear constraint */
-   if( nlinvars > 0 && nquadterms == 0 && nlexprs == NULL )
+   if( nlinvars > 0 && nquadterms == 0 && nlexpr == NULL )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name,
          nlinvars, linvars, lincoefs, lhs, rhs, initialconss,
@@ -541,9 +541,9 @@ SCIP_RETCODE createConstraint(
          assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(consexprhdlr));
 
          /* add nonlinear expression as a child to expr */
-         if( nlexprs != NULL )
+         if( nlexpr != NULL )
          {
-            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nlexprs, 1.0) );
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nlexpr, 1.0) );
          }
 
          /* add expression that represents the objective variable as a child to expr */
@@ -563,12 +563,12 @@ SCIP_RETCODE createConstraint(
       /* there is no quadratic part but we might need to take care of the objective variable */
       else
       {
-         assert(nlexprs != NULL);
+         assert(nlexpr != NULL);
 
          if( objcons )
          {
             SCIP_CONSEXPR_EXPR* sumexpr;
-            SCIP_CONSEXPR_EXPR* children[2];
+            SCIP_CONSEXPR_EXPR* children[2] = {nlexpr, varexpr};
             SCIP_Real coefs[2] = {1.0, -1.0};
 
             assert(varexpr != NULL);
@@ -586,7 +586,7 @@ SCIP_RETCODE createConstraint(
          else
          {
             /* create expression constraint */
-            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, nlexprs, lhs, rhs,
+            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, nlexpr, lhs, rhs,
                initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
          }
       }
