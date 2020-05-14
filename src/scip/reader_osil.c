@@ -27,6 +27,7 @@
 #include "nlpi/pub_expr.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_sum.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_sos1.h"
@@ -485,7 +486,10 @@ SCIP_RETCODE readConstraints(
    SCIP_VAR***           linvars,            /**< array containing for each constraint the linear variables (might be NULL) */
    SCIP_Real**           lincoefs,           /**< array containing for each constraint the coefficients of the linear variables (might be NULL) */
    int*                  nlinvars,           /**< array containing for each constraint the total number of linear variables */
-   SCIP_CONSEXPR_EXPR**  quadexprs,          /**< array containing for each constraint the quadratic part (might be NULL) */
+   SCIP_VAR***           quadvars1,          /**< array containing for each constraint the first variables of the quadratic terms */
+   SCIP_VAR***           quadvars2,          /**< array containing for each constraint the second variables of the quadratic terms */
+   SCIP_Real**           quadcoefs,          /**< array containing for each constraint the coefficients of the quadratic terms */
+   int*                  nquadterms,         /**< array containing for each constraint the total number of quadratic terms */
    SCIP_CONSEXPR_EXPR**  nlexprs,            /**< array containing for each constraint the nonlinear part (might be NULL) */
    SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
    SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
@@ -506,7 +510,10 @@ SCIP_RETCODE readConstraints(
    assert(linvars != NULL);
    assert(lincoefs != NULL);
    assert(nlinvars != NULL);
-   assert(quadexprs != NULL);
+   assert(quadvars1 != NULL);
+   assert(quadvars2 != NULL);
+   assert(quadcoefs != NULL);
+   assert(nquadterms != NULL);
    assert(nlexprs != NULL);
 
    constraints = xmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
@@ -608,14 +615,59 @@ SCIP_RETCODE readConstraints(
        */
 
       /* linear constraint */
-      if( quadexprs[c] == NULL && nlexprs[c] == NULL && nlinvars[c] > 0 )
+      if( nlinvars[c] > 0 && nquadterms[c] == 0 && nlexprs[c] == NULL )
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname,
             nlinvars[c], linvars[c], lincoefs[c], conslhs, consrhs, initialconss,
             TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
+
+      /* quadratic constraint */
+      else if( nquadterms[c] > 0 && nlexprs[c] == NULL )
+      {
+         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, consname, nlinvars[c], linvars[c], lincoefs[c],
+            nquadterms[c], quadvars1[c], quadvars2[c], quadcoefs[c], conslhs, consrhs,
+            initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+      }
+
+      /* nonlinear constraint */
+      else
+      {
+         assert(nlexprs[c] != NULL);
+
+         /* merge quadratic and nonlinear part, if necessary */
+         if( nlinvars[c] > 0 || nquadterms[c] > 0 )
+         {
+            SCIP_CONSEXPR_EXPR* expr;
+            SCIP_CONSHDLR* consexprhdlr;
+
+            consexprhdlr = SCIPfindConshdlr(scip, "expr");
+            assert(consexprhdlr != NULL);
+
+            /* create quadratic expression; note that this is always a sum expression */
+            SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, consexprhdlr, &expr, nlinvars[c], linvars[c], lincoefs[c],
+               nquadterms[c], quadvars1[c], quadvars2[c], quadcoefs[c]) );
+            assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(consexprhdlr));
+
+            /* add nonlinear expression as a child to the sum */
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, nlexprs[c], 1.0) );
+
+            /* create expression constraint */
+            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, consname, expr, conslhs, consrhs,
+               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+
+            /* release created expression */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsExpr(scip, &cons, consname, nlexprs[c], conslhs, consrhs,
+               initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+         }
+      }
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
       ++c;
    }
@@ -1057,18 +1109,18 @@ SCIP_RETCODE readQuadraticCoefs(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
-   SCIP_CONS**           conss,              /**< constraints in order of OSiL indices */
-   CONSTYPE*             constypes,          /**< type of constraints (assumed to be LINEAR) */
    int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
-   CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
+   SCIP_VAR***           quadvars1,          /**< array to store for each constraint the first variables of the quadratic terms */
+   SCIP_VAR***           quadvars2,          /**< array to store for each constraint the second variables of the quadratic terms */
+   SCIP_Real**           quadcoefs,          /**< array to store for each constraint the coefficients of the quadratic terms */
+   int*                  nquadterms,         /**< array to store for each constraint the total number of quadratic terms */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* quadcoef;
    const XML_NODE* qterm;
    const char* attrval;
-   SCIP_CONS* cons;
+   int* termssize;
    int nqterms;
    int count;
    int considx;
@@ -1077,19 +1129,13 @@ SCIP_RETCODE readQuadraticCoefs(
    SCIP_Real coef;
    int c;
 
-   /* quadratic terms, split up by constraints+objective */
-   SCIP_VAR*** vars1;
-   SCIP_VAR*** vars2;
-   SCIP_Real** coefs;
-   int* nterms;
-   int* termssize;
-
    assert(scip != NULL);
    assert(datanode != NULL);
-   assert(objcons != NULL);
+   assert(quadvars1 != NULL);
+   assert(quadvars2 != NULL);
+   assert(quadcoefs != NULL);
+   assert(nquadterms != NULL);
    assert(doingfine != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(constypes != NULL || nconss == 0);
 
    quadcoef = xmlFindNodeMaxdepth(datanode, "quadraticCoefficients", 0, 1);
 
@@ -1119,11 +1165,7 @@ SCIP_RETCODE readQuadraticCoefs(
 
    assert(vars != NULL);
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &vars1, nconss+1) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &vars2, nconss+1) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &coefs, nconss+1) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nterms, nconss+1) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &termssize, nconss+1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &termssize, nconss + 1) );
 
    count = 0;
    for( qterm = xmlFirstChild(quadcoef); qterm != NULL; qterm = xmlNextSibl(qterm), ++count )
@@ -1219,18 +1261,18 @@ SCIP_RETCODE readQuadraticCoefs(
       if( considx == -1 )
          considx = nconss;
 
-      if( nterms[considx] + 1 > termssize[considx] )
+      if( nquadterms[considx] + 1 > termssize[considx] )
       {
-         termssize[considx] = SCIPcalcMemGrowSize(scip, nterms[considx] + 1);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars1[considx], termssize[considx]) );  /*lint !e866*/
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars2[considx], termssize[considx]) );  /*lint !e866*/
-         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs[considx], termssize[considx]) );  /*lint !e866*/
+         termssize[considx] = SCIPcalcMemGrowSize(scip, nquadterms[considx] + 1);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars1[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars2[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadcoefs[considx], termssize[considx]) );  /*lint !e866*/
       }
 
-      vars1[considx][nterms[considx]] = vars[varidx1];
-      vars2[considx][nterms[considx]] = vars[varidx2];
-      coefs[considx][nterms[considx]] = coef;
-      ++nterms[considx];
+      quadvars1[considx][nquadterms[considx]] = vars[varidx1];
+      quadvars2[considx][nquadterms[considx]] = vars[varidx2];
+      quadcoefs[considx][nquadterms[considx]] = coef;
+      ++nquadterms[considx];
    }
 
    if( count != nqterms )
@@ -1240,77 +1282,8 @@ SCIP_RETCODE readQuadraticCoefs(
       goto TERMINATE;
    }
 
-   if( nterms[nconss] > 0 )
-   {
-      /* create constraint to hold quadratic part of objective; note that
-       * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and
-       * variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective
-       * variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
-       * of loose variables with infinite best bound cannot be solved)
-       */
-
-      SCIP_VAR* objvar;
-      SCIP_Real minusone;
-
-      /* we should have only looked at the linear part of the problem before, so there was no need to add a constraint for the objective */
-      assert(*objcons == NULL);
-
-      SCIP_CALL( SCIPcreateVar(scip, &objvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(scip, objvar) );
-
-      minusone = -1.0;
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, objcons, "quadobj", 1, &objvar, &minusone,
-         nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
-         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
-         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-      *objconstype = QUADRATIC;
-
-      SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
-
-      SCIPfreeBufferArray(scip, &coefs[nconss]);
-      SCIPfreeBufferArray(scip, &vars2[nconss]);
-      SCIPfreeBufferArray(scip, &vars1[nconss]);
-   }
-
-   for( c = nconss-1; c >= 0; --c )
-   {
-      if( nterms[c] == 0 )
-         continue;
-
-      /* we should have looked only at the linear part of the problem before, so all constraints should still be linear */
-      assert(constypes[c] == LINEAR);  /*lint !e613*/
-
-      /* replace linear constraint by quadratic constraint */
-      cons = conss[c];  /*lint !e613*/
-
-      /* coverity[negative_returns] */
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, SCIPconsGetName(cons),
-         SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
-         nterms[c], vars1[c], vars2[c], coefs[c],
-         SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );  /*lint !e613*/
-
-      conss[c] = cons;  /*lint !e613*/
-      constypes[c] = QUADRATIC;  /*lint !e613*/
-
-      SCIPfreeBufferArray(scip, &coefs[c]);
-      SCIPfreeBufferArray(scip, &vars2[c]);
-      SCIPfreeBufferArray(scip, &vars1[c]);
-   }
-
  TERMINATE:
    SCIPfreeBufferArray(scip, &termssize);
-   SCIPfreeBufferArray(scip, &nterms);
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars2);
-   SCIPfreeBufferArray(scip, &vars1);
 
    return SCIP_OKAY;
 }
@@ -2557,13 +2530,18 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_CONS** conss;
    int nconss;
 
-   /* linear part */
+   /* linear parts */
    SCIP_VAR*** linvars;
    SCIP_Real** lincoefs;
    int* nlinvars;
 
-   /* quadratic and nonlinear part */
-   SCIP_CONSEXPR_EXPR** quadexprs;
+   /* quadratic parts */
+   SCIP_VAR*** quadvars1;
+   SCIP_VAR*** quadvars2;
+   SCIP_Real** quadcoefs;
+   int* nquadterms;
+
+   /* nonlinear parts */
    SCIP_CONSEXPR_EXPR** nlexprs;
 
    assert(scip != NULL);
@@ -2644,21 +2622,25 @@ SCIP_DECL_READERREAD(readerReadOsil)
       goto CLEANUP;
 
    /* allocate memory to store constraint information */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &linvars, nconss) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nconss) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlinvars, nconss) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadexprs, nconss) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlexprs, nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &linvars, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlinvars, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadvars1, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadvars2, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadcoefs, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nquadterms, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlexprs, nconss + 1) );
 
    /* read linear coefficients matrix */
    SCIP_CALL_TERMINATE( retcode, readLinearCoefs(scip, data, vars, nvars, nconss, linvars, lincoefs, nlinvars, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
-   // /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
-   // SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
-   // if( !doingfine )
-   //    goto CLEANUP;
+   /* read quadratic coefficients */
+   SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, nconss, quadvars1, quadvars2, quadcoefs,
+      nquadterms, &doingfine), CLEANUP );
+   if( !doingfine )
+      goto CLEANUP;
 
    // /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
    // SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
@@ -2666,21 +2648,10 @@ SCIP_DECL_READERREAD(readerReadOsil)
    //    goto CLEANUP;
 
    /* read constraint data; generate constraints */
-   SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, nconss, linvars, lincoefs, nlinvars, quadexprs, nlexprs,
-      initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
+   SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, nconss, linvars, lincoefs, nlinvars, quadvars1, quadvars2,
+      quadcoefs, nquadterms, nlexprs, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
-
-   // /* add constraints to problem */
-   // for( i = 0; i < nconss; ++i )
-   // {
-   //    assert(conss[i] != NULL);  /*lint !e613*/
-   //    SCIP_CALL( SCIPaddCons(scip, conss[i]) );  /*lint !e613*/
-   // }
-   // if( objcons != NULL )
-   // {
-   //    SCIP_CALL( SCIPaddCons(scip, objcons) );
-   // }
 
    /* read sos2 constraints and add to problem */
    SCIP_CALL_TERMINATE( retcode, readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
@@ -2695,22 +2666,29 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( start != NULL )
       xmlFreeNode(start);
 
-   /* free memory for constraint information */
-   for( c = nconss - 1; c >= 0; --c )
+   /* free memory for constraint information (position nconss belongs to the nonlinear objective function) */
+   for( c = nconss; c >= 0; --c )
    {
+      /* free nonlinear parts */
       if( nlexprs[c] != NULL )
       {
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexprs[c]) );
       }
-      if( quadexprs[c] != NULL )
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &quadexprs[c]) );
-      }
+
+      /* free quadratic parts */
+      SCIPfreeBufferArrayNull(scip, &quadcoefs[c]);
+      SCIPfreeBufferArrayNull(scip, &quadvars1[c]);
+      SCIPfreeBufferArrayNull(scip, &quadvars2[c]);
+
+      /* free linear parts */
       SCIPfreeBufferArrayNull(scip, &lincoefs[c]);
       SCIPfreeBufferArrayNull(scip, &linvars[c]);
    }
-   SCIPfreeBufferArray(scip, &quadexprs);
    SCIPfreeBufferArray(scip, &nlexprs);
+   SCIPfreeBufferArray(scip, &nquadterms);
+   SCIPfreeBufferArray(scip, &quadcoefs);
+   SCIPfreeBufferArray(scip, &quadvars2);
+   SCIPfreeBufferArray(scip, &quadvars1);
    SCIPfreeBufferArray(scip, &nlinvars);
    SCIPfreeBufferArray(scip, &lincoefs);
    SCIPfreeBufferArray(scip, &linvars);
