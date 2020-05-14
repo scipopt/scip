@@ -447,7 +447,7 @@ SCIP_RETCODE readConstraints(
    const XML_NODE* consnode;
    const char* attrval;
    int consssize;
-   char name[20];
+   char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(datanode != NULL);
@@ -505,7 +505,7 @@ SCIP_RETCODE readConstraints(
       consname = xmlGetAttrval(consnode, "name");
       if( consname == NULL )
       {
-         (void) SCIPsnprintf(name, 20, "cons%d", *nconss);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons%d", *nconss);
          consname = name;
       }
 
