@@ -26,9 +26,9 @@
 #include "blockmemshell/memory.h"
 #include "nlpi/pub_expr.h"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_expr.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/pub_cons.h"
@@ -1215,10 +1215,12 @@ SCIP_RETCODE readQuadraticCoefs(
       SCIP_CALL( SCIPaddVar(scip, objvar) );
 
       minusone = -1.0;
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "quadobj", 1, &objvar, &minusone, nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, objcons, "quadobj", 1, &objvar, &minusone,
+         nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
          SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
          SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
       *objconstype = QUADRATIC;
 
       SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
@@ -1240,7 +1242,7 @@ SCIP_RETCODE readQuadraticCoefs(
       cons = conss[c];  /*lint !e613*/
 
       /* coverity[negative_returns] */
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, SCIPconsGetName(cons),
          SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
          nterms[c], vars1[c], vars2[c], coefs[c],
          SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
