@@ -1219,13 +1219,12 @@ SCIP_RETCODE readQuadraticCoefs(
    const XML_NODE* qterm;
    const char* attrval;
    int* termssize;
+   SCIP_Real coef;
    int nqterms;
    int count;
    int considx;
    int varidx1;
    int varidx2;
-   SCIP_Real coef;
-   int c;
 
    assert(scip != NULL);
    assert(datanode != NULL);
@@ -1872,7 +1871,6 @@ SCIP_RETCODE readExpression(
       int nquadelems;
       int quadelemssize;
       int idx;
-      int i;
 
       quadelemssize = 5;
       SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, quadelemssize) );
@@ -1982,9 +1980,6 @@ SCIP_RETCODE readNonlinearExprs(
    const XML_NODE* nlexpr;
    const char* attrval;
    SCIP_CONSHDLR* consexprhdlr;
-   SCIP_VAR** exprvars;
-   int* exprvaridx;
-   int nexprvars;
    int nnlexprs;
    int count;
    int considx;
@@ -2022,10 +2017,6 @@ SCIP_RETCODE readNonlinearExprs(
       return SCIP_OKAY;
    }
    assert(nnlexprs >= 0);
-
-   /* buffer array to store index of variable in expression graph, or -1 if not present */
-   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridx, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
 
    /* read nonlinear expressions and store in constraints */
    count = 0;
@@ -2065,19 +2056,12 @@ SCIP_RETCODE readNonlinearExprs(
          break;
       }
 
-      nexprvars = 0;
-      for( i = 0; i < nvars; ++i )
-         exprvaridx[i] = -1;
-
       /* turn OSiL expression into SCIP expression and assign indices to variables; store a nonlinear objective at position nconss */
       SCIP_CALL( readExpression(scip, consexprhdlr, considx == -1 ? &exprs[nconss] : &exprs[considx],
          xmlFirstChild(nlexpr), vars, nvars, doingfine) );
       if( !*doingfine )
          return SCIP_OKAY;
    }
-
-   SCIPfreeBufferArray(scip, &exprvars);
-   SCIPfreeBufferArray(scip, &exprvaridx);
 
    return SCIP_OKAY;
 }
