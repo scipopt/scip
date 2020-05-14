@@ -426,38 +426,23 @@ SCIP_RETCODE readObjective(
    return SCIP_OKAY;
 }
 
-/** setup constraint sides as linear constraints
- *
- * constraints are not added to the problem yet
- */
+/** helper method to get the total number of constraints */
 static
-SCIP_RETCODE readConstraints(
+SCIP_RETCODE readNConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    const XML_NODE*       datanode,           /**< XML root node for instance data */
-   SCIP_CONS***          conss,              /**< buffer to store array of (linear) constraints */
-   CONSTYPE**            constypes,          /**< buffer to store type of constraints (will be all LINEAR) */
-   int*                  nconss,             /**< buffer to store number of constraints */
-   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
-   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
-   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
+   int*                  nconss,             /**< pointer to store the total number of constraints */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* constraints;
-   const XML_NODE* consnode;
    const char* attrval;
-   int consssize;
-   char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(datanode != NULL);
-   assert(conss != NULL);
-   assert(constypes != NULL);
    assert(nconss != NULL);
    assert(doingfine != NULL);
 
-   *conss = NULL;
-   *constypes = NULL;
    *nconss = 0;
 
    constraints = xmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
@@ -475,17 +460,60 @@ SCIP_RETCODE readConstraints(
       return SCIP_OKAY;
    }
 
-   consssize = (int)strtol(attrval, (char**)&attrval, 10);
-   if( *attrval != '\0' || consssize < 0 )
+   *nconss = (int)strtol(attrval, (char**)&attrval, 10);
+   if( *attrval != '\0' || *nconss < 0 )
    {
       SCIPerrorMessage("Invalid value '%s' for \"numberOfConstraints\" attribute.\n", xmlGetAttrval(constraints, "numberOfConstraints"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
-   assert(consssize >= 0);
+   assert(*nconss >= 0);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, conss, consssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, constypes, consssize) );
+   return SCIP_OKAY;
+}
+
+
+/** setup constraint sides as linear constraints
+ *
+ * constraints are not added to the problem yet
+ */
+static
+SCIP_RETCODE readConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const XML_NODE*       datanode,           /**< XML root node for instance data */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_VAR***           linvars,            /**< array containing for each constraint the linear variables (might be NULL) */
+   SCIP_Real**           lincoefs,           /**< array containing for each constraint the coefficients of the linear variables (might be NULL) */
+   int*                  nlinvars,           /**< array containing for each constraint the total number of linear variables */
+   SCIP_CONSEXPR_EXPR**  quadexprs,          /**< array containing for each constraint the quadratic part (might be NULL) */
+   SCIP_CONSEXPR_EXPR**  nlexprs,            /**< array containing for each constraint the nonlinear part (might be NULL) */
+   SCIP_Bool             initialconss,       /**< should model constraints be marked as initial? */
+   SCIP_Bool             dynamicconss,       /**< should model constraints be subject to aging? */
+   SCIP_Bool             dynamicrows,        /**< should rows be added and removed dynamically to the LP? */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
+   )
+{
+   const XML_NODE* constraints;
+   const XML_NODE* consnode;
+   const char* attrval;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONS* cons;
+   int c = 0;
+
+   assert(scip != NULL);
+   assert(datanode != NULL);
+   assert(doingfine != NULL);
+   assert(linvars != NULL);
+   assert(lincoefs != NULL);
+   assert(nlinvars != NULL);
+   assert(quadexprs != NULL);
+   assert(nlexprs != NULL);
+
+   constraints = xmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
+
+   /* if no constraints, then nothing to do here */
+   if( constraints == NULL )
+      return SCIP_OKAY;
 
    /* read constraint names, lhs, rhs, constant */
    for( consnode = xmlFirstChild(constraints); consnode != NULL; consnode = xmlNextSibl(consnode) )
@@ -494,9 +522,9 @@ SCIP_RETCODE readConstraints(
       SCIP_Real conslhs;
       SCIP_Real consrhs;
 
-      if( consssize == *nconss )
+      if( c == nconss )
       {
-         SCIPerrorMessage("Expected %d constraints, but got at least %d many.\n", consssize, *nconss+1);
+         SCIPerrorMessage("Expected %d constraints, but got at least %d many.\n", nconss, c+1);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -505,7 +533,7 @@ SCIP_RETCODE readConstraints(
       consname = xmlGetAttrval(consnode, "name");
       if( consname == NULL )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons%d", *nconss);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons%d", c);
          consname = name;
       }
 
@@ -575,19 +603,26 @@ SCIP_RETCODE readConstraints(
             consrhs -= consconstant;
       }
 
-      /* create SCIP linear constraint */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &(*conss)[*nconss], consname, 0, NULL, NULL, conslhs, consrhs,
-            initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
-      assert((*conss)[*nconss] != NULL);
+      /*
+       * create, add, and release constraint
+       */
 
-      (*constypes)[*nconss] = LINEAR;
+      /* linear constraint */
+      if( quadexprs[c] == NULL && nlexprs[c] == NULL && nlinvars[c] > 0 )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname,
+            nlinvars[c], linvars[c], lincoefs[c], conslhs, consrhs, initialconss,
+            TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
 
-      ++*nconss;
+      ++c;
    }
 
-   if( *nconss < consssize )
+   if( c != nconss )
    {
-      SCIPerrorMessage("Got %d constraints, but expected %d many.\n", *nconss, consssize);
+      SCIPerrorMessage("Got %d constraints, but expected %d many.\n", c, nconss);
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -672,9 +707,10 @@ SCIP_RETCODE readLinearCoefs(
    const XML_NODE*       datanode,           /**< XML root node for instance data */
    SCIP_VAR**            vars,               /**< variables in order of OSiL indices */
    int                   nvars,              /**< number of variables */
-   SCIP_CONS**           conss,              /**< constraints in order of OSiL indices */
-   CONSTYPE*             constypes,          /**< type of constraints (assumed to be LINEAR) */
    int                   nconss,             /**< number of constraints */
+   SCIP_VAR***           linvars,            /**< array to store for each constraint the linear variables */
+   SCIP_Real**           lincoefs,           /**< array to store for each constraint the coefficients of the linear variables */
+   int*                  nlinvars,           /**< array to store for each constraint the total number of linear variables */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
@@ -697,8 +733,6 @@ SCIP_RETCODE readLinearCoefs(
    assert(scip != NULL);
    assert(datanode != NULL);
    assert(vars != NULL || nvars == 0);
-   assert(conss != NULL || nconss == 0);
-   assert(constypes != NULL || nconss == 0);
    assert(doingfine != NULL);
 
    lincoef = xmlFindNodeMaxdepth(datanode, "linearConstraintCoefficients", 0, 1);
@@ -952,11 +986,22 @@ SCIP_RETCODE readLinearCoefs(
       int pos;
       for( row = 0; row < nconss; ++row )
       {
+         int nterms;
+
          /* these asserts were checked above */
          assert(start[row] >= 0);
          assert(start[row+1] >= 0);
          assert(start[row] <= nnz);
          assert(start[row+1] <= nnz);
+
+         assert(linvars[row] == NULL);
+         assert(lincoefs[row] == NULL);
+         assert(nlinvars[row] == 0);
+
+         nterms = start[row+1] - start[row];
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvars[row], nterms) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs[row], nterms) );
+
          for( pos = start[row]; pos < start[row+1]; ++pos )
          {
             /* these asserts were checked above */
@@ -965,9 +1010,9 @@ SCIP_RETCODE readLinearCoefs(
             assert(idx[pos] >= 0);
             assert(idx[pos] < nvars);
 
-            assert(constypes[row] == LINEAR);  /*lint !e613*/
-
-            SCIP_CALL( SCIPaddCoefLinear(scip, conss[row], vars[idx[pos]], val[pos]) );  /*lint !e613*/
+            linvars[row][nlinvars[row]] = vars[idx[pos]];
+            lincoefs[row][nlinvars[row]] = val[pos];
+            ++(nlinvars[row]);
          }
       }
    }
@@ -990,9 +1035,9 @@ SCIP_RETCODE readLinearCoefs(
             assert(idx[pos] >= 0);
             assert(idx[pos] < nconss);
 
-            assert(constypes[idx[pos]] == LINEAR);  /*lint !e613*/
+            // assert(constypes[idx[pos]] == LINEAR);  /*lint !e613*/
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, conss[idx[pos]], vars[col], val[pos]) );  /*lint !e613*/
+            // SCIP_CALL( SCIPaddCoefLinear(scip, conss[idx[pos]], vars[col], val[pos]) );  /*lint !e613*/
          }
       }
    }
@@ -2504,12 +2549,22 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_Bool dynamicrows;
    SCIP_VAR** vars;
    int nvars;
-   SCIP_CONS** conss;
-   CONSTYPE* constypes;
-   int nconss;
    SCIP_CONS* objcons;
    CONSTYPE objconstype;
+   int c;
    int i;
+
+   SCIP_CONS** conss;
+   int nconss;
+
+   /* linear part */
+   SCIP_VAR*** linvars;
+   SCIP_Real** lincoefs;
+   int* nlinvars;
+
+   /* quadratic and nonlinear part */
+   SCIP_CONSEXPR_EXPR** quadexprs;
+   SCIP_CONSEXPR_EXPR** nlexprs;
 
    assert(scip != NULL);
    assert(reader != NULL);
@@ -2522,7 +2577,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
    vars = NULL;
    nvars = 0;
    conss = NULL;
-   constypes = NULL;
    nconss = 0;
    objcons = NULL;
 
@@ -2584,39 +2638,51 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( !doingfine )
       goto CLEANUP;
 
-   /* read constraint data (names, constants, lhs/rhs) */
-   SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, &conss, &constypes, &nconss, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
+   /* read total number of constraints */
+   SCIP_CALL_TERMINATE( retcode, readNConstraints(scip, data, &nconss, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
-   assert(conss != NULL || nconss == 0);
+
+   /* allocate memory to store constraint information */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &linvars, nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlinvars, nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadexprs, nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlexprs, nconss) );
 
    /* read linear coefficients matrix */
-   SCIP_CALL_TERMINATE( retcode, readLinearCoefs(scip, data, vars, nvars, conss, constypes, nconss, &doingfine), CLEANUP );
+   SCIP_CALL_TERMINATE( retcode, readLinearCoefs(scip, data, vars, nvars, nconss, linvars, lincoefs, nlinvars, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
-   /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
-   SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
+   // /* read quadratic coefficients (turns linear constraints into quadratic ones, may create objcons) */
+   // SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
+   // if( !doingfine )
+   //    goto CLEANUP;
+
+   // /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
+   // SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
+   // if( !doingfine )
+   //    goto CLEANUP;
+
+   /* read constraint data; generate constraints */
+   SCIP_CALL_TERMINATE( retcode, readConstraints(scip, data, nconss, linvars, lincoefs, nlinvars, quadexprs, nlexprs,
+      initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
-   /* read nonlinear expressions (turns constraints into nonlinear ones, may create objcons) */
-   SCIP_CALL_TERMINATE( retcode, readNonlinearExprs(scip, data, vars, nvars, conss, constypes, nconss, &objcons, &objconstype, &doingfine), CLEANUP );
-   if( !doingfine )
-      goto CLEANUP;
+   // /* add constraints to problem */
+   // for( i = 0; i < nconss; ++i )
+   // {
+   //    assert(conss[i] != NULL);  /*lint !e613*/
+   //    SCIP_CALL( SCIPaddCons(scip, conss[i]) );  /*lint !e613*/
+   // }
+   // if( objcons != NULL )
+   // {
+   //    SCIP_CALL( SCIPaddCons(scip, objcons) );
+   // }
 
-   /* add constraints to problem */
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss[i] != NULL);  /*lint !e613*/
-      SCIP_CALL( SCIPaddCons(scip, conss[i]) );  /*lint !e613*/
-   }
-   if( objcons != NULL )
-   {
-      SCIP_CALL( SCIPaddCons(scip, objcons) );
-   }
-
-   /* read sos2 constraints  and add to problem*/
+   /* read sos2 constraints and add to problem */
    SCIP_CALL_TERMINATE( retcode, readSOScons(scip, data, vars, nvars, initialconss, dynamicconss, dynamicrows, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
@@ -2629,13 +2695,25 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( start != NULL )
       xmlFreeNode(start);
 
-   /* free constraints */
-   for( i = 0; i < nconss; ++i )
+   /* free memory for constraint information */
+   for( c = nconss - 1; c >= 0; --c )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
+      if( nlexprs[c] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexprs[c]) );
+      }
+      if( quadexprs[c] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &quadexprs[c]) );
+      }
+      SCIPfreeBufferArrayNull(scip, &lincoefs[c]);
+      SCIPfreeBufferArrayNull(scip, &linvars[c]);
    }
-   SCIPfreeBufferArrayNull(scip, &constypes);
-   SCIPfreeBufferArrayNull(scip, &conss);
+   SCIPfreeBufferArray(scip, &quadexprs);
+   SCIPfreeBufferArray(scip, &nlexprs);
+   SCIPfreeBufferArray(scip, &nlinvars);
+   SCIPfreeBufferArray(scip, &lincoefs);
+   SCIPfreeBufferArray(scip, &linvars);
 
    /* free variables */
    for( i = 0; i < nvars; ++i )
