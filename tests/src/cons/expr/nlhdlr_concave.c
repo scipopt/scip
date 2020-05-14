@@ -136,7 +136,7 @@ SCIP_RETCODE detect(
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
