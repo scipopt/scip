@@ -40,18 +40,7 @@ typedef struct dynamic_complete_minimum_spanning_tree DCMST;
 typedef struct node_one_hop_star STAR;
 
 /** SD distance graph data */
-typedef struct special_distance_graph
-{
-   GRAPH*                distgraph;          /**< (complete) distance graph */
-   PATH*                 sdmst;              /**< MST on sdgraph */
-   SCIP_Real*            mstcosts;           /**< maximum MST edge costs in descending order */
-   int*                  nodes_id;           /**< number of each node in original graph */
-   int*                  halfedge_isInMst;   /**< signifies whether edge of original graph is part of MST
-                                                  NOTE: operates on edges / 2! */
-   SCIP_Real             mstmaxcost;         /**< maximum edge cost */
-   int                   nnodesorg;          /**< number of nodes of original graph */
-   int                   nedgesorg;          /**< number of edges of original graph */
-} SDGRAPH;
+typedef struct special_distance_graph SDGRAPH;
 
 
 /** reduced cost result data */
@@ -227,5 +216,10 @@ extern void            reduce_starSetFailed(STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
+extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
+extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
+extern const SCIP_Real* reduce_sdgraphGetMaxCosts(SCIP*, const SDGRAPH*);
+extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
+
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

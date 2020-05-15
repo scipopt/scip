@@ -63,6 +63,21 @@ struct node_one_hop_star
 };
 
 
+/** see reduce.h */
+struct special_distance_graph
+{
+   GRAPH*                distgraph;          /**< (complete) distance graph */
+   PATH*                 sdmst;              /**< MST on sdgraph */
+   SCIP_Real*            mstcosts;           /**< maximum MST edge costs in descending order */
+   int*                  nodes_id;           /**< number of each node in original graph */
+   STP_Bool*             halfedge_isInMst;   /**< signifies whether edge of original graph is part of MST
+                                                  NOTE: operates on edges / 2! */
+   SCIP_Real             mstmaxcost;         /**< maximum edge cost */
+   int                   nnodesorg;          /**< number of nodes of original graph */
+   int                   nedgesorg;          /**< number of edges of original graph */
+};
+
+
 /** recursive method for adding node to MST */
 static
 void dcmstInsert(
@@ -349,6 +364,239 @@ SCIP_Bool starIsDeg2(
    }
 
    return FALSE;
+}
+
+
+/** allocates memory */
+static
+SCIP_RETCODE sdgraphAlloc(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int nterms = g->terms;
+   SDGRAPH* g_sd;
+
+   SCIP_CALL( SCIPallocMemory(scip, sdgraph) );
+   g_sd = *sdgraph;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->sdmst), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstcosts), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->nodes_id), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->halfedge_isInMst), nedges / 2) );
+
+   g_sd->nnodesorg = nnodes;
+   g_sd->nedgesorg = nedges;
+
+   return SCIP_OKAY;
+}
+
+
+/** builds distance graph */
+static
+SCIP_RETCODE sdgraphBuildDistgraph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH*              g_sd,               /**< the SD graph */
+   VNOI**                vnoi,               /**< Voronoi */
+   int**                 distedge2org        /**< array of size nedges / 2 */
+)
+{
+   GRAPH* distgraph;
+   int* RESTRICT distnodes_id = g_sd->nodes_id;
+   SCIP_Real* RESTRICT nodes_vdist;
+   int* RESTRICT nodes_vbase;
+   int* RESTRICT edgeorg;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int nterms = g->terms;
+   const SCIP_Longint terms2 = (nterms - 1) * nterms;
+   int maxnedges;
+   int nnodes_distgraph;
+
+   assert(nterms >= 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, distedge2org, nedges / 2) );
+   edgeorg = *distedge2org;
+    for( int e = 0; e < nedges / 2; e++ )
+       edgeorg[e] = UNKNOWN;
+
+   SCIP_CALL( graph_vnoiInit(scip, g, TRUE, vnoi) );
+   graph_vnoiCompute(scip, g, *vnoi);
+   nodes_vbase = (*vnoi)->nodes_base;
+   nodes_vdist = (*vnoi)->nodes_dist;
+
+   if( nedges >= terms2 )
+   {
+      assert(terms2 <= INT_MAX);
+      maxnedges = terms2;
+   }
+   else
+   {
+      maxnedges = nedges;
+   }
+
+   SCIP_CALL( graph_init(scip, &(g_sd->distgraph), nterms, maxnedges, 1) );
+   distgraph = g_sd->distgraph;
+   nnodes_distgraph = 0;
+
+   /* add the nodes */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) )
+      {
+         graph_knot_add(distgraph, STP_TERM_NONE);
+         distnodes_id[k] = nnodes_distgraph++;
+      }
+      else
+      {
+         distnodes_id[k] = UNKNOWN;
+      }
+   }
+
+   assert(distgraph->knots == nnodes_distgraph);
+   assert(distgraph->knots == nterms);
+
+   graph_knot_chg(distgraph, 0, STP_TERM);
+   distgraph->source = 0;
+
+   /* add the edges */
+   for( int tail = 0; tail < nnodes; tail++ )
+   {
+      const int vbase_tail = nodes_vbase[tail];
+
+      for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         const int vbase_head = nodes_vbase[head];
+
+         assert(tail == g->tail[e]);
+
+         if( vbase_tail != vbase_head )
+         {
+            const SCIP_Real distance = g->cost[e] + nodes_vdist[tail] + nodes_vdist[head];
+            int ne;
+
+            assert(Is_term(g->term[vbase_tail]));
+            assert(Is_term(g->term[vbase_head]));
+            assert(distnodes_id[vbase_tail] >= 0);
+            assert(distnodes_id[vbase_head] >= 0);
+
+            /* find the corresponding edge in the distance graph */
+            for( ne = distgraph->outbeg[distnodes_id[vbase_tail]]; ne != EAT_LAST; ne = distgraph->oeat[ne] )
+            {
+               if( distgraph->head[ne] == distnodes_id[vbase_head] )
+                  break;
+            }
+
+            /* edge exists already? */
+            if( ne != EAT_LAST )
+            {
+               assert(ne >= 0);
+               assert(distgraph->head[ne] == distnodes_id[vbase_head]);
+               assert(distgraph->tail[ne] == distnodes_id[vbase_tail]);
+
+               if( distgraph->cost[ne] > distance )
+               {
+                  distgraph->cost[ne]            = distance;
+                  distgraph->cost[Edge_anti(ne)] = distance;
+                  edgeorg[ne / 2] = e;
+                  assert(ne <= maxnedges);
+               }
+            }
+            else
+            {
+               edgeorg[distgraph->edges / 2] = e;
+               graph_edge_add(scip, distgraph, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, distance);
+               assert(distgraph->edges <= maxnedges);
+            }
+         }
+      }
+   }
+
+   assert(graph_valid(scip, distgraph));
+
+   return SCIP_OKAY;
+}
+
+
+/** builds MST on distance graph */
+static
+SCIP_RETCODE sdgraphBuildMst(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const VNOI*           vnoi,               /**< Voronoi */
+   const int*            distedge2org,       /**< array of size nedges / 2 */
+   SDGRAPH*              g_sd                /**< the SD graph */
+)
+{
+   PATH* RESTRICT mst = g_sd->sdmst;
+   GRAPH* distgraph = g_sd->distgraph;
+   STP_Bool* RESTRICT orgedges_isInMst = g_sd->halfedge_isInMst;
+   const int* const nodes_vbase;
+   const int* const nodes_vpred;
+   SCIP_Real maxcost;
+   const int nedges = graph_get_nEdges(g);
+   const int nnodes_distgraph = graph_get_nNodes(distgraph);
+
+   for( int k = 0; k < nnodes_distgraph; k++ )
+      distgraph->mark[k] = TRUE;
+
+   for( int e = 0; e < nedges / 2; e++ )
+      orgedges_isInMst[e] = FALSE;
+
+   SCIP_CALL( graph_path_init(scip, distgraph) );
+   graph_path_exec(scip, distgraph, MST_MODE, distgraph->source, distgraph->cost, mst);
+   graph_path_exit(scip, distgraph);
+
+   assert(mst[0].edge == -1);
+
+   maxcost = 0.0;
+   for( int k = 1; k < nnodes_distgraph; k++ )
+   {
+      const int e = mst[k].edge;
+      const int ne = distedge2org[e / 2];
+      const SCIP_Real cost = distgraph->cost[e];
+
+      assert(distgraph->path_state[k] == CONNECT);
+      assert(e >= 0);
+
+      if( cost > maxcost )
+         maxcost = cost;
+
+      orgedges_isInMst[ne / 2] = TRUE;
+
+      for( int v = g->head[ne]; v != nodes_vbase[v]; v = g->tail[nodes_vpred[v]] )
+      {
+         orgedges_isInMst[nodes_vpred[v] / 2] = TRUE;
+      }
+
+      for( int v = g->tail[ne]; v != nodes_vbase[v]; v = g->tail[nodes_vpred[v]] )
+      {
+         orgedges_isInMst[nodes_vpred[v]/ 2] = TRUE;
+      }
+
+      assert(e != EAT_LAST);
+   }
+
+   g_sd->mstmaxcost = maxcost;
+
+   return SCIP_OKAY;
+}
+
+/** finalizes distance graph */
+static
+void sdgraphFinalize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VNOI**                vnoi,               /**> Voronoi */
+   int**                 edgeorg             /**< array of size nedges / 2 */
+)
+{
+   graph_vnoiFree(scip, vnoi);
+   SCIPfreeBufferArray(scip, edgeorg);
 }
 
 
@@ -1054,7 +1302,7 @@ void reduce_redcostdataFreeMembers(
    SCIPfreeMemoryArray(scip, &(redcostdata->redEdgeCost));
 }
 
-#if 0
+
 /** initializes SD graph */
 SCIP_RETCODE reduce_sdgraphInit(
    SCIP*                 scip,               /**< SCIP */
@@ -1062,185 +1310,17 @@ SCIP_RETCODE reduce_sdgraphInit(
    SDGRAPH**             sdgraph             /**< the SD graph */
 )
 {
-   GRAPH* distgraph;
-   int* vbase;
-   int* nodesid;
+   VNOI* vnoi;
    int* edgeorg;
-   const int nnodes = graph_get_nNodes(g);
-   const int nedges = graph_get_nEdges(g);
-   const int nterms = g->terms;
-   int maxnedges;
-   SDGRAPH* g_sd;
+   assert(scip && g && sdgraph);
 
-   assert(scip && sdgraph);
+   SCIP_CALL( sdgraphAlloc(scip, g, sdgraph) );
 
-   SCIP_CALL( SCIPallocMemory(scip, sdgraph) );
-
-   g_sd = *sdgraph;
-
-   // todo build VNOI here and take it? Flag for distance...
    // todo already build biased!
+   SCIP_CALL( sdgraphBuildDistgraph(scip, g, *sdgraph, &vnoi, &edgeorg) );
+   SCIP_CALL( sdgraphBuildMst(scip, g, vnoi, edgeorg, *sdgraph) );
 
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
-
-   graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, g->path_heap, g->path_state);
-
-   // todo extra
-   {
-      const SCIP_Longint terms2 = (nterms - 1) * nterms;
-
-      if( nedges >= terms2 )
-      {
-         assert(terms2 <= INT_MAX);
-
-         maxnedges = terms2;
-      }
-      else
-      {
-         maxnedges = nedges;
-      }
-   }
-
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
-
-      SCIP_CALL( graph_init(scip, &(g_sd->distgraph), nterms, maxnedges, 1) );
-
-      distgraph = g_sd->distgraph;
-
-      int e = 0;
-      for( int k = 0; k < nnodes; k++ )
-      {
-         if( Is_term(g->term[k]) && g->grad[k] > 0 )
-         {
-            if( e == 0 )
-            {
-               graph_knot_add(distgraph, STP_TERM);
-            }
-            else
-            {
-               graph_knot_add(distgraph, STP_TERM_NONE);
-            }
-
-            nodesid[k] = e++;
-         }
-         else
-         {
-            nodesid[k] = UNKNOWN;
-         }
-      }
-      assert(distgraph->knots == e);
-      assert(distgraph->knots == nterms);
-
-
-      nodesid = g_sd->nodes_id;
-
-      const int nnodes_distgraph = distgraph->knots;
-
-      for( int e = 0; e < nedges / 2; e++ )
-      {
-         blocked[e] = FALSE;
-         edgeorg[e] = UNKNOWN;
-      }
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            const int v1 = vbase[k];
-            assert(k == g->tail[e]);
-
-            if( v1 != vbase[g->head[e]] )
-            {
-               SCIP_Real cost;
-               int ne;
-               const int v2 = vbase[g->head[e]];
-
-               assert(Is_term(g->term[v1]));
-               assert(Is_term(g->term[v2]));
-               assert(nodesid[v1] >= 0);
-               assert(nodesid[v2] >= 0);
-
-               for( ne = distgraph->outbeg[nodesid[v1]]; ne != EAT_LAST; ne = distgraph->oeat[ne] )
-                  if( distgraph->head[ne] == nodesid[v2] )
-                     break;
-
-               cost = g->cost[e] + vnoi[g->head[e]].dist + vnoi[g->tail[e]].dist;
-               /* edge exists? */
-               if( ne != EAT_LAST )
-               {
-                  assert(ne >= 0);
-                  assert(distgraph->head[ne] == nodesid[v2]);
-                  assert(distgraph->tail[ne] == nodesid[v1]);
-                  if( SCIPisGT(scip, distgraph->cost[ne], cost) )
-                  {
-                     distgraph->cost[ne]            = cost;
-                     distgraph->cost[Edge_anti(ne)] = cost;
-                     edgeorg[ne / 2] = e;
-                     assert(ne <= maxnedges);
-                  }
-               }
-               else
-               {
-                  edgeorg[distgraph->edges / 2] = e;
-                  graph_edge_add(scip, distgraph, nodesid[v1], nodesid[v2], cost, cost);
-                  assert(distgraph->edges <= maxnedges);
-               }
-            }
-         }
-      }
-      distgraph->source = 0;
-
-      assert(graph_valid(scip, distgraph));
-
-   }
-
-   /* extra method compute a MST on netgraph */
-   {
-   for( int k = 0; k < nnodes_distgraph; k++ )
-      distgraph->mark[k] = TRUE;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes_distgraph) );
-   SCIP_CALL( graph_path_init(scip, distgraph) );
-   graph_path_exec(scip, distgraph, MST_MODE, 0, distgraph->cost, mst);
-
-   SCIP_Real maxcost = -1.0;
-   assert(mst[0].edge == -1);
-
-   }
-
-   {
-         SCIP_Real maxcost = 0.0;
-      for( int k = 1; k < nnodes_distgraph; k++ )
-      {
-         const int e = mst[k].edge;
-         const SCIP_Real cost = distgraph->cost[e];
-
-         assert(distgraph->path_state[k] == CONNECT);
-
-         assert(e >= 0);
-
-         if( cost > maxcost )
-            maxcost = cost;
-
-         int ne = edgeorg[e / 2];
-         blocked[ne / 2] = TRUE;
-         for( int v1 = g->head[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
-            blocked[vnoi[v1].edge / 2] = TRUE;
-
-         for( int v1 = g->tail[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
-            blocked[vnoi[v1].edge / 2] = TRUE;
-         assert(e != EAT_LAST);
-      }
-      g_sd->mstmaxcost = maxcost;
-
-   }
-
-   SCIPfreeBufferArray(scip, &edgeorg);
+   sdgraphFinalize(scip, &vnoi, &edgeorg);
 
    return SCIP_OKAY;
 }
@@ -1248,11 +1328,12 @@ SCIP_RETCODE reduce_sdgraphInit(
 
 /** initializes SD graph */
 SCIP_Real reduce_sdgraphGetMaxCost(
-   SCIP*                 scip,               /**< SCIP */
    const SDGRAPH*        sdgraph             /**< the SD graph */
 )
 {
-   return 0.0;
+   assert(sdgraph);
+
+   return sdgraph->mstmaxcost;
 }
 
 
@@ -1262,6 +1343,8 @@ const SCIP_Real* reduce_sdgraphGetMaxCosts(
    const SDGRAPH*        sdgraph             /**< the SD graph */
 )
 {
+   assert(scip && sdgraph);
+
    // todo if flag not set yet, sort! then r
 
    if( 0 )
@@ -1270,7 +1353,7 @@ const SCIP_Real* reduce_sdgraphGetMaxCosts(
    }
 
 
-   return NULL;
+   return sdgraph->mstcosts;
 }
 
 
@@ -1280,16 +1363,18 @@ void reduce_sdgraphFree(
    SDGRAPH**             sdgraph             /**< the SD graph */
 )
 {
-   SDGRAPH* s;
-   assert(scip && star);
+   SDGRAPH* g_sd;
+   assert(scip && sdgraph);
 
-   s = *star;
-   assert(s);
+   g_sd = *sdgraph;
+   assert(g_sd);
 
-   SCIPfreeMemoryArray(scip, &(s->edgesSelectedPos));
-   SCIPfreeMemoryArray(scip, &(s->edgesSelected));
-   SCIPfreeMemoryArray(scip, &(s->edgeId));
+   SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
+   SCIPfreeMemoryArray(scip, &(g_sd->mstcosts));
+   SCIPfreeMemoryArray(scip, &(g_sd->nodes_id));
+   SCIPfreeMemoryArray(scip, &(g_sd->halfedge_isInMst));
 
-   SCIPfreeMemory(scip, star);
+   graph_free(scip, &(g_sd->distgraph), TRUE);
+
+   SCIPfreeMemory(scip, g_sd);
 }
-#endif

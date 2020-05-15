@@ -171,6 +171,7 @@ void vnoiCompute(
                if( nodes_dist[m] > newdist )
                {
                   graph_heap_correct(m, newdist, dheap);
+                  nodes_pred[m] = i;
                   nodes_dist[m] = newdist;
                   nodes_base[m] = nodes_base[k];
                }
