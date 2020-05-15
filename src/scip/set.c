@@ -49,6 +49,7 @@
 #include "scip/nodesel.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
+#include "scip/rational.h"
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
@@ -628,6 +629,7 @@ SCIP_DECL_PARAMCHGD(paramChgInfinity)
    SCIP_Real infinity;
 
    infinity = SCIPparamGetReal(param);
+   RatSetInfinity(infinity);
 
    /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
     * transfer SCIP infinity values to the ones by the LPI, but not the converse. */

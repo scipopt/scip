@@ -50,7 +50,7 @@
 #include "scip/implics.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/nlp.h"
 #include "scip/presol.h"
 #include "scip/pricestore.h"
@@ -70,7 +70,7 @@
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
-#include "scip/sepastoreex.h"
+#include "scip/sepastoreexact.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
@@ -403,11 +403,11 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundex) );
-      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundex) );
-      RatSetString(scip->primal->upperboundex, "inf");
-      RatSetString(scip->primal->cutoffboundex, "inf");
-      SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
+      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundexact) );
+      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundexact) );
+      RatSetString(scip->primal->upperboundexact, "inf");
+      RatSetString(scip->primal->cutoffboundexact, "inf");
+      SCIP_CALL( SCIPlpExactCreate(&scip->lpexact, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    }
 
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
@@ -1632,7 +1632,7 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPsepastoreexCreate(&scip->sepastoreex, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPsepastoreExactCreate(&scip->sepastoreexact, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue,
@@ -1774,7 +1774,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
-   SCIP_CALL( SCIPlpexReset(scip->lpex, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPlpExactReset(scip->lpexact, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
 
    /* resets the debug environment */
    SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
@@ -1800,8 +1800,8 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPsepastoreexClearCuts(scip->sepastoreex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpex) );
-      SCIP_CALL( SCIPsepastoreexFree(&scip->sepastoreex, scip->mem->probmem) );
+      SCIP_CALL( SCIPsepastoreExactClearCuts(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpexact) );
+      SCIP_CALL( SCIPsepastoreExactFree(&scip->sepastoreexact, scip->mem->probmem) );
    }
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -2080,7 +2080,7 @@ SCIP_RETCODE freeTransform(
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
 
-   SCIP_CALL( SCIPlpexFree(&scip->lpex, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPlpExactFree(&scip->lpexact, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
 

@@ -123,7 +123,7 @@ SCIP_RETCODE fromCommandLine(
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
          if( SCIPisExactSolve(scip) && SCIPisExactSol(scip, bestsol) )
          {
-            SCIP_CALL( SCIPprintSolex(scip, origsol, NULL, FALSE) );
+            SCIP_CALL( SCIPprintSolExact(scip, origsol, NULL, FALSE) );
          }
          else
          {

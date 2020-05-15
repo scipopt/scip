@@ -1471,7 +1471,7 @@ void SCIPgetLowerboundExact(
        */
       treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
       RatSetReal(result, treelowerbound);
-      RatMIN(result, result, scip->primal->upperboundex);
+      RatMIN(result, result, scip->primal->upperboundexact);
    }
 }
 
@@ -1622,7 +1622,7 @@ void SCIPgetPrimalboundExact(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundex, result);
+   return SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundexact, result);
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)

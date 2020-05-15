@@ -14,7 +14,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_lpex.h
+/**@file   scip_lpexact.h
  * @ingroup PUBLICCOREAPI
  * @brief  public methods for the LP relaxation, rows and columns
  * @author Leon Eifler
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SCIP_LPEX_H__
-#define __SCIP_SCIP_LPEX_H__
+#ifndef __SCIP_SCIP_LPEXACT_H__
+#define __SCIP_SCIP_LPEXACT_H__
 
 
 #include "lpi/type_lpi.h"
@@ -31,7 +31,7 @@
 #include "scip/rational.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -74,7 +74,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX**          rowex,              /**< pointer to row */
+   SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< pointer to fp-row that corresponds to this row */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs                 /**< right hand side of row */
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
 SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX**          row                 /**< pointer to LP row */
+   SCIP_ROWEXACT**       row                 /**< pointer to LP row */
    );
 
 
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarsToRowEx(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
    SCIP_Rational**       vals                /**< values of coefficients */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
 SCIP_EXPORT
 void SCIPgetRowActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_Rational*        result              /**< result pointer */
    );
 
@@ -142,7 +142,7 @@ void SCIPgetRowActivityExact(
 SCIP_EXPORT
 void SCIPgetRowFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_Rational*        result              /**< result pointer */
    );
 
@@ -156,9 +156,9 @@ void SCIPgetRowFeasibilityExact(
 SCIP_EXPORT
 void SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             useexact,           /**< true if solex should be considered instead of sol */
+   SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
    SCIP_Rational*        result              /**< result pointer */
    );
 
@@ -172,7 +172,7 @@ void SCIPgetRowSolActivityExact(
 SCIP_EXPORT
 void SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        result              /**< result pointer */
    );
@@ -190,13 +190,13 @@ void SCIPgetRowSolFeasibilityExact(
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintRowex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEXACT*        row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** returns whether the exact lp was solved */
 SCIP_EXPORT
-SCIP_Bool SCIPlpexIsSolved(
+SCIP_Bool SCIPlpExactIsSolved(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_lpex.h
+/**@file   type_lpexact.h
  * @brief  type definitions for exact LP management
  * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_LPEX_H__
-#define __SCIP_TYPE_LPEX_H__
+#ifndef __SCIP_TYPE_LPEXACT_H__
+#define __SCIP_TYPE_LPEXACT_H__
 
 #include "type_lp.h"
 
@@ -29,30 +29,26 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_ColSolValsEx SCIP_COLSOLVALSEX;   /**< collected values of a column which depend on the LP solution */
-typedef struct SCIP_RowSolValsEx SCIP_ROWSOLVALSEX;   /**< collected values of a row which depend on the LP solution */
-typedef struct SCIP_LpSolValsEx SCIP_LPSOLVALSEX;     /**< collected values of the LP data which depend on the LP solution */
-
 /** column of an LP
  *
  *  - \ref PublicColumnMethods "List of all available methods"
  */
-typedef struct SCIP_ColEx SCIP_COLEX;
+typedef struct SCIP_ColExact SCIP_COLEXACT;
 
 /** row of an LP
  *
  *  - \ref PublicRowMethods "List of all available methods"
  */
-typedef struct SCIP_RowEx SCIP_ROWEX;
+typedef struct SCIP_RowExact SCIP_ROWEXACT;
 
 /** data used for project and shift */
-typedef struct SCIP_Psdata SCIP_PSDATA;
+typedef struct SCIP_ProjShiftData SCIP_PROJSHIFTDATA;
 
 /** LP structure
  *
  *  - \ref PublicLPMethods "List of all available methods"
  */
-typedef struct SCIP_LpEx SCIP_LPEX;
+typedef struct SCIP_LpExact SCIP_LPEXACT;
 
 enum Ps_intpointsel
 {

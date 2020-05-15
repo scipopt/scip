@@ -3887,7 +3887,7 @@ SCIP_RETCODE SCIPaddVarExactData(
  *  @note The printing process is done via the message handler system.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPwriteVarsExactLinearsum(
+SCIP_RETCODE SCIPwriteVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to output */

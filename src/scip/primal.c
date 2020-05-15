@@ -29,11 +29,10 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
-#include "scip/solex.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
@@ -142,10 +141,10 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nbestsolsfound = 0;
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
-   (*primal)->upperboundex = NULL;
+   (*primal)->upperboundexact = NULL;
    (*primal)->cutoffbound = SCIP_INVALID;
    (*primal)->updateviolations = TRUE;
-   (*primal)->cutoffboundex = NULL;
+   (*primal)->cutoffboundexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -188,10 +187,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
-   if( (*primal)->cutoffboundex != NULL )
+   if( (*primal)->cutoffboundexact != NULL )
    {
-      RatFreeBlock(blkmem, &(*primal)->upperboundex);
-      RatFreeBlock(blkmem, &(*primal)->cutoffboundex);
+      RatFreeBlock(blkmem, &(*primal)->upperboundexact);
+      RatFreeBlock(blkmem, &(*primal)->cutoffboundexact);
    }
 
    BMSfreeMemory(primal);
@@ -293,6 +292,18 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIPsetDebugMsg(set, "changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
 
    primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
+
+   /* possibly update the exact cutoffbound */
+   if( set->misc_exactsolve )
+   {
+      SCIP_Rational* tmp;
+
+      RatCreateBuffer(set->buffer, &tmp);
+      RatSetReal(tmp, primal->cutoffbound);
+      if( RatIsGT(primal->cutoffboundexact, tmp) )
+         RatSet(primal->cutoffboundexact, tmp);
+      RatFreeBuffer(set->buffer, &tmp);
+   }
 
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
@@ -1967,7 +1978,7 @@ void SCIPprimalSetUpdateViolations(
 
 /** adds exact primal solution to solution storage at given position */
 static
-SCIP_RETCODE primalAddSolex(
+SCIP_RETCODE primalAddSolExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1977,7 +1988,7 @@ SCIP_RETCODE primalAddSolex(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
@@ -2004,21 +2015,21 @@ SCIP_RETCODE primalAddSolex(
 
    sol = *solptr;
    assert(sol != NULL);
-   obj = SCIPsolexGetObj(sol, set, transprob, origprob);
+   obj = SCIPsolGetObjExact(sol, set, transprob, origprob);
    fpobj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, RatApproxReal(obj), insertpos, replace);
 
-   SCIPdebug( SCIP_CALL( SCIPsolexPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
+   SCIPdebug( SCIP_CALL( SCIPsolPrintExact(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
-   SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
+   SCIP_CALL( SCIPsolUnlinkExact(sol, set, transprob) );
 
-   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, set, stat, origprob, transprob, tree) );
+   SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
 
-   RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
-   RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
+   RatMIN(primal->upperboundexact, primal->upperboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
@@ -2029,7 +2040,7 @@ SCIP_RETCODE primalAddSolex(
 }
 
 /** adds exact primal solution to solution storage, frees the solution afterwards */
-SCIP_RETCODE SCIPprimalTrySolexFree(
+SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2039,7 +2050,7 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -2077,7 +2088,7 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
 
    if( feasible )
    {
-      SCIP_CALL( primalAddSolex(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+      SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */

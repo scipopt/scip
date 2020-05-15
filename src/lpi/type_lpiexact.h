@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_lpiex.h
+/**@file   type_lpiexact.h
  * @brief  type definitions for specific exact LP solvers interface
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -21,11 +21,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_LPIEX_H__
-#define __SCIP_TYPE_LPIEX_H__
+#ifndef __SCIP_TYPE_LPIEXACT_H__
+#define __SCIP_TYPE_LPIEXACT_H__
 
 #include <lpi/type_lpi.h>
 
-typedef struct SCIP_LPiEx SCIP_LPIEX;                 /**< solver dependent LP interface */
+typedef struct SCIP_LPiExact SCIP_LPIEXACT;  /**< solver dependent LP interface */
 
 #endif

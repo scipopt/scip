@@ -29,13 +29,12 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
-#include "scip/scip_lpex.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
-#include "scip/scip_solex.h"
 #include "scip/scip_mem.h"
 #include "scip/rational.h"
 #include <string.h>
@@ -87,7 +86,7 @@ SCIP_RETCODE checkIntegralityExact(
    {
       /* if the solution is exact we check the exact data, otherwise we check the fp data */
       if( SCIPisExactSol(scip, sol) )
-         SCIPgetSolexVal(scip, sol, vars[v], solval);
+         SCIPgetSolValExact(scip, sol, vars[v], solval);
       else
          RatSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
 

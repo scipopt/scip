@@ -33,6 +33,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
@@ -54,6 +55,17 @@ SCIP_RETCODE SCIPsolCreate(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates primal CIP solution with exact rational values, initialized to zero */
+SCIP_RETCODE SCIPsolCreateExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -115,6 +127,19 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution with exact rational values, initialized to the current LP solution */
+SCIP_RETCODE SCIPsolCreateLPSolExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates primal CIP solution, initialized to the current NLP solution */
 SCIP_RETCODE SCIPsolCreateNLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -165,6 +190,19 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution with exact rational values, initialized to the current solution */
+SCIP_RETCODE SCIPsolCreateCurrentSolExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates partial primal CIP solution, initialized to unknown values */
 SCIP_RETCODE SCIPsolCreatePartial(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -203,6 +241,12 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** copies current exact LP solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkLPSolExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
+   );
+
 /** copies current NLP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkNLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -228,6 +272,14 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** copies current pseudo solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkPseudoSolExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */
@@ -261,6 +313,13 @@ SCIP_RETCODE SCIPsolUnlink(
    SCIP_PROB*            prob                /**< transformed problem data */
    );
 
+/** stores solution values of variables in solution's own array */
+SCIP_RETCODE SCIPsolUnlinkExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
 /** sets value of variable in primal CIP solution */
 SCIP_RETCODE SCIPsolSetVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -269,6 +328,16 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Real             val                 /**< solution value of variable */
+   );
+
+/** sets value of variable in primal CIP solution */
+SCIP_RETCODE SCIPsolSetValExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_Rational*        val                 /**< solution value of variable */
    );
 
 /** increases value of variable in primal CIP solution */
@@ -289,6 +358,15 @@ SCIP_Real SCIPsolGetVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
+/** returns value of variable in primal CIP solution */
+void SCIPsolGetValExact(
+   SCIP_Rational*        res,
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   );
+
 /** returns value of variable in primal ray represented by primal CIP solution */
 SCIP_Real SCIPsolGetRayVal(
    SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
@@ -300,6 +378,14 @@ SCIP_Real SCIPsolGetRayVal(
 
 /** gets objective value of primal CIP solution in transformed problem */
 SCIP_Real SCIPsolGetObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob            /**< original problem data */
+   );
+
+/** gets objective value of primal CIP solution in transformed problem */
+SCIP_Rational* SCIPsolGetObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
@@ -373,6 +459,16 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    );
 
+/** retransforms exact part of solution to original problem space */
+SCIP_RETCODE SCIPsolRetransformExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
+   );
+
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
  *  from the solution pool (objective coefficients might have changed in the meantime)
  */
@@ -396,6 +492,19 @@ SCIP_Bool SCIPsolsAreEqual(
 
 /** outputs non-zero elements of solution to file stream */
 SCIP_RETCODE SCIPsolPrint(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+/** outputs non-zero elements of solution to file stream */
+SCIP_RETCODE SCIPsolPrintExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -459,7 +568,40 @@ void SCIPsolUpdateLPConsViolation(
    SCIP_Real             relviol             /**< relative violation of constraint */
    );
 
+/** checks whether soltion has exact rational solution values */
+SCIP_Bool SCIPsolIsExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
 
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Rational* SCIPsolGetOrigObjExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** overwrite FP solution with exact values */
+SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
+   SCIP_SOL*             sol,                /**< exact primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< problem data */
+   SCIP_PROB*            transprob,          /**< problem data */
+   SCIP_TREE*            tree                /**< branch and bound tree, or NULL */
+   );
+
+/** creates a copy of a primal CIP solution */
+SCIP_RETCODE SCIPvalsExactCopy(
+   SCIP_VALSEXACT**      valsexact,          /**< pointer to store the copy of the primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VALSEXACT*       sourcevals          /**< primal CIP solution to copy */
+   );
+
+/** frees primal CIP solution */
+SCIP_RETCODE SCIPvalsExactFree(
+   SCIP_VALSEXACT**      valsexact,          /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.

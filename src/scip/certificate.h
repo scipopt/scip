@@ -31,7 +31,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
 #include "scip/type_sol.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
@@ -209,7 +209,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 /** Print a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_NODE*            node,               /**< the current node */
    SCIP_PROB*            prob,               /**< problem data */
@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 /** Print a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
-   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP informations */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_NODE*            node,                /**< node data */
+   SCIP_NODE*            node,               /**< node data */
    SCIP_VAR*             branchvar,          /**< the variable that gets branched on */
    SCIP_BOUNDTYPE        boundtype,          /**< the bounding type */
    SCIP_Real             newbound            /**< the new bound */
@@ -276,7 +276,7 @@ void SCIPcertificatePrintRtpInfeas(
    );
 
 /** prints SOL header and exact solution to certificate file */
-void SCIPcertificatePrintSolex(
+void SCIPcertificatePrintSolExact(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */

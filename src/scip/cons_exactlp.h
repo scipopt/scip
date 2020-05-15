@@ -27,7 +27,7 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -356,7 +356,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
  *  the user must not modify the row!
  */
 SCIP_EXPORT
-SCIP_ROWEX* SCIPgetRowexExactLinear(
+SCIP_ROWEXACT* SCIPgetRowexExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

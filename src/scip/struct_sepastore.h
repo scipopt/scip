@@ -50,9 +50,9 @@ struct SCIP_SepaStore
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
-struct SCIP_SepaStoreEx
+struct SCIP_SepaStoreExact
 {
-   SCIP_ROWEX**          cuts;
+   SCIP_ROWEXACT**       cuts;
    int                   cutssize;
    int                   ncuts;
    int                   ncutsfound;

@@ -31,7 +31,7 @@
 #include "scip/type_set.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
@@ -379,7 +379,7 @@ void SCIPprimalSetUpdateViolations(
    );
    
 /** adds exact primal solution to solution storage, frees the solution afterwards */
-SCIP_RETCODE SCIPprimalTrySolexFree(
+SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -389,7 +389,7 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_lpex.h
+/**@file   struct_lpexact.h
  * @ingroup INTERNALAPI
  * @brief  data structures for exact LP management
  * @author Tobias Achterberg
@@ -62,19 +62,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_LPEX_H__
-#define __SCIP_STRUCT_LPEX_H__
+#ifndef __SCIP_STRUCT_LPEXACT_H__
+#define __SCIP_STRUCT_LPEXACT_H__
 
 
 #include "scip/def.h"
 #include "scip/scip_exact.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
-#include "lpi/type_lpiex.h"
+#include "lpi/type_lpiexact.h"
 #include "scip/rational.h"
 #include "rectlu/rectlu.h"
 
@@ -89,10 +89,10 @@ extern "C" {
  *  don't belong to the current LP (col->rows[j]->lppos == -1) or that are not linked to the column
  *  (col->linkpos[j] == -1).
  */
-struct SCIP_ColEx
+struct SCIP_ColExact
 {
    SCIP_COL*             fpcol;              /**< the floating point column corresponding to this exact column */
-   SCIP_ROWEX**          rows;               /**< the exact rows corresponding the this exact column */
+   SCIP_ROWEXACT**       rows;               /**< the exact rows corresponding the this exact column */
    SCIP_Rational*        obj;                /**< current objective value of column in LP (might be changed in diving or probing) */
    SCIP_Rational*        lb;                 /**< current lower bound of column in LP */
    SCIP_Rational*        ub;                 /**< current upper bound of column in LP */
@@ -130,7 +130,7 @@ struct SCIP_ColEx
  *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row
  *  (row->linkpos[j] == -1).
  */
-struct SCIP_RowEx
+struct SCIP_RowExact
 {
    SCIP_ROW*             fprow;              /**< pointer to the corresponding row in the fp lp */
    SCIP_Rational*        constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
@@ -145,7 +145,7 @@ struct SCIP_RowEx
    SCIP_Rational*        pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    SCIP_Rational**       vals;               /**< coefficients of row entries */
    SCIP_INTERVAL*        valsinterval;       /**< interval-array of coefficients rounded up and down, respectively */
-   SCIP_COLEX**          cols;               /**< columns of row entries, that may have a nonzero primal solution value */
+   SCIP_COLEXACT**       cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
@@ -169,29 +169,28 @@ struct SCIP_RowEx
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
 };
 
-struct SCIP_Psdata
+struct SCIP_ProjShiftData
 {
-   SCIP_Rational**       interiorpt;         /**< stores S-interior point for root node dual problem */
+   SCIP_Rational**       interiorpoint;      /**< stores S-interior point for root node dual problem */
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
    SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
-   int*                  psbasis;            /**< mapping for basis used in factorization */
+   int*                  projshiftbasis;     /**< mapping for basis used in factorization */
 #ifdef SCIP_WITH_GMP
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
    SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
-   int                   npsbasis;           /**< length of psbasis */
+   int                   projshiftbasisdim;  /**< length of projshiftbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
    int                   violationsize;      /**< size of violation array */
-   unsigned int          psdatacon:1;        /**< was project-and-shift data structure constructed? */
-   unsigned int          psdatafail:1;       /**< did the construction of the project-and-shift root node data fail? */
-   unsigned int          pshaspoint:1;       /**< has an S-interior point successfully been constructed? */
-   unsigned int          pshasray:1;         /**< has an S-interior ray successfully been constructed? */
-   unsigned int          psobjweight:1;      /**< weight of the original objective function in lp to compute interior point */
-   unsigned int          psreduceauxlp:1;    /**< should the number of constraints in lp to compute interior point be reduced? */
+   unsigned int          projshiftdatacon:1; /**< was project-and-shift data structure constructed? */
+   unsigned int          projshiftdatafail:1;/**< did the construction of the project-and-shift root node data fail? */
+   unsigned int          projshifthaspoint:1;/**< has an S-interior point successfully been constructed? */
+   unsigned int          projshifthasray:1;  /**< has an S-interior ray successfully been constructed? */
+   unsigned int          projshiftobjweight:1;/**< weight of the original objective function in lp to compute interior point */
    unsigned int          scaleobj:1;         /**< should the objective be scaled to be integral if possible? */
-   unsigned int          psuseintpoint:1;    /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
+   unsigned int          projshiftuseintpoint:1;/**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
    unsigned int          psdualcolselection:2;/**< strategy to select which dual columns to use for lp to compute interior point
                                               *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
    unsigned int          psintpointselection:3;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
@@ -200,12 +199,10 @@ struct SCIP_Psdata
 
 
 /** current LP data */
-struct SCIP_LpEx
+struct SCIP_LpExact
 {
-   SCIP_LP*              fplp;               /**< pointer to the fp lp */
-   SCIP_PSDATA*          psdata;             /**< data stored for usage in project+shift, NULL if ps not used */
-   SCIP_HASHTABLE*       exrowhash;          /**< hashes fprows as keys onto exact rows */
-   SCIP_HASHTABLE*       excolhash;          /**< hashes fprows as keys onto exact rows */
+   SCIP_LP*              fplp;               /**< pointer to the floating point lp */
+   SCIP_PROJSHIFTDATA*   projshiftdata;      /**< data stored for usage in project+shift, NULL if ps not used */
    SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Rational*        looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
@@ -215,13 +212,13 @@ struct SCIP_LpEx
                                               *   ignoring variables, with infinite best bound */
    SCIP_Rational*        cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    SCIP_Rational*        lpiobjlim;          /**< current objective limit in LPI */
-   SCIP_LPIEX*           lpiex;              /**< exact LP solver interface */
-   SCIP_COLEX**          lpicols;            /**< array with columns currently stored in the LP solver */
-   SCIP_ROWEX**          lpirows;            /**< array with rows currently stored in the LP solver */
-   SCIP_COLEX**          chgcols;            /**< array of changed columns not yet applied to the LP solver */
-   SCIP_ROWEX**          chgrows;            /**< array of changed rows not yet applied to the LP solver */
-   SCIP_COLEX**          cols;               /**< array with current LP columns in correct order */
-   SCIP_ROWEX**          rows;               /**< array with current LP rows in correct order */
+   SCIP_LPIEXACT*        lpiexact;              /**< exact LP solver interface */
+   SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */
+   SCIP_ROWEXACT**       lpirows;            /**< array with rows currently stored in the LP solver */
+   SCIP_COLEXACT**       chgcols;            /**< array of changed columns not yet applied to the LP solver */
+   SCIP_ROWEXACT**       chgrows;            /**< array of changed rows not yet applied to the LP solver */
+   SCIP_COLEXACT**       cols;               /**< array with current LP columns in correct order */
+   SCIP_ROWEXACT**       rows;               /**< array with current LP rows in correct order */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */

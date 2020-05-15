@@ -54,6 +54,7 @@ static const char posinf[4] = "inf";
 static const char neginf[5] = "-inf";
 static char stringbuf[SCIP_MAXSTRLEN];
 static SCIP_Rational buffer;
+static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 
 /*
  * Creation methods
@@ -550,9 +551,18 @@ void RatSetReal(
 {
    assert(res != NULL);
 
-   res->isinf = FALSE;
-   res->val = real;
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+   if( REALABS(real) >= infinity )
+   {
+      res->isinf = TRUE;
+      res->val = real > 0 ? 1 : -1;
+      res->isfprepresentable = TRUE;
+   }
+   else
+   {
+      res->isinf = FALSE;
+      res->val = real;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+   }
 }
 
 /*
@@ -595,6 +605,10 @@ void RatAddReal(
    assert(res != NULL && rat != NULL);
    if( rat->isinf )
       RatSet(res, rat);
+   else if( REALABS(real) >= infinity )
+   {
+      RatSetReal(res, real);
+   }
    else
    {
       res->isinf = FALSE;
@@ -638,14 +652,7 @@ void RatDiffReal(
 {
    assert(res != NULL && rat != NULL);
 
-   if( rat->isinf )
-      RatSet(res, rat);
-   else
-   {
-      res->isinf = FALSE;
-      res->val = rat->val - real;
-   }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   RatAddReal(res, rat, -real);
 }
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
@@ -725,6 +732,10 @@ void RatMultReal(
        {
           op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
        }
+    }
+    else if( REALABS(op2) >= infinity )
+    {
+       RatSetReal(res, op2 * op1->val.sign());
     }
     else
     {
@@ -976,6 +987,9 @@ SCIP_Bool RatIsEqualReal(
    )
 {
    assert(rat != NULL);
+
+   if( REALABS(real) >= infinity && rat->isinf )
+      return (real > 0 && RatIsPositive(rat));
 
    return !rat->isinf && rat->val == real;
 }
@@ -1425,7 +1439,7 @@ SCIP_Real RatRoundReal(
    assert(rational != NULL);
 
    if( rational->isinf )
-      return (rational->val.sign() * SCIP_DEFAULT_INFINITY);
+      return (rational->val.sign() * infinity);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_ROUND_NEAREST )
       return RatApproxReal(rational);
 
@@ -1586,7 +1600,7 @@ SCIP_Real RatApproxReal(
    assert(rational != NULL);
 
    if( rational->isinf )
-      return (rational->val.sign() * SCIP_DEFAULT_INFINITY);
+      return (rational->val.sign() * infinity);
 
    retval = rational->val.convert_to<SCIP_Real>();
 #endif
@@ -1794,4 +1808,21 @@ int SCIPrationalarrayGetMaxIdx(
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
 
+}
+
+/** set the infinity threshold to new value */
+void RatSetInfinity(
+   SCIP_Real             inf                 /**< new infinity value */
+   )
+{
+   assert(inf > 0);
+   infinity = inf;
+}
+
+/** return the infinity threshold for rationals */
+SCIP_Real RatGetInfinity(
+   void
+   )
+{
+   return infinity;
 }

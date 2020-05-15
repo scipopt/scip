@@ -40,17 +40,17 @@
 
 #include "scip/struct_lp.h"
 
-#include "scip/lpex.h"
+#include "scip/lpexact.h"
 #include "scip/type_lp.h"
-#include "scip/type_lpex.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-SCIP_RETCODE SCIPlpexComputeSafeBound(
+SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
