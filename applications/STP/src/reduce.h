@@ -124,6 +124,7 @@ extern SCIP_RETCODE    reduce_chain2(SCIP*, GRAPH*, PATH*, int*, int*, int*, int
 
 /* reduce_sd.c
  */
+extern SCIP_RETCODE    reduce_sdImpLongEdge(SCIP*, const int*, GRAPH*, SDGRAPH*, int*);
 extern SCIP_RETCODE    reduce_ledge(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
@@ -218,7 +219,8 @@ extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, R
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
-extern const SCIP_Real* reduce_sdgraphGetMaxCosts(SCIP*, const SDGRAPH*);
+extern const SCIP_Real* reduce_sdgraphGetMaxCosts(SCIP*, SDGRAPH*);
+extern const STP_Bool*       reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
 
 

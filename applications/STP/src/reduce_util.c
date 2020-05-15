@@ -536,8 +536,8 @@ SCIP_RETCODE sdgraphBuildMst(
    PATH* RESTRICT mst = g_sd->sdmst;
    GRAPH* distgraph = g_sd->distgraph;
    STP_Bool* RESTRICT orgedges_isInMst = g_sd->halfedge_isInMst;
-   const int* const nodes_vbase;
-   const int* const nodes_vpred;
+   const int* const nodes_vbase = vnoi->nodes_base;
+   const int* const nodes_vpred = vnoi->nodes_pred;
    SCIP_Real maxcost;
    const int nedges = graph_get_nEdges(g);
    const int nnodes_distgraph = graph_get_nNodes(distgraph);
@@ -561,7 +561,6 @@ SCIP_RETCODE sdgraphBuildMst(
       const int ne = distedge2org[e / 2];
       const SCIP_Real cost = distgraph->cost[e];
 
-      assert(distgraph->path_state[k] == CONNECT);
       assert(e >= 0);
 
       if( cost > maxcost )
@@ -1326,24 +1325,39 @@ SCIP_RETCODE reduce_sdgraphInit(
 }
 
 
-/** initializes SD graph */
+/** return maximum MST edge cost */
 SCIP_Real reduce_sdgraphGetMaxCost(
    const SDGRAPH*        sdgraph             /**< the SD graph */
 )
 {
    assert(sdgraph);
+   assert(GE(sdgraph->mstmaxcost, 0.0));
 
    return sdgraph->mstmaxcost;
 }
 
 
 /** initializes SD graph */
-const SCIP_Real* reduce_sdgraphGetMaxCosts(
-   SCIP*                 scip,               /**< SCIP */
+const STP_Bool* reduce_sdgraphGetMstHalfMark(
    const SDGRAPH*        sdgraph             /**< the SD graph */
 )
 {
+   assert(sdgraph);
+   assert(sdgraph->halfedge_isInMst);
+
+   return sdgraph->halfedge_isInMst;
+}
+
+
+
+/** returns all MST costs in descending order */
+const SCIP_Real* reduce_sdgraphGetMaxCosts(
+   SCIP*                 scip,               /**< SCIP */
+   SDGRAPH*              sdgraph             /**< the SD graph */
+)
+{
    assert(scip && sdgraph);
+   assert(sdgraph->mstcosts);
 
    // todo if flag not set yet, sort! then r
 
@@ -1376,5 +1390,5 @@ void reduce_sdgraphFree(
 
    graph_free(scip, &(g_sd->distgraph), TRUE);
 
-   SCIPfreeMemory(scip, g_sd);
+   SCIPfreeMemory(scip, sdgraph);
 }

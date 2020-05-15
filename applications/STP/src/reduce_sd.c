@@ -42,7 +42,8 @@
 #define STP_BD_MAXDEGREE 4
 #define STP_BD_MAXDNEDGES 6
 #define STP_SDWALK_MAXNPREVS 8
-
+#define STP_BDKIMP_MAXDEGREE 5
+#define STP_BDKIMP_MAXDNEDGES 10
 
 
 /** initializes data needed for SD star tests */
@@ -1022,6 +1023,60 @@ SCIP_Bool isPseudoDeletable(
 
    return success;
 }
+
+
+/** long edge implied special distance test */
+SCIP_RETCODE reduce_sdImpLongEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   GRAPH*                g,                  /**< graph data structure */
+   SDGRAPH*              sdgraph,            /**< SD graph data structure */
+   int*                  nelims              /**< point to store number of deleted edges */
+)
+{
+   const STP_Bool* const edges_isBlocked = reduce_sdgraphGetMstHalfMark(sdgraph);
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool checkstate = (edgestate != NULL);
+   const SCIP_Real maxcost = reduce_sdgraphGetMaxCost(sdgraph);
+
+   assert(scip && nelims);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int e = g->outbeg[k];
+      while( e != EAT_LAST )
+      {
+         assert(e >= 0);
+         if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
+         {
+            e = g->oeat[e];
+            continue;
+         }
+
+         if( SCIPisGE(scip, g->cost[e], maxcost) && !edges_isBlocked[e / 2] )
+         {
+            const int enext = g->oeat[e];
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+
+            e = enext;
+         }
+         else
+         {
+            e = g->oeat[e];
+         }
+      }
+   }
+
+   /* graph might have become disconnected */
+   if( *nelims > 0 )
+   {
+      SCIP_CALL( reduceLevel0(scip, g) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** Special distance test */
 SCIP_RETCODE reduce_sd(
@@ -2196,6 +2251,7 @@ SCIP_RETCODE reduce_ledge(
          blocked[vnoi[v1].edge / 2] = TRUE;
       assert(e != EAT_LAST);
    }
+
 
    for( k = 0; k < nnodes; k++ )
    {
@@ -4103,8 +4159,154 @@ SCIP_RETCODE reduce_sdsp(
    return SCIP_OKAY;
 }
 
+#if 0
 
 /** bd_k test for given Steiner bottleneck distances */
+SCIP_RETCODE reduce_bdk(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   GRAPH*                netgraph,           /**< auxiliary graph structure */
+   PATH*                 netmst,             /**< MST structure */
+   PATH*                 vnoi,               /**< path structure */
+   SCIP_Real*            mstsdist,           /**< MST distance in aux-graph */
+   SCIP_Real*            termdist1,          /**< dist array */
+   SCIP_Real*            termdist2,          /**< second dist array */
+   int*                  vbase,              /**< bases for nearest terminals */
+   int*                  nodesid,            /**< nodes identification array */
+   int*                  neighbterms1,       /**< neighbour terminals array */
+   int*                  neighbterms2,       /**< second neighbour terminals array */
+   int*                  nelims              /**< number of eliminations */
+   )
+{
+   SCIP_Real cutoffs[STP_BDKIMP_MAXDNEDGES];
+   SCIP_Real sd[STP_BDKIMP_MAXDEGREE];
+   SCIP_Real ecost[STP_BDKIMP_MAXDEGREE];
+   int edges[STP_BDKIMP_MAXDEGREE];
+   int adjvert[STP_BDKIMP_MAXDEGREE];
+   GRAPH* auxg;
+   const int nnodes = g->knots;
+
+   assert(scip && g && netgraph && netmst && vnoi);
+   assert(!graph_pc_isPcMw(g));
+
+   /* build auxiliary graph */
+   SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BDKIMP_MAXDEGREE) );
+   assert(auxg->edges == 2 * STP_BDKIMP_MAXDNEDGES);
+
+   SCIP_CALL( graph_path_init(scip, auxg) );
+
+   SCIPdebugMessage("BDK-SD Reduction: ");
+
+   for( int i = 0; i < STP_BDKIMP_MAXDEGREE; i++ )
+      sd[i] = 0.0;
+
+   graph_mark(g);
+
+   for( int degree = 3; degree <= STP_BDKIMP_MAXDEGREE; degree ++ )
+   {
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) || g->grad[i] != degree )
+         {
+            continue;
+         }
+         else
+         {
+            int k = 0;
+            for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               edges[k] = e;
+               ecost[k] = g->cost[e];
+               adjvert[k++] = g->head[e];
+            }
+            assert(k == degree);
+         }
+
+         assert(g->mark[i]);
+
+         /* vertex of degree 3? */
+         if( degree == 3 )
+         {
+            const SCIP_Real costsum = ecost[0] + ecost[1] + ecost[2];
+
+            sd[0] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[0] + ecost[1], vbase, nodesid, neighbterms1, neighbterms2, adjvert[0],
+                  adjvert[1], 300);
+            sd[1] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[1] + ecost[2], vbase, nodesid, neighbterms1, neighbterms2, adjvert[1],
+                  adjvert[2], 300);
+            sd[2] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[2] + ecost[0], vbase, nodesid, neighbterms1, neighbterms2, adjvert[2],
+                  adjvert[0], 300);
+
+            if( isPseudoDeletableDeg3(scip, g, sd, edges, costsum, TRUE) )
+            {
+               SCIP_Bool success;
+
+               cutoffs[0] = sd[0];
+               cutoffs[1] = sd[2];
+               cutoffs[2] = sd[1];
+
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+
+               assert(success);
+               assert(g->grad[i] == 0);
+
+               SCIPdebugMessage("BD3-R Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], costsum);
+               (*nelims)++;
+            }
+         }
+         /* vertex of degree 4? */
+         else if( degree == 4 )
+         {
+            SCIP_Bool success = TRUE;
+
+            for( int k = 0; k < 4; k++ )
+            {
+               auxg->mark[k] = TRUE;
+               for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+               {
+                  const int k2 = auxg->head[e];
+                  if( k2 > k )
+                  {
+                     auxg->cost[e] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[k] + ecost[k2], vbase, nodesid, neighbterms1,
+                           neighbterms2, adjvert[k], adjvert[k2], 200);
+                     auxg->cost[flipedge(e)] = auxg->cost[e];
+                  }
+               }
+            }
+
+            success = isPseudoDeletable(scip, g, auxg, ecost, edges, 4);
+
+            if( success )
+            {
+               int edgecount = 0;
+               for( int k = 0; k < 3; k++ )
+               {
+                  for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
+                  {
+                     const int k2 = auxg->head[e];
+                     if( k2 > k )
+                        cutoffs[edgecount++] = auxg->cost[e];
+                  }
+               }
+
+               SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+
+               if( success )
+                  (*nelims)++;
+            }
+         }
+      }
+   }
+
+   graph_path_exit(scip, auxg);
+   graph_free(scip, &auxg, TRUE);
+
+   return SCIP_OKAY;
+}
+
+#endif
+
+/** bd_k test for given Steiner bottleneck distances */
+/* *** DEPRECATED ***/
 SCIP_RETCODE reduce_bd34WithSd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
