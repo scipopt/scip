@@ -27,8 +27,6 @@
 #ifndef APPLICATIONS_STP_GRAPH_H_
 #define APPLICATIONS_STP_GRAPH_H_
 
-#define VERSION_SCIPJACK "1.3"
-
 #define STP_SPG                      0
 #define STP_SAP                      1
 #define STP_PCSPG                    2
@@ -89,6 +87,19 @@ typedef struct pseudo_ancestors PSEUDOANS;
 
 /** depository for several CSR storages */
 typedef struct compressed_sparse_storages_depository CSRDEPO;
+
+
+/** Voronoi data */
+typedef struct voronoi_storage
+{
+   SCIP_Real*            nodes_dist;         /**< distance to base for each node */
+   int*                  nodes_pred;         /**< predecessor to each node */
+   int*                  nodes_base;         /**< base of each node*/
+   int                   nnodes;             /**< number of nodes */
+   SCIP_Bool             usingBufferArrays;  /**< are buffer arrays being used? */
+} VNOI;
+
+
 
 
 /** CSR like graph storage */
@@ -231,6 +242,7 @@ typedef struct presolve_info
    int    time;
 } PRESOL;
 
+
 /* ONE segment of a path
  */
 typedef struct shortest_path
@@ -238,6 +250,7 @@ typedef struct shortest_path
    SCIP_Real             dist;               /* Distance to the end of the path             */
    signed int            edge;               /* Incoming edge to go along                   */
 } PATH;
+
 
 /** heap entry */
 typedef struct dijkstra_heap_entry
@@ -589,6 +602,11 @@ extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH
 
 /* graph_vnoi.c
  */
+
+extern SCIP_RETCODE graph_vnoiInit(SCIP*, const GRAPH*, SCIP_Bool, VNOI**);
+extern void graph_vnoiFree(SCIP*, VNOI**);
+extern SCIP_RETCODE graph_vnoiCompute(SCIP*, const GRAPH*, VNOI*);
+extern SCIP_RETCODE graph_vnoiComputeImplied(SCIP*, const GRAPH*, VNOI*);
 extern void   graph_voronoi(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
 extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int* RESTRICT, UF* RESTRICT, PATH* RESTRICT);

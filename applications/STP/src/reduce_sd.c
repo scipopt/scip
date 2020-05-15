@@ -44,6 +44,7 @@
 #define STP_SDWALK_MAXNPREVS 8
 
 
+
 /** initializes data needed for SD star tests */
 static
 SCIP_RETCODE sdStarInit(
@@ -2022,7 +2023,9 @@ SCIP_RETCODE reduce_getSdPcMw(
 
 
 
-/*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20) */
+/*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20)
+ *
+ *  *** DEPRECATED! *** */
 SCIP_RETCODE reduce_ledge(
    SCIP*   scip,
    GRAPH*  g,

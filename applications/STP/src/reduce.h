@@ -39,6 +39,20 @@ typedef struct dynamic_complete_minimum_spanning_tree DCMST;
 /** auxiliary data structure for ruling out all 1-hop stars of a given node */
 typedef struct node_one_hop_star STAR;
 
+/** SD distance graph data */
+typedef struct special_distance_graph
+{
+   GRAPH*                distgraph;          /**< (complete) distance graph */
+   PATH*                 sdmst;              /**< MST on sdgraph */
+   SCIP_Real*            mstcosts;           /**< maximum MST edge costs in descending order */
+   int*                  nodes_id;           /**< number of each node in original graph */
+   int*                  halfedge_isInMst;   /**< signifies whether edge of original graph is part of MST
+                                                  NOTE: operates on edges / 2! */
+   SCIP_Real             mstmaxcost;         /**< maximum edge cost */
+   int                   nnodesorg;          /**< number of nodes of original graph */
+   int                   nedgesorg;          /**< number of edges of original graph */
+} SDGRAPH;
+
 
 /** reduced cost result data */
 typedef struct reduce_costs_data

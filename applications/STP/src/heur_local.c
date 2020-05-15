@@ -79,7 +79,7 @@ struct SCIP_HeurData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
 };
 
-/** Voronoi data */
+/** Voronoi data for local heuristic */
 typedef struct Voronoi_data_structures
 {
    PATH*                 vnoi_path;           /**< path */
@@ -90,7 +90,7 @@ typedef struct Voronoi_data_structures
    int*                  vnoi_nodestate;     /**< node state */
    int                   nmems;              /**< number of memorized elements */
    int                   nkpnodes;           /**< number of key path nodes */
-} VNOI;
+} VNOILOC;
 
 
 /** Connectivity data */
@@ -573,7 +573,7 @@ static
 SCIP_RETCODE getLowestCommonAncestors(
    SCIP*                 scip,
    const GRAPH*          graph,
-   const VNOI*           vnoiData,           /**< Voronoi data */
+   const VNOILOC*        vnoiData,           /**< Voronoi data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    CONN*                 connectData         /**< data */
 )
@@ -909,7 +909,7 @@ SCIP_Real getEdgeCostUnbiased(
 static
 SCIP_Real getBoundaryPathCost(
    const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const PCMW*           pcmwData,           /**< data */
    int                   boundaryedge        /**< boundary edge*/
    )
@@ -946,7 +946,7 @@ SCIP_Real getBoundaryPathCost(
 static
 SCIP_Real getBoundaryPathCostPrized(
    const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    int                   boundaryedge,       /**< boundary edge */
    PCMW*                 pcmwData            /**< data */
@@ -1019,7 +1019,7 @@ static
 SCIP_RETCODE connectivityDataKeyElimUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< Voronoi data */
+   const VNOILOC*        vnoiData,           /**< Voronoi data */
    const SGRAPH*         supergraphData,     /**< super-graph*/
    int                   crucnode,           /**< node to eliminate */
    CONN*                 connectData         /**< data */
@@ -1091,7 +1091,7 @@ static
 SCIP_RETCODE connectivityDataInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< Voronoi data */
+   const VNOILOC*        vnoiData,           /**< Voronoi data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    const PCMW*           pcmwData,           /**< data */
    CONN*                 connectData         /**< data */
@@ -1354,7 +1354,7 @@ SCIP_RETCODE soltreeExchangeKeyPath(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const KPATHS*         keypathsData,       /**< key paths */
    const int*            dfstree,            /**< DFS tree */
    const STP_Bool*       scanned,            /**< array to mark which nodes have been scanned */
@@ -1503,7 +1503,7 @@ SCIP_RETCODE soltreeElimKeyPathsStar(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const KPATHS*         keypathsData,       /**< key paths */
    const SGRAPH*         supergraphData,     /**< super-graph */
    const int*            dfstree,            /**< DFS tree */
@@ -1700,7 +1700,7 @@ static
 SCIP_Real getKeyPathReplaceCost(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    SCIP_Real             edgecost_old_in,    /**< edge cost of old edge */
    int                   boundedge_old,      /**< Voronoi boundary edge */
@@ -1782,7 +1782,7 @@ SCIP_RETCODE supergraphComputeMst(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
-   const VNOI*           vnoiData,           /**< data */
+   const VNOILOC*        vnoiData,           /**< data */
    const KPATHS*         keypathsData,       /**< key paths */
    int                   crucnode,           /**< node to eliminate */
    SOLTREE*              soltreeData,        /**< solution tree data */
@@ -2168,7 +2168,7 @@ void vnoiDataRepairPreprocess(
    const KPATHS*         keypathsData,       /**< key paths */
    const CONN*           connectData,        /**< base lists */
    const PCMW*           pcmwData,           /**< data */
-   VNOI*                 vnoiData,           /**< data */
+   VNOILOC*              vnoiData,           /**< data */
    int*                  nheapelems          /**< to store */
 )
 {
@@ -2232,7 +2232,7 @@ static
 void vnoiDataRestore(
    const CONN*           connectData,        /**< base lists */
    const KPATHS*         keypathsData,       /**< key paths */
-   VNOI*                 vnoiData            /**< data */
+   VNOILOC*              vnoiData            /**< data */
 )
 {
    IDX** blists_start = connectData->blists_start;
@@ -2270,7 +2270,7 @@ void vnoiDataReset(
    const CONN*           connectData,        /**< base lists */
    const KPATHS*         keypathsData,       /**< key paths */
    const int*            graphmark,          /**< graph mark */
-   VNOI*                 vnoiData            /**< data */
+   VNOILOC*              vnoiData            /**< data */
 )
 {
    IDX** blists_start = connectData->blists_start;
@@ -3211,7 +3211,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* main loop */
    for( int nruns = 0, localmoves = 1; nruns < LOCAL_MAXRESTARTS && localmoves > 0; nruns++ )
    {
-      VNOI vnoiData = { .vnoi_path = vnoipath, .vnoi_base = vnoibase, .memvdist = memvdist, .memvbase = memvbase,
+      VNOILOC vnoiData = { .vnoi_path = vnoipath, .vnoi_base = vnoibase, .memvdist = memvdist, .memvbase = memvbase,
          .meminedges = meminedges, .vnoi_nodestate = graph->path_state, .nmems = 0, .nkpnodes = -1 };
       KPATHS keypathsData = { .kpnodes = kpnodes, .kpedges = kpedges, .kpcost = 0.0, .nkpnodes = 0, .nkpedges = 0,
          .kptailnode = -1 };

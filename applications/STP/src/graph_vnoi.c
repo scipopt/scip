@@ -108,6 +108,92 @@ inline static int nearest(
 }
 
 
+/** build a Voronoi region w.r.t. shortest paths for all terminals */
+static
+void vnoiCompute(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   DHEAP*                dheap,              /**< heap */
+   VNOI*                 vnoi                /**< vnoi data structure */
+   )
+{
+   SCIP_Real* RESTRICT nodes_dist = vnoi->nodes_dist;
+   int* RESTRICT nodes_pred = vnoi->nodes_pred;
+   int* RESTRICT nodes_base = vnoi->nodes_base;
+   int* const state = dheap->position;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(graph_heap_isClean(dheap));
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(UNKNOWN == state[i]);
+
+      if( Is_term(g->term[i]) )
+      {
+         nodes_base[i] = i;
+         nodes_dist[i] = 0.0;
+
+         graph_heap_correct(i, 0.0, dheap);
+      }
+      else
+      {
+         nodes_base[i] = UNKNOWN;
+         nodes_dist[i] = FARAWAY;
+      }
+
+      nodes_pred[i] = UNKNOWN;
+   }
+
+   assert(dheap->size > 0);
+
+   if( nnodes > 1 )
+   {
+      const SCIP_Real* const cost = g->cost;
+      const int* const gOeat = g->oeat;
+      const int* const gHead = g->head;
+
+      /* until the heap is empty */
+      while( dheap->size > 0 )
+      {
+         const int k = graph_heap_deleteMinReturnNode(dheap);
+         assert(CONNECT == state[k]);
+
+         for( int i = g->outbeg[k]; i >= 0; i = gOeat[i] )
+         {
+            const int m = gHead[i];
+
+            if( state[m] != CONNECT )
+            {
+               const SCIP_Real newdist = nodes_dist[k] + cost[i];
+
+               /* check whether the path (to m) including k is shorter than the so far best known */
+               if( nodes_dist[m] > newdist )
+               {
+                  graph_heap_correct(m, newdist, dheap);
+                  nodes_dist[m] = newdist;
+                  nodes_base[m] = nodes_base[k];
+               }
+            }
+         }
+      }
+   }
+}
+
+
+/** build a Voronoi region w.r.t. implied shortest paths for all terminals */
+static
+void vnoiComputeImplied(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   DHEAP*                dheap,              /**< heap */
+   VNOI*                 vnoi                /**< vnoi data structure */
+   )
+{
+
+}
+
+
 /** extend a Voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE graph_voronoiExtend(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1062,4 +1148,110 @@ void graph_voronoiRepairMult(
          }
       }
    }
+}
+
+
+/** initializes VNOI structure */
+SCIP_RETCODE graph_vnoiInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure to work on */
+
+   SCIP_Bool             useBufferArrays,    /**< should buffer arrays be used? */
+   VNOI**                vnoi                /**< the VNOI */
+)
+{
+   VNOI* vnoi_d;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, vnoi) );
+
+   vnoi_d = *vnoi;
+   vnoi_d->nnodes = nnodes;
+   vnoi_d->usingBufferArrays = useBufferArrays;
+
+   if( useBufferArrays )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vnoi_d->nodes_dist), nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vnoi_d->nodes_pred), nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vnoi_d->nodes_base), nnodes) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(vnoi_d->nodes_dist), nnodes) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(vnoi_d->nodes_pred), nnodes) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(vnoi_d->nodes_base), nnodes) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** computes Voronoi region on given graph */
+SCIP_RETCODE graph_vnoiCompute(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure to work on */
+   VNOI*                 vnoi                /**< the VNOI */
+)
+{
+   DHEAP* dheap;
+   const int nnodes = graph_get_nNodes(graph);
+   assert(vnoi->nnodes == graph->knots);
+
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &(dheap) ));
+   vnoiCompute(scip, graph, dheap, vnoi);
+
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
+
+   return SCIP_OKAY;
+}
+
+
+/** computes implied Voronoi region on given graph  */
+SCIP_RETCODE graph_vnoiComputeImplied(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure to work on */
+   VNOI*                 vnoi                /**< the VNOI */
+)
+{
+   DHEAP* dheap;
+   const int nnodes = graph_get_nNodes(graph);
+   assert(vnoi->nnodes == graph->knots);
+
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &(dheap) ));
+   vnoiComputeImplied(scip, graph, dheap, vnoi);
+
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees VNOI structure */
+void graph_vnoiFree(
+   SCIP*                 scip,               /**< SCIP */
+   VNOI**                vnoi                /**< the VNOI */
+)
+{
+   VNOI* vnoi_d;
+   assert(scip && vnoi);
+
+   vnoi_d = *vnoi;
+   assert(vnoi_d);
+
+   if( vnoi_d->usingBufferArrays )
+   {
+      SCIPfreeBufferArray(scip, &(vnoi_d->nodes_base));
+      SCIPfreeBufferArray(scip, &(vnoi_d->nodes_pred));
+      SCIPfreeBufferArray(scip, &(vnoi_d->nodes_dist));
+   }
+   else
+   {
+      SCIPfreeMemoryArray(scip, &(vnoi_d->nodes_base));
+      SCIPfreeMemoryArray(scip, &(vnoi_d->nodes_pred));
+      SCIPfreeMemoryArray(scip, &(vnoi_d->nodes_dist));
+   }
+
+   SCIPfreeMemory(scip, vnoi);
 }

@@ -55,6 +55,8 @@
 #include "branch_stp.h"
 #endif
 
+#define VERSION_SCIPJACK "1.3"
+
 #define STP_SYM_PRIZE
 #define STP_AGG_SYM
 
