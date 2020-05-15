@@ -408,8 +408,9 @@ SCIP_RETCODE redLoopStp_inner(
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool le = TRUE;
    SCIP_Bool sd = TRUE;
+   SCIP_Bool sdc = FALSE;
+   SCIP_Bool sdstar = TRUE;
    SCIP_Bool da = redparameters->dualascent;
-   SCIP_Bool sdc = TRUE;
    SCIP_Bool bd3 = redparameters->nodereplacing;
    SCIP_Bool bred = redparameters->boundreduce;
    SCIP_Bool nvsl = redparameters->nodereplacing;
@@ -423,6 +424,7 @@ SCIP_RETCODE redLoopStp_inner(
       int lenelims = 0;
       int sdnelims = 0;
       int sdcnelims = 0;
+      int sdstarnelims = 0;
       int bd3nelims = 0;
       int nvslnelims = 0;
       int brednelims = 0;
@@ -442,22 +444,6 @@ SCIP_RETCODE redLoopStp_inner(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-#if 1
-      {
-         int todo; // replace sds and call sdc maybe at after the loop?
-      int nelimsx = 0;
-      SCIP_CALL( reduce_sdStarBiased(scip, ((inner_rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND)
-            , NULL, g, &nelimsx));
-      }
-
-#if 0
-      FILE *fp;
-                    fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redsNew2.txt", "a+");
-                    fprintf(fp, "%s %d \n", SCIPgetProbName(scip), nelimsx);
-                    fclose(fp);
-                    exit(1);
-#endif
-#endif
 
       if( le || extensive )
       {
@@ -487,6 +473,26 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
+
+
+      if( sdstar || extensive )
+      {
+         SCIP_CALL( reduce_sdStarBiased(scip, ((inner_rounds > 0) ? 2 * STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND)
+            , NULL, g, &sdstarnelims));
+
+         if( sdstarnelims <= reductbound )
+            sdstar = FALSE;
+
+         reduceStatsPrint(fullreduce, "sdstar", sdstarnelims);
+      }
+
+#if 0
+      FILE *fp;
+                    fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redsNew2.txt", "a+");
+                    fprintf(fp, "%s %d \n", SCIPgetProbName(scip), nelimsx);
+                    fclose(fp);
+                    exit(1);
+#endif
 
       if( sdc || extensive )
       {
@@ -568,7 +574,8 @@ SCIP_RETCODE redLoopStp_inner(
       SCIP_CALL(reduceLevel0(scip, g));
       SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
 
-      if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound )
+      /* too few eliminations? */
+      if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) <= 2 * reductbound )
       {
          // at least one successful round and full reduce and no inner_restarts yet?
          if( inner_rounds > 0 && fullreduce && inner_restarts == 0 )
@@ -576,10 +583,13 @@ SCIP_RETCODE redLoopStp_inner(
             inner_restarts++;
             le = TRUE;
             sd = TRUE;
+            sdstar = TRUE;
             sdc = TRUE;
             da = TRUE;
             bd3 = nodereplacing;
             nvsl = nodereplacing;
+
+            assert(extensive || sdcnelims == 0);
 
 #ifdef STP_PRINT_STATS
             printf("RESTART reductions (restart %d) \n", inner_restarts);
@@ -591,13 +601,11 @@ SCIP_RETCODE redLoopStp_inner(
          }
       }
 
-      if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) > 0 )
+      if( extensive && (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) > 0 )
          rerun = TRUE;
 
       inner_rounds++;
    } /* inner reduction loop */
-
-   // call sdc here?
 
    return SCIP_OKAY;
 }
