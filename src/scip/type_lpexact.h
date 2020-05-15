@@ -42,7 +42,7 @@ typedef struct SCIP_ColExact SCIP_COLEXACT;
 typedef struct SCIP_RowExact SCIP_ROWEXACT;
 
 /** data used for project and shift */
-typedef struct SCIP_Psdata SCIP_PSDATA;
+typedef struct SCIP_ProjShiftData SCIP_PROJSHIFTDATA;
 
 /** LP structure
  *

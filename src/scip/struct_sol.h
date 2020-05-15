@@ -74,6 +74,7 @@ struct SCIP_Sol
    SCIP_REALARRAY*       vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
+   SCIP_VALSEXACT*       valsexact;          /**< exact solution values (only used if this is an exact solution) */
    union
    {
       SCIP_HEUR*         heur;               /**< heuristic that found the solution, if solution is of heuristic type */
@@ -90,7 +91,6 @@ struct SCIP_Sol
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
-   SCIP_VALSEXACT*       valsexact;          /**< exact solution values if this is an exact solution */
 };
 
 /** exact primal CIP solution

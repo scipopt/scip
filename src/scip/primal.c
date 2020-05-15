@@ -141,10 +141,10 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nbestsolsfound = 0;
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
-   (*primal)->upperboundex = NULL;
+   (*primal)->upperboundexact = NULL;
    (*primal)->cutoffbound = SCIP_INVALID;
    (*primal)->updateviolations = TRUE;
-   (*primal)->cutoffboundex = NULL;
+   (*primal)->cutoffboundexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -187,10 +187,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
-   if( (*primal)->cutoffboundex != NULL )
+   if( (*primal)->cutoffboundexact != NULL )
    {
-      RatFreeBlock(blkmem, &(*primal)->upperboundex);
-      RatFreeBlock(blkmem, &(*primal)->cutoffboundex);
+      RatFreeBlock(blkmem, &(*primal)->upperboundexact);
+      RatFreeBlock(blkmem, &(*primal)->cutoffboundexact);
    }
 
    BMSfreeMemory(primal);
@@ -300,8 +300,8 @@ SCIP_RETCODE primalSetCutoffbound(
 
       RatCreateBuffer(set->buffer, &tmp);
       RatSetReal(tmp, primal->cutoffbound);
-      if( RatIsGT(primal->cutoffboundex, tmp) )
-         RatSet(primal->cutoffboundex, tmp);
+      if( RatIsGT(primal->cutoffboundexact, tmp) )
+         RatSet(primal->cutoffboundexact, tmp);
       RatFreeBuffer(set->buffer, &tmp);
    }
 
@@ -2028,8 +2028,8 @@ SCIP_RETCODE primalAddSolExact(
 
    SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
 
-   RatMIN(primal->cutoffboundex, primal->cutoffboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );
-   RatMIN(primal->upperboundex, primal->upperboundex, SCIPsolGetObjExact(sol, set, transprob, origprob) );
+   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
+   RatMIN(primal->upperboundexact, primal->upperboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,

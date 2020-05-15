@@ -105,8 +105,8 @@ typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation info
 typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
-typedef struct SCIP_ExVarData SCIP_EXVARDATA;     /**< exact data (obj, bounds, ...) */
-typedef struct SCIP_DomEx SCIP_DOMEX;             /**< exact domain (using rationals) */
+typedef struct SCIP_VarDataExact SCIP_VARDATAEXACT;/**< exact data (obj, bounds, ...) */
+typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using rationals) */
 
 /** frees user data of original variable (called when the original variable is freed)
  *

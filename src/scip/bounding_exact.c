@@ -389,21 +389,21 @@ SCIP_RETCODE psChooseS(
    SCIP_Rational** rootactivity;
    SCIP_Rational** rootprimal;
    SCIP_Bool lperror;
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
 
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
-   assert(psdata != NULL);
+   assert(projshiftdata != NULL);
 
-   nextendedrows = psdata->nextendedrows;
+   nextendedrows = projshiftdata->nextendedrows;
 
    /* build includedrows vector based on psfpdualcolwiseselection, this determines the matrix D */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &psdata->includedrows, nextendedrows) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
-      psdata->includedrows[i] = 0;
-   if( psdata->psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      projshiftdata->includedrows[i] = 0;
+   if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
        * (ones with finite dual objective coef. in [lhs',-rhs',lb',-ub'])
@@ -411,19 +411,19 @@ SCIP_RETCODE psChooseS(
       for( i = 0; i < nrows; i++ )
       {
          if( !RatIsNegInfinity(lpexact->rows[i]->lhs) )
-            psdata->includedrows[i] = 1;
+            projshiftdata->includedrows[i] = 1;
          if( !RatIsInfinity(lpexact->rows[i]->rhs) )
-            psdata->includedrows[nrows + i] = 1;
+            projshiftdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
          if( !RatIsNegInfinity(lpexact->cols[i]->lb) )
-            psdata->includedrows[2*nrows + i] = 1;
+            projshiftdata->includedrows[2*nrows + i] = 1;
          if( !RatIsInfinity(lpexact->cols[i]->ub) )
-            psdata->includedrows[2*nrows + ncols + i] = 1;
+            projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
-   else if( psdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
+   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
    {
       /* determone which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -443,22 +443,22 @@ SCIP_RETCODE psChooseS(
       for( i = 0; i < nrows; i++ )
       {
          if( RatIsEqual(rootactivity[i], lpexact->rows[i]->lhs) )
-            psdata->includedrows[i] = 1;
+            projshiftdata->includedrows[i] = 1;
          if( RatIsEqual(rootactivity[i], lpexact->rows[i]->rhs) )
-            psdata->includedrows[nrows + i] = 1;
+            projshiftdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
          if( RatIsEqual(rootprimal[i], lpexact->cols[i]->lb) )
-            psdata->includedrows[2*nrows + i] = 1;
+            projshiftdata->includedrows[2*nrows + i] = 1;
          if( RatIsEqual(rootprimal[i], lpexact->cols[i]->ub) )
-            psdata->includedrows[2*nrows + ncols + i] = 1;
+            projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
 
       RatFreeBufferArray(set->buffer, &rootactivity, nrows);
       RatFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
-   else if( psdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
+   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
       /* determine which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -468,18 +468,18 @@ SCIP_RETCODE psChooseS(
       for( i = 0; i < nrows; i++ )
       {
          if( SCIPsetIsFeasEQ(set, SCIProwGetLPActivity(lp->rows[i], set, stat, lp), SCIProwGetLhs(lp->rows[i])) )
-            psdata->includedrows[i] = 1;
+            projshiftdata->includedrows[i] = 1;
          if( SCIPsetIsFeasEQ(set, SCIProwGetLPActivity(lp->rows[i], set, stat, lp), SCIProwGetRhs(lp->rows[i])) )
-            psdata->includedrows[nrows + i] = 1;
+            projshiftdata->includedrows[nrows + i] = 1;
       }
 
       assert(ncols == lp->ncols);
       for( i = 0; i < ncols; i++ )
       {
          if( SCIPsetIsFeasEQ(set, SCIPcolGetPrimsol(lp->cols[i]), SCIPcolGetLb(lp->cols[i])) )
-            psdata->includedrows[2*nrows + i] = 1;
+            projshiftdata->includedrows[2*nrows + i] = 1;
          if( SCIPsetIsFeasEQ(set, SCIPcolGetPrimsol(lp->cols[i]), SCIPcolGetUb(lp->cols[i])) )
-            psdata->includedrows[2*nrows + ncols + i] = 1;
+            projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
    else
@@ -516,13 +516,13 @@ SCIP_RETCODE psFactorizeD(
    int* projlen;
    int* projind;
    SCIP_Rational** projval;
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
-   nextendedrows = psdata->nextendedrows;
+   nextendedrows = projshiftdata->nextendedrows;
    nnonz = getNNonz(lpexact);
 
    /* allocate memory for the projection factorization */
@@ -535,21 +535,21 @@ SCIP_RETCODE psFactorizeD(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &psdata->psbasis, nextendedrows) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->projshiftbasis, nextendedrows) );
 
-   /* use includedrows to construct psbasis, a description/mapping for D it has length npsbasis and psbasis[i] tells what
+   /* use includedrows to construct projshiftbasis, a description/mapping for D it has length projshiftbasisdim and projshiftbasis[i] tells what
     * column (out of the original nextendecons) the ith column in D is
     */
    pos = 0;
    for( i = 0; i < nextendedrows; i++ )
    {
-      if( psdata->includedrows[i] )
+      if( projshiftdata->includedrows[i] )
       {
-         psdata->psbasis[pos] = i;
+         projshiftdata->projshiftbasis[pos] = i;
          pos++;
       }
    }
-   psdata->npsbasis = pos;
+   projshiftdata->projshiftbasisdim = pos;
 
    /* build the sparse representation of D that will be passed to the RECTLU code for factorization */
    pos = 0;
@@ -600,7 +600,7 @@ SCIP_RETCODE psFactorizeD(
    }
 
 #ifdef PS_OUT
-   printf("factoring matrix: ncols=%d, npsbasis=%d\n", ncols, psdata->npsbasis);
+   printf("factoring matrix: ncols=%d, projshiftbasisdim=%d\n", ncols, projshiftdata->projshiftbasisdim);
    for( i = 0; i < nextendedrows; i++ )
       printf("   j=%d:\t projbeg=<%d>,\t projlen=<%d>\n", i, projbeg[i], projlen[i]);
 
@@ -613,21 +613,21 @@ SCIP_RETCODE psFactorizeD(
 #endif
 
    /* factorize projection matrix D
-    * - psbasis stores a mapping to tell us what D is, i.e. the dual columns corresponding to dual valuse that have a
+    * - projshiftbasis stores a mapping to tell us what D is, i.e. the dual columns corresponding to dual valuse that have a
     *   strictly positive value in the relative interior point
     * - D is equal to a subset of [A',-A',I,-I] and is given to the factor code in sparse column representation
     */
    RatSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
 
-   rval = RECTLUbuildFactorization(&psdata->rectfactor, ncols, psdata->npsbasis,
-      psdata->psbasis, projvalgmp, projind, projbeg, projlen);
+   rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
+      projshiftdata->projshiftbasis, projvalgmp, projind, projbeg, projlen);
 
    /* if rval != 0 then RECTLUbuildFactorization has failed. In this case the project-and-shift method will not work and
     * we will return failure
     */
    if( rval )
    {
-      psdata->psdatafail = TRUE;
+      projshiftdata->projshiftdatafail = TRUE;
       SCIPdebugMessage("factorization of matrix for project-and-shift method failed.\n");
    }
 
@@ -712,13 +712,13 @@ SCIP_RETCODE setupPsOpt(
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    int pos;
    int i;
    int j;
    int indx;
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
    /* set up the objective */
    pos = 0;
@@ -757,7 +757,7 @@ SCIP_RETCODE setupPsOpt(
    assert(pos == ndvarmap);
 
    /* set alpha and beta. */
-   RatSetReal(alpha, psdata->psobjweight);
+   RatSetReal(alpha, projshiftdata->projshiftobjweight);
    RatSetInt(beta, 1, 1);
 
    if( RatIsPositive(alpha) )
@@ -796,7 +796,7 @@ SCIP_RETCODE setupPsOpt(
       RatSet(pslhs[i], lpexact->cols[i]->obj);
       RatSet(psrhs[i], lpexact->cols[i]->obj);
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       RatSetInt(pslhs[ncols + i], 0, 1);
       RatSetString(psrhs[ncols + i], "inf");
@@ -828,7 +828,7 @@ SCIP_RETCODE setupPsOpt(
          pslen[indx]++;
       }
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       pslen[ncols + i] = 2;
    }
@@ -877,12 +877,12 @@ SCIP_RETCODE setupPsOpt(
          pslen[indx]++;
       }
    }
-   /* set up the last npsbasis rows */
+   /* set up the last projshiftbasisdim rows */
    pos = ncols;
    for( i = 0; i < ndvarmap; i++ )
    {
       indx = dvarmap[i];
-      if( psdata->includedrows[indx] )
+      if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
          RatSetInt(psval[psbeg[pos]], 1, 1);
@@ -958,15 +958,15 @@ SCIP_RETCODE setupPsArb(
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    int pos;
    int i;
    int j;
    int indx;
    int nextendedrows;
 
-   psdata = lpexact->psdata;
-   nextendedrows = psdata->nextendedrows;
+   projshiftdata = lpexact->projshiftdata;
+   nextendedrows = projshiftdata->nextendedrows;
 
    /* set objective */
       for( i = 0; i < ncols + ndvarmap; i++ )
@@ -1130,13 +1130,13 @@ SCIP_RETCODE setupPsArbDual(
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    int pos;
    int i;
    int j;
    int indx;
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
    /* set up the objective*/
    for( i = 0; i < ndvarmap + 1; i++ )
@@ -1168,7 +1168,7 @@ SCIP_RETCODE setupPsArbDual(
       RatSetInt(pslhs[i], 0, 1);
       RatSetInt(psrhs[i], 0, 1);
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       RatSetInt(pslhs[ncols + i], 0, 1);
       RatSetString(psrhs[ncols + i], "inf");
@@ -1201,7 +1201,7 @@ SCIP_RETCODE setupPsArbDual(
          pslen[indx]++;
       }
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       pslen[ncols + i] = 2;
    }
@@ -1264,12 +1264,12 @@ SCIP_RETCODE setupPsArbDual(
       pslen[i]++;
    }
 
-   /* set up the last npsbasis rows */
+   /* set up the last projshiftbasisdim rows */
    pos = ncols;
    for( i = 0; i < ndvarmap; i++ )
    {
       indx = dvarmap[i];
-      if( psdata->includedrows[indx] )
+      if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
          RatSetInt(psval[psbeg[pos]], 1, 1);
@@ -1313,13 +1313,13 @@ SCIP_RETCODE setupPsTwoStage(
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    int pos;
    int i;
    int j;
    int indx;
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
    /* the representation of the problem will be:
        * max:              [0,1]*[y|d]'
@@ -1354,7 +1354,7 @@ SCIP_RETCODE setupPsTwoStage(
       RatSet(pslhs[i], lpexact->cols[i]->obj);
       RatSet(psrhs[i], lpexact->cols[i]->obj);
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       RatSetInt(pslhs[ncols + i], 0, 1);
       RatSetString(psrhs[ncols + i], "inf");
@@ -1386,7 +1386,7 @@ SCIP_RETCODE setupPsTwoStage(
          pslen[indx]++;
       }
    }
-   for( i = 0; i < psdata->npsbasis; i++ )
+   for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       pslen[ncols + i] = 2;
    }
@@ -1437,12 +1437,12 @@ SCIP_RETCODE setupPsTwoStage(
       }
    }
 
-   /* set up the last npsbasis rows */
+   /* set up the last projshiftbasisdim rows */
    pos = ncols;
    for( i = 0; i < ndvarmap; i++ )
    {
       indx = dvarmap[i];
-      if( psdata->includedrows[indx] )
+      if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
          RatSetInt(psval[psbeg[pos]], 1, 1);
@@ -1518,7 +1518,7 @@ SCIP_RETCODE psComputeSintPointRay(
    SCIP_Rational** psobj = NULL;
    SCIP_Rational** pslb = NULL;
    SCIP_Rational** psub = NULL;
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    SCIP_ROWEXACT** lprows;
    SCIP_COLEXACT** lpcols;
 
@@ -1538,12 +1538,12 @@ SCIP_RETCODE psComputeSintPointRay(
    int* dvarmap;
    int* dvarincidence;
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
 
-   assert(psdata != NULL);
-   nextendedrows = psdata->nextendedrows;
+   assert(projshiftdata != NULL);
+   nextendedrows = projshiftdata->nextendedrows;
 
    psncols = 0;
    psnrows = 0;
@@ -1593,7 +1593,7 @@ SCIP_RETCODE psComputeSintPointRay(
    ndvarmap = pos;
 
    /* if we are finding an interior ray, always use the optimized selection */
-   if( psdata->psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
+   if( projshiftdata->psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following problem
@@ -1603,17 +1603,16 @@ SCIP_RETCODE psComputeSintPointRay(
        *                                     y   >= 0
        *                                  M >= d >= 0
        * M is a bound on how interior we will let the point be, S is the set of dual columns chosen earlier
-       * which could have nonzero values for the S-interior point.  The parameter psreduceauxlp=TRUE then we
-       * exclude all dual variables y_i that are not in S to not be present in this problem.
+       * which could have nonzero values for the S-interior point.
        *
        * After solving this y will be the S-interior point and d will be the common slack.
        * Here we actually construct the dual in row representation so it can be solved directly.
        */
 
       psncols =  ndvarmap + 1;
-      psnrows = ncols + psdata->npsbasis;
+      psnrows = ncols + projshiftdata->projshiftbasisdim;
       psnnonz = computePsNnonz(lpexact, dvarincidence);
-      psnnonz += 2*psdata->npsbasis;
+      psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
@@ -1628,7 +1627,7 @@ SCIP_RETCODE psComputeSintPointRay(
        * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
        * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
        *
-       * beta is set equal to the param psobjweight and alpha is set equal to
+       * beta is set equal to the param projshiftobjweight and alpha is set equal to
        * alpha := (1-beta)/||OBJ||
        */
 
@@ -1655,8 +1654,8 @@ SCIP_RETCODE psComputeSintPointRay(
          /* get optimal dual solution */
          SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
-         RatSet(psdata->commonslack, sol[psncols - 1]);
-         if( RatIsZero(psdata->commonslack) )
+         RatSet(projshiftdata->commonslack, sol[psncols - 1]);
+         if( RatIsZero(projshiftdata->commonslack) )
          {
             /* if commonslack == 0, point/ray is not interior */
             SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
@@ -1667,15 +1666,15 @@ SCIP_RETCODE psComputeSintPointRay(
             for( i = 0; i < ndvarmap; i++ )
             {
                if( findintpoint )
-                  RatSet( psdata->interiorpt[dvarmap[i]], sol[i]);
+                  RatSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
                else
-                  RatSet( psdata->interiorray[dvarmap[i]], sol[i]);
+                  RatSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
 
             }
             if( findintpoint )
-               psdata->pshaspoint = TRUE;
+               projshiftdata->projshifthaspoint = TRUE;
             else
-               psdata->pshasray = TRUE;
+               projshiftdata->projshifthasray = TRUE;
          }
       }
       else
@@ -1684,7 +1683,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
    }
    /* use 'a'rbitrary interior point */
-   else if( psdata->psintpointselection == PS_INTPOINTSEL_ARB )
+   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARB )
    {
       SCIPdebugMessage("building aux. problem with arbitrary interior point\n");
 
@@ -1763,28 +1762,28 @@ SCIP_RETCODE psComputeSintPointRay(
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
          SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, NULL, sol, NULL, NULL) );
          if( !RatIsZero(sol[psnrows - 1]) )
-            RatInvert(psdata->commonslack, sol[psnrows - 1]);
+            RatInvert(projshiftdata->commonslack, sol[psnrows - 1]);
          else
          {
-            RatSetInt(psdata->commonslack, 0, 1);
+            RatSetInt(projshiftdata->commonslack, 0, 1);
          }
-         if( RatIsZero(psdata->commonslack) )
+         if( RatIsZero(projshiftdata->commonslack) )
          {
             SCIPdebugMessage("   --> project-and-shift did not find S-interior point/ray\n");
          }
 
          /* interior point is y/lambda */
-         psdata->pshaspoint = TRUE;
+         projshiftdata->projshifthaspoint = TRUE;
          for( i = 0; i < ndvarmap; i++ )
          {
-            if( psdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
+            if( projshiftdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
             {
                SCIPdebugMessage("   --> project-and-shift did not find S-interior point/ray\n");
-               psdata->pshaspoint = FALSE;
+               projshiftdata->projshifthaspoint = FALSE;
                i = ndvarmap;
             }
             else
-               RatDiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[psnrows - 1]);
+               RatDiv( projshiftdata->interiorpoint[dvarmap[i]], sol[i], sol[psnrows - 1]);
          }
       }
       else
@@ -1793,7 +1792,7 @@ SCIP_RETCODE psComputeSintPointRay(
       }
    }
    /* use 'A'rbitrary interior point in transposed form*/
-   else if( psdata->psintpointselection == PS_INTPOINTSEL_ARBDUAL )
+   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARBDUAL )
    {
       SCIPdebugMessage("building new version of arbitrary interior point aux. problem\n");
 
@@ -1818,10 +1817,10 @@ SCIP_RETCODE psComputeSintPointRay(
        * y is a vector of length (ndvarmap) and d is a single variable
        * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
        */
-      psncols =  ndvarmap + 1 + psdata->npsbasis;
-      psnrows = ncols + psdata->npsbasis;
+      psncols =  ndvarmap + 1 + projshiftdata->projshiftbasisdim;
+      psnrows = ncols + projshiftdata->projshiftbasisdim;
       psnnonz = computePsNnonz(lpexact, dvarincidence);
-      psnnonz += 2*psdata->npsbasis + ncols;
+      psnnonz += 2*projshiftdata->projshiftbasisdim + ncols;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
@@ -1853,33 +1852,33 @@ SCIP_RETCODE psComputeSintPointRay(
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
          SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
          if( !RatIsZero(sol[ndvarmap]) )
-            RatInvert(psdata->commonslack, sol[ndvarmap]);
+            RatInvert(projshiftdata->commonslack, sol[ndvarmap]);
          else
          {
-            RatSetInt(psdata->commonslack, 0, 1);
+            RatSetInt(projshiftdata->commonslack, 0, 1);
          }
-         if( RatIsZero(psdata->commonslack) == 0 )
+         if( RatIsZero(projshiftdata->commonslack) == 0 )
          {
             SCIPdebugMessage("   --> interior point not found\n");
          }
 
          /* interior point is y/lambda */
-         psdata->pshaspoint = TRUE;
+         projshiftdata->projshifthaspoint = TRUE;
          for( i = 0; i < ndvarmap; i++ )
          {
-            if( psdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
+            if( projshiftdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
             {
-               psdata->pshaspoint = FALSE;
+               projshiftdata->projshifthaspoint = FALSE;
                SCIPdebugMessage("   --> interior point not found\n");
                i = ndvarmap;
             }
             else
-               RatDiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[ndvarmap]);
+               RatDiv( projshiftdata->interiorpoint[dvarmap[i]], sol[i], sol[ndvarmap]);
          }
 
 #ifdef PS_OUT
          printf("constraints all satisfied by slack=");
-         RatPrint(psdata->commonslack);
+         RatPrint(projshiftdata->commonslack);
          printf("\n");
 
          printf("objective value of aux problem=");
@@ -1887,10 +1886,10 @@ SCIP_RETCODE psComputeSintPointRay(
          printf("\n");
 
          printf("relative interior solution:\n");
-         for( i = 0; i <  psdata->nextendedrows; i++ )
+         for( i = 0; i <  projshiftdata->nextendedrows; i++ )
          {
             printf("   i=%d: ", i);
-            RatPrint(psdata->interiorpt[i]);
+            RatPrint(projshiftdata->interiorpoint[i]);
             printf("\n");
          }
 #endif
@@ -1898,10 +1897,10 @@ SCIP_RETCODE psComputeSintPointRay(
       else
       {
          printlpiexacterr( pslpiexact );
-         psdata->psdatafail = TRUE;
+         projshiftdata->projshiftdatafail = TRUE;
       }
    }
-   else if( psdata->psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
+   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following two problems
@@ -1916,16 +1915,15 @@ SCIP_RETCODE psComputeSintPointRay(
        *                                     y   >= 0
        *                                       d >= d* <-- where d* is the optimal solution from the first problem
        * M is a bound on how interior we will let the point be, S is the set of dual columns chosen earlier
-       * which could have nonzero values for the S-interior point.  The parameter psreduceauxlp=TRUE then we
-       * exclude all dual variables y_i that are not in S to not be present in this problem.
+       * which could have nonzero values for the S-interior point.
        *
        * After solving this y will be the S-interior point and d will be the common slack.
        * Here we actually construct the dual in row representation so it can be solved directly.
        */
       psncols =  ndvarmap + 1;
-      psnrows = ncols + psdata->npsbasis;
+      psnrows = ncols + projshiftdata->projshiftbasisdim;
       psnnonz = computePsNnonz(lpexact, dvarincidence);
-      psnnonz += 2*psdata->npsbasis;
+      psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
@@ -2023,8 +2021,8 @@ SCIP_RETCODE psComputeSintPointRay(
          SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
          /* assign interior point solution to constraint handler data */
-         RatSet(psdata->commonslack, sol[psncols - 1]);
-         if( RatIsZero(psdata->commonslack) )
+         RatSet(projshiftdata->commonslack, sol[psncols - 1]);
+         if( RatIsZero(projshiftdata->commonslack) )
          {
             SCIPdebugMessage("   --> interior point not found \n");
          }
@@ -2032,9 +2030,9 @@ SCIP_RETCODE psComputeSintPointRay(
          {
             for( i = 0; i < ndvarmap; i++ )
             {
-               RatSet( psdata->interiorpt[dvarmap[i]], sol[i]);
+               RatSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
             }
-            psdata->pshaspoint = TRUE;
+            projshiftdata->projshifthaspoint = TRUE;
          }
       }
       else
@@ -2045,16 +2043,16 @@ SCIP_RETCODE psComputeSintPointRay(
    else
    {
       SCIPerrorMessage("invalid parameter setting <%d> for selection method to compute interior point\n",
-         psdata->psintpointselection);
+         projshiftdata->psintpointselection);
       return SCIP_PARAMETERWRONGVAL;
    }
 
    for( i = 0; i < ndvarmap; i++ )
    {
-      if( psdata->pshaspoint )
-         RatCanonicalize(psdata->interiorpt[i]);
-      if( psdata->pshasray )
-         RatCanonicalize(psdata->interiorray[i]);
+      if( projshiftdata->projshifthaspoint )
+         RatCanonicalize(projshiftdata->interiorpoint[i]);
+      if( projshiftdata->projshifthasray )
+         RatCanonicalize(projshiftdata->interiorray[i]);
    }
 
    /* free memory */
@@ -2113,12 +2111,12 @@ SCIP_RETCODE constructPSData(
    )
 {
    int i;
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
 
    assert(lpexact != NULL);
-   assert(lpexact->psdata != NULL);
+   assert(lpexact->projshiftdata != NULL);
 
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
    /* consider the primal problem as
     * min c'x
@@ -2137,15 +2135,15 @@ SCIP_RETCODE constructPSData(
     */
 
    /* if the ps data was already constructed, exit */
-   if( psdata->psdatacon )
+   if( projshiftdata->projshiftdatacon )
       return SCIP_OKAY;
 
    SCIPclockStart(stat->provedfeaspstime, set);
    /* now mark that this function has been called */
-   psdata->psdatacon = TRUE;
+   projshiftdata->projshiftdatacon = TRUE;
 
    SCIPdebugMessage("calling constructPSdata()\n");
-   SCIP_CALL( RatCreateBlock(blkmem, &psdata->commonslack) );
+   SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
@@ -2153,40 +2151,40 @@ SCIP_RETCODE constructPSData(
 
    assert(lpexact->nrows > 0);
 
-   psdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
+   projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
    SCIP_CALL( psChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( psFactorizeD(lp, lpexact, set, prob, blkmem, psdata->psuseintpoint) );
+   SCIP_CALL( psFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
-   if( !psdata->psdatafail )
+   if( !projshiftdata->projshiftdatafail )
    {
-      if( TRUE || !psdata->psuseintpoint )
+      if( TRUE || !projshiftdata->projshiftuseintpoint )
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
-         SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorray, psdata->nextendedrows) );
+         SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
       }
-      if( psdata->psuseintpoint || !psdata->pshasray )
+      if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
-         SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorpt, psdata->nextendedrows) );
+         SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
       }
    }
 
-   /* if construction of both point and ray has failed, mark psdatafail as true. */
-   if( !psdata->pshaspoint && !psdata->pshasray )
+   /* if construction of both point and ray has failed, mark projshiftdatafail as true. */
+   if( !projshiftdata->projshifthaspoint && !projshiftdata->projshifthasray )
    {
-      psdata->psdatafail = TRUE;
+      projshiftdata->projshiftdatafail = TRUE;
    }
 
-   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->violation, lpexact->ncols) );
-   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->correction, psdata->nextendedrows) );
-   psdata->violationsize = lpexact->ncols;
+   SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
+   SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
+   projshiftdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
    SCIPdebugMessage("exiting constructPSdata()\n");
@@ -2221,7 +2219,7 @@ SCIP_RETCODE getPSdual(
    SCIP_Rational* lambda2;
    SCIP_Rational* maxv;
    SCIP_Rational* dualbound;
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
    mpq_t* violationgmp = NULL;
    mpq_t* correctiongmp = NULL;
    SCIP_Bool* isupper;
@@ -2248,16 +2246,16 @@ SCIP_RETCODE getPSdual(
     */
 
    /* if data has not been constructed, or it failed, then exit */
-   psdata = lpexact->psdata;
+   projshiftdata = lpexact->projshiftdata;
 
-   assert(psdata->psdatacon);
-   if( (psdata->psdatafail && !usefarkas) || (usefarkas && !psdata->pshasray) )
+   assert(projshiftdata->projshiftdatacon);
+   if( (projshiftdata->projshiftdatafail && !usefarkas) || (usefarkas && !projshiftdata->projshifthasray) )
    {
       lp->hasprovedbound = FALSE;
       return SCIP_OKAY;
    }
 
-   /* constructpsdata should always be called first */
+   /* constructprojshiftdata should always be called first */
    if( usefarkas )
    {
       stat->nprojshift++;
@@ -2276,15 +2274,15 @@ SCIP_RETCODE getPSdual(
    SCIPdebugMessage("calling getPSdual()\n");
 
    /* decide if we should use ray or point to compute bound */
-   if( !usefarkas && psdata->psuseintpoint && psdata->pshaspoint )
+   if( !usefarkas && projshiftdata->projshiftuseintpoint && projshiftdata->projshifthaspoint )
    {
       /* if we are supposed to use the interior point, and it exists use it */
       useinteriorpoint = TRUE;
    }
    else
    {
-      /* in this case, since psdatafail != TRUE, pshasray should be true -- use it */
-      assert( psdata->pshasray );
+      /* in this case, since projshiftdatafail != TRUE, projshifthasray should be true -- use it */
+      assert( projshiftdata->projshifthasray );
       useinteriorpoint = FALSE;
    }
 
@@ -2300,18 +2298,18 @@ SCIP_RETCODE getPSdual(
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
-   nextendedrows = psdata->nextendedrows;
+   nextendedrows = projshiftdata->nextendedrows;
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
-   nrowsps = psdata->nextendedrows/2 - ncols;
+   nrowsps = projshiftdata->nextendedrows/2 - ncols;
    shift = nrows - nrowsps;
 
-   assert(ncols == psdata->violationsize);
+   assert(ncols == projshiftdata->violationsize);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
    SCIPsetAllocBufferArray(set, &approxdual, nrows + ncols);
-   violation = psdata->violation;
-   correction = psdata->correction;
+   violation = projshiftdata->violation;
+   correction = projshiftdata->correction;
 
    /** @todo: exip this could be removed */
    for( i = 0; i < nrows + ncols; ++i )
@@ -2478,7 +2476,7 @@ SCIP_RETCODE getPSdual(
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
-      /* compute [z] with Dz=r (D depends on psdata->psfpdualcolwiseselection) */
+      /* compute [z] with Dz=r (D depends on projshiftdata->psfpdualcolwiseselection) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
       RatSetGMPArray(violationgmp, violation, ncols);
@@ -2488,7 +2486,7 @@ SCIP_RETCODE getPSdual(
          mpq_init(correctiongmp[i]);
       }
 
-      rval = RECTLUsolveSystem(psdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
+      rval = RECTLUsolveSystem(projshiftdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
       if( rval )
       {
          lp->hasprovedbound = FALSE;
@@ -2503,11 +2501,11 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
-      for( i = 0; i < psdata->npsbasis; i++ )
+      for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          printf("   i=%d: ", i);
          RatPrint(correction[i]);
-         printf(", position=%d\n", psdata->psbasis[i]);
+         printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
 
@@ -2516,10 +2514,10 @@ SCIP_RETCODE getPSdual(
       /* projection step: compute bold(y)=y^+[z 0];
        * save the corrected components in the correction vector
        */
-      for( i = 0; i < psdata->npsbasis; i++ )
+      for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          // map is the point in the extended space -> transform it back to the original space
-         int map = psdata->psbasis[i];
+         int map = projshiftdata->projshiftbasis[i];
          if( map < nrowsps )
          {
             if( !isupper[map] )
@@ -2557,11 +2555,11 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
       printf("updated dual solution:\n");
-      for( i = 0; i < psdata->npsbasis; i++ )
+      for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          printf("   i=%d: ", i);
          RatPrint(correction[i]);
-         printf(", position=%d\n", psdata->psbasis[i]);
+         printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
 
@@ -2576,14 +2574,14 @@ SCIP_RETCODE getPSdual(
 
          /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
          RatSetInt(lambda1, 1, 1);
-         for( i = 0; i < psdata->npsbasis; i++ )
+         for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             if( RatIsNegative(correction[i]) )
             {
-               int map = psdata->psbasis[i];
+               int map = projshiftdata->projshiftbasis[i];
 
-               RatSet(tmp2, psdata->interiorpt[map]);
-               RatDiff(tmp, psdata->interiorpt[map], correction[i]);
+               RatSet(tmp2, projshiftdata->interiorpoint[map]);
+               RatDiff(tmp, projshiftdata->interiorpoint[map], correction[i]);
                RatDiv(tmp2, tmp2, tmp);
                RatMIN(lambda1, lambda1, tmp2);
             }
@@ -2597,12 +2595,12 @@ SCIP_RETCODE getPSdual(
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
          RatSetInt(lambda1, 1, 1);
          //RatSetInt(lambda2, 0, 1);
-         for( i = 0; i < psdata->npsbasis; i++ )
+         for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
-            int map = psdata->psbasis[i];
-            if( RatIsNegative(correction[i]) && psdata->includedrows[map] )
+            int map = projshiftdata->projshiftbasis[i];
+            if( RatIsNegative(correction[i]) && projshiftdata->includedrows[map] )
             {
-               RatDiv(tmp, correction[i], psdata->interiorray[map]);
+               RatDiv(tmp, correction[i], projshiftdata->interiorray[map]);
                RatNegate(tmp, tmp);
                RatMAX(lambda2, lambda2, tmp);
             }
@@ -2628,9 +2626,9 @@ SCIP_RETCODE getPSdual(
 #endif
 
       /* tranfsorm correction back to approxdual */
-      for( i = 0; i < psdata->npsbasis; i++ )
+      for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
-         int map = psdata->psbasis[i];
+         int map = projshiftdata->projshiftbasis[i];
          if( map < nrowsps )
             RatAdd(approxdual[map], approxdual[map], correction[i]);
          else if( map < 2 * nrowsps )
@@ -2677,10 +2675,10 @@ SCIP_RETCODE getPSdual(
             if( i < nrows && i >= nrowsps )
                continue;
             map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
-            RatMult(tmp, useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
             RatDiff(approxdual[i], approxdual[i], tmp);
             map = (i < nrowsps) ? i : i + nrowsps - shift;
-            RatMult(tmp, useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
             RatAdd(approxdual[i], approxdual[i], tmp);
          }
       }
@@ -2773,8 +2771,8 @@ SCIP_RETCODE getPSdual(
    }
 
 #ifdef PS_OUT
-   printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
-   RatPrint(psdata->commonslack);
+   printf("   common slack=%.20f (", RgetRealApprox(projshiftdata->commonslack));
+   RatPrint(projshiftdata->commonslack);
    printf(")\n");
 
    printf("   max violation=%.20f (", RgetRealApprox(maxv));
@@ -2864,7 +2862,7 @@ char chooseBoundingMethod(
       {
          SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem) );
-         if( !lpexact->psdata->psdatafail )
+         if( !lpexact->projshiftdata->projshiftdatafail )
             dualboundmethod = 'p';
          else
             dualboundmethod = 'e';
@@ -2899,7 +2897,7 @@ char chooseBoundingMethod(
          {
             SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                            prob, blkmem) );
-            if( !lpexact->psdata->psdatafail )
+            if( !lpexact->projshiftdata->projshiftdatafail )
                dualboundmethod = 'p';
             else
                dualboundmethod = 'e';

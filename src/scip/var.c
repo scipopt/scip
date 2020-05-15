@@ -2109,7 +2109,7 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
 
    var->exactdata->colexact = NULL;
-   var->exactdata->exvarstatus = var->varstatus;
+   var->exactdata->varstatusexact = var->varstatus;
    var->exactdata->origvarindex = var->index;
 
    if( obj != NULL )
@@ -2150,7 +2150,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    targetvar->exactdata->colexact = NULL;
-   targetvar->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
+   targetvar->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
 
    return SCIP_OKAY;
 }
@@ -3644,7 +3644,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
 
    /* switch variable status */
-   var->exactdata->exvarstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
+   var->exactdata->varstatusexact = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    /* create column of variable */
    SCIP_CALL( SCIPcolExactCreate(&(var->exactdata->colexact), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
@@ -5949,7 +5949,7 @@ SCIP_RETCODE varNegateExactData(
    RatDiffReal(negvar->exactdata->locdom.lb, origvar->exactdata->locdom.ub, constant);
    RatNegate(negvar->exactdata->locdom.lb, negvar->exactdata->locdom.lb);
 
-   negvar->exactdata->exvarstatus = SCIP_VARSTATUS_NEGATED;
+   negvar->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED;
 
    assert(RatIsEqualReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
    assert(RatIsEqualReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
@@ -17721,7 +17721,7 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
    assert(var != NULL);
    assert(var->exactdata != NULL);
 
-   return var->exactdata->exvarstatus;
+   return var->exactdata->varstatusexact;
 }
 
 

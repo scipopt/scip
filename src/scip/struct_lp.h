@@ -192,7 +192,6 @@ struct SCIP_Col
  */
 struct SCIP_Row
 {
-   SCIP_ROWEXACT*        rowexact;              /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    SCIP_Real             lhs;                /**< left hand side of row */
    SCIP_Real             rhs;                /**< right hand side of row */
@@ -222,6 +221,7 @@ struct SCIP_Row
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
+   SCIP_ROWEXACT*        rowexact;              /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
@@ -293,6 +293,7 @@ struct SCIP_Lp
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
+   SCIP_LPEXACT*         lpexact;            /**< pointer to exact rational lp, or null if in normal fp soliving mode */
    SCIP_Real*            soldirection;       /**< normalized vector in direction of primal solution from current LP solution */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    SCIP_Real*            divechgsides;       /**< stores the lhs/rhs changed in the current diving */
@@ -393,7 +394,6 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
    SCIP_Bool             hasprovedbound;      /**< is the bound of the lp proved to be exactly dual feasible */
-   SCIP_LPEXACT*         lpexact;                /**< pointer to exact rational lp, or null if in normal fp soliving mode */
 };
 
 #ifdef __cplusplus

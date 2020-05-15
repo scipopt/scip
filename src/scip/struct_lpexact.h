@@ -169,29 +169,28 @@ struct SCIP_RowExact
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
 };
 
-struct SCIP_Psdata
+struct SCIP_ProjShiftData
 {
-   SCIP_Rational**       interiorpt;         /**< stores S-interior point for root node dual problem */
+   SCIP_Rational**       interiorpoint;      /**< stores S-interior point for root node dual problem */
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
    SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
-   int*                  psbasis;            /**< mapping for basis used in factorization */
+   int*                  projshiftbasis;     /**< mapping for basis used in factorization */
 #ifdef SCIP_WITH_GMP
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
    SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
-   int                   npsbasis;           /**< length of psbasis */
+   int                   projshiftbasisdim;  /**< length of projshiftbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
    int                   violationsize;      /**< size of violation array */
-   unsigned int          psdatacon:1;        /**< was project-and-shift data structure constructed? */
-   unsigned int          psdatafail:1;       /**< did the construction of the project-and-shift root node data fail? */
-   unsigned int          pshaspoint:1;       /**< has an S-interior point successfully been constructed? */
-   unsigned int          pshasray:1;         /**< has an S-interior ray successfully been constructed? */
-   unsigned int          psobjweight:1;      /**< weight of the original objective function in lp to compute interior point */
-   unsigned int          psreduceauxlp:1;    /**< should the number of constraints in lp to compute interior point be reduced? */
+   unsigned int          projshiftdatacon:1; /**< was project-and-shift data structure constructed? */
+   unsigned int          projshiftdatafail:1;/**< did the construction of the project-and-shift root node data fail? */
+   unsigned int          projshifthaspoint:1;/**< has an S-interior point successfully been constructed? */
+   unsigned int          projshifthasray:1;  /**< has an S-interior ray successfully been constructed? */
+   unsigned int          projshiftobjweight:1;/**< weight of the original objective function in lp to compute interior point */
    unsigned int          scaleobj:1;         /**< should the objective be scaled to be integral if possible? */
-   unsigned int          psuseintpoint:1;    /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
+   unsigned int          projshiftuseintpoint:1;/**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
    unsigned int          psdualcolselection:2;/**< strategy to select which dual columns to use for lp to compute interior point
                                               *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
    unsigned int          psintpointselection:3;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
@@ -202,10 +201,8 @@ struct SCIP_Psdata
 /** current LP data */
 struct SCIP_LpExact
 {
-   SCIP_LP*              fplp;               /**< pointer to the fp lp */
-   SCIP_PSDATA*          psdata;             /**< data stored for usage in project+shift, NULL if ps not used */
-   SCIP_HASHTABLE*       rowexacthash;          /**< hashes fprows as keys onto exact rows */
-   SCIP_HASHTABLE*       colexacthash;          /**< hashes fprows as keys onto exact rows */
+   SCIP_LP*              fplp;               /**< pointer to the floating point lp */
+   SCIP_PROJSHIFTDATA*   projshiftdata;      /**< data stored for usage in project+shift, NULL if ps not used */
    SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Rational*        looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */

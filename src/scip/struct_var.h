@@ -165,10 +165,11 @@ struct SCIP_Dom
    SCIP_HOLELIST*        holelist;           /**< list of holes */
 };
 
-struct SCIP_DomEx
+/** exact domain of a variable */
+struct SCIP_DomExact
 {
-   SCIP_Rational*        lb;
-   SCIP_Rational*        ub;
+   SCIP_Rational*        lb;                 /**< exact lower bound of variables */
+   SCIP_Rational*        ub;                 /**< exact upper bound of variables */
 };
 
 /** original variable information */
@@ -203,21 +204,20 @@ struct SCIP_Negate
 };
 
 /** exact variable domains and further information */
-struct SCIP_ExVarData
+struct SCIP_VarDataExact
 {
    SCIP_Rational*        obj;                /**< exact rational objective */
-   SCIP_DOMEX            locdom;             /**< exact local bounds */
-   SCIP_DOMEX            glbdom;             /**< exact global bound */
-   SCIP_DOMEX            origdom;            /**< original domain */
+   SCIP_DOMEXACT         locdom;             /**< exact local bounds */
+   SCIP_DOMEXACT         glbdom;             /**< exact global bound */
+   SCIP_DOMEXACT         origdom;            /**< original domain */
    SCIP_COLEXACT*        colexact;              /**< column in exact lp */
-   SCIP_VARSTATUS        exvarstatus;        /**< status in exact lp */
+   SCIP_VARSTATUS        varstatusexact;        /**< status in exact lp */
    int                   origvarindex;       /**< index of original variable (needed for certificate), or -1 */
 };
 
 /** variable of the problem */
 struct SCIP_Var
 {
-   SCIP_EXVARDATA*       exactdata;          /**< exact variable data (obj, lb, ub, ...) */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif
@@ -247,6 +247,7 @@ struct SCIP_Var
       SCIP_MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
+   SCIP_VARDATAEXACT*    exactdata;          /**< exact variable data (obj, lb, ub, ...) */
    char*                 name;               /**< name of the variable */
    SCIP_DECL_VARCOPY     ((*varcopy));       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */

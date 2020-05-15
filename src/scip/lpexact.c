@@ -3100,41 +3100,40 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
 
    assert(lp != NULL);
    assert(set != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &lp->psdata) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &lp->projshiftdata) );
 
-   psdata = lp->psdata;
+   projshiftdata = lp->projshiftdata;
 
-   psdata->interiorpt = NULL;
-   psdata->interiorray = NULL;
-   psdata->violation = NULL;
-   psdata->commonslack = NULL;
-   psdata->includedrows = NULL;
-   psdata->psbasis = NULL;
+   projshiftdata->interiorpoint = NULL;
+   projshiftdata->interiorray = NULL;
+   projshiftdata->violation = NULL;
+   projshiftdata->commonslack = NULL;
+   projshiftdata->includedrows = NULL;
+   projshiftdata->projshiftbasis = NULL;
 #ifdef SCIP_WITH_GMP
-   psdata->rectfactor = (qsnum_factor_work*) NULL;
+   projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
 #endif
-   psdata->commonslack = NULL;
+   projshiftdata->commonslack = NULL;
 
-   psdata->nextendedrows = 0;
-   psdata->npsbasis = 0;
-   psdata->violationsize = 0;
+   projshiftdata->nextendedrows = 0;
+   projshiftdata->projshiftbasisdim = 0;
+   projshiftdata->violationsize = 0;
 
-   psdata->psdatacon = FALSE;
-   psdata->psdatafail = FALSE;
-   psdata->pshaspoint = FALSE;
-   psdata->pshasray = FALSE;
-   psdata->psobjweight = FALSE;
-   psdata->psreduceauxlp = FALSE;
-   psdata->scaleobj = FALSE;
-   psdata->psuseintpoint = TRUE;
-   psdata->psdualcolselection = PS_DUALCOSTSEL_ACTIVE_FPLP;
-   psdata->psintpointselection = PS_INTPOINTSEL_OPT;
+   projshiftdata->projshiftdatacon = FALSE;
+   projshiftdata->projshiftdatafail = FALSE;
+   projshiftdata->projshifthaspoint = FALSE;
+   projshiftdata->projshifthasray = FALSE;
+   projshiftdata->projshiftobjweight = FALSE;
+   projshiftdata->scaleobj = FALSE;
+   projshiftdata->projshiftuseintpoint = TRUE;
+   projshiftdata->psdualcolselection = PS_DUALCOSTSEL_ACTIVE_FPLP;
+   projshiftdata->psintpointselection = PS_INTPOINTSEL_OPT;
 
    return SCIP_OKAY;
 }
@@ -3147,38 +3146,38 @@ SCIP_RETCODE SCIPlpPsdataFree(
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
    )
 {
-   SCIP_PSDATA* psdata;
+   SCIP_PROJSHIFTDATA* projshiftdata;
 
    assert(lp != NULL);
    assert(set != NULL);
    assert(blkmem != NULL);
 
-   psdata = lp->psdata;
-   if( psdata->psdatacon )
+   projshiftdata = lp->projshiftdata;
+   if( projshiftdata->projshiftdatacon )
    {
-      if( psdata->pshaspoint )
-         RatFreeBlockArray(blkmem, &psdata->interiorpt, psdata->nextendedrows);
-      if( psdata->pshasray )
-         RatFreeBlockArray(blkmem, &psdata->interiorray, psdata->nextendedrows);
-      RatFreeBlockArray(blkmem, &psdata->violation, psdata->violationsize);
-      RatFreeBlockArray(blkmem, &psdata->correction, psdata->nextendedrows);
+      if( projshiftdata->projshifthaspoint )
+         RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
+      if( projshiftdata->projshifthasray )
+         RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
+      RatFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
+      RatFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
 
-      RatFreeBlock(blkmem, &psdata->commonslack);
+      RatFreeBlock(blkmem, &projshiftdata->commonslack);
 
-      BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
-      BMSfreeBlockMemoryArrayNull(blkmem, &psdata->psbasis, psdata->nextendedrows);
+      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
+      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
 #ifdef SCIP_WITH_GMP
-      if( psdata->rectfactor != NULL )
-         RECTLUfreeFactorization(psdata->rectfactor);
+      if( projshiftdata->rectfactor != NULL )
+         RECTLUfreeFactorization(projshiftdata->rectfactor);
 #endif
    }
-   assert(psdata->interiorpt == NULL);
-   assert(psdata->interiorray == NULL);
-   assert(psdata->includedrows == NULL);
-   assert(psdata->psbasis == NULL);
-   assert(psdata->commonslack == NULL);
+   assert(projshiftdata->interiorpoint == NULL);
+   assert(projshiftdata->interiorray == NULL);
+   assert(projshiftdata->includedrows == NULL);
+   assert(projshiftdata->projshiftbasis == NULL);
+   assert(projshiftdata->commonslack == NULL);
 
-   BMSfreeBlockMemoryNull(blkmem, &lp->psdata);
+   BMSfreeBlockMemoryNull(blkmem, &lp->projshiftdata);
 
    return SCIP_OKAY;
 }
@@ -3200,9 +3199,9 @@ SCIP_Bool SCIPlpExactPSpossible(
    )
 {
    assert(lp != NULL);
-   assert(lp->psdata != NULL);
+   assert(lp->projshiftdata != NULL);
 
-   return !(lp->psdata->psdatafail);
+   return !(lp->projshiftdata->projshiftdatafail);
 }
 
 /** checks that lp and fplp are properly synced */
