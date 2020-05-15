@@ -2250,7 +2250,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalPerspective)
             }
 
             /* indicator is fixed -> w0 cup [wlb1,wub1] = w0 */
-            SCIPevalConsExprExprActivity(scip, conshdlr, expr, &indintervals[0], FALSE);
+            SCIPevalConsExprExprActivity(scip, conshdlr, expr, &indintervals[0], FALSE, FALSE);
 
             /* TODO as long as we only allow expressions where all vars are semicontinuous, this should hold */
             assert(indintervals[0].inf == indintervals[0].sup);
