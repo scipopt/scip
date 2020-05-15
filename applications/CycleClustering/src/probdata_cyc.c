@@ -26,9 +26,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "probdata_cyc.h"
 
+#include "scip/cons_expr.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
 #include "scip/var.h"
 #include <assert.h>
 
@@ -629,7 +629,10 @@ SCIP_RETCODE createProbQP(
    SCIP_PROBDATA*        probdata            /**< The problem data */
    )
 {
+   SCIP_VAR** quadvars1;
+   SCIP_VAR** quadvars2;
    SCIP_VAR** edgevars;
+   SCIP_Real* quadcoefs;
    SCIP_CONS* temp;
    SCIP_Real scale;
    char varname[SCIP_MAXSTRLEN];
@@ -645,6 +648,11 @@ SCIP_RETCODE createProbQP(
    probdata->scale = scale;
    /* create variables for bins */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+
+   /* allocate memory to create nonlinear constraints */
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nbins * nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nbins * nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nbins * nbins) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->binvars), nbins) );
 
@@ -727,35 +735,36 @@ SCIP_RETCODE createProbQP(
 
    for( c = 0; c < ncluster; ++c)
    {
-      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL,
-         -SCIPinfinity(scip), 0.0) );
+      SCIP_Real one = 1.0;
+      int nquadterms = 0;
 
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c], 1.0) );
-
+      /* collect quadratic terms */
       for( i = 0; i < nbins; ++i )
       {
          for( j = 0; j < nbins; ++j )
          {
             if( i != j )
             {
-               SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c],
-                  probdata->binvars[j][phi(c,ncluster)], probdata->cmatrix[j][i] - probdata->cmatrix[i][j]) );
+               quadvars1[nquadterms] = probdata->binvars[i][c];
+               quadvars2[nquadterms] = probdata->binvars[j][phi(c,ncluster)];
+               quadcoefs[nquadterms] = probdata->cmatrix[j][i] - probdata->cmatrix[i][j];
+               ++nquadterms;
             }
          }
       }
 
+      /* create, add, and release constraint */
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c);
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &temp, consname, 1, &edgevars[c], &one, nquadterms, quadvars1,
+         quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
 
    for( c = 0; c < ncluster; ++c )
    {
-      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL,
-         -SCIPinfinity(scip), 0.0) );
-
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c+ncluster], 1.0) );
+      SCIP_Real one = 1.0;
+      int nquadterms = 0;
 
       for( i = 0; i < nbins; ++i)
       {
@@ -763,12 +772,18 @@ SCIP_RETCODE createProbQP(
          {
             if( i > j )
             {
-               SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][c],
-                  -scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
+               quadvars1[nquadterms] = probdata->binvars[i][c];
+               quadvars2[nquadterms] = probdata->binvars[j][c];
+               quadcoefs[nquadterms] = -scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]);
+               ++nquadterms;
             }
          }
       }
 
+      /* create, add, and release constraint */
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c);
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &temp, consname, 1, &edgevars[c+ncluster], &one, nquadterms, quadvars1,
+         quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
@@ -779,6 +794,11 @@ SCIP_RETCODE createProbQP(
    }
 
    SCIPfreeBlockMemoryArray(scip, &edgevars, (SCIP_Longint) 2 * ncluster);
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &quadcoefs);
+   SCIPfreeBufferArray(scip, &quadvars2);
+   SCIPfreeBufferArray(scip, &quadvars1);
 
    return SCIP_OKAY;
 }
