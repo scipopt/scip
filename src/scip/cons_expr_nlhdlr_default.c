@@ -390,7 +390,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    assert(expr != NULL);
 
    /* call the interval evaluation callback of the expression handler */
-   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, intevalvardata) );
+   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, global, intevalvardata) );
 
    return SCIP_OKAY;
 }

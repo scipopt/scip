@@ -135,7 +135,7 @@ SCIP_RETCODE detect(
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
@@ -249,7 +249,7 @@ SCIP_RETCODE estimate(
    SCIPinfoMessage(scip, NULL, " at x1=%g x2=%g x3=%g\n",
       SCIPgetSolVal(scip, sol, x_1), SCIPgetSolVal(scip, sol, x_2), SCIPgetSolVal(scip, sol, x_3));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
