@@ -2780,7 +2780,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
 
    /* for real variables notify constraints to repropagate and possibly resimplify */
-   if( SCIPisConsExprExprVar(expr) )
+   if( SCIPisConsExprExprVar(expr) && ((SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || ((eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0)) )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS** conss;
@@ -2796,8 +2796,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          assert(conss[c] != NULL);  /*lint !e613*/
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
 
-         /* if boundchange, then mark constraints to be propagated again */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
+         /* if boundtightening, then mark constraints to be propagated again */
+         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
          {
             consdata->ispropagated = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
