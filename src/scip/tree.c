@@ -816,6 +816,9 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
+      if( set->misc_exactsolve )
+         RatSet(node->lowerboundexact, parent->lowerboundexact);
+
       if( parent->depth >= SCIP_MAXTREEDEPTH )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
@@ -5775,8 +5778,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, downub) );
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
 
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {

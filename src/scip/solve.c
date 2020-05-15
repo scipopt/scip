@@ -2877,24 +2877,11 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
+      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
+            || (set->misc_exactsolve && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
-         if( set->misc_exactsolve )
-         {
-            SCIP_Rational* bound;
-
-            assert(lp->hasprovedbound);
-
-            SCIP_CALL( RatCreateBuffer(set->buffer, &bound) );
-            SCIPlpExactGetObjval(lp->lpexact, set, transprob, bound);
-
-            if( RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) )
-            {
-               RatFreeBuffer(set->buffer, &bound);
-               return SCIP_OKAY;
-            }
-            RatFreeBuffer(set->buffer, &bound);
-         }
+         if( set->misc_exactsolve && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) )
+            return SCIP_OKAY;
 
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
