@@ -611,7 +611,7 @@ static
 SCIP_RETCODE conshdlrdataIncludeUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   SCIP_EXLINCONSUPGRADE*  linconsupgrade      /**< linear constraint upgrade method */
+   SCIP_EXLINCONSUPGRADE*  linconsupgrade    /**< linear constraint upgrade method */
    )
 {
    int i;
@@ -1345,7 +1345,7 @@ void consdataComputePseudoActivity(
    }
 
    if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
-      return; /** exip what to do in this case? */
+      return; /** @todo exip what to do in this case? */
    else if( pseudoactivityneginf > 0 )
       RatSetString(pseudoactivity, "-inf");
    else if( pseudoactivityposinf > 0 )

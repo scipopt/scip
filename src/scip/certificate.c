@@ -561,8 +561,6 @@ void concatCert(
    derivationfile = SCIPfopen(certificate->derivationfilename, "r");
 
    /* append the derivation file to the problem file */
-
-
    while( 0 != (size = SCIPfread(buffer, sizeof(char), SCIP_MAXSTRLEN, derivationfile)) )
       SCIPfwrite(buffer, sizeof(char), size, certificate->file);
 
@@ -576,7 +574,7 @@ void SCIPcertificateExit(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
-  )
+   )
 {
    int i;
 
@@ -1237,7 +1235,6 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       RatMAX(nodedataparent->derbound_left, nodedataparent->derbound_left, newbound);
       if( RatIsNegInfinity(newbound) )
          nodedataparent->leftinfeas = TRUE;
-
    }
    else
    {
@@ -1357,11 +1354,11 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          {
             val = certificate->workbound->boundval;
             RatAddProd(farkasrhs, vals[len], val);
-
          }
          len++;
       }
    }
+
    for( i = 0; i < lpexact->nrows; ++i )
    {
       SCIP_ROWEXACT* row;
@@ -1797,7 +1794,6 @@ int SCIPcertificatePrintUnsplitting(
          RatFreeBuffer(set->buffer, &lowerbound);
          RatFreeBuffer(set->buffer, &val);
       }
-
    }
 
    certificateFreeNodeData(certificate, node);

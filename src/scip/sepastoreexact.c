@@ -111,7 +111,7 @@ SCIP_RETCODE SCIPsepastoreExactFree(
 
 /** informs separation storage that the setup of the initial LP starts now */
 void SCIPsepastoreExactStartInitialLP(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -123,7 +123,7 @@ void SCIPsepastoreExactStartInitialLP(
 
 /** informs separation storage that the setup of the initial LP is now finished */
 void SCIPsepastoreExactEndInitialLP(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -310,7 +310,7 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROWEXACT** SCIPsepastoreExactGetCuts(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -320,7 +320,7 @@ SCIP_ROWEXACT** SCIPsepastoreExactGetCuts(
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreExactGetNCuts(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -330,7 +330,7 @@ int SCIPsepastoreExactGetNCuts(
 
 /** get total number of cuts found so far */
 int SCIPsepastoreExactGetNCutsFound(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -340,7 +340,7 @@ int SCIPsepastoreExactGetNCutsFound(
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreExactGetNCutsFoundRound(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -350,7 +350,7 @@ int SCIPsepastoreExactGetNCutsFoundRound(
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreExactGetNCutsApplied(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    )
 {
    assert(sepastoreexact != NULL);

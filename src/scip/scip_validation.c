@@ -210,11 +210,11 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    SCIP_Rational*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
-                                               *  or NULL */
+                                              *   or NULL */
    SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    )
 {
    SCIP_Bool localfeasible;

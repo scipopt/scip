@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP informations */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_NODE*            node,                /**< node data */
+   SCIP_NODE*            node,               /**< node data */
    SCIP_VAR*             branchvar,          /**< the variable that gets branched on */
    SCIP_BOUNDTYPE        boundtype,          /**< the bounding type */
    SCIP_Real             newbound            /**< the new bound */

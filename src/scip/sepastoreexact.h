@@ -94,27 +94,27 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROWEXACT** SCIPsepastoreExactGetCuts(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreExactGetNCuts(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    );
 
 /** get total number of cuts found so far */
 int SCIPsepastoreExactGetNCutsFound(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    );
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreExactGetNCutsFoundRound(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreExactGetNCutsApplied(
-   SCIP_SEPASTOREEXACT*  sepastoreexact         /**< separation storage */
+   SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
    );
 
 #ifdef __cplusplus
