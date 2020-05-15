@@ -16830,6 +16830,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr)
       case SCIP_CUTOFF:
          ++nlhdlr->ncutoffs;
          break;
+      case SCIP_REDUCEDDOM:
+         ++nlhdlr->ndomreds;
       default: ;
    }  /*lint !e788*/
 

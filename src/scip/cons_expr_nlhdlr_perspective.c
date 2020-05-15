@@ -1159,7 +1159,13 @@ SCIP_RETCODE analyseOnoffBounds(
       else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
       {
          /* if indicator is fixed to indvalue, sclb is valid for the current node */
-         SCIP_CALL( SCIPtightenVarLb(scip, var, sclb, FALSE, infeas, &bndchgsuccess) );
+         if( indvalue == 0 )
+         {
+            assert(sclb == scub);
+            SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
+         }
+         else
+            SCIP_CALL( SCIPtightenVarLb(scip, var, sclb, FALSE, infeas, &bndchgsuccess) );
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -1174,7 +1180,7 @@ SCIP_RETCODE analyseOnoffBounds(
       /* first check for infeasibility */
       if( SCIPisFeasLT(scip, scub, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPfixVar(scip, indicator, 0, infeas, &bndchgsuccess) );
+         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &bndchgsuccess) );
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -1184,7 +1190,13 @@ SCIP_RETCODE analyseOnoffBounds(
       else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
       {
          /* if indicator is fixed to indvalue, scub is valid for the current node */
-         SCIP_CALL( SCIPtightenVarUb(scip, var, scub, FALSE, infeas, &bndchgsuccess) );
+         if( indvalue == 0 )
+         {
+            assert(sclb == scub);
+            SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
+         }
+         else
+            SCIP_CALL( SCIPtightenVarUb(scip, var, scub, FALSE, infeas, &bndchgsuccess) );
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -1296,7 +1308,7 @@ SCIP_RETCODE prepareProbing(
       *doprobing = FALSE;
    }
 
-   /* TODO only report SCIP_REDUCEDDOM if the new bounds cut off the current solution */
+   /* TODO only report SCIP_REDUCEDDOM if the new bounds cut off the current solution? */
 
    return SCIP_OKAY;
 }
