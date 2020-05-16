@@ -35,11 +35,13 @@
 #define MIN_INTERIORITY     0.01 /* minimum interiority for a reference point for applying separation */
 #define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
 
+#ifdef SCIP_STATISTIC
 /* properties of the bilinear nlhdlr statistics table */
 #define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
 #define TABLE_DESC_BILINEAR                 "bilinear nlhdlr statistics table"
 #define TABLE_POSITION_BILINEAR             12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+#endif
 
 /*
  * Data structures
@@ -732,6 +734,7 @@ void reversePropBilinear(
    }
 }
 
+#ifdef SCIP_STATISTIC
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
@@ -810,6 +813,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    return SCIP_OKAY;
 }
+#endif
 
 /*
  * Callback methods of nonlinear handler
@@ -1526,11 +1530,13 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
          "maximum depth to apply separation",
          &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
+#ifdef SCIP_STATISTIC
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, TRUE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
+#endif
 
    return SCIP_OKAY;
 }
