@@ -2469,7 +2469,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    for( c = nconss; c >= 0; --c )
    {
       /* free nonlinear parts */
-      if( nlexprs[c] != NULL )
+      if( nlexprs != NULL && nlexprs[c] != NULL )
       {
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexprs[c]) );
       }
