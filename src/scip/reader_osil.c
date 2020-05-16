@@ -498,7 +498,7 @@ SCIP_RETCODE createConstraint(
    /* create objective variable, if requested */
    if( objcons )
    {
-      SCIP_CALL( SCIPcreateVar(scip, &objvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+      SCIP_CALL( SCIPcreateVar(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
          SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, objvar) );
    }
