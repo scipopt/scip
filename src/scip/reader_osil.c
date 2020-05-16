@@ -613,9 +613,8 @@ SCIP_RETCODE createConstraint(
 }
 
 
-/** setup constraint sides as linear constraints
- *
- * constraints are not added to the problem yet
+/** reads constraint-specific information; creates and adds linear and nonlinear constraints based on the
+ * information that have been collected by @ref readLinearCoefs, @ref readQuadraticCoefs, and @ref readNonlinearExprs
  */
 static
 SCIP_RETCODE readConstraints(
