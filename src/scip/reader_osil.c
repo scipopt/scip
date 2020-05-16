@@ -494,6 +494,8 @@ SCIP_RETCODE createConstraint(
    SCIP_VAR* objvar = NULL;
 
    assert(consexprhdlr != NULL);
+   assert(nlinvars >= 0);
+   assert(nquadterms >= 0);
 
    /* create objective variable, if requested */
    if( objcons )
@@ -503,8 +505,8 @@ SCIP_RETCODE createConstraint(
       SCIP_CALL( SCIPaddVar(scip, objvar) );
    }
 
-   /* linear constraint */
-   if( nlinvars >= 0 && nquadterms == 0 && nlexpr == NULL )
+   /* linear constraint (can be empty) */
+   if( nquadterms == 0 && nlexpr == NULL )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name,
          nlinvars, linvars, lincoefs, lhs, rhs, initialconss,
