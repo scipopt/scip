@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_bilinear.h
+/**@file   cons_expr_nlhdlr_bilinear.c
  * @brief  bilinear nonlinear handler
  * @author Benjamin Mueller
  */
