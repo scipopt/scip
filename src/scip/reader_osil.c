@@ -1634,7 +1634,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "log") == 0
      )
    {
-      SCIP_CONSEXPR_EXPR* args[2];
+      SCIP_CONSEXPR_EXPR* args[2] = {NULL, NULL};
 
       /* check number of children */
       if( xmlFirstChild(node) == NULL ||
@@ -1649,13 +1649,13 @@ SCIP_RETCODE readExpression(
       /* read first child expression */
       SCIP_CALL( readExpression(scip, consexprhdlr, &args[0], xmlFirstChild(node), vars, nvars, doingfine) );
       if( !*doingfine )
-         return SCIP_OKAY;
+         goto TERMINATE_TWO_ARGS;
       assert(args[0] != NULL);
 
       /* read second child expression */
       SCIP_CALL( readExpression(scip, consexprhdlr, &args[1], xmlNextSibl(xmlFirstChild(node)), vars, nvars, doingfine) );
       if( !*doingfine )
-         return SCIP_OKAY;
+         goto TERMINATE_TWO_ARGS;
       assert(args[1] != NULL);
 
       if( strcmp(exprname, "plus") == 0 )
@@ -1698,7 +1698,7 @@ SCIP_RETCODE readExpression(
             {
                SCIPerrorMessage("Negative base in <power> node with nonconstant exponent not allowed in nonlinear expression.\n");
                *doingfine = FALSE;
-               return SCIP_OKAY;
+               goto TERMINATE_TWO_ARGS;
             }
             else
             {
@@ -1733,14 +1733,14 @@ SCIP_RETCODE readExpression(
          {
             SCIPerrorMessage("Signpower only supported for constant exponents.\n");
             *doingfine = FALSE;
-            return SCIP_OKAY;
+            goto TERMINATE_TWO_ARGS;
          }
          if( SCIPgetConsExprExprValueValue(args[1]) <= 1.0 )
          {
             SCIPerrorMessage("Signpower only supported for exponents > 1, but got %g.\n",
                SCIPgetConsExprExprValueValue(args[1]));
             *doingfine = FALSE;
-            return SCIP_OKAY;
+            goto TERMINATE_TWO_ARGS;
          }
 
          SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, expr, args[0], SCIPgetConsExprExprValueValue(args[1])) );
@@ -1769,7 +1769,7 @@ SCIP_RETCODE readExpression(
       {
          SCIPerrorMessage("min expressions are not supported\n");
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE_TWO_ARGS;
       }
       else /* if( strcmp(exprname, "max") == 0 ) */
       {
@@ -1777,12 +1777,20 @@ SCIP_RETCODE readExpression(
 
          SCIPerrorMessage("max expressions are not supported\n");
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE_TWO_ARGS;
       }
 
+TERMINATE_TWO_ARGS:
+
       /* release first and second argument expression */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[0]) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[1]) );
+      if( args[0] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[0]) );
+      }
+      if( args[1] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &args[1]) );
+      }
 
       return SCIP_OKAY;
    }
@@ -1840,6 +1848,8 @@ SCIP_RETCODE readExpression(
             case 1:
             {
                *expr = args[0];
+               /* capture expression here because args[0] will be released at the end */
+               SCIPcaptureConsExprExpr(*expr);
                break;
             }
 
@@ -1957,7 +1967,7 @@ SCIP_RETCODE readExpression(
          if( attrval != NULL )
          {
             quadcoefs[nquadelems] = strtod(attrval, (char**)&attrval);
-            if( *attrval != '\0' || (quadcoefs[nquadelems] != quadcoefs[nquadelems]) )  /*lint !e777*/
+            if( *attrval != '\0' || !SCIPisFinite(quadcoefs[nquadelems]) )  /*lint !e777*/
             {
                SCIPerrorMessage("Invalid value '%s' for \"coef\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "coef"), nquadelems);
                *doingfine = FALSE;
