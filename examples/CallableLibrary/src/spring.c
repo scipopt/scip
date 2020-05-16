@@ -97,6 +97,13 @@ SCIP_RETCODE setupProblem(
    SCIP_VAR* y[nwires];   /* wire choice (binary) */
 
    SCIP_CONSHDLR* consexprhdlr;
+   SCIP_CONSEXPR_EXPR* coilexpr;
+   SCIP_CONSEXPR_EXPR* wireexpr;
+   SCIP_CONSEXPR_EXPR* deflexpr;
+   SCIP_CONSEXPR_EXPR* ncoilsexpr;
+   SCIP_CONSEXPR_EXPR* const1expr;
+   SCIP_CONSEXPR_EXPR* const2expr;
+   SCIP_CONSEXPR_EXPR* volumeexpr;
 
    SCIP_CONS* voldef;
    SCIP_CONS* defconst1;
@@ -149,24 +156,23 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPaddVar(scip, y[i]) );
    }
 
+   /* create variable expressions */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &coilexpr, coil) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &wireexpr, wire) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &deflexpr, defl) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &ncoilsexpr, ncoils) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const1expr, const1) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const2expr, const2) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &volumeexpr, volume) );
+
    /* nonlinear constraint voldef: PI/2 * (ncoils+2)*coil*wire^2 - volume == 0 */
    {
       SCIP_CONSEXPR_EXPR* exprs[3];
       SCIP_CONSEXPR_EXPR* powexpr;
       SCIP_CONSEXPR_EXPR* prodexpr;
       SCIP_CONSEXPR_EXPR* sumexpr;
-      SCIP_CONSEXPR_EXPR* coilexpr;
-      SCIP_CONSEXPR_EXPR* ncoilsexpr;
-      SCIP_CONSEXPR_EXPR* wireexpr;
-      SCIP_CONSEXPR_EXPR* volumeexpr;
       SCIP_CONSEXPR_EXPR* expr;
       SCIP_Real coefs[2];
-
-      /* create variable expressions */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &ncoilsexpr, coil) );
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &coilexpr, coil) );
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &wireexpr, wire) );
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &volumeexpr, volume) );
 
       /* create wire^2 */
       SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, wireexpr, 2.0) );
@@ -195,10 +201,6 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &volumeexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wireexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &coilexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &ncoilsexpr) );
    }
 
    /* nonlinear constraint defconst1: coil / wire - const1 == 0.0 */
@@ -392,6 +394,15 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddCons(scip, coilwidth) );
    SCIP_CALL( SCIPaddCons(scip, defwire) );
    SCIP_CALL( SCIPaddCons(scip, selectwire) );
+
+   /* release variable expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &volumeexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const2expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const1expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &ncoilsexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &deflexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wireexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &coilexpr) );
 
    /* release variables and constraints
     * the problem has them captured, and we do not require them anymore
