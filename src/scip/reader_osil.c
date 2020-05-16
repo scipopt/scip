@@ -1719,7 +1719,7 @@ SCIP_RETCODE readExpression(
 
             SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &logexpr, args[0]) );
             tmp[0] = args[1];
-            tmp[0] = logexpr;
+            tmp[1] = logexpr;
             SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, tmp, 1.0) );
             SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, prodexpr) );
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
