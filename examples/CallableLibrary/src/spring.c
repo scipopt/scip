@@ -288,14 +288,13 @@ SCIP_RETCODE setupProblem(
 
    /* quadratic constraint shear: 8.0*maxworkload/PI * const1 * const2 - maxshearstress * wire^2 <= 0.0 */
    {
+      SCIP_VAR* quadvars1[2] = {const1, wire};
+      SCIP_VAR* quadvars2[2] = {const2, wire};
+      SCIP_Real quadcoefs[2] = {8.0 * maxworkload / M_PI, -maxshearstress};
+
       /* create empty quadratic constraint with right-hand-side 0.0 */
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &shear, "shear", 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 0.0) );
-
-      /* add bilinear term 8.0*maxworkload/PI * const1 * const2 */
-      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, shear, const1, const2, 8.0 * maxworkload / M_PI) );
-
-      /* add square term -maxshearstress * wire^2 */
-      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, shear, wire, -maxshearstress) );
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &shear, "shear", 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+         -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
 
    /* nonlinear constraint defdefl: 8.0/shearmod * ncoils * const1^3 / wire - defl == 0.0 */
@@ -347,16 +346,14 @@ SCIP_RETCODE setupProblem(
 
    /* quadratic constraint freel: maxworkload * defl + 1.05 * ncoils * wire + 2.1 * wire <= maxfreelen */
    {
-      SCIP_Real one05;
+      SCIP_VAR* linvars[2] = {defl, wire};
+      SCIP_Real lincoefs[2] = {maxworkload, 2.1};
+      SCIP_Real one05 = 1.05;
 
       /* create quadratic constraint maxworkload * defl + 1.05 * ncoils * wire <= maxfreelen */
-      one05 = 1.05;
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &freel, "freel",
-         1, &defl, (SCIP_Real*)&maxworkload,
-         1, &ncoils, &wire, &one05, -SCIPinfinity(scip), maxfreelen) );
-
-      /* add linear term 2.1 * wire for variable wire in quadratic part of constraint */
-      SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, freel, wire, 2.1) );
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &freel, "freel", 2, linvars, lincoefs, 1, &ncoils, &wire, &one05,
+         -SCIPinfinity(scip), maxfreelen, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE,
+         FALSE, FALSE) );
    }
 
    /* linear constraint coilwidth: coil + wire <= maxcoildiam */
