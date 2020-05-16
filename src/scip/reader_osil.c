@@ -1694,7 +1694,7 @@ SCIP_RETCODE readExpression(
          {
             SCIP_Real value = SCIPgetConsExprExprValueValue(args[0]);
 
-            if( value < 0.0 )
+            if( value <= 0.0 )
             {
                SCIPerrorMessage("Negative base in <power> node with nonconstant exponent not allowed in nonlinear expression.\n");
                *doingfine = FALSE;
