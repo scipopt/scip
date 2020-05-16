@@ -1315,7 +1315,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    assert(scip != NULL);
    assert(gmo != NULL);
 
-   gev = gmoEnvironment(gmo);
+   gev = (gevHandle_t) gmoEnvironment(gmo);
    assert(gev != NULL);
 
    /* we want a real objective function, if it is linear, otherwise keep the GAMS single-variable-objective? */
@@ -1611,7 +1611,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoNLCodeSizeMaxRow(gmo)+1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoNLCodeSizeMaxRow(gmo)+1) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, gmoPPool(gmo), gmoNLConst(gmo)) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, (double*)gmoPPool(gmo), gmoNLConst(gmo)) );
 
       /* translate special GAMS constants into SCIP variants (gmo does not seem to do this...) */
       for( i = 0; i < gmoNLConst(gmo); ++i )
