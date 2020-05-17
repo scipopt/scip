@@ -75,6 +75,7 @@ struct special_distance_graph
    SCIP_Real             mstmaxcost;         /**< maximum edge cost */
    int                   nnodesorg;          /**< number of nodes of original graph */
    int                   nedgesorg;          /**< number of edges of original graph */
+   SCIP_Bool             mstcostsReady;      /**< are the mstcosts already available? */
 };
 
 
@@ -390,6 +391,7 @@ SCIP_RETCODE sdgraphAlloc(
 
    g_sd->nnodesorg = nnodes;
    g_sd->nedgesorg = nedges;
+   g_sd->mstcostsReady = FALSE;
 
    return SCIP_OKAY;
 }
@@ -520,6 +522,36 @@ SCIP_RETCODE sdgraphBuildDistgraph(
    assert(graph_valid(scip, distgraph));
 
    return SCIP_OKAY;
+}
+
+
+/** builds MST costs (ordered) for distance graph */
+static
+void sdgraphBuildMstcosts(
+   SDGRAPH*              g_sd                /**< the SD graph */
+)
+{
+   const GRAPH* const distgraph = g_sd->distgraph;
+   const PATH* const mst = g_sd->sdmst;
+   SCIP_Real* RESTRICT mstcosts = g_sd->mstcosts;
+   const int nnodes_distgraph = graph_get_nNodes(distgraph);
+
+   assert(mst[0].edge == UNKNOWN);
+   assert(nnodes_distgraph >= 1);
+
+   for( int k = 1; k < nnodes_distgraph; k++ )
+   {
+      const int e = mst[k].edge;
+      assert(e >= 0);
+      assert(GE(distgraph->cost[e], 0.0));
+
+      mstcosts[k - 1] = distgraph->cost[e];
+   }
+
+   SCIPsortDownReal(mstcosts, nnodes_distgraph - 1);
+
+   /* debug sentinel */
+   mstcosts[nnodes_distgraph - 1] = -FARAWAY;
 }
 
 
@@ -1349,23 +1381,45 @@ const STP_Bool* reduce_sdgraphGetMstHalfMark(
 }
 
 
+/** MST costs in descending order available? */
+SCIP_Bool reduce_sdgraphHasOrderedMstCosts(
+   const SDGRAPH*         sdgraph             /**< the SD graph */
+)
+{
+   assert(sdgraph);
+   assert(sdgraph->mstcosts);
 
-/** returns all MST costs in descending order */
-const SCIP_Real* reduce_sdgraphGetMaxCosts(
-   SCIP*                 scip,               /**< SCIP */
+   return sdgraph->mstcostsReady;
+}
+
+
+/** initializes all MST costs in descending order */
+void reduce_sdgraphInitOrderedMstCosts(
    SDGRAPH*              sdgraph             /**< the SD graph */
 )
 {
-   assert(scip && sdgraph);
+   assert(sdgraph);
    assert(sdgraph->mstcosts);
 
-   // todo if flag not set yet, sort! then r
-
-   if( 0 )
+   if( !sdgraph->mstcostsReady )
    {
-
+      sdgraphBuildMstcosts(sdgraph);
+      sdgraph->mstcostsReady = TRUE;
    }
 
+   assert(reduce_sdgraphHasOrderedMstCosts(sdgraph));
+   assert(sdgraph->mstcosts[0] == sdgraph->mstmaxcost);
+}
+
+
+/** returns all MST costs in descending order */
+const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(
+   const SDGRAPH*         sdgraph             /**< the SD graph */
+)
+{
+   assert(sdgraph);
+   assert(reduce_sdgraphHasOrderedMstCosts(sdgraph));
+   assert(sdgraph->mstcosts[0] == sdgraph->mstmaxcost);
 
    return sdgraph->mstcosts;
 }

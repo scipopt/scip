@@ -19,7 +19,7 @@
  * @author Daniel Rehfeldt
  *
  * This file encompasses various (heap-based) shortest path based algorithms including
- * Dijkstra's algorithm and Voronoi diagram algorithms
+ * Dijkstra's algorithm.
  *
  */
 

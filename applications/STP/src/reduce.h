@@ -42,6 +42,16 @@ typedef struct node_one_hop_star STAR;
 /** SD distance graph data */
 typedef struct special_distance_graph SDGRAPH;
 
+/** Steiner nodes to terminal paths */
+typedef struct nodes_to_terminal_paths TPATHS;
+
+/** Stores data for computation of special distance/bottleneck distance computations  */
+typedef struct special_distance_storage
+{
+   SDGRAPH*              sdgraph;            /**< special distance graph on terminals      */
+   TPATHS*               terminalpaths;      /**< terminal paths                 */
+} SD;
+
 
 /** reduced cost result data */
 typedef struct reduce_costs_data
@@ -144,6 +154,8 @@ extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_
 extern SCIP_RETCODE    reduce_nts(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_bd34(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, SCIP_Real*);
 extern SCIP_RETCODE    reduce_bd34WithSd(SCIP*, GRAPH*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
+extern SCIP_RETCODE    reduce_bdk(SCIP*, GRAPH*, int*);
+extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, const SD*, GRAPH*, int*);
 
 
 /* reduce_bnd.c
@@ -219,8 +231,10 @@ extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, R
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
-extern const SCIP_Real* reduce_sdgraphGetMaxCosts(SCIP*, SDGRAPH*);
-extern const STP_Bool*       reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
+extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
+extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
+extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
+extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
 
 
