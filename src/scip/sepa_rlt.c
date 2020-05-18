@@ -920,7 +920,7 @@ SCIP_RETCODE createRelationTables(
       assert(cols != NULL);
       SCIPdebugMsg(scip, "row %s:\n", SCIProwGetName(prob_rows[r]));
 #ifdef SCIP_DEBUG
-      for( v1 = 0; v1 < SCIProwGetNNonz(prob_rows[r]); ++v1 ) /* TODO same for some other similar loops */
+      for( v1 = 0; v1 < SCIProwGetNNonz(prob_rows[r]); ++v1 )
          SCIPdebugMsg(scip,"%s(%d) \n", SCIPvarGetName(SCIPcolGetVar(cols[v1])), SCIPcolGetIndex(cols[v1]));
 #endif
 
@@ -1794,7 +1794,9 @@ SCIP_RETCODE addRltTerm(
       }
    }
 
-   /* if a suitable linearisation for this term exists, add it to the cut with the previous coefficient */
+   /* if the term is implicit and a suitable linearisation for it exists,
+    * add the linearisation to the cut with the previous coefficient
+    */
    if( linpos >= 0 )
    {
       SCIPdebugMsg(scip, "linearisation for %s and %s found, will be added to cut:\n",
@@ -1802,6 +1804,7 @@ SCIP_RETCODE addRltTerm(
       assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
       SCIP_CALL( addAuxexprToRow(scip, cut, var, colvar, terms[idx].auxexprs[linpos], coefauxvar, finalside) );
    }
+   /* for an existing term, use the auxvar if there is one */
    else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
    {
       SCIPdebugMsg(scip, "auxvar for %s and %s found, will be added to cut:\n",
