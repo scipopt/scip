@@ -237,7 +237,7 @@ SCIP_RETCODE bdkTryDeg3(
       assert(success);
       assert(g->grad[i] == 0);
 
-      printf("BD3-implied reduction of node %d with SDs: %f %f %f \n ",i, sd[0], sd[1], sd[2]);
+      SCIPdebugMessage("BD3-implied reduction of node %d with SDs: %f %f %f \n ",i, sd[0], sd[1], sd[2]);
       (*nelims)++;
    }
 
@@ -291,7 +291,6 @@ SCIP_RETCODE bdkTryDegGe4(
       for( int j = 0; j < STP_BDKIMP_MAXNEDGES; j++ )
          cutoffs[j] = maxcost;
 
-      printf("BD%d-implied reduction of node %d \n ", g->grad[i], i);
 
 #if 0
       int edgecount = 0;
@@ -310,7 +309,10 @@ SCIP_RETCODE bdkTryDegGe4(
       SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &isPseudoDeletable));
 
       if( isPseudoDeletable )
+      {
+         SCIPdebugMessage("BD%d-implied reduction of node %d \n ", g->grad[i], i);
          (*nelims)++;
+      }
    }
 
 
@@ -4480,19 +4482,20 @@ SCIP_RETCODE reduce_bdkWithSd(
 {
    BDK* bdk;
    const int nnodes = graph_get_nNodes(g);
+   const int maxdegree = MIN(g->terms, STP_BDKIMP_MAXDEGREE);
 
    assert(scip && sdistance && nelims);
    assert(!graph_pc_isPcMw(g));
 
-   /* in this case the method does not work properly, and the case is easy enough to ignore it */
-   if( g->terms < STP_BDKIMP_MAXDEGREE )
+   /* NOTE: in the case of g->terms < 3 the method does not work properly, and the case is easy enough to ignore it */
+   if( g->terms < 3  )
       return SCIP_OKAY;
 
    SCIP_CALL( bdkInit(scip, sdistance, &bdk) );
    SCIPdebugMessage("starting BDK-SD Reduction: ");
    graph_mark(g);
 
-   for( int degree = 3; degree <= STP_BDKIMP_MAXDEGREE; degree ++ )
+   for( int degree = 3; degree <= maxdegree; degree ++ )
    {
       for( int i = 0; i < nnodes; i++ )
       {
