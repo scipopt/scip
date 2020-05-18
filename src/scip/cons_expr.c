@@ -9141,6 +9141,8 @@ SCIP_RETCODE addTermBilinExpr(
       }
       term->auxexprs[pos] = auxexpr;
       ++(term->nauxexprs);
+      if( term->nauxexprs > 10 )
+         SCIPinfoMessage(scip, NULL, "\nterm has %d auxexprs", term->nauxexprs);
       *added = TRUE;
    }
    else
