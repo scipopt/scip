@@ -1188,7 +1188,7 @@ SCIP_RETCODE detectHiddenProducts(
                   side1 = SCIProwGetRhs(row1);
                }
 
-               if( REALABS(side1) == SCIPinfinity(scip) )
+               if( SCIPisInfinity(scip, REALABS(side1)) )
                {
                   r1 = row_list[r1];
                   continue;
@@ -1240,7 +1240,7 @@ SCIP_RETCODE detectHiddenProducts(
                         side2 = SCIProwGetLhs(row2);
                      }
 
-                     if( REALABS(side2) == SCIPinfinity(scip) )
+                     if( SCIPisInfinity(scip, REALABS(side2)) )
                      {
                         r2 = row_list[r2];
                         continue;
@@ -2261,7 +2261,7 @@ void printProjLP(
    for( i = 0; i < nrows; ++i )
    {
       SCIPinfoMessage(scip, file, "\nproj_row[%d]: ", i);
-      if( projlp->lhss[i] != -SCIPinfinity(scip) )
+      if( !SCIPisInfinity(scip, -projlp->lhss[i]) )
          SCIPinfoMessage(scip, file, "%.15g <= ", projlp->lhss[i]);
       for( j = 0; j < projlp->nNonz[i]; ++j )
       {
@@ -2287,7 +2287,7 @@ void printProjLP(
       else if( projlp->consts[i] < 0 )
          SCIPinfoMessage(scip, file, " - %.15g", REALABS(projlp->consts[i]));
 
-      if( projlp->rhss[i] != SCIPinfinity(scip) )
+      if( !SCIPisInfinity(scip, projlp->rhss[i]) )
          SCIPinfoMessage(scip, file, " <= %.15g", projlp->rhss[i]);
    }
    SCIPinfoMessage(scip, file, "\n");
