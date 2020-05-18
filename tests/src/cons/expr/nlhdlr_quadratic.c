@@ -256,9 +256,6 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
 
-   /* free auxvar(s) created by detect from above */
-   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
-
    /* register nlhdlr info in expr and free */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
@@ -711,9 +708,9 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    }
 
    /* interval evaluate */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
+   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, FALSE, NULL) );
 
    cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
    cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);
@@ -811,9 +808,9 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
    cr_expect_eq(4, SCIPgetNVars(scip), "got %d\n", SCIPgetNVars(scip));
 
    /* interval evaluate */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
    //SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   //SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
+   //SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, FALSE, NULL) );
 
    //cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
    //cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);

@@ -648,8 +648,8 @@ SCIP_RETCODE solvePricingMINLP(
 
          /* create quadratic constraint */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nonoverlap_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 2, linvars, lincoefs, 6, quadvars1, quadvars2,
-               quadcoefs, -c, SCIPinfinity(subscip)) );
+         SCIP_CALL( SCIPcreateConsExprQuadratic(subscip, &cons, name, 2, linvars, lincoefs, 6, quadvars1, quadvars2,
+               quadcoefs, -c, SCIPinfinity(subscip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          /* add and release constraint */
          SCIP_CALL( SCIPaddCons(subscip, cons) );

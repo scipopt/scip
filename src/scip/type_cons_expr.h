@@ -97,6 +97,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  *  input:
  *  - scip           : SCIP main data structure
  *  - var            : variable for which to obtain bounds
+ *  - global         : whether to evaluate expressions w.r.t. global bounds
  *  - intevalvardata : data that belongs to this callback
  *  output:
  *  - returns an interval that contains the current variable bounds, but might be (slightly) larger
@@ -104,6 +105,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
 #define SCIP_DECL_CONSEXPR_INTEVALVAR(x) SCIP_INTERVAL x (\
    SCIP* scip, \
    SCIP_VAR* var, \
+   SCIP_Bool global, \
    void* intevalvardata \
    )
 
@@ -389,6 +391,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  *  - interval : buffer where to store interval
  *  - expr : expression to be evaluated
  *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - global : whether to evaluate expressions w.r.t. global bounds
  *  - intevalvardata : data to be passed to intevalvar callback
  */
 #define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
@@ -396,6 +399,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval, \
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   SCIP_Bool global, \
    void* intevalvardata)
 
 /** expression under/overestimation callback
@@ -757,6 +761,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
  *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - global : whether to evaluate expressions w.r.t. global bounds
  *  - intevalvardata : data to be passed to intevalvar callback
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
@@ -766,6 +771,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL* interval, \
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   SCIP_Bool global, \
    void* intevalvardata)
 
 /** nonlinear handler callback for reverse propagation
