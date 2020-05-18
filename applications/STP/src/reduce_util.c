@@ -551,7 +551,14 @@ void sdgraphBuildMstcosts(
    SCIPsortDownReal(mstcosts, nnodes_distgraph - 1);
 
    /* debug sentinel */
-   mstcosts[nnodes_distgraph - 1] = -FARAWAY;
+   if( nnodes_distgraph > 1 )
+   {
+      mstcosts[nnodes_distgraph - 1] = -FARAWAY;
+   }
+   else
+   {
+      mstcosts[0] = 0.0;
+   }
 }
 
 

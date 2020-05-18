@@ -445,6 +445,8 @@ SCIP_RETCODE redLoopStp_inner(
          break;
 
 
+
+
       if( le || extensive )
       {
          SCIP_CALL(reduce_ledge(scip, g, vnoi, heap, state, vbase, &lenelims, NULL));
@@ -525,6 +527,15 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
+      {
+         int nelimsx = 0;
+             SCIP_CALL( reduce_bdk(scip, g, &nelimsx) );
+
+           //  printf("bd3nelims=%d nelimsx=%d \n", bd3nelims, nelimsx);
+      }
+
+
+
       if( nvsl || extensive )
       {
          SCIP_CALL( nvreduce_sl(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, nodearrint, NULL,
@@ -538,6 +549,10 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
+
+
+
+
 
       ub = -1.0;
 
@@ -2009,6 +2024,9 @@ SCIP_RETCODE redLoopStp(
             break;
 
          assert(!rerun);
+
+
+
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, state, heap,
                      nodearrchar, &extendedelims, randnumgen) );
