@@ -362,6 +362,8 @@ SCIP_RETCODE presolveStp(
    SCIP_CALL( reduce(scip, graph, offset, reduction, probdata->minelims, TRUE) );
 
 
+
+
 #ifdef STP_WRITE_RED_STATS
    graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
    exit(1);
@@ -381,6 +383,30 @@ SCIP_RETCODE presolveStp(
 
 
 #if 0
+   int c = 0;
+     for( int e = 0; e < graph->edges; e+=2)
+     {
+        const int tail = graph->tail[e];
+        const int head = graph->head[e];
+
+        if( graph->grad[tail] + graph->grad[head] <= 7 && !Is_term(graph->term[tail]) && !Is_term(graph->term[head]) )
+        {
+           double coste = -graph->cost[e];
+           c++;
+
+           for( int e2 = graph->outbeg[tail]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
+              coste += graph->cost[e2];
+
+           for( int e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
+              coste += graph->cost[e2];
+
+           printf("coste=%f \n", coste);
+
+        }
+     }
+
+     printf("count=%d \n\n\n\n", c);
+
    for( int i = 0 ; i < graph->knots; i++)
    {
       if( Is_term(graph->term[i]) )
