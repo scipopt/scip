@@ -99,6 +99,7 @@ SCIP_RETCODE reduce_simple(
    int elimscount = 0;
    const int nnodes = g->knots;
    const SCIP_Bool checkstate = (edgestate != NULL);
+   SCIP_Bool replaceConflict = FALSE;
 
    assert(scip && g && fixed && nelims);
 
@@ -171,7 +172,11 @@ SCIP_RETCODE reduce_simple(
             {
                if( !Is_term(g->term[i]) )
                {
-                  SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
+                  SCIP_Bool conflict;
+                  SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode, &conflict) );
+
+                  if( conflict)
+                     replaceConflict = TRUE;
 
                   elimscount++;
 
@@ -257,6 +262,13 @@ SCIP_RETCODE reduce_simple(
          }
       }
    }
+
+   /* NOTE: in this case we might have made the graph unconnected... */
+   if( replaceConflict )
+   {
+      SCIP_CALL( reduceLevel0(scip, g) );
+   }
+
    SCIPdebugMessage(" %d Knots deleted\n", elimscount);
    assert(graph_valid(scip, g));
 

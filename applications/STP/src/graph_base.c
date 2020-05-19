@@ -1193,7 +1193,8 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   vertex,             /**< the vertex */
    GRAPH*                g,                  /**< the graph */
-   int*                  solnode             /**< marks whether an node is part of a given solution (CONNECT), or is NULL */
+   int*                  solnode,            /**< marks whether an node is part of a given solution (CONNECT), or is NULL */
+   SCIP_Bool*            edgeEliminated      /**< edge eliminated? (due to conflict) */
    )
 {
    SINGLETONANS ancestors1;
@@ -1214,6 +1215,8 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    assert(SCIPisEQ(scip, g->cost[e2], g->cost[flipedge(e2)]));
    assert(graph_valid_pseudoAncestors(scip, g));
 
+   *edgeEliminated = FALSE;
+
    SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
    SCIP_CALL( graph_singletonAncestors_init(scip, g, e2, &(ancestors2)) );
 
@@ -1230,6 +1233,7 @@ SCIP_RETCODE graph_knot_replaceDeg2(
       SCIPdebugMessage("conflict in graph_knot_replaceDeg2 \n");
       assert(newedge >= 0);
       graph_edge_del(scip, g, newedge, TRUE);
+      *edgeEliminated = TRUE;
    }
 
    return SCIP_OKAY;

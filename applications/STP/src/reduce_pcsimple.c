@@ -694,12 +694,13 @@ SCIP_RETCODE pcReduceKnotDeg2(
    const int e2 = g->oeat[e1];
    const int i1 = g->head[e1];
    const int i2 = g->head[e2];
+   SCIP_Bool conflict;
 
    assert(!Is_term(g->term[i]));
 
    SCIPdebugMessage("replace degree 2 non-terminal %d \n ", i);
 
-   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
+   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode, &conflict) );
 
    if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
       *rerun = TRUE;

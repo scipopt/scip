@@ -4487,8 +4487,10 @@ SCIP_RETCODE reduce_bdkWithSd(
    BDK* bdk;
    const int nnodes = graph_get_nNodes(g);
    const int maxdegree = MIN(g->terms, STP_BDKIMP_MAXDEGREE);
+   const int nelims_initial = *nelims;
 
    assert(scip && sdistance && nelims);
+   assert(nelims_initial >= 0);
    assert(!graph_pc_isPcMw(g));
 
    /* NOTE: in the case of g->terms < 3 the method does not work properly, and the case is easy enough to ignore it */
@@ -4520,6 +4522,11 @@ SCIP_RETCODE reduce_bdkWithSd(
    }
 
    bdkFree(scip, &bdk);
+
+   if( *nelims > nelims_initial  )
+   {
+      SCIP_CALL( reduceLevel0(scip, g) );
+   }
 
    return SCIP_OKAY;
 }
