@@ -102,6 +102,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_ext.o \
 			reduce_pcsimple.o \
 			reduce_sd.o \
+			reduce_sdcomp.o \
 			reduce_simple.o \
 			reduce_util.o \
 			shortestpath.o \
