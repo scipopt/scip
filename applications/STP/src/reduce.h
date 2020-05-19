@@ -244,6 +244,7 @@ extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
+extern void             reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, const int*, SD*, GRAPH*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

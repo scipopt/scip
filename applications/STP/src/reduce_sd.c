@@ -1048,6 +1048,49 @@ SCIP_RETCODE reduce_sdInit(
 }
 
 
+/** get SDs between all pairs of marked vertices of given clique graph */
+void reduce_sdGetSdsCliquegraph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   SD*                   sd,                 /**< SD */
+   GRAPH*                cliquegraph         /**< clique graph to be filled */
+)
+{
+   const int nnodes_clique = graph_get_nNodes(cliquegraph);
+
+   assert(scip && cliqueNodeMap && sd);
+   assert(2 <= nnodes_clique && nnodes_clique <= g->knots);
+
+   for( int k = 0; k < nnodes_clique; k++ )
+   {
+      const int v1 = cliqueNodeMap[k];
+      assert(0 <= v1 && v1 < g->knots);
+
+      if( !cliquegraph->mark[k] )
+         continue;
+
+      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      {
+         const int k2 = cliquegraph->head[e];
+
+         if( !cliquegraph->mark[k2] )
+            continue;
+
+         if( k2 > k )
+         {
+            const int v2 = cliqueNodeMap[k2];
+            assert(0 <= v2 && v2 < g->knots);
+            assert(v1 != v2);
+
+       //  cliquegraph->cost[e] = ()
+            cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
+         }
+      }
+   }
+}
+
+
 /** frees SD structure */
 void reduce_sdFree(
    SCIP*                 scip,               /**< SCIP */
