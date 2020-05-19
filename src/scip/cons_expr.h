@@ -456,6 +456,21 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
    );
 
+/** creates and captures an expression representing a quadratic function */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nlinvars,         /**< number of linear terms */
+   SCIP_VAR**              linvars,          /**< array with variables in linear part */
+   SCIP_Real*              lincoefs,         /**< array with coefficients of variables in linear part */
+   int                     nquadterms,       /**< number of quadratic terms */
+   SCIP_VAR**              quadvars1,        /**< array with first variables in quadratic terms */
+   SCIP_VAR**              quadvars2,        /**< array with second variables in quadratic terms */
+   SCIP_Real*              quadcoefs         /**< array with coefficients of quadratic terms */
+   );
+
 /** creates and captures an expression representing a monomial */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprMonomial(
@@ -556,6 +571,12 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
 /** returns whether an expression is a variable expression */
 SCIP_EXPORT
 SCIP_Bool SCIPisConsExprExprVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns whether an expression is a value expression */
+SCIP_EXPORT
+SCIP_Bool SCIPisConsExprExprValue(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

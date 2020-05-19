@@ -12686,6 +12686,100 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** creates and captures an expression representing a quadratic function */
+SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nlinvars,         /**< number of linear terms */
+   SCIP_VAR**              linvars,          /**< array with variables in linear part */
+   SCIP_Real*              lincoefs,         /**< array with coefficients of variables in linear part */
+   int                     nquadterms,       /**< number of quadratic terms */
+   SCIP_VAR**              quadvars1,        /**< array with first variables in quadratic terms */
+   SCIP_VAR**              quadvars2,        /**< array with second variables in quadratic terms */
+   SCIP_Real*              quadcoefs         /**< array with coefficients of quadratic terms */
+   )
+{
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_Real* coefs;
+   int i;
+
+   assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
+   assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadterms + nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nquadterms + nlinvars) );
+
+   /* create children for quadratic terms */
+   for( i = 0; i < nquadterms; ++i )
+   {
+      assert(quadvars1 != NULL && quadvars1[i] != NULL);
+      assert(quadvars2 != NULL && quadvars2[i] != NULL);
+
+      /* quadratic term */
+      if( quadvars1[i] == quadvars2[i] )
+      {
+         SCIP_CONSEXPR_EXPR* xexpr;
+
+         /* create variable expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &xexpr, quadvars1[i]) );
+
+         /* create pow expression */
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], xexpr, 2.0) );
+
+         /* release variable expression; note that the variable expression is still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+      }
+      else /* bilinear term */
+      {
+         SCIP_CONSEXPR_EXPR* exprs[2];
+
+         /* create variable expressions */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &exprs[0], quadvars1[i]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &exprs[1], quadvars2[i]) );
+
+         /* create product expression */
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &children[i], 2, exprs, 1.0) );
+
+         /* release variable expressions; note that the variable expressions are still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      }
+
+      /* store coefficient */
+      coefs[i] = quadcoefs[i];
+   }
+
+   /* create children for linear terms */
+   for( i = 0; i < nlinvars; ++i )
+   {
+      assert(linvars != NULL && linvars[i] != NULL);
+
+      /* create variable expression; release variable expression after the sum expression has been created */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[nquadterms + i], linvars[i]) );
+
+      /* store coefficient */
+      coefs[nquadterms + i] = lincoefs[i];
+   }
+
+   /* create sum expression */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nquadterms + nlinvars, children, coefs, 0.0) );
+
+   /* release children */
+   for( i = 0; i < nquadterms + nlinvars; ++i )
+   {
+      assert(children[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &children);
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures an expression representing a monomial */
 SCIP_RETCODE SCIPcreateConsExprExprMonomial(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13066,6 +13160,16 @@ SCIP_Bool SCIPisConsExprExprVar(
    assert(expr != NULL);
 
    return strcmp(expr->exprhdlr->name, "var") == 0;
+}
+
+/** returns whether an expression is a vallue expression */
+SCIP_Bool SCIPisConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(expr->exprhdlr->name, "val") == 0;
 }
 
 /** returns the variable used for linearizing a given expression (return value might be NULL)
@@ -15820,10 +15924,7 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_CONSEXPR_EXPR* sumexpr;
-   SCIP_Real* coefs;
-   int i;
+   SCIP_CONSEXPR_EXPR* expr;
 
    assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
    assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
@@ -15832,82 +15933,17 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadterms + nlinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nquadterms + nlinvars) );
-
-   /* create children for quadratic terms */
-   for( i = 0; i < nquadterms; ++i )
-   {
-      assert(quadvars1 != NULL && quadvars1[i] != NULL);
-      assert(quadvars2 != NULL && quadvars2[i] != NULL);
-
-      /* quadratic term */
-      if( quadvars1[i] == quadvars2[i] )
-      {
-         SCIP_CONSEXPR_EXPR* xexpr;
-
-         /* create variable expression */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, quadvars1[i]) );
-
-         /* create pow expression */
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &children[i], xexpr, 2.0) );
-
-         /* release variable expression; note that the variable expression is still captured by children[i] */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
-      }
-      else /* bilinear term */
-      {
-         SCIP_CONSEXPR_EXPR* exprs[2];
-
-         /* create variable expressions */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], quadvars1[i]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], quadvars2[i]) );
-
-         /* create product expression */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &children[i], 2, exprs, 1.0) );
-
-         /* release variable expressions; note that the variable expressions are still captured by children[i] */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
-      }
-
-      /* store coefficient */
-      coefs[i] = quadcoefs[i];
-   }
-
-   /* create children for linear terms */
-   for( i = 0; i < nlinvars; ++i )
-   {
-      assert(linvars != NULL && linvars[i] != NULL);
-
-      /* create variable expression; release variable expression after the constraint has been created */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &children[nquadterms + i], linvars[i]) );
-
-      /* store coefficient */
-      coefs[nquadterms + i] = lincoefs[i];
-   }
-
-   /* create sum expression */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, nquadterms + nlinvars, children, coefs, 0.0) );
+   /* create quadratic expression */
+   SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, conshdlr, &expr, nlinvars, linvars, lincoefs, nquadterms,
+      quadvars1, quadvars2, quadcoefs) );
+   assert(expr != NULL);
 
    /* create expression constraint */
-   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, sumexpr, lhs, rhs, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs, initial, separate, enforce, check, propagate,
       local, modifiable, dynamic, removable) );
 
-   /* release sum expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
-
-   /* release children */
-   for( i = 0; i < nquadterms + nlinvars; ++i )
-   {
-      assert(children[i] != NULL);
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
-   }
-
-   /* free memory */
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &children);
+   /* release quadratic expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    return SCIP_OKAY;
 }
