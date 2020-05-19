@@ -708,14 +708,10 @@ SCIP_RETCODE exprIsSemicontinuous(
          /* all nonlinear variables of a sum on/off term should be semicontinuous */
          for( v = 0; v < nchildvarexprs; ++v )
          {
-            SCIP_Bool childacceptable;
-
             var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
             SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
 
-            childacceptable = var_is_sc || SCIPisConsExprExprVar(child);
-
-            if( !childacceptable )
+            if( !(var_is_sc || SCIPisConsExprExprVar(child)) )
             {
                issc = FALSE;
                break;
@@ -1000,6 +996,7 @@ SCIP_RETCODE computeOffValues(
    SCIP_VAR* auxvar;
    SCIP_CONSEXPR_EXPR* curexpr;
    SCIP_HASHMAP* auxvarmap;
+   SCIP_Bool hasnonsc;
 
    assert(expr != NULL);
 
@@ -1019,6 +1016,8 @@ SCIP_RETCODE computeOffValues(
 
    for( i = 0; i < exprdata->nindicators; ++i )
    {
+      hasnonsc = FALSE;
+
       /* set sol to the off value of all expr vars for this indicator */
       for( v = 0; v < norigvars; ++v )
       {
@@ -1029,7 +1028,10 @@ SCIP_RETCODE computeOffValues(
           * non-sc var must be linear
           */
          if( !var_is_sc )
+         {
             origvals0[v] = 0.0;
+            hasnonsc = TRUE;
+         }
       }
       SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0);
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
@@ -1043,7 +1045,7 @@ SCIP_RETCODE computeOffValues(
 
       exprdata->exprvals0[i] = SCIPgetConsExprExprValue(expr);
 
-      /* iterate through the expression and create scvdata for all aux vars */
+      /* iterate through the expression and create scvdata for aux vars */
       SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
       curexpr = SCIPexpriteratorGetCurrent(it);
 
@@ -1051,28 +1053,62 @@ SCIP_RETCODE computeOffValues(
       {
          if( curexpr->auxvar != NULL )
          {
-            /* we know that all vars are sc with respect to exprdata->indicators; it remains to:
-             * - get or create the scvdata structure
-             * - add it to scvars hashmap
-             * - find the expr's off value
-             * - add the indicator and off value to scvdata
-             */
-            auxvar = SCIPgetConsExprExprAuxVar(curexpr);
+            SCIP_Bool issc = TRUE;
 
-            scvdata = (SCVARDATA*) SCIPhashmapGetImage(hdlrdata->scvars, (void*)auxvar);
-            if( scvdata == NULL )
+            if( hasnonsc )
             {
-               SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->bvars,  exprdata->nindicators) );
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->vals0, exprdata->nindicators) );
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->lbs1, exprdata->nindicators) );
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->ubs1, exprdata->nindicators) );
-               scvdata->bndssize = exprdata->nindicators;
-               SCIP_CALL( SCIPhashmapInsert(hdlrdata->scvars, auxvar, scvdata) );
+               SCIP_CONSEXPR_EXPR** childvarexprs;
+               int nchildvarexprs;
+               SCIP_VAR* var;
+
+               SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
+               SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, curexpr, childvarexprs, &nchildvarexprs) );
+
+               /* all nonlinear variables of a sum on/off term should be semicontinuous */
+               for( v = 0; v < nchildvarexprs; ++v )
+               {
+                  var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
+                  SCIP_CALL( varIsSemicontinuous(scip, var, hdlrdata->scvars, NULL, NULL, &var_is_sc) );
+
+                  if( !var_is_sc )
+                  {
+                     issc = FALSE;
+                     break;
+                  }
+               }
+
+               for( v = 0; v < nchildvarexprs; ++v )
+               {
+                  SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childvarexprs[v]) );
+               }
+               SCIPfreeBufferArray(scip, &childvarexprs);
             }
 
-            SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr),
-                  SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar)) );
+            if( issc )
+            {
+               /* we know that all vars are sc with respect to exprdata->indicators; it remains to:
+                * - get or create the scvdata structure
+                * - add it to scvars hashmap
+                * - find the expr's off value
+                * - add the indicator and off value to scvdata
+                */
+               auxvar = SCIPgetConsExprExprAuxVar(curexpr);
+
+               scvdata = (SCVARDATA*) SCIPhashmapGetImage(hdlrdata->scvars, (void*)auxvar);
+               if( scvdata == NULL )
+               {
+                  SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
+                  SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->bvars,  exprdata->nindicators) );
+                  SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->vals0, exprdata->nindicators) );
+                  SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->lbs1, exprdata->nindicators) );
+                  SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scvdata->ubs1, exprdata->nindicators) );
+                  scvdata->bndssize = exprdata->nindicators;
+                  SCIP_CALL( SCIPhashmapInsert(hdlrdata->scvars, auxvar, scvdata) );
+               }
+
+               SCIP_CALL( addSCVarIndicator(scip, scvdata, exprdata->indicators[i], SCIPgetConsExprExprValue(curexpr),
+                     SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar)) );
+            }
 
             SCIP_CALL( addAuxVar(scip, exprdata, auxvarmap, auxvar) );
          }
