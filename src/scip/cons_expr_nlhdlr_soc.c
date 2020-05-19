@@ -224,9 +224,9 @@ SCIP_RETCODE createDisaggrVars(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVarBasic(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_CONTINUOUS) );
-      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
-
       SCIPvarMarkRelaxationOnly(nlhdlrexprdata->disvars[i]);
+
+      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
       SCIP_CALL( SCIPaddVarLocksType(scip, nlhdlrexprdata->disvars[i], SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
