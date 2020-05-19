@@ -29,6 +29,8 @@
 #include "reduce.h"
 #include "portab.h"
 
+#define STP_TPATHS_NTERMBASES 4
+
 
 /** storage for edge on complete graph */
 typedef struct complete_edge
@@ -46,6 +48,17 @@ struct dynamic_complete_minimum_spanning_tree
    SCIP_Real*            adjcost_buffer;    /**< distances buffer (of size maxnnodes) */
    SCIP_Bool*            nodemark;          /**< array for marking nodes (of size maxnnodes) */
    int                   maxnnodes;         /**< maximum number of nodes that can be handled */
+};
+
+
+/** Steiner nodes to terminal paths
+ * NOTE: all arrays are of size STP_TPATHS_NTERMBASES * nnodes */
+struct nodes_to_terminal_paths
+{
+   PATH*                 termpaths;         /**< path data (leading to first, second, ... terminal) */
+   int*                  termbases;         /**< terminals to each non terminal */
+   int*                  state;             /**< array to mark the state of each node during calculation */
+   int                   nnodes;            /**< number of nodes of underlying graph */
 };
 
 
@@ -78,6 +91,53 @@ struct special_distance_graph
    SCIP_Bool             mstcostsReady;      /**< are the mstcosts already available? */
 };
 
+
+/** allocates TPATHS data */
+static
+SCIP_RETCODE tpathsAlloc(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TPATHS**              tpaths              /**< the terminal paths */
+)
+{
+
+   TPATHS* tp;
+   const int nnodes = graph_get_nNodes(g);
+   assert(nnodes >= 1);
+
+   SCIP_CALL( SCIPallocMemory(scip, tpaths) );
+
+   tp = *tpaths;
+   tp->nnodes = nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termpaths), nnodes * STP_TPATHS_NTERMBASES) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termbases), nnodes * STP_TPATHS_NTERMBASES) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->state), nnodes * STP_TPATHS_NTERMBASES) );
+
+   return SCIP_OKAY;
+}
+
+
+/** allocates TPATHS data */
+static
+SCIP_RETCODE tpathsBuild(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph */
+   TPATHS*               tpaths              /**< the terminal paths */
+)
+{
+   int* heap;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(nnodes >= 1);
+   assert(STP_TPATHS_NTERMBASES == 4);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1)  );
+   graph_get4nextTerms(scip, g, g->cost, g->cost, tpaths->termpaths, tpaths->termbases, heap, tpaths->state);
+   SCIPfreeBufferArray(scip, &heap);
+
+   return SCIP_OKAY;
+}
 
 /** recursive method for adding node to MST */
 static
@@ -1452,4 +1512,44 @@ void reduce_sdgraphFree(
    graph_free(scip, &(g_sd->distgraph), TRUE);
 
    SCIPfreeMemory(scip, sdgraph);
+}
+
+
+/** initializes TPATHS structure */
+SCIP_RETCODE reduce_tpathsInit(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph NOTE: will make the graph, thus not const :(
+                                                  terrible design */
+   TPATHS**              tpaths              /**< the terminal paths */
+)
+{
+
+   assert(scip);
+   assert(graph_isMarked(g));
+   assert(STP_TPATHS_NTERMBASES == 4);
+
+   SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
+   SCIP_CALL( tpathsBuild(scip, g, *tpaths) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees TPATHS structure */
+void reduce_tpathsFree(
+   SCIP*                 scip,               /**< SCIP */
+   TPATHS**              tpaths              /**< the terminal paths */
+)
+{
+   TPATHS* tp;
+   assert(scip && tpaths);
+
+   tp = *tpaths;
+   assert(tp);
+
+   SCIPfreeMemoryArray(scip, &(tp->state));
+   SCIPfreeMemoryArray(scip, &(tp->termbases));
+   SCIPfreeMemoryArray(scip, &(tp->termpaths));
+
+   SCIPfreeMemory(scip, tpaths);
 }

@@ -236,6 +236,8 @@ extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
 extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
 extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
+extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */
