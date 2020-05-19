@@ -1711,16 +1711,14 @@ SCIP_RETCODE propConss(
          assert(consdata != NULL);
 
          /* skip deleted, non-active, or propagation-disabled constraints */
-         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
-          * expression from a reverse propagation in a previous propagation round
-          * (TODO: do we still need this since we have the tag's???
-          * this means that we propagate all constraints even if there was only very few boundchanges that related to only a few constraints)
-          * in other rounds, we skip already propagated constraints
+         /* skip already propagated constraints, i.e., constraints where no variable has changed, unless allexprs is set
+          * TODO ispropagated is only unset if an original variable has been tightened; if an auxiliary variable was tightened
+          * due to some mysterious ways, then this would not unset ispropagated at the moment
           */
-         if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
+         if( !allexprs && consdata->ispropagated )
             continue;
 
          /* update activities in expression and collect initial candidates for reverse propagation */
