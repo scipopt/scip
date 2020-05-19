@@ -642,6 +642,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 SCIP_EXPORT
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    );
 

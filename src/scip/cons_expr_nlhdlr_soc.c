@@ -1990,7 +1990,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 
 #ifdef SCIP_DEBUG
-      SCIPdismantleConsExprExpr(scip, expr);
+      SCIPdismantleConsExprExpr(scip, NULL, expr);
 #endif
 
       goto CLEANUP;

@@ -572,9 +572,9 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
       exprinterval.inf = 35;
       exprinterval.sup = 35;
       SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
       cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
@@ -722,9 +722,9 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       infeasible = FALSE;
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
       SCIPintervalSet(&expr->activity, 35);
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
       cr_expect_float_eq(SCIPvarGetLbLocal(z), 0.611389821, 1e-7, "expecting %g, got %g\n", 0.61139, SCIPvarGetLbLocal(z));
@@ -822,9 +822,9 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
       infeasible = FALSE;
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
       SCIPintervalSet(&expr->activity, 10);
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
-      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
       SCIPqueueFree(&queue);

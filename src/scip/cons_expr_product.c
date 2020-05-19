@@ -1609,7 +1609,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
          if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
          {
             SCIPdebugMsg(scip, "unbounded factor related to\n");
-            SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
+            SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, child) );
          }
       }
    }

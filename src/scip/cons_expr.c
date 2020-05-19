@@ -13400,6 +13400,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 /** prints structure of an expression a la Maple's dismantle */
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    )
 {
@@ -13424,42 +13425,42 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
             /* use depth of expression to align output */
-            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+            SCIPinfoMessage(scip, file, "%*s[%s]: ", nspaces, "", type);
 
             if( strcmp(type, "var") == 0 )
             {
                SCIP_VAR* var;
 
                var = SCIPgetConsExprExprVarVar(expr);
-               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+               SCIPinfoMessage(scip, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if(strcmp(type, "sum") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprSumConstant(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprSumConstant(expr));
             else if(strcmp(type, "prod") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprProductCoef(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprProductCoef(expr));
             else if(strcmp(type, "val") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
             else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprPowExponent(expr));
 
             /* print nl handlers associated to expr */
             if(expr->nenfos > 0 )
             {
                int i;
-               SCIPinfoMessage(scip, NULL, "   {");
+               SCIPinfoMessage(scip, file, "   {");
 
                for( i = 0; i < expr->nenfos - 1; ++i )
-                  SCIPinfoMessage(scip, NULL, "%s, ", expr->enfos[i]->nlhdlr->name);
+                  SCIPinfoMessage(scip, file, "%s, ", expr->enfos[i]->nlhdlr->name);
 
-               SCIPinfoMessage(scip, NULL, "%s}", expr->enfos[i]->nlhdlr->name);
+               SCIPinfoMessage(scip, file, "%s}", expr->enfos[i]->nlhdlr->name);
             }
 
             /* print aux var associated to expr */
             if( expr->auxvar != NULL )
-               SCIPinfoMessage(scip, NULL, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
+               SCIPinfoMessage(scip, file, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
                      SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar));
-            SCIPinfoMessage(scip, NULL, "\n");
+            SCIPinfoMessage(scip, file, "\n");
 
             break;
          }
@@ -13474,8 +13475,8 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
             if( strcmp(type, "sum") == 0 )
             {
-               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+               SCIPinfoMessage(scip, file, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
             }
 
             break;
