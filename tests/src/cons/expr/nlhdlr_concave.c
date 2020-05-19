@@ -71,6 +71,8 @@ void setup(void)
 
    cr_assert_not_null(nlhdlr);
 
+   /* enable quadratic convexity check */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/concave/cvxquadratic", TRUE) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -134,7 +136,7 @@ SCIP_RETCODE detect(
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
@@ -192,4 +194,8 @@ Test(nlhdlrconcave, detect, .init = setup, .fini = teardown)
    detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, TRUE);
    detect("log(4-<x1>)*<x1>", SCIP_EXPRCURV_CONCAVE, TRUE);   /* similar to arki0017 */
+
+   /* quadratic */
+   detect("log(-<x1>^2-<x2>^2)", SCIP_EXPRCURV_CONCAVE, FALSE);
+   detect("-2*<x1>^2+<x1>*<x2>-2*<x2>^2", SCIP_EXPRCURV_CONCAVE, TRUE);
 }

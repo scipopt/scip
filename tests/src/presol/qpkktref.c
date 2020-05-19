@@ -244,6 +244,7 @@ SCIP_RETCODE createProbLinear1(
    SCIP_VAR* objvar;
    SCIP_VAR* vars[3];
    SCIP_Real vals[3];
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-linear1") );
 
@@ -258,19 +259,10 @@ SCIP_RETCODE createProbLinear1(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, 1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -3.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 2.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, 1.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, -2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -315,6 +307,7 @@ SCIP_RETCODE createProbLinear2(
    SCIP_VAR* objvar;
    SCIP_VAR* vars[3];
    SCIP_Real vals[3];
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-linear2") );
 
@@ -331,19 +324,10 @@ SCIP_RETCODE createProbLinear2(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, 1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -3.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 2.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, 1.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, -2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -388,6 +372,7 @@ SCIP_RETCODE createProbKnapsack(
    SCIP_VAR* objvar;
    SCIP_VAR* vars[2];
    SCIP_Longint vals[2];
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-knapsack") );
 
@@ -404,19 +389,10 @@ SCIP_RETCODE createProbKnapsack(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, 1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -3.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 2.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, 1.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, -2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -458,6 +434,7 @@ SCIP_RETCODE createProbSetppc(
    SCIP_VAR* zvar;
    SCIP_VAR* objvar;
    SCIP_VAR* vars[3];
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-setppc") );
 
@@ -472,19 +449,10 @@ SCIP_RETCODE createProbSetppc(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, 1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -3.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 2.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, 1.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, -2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -521,6 +489,7 @@ SCIP_RETCODE createProbLogicor(
    SCIP_VAR* zvar;
    SCIP_VAR* objvar;
    SCIP_VAR* vars[3];
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-logicor") );
 
@@ -535,19 +504,10 @@ SCIP_RETCODE createProbLogicor(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, -1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -1.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, -2.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, 2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -1 * <z> + 1 * <x>^2 -1 * <y>^2 - 2 * <z>^2 + 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -583,6 +543,7 @@ SCIP_RETCODE createProbVarbound(
    SCIP_VAR* yvar;
    SCIP_VAR* zvar;
    SCIP_VAR* objvar;
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateProbBasic(scip, "qpkktref-varbound") );
 
@@ -599,19 +560,10 @@ SCIP_RETCODE createProbVarbound(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create quadratic inequality */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "quadratic", 0, NULL, NULL, 0, NULL, NULL, NULL, 2.0, 2.0) );
-
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, objvar, 1.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, zvar, -3.0) );
-
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, xvar, 2.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, yvar, -1.0) );
-   SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, zvar, 1.0) );
-
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, yvar, -2.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, xvar, zvar, 1.0) );
-   SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, zvar, yvar, 1.0) );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

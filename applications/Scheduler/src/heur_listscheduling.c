@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_listscheduling.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Jens Schulz
  *

@@ -823,6 +823,10 @@ SCIP_Bool SCIPisRowprepViolationReliable(
 
 /** Merge terms that use same variable and eliminate zero coefficients.
  *
+ * Removes a variable if its bounds have a relative difference of below epsilon.
+ * Local bounds are checked for local rows, otherwise global bounds are used.
+ * If the bounds are not absolute equal, the bound that relaxes the row is used.
+ *
  * Terms are sorted by variable (@see SCIPvarComp) after return.
  */
 SCIP_EXPORT

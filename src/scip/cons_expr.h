@@ -821,6 +821,9 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
+ *
+ * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExprActivity(
@@ -828,7 +831,8 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   SCIP_Bool               validsufficient,  /**< whether any valid activity is sufficient */
+   SCIP_Bool               global            /**< whether to evaluate expressions w.r.t. global bounds */
    );
 
 /** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
@@ -1039,6 +1043,23 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   );
+
 /** returns the total number of variables in an expression
  *
  * The function counts variables in common sub-expressions only once.
@@ -1173,6 +1194,13 @@ unsigned int SCIPgetConsExprCurBoundsTag(
 /** gets the curboundstag at the last time where variable bounds were relaxed */
 SCIP_EXPORT
 unsigned int SCIPgetConsExprLastBoundRelaxTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_EXPORT
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
@@ -1368,6 +1396,14 @@ SCIP_RETCODE SCIPgetQuadExprConsExpr(
    SCIP*                    scip,               /**< SCIP data structure */
    SCIP_CONS*               cons,               /**< constraint data */
    SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   );
+
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** gets the left hand side of an expression constraint */
