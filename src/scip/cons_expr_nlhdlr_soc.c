@@ -507,7 +507,10 @@ SCIP_RETCODE generateCutSolSOC(
     * violated
     */
    if( fvalue - rhsval <= mincutviolation )
+   {
+      SCIPdebugMsg(scip, "do not generate cut: rhsval %g, fvalue %g violation is %g\n", rhsval, fvalue, fvalue - rhsval);
       return SCIP_OKAY;
+   }
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -2378,7 +2381,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 }
 
 
-/** auxiliary evaluation callback of nonlinear handler */
+/** auxiliary evaluation callback of nonlinear handler
+ * @todo: remember if we are in the original variables and avoid reevaluating
+ */
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 { /*lint --e{715}*/
@@ -2437,13 +2442,15 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
          if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) )
          {
             SCIP_VAR* argauxvar;
+            SCIP_Real solval;
 
             assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
 
             argauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
             assert(argauxvar != NULL);
 
-            *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
+            solval = SCIPgetSolVal(scip, sol, argauxvar);
+            *auxvalue += childcoefs[i] * SQR( solval );
          }
          else if( exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) )
          {
@@ -2585,6 +2592,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          /* release row */
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
+#ifdef SCIP_DEBUG
+      else
+      {
+         SCIPdebugMsg(scip, "failed to generate %d-SOC\n");
+      }
+#endif
 
       return SCIP_OKAY;
    }
