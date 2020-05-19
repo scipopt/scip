@@ -950,6 +950,7 @@ SCIP_RETCODE addAuxVar(
    int newsize;
 
    assert(nlhdlrexprdata != NULL);
+   assert(auxvar != NULL);
 
    pos = SCIPhashmapGetImageInt(auxvarmap, (void*) auxvar);
 
@@ -1055,6 +1056,8 @@ SCIP_RETCODE computeOffValues(
          {
             SCIP_Bool issc = TRUE;
 
+            auxvar = SCIPgetConsExprExprAuxVar(curexpr);
+
             if( hasnonsc )
             {
                SCIP_CONSEXPR_EXPR** childvarexprs;
@@ -1092,8 +1095,6 @@ SCIP_RETCODE computeOffValues(
                 * - find the expr's off value
                 * - add the indicator and off value to scvdata
                 */
-               auxvar = SCIPgetConsExprExprAuxVar(curexpr);
-
                scvdata = (SCVARDATA*) SCIPhashmapGetImage(hdlrdata->scvars, (void*)auxvar);
                if( scvdata == NULL )
                {
