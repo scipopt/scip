@@ -238,6 +238,8 @@ extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern void             reduce_tpathsFree(SCIP*, TPATHS**);
+extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
+extern void             reduce_sdFree(SCIP*, SD**);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

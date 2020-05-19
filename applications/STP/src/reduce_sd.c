@@ -1322,6 +1322,55 @@ SCIP_Bool isPseudoDeletable(
 }
 
 
+
+/*
+ * Interface methods
+ */
+
+
+
+/** initializes SD structure */
+SCIP_RETCODE reduce_sdInit(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   SD**                  sd                  /**< to initialize */
+)
+{
+   SD* s;
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, sd) );
+
+   s = *sd;
+
+   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees SD structure */
+void reduce_sdFree(
+   SCIP*                 scip,               /**< SCIP */
+   SD**                  sd                  /**< to free */
+)
+{
+   SD* s;
+   assert(scip && sd);
+
+   s = *sd;
+   assert(s);
+
+   reduce_sdgraphFree(scip, &(s->sdgraph));
+   reduce_tpathsFree(scip, &(s->terminalpaths));
+
+   SCIPfreeMemory(scip, sd);
+}
+
+
 /** long edge implied special distance test */
 SCIP_RETCODE reduce_sdImpLongEdge(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4465,7 +4514,7 @@ SCIP_RETCODE reduce_bdk(
    )
 {
    SD sdistance = { NULL, NULL };
-   reduce_sdgraphInit(scip, g, &(sdistance.sdgraph));
+   SCIP_CALL( reduce_sdgraphInit(scip, g, &(sdistance.sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(sdistance.sdgraph);
 
    SCIP_CALL( reduce_bdkWithSd(scip, &sdistance, g, nelims) );

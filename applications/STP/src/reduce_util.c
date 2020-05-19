@@ -1518,14 +1518,12 @@ void reduce_sdgraphFree(
 /** initializes TPATHS structure */
 SCIP_RETCODE reduce_tpathsInit(
    SCIP*                 scip,               /**< SCIP */
-   GRAPH*                g,                  /**< graph NOTE: will make the graph, thus not const :(
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
                                                   terrible design */
    TPATHS**              tpaths              /**< the terminal paths */
 )
 {
-
    assert(scip);
-   assert(graph_isMarked(g));
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
