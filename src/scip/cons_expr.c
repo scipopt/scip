@@ -7136,7 +7136,9 @@ SCIP_RETCODE enforceExpr(
 
    /* no sufficient violation w.r.t. the original variables -> skip expression */
    if( !overestimate && !underestimate )
+   {
       return SCIP_OKAY;
+   }
 
    /* check aux-violation w.r.t. each nonlinear handlers and try to enforce when there is a decent violation */
    for( e = 0; e < expr->nenfos; ++e )
@@ -7170,7 +7172,7 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
       if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with" \
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with " \
                   "auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr,
                   expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate); )
 
@@ -13435,15 +13437,8 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
             else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
-            else if(strcmp(type, "exp") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "log") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "abs") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else
-               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
 
+            /* print nl handlers associated to expr */
             if(expr->nenfos > 0 )
             {
                int i;
@@ -13454,6 +13449,11 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
                SCIPinfoMessage(scip, NULL, "%s}", expr->enfos[i]->nlhdlr->name);
             }
+
+            /* print aux var associated to expr */
+            if( expr->auxvar != NULL )
+               SCIPinfoMessage(scip, NULL, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
+                     SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar));
             SCIPinfoMessage(scip, NULL, "\n");
 
             break;
