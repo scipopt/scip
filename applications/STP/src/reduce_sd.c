@@ -53,7 +53,7 @@ typedef struct bottleneck_distance_storage
    STAR*                 star;               /**< star structure for neighborhood of node */
    GRAPH*                cliquegraph;        /**< complete graph on adjacent vertices */
    int*                  node_outedges;      /**< for node: outgoing edges (size STP_BDKIMP_MAXNEDGES) */
-   SCIP_Real*            node_edgecosts;     /**< for node: edge costs (size STP_BDKIMP_MAXNEDGES) */
+//   SCIP_Real*            node_edgecosts;     /**< for node: edge costs (size STP_BDKIMP_MAXNEDGES) */
    int*                  node_neighbors;     /**< for node: adjacent vertices (size STP_BDKIMP_MAXDEGREE) */
    const int*            star_outedges;      /**< for star: outgoing edges */
  //  int*                  star_neighbors;     /**< for star: adjacent vertices */
@@ -86,7 +86,7 @@ SCIP_RETCODE bdkInit(
    bdk_d->cliquegraph = cliquegraph;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_outedges), STP_BDKIMP_MAXNEDGES) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_edgecosts), STP_BDKIMP_MAXNEDGES) );
+ //  SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_edgecosts), STP_BDKIMP_MAXNEDGES) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_neighbors), STP_BDKIMP_MAXDEGREE) );
 
    return SCIP_OKAY;
@@ -103,7 +103,7 @@ void bdkFree(
    GRAPH* cliquegraph = bdk_d->cliquegraph;
 
    SCIPfreeMemoryArray(scip, &(bdk_d->node_neighbors));
-   SCIPfreeMemoryArray(scip, &(bdk_d->node_edgecosts));
+//   SCIPfreeMemoryArray(scip, &(bdk_d->node_edgecosts));
    SCIPfreeMemoryArray(scip, &(bdk_d->node_outedges));
 
    graph_path_exit(scip, cliquegraph);
@@ -124,14 +124,12 @@ void bdkGetNeighborhood(
 )
 {
    int* RESTRICT edges = bdk->node_outedges;
-   SCIP_Real* RESTRICT ecosts = bdk->node_edgecosts;
    int* RESTRICT adjverts = bdk->node_neighbors;
    int k = 0;
 
    for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
    {
       edges[k] = e;
-      ecosts[k] = g->cost[e];
       adjverts[k++] = g->head[e];
    }
 }
@@ -147,10 +145,12 @@ SCIP_Bool bdkStarIsDeletableDeg3(
 )
 {
    const SCIP_Real* const maxcosts = reduce_sdgraphGetOrderedMstCosts(bdk->sdistance->sdgraph);
-   const SCIP_Real* const ecost = bdk->node_edgecosts;
-   const SCIP_Real costsum = ecost[0] + ecost[1] + ecost[2];
+   const SCIP_Real* const gCost = g->cost;
+   const int* const star_edges = bdk->star_outedges;
+   const SCIP_Real costsum = gCost[star_edges[0]] + gCost[star_edges[1]] + gCost[star_edges[2]];
 
    assert(bdk->star_degree == 3);
+   assert(GE(maxcosts[0], 0.0) && GE(maxcosts[1], 0.0));
 
    /* NOTE: sd can be always equal to costsum, because in the case it cannot contain the whole star! */
    if( SCIPisLE(scip, maxcosts[0] + maxcosts[1], costsum) )
@@ -173,7 +173,7 @@ SCIP_Bool bdkStarIsDeletableDegGe4(
 )
 {
    const SCIP_Real* const sdtreecosts = reduce_sdgraphGetOrderedMstCosts(bdk->sdistance->sdgraph);
-   const SCIP_Real* const ecost = bdk->node_edgecosts;
+   const int* const star_edges = bdk->star_outedges;
    const int star_degree = bdk->star_degree;
    SCIP_Real costsum = 0.0;
    SCIP_Real treecost = 0.0;
@@ -181,10 +181,17 @@ SCIP_Bool bdkStarIsDeletableDegGe4(
    assert(4 <= star_degree && star_degree <= STP_BDKIMP_MAXDEGREE);
 
    for( int j = 0; j < star_degree; j++ )
-      costsum += ecost[j];
+   {
+      const int outedge = star_edges[j];
+      assert(outedge >= 0 && g->tail[outedge] == i);
+      costsum += g->cost[outedge];
+   }
 
    for( int j = 0; j < star_degree - 1; j++ )
+   {
+      assert(GE(sdtreecosts[j], 0.0));
       treecost += sdtreecosts[j];
+   }
 
    /* NOTE: sd can be always equal to costsum, because in the case it cannot contain the whole star! */
    if( SCIPisLE(scip, treecost, costsum) )
@@ -338,9 +345,6 @@ SCIP_RETCODE bdkTryDegGe4(
 
 
 #endif
-
-
-   return SCIP_OKAY;
 }
 
 /** initializes data needed for SD star tests */
