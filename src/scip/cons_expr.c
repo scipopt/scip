@@ -2311,6 +2311,9 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
+
+      /* make sure we include this constraint into the next propagation round, now that more structure may have been detected */
+      consdata->ispropagated = FALSE;
    }
 
    /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
@@ -7116,6 +7119,8 @@ SCIP_RETCODE enforceExpr(
    SCIP_Bool auxunderestimate;
    SCIP_Bool auxoverestimate;
    SCIP_RESULT hdlrresult;
+   SCIP_Bool infeasible;
+   int ntightenings;
    int e;
 
    assert(scip != NULL);
@@ -7139,6 +7144,19 @@ SCIP_RETCODE enforceExpr(
    {
       return SCIP_OKAY;
    }
+
+   /* ensure activity in expression is uptodate, in case someone uses bounds (TODO: nlhdlr will tell us soon whether they do)
+    * as nlhdlr/exprhdlr may look at auxvar bounds instead of activity, we run this with tightenauxvars = TRUE
+    */
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, FALSE, TRUE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+   if( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+   /* if we tightened an auxvar bound, we better communicate that */
+   if( ntightenings > 0 )
+      *result = SCIP_REDUCEDDOM;
 
    /* check aux-violation w.r.t. each nonlinear handlers and try to enforce when there is a decent violation */
    for( e = 0; e < expr->nenfos; ++e )
