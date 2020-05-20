@@ -51,7 +51,7 @@
 #define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
 #define DEFAULT_ENFOFREQ              5 /** default value for parameter enfofreq */
 #define DEFAULT_MAXENFOROUNDSROOT    -1 /** default value for parameter maxenforoundsroot */
-#define DEFAULT_MAXENFOROUNDS         1 /** default value for parameter maxenforounds */
+#define DEFAULT_MAXENFOROUNDS        -1 /** default value for parameter maxenforounds */
 #define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
 
 /*
