@@ -112,10 +112,6 @@ if(NOT WIN32)
     set(IPOPT_LINK_FLAGS "")
   endif()
 
-  message(WARNING "IPOPT_DIR ${IPOPT_DIR}")
-  message(WARNING "IPOPT_LIBRARIES ${IPOPT_LIBRARIES}")
-  message(WARNING "IPOPT_INCLUDE_DIRS ${IPOPT_INCLUDE_DIRS}")
-
 # Windows platforms
 else()
   include(SelectLibraryConfigurations)
