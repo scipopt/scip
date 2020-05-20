@@ -82,7 +82,8 @@ struct special_distance_graph
    GRAPH*                distgraph;          /**< (complete) distance graph */
    PATH*                 sdmst;              /**< MST on sdgraph */
    SCIP_Real*            mstcosts;           /**< maximum MST edge costs in descending order */
-   int*                  nodes_id;           /**< number of each node in original graph */
+   SCIP_Real*            mstsdist;           /**< helper array; each entry needs to -1.0; of size nnodesorg */
+   int*                  nodemapOrgToDist;   /**< node mapping from original graph to distance graph */
    STP_Bool*             halfedge_isInMst;   /**< signifies whether edge of original graph is part of MST
                                                   NOTE: operates on edges / 2! */
    SCIP_Real             mstmaxcost;         /**< maximum edge cost */
@@ -436,6 +437,7 @@ SCIP_RETCODE sdgraphAlloc(
    SDGRAPH**             sdgraph             /**< the SD graph */
 )
 {
+   SCIP_Real* mstsdist;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
    const int nterms = g->terms;
@@ -446,8 +448,15 @@ SCIP_RETCODE sdgraphAlloc(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->sdmst), nterms) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstcosts), nterms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->nodes_id), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstsdist), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->nodemapOrgToDist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->halfedge_isInMst), nedges / 2) );
+
+   mstsdist = g_sd->mstsdist;
+   for( int i = 0; i < nnodes; i++ )
+   {
+      mstsdist[i] = -1.0;
+   }
 
    g_sd->nnodesorg = nnodes;
    g_sd->nedgesorg = nedges;
@@ -468,7 +477,7 @@ SCIP_RETCODE sdgraphBuildDistgraph(
 )
 {
    GRAPH* distgraph;
-   int* RESTRICT distnodes_id = g_sd->nodes_id;
+   int* RESTRICT distnodes_id = g_sd->nodemapOrgToDist;
    SCIP_Real* RESTRICT nodes_vdist;
    int* RESTRICT nodes_vbase;
    int* RESTRICT edgeorg;
@@ -684,6 +693,101 @@ SCIP_RETCODE sdgraphBuildMst(
 
    return SCIP_OKAY;
 }
+
+
+/** Gets special distance (e.g. bottleneck distance) from graph.
+ *  Corresponds to bottleneck length of path between term1 and term2 on distance graph */
+static
+SCIP_Real sdgraphGetSd(
+   int                    term1,             /**< terminal 1 */
+   int                    term2,             /**< terminal 2 */
+   SDGRAPH*               sdgraph            /**< the SD graph */
+)
+{
+   SCIP_Real* RESTRICT mstsdist = sdgraph->mstsdist;
+   const GRAPH* distgraph = sdgraph->distgraph;
+   const PATH* sdmst = sdgraph->sdmst;
+   const int* nodesid = sdgraph->nodemapOrgToDist;
+   const int sdnode1 = nodesid[term1];
+   const int sdnode2 = nodesid[term2];
+   SCIP_Real sdist = 0.0;
+   int tempnode = sdnode1;
+
+   assert(sdnode1 != sdnode2);
+   assert(distgraph->source == 0);
+
+   mstsdist[tempnode] = 0.0;
+
+   /* not at root? */
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+
+      assert(distgraph->head[ne] == tempnode);
+      tempnode = distgraph->tail[ne];
+
+      if( distgraph->cost[ne] > sdist )
+         sdist = distgraph->cost[ne];
+
+      mstsdist[tempnode] = sdist;
+      if( tempnode == sdnode2 )
+         break;
+   }
+
+   /* already finished? */
+   if( tempnode == sdnode2 )
+   {
+      tempnode = 0;
+   }
+   else
+   {
+      tempnode = sdnode2;
+      sdist = 0.0;
+   }
+
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+      tempnode = distgraph->tail[ne];
+
+      if( distgraph->cost[ne] > sdist )
+         sdist = distgraph->cost[ne];
+
+      /* already visited? */
+      if( GE(mstsdist[tempnode], 0.0) )
+      {
+         if( mstsdist[tempnode] > sdist )
+            sdist = mstsdist[tempnode];
+         break;
+      }
+
+#ifndef NDEBUG
+      assert(EQ(mstsdist[tempnode], -1.0));
+
+      if( tempnode == 0 )
+      {
+         assert(sdnode1 == 0);
+      }
+#endif
+   }
+
+   /* restore mstsdist */
+   tempnode = sdnode1;
+   mstsdist[tempnode] = -1.0;
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+      tempnode = distgraph->tail[ne];
+      mstsdist[tempnode] = -1.0;
+      if( tempnode == sdnode2 )
+         break;
+   }
+
+   assert(GT(sdist, 0.0));
+
+   return sdist;
+}
+
 
 /** finalizes distance graph */
 static
@@ -1460,6 +1564,32 @@ SCIP_Bool reduce_sdgraphHasOrderedMstCosts(
 }
 
 
+/** Gets special distance (e.g. bottleneck distance) from distance graph.
+ *  Only works if both nodes are terminals!  */
+SCIP_Real reduce_sdgraphGetSd(
+   int                    term1,             /**< node 1 */
+   int                    term2,             /**< node 2 */
+   SDGRAPH*               sdgraph            /**< the SD graph */
+)
+{
+#ifndef NDEBUG
+   assert(sdgraph);
+   assert(term1 != term2);
+   assert(sdgraph->mstcosts);
+   assert(sdgraph->mstsdist);
+   assert(0 <= term1 && term1 < sdgraph->nnodesorg);
+   assert(0 <= term2 && term2 < sdgraph->nnodesorg);
+   assert(sdgraph->nodemapOrgToDist[term1] != UNKNOWN);
+   assert(sdgraph->nodemapOrgToDist[term2] != UNKNOWN);
+
+   for( int i = 0; i < sdgraph->nnodesorg; i++ )
+      assert(EQ(sdgraph->mstsdist[i], 0.0));
+#endif
+
+   return sdgraphGetSd(term1, term2, sdgraph);
+}
+
+
 /** initializes all MST costs in descending order */
 void reduce_sdgraphInitOrderedMstCosts(
    SDGRAPH*              sdgraph             /**< the SD graph */
@@ -1504,10 +1634,11 @@ void reduce_sdgraphFree(
    g_sd = *sdgraph;
    assert(g_sd);
 
-   SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
-   SCIPfreeMemoryArray(scip, &(g_sd->mstcosts));
-   SCIPfreeMemoryArray(scip, &(g_sd->nodes_id));
    SCIPfreeMemoryArray(scip, &(g_sd->halfedge_isInMst));
+   SCIPfreeMemoryArray(scip, &(g_sd->nodemapOrgToDist));
+   SCIPfreeMemoryArray(scip, &(g_sd->mstsdist));
+   SCIPfreeMemoryArray(scip, &(g_sd->mstcosts));
+   SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
 
    graph_free(scip, &(g_sd->distgraph), TRUE);
 
@@ -1550,4 +1681,54 @@ void reduce_tpathsFree(
    SCIPfreeMemoryArray(scip, &(tp->termpaths));
 
    SCIPfreeMemory(scip, tpaths);
+}
+
+
+/** gets (up to) four close terminals to given node i */
+void reduce_tpathsGet4CloseTerms(
+   const GRAPH*          g,                  /**< graph */
+   const TPATHS*         tpaths,             /**< the terminal paths */
+   int                   node,               /**< node */
+   SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
+   int*                  closeterms,         /**< four close terminals */
+   SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
+   int*                  ncloseterms         /**< number of close terminals found */
+)
+{
+   const PATH* const termpaths = tpaths->termpaths;
+   const int* const termbases = tpaths->termbases;
+   const int nnodes = tpaths->nnodes;
+   int pos = node;
+   int nnterms = 0;
+
+   assert(closeterms && closeterms_dist && ncloseterms && g);
+   assert(4 <= STP_TPATHS_NTERMBASES);
+   assert(0 <= node && node < nnodes);
+   assert(nnodes == g->knots);
+   assert(GE(maxdist_strict, 0.0));
+
+   if( Is_term(g->term[node]))
+   {
+      *ncloseterms = 1;
+      closeterms[0] = node;
+      closeterms_dist[0] = 0.0;
+      return;
+   }
+
+   for( int k = 0; k < 4; k++ )
+   {
+      if( LT(termpaths[pos].dist, maxdist_strict) )
+      {
+         closeterms[nnterms] = termbases[pos];
+         closeterms_dist[nnterms++] = termpaths[pos].dist;
+      }
+      else
+      {
+         break;
+      }
+
+      pos += nnodes;
+   }
+
+   *ncloseterms = nnterms;
 }

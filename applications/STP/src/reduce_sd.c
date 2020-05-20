@@ -893,6 +893,73 @@ SCIP_Real getSd(
 }
 
 
+/** gets special distance to a pair of nodes */
+static
+SCIP_Real sdGetSd(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   i,                  /**< first vertex */
+   int                   i2,                 /**< second vertex */
+   SCIP_Real             sd_upper,           /**< upper bound on special distance (can be FARAWAY) */
+   SD*                   sddata              /**< SD */
+   )
+{
+   SCIP_Real termdist1[4];
+   SCIP_Real termdist2[4];
+   int neighbterms1[4];
+   int neighbterms2[4];
+   SDGRAPH* sdgraph;
+   SCIP_Real sd = sd_upper;
+   int nnterms1;
+   int nnterms2;
+
+   assert(g && sddata);
+   assert(i != i2);
+
+   sdgraph = sddata->sdgraph;
+   assert(sdgraph);
+
+   /* get closest terminals of distance strictly smaller than 'sd' */
+   reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, termdist1, &nnterms1);
+   if( nnterms1 == 0 )
+      return sd;
+
+   reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, i2, sd, neighbterms2, termdist2, &nnterms2);
+   if( nnterms2 == 0 )
+      return sd;
+
+   for( int j = 0; j < nnterms1; j++ )
+   {
+      const int tj = neighbterms1[j];
+      assert(tj >= 0);
+
+      for( int k = 0; k < nnterms2; k++ )
+      {
+         SCIP_Real sd_jk = MAX(termdist1[j], termdist2[k]);
+         const int tk = neighbterms2[k];
+
+         assert(Is_term(g->term[tk]));
+         assert(Is_term(g->term[tj]));
+         assert(tk >= 0);
+
+         if( tj != tk)
+         {
+            /* get terminal-to-terminal special distance */
+            const SCIP_Real sdt_jk = reduce_sdgraphGetSd(tj, tk, sdgraph);
+
+            if( sdt_jk > sd_jk )
+               sd_jk = sdt_jk;
+         }
+
+         if( sd_jk < sd )
+            sd = sd_jk;
+
+      } /* k < nnterms2 */
+   } /* j < nnterms1 */
+
+   return sd;
+}
+
+
 /** is node of degree 3 pseudo-deletable? */
 static inline
 SCIP_Bool isPseudoDeletableDeg3(
@@ -1053,37 +1120,37 @@ void reduce_sdGetSdsCliquegraph(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
-   SD*                   sd,                 /**< SD */
+   SD*                   sddata,             /**< SD */
    GRAPH*                cliquegraph         /**< clique graph to be filled */
 )
 {
    const int nnodes_clique = graph_get_nNodes(cliquegraph);
 
-   assert(scip && cliqueNodeMap && sd);
+   assert(scip && cliqueNodeMap && sddata);
    assert(2 <= nnodes_clique && nnodes_clique <= g->knots);
 
-   for( int k = 0; k < nnodes_clique; k++ )
+   for( int k1 = 0; k1 < nnodes_clique; k1++ )
    {
-      const int v1 = cliqueNodeMap[k];
+      const int v1 = cliqueNodeMap[k1];
       assert(0 <= v1 && v1 < g->knots);
 
-      if( !cliquegraph->mark[k] )
+      if( !cliquegraph->mark[k1] )
          continue;
 
-      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
       {
          const int k2 = cliquegraph->head[e];
 
          if( !cliquegraph->mark[k2] )
             continue;
 
-         if( k2 > k )
+         if( k2 > k1 )
          {
             const int v2 = cliqueNodeMap[k2];
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
 
-       //  cliquegraph->cost[e] = ()
+            cliquegraph->cost[e] = sdGetSd(g, k1, k2, FARAWAY, sddata);
             cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
          }
       }
