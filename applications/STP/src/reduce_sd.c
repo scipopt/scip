@@ -1150,7 +1150,7 @@ void reduce_sdGetSdsCliquegraph(
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
 
-            cliquegraph->cost[e] = sdGetSd(g, k1, k2, FARAWAY, sddata);
+            cliquegraph->cost[e] = sdGetSd(g, v1, v2, FARAWAY, sddata);
             cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
          }
       }

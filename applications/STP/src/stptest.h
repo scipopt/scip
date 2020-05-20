@@ -100,7 +100,7 @@ extern SCIP_RETCODE    stptest_reduceStar(SCIP*);
  */
 extern SCIP_RETCODE    stptest_reduceBdk(SCIP*);
 extern SCIP_RETCODE    stptest_reduceSdStarBias(SCIP*);
-
+extern SCIP_RETCODE    stptest_reduceSdGetter(SCIP*);
 
 /* stptest_pcreduce.c
  */

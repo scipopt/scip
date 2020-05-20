@@ -35,6 +35,99 @@
 
 
 
+/** tests SD getter */
+static
+SCIP_RETCODE testSdGetterReturnsCorrectSds(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   GRAPH* cliquegraph;
+   int nnodes = 7;
+   int nedges = 16;
+   int cliqueNodeMap[] = { 3,4,5,6 };
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 3.0); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 2.0); // 2
+
+   graph_edge_addBi(scip, graph, 3, 0, 1.0); // 4
+   graph_edge_addBi(scip, graph, 4, 0, 1.0); // 6
+   graph_edge_addBi(scip, graph, 4, 1, 2.0); // 8
+   graph_edge_addBi(scip, graph, 5, 1, 4.0); // 10
+   graph_edge_addBi(scip, graph, 6, 1, 4.0); // 12
+   graph_edge_addBi(scip, graph, 6, 2, 2.0); // 14
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( graph_buildCompleteGraph(scip, &cliquegraph, 4) );
+   SCIP_CALL( graph_path_init(scip, cliquegraph) );
+   for( int i = 0; i < 4; i++ )
+      cliquegraph->mark[i] = TRUE;
+
+   SCIP_CALL( reduce_sdInit(scip, graph, &sddata) );
+
+   reduce_sdGetSdsCliquegraph(scip, graph, cliqueNodeMap, sddata, cliquegraph);
+
+   for( int e = cliquegraph->outbeg[0]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+   {
+      const int head = cliquegraph->head[e];
+      const SCIP_Real cost = cliquegraph->cost[e];
+      if( head == 1 )
+      {
+         STPTEST_ASSERT(EQ(cost, 1.0));
+      }
+
+      if( head == 2 )
+      {
+         STPTEST_ASSERT(EQ(cost, 4.0));
+      }
+
+      if( head == 3 )
+      {
+         STPTEST_ASSERT(EQ(cost, 3.0));
+      }
+   }
+
+   for( int e = cliquegraph->outbeg[1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+   {
+      const int head = cliquegraph->head[e];
+      const SCIP_Real cost = cliquegraph->cost[e];
+      if( head == 0 )
+      {
+         STPTEST_ASSERT(EQ(cost, 1.0));
+      }
+
+      if( head == 2 )
+      {
+         STPTEST_ASSERT(EQ(cost, 4.0));
+      }
+
+      if( head == 3 )
+      {
+         STPTEST_ASSERT(EQ(cost, 2.0));
+      }
+   }
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, cliquegraph);
+   stptest_graphTearDown(scip, graph);
+
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that BDk test pseudo-eliminates node of degree 4 */
 static
 SCIP_RETCODE testBdkDeletesNodeDeg4(
@@ -211,6 +304,18 @@ SCIP_RETCODE stptest_reduceBdk(
    return SCIP_OKAY;
 }
 
+
+/** tests sd getter methods */
+SCIP_RETCODE stptest_reduceSdGetter(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( testSdGetterReturnsCorrectSds(scip) );
+
+   printf("reduce sd getter test: all ok \n");
+
+   return SCIP_OKAY;
+}
 
 /** tests SD biased methods */
 SCIP_RETCODE stptest_reduceSdStarBias(

@@ -1583,7 +1583,7 @@ SCIP_Real reduce_sdgraphGetSd(
    assert(sdgraph->nodemapOrgToDist[term2] != UNKNOWN);
 
    for( int i = 0; i < sdgraph->nnodesorg; i++ )
-      assert(EQ(sdgraph->mstsdist[i], 0.0));
+      assert(EQ(sdgraph->mstsdist[i], -1.0));
 #endif
 
    return sdgraphGetSd(term1, term2, sdgraph);
