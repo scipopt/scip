@@ -1406,6 +1406,16 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns the root curvature of the given expression constraint
+ *
+ * @note The curvature information are computed during CONSINITSOL.
+ */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** returns representation of the expression of the given expression constraint as quadratic form, if possible
  *
  * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
