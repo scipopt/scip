@@ -79,12 +79,24 @@ if(NOT WIN32)
       set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
     endif()
 
-    set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
+    # version ipopt >= 3.13
+    set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
     find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
-                                     ${IPOPT_DIR}/lib/coin
+                                     ${IPOPT_DIR}/lib/coin-or
                                      NO_DEFAULT_PATH)
+
+    if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
+        # version ipopt <= 3.12
+        set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
+        find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
+                                         ${IPOPT_DIR}/lib/coin
+                                         NO_DEFAULT_PATH)
+    endif()
+
     if(IPOPT_LIBRARIES)
-      find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin/Ipopt
+      find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
+         ${IPOPT_DIR}/share/coin-or/doc/Ipopt
+         ${IPOPT_DIR}/share/doc/coin/Ipopt
          ${IPOPT_DIR}/share/coin/doc/Ipopt
          NO_DEFAULT_PATH)
 
@@ -106,19 +118,32 @@ else()
 
   set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
 
-  set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
+  # version ipopt >= 3.13
+  set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
   find_library(IPOPT_IPOPT_LIBRARY_RELEASE libipopt ${IPOPT_DIR}/lib
-                                                    ${IPOPT_DIR}/lib/coin
+                                                    ${IPOPT_DIR}/lib/coin-or
                                                     NO_DEFAULT_PATH)
   find_library(IPOPT_IPOPT_LIBRARY_DEBUG   libipoptD ${IPOPT_DIR}/lib
-                                                     ${IPOPT_DIR}/lib/coin
+                                                     ${IPOPT_DIR}/lib/coin-or
                                                      NO_DEFAULT_PATH)
+  if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
+      # version ipopt <= 3.12
+      set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
+      find_library(IPOPT_IPOPT_LIBRARY_RELEASE libipopt ${IPOPT_DIR}/lib
+                                                        ${IPOPT_DIR}/lib/coin
+                                                        NO_DEFAULT_PATH)
+      find_library(IPOPT_IPOPT_LIBRARY_DEBUG   libipoptD ${IPOPT_DIR}/lib
+                                                         ${IPOPT_DIR}/lib/coin
+                                                         NO_DEFAULT_PATH)
+  endif()
 
   select_library_configurations(IPOPT_IPOPT)
   set(IPOPT_LIBRARIES ${IPOPT_IPOPT_LIBRARY})
 
   if(IPOPT_LIBRARIES)
-    find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin/Ipopt
+    find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
+                                                   ${IPOPT_DIR}/share/coin-or/doc/Ipopt
+                                                   ${IPOPT_DIR}/share/doc/coin/Ipopt
                                                    ${IPOPT_DIR}/share/coin/doc/Ipopt
                                                    NO_DEFAULT_PATH)
     mark_as_advanced(IPOPT_DEP_FILE)
@@ -150,6 +175,8 @@ else()
 
         find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} $ENV{MKLROOT}/lib/${MKL_ARCH_DIR}
                                                     ${IPOPT_DIR}/lib
+                                                    ${IPOPT_DIR}/lib/coin-or
+                                                    ${IPOPT_DIR}/lib/coin-or/ThirdParty
                                                     ${IPOPT_DIR}/lib/coin
                                                     ${IPOPT_DIR}/lib/coin/ThirdParty
                                                     NO_DEFAULT_PATH)
