@@ -447,7 +447,10 @@ SCIP_RETCODE redLoopStp_inner(
       // todo check me out
       int xxx = 0;
       SCIP_CALL( reduce_bdk(scip, g, &xxx) );
-    //  assert(0);
+
+   //   printf("reduce_bdk elims=%d \n",xxx );
+
+//      assert(0);
 
 
 

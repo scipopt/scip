@@ -226,6 +226,7 @@ extern SCIP_RETCODE    reduce_starInit(SCIP*, int, STAR**);
 extern void            reduce_starFree(SCIP*, STAR**);
 extern void            reduce_starReset(const GRAPH*, int, STAR*);
 extern const int*      reduce_starGetNext(STAR*, int*);
+extern const int*      reduce_starGetNextAndPosition(STAR*, int*, int*);
 extern const int*      reduce_starGetRuledOutEdges(STAR*, int*);
 extern int             reduce_starGetCenter(const STAR*);
 extern void            reduce_starSetRuledOut(STAR*);

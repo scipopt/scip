@@ -365,6 +365,27 @@ void starSelectedEdgesUpdate(
    }
 }
 
+/** copies selected positions into given array */
+static inline
+void starSelectedPositionsCopy(
+   const STAR*           star,               /**< the star (in/out) */
+   int*                  posStorage          /**< to copy into */
+)
+{
+   const int* const edgesSelectedPos = star->edgesSelectedPos;
+   const int starDegree = star->starDegree;
+
+   assert(starDegree >= 3);
+
+   for( int i = 0; i < starDegree; i++ )
+   {
+      const int pos = edgesSelectedPos[i];
+      assert(0 <= pos && pos < star->nodeDegree);
+
+      posStorage[i] = pos;
+   }
+}
+
 
 /** moves to next star */
 static inline
@@ -1391,6 +1412,39 @@ const int* reduce_starGetNext(
 
    return star->edgesSelected;
 }
+
+
+/** gets next star */
+const int* reduce_starGetNextAndPosition(
+   STAR*                 star,               /**< the star (in/out) */
+   int*                  position,           /**< array to store the positions */
+   int*                  nedges              /**< number of edges of next star (out) */
+)
+{
+   assert(star);
+   assert(!reduce_starAllAreChecked(star));
+
+   if( nedges )
+   {
+      *nedges = star->starDegree;
+   }
+
+   starSelectedEdgesUpdate(star);
+   starSelectedPositionsCopy(star, position);
+   starSelectedPositionsSetNext(star);
+
+   /* just finished? */
+   if( starIsDeg2(star) )
+      star->allStarsChecked = TRUE;
+
+   if( nedges )
+   {
+      assert(3 <= *nedges && *nedges <= star->maxNodeDegree);
+   }
+
+   return star->edgesSelected;
+}
+
 
 
 /** gets ruled out edges after termination */
