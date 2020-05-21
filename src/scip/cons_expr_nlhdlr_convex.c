@@ -2236,6 +2236,7 @@ SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
    SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
 
    /* prepare nonlinear handler data */
+   nlhdlrdata.isnlhdlrconvex = TRUE;
    nlhdlrdata.evalsol = NULL;
    nlhdlrdata.detectsum = TRUE;
    nlhdlrdata.preferextended = FALSE;
@@ -2249,8 +2250,6 @@ SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
    {
       SCIP_EXPRCURV targetcurv = (i == 0) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
       SCIP_Bool success;
-
-      nlhdlrdata.isnlhdlrconvex = (i == 0);
 
       SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr,
          targetcurv, &success) );
