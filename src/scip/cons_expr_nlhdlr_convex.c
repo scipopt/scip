@@ -2209,3 +2209,68 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
 
    return SCIP_OKAY;
 }
+
+/** computes the curvature information w.r.t. the original variables for a given expression; this method uses the
+ * methods that are used in the detection algorithm of the convex and concave nonlinear handler
+ */
+SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV*        curv                /**< pointer to store the curvature */
+   )
+{
+   SCIP_CONSEXPR_NLHDLRDATA nlhdlrdata;
+   SCIP_CONSEXPR_EXPR* rootnlexpr;
+   SCIP_HASHMAP* nlexpr2origexpr;
+   int nleafs;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(curv != NULL);
+
+   *curv = SCIP_EXPRCURV_UNKNOWN;
+
+   /* create temporary hashmap */
+   SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
+
+   /* prepare nonlinear handler data */
+   nlhdlrdata.evalsol = NULL;
+   nlhdlrdata.detectsum = TRUE;
+   nlhdlrdata.preferextended = FALSE;
+   nlhdlrdata.cvxquadratic = TRUE;
+   nlhdlrdata.cvxsignomial = TRUE;
+   nlhdlrdata.cvxprodcomp = TRUE;
+   nlhdlrdata.handletrivial = TRUE;
+
+   /* call constructExpr() for the convex and concave case */
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_EXPRCURV targetcurv = (i == 0) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      SCIP_Bool success;
+
+      nlhdlrdata.isnlhdlrconvex = (i == 0);
+
+      SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr,
+         targetcurv, &success) );
+
+      /* free created expression */
+      if( rootnlexpr != NULL )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootnlexpr) );
+      }
+
+      /* curvature detection was successful -> leave loop */
+      if( success )
+      {
+         *curv = targetcurv;
+         break;
+      }
+   }
+
+   /* free hashmap */
+   SCIPhashmapFree(&nlexpr2origexpr);
+
+   return SCIP_OKAY;
+}

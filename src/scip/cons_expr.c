@@ -177,6 +177,8 @@ struct SCIP_ConsData
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
    unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
 
+   SCIP_EXPRCURV         curv;               /**< curvature of the root expression w.r.t. the original variables */
+
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
    int                   nlockspos;          /**< number of positive locks */
@@ -10289,6 +10291,19 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
          /* call curvature detection of expression handlers; TODO do we really need this? */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
 
+         /* call the curvature detection algorithm of the convex and concave nonlinear handler if the curvature
+          * detection of the expression handlers could not detect anything
+          */
+         if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
+         {
+            SCIP_CALL( SCIPgetConsExprExprOrigCurvature(scip, conshdlr, consdata->expr, &consdata->curv) );
+         }
+         else
+         {
+            consdata->curv = SCIPgetConsExprExprCurvature(consdata->expr);
+         }
+         SCIPdebugMsg(scip, "curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
+
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
@@ -10297,6 +10312,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
                SCIP_CALL( createNlRow(scip, conss[c]) );
                assert(consdata->nlrow != NULL);
             }
+            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
       }
@@ -15762,6 +15778,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    consdata->lhs = lhs;
    consdata->rhs = rhs;
    consdata->consindex = conshdlrdata->lastconsindex++;
+   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
 
    /* capture expression */
    SCIPcaptureConsExprExpr(consdata->expr);
@@ -15944,6 +15961,33 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    assert(consdata != NULL);
 
    return consdata->expr;
+}
+
+/** returns the root curvature of the given expression constraint
+ *
+ * @note The curvature information are computed during CONSINITSOL.
+ */
+SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not expression\n");
+      SCIPABORT();
+      return SCIP_EXPRCURV_UNKNOWN;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->curv;
 }
 
 /** returns representation of the expression of the given expression constraint as quadratic form, if possible
