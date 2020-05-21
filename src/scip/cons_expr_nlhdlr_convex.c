@@ -965,7 +965,7 @@ SCIP_RETCODE constructExpr(
       {
          ++*nleafs;
 
-         /* check if the new leave is not an original variable (or constant) */
+         /* check whether the new leaf is not an original variable (or constant) */
          if( curvsuccess != NULL && !SCIPisConsExprExprVar(nlexpr) && !SCIPisConsExprExprValue(nlexpr) )
             *curvsuccess = FALSE;
       }
