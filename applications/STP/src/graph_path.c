@@ -973,6 +973,7 @@ void graph_path_exec(
    assert(p->path_state  != NULL);
    assert(path   != NULL);
    assert(cost   != NULL);
+   assert(p->mark[start]);
 
    /* no nodes?, return*/
    if( nnodes == 0 )
