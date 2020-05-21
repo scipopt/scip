@@ -559,6 +559,12 @@ SCIP_Bool SCIPisConsExprExprVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** returns whether an expression is a value expression */
+SCIP_EXPORT
+SCIP_Bool SCIPisConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
