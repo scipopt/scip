@@ -7146,9 +7146,11 @@ SCIP_RETCODE enforceExpr(
    }
 
    /* ensure activity in expression is uptodate, in case someone uses bounds (TODO: nlhdlr will tell us soon whether they do)
-    * as nlhdlr/exprhdlr may look at auxvar bounds instead of activity, we run this with tightenauxvars = TRUE
+    * as nlhdlr/exprhdlr may look at auxvar bounds instead of expr activity, we may want to run with tightenauxvars = TRUE
+    * but this has some weird sideeffect on lnts*, so I turned this off again
+    * but then we might take out this whole forwardPropExpr call as well
     */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, FALSE, TRUE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, FALSE, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
