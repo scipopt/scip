@@ -2267,6 +2267,9 @@ SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
          *curv = targetcurv;
          break;
       }
+
+      /* clear hashmap */
+      SCIP_CALL( SCIPhashmapRemoveAll(nlexpr2origexpr) );
    }
 
    /* free hashmap */
