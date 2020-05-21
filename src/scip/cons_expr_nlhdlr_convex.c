@@ -877,7 +877,7 @@ SCIP_RETCODE constructExpr(
    int*                  nleafs,             /**< number of leafs in constructed expression */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to achieve */
-   SCIP_Bool*            success             /**< pointer to store whether the curvature could be achieved w.r.t. the original variables (might be NULL) */
+   SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved w.r.t. the original variables (might be NULL) */
    )
 {
    SCIP_CONSEXPR_EXPR* nlexpr;
@@ -897,8 +897,8 @@ SCIP_RETCODE constructExpr(
    SCIP_CALL( nlhdlrExprCreate(scip, conshdlr, nlexpr2origexpr, rootnlexpr, rootexpr, curv) );
 
    *nleafs = 0;
-   if( success != NULL )
-      *success = TRUE;
+   if( curvsuccess != NULL )
+      *curvsuccess = TRUE;
 
    SCIP_CALL( exprstackInit(scip, &stack, 20) );
    SCIP_CALL( exprstackPush(scip, &stack, 1, rootnlexpr) );
@@ -966,8 +966,8 @@ SCIP_RETCODE constructExpr(
          ++*nleafs;
 
          /* check if the new leave is not an original variable (or constant) */
-         if( success != NULL && !SCIPisConsExprExprVar(nlexpr) && !SCIPisConsExprExprValue(nlexpr) )
-            *success = FALSE;
+         if( curvsuccess != NULL && !SCIPisConsExprExprVar(nlexpr) && !SCIPisConsExprExprValue(nlexpr) )
+            *curvsuccess = FALSE;
       }
    }
 
