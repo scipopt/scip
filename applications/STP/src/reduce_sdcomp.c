@@ -43,14 +43,13 @@
 /** BD_k storage */
 typedef struct bottleneck_distance_storage
 {
-   const SD*             sdistance;          /**< special distance storage */
+   SD*                   sdistance;          /**< special distance storage */
    STAR*                 star;               /**< star structure for neighborhood of node */
    GRAPH*                cliquegraph;        /**< complete graph on adjacent vertices */
+   PATH*                 clique_mst;          /**< MST on cliquegraph */
    int*                  node_outedges;      /**< for node: outgoing edges (size STP_BDKIMP_MAXNEDGES) */
-//   SCIP_Real*            node_edgecosts;     /**< for node: edge costs (size STP_BDKIMP_MAXNEDGES) */
    int*                  node_neighbors;     /**< for node: adjacent vertices (size STP_BDKIMP_MAXDEGREE) */
    const int*            star_outedges;      /**< for star: outgoing edges */
- //  int*                  star_neighbors;     /**< for star: adjacent vertices */
    int                   star_degree;        /**< degree of star */
 } BDK;
 
@@ -59,7 +58,7 @@ typedef struct bottleneck_distance_storage
 static
 SCIP_RETCODE bdkInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SD*             sdistance,          /**< special distance storage */
+   SD*                   sdistance,          /**< special distance storage */
    BDK**                 bdk                 /**< storage */
 )
 {
@@ -78,9 +77,11 @@ SCIP_RETCODE bdkInit(
    SCIP_CALL( graph_path_init(scip, cliquegraph) );
    assert(cliquegraph->edges == 2 * STP_BDKIMP_MAXNEDGES);
    bdk_d->cliquegraph = cliquegraph;
+   for( int i = 0; i < STP_BDKIMP_MAXDEGREE; i++ )
+      cliquegraph->mark[i] = TRUE;
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->clique_mst), STP_BDKIMP_MAXDEGREE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_outedges), STP_BDKIMP_MAXNEDGES) );
- //  SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_edgecosts), STP_BDKIMP_MAXNEDGES) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_neighbors), STP_BDKIMP_MAXDEGREE) );
 
    return SCIP_OKAY;
@@ -97,8 +98,8 @@ void bdkFree(
    GRAPH* cliquegraph = bdk_d->cliquegraph;
 
    SCIPfreeMemoryArray(scip, &(bdk_d->node_neighbors));
-//   SCIPfreeMemoryArray(scip, &(bdk_d->node_edgecosts));
    SCIPfreeMemoryArray(scip, &(bdk_d->node_outedges));
+   SCIPfreeMemoryArray(scip, &(bdk_d->clique_mst));
 
    graph_path_exit(scip, cliquegraph);
    graph_free(scip, &cliquegraph, TRUE);
@@ -128,10 +129,156 @@ void bdkGetNeighborhood(
    }
 }
 
-
-/** can vertex of degree 3 be deleted? */
+/** gets SDs bdk test; stored in cliquegraph */
 static inline
-SCIP_Bool bdkStarIsDeletableDeg3(
+void bdkGetCliqueSds(
+   const GRAPH*          g,                 /**< graph data structure */
+   int                   node,              /**< the node */
+   BDK*                  bdk                /**< storage */
+)
+{
+   GRAPH* cliquegraph = bdk->cliquegraph;
+   const int degree = g->grad[node];
+   int* nodemark = cliquegraph->mark;
+
+   assert(degree >= 3);
+   assert(STP_BDKIMP_MAXDEGREE == cliquegraph->knots);
+   assert(nodemark[0] && nodemark[1] && nodemark[2]);
+
+   for( int k = 3; k < degree; k++ )
+      nodemark[k] = TRUE;
+
+   for( int k = degree; k < STP_BDKIMP_MAXDEGREE; k++ )
+      nodemark[k] = FALSE;
+
+   reduce_sdGetSdsCliquegraph(g, bdk->node_neighbors, bdk->sdistance, cliquegraph);
+}
+
+
+/** gets SDs bdk test; stored in cliquegraph */
+static inline
+void bdkGetCutoffs(
+   const GRAPH*          g,                 /**< graph data structure */
+   const BDK*            bdk,               /**< storage */
+   int                   node,              /**< the node */
+   SCIP_Real*            cutoffs            /**< cutoffs */
+)
+{
+   const GRAPH* cliquegraph = bdk->cliquegraph;
+   const int degree = g->grad[node];
+   const int* const nodemark = cliquegraph->mark;
+   int edgecount = 0;
+
+  // printf("go degree=%d \n", degree);
+
+   for( int k = 0; k < STP_BDKIMP_MAXDEGREE - 1; k++ )
+   {
+      if( !nodemark[k] )
+         continue;
+
+      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      {
+         const int k2 = cliquegraph->head[e];
+
+         if( !nodemark[k2] )
+            continue;
+
+         if( k2 > k )
+         {
+         //   printf("%d, %d \n", k, k2);
+
+            cutoffs[edgecount++] = cliquegraph->cost[e];
+         }
+      }
+   }
+}
+
+
+/** return cost of star */
+static inline
+SCIP_Real bdkStarGetCost(
+   int                   i,                 /**< the node */
+   const GRAPH*          g,                 /**< graph data structure */
+   const BDK*            bdk                /**< storage */
+   )
+{
+   const int* const star_edges = bdk->star_outedges;
+   SCIP_Real costsum = 0.0;
+   const int star_degree = bdk->star_degree;
+
+   for( int j = 0; j < star_degree; j++ )
+   {
+      const int outedge = star_edges[j];
+      assert(outedge >= 0 && g->tail[outedge] == i);
+      costsum += g->cost[outedge];
+   }
+
+   return costsum;
+}
+
+#if 0
+/** can star be replaced by SD MST? */
+static inline
+SCIP_Bool bdkStarIsSdMstReplacable(
+   SCIP*                 scip,              /**< SCIP data structure */
+   int                   i,                 /**< the node */
+   const GRAPH*          g,                 /**< graph data structure */
+   BDK*                  bdk                /**< storage */
+)
+{
+   PATH mst[STP_BD_MAXDEGREE];
+
+   for( int l = 0; l < STP_BD_MAXDEGREE; l++ )
+      mst[l].dist = UNKNOWN;
+
+
+   /* compute MST  */
+   graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
+
+#ifndef NDEBUG
+   for( int l = 1; l < STP_BD_MAXDEGREE; l++ )
+      assert(mst[l].dist != UNKNOWN);
+#endif
+
+   for( int l = 1; l < STP_BD_MAXDEGREE; l++ )
+      mstcost += mst[l].dist;
+   // combine costs...
+}
+#endif
+
+
+/** can star be replaced by SD MST? */
+static inline
+SCIP_Bool bdkStarIsSdReplacable(
+   SCIP*                 scip,              /**< SCIP data structure */
+   int                   i,                 /**< the node */
+   const GRAPH*          g,                 /**< graph data structure */
+   BDK*                  bdk                /**< storage */
+)
+{
+   const SCIP_Real* const sdtreecosts = reduce_sdgraphGetOrderedMstCosts(bdk->sdistance->sdgraph);
+   SCIP_Real treecost = 0.0;
+   SCIP_Real costsum = bdkStarGetCost(i, g, bdk);
+   const int star_degree = bdk->star_degree;
+
+   for( int j = 0; j < star_degree - 1; j++ )
+   {
+      assert(GE(sdtreecosts[j], 0.0));
+      treecost += sdtreecosts[j];
+   }
+
+   /* NOTE: sd can be always equal to costsum, because in the case it cannot contain the whole star! */
+   if( SCIPisLE(scip, treecost, costsum) )
+      return TRUE;
+
+
+   return FALSE;
+}
+
+
+/** can vertex of degree 3 be replaced? */
+static inline
+SCIP_Bool bdkStarIsReplacableDeg3(
    SCIP*                 scip,              /**< SCIP data structure */
    int                   i,                 /**< the node */
    const GRAPH*          g,                 /**< graph data structure */
@@ -150,45 +297,31 @@ SCIP_Bool bdkStarIsDeletableDeg3(
    if( SCIPisLE(scip, maxcosts[0] + maxcosts[1], costsum) )
       return TRUE;
 
-   if( graph_pseudoAncestors_edgesInConflict(scip, g, bdk->star_outedges, bdk->star_degree) )
+   // todo here get the sds and combine
+   // new method
+
+   if( graph_pseudoAncestors_edgesInConflict(scip, g, bdk->star_outedges, 3) )
       return TRUE;
 
    return FALSE;
 }
 
 
-/** can star of degree 4 or greater be deleted? */
+/** can star of degree 4 or greater be replaced? */
 static inline
-SCIP_Bool bdkStarIsDeletableDegGe4(
+SCIP_Bool bdkStarIsReplacableDegGe4(
    SCIP*                 scip,              /**< SCIP data structure */
    int                   i,                 /**< the node */
    const GRAPH*          g,                 /**< graph data structure */
    BDK*                  bdk                /**< storage */
 )
 {
-   const SCIP_Real* const sdtreecosts = reduce_sdgraphGetOrderedMstCosts(bdk->sdistance->sdgraph);
-   const int* const star_edges = bdk->star_outedges;
    const int star_degree = bdk->star_degree;
-   SCIP_Real costsum = 0.0;
-   SCIP_Real treecost = 0.0;
 
+   assert(g->terms >= star_degree);
    assert(4 <= star_degree && star_degree <= STP_BDKIMP_MAXDEGREE);
 
-   for( int j = 0; j < star_degree; j++ )
-   {
-      const int outedge = star_edges[j];
-      assert(outedge >= 0 && g->tail[outedge] == i);
-      costsum += g->cost[outedge];
-   }
-
-   for( int j = 0; j < star_degree - 1; j++ )
-   {
-      assert(GE(sdtreecosts[j], 0.0));
-      treecost += sdtreecosts[j];
-   }
-
-   /* NOTE: sd can be always equal to costsum, because in the case it cannot contain the whole star! */
-   if( SCIPisLE(scip, treecost, costsum) )
+   if( bdkStarIsSdReplacable(scip, i, g, bdk) )
       return TRUE;
 
    if( graph_pseudoAncestors_edgesInConflict(scip, g, bdk->star_outedges, star_degree) )
@@ -203,42 +336,32 @@ SCIP_Bool bdkStarIsDeletableDegGe4(
 static inline
 SCIP_RETCODE bdkTryDeg3(
    SCIP*                 scip,              /**< SCIP data structure */
-   int                   i,                 /**< the node */
+   int                   node,              /**< the node */
    GRAPH*                g,                 /**< graph data structure */
    BDK*                  bdk,               /**< storage */
    int*                  nelims             /**< number of eliminations */
 )
 {
    SCIP_Real sd[3];
-   const SCIP_Real* const maxcosts = reduce_sdgraphGetOrderedMstCosts(bdk->sdistance->sdgraph);
 
-   assert(g->grad[i] == 3);
+   assert(g->grad[node] == 3);
    assert(g->terms >= 3);
-
-   // todo replace
-   sd[0] = maxcosts[0];
-   sd[1] = maxcosts[0];
-   sd[2] = maxcosts[0];
 
    bdk->star_degree = 3;
    bdk->star_outedges = bdk->node_outedges;
 
-   if( bdkStarIsDeletableDeg3(scip, i, g, bdk) )
+   if( bdkStarIsReplacableDeg3(scip, node, g, bdk) )
    {
       SCIP_Real cutoffs[3];
       SCIP_Bool success;
+      bdkGetCutoffs(g, bdk, node, cutoffs);
 
-      // todo replace
-      cutoffs[0] = MIN(sd[0], maxcosts[0]);
-      cutoffs[1] = MIN(sd[2], maxcosts[0]);
-      cutoffs[2] = MIN(sd[1], maxcosts[0]);
-
-      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
+      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, &success));
 
       assert(success);
-      assert(g->grad[i] == 0);
+      assert(g->grad[node] == 0);
 
-      SCIPdebugMessage("BD3-implied reduction of node %d with SDs: %f %f %f \n ",i, sd[0], sd[1], sd[2]);
+      SCIPdebugMessage("BD3-implied reduction of node %d with SDs: %f %f %f \n ",node, sd[0], sd[1], sd[2]);
       (*nelims)++;
    }
 
@@ -250,7 +373,7 @@ SCIP_RETCODE bdkTryDeg3(
 static inline
 SCIP_RETCODE bdkTryDegGe4(
    SCIP*                 scip,              /**< SCIP data structure */
-   int                   i,                 /**< the node */
+   int                   node,              /**< the node */
    GRAPH*                g,                 /**< graph data structure */
    BDK*                  bdk,               /**< storage */
    int*                  nelims             /**< number of eliminations */
@@ -259,11 +382,9 @@ SCIP_RETCODE bdkTryDegGe4(
    STAR* const star = bdk->star;
    SCIP_Bool isPseudoDeletable = TRUE;
 
-   assert(4 <= g->grad[i] && g->grad[i] <= STP_BDKIMP_MAXDEGREE);
+   assert(4 <= g->grad[node] && g->grad[node] <= STP_BDKIMP_MAXDEGREE);
 
-   reduce_starReset(g, i, star);
-   // todo extra method: get SDs
-   // todo also: get treeSds
+   reduce_starReset(g, node, star);
 
    /* check all stars of degree >= 3, as long as they can be ruled-out */
    while ( isPseudoDeletable )
@@ -272,73 +393,32 @@ SCIP_RETCODE bdkTryDegGe4(
 
       if( bdk->star_degree == 3 )
       {
-         isPseudoDeletable = bdkStarIsDeletableDeg3(scip, i, g, bdk);
+         isPseudoDeletable = bdkStarIsReplacableDeg3(scip, node, g, bdk);
       }
       else
       {
-         isPseudoDeletable = bdkStarIsDeletableDegGe4(scip, i, g, bdk);
+         isPseudoDeletable = bdkStarIsReplacableDegGe4(scip, node, g, bdk);
       }
 
       if( reduce_starAllAreChecked(star) )
          break;
    }
 
-
    if( isPseudoDeletable )
    {
       SCIP_Real cutoffs[STP_BDKIMP_MAXNEDGES];
-      const SCIP_Real maxcost = reduce_sdgraphGetMaxCost(bdk->sdistance->sdgraph);
+      bdkGetCutoffs(g, bdk, node, cutoffs);
 
-      for( int j = 0; j < STP_BDKIMP_MAXNEDGES; j++ )
-         cutoffs[j] = maxcost;
-
-
-#if 0
-      int edgecount = 0;
-
-      for( int k = 0; k < 3; k++ )
-      {
-         for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
-         {
-            const int k2 = cliquegraph->head[e];
-            if( k2 > k )
-               cutoffs[edgecount++] = cliquegraph->cost[e];
-         }
-      }
-#endif
-
-      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &isPseudoDeletable));
+      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, &isPseudoDeletable));
 
       if( isPseudoDeletable )
       {
-         SCIPdebugMessage("BD%d-implied reduction of node %d \n ", g->grad[i], i);
+         SCIPdebugMessage("BDk-implied reduction of node %d \n ", node);
          (*nelims)++;
       }
    }
 
-
    return SCIP_OKAY;
-
-#if 0
-   for( int k = 0; k < 4; k++ )
-   {
-      cliquegraph->mark[k] = TRUE;
-      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
-      {
-         const int k2 = cliquegraph->head[e];
-         if( k2 > k )
-         {
-            cliquegraph->cost[e] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, ecost[k] + ecost[k2], vbase, nodesid,
-                  adjvert[k], adjvert[k2], 200);
-            cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
-         }
-      }
-   }
-
-   success = isPseudoDeletable(scip, g, cliquegraph, ecost, node_outedges, 4);
-
-
-#endif
 }
 
 
@@ -355,13 +435,13 @@ SCIP_RETCODE reduce_bdk(
    int*                  nelims              /**< number of eliminations */
    )
 {
-   SD sdistance = { NULL, NULL };
-   SCIP_CALL( reduce_sdgraphInit(scip, g, &(sdistance.sdgraph)) );
-   reduce_sdgraphInitOrderedMstCosts(sdistance.sdgraph);
+   SD* sdistance;
 
-   SCIP_CALL( reduce_bdkWithSd(scip, &sdistance, g, nelims) );
+   SCIP_CALL( reduce_sdInit(scip, g, &sdistance) );
 
-   reduce_sdgraphFree(scip, &(sdistance.sdgraph));
+   SCIP_CALL( reduce_bdkWithSd(scip, sdistance, g, nelims) );
+
+   reduce_sdFree(scip, &sdistance);
 
    return SCIP_OKAY;
 }
@@ -370,7 +450,7 @@ SCIP_RETCODE reduce_bdk(
 /** bd_k test for given Steiner bottleneck distances */
 SCIP_RETCODE reduce_bdkWithSd(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SD*             sdistance,          /**< special distances storage */
+   SD*                   sdistance,          /**< special distances storage */
    GRAPH*                g,                  /**< graph structure */
    int*                  nelims              /**< number of eliminations */
    )
@@ -400,6 +480,7 @@ SCIP_RETCODE reduce_bdkWithSd(
             continue;
 
          bdkGetNeighborhood(g, i, bdk);
+         bdkGetCliqueSds(g, i, bdk);
 
          if( degree == 3 )
          {

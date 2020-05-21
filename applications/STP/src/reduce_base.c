@@ -444,6 +444,10 @@ SCIP_RETCODE redLoopStp_inner(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
+      // todo check me out
+      int xxx = 0;
+      SCIP_CALL( reduce_bdk(scip, g, &xxx) );
+    //  assert(0);
 
 
 

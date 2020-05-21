@@ -153,7 +153,7 @@ extern SCIP_RETCODE    reduce_getSd(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCI
 extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE    reduce_nts(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_bdk(SCIP*, GRAPH*, int*);
-extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, const SD*, GRAPH*, int*);
+extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, SD*, GRAPH*, int*);
 
 
 /* reduce_sdcomp.c
@@ -246,7 +246,7 @@ extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
-extern void             reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, const int*, SD*, GRAPH*);
+extern void             reduce_sdGetSdsCliquegraph(const GRAPH*, const int*, SD*, GRAPH*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

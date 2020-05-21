@@ -1117,7 +1117,6 @@ SCIP_RETCODE reduce_sdInit(
 
 /** get SDs between all pairs of marked vertices of given clique graph */
 void reduce_sdGetSdsCliquegraph(
-   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    SD*                   sddata,             /**< SD */
@@ -1125,23 +1124,27 @@ void reduce_sdGetSdsCliquegraph(
 )
 {
    const int nnodes_clique = graph_get_nNodes(cliquegraph);
+   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph); // todo is that valid to use?
+   const int* const nodemark = cliquegraph->mark;
 
-   assert(scip && cliqueNodeMap && sddata);
-   assert(2 <= nnodes_clique && nnodes_clique <= g->knots);
+   assert(cliqueNodeMap && sddata);
+   assert(2 <= nnodes_clique);
 
    for( int k1 = 0; k1 < nnodes_clique; k1++ )
    {
-      const int v1 = cliqueNodeMap[k1];
-      assert(0 <= v1 && v1 < g->knots);
+      int v1;
 
-      if( !cliquegraph->mark[k1] )
+      if( !nodemark[k1] )
          continue;
+
+      v1 = cliqueNodeMap[k1];
+      assert(0 <= v1 && v1 < g->knots);
 
       for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
       {
          const int k2 = cliquegraph->head[e];
 
-         if( !cliquegraph->mark[k2] )
+         if( !nodemark[k2] )
             continue;
 
          if( k2 > k1 )
@@ -1150,7 +1153,7 @@ void reduce_sdGetSdsCliquegraph(
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
 
-            cliquegraph->cost[e] = sdGetSd(g, v1, v2, FARAWAY, sddata);
+            cliquegraph->cost[e] = sdGetSd(g, v1, v2, maxtreecost, sddata);
             cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
          }
       }
