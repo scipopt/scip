@@ -19,7 +19,7 @@
  *
  * This example shows how to setup quadratic and nonlinear constraints in SCIP when using SCIP as callable library.
  * The example implements a model for the design of a coil compression spring as it can be found in the GAMS model library:
- * http://www.gams.com/modlib/libhtml/spring.htm
+ * https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_spring.html
  *
  * The task is to find a minimum volume of a wire for the production of a coil compression spring.
  *
@@ -209,7 +209,6 @@ SCIP_RETCODE setupProblem(
       SCIP_CONSEXPR_EXPR* powexpr;
       SCIP_CONSEXPR_EXPR* prodexpr;
       SCIP_CONSEXPR_EXPR* sumexpr;
-      SCIP_CONSEXPR_EXPR* expr;
       SCIP_Real coefs[2];
 
       /* create 1 / wire */
@@ -225,20 +224,20 @@ SCIP_RETCODE setupProblem(
       coefs[0] = 1.0;
       exprs[1] = const1expr;
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 2, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 2, exprs, coefs, 0.0) );
 
       /* create nonlinear constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst1, "defconst1", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst1, "defconst1", sumexpr, 0.0, 0.0) );
 
       /* release expressions */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
    }
 
    /* nonlinear constraint defconst2: (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) + 0.615 / const1 - const2 == 0.0 */
    {
-      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_CONSEXPR_EXPR* exprs[3];
       SCIP_CONSEXPR_EXPR* sumexpr1;
       SCIP_CONSEXPR_EXPR* sumexpr2;
       SCIP_CONSEXPR_EXPR* powexpr1;
@@ -310,7 +309,7 @@ SCIP_RETCODE setupProblem(
       /* create const1^3 */
       SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr1, const1expr, 3.0) );
 
-      /* create / wire */
+      /* create 1 / wire */
       SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr2, wireexpr, -1.0) );
 
       /* create ncoils * const1^3 / wire */
