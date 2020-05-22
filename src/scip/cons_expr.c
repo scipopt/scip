@@ -7119,8 +7119,6 @@ SCIP_RETCODE enforceExpr(
    SCIP_Bool auxunderestimate;
    SCIP_Bool auxoverestimate;
    SCIP_RESULT hdlrresult;
-   SCIP_Bool infeasible;
-   int ntightenings;
    int e;
 
    assert(scip != NULL);
@@ -7144,21 +7142,6 @@ SCIP_RETCODE enforceExpr(
    {
       return SCIP_OKAY;
    }
-
-   /* ensure activity in expression is uptodate, in case someone uses bounds (TODO: nlhdlr will tell us soon whether they do)
-    * as nlhdlr/exprhdlr may look at auxvar bounds instead of expr activity, we may want to run with tightenauxvars = TRUE
-    * but this has some weird sideeffect on lnts*, so I turned this off again
-    * but then we might take out this whole forwardPropExpr call as well
-    */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, FALSE, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
-   if( infeasible )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-   /* if we tightened an auxvar bound, we better communicate that */
-   if( ntightenings > 0 )
-      *result = SCIP_REDUCEDDOM;
 
    /* check aux-violation w.r.t. each nonlinear handlers and try to enforce when there is a decent violation */
    for( e = 0; e < expr->nenfos; ++e )
@@ -7341,6 +7324,28 @@ SCIP_RETCODE enforceConstraint(
    assert(consdata != NULL);
 
    *success = FALSE;
+
+   if( inenforcement && !consdata->ispropagated )
+   {
+      /* If there are boundchanges that haven't been propagated to activities yes, then do this now and update bounds of auxiliary variables,
+       * since some nlhdlr/exprhdlr may look at auxvar bounds or activities (TODO: nlhdlr will tell us soon whether they do and then we could skip).
+       * For now, do this only if called from enforcement, since updating auxvar bounds in separation doesn't seem to be right
+       * (it would be ok if the boundchange cuts off the current LP solution by a nice amount, but if not, we may just add a boundchange that
+       * doesn't change the dual bound much and could confuse the stalling check for how long to do separation).
+       */
+      SCIP_Bool infeasible;
+      int ntightenings;
+
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      /* if we tightened an auxvar bound, we better communicate that */
+      if( ntightenings > 0 )
+         *result = SCIP_REDUCEDDOM;
+   }
 
    for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
