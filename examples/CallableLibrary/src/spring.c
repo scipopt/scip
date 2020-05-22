@@ -13,12 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   string.c
- * @brief  Coil Compression String Design model
+/**@file   spring.c
+ * @brief  Coil Compression Spring Design model
  * @author Stefan Vigerske
  *
  * This example shows how to setup quadratic and nonlinear constraints in SCIP when using SCIP as callable library.
- * The example implements a model for the design of a coil compression string as it can be found in the GAMS model library:
+ * The example implements a model for the design of a coil compression spring as it can be found in the GAMS model library:
  * http://www.gams.com/modlib/libhtml/spring.htm
  *
  * The task is to find a minimum volume of a wire for the production of a coil compression spring.
@@ -105,7 +105,7 @@ SCIP_RETCODE setupProblem(
    int i;
 
    /* create empty problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "string") );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "spring") );
 
    /* create variables */
    SCIP_CALL( SCIPcreateVarBasic(scip, &coil, "coildiam", 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -422,9 +422,9 @@ SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/** runs string example */
+/** runs spring example */
 static
-SCIP_RETCODE runString(void)
+SCIP_RETCODE runSpring(void)
 {
    SCIP* scip;
 
@@ -433,7 +433,7 @@ SCIP_RETCODE runString(void)
 
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "************************************************\n");
-   SCIPinfoMessage(scip, NULL, "* Running Coil Compression String Design Model *\n");
+   SCIPinfoMessage(scip, NULL, "* Running Coil Compression Spring Design Model *\n");
    SCIPinfoMessage(scip, NULL, "************************************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
@@ -472,7 +472,7 @@ int main(
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode;
 
-   retcode = runString();
+   retcode = runSpring();
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
