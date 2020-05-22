@@ -1560,14 +1560,16 @@ static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
 { /*lint --e{715}*/
    int e;
-   SCIP_Real maxviol;
+   SCIP_Real maxdiff;
    SCIP_Real auxval_e;
+   SCIP_Real auxvarvalue;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
-   maxviol = 0.0;
+   auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
+   maxdiff = 0.0;
 
    for( e = 0; e < expr->nenfos; ++e )
    {
@@ -1577,13 +1579,12 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
             &auxval_e, sol) );
 
-      if( auxval_e > maxviol && auxval_e != SCIP_INVALID )
+      if( REALABS(auxval_e - auxvarvalue) > maxdiff && auxval_e != SCIP_INVALID )
       {
-         maxviol = auxval_e;
+         maxdiff = auxval_e;
+         *auxvalue = auxval_e;
       }
    }
-
-   *auxvalue = maxviol;
 
    return SCIP_OKAY;
 }
