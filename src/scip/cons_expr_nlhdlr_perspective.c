@@ -1710,7 +1710,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          assert(!doprobingind);
          continue;
       }
-      if( SCIPvarGetUbLocal(indicator) == 0 )
+      if( SCIPisZero(scip, SCIPvarGetUbLocal(indicator)) )
       { /* this case is stronger as it implies that everything is fixed;
          * therefore we are now happy
          */
