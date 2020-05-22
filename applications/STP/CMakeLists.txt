@@ -26,6 +26,7 @@ add_executable(scipstp
     src/graph_load.c
     src/graph_mcut.c
     src/graph_path.c
+    src/graph_sdpath.c
     src/graph_pcbase.c
     src/graph_save.c
     src/graph_sol.c

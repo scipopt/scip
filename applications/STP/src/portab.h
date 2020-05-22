@@ -30,6 +30,9 @@
 
 #define EPSILON 1e-06
 
+typedef unsigned char STP_Bool;
+
+
 #ifndef TRUE
 #define TRUE            1
 #endif

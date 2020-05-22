@@ -76,6 +76,7 @@ CMAINOBJ	=	cmain.o \
 			graph_load.o \
 			graph_mcut.o \
 			graph_path.o \
+			graph_sdpath.o \
 			graph_pcbase.o \
 			graph_save.o \
 			graph_trans.o \

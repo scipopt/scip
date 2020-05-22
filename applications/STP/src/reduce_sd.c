@@ -1158,6 +1158,20 @@ void reduce_sdGetSdsCliquegraph(
          }
       }
    }
+
+   //sdGetSdsCliqueTermWalks
+
+
+   //sdGetSdsCliqueStarWalks
+
+
+   // update SDS with extra method
+
+   // save the SDS into an array
+
+   // update the array (call function)
+
+   // copy array back into graph (make sure that we only get better!)
 }
 
 
