@@ -271,7 +271,7 @@ SCIP_Real bdkStarGetCombinedSdCost(
       star_mstsds[i] += star_mstsds[i - 1];
       treesum += sdtreecosts[i];
 
-      if( star_mstsds[i] > treesum && 0 )
+      if( star_mstsds[i] > treesum )
       {
          star_mstsds[i] = treesum;
       }
