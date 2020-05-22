@@ -390,6 +390,14 @@ SCIP_Bool bdkStarIsSdMstReplacable(
 
    bdkStarMarkCliqueNodes(bdk);
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("star neighbors: \n");
+   for( int i = 0; i < bdk->star_degree; i++ )
+   {
+      graph_edge_printInfo(g, bdk->star_outedges[i]);
+   }
+#endif
+
    startnode = bdkStarGetMstStartNode(cliquegraph);
 
    /* compute MST  */
@@ -401,7 +409,11 @@ SCIP_Bool bdkStarIsSdMstReplacable(
    sdcost = bdkStarGetCombinedSdCost(g, bdk);
 
    if( SCIPisLE(scip, sdcost, starcost) )
+   {
+      SCIPdebugMessage("star is SD MST replacable \n");
+
       return TRUE;
+   }
 
    return FALSE;
 }
@@ -431,7 +443,11 @@ SCIP_Bool bdkStarIsSdTreeReplacable(
    /* NOTE: special distance is allowed to be equal to costsum,
     * because in the case the corresponding walks cannot contain the whole star! */
    if( SCIPisLE(scip, treecost, starcost) )
+   {
+      SCIPdebugMessage("star is distance-graph MST replacable \n");
+
       return TRUE;
+   }
 
    return FALSE;
 }
@@ -457,7 +473,11 @@ SCIP_Bool bdkStarIsReplacableDeg3(
    /* NOTE: special distance is allowed to be equal to costsum,
     * because in the case the corresponding walks cannot contain the whole star! */
    if( SCIPisLE(scip, maxcosts[0] + maxcosts[1], starcost) )
+   {
+      SCIPdebugMessage("3-star is distance-graph MST replacable \n");
+
       return TRUE;
+   }
 
    if( bdkStarIsSdMstReplacable(scip, starcost, g, bdk) )
       return TRUE;
@@ -634,7 +654,7 @@ SCIP_RETCODE reduce_bdkWithSd(
       return SCIP_OKAY;
 
    SCIP_CALL( bdkInit(scip, sdistance, &bdk) );
-   SCIPdebugMessage("starting BDK-SD Reduction: ");
+   SCIPdebugMessage("starting BDK-SD Reduction: \n");
    graph_mark(g);
 
    for( int degree = 3; degree <= maxdegree; degree ++ )
@@ -643,6 +663,8 @@ SCIP_RETCODE reduce_bdkWithSd(
       {
          if( g->grad[i] != degree || Is_term(g->term[i]) )
             continue;
+
+         SCIPdebugMessage("check node %d (degree=%d) \n", i, degree);
 
          bdkGetNeighborhood(g, i, bdk);
          bdkGetCliqueSds(g, i, bdk);

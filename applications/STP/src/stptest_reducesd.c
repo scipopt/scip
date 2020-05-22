@@ -90,7 +90,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 
       if( head == 2 )
       {
-         STPTEST_ASSERT(EQ(cost, 4.0));
+         STPTEST_ASSERT(EQ(cost, 3.0));
       }
 
       if( head == 3 )
@@ -110,7 +110,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 
       if( head == 2 )
       {
-         STPTEST_ASSERT(EQ(cost, 4.0));
+         STPTEST_ASSERT(EQ(cost, 3.0));
       }
 
       if( head == 3 )
@@ -130,7 +130,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 
 /** tests that BDk test pseudo-eliminates node of degree 4 */
 static
-SCIP_RETCODE testBdkDeletesNodeDeg4(
+SCIP_RETCODE testBdkTreeDistDeletesNodeDeg4(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -168,6 +168,99 @@ SCIP_RETCODE testBdkDeletesNodeDeg4(
 
    return SCIP_OKAY;
 }
+
+
+/** tests that BDk test pseudo-eliminates node of degree 4 */
+static
+SCIP_RETCODE testBdkSdMstDeletesNodeDeg4(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 8;
+   int nedges = 20;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 6, STP_TERM);
+   graph_knot_chg(graph, 7, STP_TERM);
+
+   graph->source = 5;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 2.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 1.0); // 4
+   graph_edge_addBi(scip, graph, 0, 4, 1.0); // 6
+
+   graph_edge_addBi(scip, graph, 1, 5, 1.0); // 8
+   graph_edge_addBi(scip, graph, 3, 5, 1.0); // 10
+   graph_edge_addBi(scip, graph, 3, 6, 1.0); // 14
+   graph_edge_addBi(scip, graph, 4, 6, 1.0); // 14
+   graph_edge_addBi(scip, graph, 3, 7, 1.0); // 14
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_bdk(scip, graph, &nelims) );
+
+   STPTEST_ASSERT(nelims == 1);
+   STPTEST_ASSERT(graph->grad[0] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests that BDk test pseudo-eliminates node of degree 3 */
+static
+SCIP_RETCODE testBdkSdMstDeletesNodeDeg3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 7;
+   int nedges = 16;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 6, STP_TERM);
+
+   graph->source = 5;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 1.0); // 4
+
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 6, 1.0);
+   graph_edge_addBi(scip, graph, 5, 6, 2.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_bdk(scip, graph, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[0] == 0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 
 /** tests that SD star biased test finds edge for deletion */
 static
@@ -297,7 +390,11 @@ SCIP_RETCODE stptest_reduceBdk(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_CALL( testBdkDeletesNodeDeg4(scip) );
+
+   SCIP_CALL( testBdkSdMstDeletesNodeDeg3(scip) );
+   SCIP_CALL( testBdkTreeDistDeletesNodeDeg4(scip) );
+   SCIP_CALL( testBdkSdMstDeletesNodeDeg4(scip) );
+
 
    printf("reduce BDk test: all ok \n");
 
