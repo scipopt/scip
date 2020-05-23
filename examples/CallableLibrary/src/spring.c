@@ -19,7 +19,7 @@
  *
  * This example shows how to setup quadratic and nonlinear constraints in SCIP when using SCIP as callable library.
  * The example implements a model for the design of a coil compression spring as it can be found in the GAMS model library:
- * http://www.gams.com/modlib/libhtml/spring.htm
+ * https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_spring.html
  *
  * The task is to find a minimum volume of a wire for the production of a coil compression spring.
  *
@@ -37,6 +37,11 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+
+#include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
 
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
@@ -91,6 +96,15 @@ SCIP_RETCODE setupProblem(
    SCIP_VAR* volume;      /* total volume */
    SCIP_VAR* y[nwires];   /* wire choice (binary) */
 
+   SCIP_CONSHDLR* consexprhdlr;
+   SCIP_CONSEXPR_EXPR* coilexpr;
+   SCIP_CONSEXPR_EXPR* wireexpr;
+   SCIP_CONSEXPR_EXPR* deflexpr;
+   SCIP_CONSEXPR_EXPR* ncoilsexpr;
+   SCIP_CONSEXPR_EXPR* const1expr;
+   SCIP_CONSEXPR_EXPR* const2expr;
+   SCIP_CONSEXPR_EXPR* volumeexpr;
+
    SCIP_CONS* voldef;
    SCIP_CONS* defconst1;
    SCIP_CONS* defconst2;
@@ -103,6 +117,10 @@ SCIP_RETCODE setupProblem(
 
    char name[SCIP_MAXSTRLEN];
    int i;
+
+   /* find expression constraint handler */
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
 
    /* create empty problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "spring") );
@@ -138,225 +156,195 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPaddVar(scip, y[i]) );
    }
 
+   /* create variable expressions */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &coilexpr, coil) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &wireexpr, wire) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &deflexpr, defl) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &ncoilsexpr, ncoils) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const1expr, const1) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const2expr, const2) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &volumeexpr, volume) );
+
    /* nonlinear constraint voldef: PI/2 * (ncoils+2)*coil*wire^2 - volume == 0 */
    {
-      SCIP_EXPR* ncoilsplus2;
-      SCIP_EXPR* coilexpr;
-      SCIP_EXPR* wireexpr;
-      SCIP_EXPR* expr;
-      SCIP_EXPR* children[3];
-      SCIP_Real exponents[3] = { 1.0, 1.0, 2.0 };
-      SCIP_VAR* vars[3];
-      SCIP_EXPRDATA_MONOMIAL* monomial;
-      SCIP_EXPRTREE* exprtree;
-      SCIP_Real one;
-      SCIP_Real minusone;
+      SCIP_CONSEXPR_EXPR* exprs[3];
+      SCIP_CONSEXPR_EXPR* powexpr;
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Real coefs[2];
 
-      one = 1.0;
-      minusone = -1.0;
+      /* create wire^2 */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, wireexpr, 2.0) );
 
-      /* setup expression tree for PI/2 * (N+2)*coil*wire^2
-       * in the expression tree, we relate the variable indices as follows:
-       *   0: ncoils
-       *   1: coil
-       *   2: wire
-       */
+      /* create (ncoils+2) */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, &ncoilsexpr, NULL, 2.0) );
 
-      /* setup expression for ncoils+2 */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &ncoilsplus2, SCIP_EXPR_VARIDX, 0) );
-      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &ncoilsplus2, 1, &ncoilsplus2, &one, 2.0) );
+      /* create (ncoils+2)*coil*wire^2 */
+      exprs[0] = sumexpr;
+      exprs[1] = coilexpr;
+      exprs[2] = powexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 3, exprs, 1.0) );
 
-      /* setup expression for variable coil */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &coilexpr, SCIP_EXPR_VARIDX, 1) );
+      /* create PI/2 * (ncoils+2)*coil*wire^2 - volume */
+      exprs[0] = prodexpr;
+      coefs[0] = M_PI / 2.0;
+      exprs[1] = volumeexpr;
+      coefs[1] = -1.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 2, exprs, coefs, 0.0) );
 
-      /* setup expression for variable wire */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &wireexpr, SCIP_EXPR_VARIDX, 2) );
+      /* create nonlinear constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &voldef, "voldef", expr, 0.0, 0.0) );
 
-      /* setup monomial for PI/2 * ncoilsplus2 * coilexpr * wireexpr^2 */
-      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, M_PI / 2.0, 3, NULL, exponents) );
-
-      /* setup polynomial expression for only one monomial
-       * (FALSE as last argument indicates that the polynomial assumes ownership of monomial)
-       */
-      children[0] = ncoilsplus2;
-      children[1] = coilexpr;
-      children[2] = wireexpr;
-      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expr, 3, children, 1, &monomial, 0.0, FALSE) );
-
-      /* setup expression tree with expr as root expression, the tree is defined w.r.t. 3 variables */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 3, 0, NULL) );
-
-      /* assign SCIP variables to tree */
-      vars[0] = ncoils;
-      vars[1] = coil;
-      vars[2] = wire;
-      SCIP_CALL( SCIPexprtreeSetVars(exprtree, 3, vars) );
-
-      /* create nonlinear constraint for exprtree - volume = 0.0 */
-      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &voldef, "voldef", 1, &volume, &minusone, 1, &exprtree, &one, 0.0, 0.0) );
-
-      /* free expression tree, because it was copied by the constraint */
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
    }
 
    /* nonlinear constraint defconst1: coil / wire - const1 == 0.0 */
    {
-      SCIP_EXPR* coilexpr;
-      SCIP_EXPR* wireexpr;
-      SCIP_EXPR* expr;
-      SCIP_EXPRTREE* exprtree;
-      SCIP_VAR* vars[2];
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_CONSEXPR_EXPR* powexpr;
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_Real coefs[2];
 
-      SCIP_Real one;
-      SCIP_Real minusone;
+      /* create 1 / wire */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, wireexpr, -1.0) );
 
-      one = 1.0;
-      minusone = -1.0;
+      /* create coil / wire */
+      exprs[0] = coilexpr;
+      exprs[1] = powexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, exprs, 1.0) );
 
-      /* expression for variables coilexpr (index 0) and wireexpr (index 1) */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &coilexpr, SCIP_EXPR_VARIDX, 0) );
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &wireexpr, SCIP_EXPR_VARIDX, 1) );
+      /* create coil / wire - const1 */
+      exprs[0] = prodexpr;
+      coefs[0] = 1.0;
+      exprs[1] = const1expr;
+      coefs[1] = -1.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 2, exprs, coefs, 0.0) );
 
-      /* expression for coil / wire */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, coilexpr, wireexpr) );
+      /* create nonlinear constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst1, "defconst1", sumexpr, 0.0, 0.0) );
 
-      /* expression tree from expr */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 2, 0, NULL) );
-
-      /* set variables in expression tree */
-      vars[0] = coil;
-      vars[1] = wire;
-      SCIP_CALL( SCIPexprtreeSetVars(exprtree, 2, vars) );
-
-      /* create nonlinear constraint for exprtree - const1 = 0.0 */
-      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defconst1, "defconst1", 1, &const1, &minusone, 1, &exprtree, &one, 0.0, 0.0) );
-
-      /* free expression tree, because it was copied by the constraint */
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
    }
 
    /* nonlinear constraint defconst2: (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) + 0.615 / const1 - const2 == 0.0 */
    {
-      SCIP_EXPR* const1expr;
-      SCIP_EXPR* denom;
-      SCIP_EXPR* nomin;
-      SCIP_EXPR* expr;
-      SCIP_EXPRTREE* exprtrees[2];
+      SCIP_CONSEXPR_EXPR* exprs[3];
+      SCIP_CONSEXPR_EXPR* sumexpr1;
+      SCIP_CONSEXPR_EXPR* sumexpr2;
+      SCIP_CONSEXPR_EXPR* powexpr1;
+      SCIP_CONSEXPR_EXPR* powexpr2;
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Real coefs[3];
 
-      SCIP_Real coef;
-      SCIP_Real coefs[2];
-      SCIP_Real minusone;
+      /* create (4.0 * const1 - 1.0) */
+      coefs[0] = 4.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr1, 1, &const1expr, coefs, -1.0) );
 
-      minusone = -1.0;
+      /* create (4.0 * const1 - 4.0) */
+      coefs[0] = 4.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr2, 1, &const1expr, coefs, -4.0) );
 
-      /* expression for denominator 4.0 * const1 - 1.0 */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &const1expr, SCIP_EXPR_VARIDX, 0) );
-      coef = 4.0;
-      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &denom, 1, &const1expr, &coef, -1.0) );
+      /* create 1 / (4.0 * const1 - 4.0) */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr1, sumexpr2, -1.0) );
 
-      /* expression for nominator 4.0 * const1 - 4.0
-       * (we cannot reuse const1expr a second time in the expression tree, thus we create a new expression for this variable)
-       */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &const1expr, SCIP_EXPR_VARIDX, 0) );
-      coef = 4.0;
-      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &nomin, 1, &const1expr, &coef, -4.0) );
+      /* create (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) */
+      exprs[0] = sumexpr1;
+      exprs[1] = powexpr1;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, exprs, 1.0) );
 
-      /* expression for quotient (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, denom, nomin) );
+      /* create 1 / const1 */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr2, const1expr, -1.0) );
 
-      /* expression tree from expr */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtrees[0], expr, 1, 0, NULL) );
-      SCIP_CALL( SCIPexprtreeSetVars(exprtrees[0], 1, &const1) );
-
-      /* expression for 1.0 / const1 */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &const1expr, SCIP_EXPR_VARIDX, 0) );
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, const1expr, -1) );
-
-      /* expression tree from expr */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtrees[1], expr, 1, 0, NULL) );
-      SCIP_CALL( SCIPexprtreeSetVars(exprtrees[1], 1, &const1) );
-
-      /* create nonlinear constraint for exprtree[0] + 0.615 * exprtree[1] - const2 = 0.0 */
+      /* create (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) + 0.615 / const1 - const2 */
+      exprs[0] = prodexpr;
       coefs[0] = 1.0;
+      exprs[1] = powexpr2;
       coefs[1] = 0.615;
-      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defconst2, "defconst2", 1, &const2, &minusone, 2, exprtrees, coefs, 0.0, 0.0) );
+      exprs[2] = const2expr;
+      coefs[2] = -1.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 3, exprs, coefs, 0.0) );
 
-      /* free expression trees, because they were copied by the constraint */
-      SCIP_CALL( SCIPexprtreeFree(&exprtrees[0]) );
-      SCIP_CALL( SCIPexprtreeFree(&exprtrees[1]) );
+      /* create nonlinear constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst2, "defconst2", expr, 0.0, 0.0) );
+
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
    }
 
    /* quadratic constraint shear: 8.0*maxworkload/PI * const1 * const2 - maxshearstress * wire^2 <= 0.0 */
    {
+      SCIP_VAR* quadvars1[2] = {const1, wire};
+      SCIP_VAR* quadvars2[2] = {const2, wire};
+      SCIP_Real quadcoefs[2] = {8.0 * maxworkload / M_PI, -maxshearstress};
+
       /* create empty quadratic constraint with right-hand-side 0.0 */
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &shear, "shear", 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 0.0) );
-
-      /* add bilinear term 8.0*maxworkload/PI * const1 * const2 */
-      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, shear, const1, const2, 8.0 * maxworkload / M_PI) );
-
-      /* add square term -maxshearstress * wire^2 */
-      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, shear, wire, -maxshearstress) );
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &shear, "shear", 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+         -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
 
    /* nonlinear constraint defdefl: 8.0/shearmod * ncoils * const1^3 / wire - defl == 0.0 */
    {
-      SCIP_EXPR* expr;
-      SCIP_EXPR* children[3];
-      SCIP_Real exponents[3] = { 1.0, 3.0, -1.0 };
-      SCIP_VAR* vars[3];
-      SCIP_EXPRDATA_MONOMIAL* monomial;
-      SCIP_EXPRTREE* exprtree;
-      SCIP_Real one;
-      SCIP_Real minusone;
+      SCIP_CONSEXPR_EXPR* exprs[3];
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* powexpr1;
+      SCIP_CONSEXPR_EXPR* powexpr2;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Real coefs[3];
 
-      one = 1.0;
-      minusone = -1.0;
+      /* create const1^3 */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr1, const1expr, 3.0) );
 
-      /* we relate the variable indices as follows:
-       *  0: ncoils
-       *  1: const1
-       *  2: wire
-       */
+      /* create 1 / wire */
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr2, wireexpr, -1.0) );
 
-      /* setup expressions for ncoils, const1, and wire */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[0], SCIP_EXPR_VARIDX, 0) );
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[1], SCIP_EXPR_VARIDX, 1) );
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[2], SCIP_EXPR_VARIDX, 2) );
+      /* create ncoils * const1^3 / wire */
+      exprs[0] = ncoilsexpr;
+      exprs[1] = powexpr1;
+      exprs[2] = powexpr2;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 3, exprs, 1.0) );
 
-      /* setup monomial for 8.0/shearmod * ncoils * const1^3 / wire */
-      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, 8.0 / shearmod, 3, NULL, exponents) );
+      /* create 8.0/shearmod * ncoils * const1^3 / wire - defl */
+      exprs[0] = prodexpr;
+      coefs[0] = 8.0 / shearmod;
+      exprs[1] = deflexpr;
+      coefs[1] = -1.0;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 2, exprs, coefs, 0.0) );
 
-      /* setup polynomial expression for only one monomial */
-      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expr, 3, children, 1, &monomial, 0.0, FALSE) );
+      /* create nonlinear constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defdefl, "defdefl", expr, 0.0, 0.0) );
 
-      /* setup expression tree with expr as root expression */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 3, 0, NULL) );
-
-      /* assign SCIP variables to tree */
-      vars[0] = ncoils;
-      vars[1] = const1;
-      vars[2] = wire;
-      SCIP_CALL( SCIPexprtreeSetVars(exprtree, 3, vars) );
-
-      /* create nonlinear constraint for exprtree - defl = 0.0 */
-      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defdefl, "defdefl", 1, &defl, &minusone, 1, &exprtree, &one, 0.0, 0.0) );
-
-      /* free expression tree, because it was copied by the constraint */
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr1) );
    }
 
    /* quadratic constraint freel: maxworkload * defl + 1.05 * ncoils * wire + 2.1 * wire <= maxfreelen */
    {
-      SCIP_Real one05;
+      SCIP_VAR* linvars[2] = {defl, wire};
+      SCIP_Real lincoefs[2] = {maxworkload, 2.1};
+      SCIP_Real one05 = 1.05;
 
       /* create quadratic constraint maxworkload * defl + 1.05 * ncoils * wire <= maxfreelen */
-      one05 = 1.05;
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &freel, "freel",
-         1, &defl, (SCIP_Real*)&maxworkload,
-         1, &ncoils, &wire, &one05, -SCIPinfinity(scip), maxfreelen) );
-
-      /* add linear term 2.1 * wire for variable wire in quadratic part of constraint */
-      SCIP_CALL( SCIPaddQuadVarLinearCoefQuadratic(scip, freel, wire, 2.1) );
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &freel, "freel", 2, linvars, lincoefs, 1, &ncoils, &wire, &one05,
+         -SCIPinfinity(scip), maxfreelen, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE,
+         FALSE, FALSE) );
    }
 
    /* linear constraint coilwidth: coil + wire <= maxcoildiam */
@@ -393,6 +381,15 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddCons(scip, coilwidth) );
    SCIP_CALL( SCIPaddCons(scip, defwire) );
    SCIP_CALL( SCIPaddCons(scip, selectwire) );
+
+   /* release variable expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &volumeexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const2expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const1expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &ncoilsexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &deflexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wireexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &coilexpr) );
 
    /* release variables and constraints
     * the problem has them captured, and we do not require them anymore
