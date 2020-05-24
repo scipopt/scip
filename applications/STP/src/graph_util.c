@@ -1876,13 +1876,14 @@ void graph_dijkLimited_reset(
    DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
-   STP_Bool* const visited = dijkdata->node_visited;
-   int* const visitlist = dijkdata->visitlist;
-   int* const state = dijkdata->dheap->position;
-   SCIP_Real* const distance = dijkdata->node_distance;
+   const int* const visitlist = dijkdata->visitlist;
+   SCIP_Real* RESTRICT distance = dijkdata->node_distance;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
+   int* RESTRICT state = dijkdata->dheap->position;
    const int nvisits = dijkdata->nvisits;
 
    assert(dijkdata && g);
+   assert(nvisits >= 0);
 
    for( int k = 0; k < nvisits; k++ )
    {

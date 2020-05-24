@@ -77,7 +77,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 
    SCIP_CALL( reduce_sdInit(scip, graph, &sddata) );
 
-   reduce_sdGetSdsCliquegraph(graph, cliqueNodeMap, sddata, cliquegraph);
+   reduce_sdGetSdsCliquegraph(scip, graph, cliqueNodeMap, sddata, cliquegraph);
 
    for( int e = cliquegraph->outbeg[0]; e != EAT_LAST; e = cliquegraph->oeat[e] )
    {

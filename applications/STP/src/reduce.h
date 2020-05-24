@@ -45,6 +45,7 @@ typedef struct special_distance_graph SDGRAPH;
 /** Steiner nodes to terminal paths */
 typedef struct nodes_to_terminal_paths TPATHS;
 
+
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
 {
@@ -247,7 +248,7 @@ extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
-extern void             reduce_sdGetSdsCliquegraph(const GRAPH*, const int*, SD*, GRAPH*);
+extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, const int*, SD*, GRAPH*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

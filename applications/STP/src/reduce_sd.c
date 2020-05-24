@@ -1086,6 +1086,97 @@ SCIP_Bool isPseudoDeletable(
 
 
 
+/** get SDs between all pairs of marked vertices of given clique graph by
+ *  using terminal-to-terminal special distances */
+static
+void sdGetSdsCliqueTermWalks(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   SD* RESTRICT          sddata,             /**< SD */
+   GRAPH* RESTRICT       cliquegraph,        /**< clique graph to be filled */
+   SCIP_Real* RESTRICT   sds_buffer          /**< special distances (size cliquegraph->edges / 2) */
+)
+{
+   const int nnodes_clique = graph_get_nNodes(cliquegraph);
+   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph); // todo is that valid to use?
+   const int* const nodemark = cliquegraph->mark;
+   int nsds = 0;
+
+   assert(cliqueNodeMap && sddata);
+   assert(2 <= nnodes_clique);
+
+   for( int k1 = 0; k1 < nnodes_clique; k1++ )
+   {
+      int v1;
+
+      if( !nodemark[k1] )
+         continue;
+
+      v1 = cliqueNodeMap[k1];
+      assert(0 <= v1 && v1 < g->knots);
+
+      for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      {
+         const int k2 = cliquegraph->head[e];
+
+         if( !nodemark[k2] )
+            continue;
+
+         if( k2 > k1 )
+         {
+            const int v2 = cliqueNodeMap[k2];
+            assert(0 <= v2 && v2 < g->knots);
+            assert(v1 != v2);
+
+            sds_buffer[nsds] = sdGetSd(g, v1, v2, maxtreecost, sddata);
+            cliquegraph->cost[e] = sds_buffer[nsds];
+            cliquegraph->cost[flipedge(e)] = sds_buffer[nsds];
+
+            nsds++;
+            assert(nsds <= cliquegraph->edges / 2);
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   for( int k = nsds; k < cliquegraph->edges / 2; k++ )
+      sds_buffer[k] = FARAWAY;
+#endif
+}
+
+
+/** get SDs between all pairs of marked vertices of given clique graph by
+ *  using star-clique method special distances */
+static
+SCIP_RETCODE sdGetSdsCliqueStarWalks(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   SD* RESTRICT          sddata,             /**< SD */
+   GRAPH* RESTRICT       cliquegraph,        /**< clique graph to be filled */
+   SCIP_Real* RESTRICT   sds_buffer          /**< special distances (size cliquegraph->edges / 2) */
+)
+{
+#if 0
+   const int nnodes_clique = graph_get_nNodes(cliquegraph);
+   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph);
+   const int* const nodemark = cliquegraph->mark;
+#endif
+
+
+
+   // update SDS with extra method
+
+   // save the SDS into an array
+
+   // update the array (call function)
+
+   // copy array back into graph (make sure that we only get better!)
+
+   return SCIP_OKAY;
+
+}
+
+
 /*
  * Interface methods
  */
@@ -1116,62 +1207,24 @@ SCIP_RETCODE reduce_sdInit(
 
 
 /** get SDs between all pairs of marked vertices of given clique graph */
-void reduce_sdGetSdsCliquegraph(
+SCIP_RETCODE reduce_sdGetSdsCliquegraph(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    SD*                   sddata,             /**< SD */
    GRAPH*                cliquegraph         /**< clique graph to be filled */
 )
 {
-   const int nnodes_clique = graph_get_nNodes(cliquegraph);
-   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph); // todo is that valid to use?
-   const int* const nodemark = cliquegraph->mark;
+   SCIP_Real* sds_buffer;
 
-   assert(cliqueNodeMap && sddata);
-   assert(2 <= nnodes_clique);
+   SCIP_CALL( SCIPallocBufferArray(scip, &sds_buffer, cliquegraph->edges / 2) );
 
-   for( int k1 = 0; k1 < nnodes_clique; k1++ )
-   {
-      int v1;
+   sdGetSdsCliqueTermWalks(g, cliqueNodeMap, sddata, cliquegraph, sds_buffer);
+   SCIP_CALL( sdGetSdsCliqueStarWalks(g, cliqueNodeMap, sddata, cliquegraph, sds_buffer) );
 
-      if( !nodemark[k1] )
-         continue;
+   SCIPfreeBufferArray(scip, &sds_buffer);
 
-      v1 = cliqueNodeMap[k1];
-      assert(0 <= v1 && v1 < g->knots);
-
-      for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
-      {
-         const int k2 = cliquegraph->head[e];
-
-         if( !nodemark[k2] )
-            continue;
-
-         if( k2 > k1 )
-         {
-            const int v2 = cliqueNodeMap[k2];
-            assert(0 <= v2 && v2 < g->knots);
-            assert(v1 != v2);
-
-            cliquegraph->cost[e] = sdGetSd(g, v1, v2, maxtreecost, sddata);
-            cliquegraph->cost[flipedge(e)] = cliquegraph->cost[e];
-         }
-      }
-   }
-
-   //sdGetSdsCliqueTermWalks
-
-
-   //sdGetSdsCliqueStarWalks
-
-
-   // update SDS with extra method
-
-   // save the SDS into an array
-
-   // update the array (call function)
-
-   // copy array back into graph (make sure that we only get better!)
+   return SCIP_OKAY;
 }
 
 

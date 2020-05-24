@@ -50,19 +50,6 @@ typedef struct pseudo_ancestors PSEUDOANS;
 typedef struct compressed_sparse_storages_depository CSRDEPO;
 
 
-/** Voronoi data */
-typedef struct voronoi_storage
-{
-   SCIP_Real*            nodes_dist;         /**< distance to base for each node */
-   int*                  nodes_pred;         /**< predecessor to each node */
-   int*                  nodes_base;         /**< base of each node*/
-   int                   nnodes;             /**< number of nodes */
-   SCIP_Bool             usingBufferArrays;  /**< are buffer arrays being used? */
-} VNOI;
-
-
-
-
 /** CSR like graph storage */
 typedef struct csr_storage
 {
@@ -229,18 +216,41 @@ typedef struct dijkstra_heap
    DENTRY*               entries;            /**< number of components  */
 } DHEAP;
 
+
 /** Dijkstra data */
 typedef struct dijkstra_data
 {
-   SCIP_Real*            node_distance;      /**< distances array for each node, initially set to FARAWAY */
+   /* temporary arrays: */
    int*                  visitlist;          /**< stores all visited nodes */
    DHEAP*                dheap;              /**< Dijkstra heap, initially cleaned */
+   SCIP_Real*            node_distance;      /**< distances array for each node, initially set to FARAWAY */
    STP_Bool*             node_visited;       /**< stores whether a node has been visited, initially set to FALSE */
+   /* longer term arrays: */
    SCIP_Real*            node_bias;          /**< bias per node (e.g. cost shift per node for PC) or NULL */
    int*                  node_biassource;    /**< bias terminal per node or NULL */
    int                   nvisits;            /**< number of visited nodes, initially set to -1 */
    int                   edgelimit;          /**< number of edges to consider */
 } DIJK;
+
+
+/** Voronoi data */
+typedef struct voronoi_storage
+{
+   SCIP_Real*            nodes_dist;         /**< distance to base for each node */
+   int*                  nodes_pred;         /**< predecessor to each node */
+   int*                  nodes_base;         /**< base of each node*/
+   int                   nnodes;             /**< number of nodes */
+   SCIP_Bool             usingBufferArrays;  /**< are buffer arrays being used? */
+} VNOI;
+
+
+/** Stores data for computation of special distance/bottleneck distance clique computations  */
+typedef struct special_distance_clique
+{
+   DIJK*                 dijkdata;           /**< temporary data */
+   int*                  cliquenodes;        /**< nodes */
+   int                   ncliquenodes;       /**< number of nodes */
+} SDCLIQUE;
 
 
 
@@ -496,7 +506,6 @@ extern SCIP_Bool graph_pc_isUnrootedPcMw(const GRAPH*);
 extern SCIP_Real graph_pc_solGetObj(SCIP*, const GRAPH*, const int*, SCIP_Real);
 
 
-
 /* graph_path.c
  */
 extern void   graph_path_exit(SCIP*, GRAPH*);
@@ -519,6 +528,12 @@ extern void   graph_get4nextTerms(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Re
 extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
+extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
+
+
+/* graph_sdpath.c
+ */
 extern void   graph_sdStar(SCIP*, const GRAPH*, SCIP_Bool, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_sdStarBiased(SCIP*, const GRAPH*, int, int*, DIJK*, SCIP_Bool*);
 extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, STP_Bool*, SCIP_Bool);
@@ -527,13 +542,11 @@ extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, i
 extern SCIP_Bool graph_sdWalksTriangle(SCIP*, const GRAPH*, const int*, const int*, SCIP_Real, int, int, int, SCIP_Real*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt2(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*);
-extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
+extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, SDCLIQUE*, SCIP_Real* RESTRICT);
 
 
 /* graph_vnoi.c
  */
-
 extern SCIP_RETCODE graph_vnoiInit(SCIP*, const GRAPH*, SCIP_Bool, VNOI**);
 extern void graph_vnoiFree(SCIP*, VNOI**);
 extern SCIP_RETCODE graph_vnoiCompute(SCIP*, const GRAPH*, VNOI*);

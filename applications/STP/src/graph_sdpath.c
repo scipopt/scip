@@ -29,10 +29,57 @@
 #include <assert.h>
 #include "portab.h"
 #include "graph.h"
+#include "graphheaps.h"
 
 
+/** internal data for clique-paths computations */
+typedef struct special_distance_clique_paths
+{
+   int*                  nodes_pred;         /**< per node: predecessor */
+   int*                  nodes_base;         /**< per node: base */
+   int*                  nodes_baseToClique; /**< per base: clique id
+                                                  NOTE: undefined for non-base nodes! */
+} CLIQUEPATHS;
 
-inline static SCIP_Real sdwalk_getdistnewEdge(
+
+/** initializes clique paths */
+static
+SCIP_RETCODE cliquePathsInitData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   CLIQUEPATHS*          cliquepaths         /**< data */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && cliquepaths);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_pred), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_base), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_baseToClique), nnodes) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees clique paths */
+static
+void cliquePathsFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CLIQUEPATHS*          cliquepaths         /**< data */
+)
+{
+   assert(scip && cliquepaths);
+
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_baseToClique));
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_base));
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_pred));
+}
+
+
+/** gets distance for extension along edge e */
+inline static
+SCIP_Real sdwalkGetdistnewEdge(
    const int*            prevedges,          /**< previous edges per node */
    const int*            nprevedges,         /**< number of previous edges per node */
    const SCIP_Real*      cost,               /**< cost */
@@ -79,7 +126,8 @@ inline static SCIP_Real sdwalk_getdistnewEdge(
 }
 
 
-inline static SCIP_Real sdwalk_getdistnewPrize(
+inline static
+SCIP_Real sdwalkGetdistnewPrize(
    const int*            prevNPterms,        /**< previous np terminals per node */
    const int*            nprevNPterms,       /**< number of previous np terminals per node */
    const int*            termmark,           /**< terminal mark */
@@ -129,7 +177,8 @@ inline static SCIP_Real sdwalk_getdistnewPrize(
 
 
 
-inline static SCIP_Bool sdwalk_conflict(
+inline static
+SCIP_Bool sdwalkHasConflict(
    const GRAPH*          g,                  /**< graph data structure */
    int                   node,               /**< the node to be updated */
    int                   prednode,           /**< the predecessor node */
@@ -168,7 +217,9 @@ inline static SCIP_Bool sdwalk_conflict(
    return conflict;
 }
 
-inline static void sdwalk_update(
+/** updates */
+inline static
+void sdwalkUpdate(
    const GRAPH*          g,                  /**< graph data structure */
    int                   node,               /**< the node to be updated */
    int                   prednode,           /**< the predecessor node */
@@ -209,8 +260,9 @@ inline static void sdwalk_update(
    }
 }
 
-inline
-static void sdwalk_updateCopy(
+/** copies from of predecessor */
+inline static
+void sdwalkUpdateCopy(
    int                   node,               /**< the node to be updated */
    int                   prednode,           /**< the predecessor node */
    int                   maxnprevs,          /**< maximum number of previous terminals to save */
@@ -229,7 +281,9 @@ static void sdwalk_updateCopy(
    nprev[node] = predsize;
 }
 
-static void sdwalk_update2(
+/** update method for second version of SD walks */
+static
+void sdwalkUpdate2(
    const int*            termmark,           /**< terminal mark */
    int                   node,               /**< the node to be updated */
    int                   prednode,           /**< the predecessor node */
@@ -260,7 +314,7 @@ static void sdwalk_update2(
          assert(prevterms[maxnprevs * prednode + j] != node);
 #endif
 
-      sdwalk_updateCopy(node, prednode, maxnprevs, prevterms, nprevterms);
+      sdwalkUpdateCopy(node, prednode, maxnprevs, prevterms, nprevterms);
 
       if( termmark[node] == 2 )
       {
@@ -294,7 +348,7 @@ static void sdwalk_update2(
    }
    assert(predsize < maxnprevs);
 
-   sdwalk_updateCopy(node, prednode, maxnprevs, prevedges, nprevedges);
+   sdwalkUpdateCopy(node, prednode, maxnprevs, prevedges, nprevedges);
 
    prevedges[maxnprevs * node + predsize] = edge / 2;
    nprevedges[node]++;
@@ -312,7 +366,7 @@ static void sdwalk_update2(
    }
    else
    {
-      sdwalk_updateCopy(node, prednode, maxnprevs, prevNPterms, nprevNPterms);
+      sdwalkUpdateCopy(node, prednode, maxnprevs, prevNPterms, nprevNPterms);
 
       if( termmark[node] == 1 )
       {
@@ -325,7 +379,9 @@ static void sdwalk_update2(
    }
 }
 
-inline static void sdwalk_reset(
+/** resets temporary data */
+inline static
+void sdwalkReset(
    int                   nvisits,            /**< number of visited nodes */
    const int*            visitlist,          /**< stores all visited nodes */
    SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
@@ -345,37 +401,38 @@ inline static void sdwalk_reset(
 }
 
 
-
-inline static void correctXwalk(
-   SCIP* scip,
+/** corrects heap entry */
+inline static
+void sdwalkCorrectHeap(
    int* RESTRICT heap,
    int* RESTRICT state,
    int* RESTRICT count,    /* pointer to store the number of elements on the heap */
    SCIP_Real* RESTRICT pathdist,
-   int    l,
+   int node,
    SCIP_Real newcost
    )
 {
-   int    t;
    int    c;
    int    j;
 
-   pathdist[l] = newcost;
+   assert(GE(newcost, 0.0));
 
-   if (state[l] == UNKNOWN)
+   pathdist[node] = newcost;
+
+   if (state[node] == UNKNOWN)
    {
-      heap[++(*count)] = l;
-      state[l]      = (*count);
+      heap[++(*count)] = node;
+      state[node]      = (*count);
    }
 
    /* Heap shift up
     */
-   j = state[l];
+   j = state[node];
    c = j / 2;
 
    while( (j > 1) && pathdist[heap[c]] > pathdist[heap[j]] )
    {
-      t              = heap[c];
+      const int t    = heap[c];
       heap[c]        = heap[j];
       heap[j]        = t;
       state[heap[j]] = j;
@@ -386,12 +443,264 @@ inline static void correctXwalk(
 }
 
 
+/** gets position in Sd array
+ *  todo: bad design, should be somewhere central...probably not too time expensive */
+inline static
+int sdCliqueStarGetSdPosition(
+   int                   ncliquenodes,       /**< number of clique nodes */
+   int                   newnode,            /**< new node */
+   int                   prednode,           /**< predecessor node */
+   const SCIP_Real*      nodes_dist,         /**< distance per node */
+   const int*            nodes_base,         /**< base per node */
+   const int*            baseToClique        /**< mapping to clique ID */
+)
+{
+   const int base_new = nodes_base[newnode];
+   const int base_pred = nodes_base[prednode];
+   const int id_new = baseToClique[base_new];
+   const int id_pred = baseToClique[base_pred];
+   const int id_min = MIN(id_new, id_pred);
+   const int id_max = MAX(id_new, id_pred);
+   int pos = 0;
+
+   assert(id_min >= 0);
+   assert(id_max <= ncliquenodes);
+   assert(id_min < id_max);
+
+   for( int k = 1; k <= id_min; k++ )
+   {
+      pos += (ncliquenodes - k);
+   }
+
+   pos += (id_max - id_min - 1);
+   assert(pos < ((ncliquenodes) * (ncliquenodes - 1)) / 2);
+
+   return pos;
+}
+
+
+/** updates node data */
+inline static
+void sdCliqueStarUpdateNode(
+   int                   newnode,            /**< new node */
+   int                   prednode,           /**< predecessor node */
+   SCIP_Real             newdist,            /**< new distance */
+   DHEAP* RESTRICT       dheap,              /**< heap */
+   SCIP_Real* RESTRICT   nodes_dist,         /**< distance per node */
+   int* RESTRICT         nodes_base,         /**< base per node */
+   int* RESTRICT         nodes_pred          /**< predecessor per node */
+   )
+{
+   assert(newnode >= 0 && prednode >= 0);
+   assert(newnode != prednode);
+   assert(GE(newdist, 0.0) && LT(newdist, FARAWAY));
+
+   graph_heap_correct(newnode, newdist, dheap);
+
+   nodes_pred[newnode] = prednode;
+   nodes_dist[newnode] = newdist;
+   nodes_base[newnode] = nodes_base[prednode];
+}
+
+
+/** updates SD between nodes */
+inline static
+void sdCliqueStarUpdateSd(
+   int                   ncliquenodes,       /**< number of clique nodes */
+   int                   newnode,            /**< new node */
+   int                   prednode,           /**< predecessor node */
+   SCIP_Real             newdist,            /**< the new distance to 'newnode' (along prednode) */
+   const SCIP_Real*      nodes_dist,         /**< distance per node */
+   const int*            nodes_base,         /**< base per node */
+   const int*            baseToClique,       /**< mapping to clique ID */
+   SCIP_Real* RESTRICT   sds                 /**< to be filled */
+   )
+{
+   const int sdposition = sdCliqueStarGetSdPosition(ncliquenodes,
+      newnode, prednode, nodes_dist, nodes_base, baseToClique);
+   /* complete distance along new node: */
+   const SCIP_Real sdist = nodes_dist[newnode] + newdist;
+
+   assert(nodes_base[newnode] != nodes_base[prednode]);
+   assert(GE(newdist, 0.0) && LT(newdist, FARAWAY));
+   assert(GE(sdist, 0.0) && LT(sdist, FARAWAY));
+
+   if( sdist < sds[sdposition] )
+   {
+      sds[sdposition] = sdist;
+   }
+}
+
+
+/** initializes */
+static
+void sdCliqueStarInit(
+   const GRAPH*          g,                  /**< graph data structure */
+   SDCLIQUE*             cliquedata,         /**< data */
+   CLIQUEPATHS*          cliquepaths         /**< paths data */
+   )
+{
+   DIJK* RESTRICT dijkdata = cliquedata->dijkdata;
+   SCIP_Real* RESTRICT nodes_dist = dijkdata->node_distance;
+   int* RESTRICT visitlist = dijkdata->visitlist;
+   DHEAP* RESTRICT dheap = dijkdata->dheap;
+   const int* const cliquenodes = cliquedata->cliquenodes;
+   const int ncliquenodes = cliquedata->ncliquenodes;
+   int* RESTRICT nodes_base = cliquepaths->nodes_base;
+   int* RESTRICT nodes_pred = cliquepaths->nodes_pred;
+   int* RESTRICT nodes_baseToClique = cliquepaths->nodes_baseToClique;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
+
+   assert(nodes_dist && nodes_base && dheap && cliquenodes);
+   assert(graph_heap_isClean(dheap));
+   assert(ncliquenodes >= 2);
+   assert(dijkdata->edgelimit >= 0 && dijkdata->edgelimit < 20000);
+
+#ifndef NDEBUG
+   for( int i = 0; i < g->knots; i++ )
+   {
+      assert(UNKNOWN == dheap->position[i]);
+      assert(UNKNOWN == nodes_base[i]);
+      assert(EQ(FARAWAY, nodes_dist[i]));
+      assert(!visited[i]);
+   }
+#endif
+
+   /* add clique */
+   for( int i = 0; i < ncliquenodes; i++ )
+   {
+      const int node = cliquenodes[i];
+
+      assert(0 <= node && node < g->knots);
+
+      visitlist[i] = node;
+      visited[node] = TRUE;
+      nodes_base[node] = node;
+      nodes_pred[node] = node;
+      nodes_dist[node] = 0.0;
+      nodes_baseToClique[node] = i;
+
+      graph_heap_correct(node, 0.0, dheap);
+   }
+
+   dijkdata->nvisits = ncliquenodes;
+   assert(dheap->size == ncliquenodes);
+}
+
+
+/** returns distance limit */
+static inline
+SCIP_Real sdCliqueStarGetDistLimit(
+   const SDCLIQUE*       cliquedata,         /**< data */
+   const SCIP_Real*      sds                 /**< to be filled */
+)
+{
+   const int ncliquenodes = cliquedata->ncliquenodes;
+   const int nsds = (ncliquenodes * (ncliquenodes - 1)) / 2;
+   SCIP_Real limit = 0.0;
+
+   assert(nsds >= 2);
+
+   for( int i = 0; i < nsds; i++ )
+   {
+      assert(GE(sds[i], 0.0) && LT(sds[i], FARAWAY));
+
+      if( sds[i] > limit )
+         limit = sds[i];
+   }
+
+   assert(GT(limit, 0.0));
+
+   return limit;
+}
+
+
+/** computes SDs */
+static
+void sdCliqueStarComputeSds(
+   const GRAPH*          g,                  /**< graph data structure */
+   SDCLIQUE*             cliquedata,         /**< data */
+   CLIQUEPATHS*          cliquepaths,        /**< paths data */
+   SCIP_Real* RESTRICT   sds                 /**< to be filled */
+)
+{
+   DIJK* RESTRICT dijkdata = cliquedata->dijkdata;
+   SCIP_Real* RESTRICT nodes_dist = dijkdata->node_distance;
+   DHEAP* RESTRICT dheap = dijkdata->dheap;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
+   int* RESTRICT visitlist = dijkdata->visitlist;
+   int* const state = dheap->position;
+   const SCIP_Real* const gCost = g->cost;
+   const int* const gOeat = g->oeat;
+   const int* const gHead = g->head;
+   const int* const nodes_baseToClique = cliquepaths->nodes_baseToClique;
+   int* RESTRICT nodes_base = cliquepaths->nodes_base;
+   int* RESTRICT nodes_pred = cliquepaths->nodes_pred;
+   const int ncliquenodes = cliquedata->ncliquenodes;
+   int nvisits = dijkdata->nvisits;
+   const SCIP_Real distlimit = sdCliqueStarGetDistLimit(cliquedata, sds);
+
+   assert(g->knots > 1);
+   assert(dheap->size > 1);
+
+   /* until the heap is empty */
+   while( dheap->size > 0 )
+   {
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_base = nodes_base[k];
+
+      assert(0 <= k_base && k_base < g->knots);
+      assert(CONNECT == state[k]);
+      assert(CONNECT == state[k_base]);
+
+      for( int i = g->outbeg[k]; i >= 0; i = gOeat[i] )
+      {
+         const int m = gHead[i];
+         const SCIP_Real newdist = nodes_dist[k] + gCost[i];
+
+         if( GT(newdist, distlimit) )
+            continue;
+
+         /* first time visit of m? */
+         if( UNKNOWN == state[m] )
+         {
+            assert(!visited[m]);
+
+            sdCliqueStarUpdateNode(m, k, newdist, dheap, nodes_dist, nodes_base, nodes_pred);
+            visitlist[nvisits++] = m;
+            visited[m] = TRUE;
+
+            assert(k_base == nodes_base[m]);
+            continue;
+         }
+
+         assert(visited[m]);
+
+         /* can we update the special distances? */
+         if( nodes_base[m] != k_base )
+         {
+            sdCliqueStarUpdateSd(ncliquenodes,
+                  m, k, newdist, nodes_dist, nodes_base, nodes_baseToClique, sds);
+         }
+
+         if( state[m] != CONNECT )
+         {
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( nodes_dist[m] > newdist )
+            {
+               sdCliqueStarUpdateNode(m, k, newdist, dheap, nodes_dist, nodes_base, nodes_pred);
+            }
+         }
+      }
+   }
+
+   dijkdata->nvisits = nvisits;
+}
+
+
 /*
  * Interface methods
  */
-
-
-
 
 /** limited Dijkstra, stopping at terminals */
 void graph_sdStar(
@@ -558,9 +867,9 @@ SCIP_RETCODE graph_sdStarBiased(
    int nchecks;
    int nstarhits;
    const int nnodes = graph_get_nNodes(g);
-   SCIP_Real* restrict dist = dijkdata->node_distance;
-   int* restrict visitlist = dijkdata->visitlist;
-   STP_Bool* restrict visited = dijkdata->node_visited;
+   SCIP_Real* RESTRICT dist = dijkdata->node_distance;
+   int* RESTRICT visitlist = dijkdata->visitlist;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
    int* node_preds;
    DHEAP* dheap = dijkdata->dheap;
    const SCIP_Real* const nodebias = dijkdata->node_bias;
@@ -778,11 +1087,11 @@ SCIP_Bool graph_sdWalks(
          if( termmark[m] != 0 )
          {
             const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
-            correctXwalk(scip, heap, state, &count, dist, m, newcost);
+            sdwalkCorrectHeap(heap, state, &count, dist, m, newcost);
          }
          else
          {
-            correctXwalk(scip, heap, state, &count, dist, m, cost[e]);
+            sdwalkCorrectHeap(heap, state, &count, dist, m, cost[e]);
          }
 
          if( ++nchecks > edgelimit1 )
@@ -834,7 +1143,7 @@ SCIP_Bool graph_sdWalks(
                   break;
                }
 
-               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+               sdwalkCorrectHeap(heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1211,16 +1520,16 @@ SCIP_Bool graph_sdWalksExt(
 
          visitlist[(*nvisits)++] = m;
          visited[m] = TRUE;
-         sdwalk_update(g, m, start, maxnprevs, prevterms, nprevterms);
+         sdwalkUpdate(g, m, start, maxnprevs, prevterms, nprevterms);
 
          if( Is_term(g->term[m]) )
          {
             const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
-            correctXwalk(scip, heap, state, &count, dist, m, newcost);
+            sdwalkCorrectHeap(heap, state, &count, dist, m, newcost);
          }
          else
          {
-            correctXwalk(scip, heap, state, &count, dist, m, cost[e]);
+            sdwalkCorrectHeap(heap, state, &count, dist, m, cost[e]);
          }
 
          if( ++nchecks > edgelimit1 )
@@ -1274,11 +1583,11 @@ SCIP_Bool graph_sdWalksExt(
                   break;
                }
 
-               if( Is_term(g->term[m]) && sdwalk_conflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
+               if( Is_term(g->term[m]) && sdwalkHasConflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
                   continue;
 
-               sdwalk_update(g, m, k, maxnprevs, prevterms, nprevterms);
-               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+               sdwalkUpdate(g, m, k, maxnprevs, prevterms, nprevterms);
+               sdwalkCorrectHeap(heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1363,9 +1672,9 @@ SCIP_Bool graph_sdWalksExt2(
          if( termmark[m] != 0 )
             distnew = MAX(distnew - g->prize[m], 0.0);
 
-         sdwalk_update2(termmark, m, start, e, maxnprevs, SCIPisZero(scip, distnew),
+         sdwalkUpdate2(termmark, m, start, e, maxnprevs, SCIPisZero(scip, distnew),
                prevterms, nprevterms, prevNPterms, nprevNPterms, prevedges, nprevedges);
-         correctXwalk(scip, heap, state, &count, dist, m, distnew);
+         sdwalkCorrectHeap(heap, state, &count, dist, m, distnew);
 
          if( ++nchecks > edgelimit1 )
             break;
@@ -1391,7 +1700,7 @@ SCIP_Bool graph_sdWalksExt2(
 
          if( g->mark[m] )
          {
-            SCIP_Real distnew = sdwalk_getdistnewEdge(prevedges, nprevedges, cost, dist, k, e, maxnprevs);
+            SCIP_Real distnew = sdwalkGetdistnewEdge(prevedges, nprevedges, cost, dist, k, e, maxnprevs);
 
             assert(state[m] != CONNECT);
 
@@ -1399,7 +1708,7 @@ SCIP_Bool graph_sdWalksExt2(
                continue;
 
             if( termmark[m] != 0 )
-               distnew = sdwalk_getdistnewPrize(prevNPterms, nprevNPterms, termmark, visited, g->prize, k, m, distnew, maxnprevs);
+               distnew = sdwalkGetdistnewPrize(prevNPterms, nprevNPterms, termmark, visited, g->prize, k, m, distnew, maxnprevs);
 
             if( SCIPisLT(scip, distnew, dist[m]) )
             {
@@ -1419,12 +1728,12 @@ SCIP_Bool graph_sdWalksExt2(
                }
 
                /* continue if m is proper terminals and is on the walk to k */
-               if( termmark[m] == 2 && sdwalk_conflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
+               if( termmark[m] == 2 && sdwalkHasConflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
                   continue;
 
-               sdwalk_update2(termmark, m, k, e, maxnprevs, SCIPisZero(scip, distnew),
+               sdwalkUpdate2(termmark, m, k, e, maxnprevs, SCIPisZero(scip, distnew),
                      prevterms, nprevterms, prevNPterms, nprevNPterms, prevedges, nprevedges);
-               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+               sdwalkCorrectHeap(heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1528,12 +1837,12 @@ SCIP_Bool graph_sdWalksConnected(
                {
                   g->mark[start] = TRUE;
                   if( resetarrays )
-                     sdwalk_reset(*nvisits, visitlist, dist, state, visited);
+                     sdwalkReset(*nvisits, visitlist, dist, state, visited);
 
                   return TRUE;
                }
 
-               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+               sdwalkCorrectHeap(heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1543,7 +1852,33 @@ SCIP_Bool graph_sdWalksConnected(
    g->mark[start] = TRUE;
 
    if( resetarrays )
-      sdwalk_reset(*nvisits, visitlist, dist, state, visited);
+      sdwalkReset(*nvisits, visitlist, dist, state, visited);
 
    return FALSE;
+}
+
+
+/** computes (or rather updates) SDs between all */
+SCIP_RETCODE graph_sdComputeCliqueStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SDCLIQUE*             cliquedata,         /**< data */
+   SCIP_Real* RESTRICT   sds                 /**< to be filled */
+)
+{
+   CLIQUEPATHS cliquepaths = { NULL, NULL, NULL };
+
+   assert(scip && g && cliquedata);
+   assert(cliquedata->dijkdata && cliquedata->cliquenodes);
+   assert(cliquedata->ncliquenodes >= 2);
+   assert(g->knots >= cliquedata->ncliquenodes);
+
+   SCIP_CALL( cliquePathsInitData(scip, g, &cliquepaths) );
+
+   sdCliqueStarInit(g, cliquedata, &cliquepaths);
+   sdCliqueStarComputeSds(g, cliquedata, &cliquepaths, sds);
+
+   cliquePathsFreeData(scip, &cliquepaths);
+
+   return SCIP_OKAY;
 }

@@ -29,6 +29,7 @@
 #include <assert.h>
 #include "portab.h"
 #include "graph.h"
+#include "graphheaps.h"
 #include "shortestpath.h"
 
 

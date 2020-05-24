@@ -145,6 +145,7 @@ void bdkGetNeighborhood(
 /** gets SDs bdk test; stored in cliquegraph */
 static inline
 void bdkGetCliqueSds(
+   SCIP*                 scip,              /**< SCIP data structure */
    const GRAPH*          g,                 /**< graph data structure */
    int                   node,              /**< the node */
    BDK*                  bdk                /**< storage */
@@ -165,7 +166,7 @@ void bdkGetCliqueSds(
    for( int k = node_degree; k < STP_BDKIMP_MAXDEGREE; k++ )
       nodemark[k] = FALSE;
 
-   reduce_sdGetSdsCliquegraph(g, bdk->node_neighbors, bdk->sdistance, cliquegraph);
+   reduce_sdGetSdsCliquegraph(scip, g, bdk->node_neighbors, bdk->sdistance, cliquegraph);
 }
 
 
@@ -667,7 +668,7 @@ SCIP_RETCODE reduce_bdkWithSd(
          SCIPdebugMessage("check node %d (degree=%d) \n", i, degree);
 
          bdkGetNeighborhood(g, i, bdk);
-         bdkGetCliqueSds(g, i, bdk);
+         bdkGetCliqueSds(scip, g, i, bdk);
 
          if( degree == 3 )
          {
