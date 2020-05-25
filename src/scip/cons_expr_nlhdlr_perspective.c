@@ -1865,7 +1865,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             SCIPerrorMessage("estimate called by perspective nonlinear handler returned invalid result <%d>\n", resultr);
             return SCIP_INVALIDRESULT;
          }
+      }
 
+      /* free all rowpreps for indicator i */
+      for( r = SCIPgetPtrarrayMinIdx(scip, rowpreps); r <= SCIPgetPtrarrayMaxIdx(scip, rowpreps); ++r )
+      {
+         rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
          SCIPfreeRowprep(scip, &rowprep);
       }
 
