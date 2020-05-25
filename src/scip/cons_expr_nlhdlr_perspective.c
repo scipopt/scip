@@ -1155,7 +1155,7 @@ SCIP_RETCODE analyseOnoffBounds(
    SCIP_Bool bndchgsuccess;
 
    /* shouldn't be called if indicator is fixed to !indvalue */
-   assert((indvalue && SCIPvarGetUbLocal(indicator) == 1.0) || (!indvalue && SCIPvarGetLbLocal(indicator) == 0.0));
+   assert((indvalue && SCIPvarGetUbLocal(indicator) > 0.5) || (!indvalue && SCIPvarGetLbLocal(indicator) < 0.5));
 
    *infeas = FALSE;
    *reduceddom = FALSE;
@@ -1193,7 +1193,7 @@ SCIP_RETCODE analyseOnoffBounds(
             return SCIP_OKAY;
          }
       }
-      else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
+      else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
       {
          /* if indicator is fixed to indvalue, sclb is valid for the current node */
          if( indvalue == 0 )
@@ -1224,7 +1224,7 @@ SCIP_RETCODE analyseOnoffBounds(
             return SCIP_OKAY;
          }
       }
-      else if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
+      else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
       {
          /* if indicator is fixed to indvalue, scub is valid for the current node */
          if( indvalue == 0 )
@@ -1286,7 +1286,7 @@ SCIP_RETCODE prepareProbing(
    changed = FALSE;
 
    /* no probing if indicator already fixed */
-   if( SCIPvarGetUbLocal(indicator) == 0 || SCIPvarGetLbLocal(indicator) == 1 )
+   if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
    {
       *doprobing = FALSE;
    }
@@ -1299,7 +1299,7 @@ SCIP_RETCODE prepareProbing(
          /* nothing left to do if indicator is already fixed to !indvalue
           * (checked in the inner loop since analyseOnoff bounds might fix the indicator)
           */
-         if( (b == 1 && SCIPvarGetUbLocal(indicator) == 0.0) || (b == 0 && SCIPvarGetLbLocal(indicator) == 1.0) )
+         if( (b == 1 && SCIPvarGetUbLocal(indicator) <= 0.5) || (b == 0 && SCIPvarGetLbLocal(indicator) >= 0.5) )
          {
             *doprobing = FALSE;
             break;
@@ -1706,12 +1706,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             &nprobingvars, &doprobingind, result) );
 
       /* don't add perspective cuts for fixed indicators since there is no use for perspectivy */
-      if( SCIPvarGetLbLocal(indicator) == 1 )
+      if( SCIPvarGetLbLocal(indicator) >= 0.5 )
       {
          assert(!doprobingind);
          continue;
       }
-      if( SCIPisZero(scip, SCIPvarGetUbLocal(indicator)) )
+      if( SCIPvarGetUbLocal(indicator) <= 0.5 )
       { /* this case is stronger as it implies that everything is fixed;
          * therefore we are now happy
          */
@@ -1940,7 +1940,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
 
       indicator = nlhdlrexprdata->indicators[i];
 
-      if( SCIPvarGetLbLocal(indicator) == 1 || SCIPvarGetUbLocal(indicator) == 0 )
+      if( SCIPvarGetLbLocal(indicator) >= 0.5 || SCIPvarGetUbLocal(indicator) <= 0.5 )
       {
          continue; /* nothing to do if indicator is already fixed */
       }
@@ -2236,7 +2236,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalPerspective)
       indicator = nlhdlrexprdata->indicators[i];
 
       /* nothing to do if the indicator is already fixed */
-      if( SCIPvarGetLbLocal(indicator) == 1 || SCIPvarGetUbLocal(indicator) == 0 )
+      if( SCIPvarGetLbLocal(indicator) >= 0.5 || SCIPvarGetUbLocal(indicator) <= 0.5 )
          continue;
 
       /* TODO probing at 0 too */
