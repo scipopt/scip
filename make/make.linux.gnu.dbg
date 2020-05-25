@@ -7,8 +7,8 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 # enable sanitizers if GCC >= 5.0
 # the default is to only enable the UndefinedBehaviorSanitizer (SANITIZE=true)
 # if user specifies SANITIZE=full, then also other sanitizers are enabled
-GCCVERSION := $(shell $(CC) -dumpversion | cut -f1-2 -d.)
-SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 5.0 \) + 1), false, true)
+GCCVERSION := $(shell $(CC) -dumpversion | cut -f1 -d.)
+SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 5 \) + 1), false, true)
 
 ifeq ($(SANITIZE),full)
 
