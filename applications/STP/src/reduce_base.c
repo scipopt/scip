@@ -446,7 +446,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       // todo check me out
       int xxx = 0;
-      SCIP_CALL( reduce_bdk(scip, g, &xxx) );
+      SCIP_CALL( reduce_bdk(scip, ((inner_rounds > 0) ? 2 * STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND), g, &xxx) );
 
    //   printf("reduce_bdk elims=%d \n",xxx );
 
@@ -533,14 +533,6 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
-
-      {
-         int nelimsx = 0;
-             SCIP_CALL( reduce_bdk(scip, g, &nelimsx) );
-
-           //  printf("bd3nelims=%d nelimsx=%d \n", bd3nelims, nelimsx);
-      }
-
 
 
       if( nvsl || extensive )

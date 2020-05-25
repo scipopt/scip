@@ -44,6 +44,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
    SD* sddata;
    GRAPH* graph;
    GRAPH* cliquegraph;
+   DIJK* dijkdata;
    int nnodes = 7;
    int nedges = 16;
    int cliqueNodeMap[] = { 3,4,5,6 };
@@ -77,7 +78,11 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 
    SCIP_CALL( reduce_sdInit(scip, graph, &sddata) );
 
-   reduce_sdGetSdsCliquegraph(scip, graph, cliqueNodeMap, sddata, cliquegraph);
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &(dijkdata)) );
+   graph_dijkLimited_clean(graph, dijkdata);
+   dijkdata->edgelimit = 500;
+
+   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, graph, cliqueNodeMap, dijkdata, sddata, cliquegraph) );
 
    for( int e = cliquegraph->outbeg[0]; e != EAT_LAST; e = cliquegraph->oeat[e] )
    {
@@ -119,6 +124,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
       }
    }
 
+   graph_dijkLimited_free(scip, &(dijkdata));
    reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, cliquegraph);
    stptest_graphTearDown(scip, graph);
@@ -159,7 +165,7 @@ SCIP_RETCODE testBdkTreeDistDeletesNodeDeg4(
    graph_edge_addBi(scip, graph, 5, 6, 1.0); // 10
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
-   SCIP_CALL( reduce_bdk(scip, graph, &nelims) );
+   SCIP_CALL( reduce_bdk(scip, 100, graph, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->grad[0] == 0);
@@ -206,7 +212,7 @@ SCIP_RETCODE testBdkSdMstDeletesNodeDeg4(
 
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
-   SCIP_CALL( reduce_bdk(scip, graph, &nelims) );
+   SCIP_CALL( reduce_bdk(scip, 100, graph, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->grad[0] == 0);
@@ -252,7 +258,7 @@ SCIP_RETCODE testBdkSdMstDeletesNodeDeg3(
 
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
-   SCIP_CALL( reduce_bdk(scip, graph, &nelims) );
+   SCIP_CALL( reduce_bdk(scip, 100, graph, &nelims) );
 
    STPTEST_ASSERT(graph->grad[0] == 0);
 
@@ -397,7 +403,7 @@ SCIP_RETCODE testSdCliqueStarDeg3AdjacencyIsCorrect(
    const int nsds = 3;
    SCIP_Real sds[3];
    int cliquenodes[] = { 1, 2, 3 };
-   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 3 };
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 3, .sds = sds };
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -424,7 +430,7 @@ SCIP_RETCODE testSdCliqueStarDeg3AdjacencyIsCorrect(
    graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
    cliquedata.dijkdata->edgelimit = 50;
 
-   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata, sds) );
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata) );
 
    STPTEST_ASSERT(EQ(sds[0], 1.8));
    STPTEST_ASSERT(EQ(sds[1], 1.9));
@@ -451,7 +457,7 @@ SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
    const int nsds = 6;
    SCIP_Real sds[6];
    int cliquenodes[] = { 1, 2, 3, 4 };
-   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 4 };
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 4, .sds = sds };
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -480,7 +486,7 @@ SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
    graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
    cliquedata.dijkdata->edgelimit = 50;
 
-   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata, sds) );
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata) );
 
    STPTEST_ASSERT(EQ(sds[0], 0.8)); // 1-2
    STPTEST_ASSERT(EQ(sds[1], 1.9)); // 1-3

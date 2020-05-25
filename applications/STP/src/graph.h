@@ -248,6 +248,7 @@ typedef struct voronoi_storage
 typedef struct special_distance_clique
 {
    DIJK*                 dijkdata;           /**< temporary data */
+   SCIP_Real*            sds;                /**< array for SDs of clique */
    int*                  cliquenodes;        /**< nodes */
    int                   ncliquenodes;       /**< number of nodes */
 } SDCLIQUE;
@@ -542,7 +543,7 @@ extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, i
 extern SCIP_Bool graph_sdWalksTriangle(SCIP*, const GRAPH*, const int*, const int*, SCIP_Real, int, int, int, SCIP_Real*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt2(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*);
-extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, SDCLIQUE*, SCIP_Real* RESTRICT);
+extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, SDCLIQUE*);
 
 
 /* graph_vnoi.c

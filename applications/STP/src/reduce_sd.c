@@ -1085,6 +1085,120 @@ SCIP_Bool isPseudoDeletable(
 }
 
 
+/** initializes data */
+static inline
+SCIP_RETCODE sdCliqueInitData(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   const GRAPH*          cliquegraph,        /**< clique graph */
+   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   DIJK*                 dijkdata,           /**< data for repeated path computations */
+   SDCLIQUE*             sdclique            /**< clique */
+)
+{
+   SCIP_Real* sds_buffer;
+   int* cliquenodes;
+   const int nnodes_cliquegraph = graph_get_nNodes(cliquegraph);
+   const int* const nodemark = cliquegraph->mark;
+   int nnodes_clique = 0;
+
+   /* NOTE: might be too big, but slightly better for cache reuse */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, nnodes_cliquegraph) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sds_buffer, cliquegraph->edges / 2) );
+
+   for( int i = 0; i < nnodes_cliquegraph; ++i )
+   {
+      if( nodemark[i] )
+         cliquenodes[nnodes_clique++] = cliqueNodeMap[i];
+   }
+
+#ifndef NDEBUG
+   for( int i = nnodes_clique; i < nnodes_cliquegraph; ++i )
+      cliquenodes[i] = -1;
+#endif
+
+   sdclique->ncliquenodes = nnodes_clique;
+   sdclique->sds = sds_buffer;
+   sdclique->cliquenodes = cliquenodes;
+   sdclique->dijkdata = dijkdata;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees data */
+static inline
+void sdCliqueFreeData(
+   SCIP*                 scip,               /**< SCIP */
+   SDCLIQUE*             sdclique            /**< clique */
+)
+{
+   SCIPfreeBufferArray(scip, &(sdclique->sds));
+   SCIPfreeBufferArray(scip, &(sdclique->cliquenodes));
+}
+
+
+/** tries to improve SDs of clique-graph
+ *  by using the star SD clique algorithm */
+static inline
+SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   GRAPH*                cliquegraph,        /**< clique graph */
+   SDCLIQUE*             sdclique            /**< clique */
+)
+{
+   const SCIP_Real* sds_buffer;
+   const int* const nodemark = cliquegraph->mark;
+   const int nnodes_cliquegraph = graph_get_nNodes(cliquegraph);
+   int nsds = 0;
+
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, g, sdclique) );
+   sds_buffer = sdclique->sds;
+
+   for( int k1 = 0; k1 < nnodes_cliquegraph; k1++ )
+   {
+      int v1;
+
+      if( !nodemark[k1] )
+         continue;
+
+      v1 = cliqueNodeMap[k1];
+      assert(0 <= v1 && v1 < g->knots);
+
+      for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      {
+         const int k2 = cliquegraph->head[e];
+
+         if( !nodemark[k2] )
+            continue;
+
+         if( k2 > k1 )
+         {
+            const int v2 = cliqueNodeMap[k2];
+            assert(0 <= v2 && v2 < g->knots);
+            assert(v1 != v2);
+
+            assert(GT(sds_buffer[nsds], 0.0));
+            assert(LE(sds_buffer[nsds], cliquegraph->cost[e]));
+            assert(EQ(cliquegraph->cost[e], cliquegraph->cost[flipedge(e)]));
+
+            if( sds_buffer[nsds] < cliquegraph->cost[e] )
+            {
+               cliquegraph->cost[e] = sds_buffer[nsds];
+               cliquegraph->cost[flipedge(e)] = sds_buffer[nsds];
+            }
+
+            nsds++;
+            assert(nsds <= cliquegraph->edges / 2);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** get SDs between all pairs of marked vertices of given clique graph by
  *  using terminal-to-terminal special distances */
@@ -1094,12 +1208,13 @@ void sdGetSdsCliqueTermWalks(
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    SD* RESTRICT          sddata,             /**< SD */
    GRAPH* RESTRICT       cliquegraph,        /**< clique graph to be filled */
-   SCIP_Real* RESTRICT   sds_buffer          /**< special distances (size cliquegraph->edges / 2) */
+   SDCLIQUE* RESTRICT    sdclique            /**< clique */
 )
 {
    const int nnodes_clique = graph_get_nNodes(cliquegraph);
-   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph); // todo is that valid to use?
+   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph);
    const int* const nodemark = cliquegraph->mark;
+   SCIP_Real* RESTRICT sds_buffer = sdclique->sds;
    int nsds = 0;
 
    assert(cliqueNodeMap && sddata);
@@ -1145,37 +1260,6 @@ void sdGetSdsCliqueTermWalks(
 }
 
 
-/** get SDs between all pairs of marked vertices of given clique graph by
- *  using star-clique method special distances */
-static
-SCIP_RETCODE sdGetSdsCliqueStarWalks(
-   const GRAPH*          g,                  /**< the graph */
-   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
-   SD* RESTRICT          sddata,             /**< SD */
-   GRAPH* RESTRICT       cliquegraph,        /**< clique graph to be filled */
-   SCIP_Real* RESTRICT   sds_buffer          /**< special distances (size cliquegraph->edges / 2) */
-)
-{
-#if 0
-   const int nnodes_clique = graph_get_nNodes(cliquegraph);
-   const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph);
-   const int* const nodemark = cliquegraph->mark;
-#endif
-
-
-
-   // update SDS with extra method
-
-   // save the SDS into an array
-
-   // update the array (call function)
-
-   // copy array back into graph (make sure that we only get better!)
-
-   return SCIP_OKAY;
-
-}
-
 
 /*
  * Interface methods
@@ -1211,18 +1295,22 @@ SCIP_RETCODE reduce_sdGetSdsCliquegraph(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
+   DIJK*                 dijkdata,           /**< data for repeated path computations */
    SD*                   sddata,             /**< SD */
    GRAPH*                cliquegraph         /**< clique graph to be filled */
 )
 {
-   SCIP_Real* sds_buffer;
+   SDCLIQUE sdclique;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &sds_buffer, cliquegraph->edges / 2) );
+   assert(scip && g && cliqueNodeMap && dijkdata && sddata && cliquegraph);
+   assert(cliquegraph->edges == (cliquegraph->knots) * (cliquegraph->knots - 1));
 
-   sdGetSdsCliqueTermWalks(g, cliqueNodeMap, sddata, cliquegraph, sds_buffer);
-   SCIP_CALL( sdGetSdsCliqueStarWalks(g, cliqueNodeMap, sddata, cliquegraph, sds_buffer) );
+   SCIP_CALL( sdCliqueInitData(scip, g, cliquegraph, cliqueNodeMap, dijkdata, &sdclique) );
 
-   SCIPfreeBufferArray(scip, &sds_buffer);
+   sdGetSdsCliqueTermWalks(g, cliqueNodeMap, sddata, cliquegraph, &sdclique);
+   SCIP_CALL( sdCliqueUpdateGraphWithStarWalks(scip, g, cliqueNodeMap, cliquegraph, &sdclique) );
+
+   sdCliqueFreeData(scip, &sdclique);
 
    return SCIP_OKAY;
 }
@@ -3404,7 +3492,7 @@ SCIP_RETCODE reduce_sdStar(
    return SCIP_OKAY;
 }
 
-#if 1
+
 /** SD star test for PcMw and SPG */
 SCIP_RETCODE reduce_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3430,7 +3518,6 @@ SCIP_RETCODE reduce_sdStarBiased(
 
    for( int i = 0; i < nnodes; i++ )
    {
-
       if( !g->mark[i] )
       {
          assert(g->grad[i] == 2 || g->grad[i] == 0 || i == g->source);
@@ -3446,7 +3533,7 @@ SCIP_RETCODE reduce_sdStarBiased(
 
    return SCIP_OKAY;
 }
-#endif
+
 
 /** SD star test for PcMw */
 SCIP_RETCODE reduce_sdStarPc2(

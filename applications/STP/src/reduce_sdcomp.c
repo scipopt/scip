@@ -142,12 +142,14 @@ void bdkGetNeighborhood(
    assert(k == bdk->node_degree);
 }
 
+
 /** gets SDs bdk test; stored in cliquegraph */
 static inline
-void bdkGetCliqueSds(
+SCIP_RETCODE bdkGetCliqueSds(
    SCIP*                 scip,              /**< SCIP data structure */
    const GRAPH*          g,                 /**< graph data structure */
    int                   node,              /**< the node */
+   DIJK*                 dijkdata,          /**< data for repeated path computations */
    BDK*                  bdk                /**< storage */
 )
 {
@@ -166,7 +168,9 @@ void bdkGetCliqueSds(
    for( int k = node_degree; k < STP_BDKIMP_MAXDEGREE; k++ )
       nodemark[k] = FALSE;
 
-   reduce_sdGetSdsCliquegraph(scip, g, bdk->node_neighbors, bdk->sdistance, cliquegraph);
+   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, g, bdk->node_neighbors, dijkdata, bdk->sdistance, cliquegraph) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -617,6 +621,7 @@ SCIP_RETCODE bdkTryDegGe4(
 /** bd_k test without given Steiner bottleneck distances */
 SCIP_RETCODE reduce_bdk(
    SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgevisitlimit,     /**< maximum edge visited per iteration */
    GRAPH*                g,                  /**< graph structure */
    int*                  nelims              /**< number of eliminations */
    )
@@ -625,7 +630,7 @@ SCIP_RETCODE reduce_bdk(
 
    SCIP_CALL( reduce_sdInit(scip, g, &sdistance) );
 
-   SCIP_CALL( reduce_bdkWithSd(scip, sdistance, g, nelims) );
+   SCIP_CALL( reduce_bdkWithSd(scip, edgevisitlimit, sdistance, g, nelims) );
 
    reduce_sdFree(scip, &sdistance);
 
@@ -636,12 +641,14 @@ SCIP_RETCODE reduce_bdk(
 /** bd_k test for given Steiner bottleneck distances */
 SCIP_RETCODE reduce_bdkWithSd(
    SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgevisitlimit,     /**< maximum edge visited per iteration */
    SD*                   sdistance,          /**< special distances storage */
    GRAPH*                g,                  /**< graph structure */
    int*                  nelims              /**< number of eliminations */
    )
 {
    BDK* bdk;
+   DIJK* dijkdata;
    const int nnodes = graph_get_nNodes(g);
    const int maxdegree = MIN(g->terms, STP_BDKIMP_MAXDEGREE);
    const int nelims_initial = *nelims;
@@ -649,6 +656,7 @@ SCIP_RETCODE reduce_bdkWithSd(
    assert(scip && sdistance && nelims);
    assert(nelims_initial >= 0);
    assert(!graph_pc_isPcMw(g));
+   assert(edgevisitlimit > 0);
 
    /* NOTE: in the case of g->terms < 3 the method does not work properly, and the case is easy enough to ignore it */
    if( g->terms < 3  )
@@ -657,6 +665,11 @@ SCIP_RETCODE reduce_bdkWithSd(
    SCIP_CALL( bdkInit(scip, sdistance, &bdk) );
    SCIPdebugMessage("starting BDK-SD Reduction: \n");
    graph_mark(g);
+
+   // todo have a reduction structure REDUCT that contains DIJK and SD, etc...
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &(dijkdata)) );
+   graph_dijkLimited_clean(g, dijkdata);
+   dijkdata->edgelimit = edgevisitlimit;
 
    for( int degree = 3; degree <= maxdegree; degree ++ )
    {
@@ -668,7 +681,7 @@ SCIP_RETCODE reduce_bdkWithSd(
          SCIPdebugMessage("check node %d (degree=%d) \n", i, degree);
 
          bdkGetNeighborhood(g, i, bdk);
-         bdkGetCliqueSds(scip, g, i, bdk);
+         SCIP_CALL( bdkGetCliqueSds(scip, g, i, dijkdata, bdk) );
 
          if( degree == 3 )
          {
@@ -678,9 +691,12 @@ SCIP_RETCODE reduce_bdkWithSd(
          {
             SCIP_CALL( bdkTryDegGe4(scip, i, g, bdk, nelims) );
          }
+
+         graph_dijkLimited_reset(g, dijkdata);
       }
    }
 
+   graph_dijkLimited_free(scip, &(dijkdata));
    bdkFree(scip, &bdk);
 
    if( *nelims > nelims_initial  )

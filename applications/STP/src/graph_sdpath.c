@@ -1861,11 +1861,11 @@ SCIP_Bool graph_sdWalksConnected(
 SCIP_RETCODE graph_sdComputeCliqueStar(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SDCLIQUE*             cliquedata,         /**< data */
-   SCIP_Real* RESTRICT   sds                 /**< to be filled */
+   SDCLIQUE*             cliquedata          /**< data */
 )
 {
    CLIQUEPATHS cliquepaths = { NULL, NULL, NULL };
+   SCIP_Real* sds = cliquedata->sds;
 
    assert(scip && g && cliquedata);
    assert(cliquedata->dijkdata && cliquedata->cliquenodes);
