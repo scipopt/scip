@@ -12,8 +12,8 @@ add_executable(circle
 add_executable(gastrans
    src/gastrans.c)
 
-add_executable(string
-   src/string.c)
+add_executable(spring
+   src/spring.c)
 
 add_executable(brachistochrone
    src/brachistochrone.c)
@@ -29,12 +29,12 @@ endif()
 
 target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
-target_link_libraries(string ${SCIP_LIBRARIES})
+target_link_libraries(spring ${SCIP_LIBRARIES})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans string brachistochrone circlepacking )
+    add_dependencies( examples circle gastrans spring brachistochrone circlepacking )
 endif()
 
 #
@@ -64,6 +64,6 @@ endmacro(addbuildandtest)
 
 addbuildandtest(circle)
 addbuildandtest(gastrans)
-addbuildandtest(string)
+addbuildandtest(spring)
 addbuildandtest(brachistochrone)
 addbuildandtest(circlepacking)

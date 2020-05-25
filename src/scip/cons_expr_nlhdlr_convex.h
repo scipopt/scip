@@ -24,6 +24,7 @@
 #define __SCIP_CONS_EXPR_NLHDLR_CONVEX_H__
 
 #include "scip/scip.h"
+#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +42,17 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+   );
+
+/** computes the curvature information w.r.t. the original variables for a given expression; this method uses the
+ * methods that are used in the detection algorithm of the convex and concave nonlinear handler
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV*        curv                /**< pointer to store the curvature */
    );
 
 #ifdef __cplusplus
