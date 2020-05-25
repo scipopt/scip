@@ -560,7 +560,6 @@ void sdCliqueStarInit(
    for( int i = 0; i < g->knots; i++ )
    {
       assert(UNKNOWN == dheap->position[i]);
-      assert(UNKNOWN == nodes_base[i]);
       assert(EQ(FARAWAY, nodes_dist[i]));
       assert(!visited[i]);
    }

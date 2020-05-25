@@ -385,6 +385,117 @@ SCIP_RETCODE testSdStarBiasedDeletesEdge3(
 }
 
 
+/** tests clique star correctly identifies adjacency distances for degree 3 node  */
+static
+SCIP_RETCODE testSdCliqueStarDeg3AdjacencyIsCorrect(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 5;
+   int nedges = 12;
+   const int nsds = 3;
+   SCIP_Real sds[3];
+   int cliquenodes[] = { 1, 2, 3 };
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 3 };
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nsds; i++ )
+      sds[i] = FARAWAY - 1.0;
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 4;
+
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 0.99); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.8);
+   graph_edge_addBi(scip, graph, 1, 3, 1.9);
+   graph_edge_addBi(scip, graph, 1, 4, 3.9); // dummy terminal
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &(cliquedata.dijkdata)) );
+   graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
+   cliquedata.dijkdata->edgelimit = 50;
+
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata, sds) );
+
+   STPTEST_ASSERT(EQ(sds[0], 1.8));
+   STPTEST_ASSERT(EQ(sds[1], 1.9));
+   STPTEST_ASSERT(EQ(sds[2], 1.99));
+
+   graph_dijkLimited_free(scip, &(cliquedata.dijkdata));
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests clique star correctly identifies distances for degree 4 node  */
+static
+SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 7;
+   int nedges = 16;
+   const int nsds = 6;
+   SCIP_Real sds[6];
+   int cliquenodes[] = { 1, 2, 3, 4 };
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 4 };
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nsds; i++ )
+      sds[i] = FARAWAY - 1.0;
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 6; // dummy
+   graph_knot_chg(graph, 6, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 0.9);
+   graph_edge_addBi(scip, graph, 0, 4, 1.0);
+   graph_edge_addBi(scip, graph, 1, 5, 0.4);
+   graph_edge_addBi(scip, graph, 2, 5, 0.4);
+   graph_edge_addBi(scip, graph, 2, 3, 1.5);
+
+   graph_edge_addBi(scip, graph, 1, 6, 3.9); // dummy terminal
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &(cliquedata.dijkdata)) );
+   graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
+   cliquedata.dijkdata->edgelimit = 50;
+
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata, sds) );
+
+   STPTEST_ASSERT(EQ(sds[0], 0.8)); // 1-2
+   STPTEST_ASSERT(EQ(sds[1], 1.9)); // 1-3
+   STPTEST_ASSERT(EQ(sds[2], 2.0)); // 1-4
+   STPTEST_ASSERT(EQ(sds[3], 1.5)); // 2-3
+   STPTEST_ASSERT(EQ(sds[4], FARAWAY - 1.0)); // 2-4
+   STPTEST_ASSERT(EQ(sds[5], 1.9)); // 3-4
+
+   graph_dijkLimited_free(scip, &(cliquedata.dijkdata));
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 /** tests Bdk methods */
 SCIP_RETCODE stptest_reduceBdk(
    SCIP*                 scip                /**< SCIP data structure */
@@ -402,7 +513,21 @@ SCIP_RETCODE stptest_reduceBdk(
 }
 
 
-/** tests sd getter methods */
+/** tests SD clique star methods */
+SCIP_RETCODE stptest_reduceSdCliqueStar(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( testSdCliqueStarDeg3AdjacencyIsCorrect(scip) );
+   SCIP_CALL( testSdCliqueStarDeg4IsCorrect(scip) );
+
+   printf("reduce clique star test: all ok \n");
+
+   return SCIP_OKAY;
+}
+
+
+/** tests SD getter methods */
 SCIP_RETCODE stptest_reduceSdGetter(
    SCIP*                 scip                /**< SCIP data structure */
 )

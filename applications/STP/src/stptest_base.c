@@ -37,6 +37,8 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
+
+   SCIP_CALL( stptest_reduceSdCliqueStar(scip) );
    SCIP_CALL( stptest_reduceSdGetter(scip) );
    SCIP_CALL( stptest_reduceBdk(scip) );
    SCIP_CALL( stptest_reduceSdStarBias(scip) );
