@@ -226,7 +226,7 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib/shared) \
 		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
-		$(SANITZERFLAGS) \
+		$(SANITIZERFLAGS) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
