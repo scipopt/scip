@@ -444,14 +444,11 @@ SCIP_RETCODE redLoopStp_inner(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      // todo check me out
+      // todo put me later!
       int xxx = 0;
       SCIP_CALL( reduce_bdk(scip, ((inner_rounds > 0) ? 2 * STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND), g, &xxx) );
 
-   //   printf("reduce_bdk elims=%d \n",xxx );
-
-//      assert(0);
-
+    //  printf("reduce_bdk elims=%d \n",xxx );
 
 
       if( le || extensive )
