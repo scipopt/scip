@@ -1159,13 +1159,8 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
 
    for( int k1 = 0; k1 < nnodes_cliquegraph; k1++ )
    {
-      int v1;
-
       if( !nodemark[k1] )
          continue;
-
-      v1 = cliqueNodeMap[k1];
-      assert(0 <= v1 && v1 < g->knots);
 
       for( int e = cliquegraph->outbeg[k1]; e != EAT_LAST; e = cliquegraph->oeat[e] )
       {
@@ -1176,9 +1171,14 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
 
          if( k2 > k1 )
          {
+#ifndef NDEBUG
+            const int v1 = cliqueNodeMap[k1];
             const int v2 = cliqueNodeMap[k2];
+            assert(0 <= v1 && v1 < g->knots);
+
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
+#endif
 
             assert(GT(sds_buffer[nsds], 0.0));
             assert(LE(sds_buffer[nsds], cliquegraph->cost[e]));
