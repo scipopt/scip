@@ -39,6 +39,7 @@
 #define DEFAULT_MULTCUTS          TRUE  /**< TODO this is not used currently */
 #define DEFAULT_MAXPROPROUNDS     1     /**< maximal number of propagation rounds in probing */
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
+#define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
 
 /*
  * Data structures
@@ -93,6 +94,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             multcuts;           /**< whether to add cuts for all suitable indicator variables */
    int                   maxproprounds;      /**< maximal number of propagation rounds in probing */
    SCIP_Real             mindomreduction;    /**< minimal relative reduction in a variable's domain for applying probing */
+   SCIP_Real             minviolprobing;     /**< minimal violation w.r.t. auxiliary variables for applying probing */
 };
 
 /*
@@ -1561,7 +1563,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
 { /*lint --e{715}*/
    int e;
    SCIP_Real maxdiff;
-   SCIP_Real auxval_e;
    SCIP_Real auxvarvalue;
 
    assert(scip != NULL);
@@ -1577,12 +1578,12 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
          continue;
 
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-            &auxval_e, sol) );
+            &expr->enfos[e]->auxvalue, sol) );
 
-      if( REALABS(auxval_e - auxvarvalue) > maxdiff && auxval_e != SCIP_INVALID )
+      if( REALABS(expr->enfos[e]->auxvalue - auxvarvalue) > maxdiff && expr->enfos[e]->auxvalue != SCIP_INVALID )
       {
-         maxdiff = auxval_e;
-         *auxvalue = auxval_e;
+         maxdiff = REALABS(expr->enfos[e]->auxvalue - auxvarvalue);
+         *auxvalue = expr->enfos[e]->auxvalue;
       }
    }
 
@@ -1638,18 +1639,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_Bool doprobing;
    SCIP_BOOLARRAY* addedbranchscores2;
    SCIP_Bool stop;
+   int nenfos;
+   SCIP_CONSEXPR_EXPRENFO** enfos;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-
-   /* only do probing if expr is nonconvex and we are not in probing already */
-   if( (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
-       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) ||
-       SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 || addbranchscores )
-      doprobing = FALSE;
-   else
-      doprobing = TRUE;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
@@ -1672,6 +1665,52 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
+
+   /* detect should have picked only those expressions for which at least one other nlhdlr can enforce */
+   assert(expr->nenfos > 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &enfos, expr->nenfos - 1) );
+
+   doprobing = FALSE;
+   nenfos = 0;
+
+   /* find suitable nlhdlrs */
+   for( j = 0; j < expr->nenfos; ++j )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+      SCIP_Real violation;
+      SCIP_Bool underestimate2;
+      SCIP_Bool overestimate2;
+
+      nlhdlr2 = expr->enfos[j]->nlhdlr;
+
+      if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) || nlhdlr2 == nlhdlr ) /* TODO if persp has no estimate, the latter is not needed */
+         continue;
+
+      /* evalaux should have called evalaux of other nlhdlrs by now */
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, expr->enfos[j]->auxvalue, sol, &violation,
+            &underestimate2, &overestimate2) );
+      assert(violation >= 0.0);
+
+      if( (overestimate && !overestimate2) || (!overestimate && !underestimate2) )
+         continue;
+
+      if( !allowweakcuts && violation < SCIPfeastol(scip) )
+         continue;
+
+      enfos[nenfos] = expr->enfos[j];
+      ++nenfos;
+
+      if( violation >= nlhdlrdata->minviolprobing )
+         doprobing = TRUE;
+   }
+
+   /* only do probing if expr is nonconvex and we are not in probing already */
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   if( (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
+       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) ||
+       SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 || addbranchscores )
+      doprobing = FALSE;
 
    nrowpreps = 0;
    *result = SCIP_DIDNOTFIND;
@@ -1725,34 +1764,21 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       }
 
       /* use cuts from every suitable nlhdlr */
-      for( j = 0; j < expr->nenfos; ++j )
+      for( j = 0; j < nenfos; ++j )
       {
          SCIP_Bool addedbranchscores2j;
          SCIP_CONSEXPR_NLHDLR* nlhdlr2;
          SCIP_Bool success2;
-         SCIP_Real violation;
-         SCIP_Bool underestimate2;
-         SCIP_Bool overestimate2;
 
-         nlhdlr2 = expr->enfos[j]->nlhdlr;
+         nlhdlr2 = enfos[j]->nlhdlr;
 
-         if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) || nlhdlr2 == nlhdlr ) /* TODO if persp has no estimate, the latter is not needed */
-            continue;
+         assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr); /* TODO if persp has no estimate, the latter is not needed */
 
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
-         /* evaluate auxiliary before calling estimate */
-         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, &expr->enfos[j]->auxvalue, solcopy) );
-
-         SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, expr->enfos[j]->auxvalue, solcopy,
-               &violation, &underestimate2, &overestimate2) );
-
-         if( (overestimate && !overestimate2) || (!overestimate && !underestimate2) )
-            continue;
-
          /* ask the nonlinear handler for an estimator */
-         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, expr->enfos[j]->nlhdlrexprdata, solcopy,
-               expr->enfos[j]->auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2,
+         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, enfos[j]->nlhdlrexprdata, solcopy,
+               enfos[j]->auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2,
                addbranchscores, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
@@ -1887,6 +1913,7 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfreeSol(scip, &solcopy) );
    }
+   SCIPfreeBufferArray(scip, &enfos);
 
    return SCIP_OKAY;
 }
@@ -2434,6 +2461,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mindomreduction",
            "minimal relative reduction in a variable's domain for applying probing",
            &nlhdlrdata->mindomreduction, FALSE, DEFAULT_MINDOMREDUCTION, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/minviolprobing",
+           "minimal violation w.r.t. auxiliary variables for applying probing",
+           &nlhdlrdata->minviolprobing, FALSE, DEFAULT_MINVIOLPROBING, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);

@@ -446,7 +446,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs);
    SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs);
 
-   /* detect by quadratic handler */
+   /* detect by convex handler */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
    enforcebelow = FALSE;
    enforceabove = FALSE;
@@ -460,11 +460,13 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata_conv);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
-   expr->nenfos = 1;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
+   expr->nenfos = 2;
    expr->enfos[0]->nlhdlr = nlhdlr_conv;
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
+   expr->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect by perspective handler */
    success = FALSE;
