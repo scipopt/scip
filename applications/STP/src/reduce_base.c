@@ -516,14 +516,6 @@ SCIP_RETCODE redLoopStp_inner(
          reduceStatsPrint(fullreduce, "sdstar", sdstarnelims);
       }
 
-#if 0
-      FILE *fp;
-                    fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redsNew2.txt", "a+");
-                    fprintf(fp, "%s %d \n", SCIPgetProbName(scip), nelimsx);
-                    fclose(fp);
-                    exit(1);
-#endif
-
       if( sdc || extensive )
       {
          SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
@@ -556,15 +548,11 @@ SCIP_RETCODE redLoopStp_inner(
          else
             SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
 
-        // printf("bdknelims=%d XX=%d \n", bdknelims, xxx);
-        // exit(1);
-
          reduceStatsPrint(fullreduce, "bdk", bdknelims);
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
-
 
       if( nvsl || extensive )
       {
@@ -579,10 +567,6 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
-
-
-
-
 
       ub = -1.0;
 

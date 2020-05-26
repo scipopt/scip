@@ -36,8 +36,8 @@
 #include "portab.h"
 
 
-#define STP_BDKIMP_MAXDEGREE 5
-#define STP_BDKIMP_MAXNEDGES 10
+#define STP_BDKIMP_MAXDEGREE 7
+#define STP_BDKIMP_MAXNEDGES 21
 
 
 /** BD_k storage */
@@ -603,7 +603,7 @@ SCIP_RETCODE bdkTryDegGe4(
 
       if( isPseudoDeletable )
       {
-         SCIPdebugMessage("BDk-implied reduction of node %d \n ", node);
+         SCIPdebugMessage("BD%d-implied reduction of node %d \n ", bdk->node_degree, node);
          (*nelims)++;
       }
    }

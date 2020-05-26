@@ -66,8 +66,8 @@
 #define SDSTAR_BASE_UNSET  -1
 #define SDSTAR_BASE_KILLED -2
 
-#define STP_DELPSEUDO_MAXGRAD   5
-#define STP_DELPSEUDO_MAXNEDGES 10
+#define STP_DELPSEUDO_MAXGRAD   7
+#define STP_DELPSEUDO_MAXNEDGES 21
 
 
 /* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */
