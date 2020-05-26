@@ -543,16 +543,18 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( bdk || extensive )
       {
-         int xxx = 0;
+         int bdk34nelims = 0;
 
          SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
+         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bdk34nelims,
+                     STP_REDBOUND_BDK, fixed) );
+
+         bdknelims += bdk34nelims;
+
          if( bdknelims <= reductbound )
             bdk = FALSE;
          else
             SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
-
-         SCIP_CALL(reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &xxx,
-               STP_REDBOUND_BDK, fixed));
 
         // printf("bdknelims=%d XX=%d \n", bdknelims, xxx);
         // exit(1);
