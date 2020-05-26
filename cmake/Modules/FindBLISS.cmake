@@ -36,12 +36,22 @@ if(BLISS_DIR)
    endif()
 
    # Look for the library in the bliss directory
-   find_library(BLISS_LIBRARY
-      NAMES bliss
-      PATHS ${BLISS_DIR}
-      PATH_SUFFIXES lib
-      NO_DEFAULT_PATH
-      )
+
+   if(BLISS_LIBRARY_DIR)
+     find_library(BLISS_LIBRARY
+        NAMES libbliss
+        PATHS ${BLISS_LIBRARY_DIR}
+        PATH_SUFFIXES lib
+        NO_DEFAULT_PATH
+        )
+   else()
+     find_library(BLISS_LIBRARY
+        NAMES bliss
+        PATHS ${BLISS_DIR}
+        PATH_SUFFIXES lib
+        NO_DEFAULT_PATH
+        )
+   endif()
 
    # If requested, copy the bliss headers to the <binary dir>/bliss/ and set include dir to <binary dir>.
    if(BLISS_LIBRARY AND COPY_BLISS_HEADERS)
