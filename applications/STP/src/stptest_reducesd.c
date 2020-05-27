@@ -142,7 +142,7 @@ SCIP_RETCODE testSdGraphDistsAreValid(
 )
 {
    GRAPH* graph;
-   SDGRAPH* sdgraph;
+   SD* sddata;
    int nnodes = 5;
    int nedges = 8;
    const SCIP_Real* sddists;
@@ -165,16 +165,16 @@ SCIP_RETCODE testSdGraphDistsAreValid(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( reduce_sdgraphInit(scip, graph, &(sdgraph)) );
-   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+   SCIP_CALL( reduce_sdInitBiased(scip, graph, &(sddata)) );
+   reduce_sdgraphInitOrderedMstCosts(sddata->sdgraph);
 
-   sddists = reduce_sdgraphGetOrderedMstCosts(sdgraph);
+   sddists = reduce_sdgraphGetOrderedMstCosts(sddata->sdgraph);
 
 
    STPTEST_ASSERT(EQ(sddists[0], 2.0));
    STPTEST_ASSERT(EQ(sddists[1], 2.0));
 
-   reduce_sdgraphFree(scip, &sdgraph);
+   reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;
@@ -189,7 +189,7 @@ SCIP_RETCODE testSdGraphDistsAreValid2(
 )
 {
    GRAPH* graph;
-   SDGRAPH* sdgraph;
+   SD* sddata;
    int nnodes = 5;
    int nedges = 10;
    const SCIP_Real* sddists;
@@ -214,15 +214,15 @@ SCIP_RETCODE testSdGraphDistsAreValid2(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( reduce_sdgraphInit(scip, graph, &(sdgraph)) );
-   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+   SCIP_CALL( reduce_sdInitBiased(scip, graph, &sddata) );
+   reduce_sdgraphInitOrderedMstCosts(sddata->sdgraph);
 
-   sddists = reduce_sdgraphGetOrderedMstCosts(sdgraph);
+   sddists = reduce_sdgraphGetOrderedMstCosts(sddata->sdgraph);
 
    STPTEST_ASSERT(EQ(sddists[0], 3.5));
    STPTEST_ASSERT(EQ(sddists[1], 2.5));
 
-   reduce_sdgraphFree(scip, &sdgraph);
+   reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;

@@ -49,8 +49,10 @@ typedef struct nodes_to_terminal_paths TPATHS;
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
 {
+   SDPROFIT*             sdprofit;           /**< SD bias for nodes */
    SDGRAPH*              sdgraph;            /**< special distance graph on terminals      */
    TPATHS*               terminalpaths;      /**< terminal paths                 */
+   SCIP_Bool             isBiased;           /**< are the SDs biased? */
 } SD;
 
 
@@ -127,6 +129,7 @@ SCIP_Real reduce_sdprofitGetProfit(
    assert(LE(sdprofit->nodes_bias[node], FARAWAY));
    assert(GE(sdprofit->nodes_bias2[node], 0.0));
    assert(LE(sdprofit->nodes_bias2[node], FARAWAY));
+   assert(GE(sdprofit->nodes_bias[node], sdprofit->nodes_bias2[node]));
 
    if( source1 != nonsource1 && source1 != nonsource2 )
    {
@@ -199,6 +202,7 @@ extern SCIP_RETCODE    reduce_getSd(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCI
 extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE    reduce_nts(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_bdk(SCIP*, int, GRAPH*, int*);
+extern SCIP_RETCODE    reduce_bdkBiased(SCIP*, int, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, int, SD*, GRAPH*, int*);
 
 
@@ -285,6 +289,7 @@ extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
 extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
 extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
@@ -296,6 +301,7 @@ extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
+extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
 extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, const int*, DIJK*, SD*, GRAPH*);
 

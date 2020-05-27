@@ -53,6 +53,8 @@ typedef struct bottleneck_distance_storage
    SCIP_Real*            star_mstsds;        /**< SDs for star (size STP_BDKIMP_MAXDEGREE) */
    const int*            star_outedges;      /**< for star: outgoing edges NOTE: non-owned! */
    int*                  star_outedges_pos;  /**< for star: position of outgoing edges NOTE: owned! */
+   const STP_Bool*       edgehalf_isblocked; /**< non-owned! */
+   const SDPROFIT*       sdprofit;           /**< non-owned! */
    int                   node_degree;        /**< degree of current node */
    int                   star_degree;        /**< degree of star */
 } BDK;
@@ -76,6 +78,8 @@ SCIP_RETCODE bdkInit(
    bdk_d->node_degree = -1;
    bdk_d->star_degree = -1;
    bdk_d->star_outedges = NULL;
+   bdk_d->edgehalf_isblocked = reduce_sdgraphGetMstHalfMark(sdistance->sdgraph);
+   bdk_d->sdprofit = sdistance->sdprofit;
    SCIP_CALL( reduce_starInit(scip, STP_BDKIMP_MAXDEGREE, &(bdk_d->star)) );
 
    SCIP_CALL( graph_buildCompleteGraph(scip, &cliquegraph, STP_BDKIMP_MAXDEGREE) );
@@ -90,6 +94,8 @@ SCIP_RETCODE bdkInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_outedges), STP_BDKIMP_MAXNEDGES) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->node_neighbors), STP_BDKIMP_MAXDEGREE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(bdk_d->star_mstsds), STP_BDKIMP_MAXDEGREE) );
+
+   assert(sdistance->isBiased == (bdk_d->sdprofit != NULL));
 
    return SCIP_OKAY;
 }
@@ -140,6 +146,47 @@ void bdkGetNeighborhood(
    }
 
    assert(k == bdk->node_degree);
+}
+
+
+/** is the node invalid? */
+static inline
+SCIP_Bool bdkNodeIsInvalid(
+   const GRAPH*          g,                 /**< graph data structure */
+   int                   node,              /**< the node */
+   int                   degree,            /**< current degree */
+   const BDK*            bdk                /**< storage */
+)
+{
+   if( g->grad[node] != degree || Is_term(g->term[node]) )
+      return TRUE;
+
+   /* are the SDs biased? */
+   if( bdk->sdprofit )
+   {
+      const STP_Bool* edges_isBlocked = bdk->edgehalf_isblocked;
+      SCIP_Bool isInTree = FALSE;
+
+      /* no profit on node? */
+      if( EQ(reduce_sdprofitGetProfit(bdk->sdprofit, node, -1, -1), 0.0) )
+      {
+         return FALSE;
+      }
+
+      for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         if( edges_isBlocked[e / 2] )
+         {
+            isInTree = TRUE;
+            break;
+         }
+      }
+
+      if( isInTree )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 
@@ -629,9 +676,25 @@ SCIP_RETCODE reduce_bdk(
    SD* sdistance;
 
    SCIP_CALL( reduce_sdInit(scip, g, &sdistance) );
-
    SCIP_CALL( reduce_bdkWithSd(scip, edgevisitlimit, sdistance, g, nelims) );
+   reduce_sdFree(scip, &sdistance);
 
+   return SCIP_OKAY;
+}
+
+
+/** biased bd_k test without given Steiner bottleneck distances */
+SCIP_RETCODE reduce_bdkBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgevisitlimit,     /**< maximum edge visited per iteration */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  nelims              /**< number of eliminations */
+   )
+{
+   SD* sdistance;
+
+   SCIP_CALL( reduce_sdInitBiased(scip, g, &sdistance) );
+   SCIP_CALL( reduce_bdkWithSd(scip, edgevisitlimit, sdistance, g, nelims) );
    reduce_sdFree(scip, &sdistance);
 
    return SCIP_OKAY;
@@ -675,7 +738,7 @@ SCIP_RETCODE reduce_bdkWithSd(
    {
       for( int i = 0; i < nnodes; i++ )
       {
-         if( g->grad[i] != degree || Is_term(g->term[i]) )
+         if( bdkNodeIsInvalid(g, i, degree, bdk) )
             continue;
 
          SCIPdebugMessage("check node %d (degree=%d) \n", i, degree);

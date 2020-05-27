@@ -537,7 +537,11 @@ SCIP_RETCODE redLoopStp_inner(
       {
          int bdk34nelims = 0;
 
-         SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
+         if( inner_rounds == 0 )
+            SCIP_CALL( reduce_bdkBiased(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
+         else
+            SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
+
          SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bdk34nelims,
                      STP_REDBOUND_BDK, fixed) );
 

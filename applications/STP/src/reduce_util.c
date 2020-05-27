@@ -568,7 +568,6 @@ SCIP_Real distgraphGetBoundaryEdgeDist(
                { distAll, distTailHead, distHeadTail, edgecost,
                  nodes_vdist[tail], nodes_vdist[head] },
                  6);
-
    return dist;
 }
 
@@ -580,7 +579,7 @@ void distgraphAddEdges(
    const GRAPH*          g,                  /**< graph to initialize from */
    const int*            distnodes_id,       /**< IDs of nodes */
    const VNOI*           vnoi,               /**< Voronoi */
-   const SDPROFIT*       sdprofit,           /**< profit */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
    int* RESTRICT         edgeorg,            /**< IDs of edges */
    GRAPH*                distgraph           /**< distance graph */
 )
@@ -589,6 +588,7 @@ void distgraphAddEdges(
    const int nedges = graph_get_nEdges(g);
    const SCIP_Real* nodes_vdist = vnoi->nodes_dist;
    const int* RESTRICT nodes_vbase = vnoi->nodes_base;
+   const SCIP_Bool useProfit = (sdprofit != NULL);
 
    for( int e = 0; e < nedges / 2; e++ )
       edgeorg[e] = UNKNOWN;
@@ -607,10 +607,10 @@ void distgraphAddEdges(
 
          if( vbase_tail != vbase_head )
          {
-            //const SCIP_Real distance = g->cost[e] + nodes_vdist[tail] + nodes_vdist[head] - MIN(g->cost[e], profit);
             int ne;
-            const SCIP_Real distance = distgraphGetBoundaryEdgeDist(tail, head, vbase_tail, vbase_head,
-                  g->cost[e], nodes_vdist, sdprofit);
+            const SCIP_Real distance = useProfit ?
+               distgraphGetBoundaryEdgeDist(tail, head, vbase_tail, vbase_head, g->cost[e], nodes_vdist, sdprofit)
+               : (g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]);
 
            // if( LT(distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]) )
          //   printf("distance: %f < %f \n", distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]);
@@ -660,12 +660,12 @@ static
 SCIP_RETCODE sdgraphBuildDistgraph(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph to initialize from */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
    SDGRAPH*              g_sd,               /**< the SD graph */
    VNOI**                vnoi,               /**< Voronoi */
    int**                 distedge2org        /**< array of size nedges / 2 */
 )
 {
-   SDPROFIT* sdprofit;
    GRAPH* distgraph;
    int* RESTRICT distnodes_id = g_sd->nodemapOrgToDist;
    const int nedges = graph_get_nEdges(g);
@@ -677,8 +677,11 @@ SCIP_RETCODE sdgraphBuildDistgraph(
 
    /* build biased Voronoi diagram */
    SCIP_CALL( graph_vnoiInit(scip, g, TRUE, vnoi) );
-   SCIP_CALL( reduce_sdprofitInit(scip, g, &sdprofit) );
-   graph_vnoiComputeImplied(scip, g, sdprofit, *vnoi);
+
+   if( sdprofit )
+      graph_vnoiComputeImplied(scip, g, sdprofit, *vnoi);
+   else
+      graph_vnoiCompute(scip, g, *vnoi);
 
    /* build distance graph from Voronoi diagram */
    SCIP_CALL( graph_init(scip, &(g_sd->distgraph), g->terms, nedges_distgraph, 1) );
@@ -687,8 +690,6 @@ SCIP_RETCODE sdgraphBuildDistgraph(
    distgraphAddEdges(scip, g, distnodes_id, *vnoi, sdprofit, *distedge2org, distgraph);
 
    assert(graph_valid(scip, distgraph));
-
-   reduce_sdprofitFree(scip, &sdprofit);
 
    return SCIP_OKAY;
 }
@@ -1865,8 +1866,29 @@ SCIP_RETCODE reduce_sdgraphInit(
    assert(scip && g && sdgraph);
 
    SCIP_CALL( sdgraphAlloc(scip, g, sdgraph) );
+   SCIP_CALL( sdgraphBuildDistgraph(scip, g, NULL, *sdgraph, &vnoi, &edgeorg) );
+   SCIP_CALL( sdgraphBuildMst(scip, g, vnoi, edgeorg, *sdgraph) );
 
-   SCIP_CALL( sdgraphBuildDistgraph(scip, g, *sdgraph, &vnoi, &edgeorg) );
+   sdgraphFinalize(scip, &vnoi, &edgeorg);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes biased SD graph */
+SCIP_RETCODE reduce_sdgraphInitBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   VNOI* vnoi;
+   int* edgeorg;
+   assert(scip && g && sdgraph);
+
+   SCIP_CALL( sdgraphAlloc(scip, g, sdgraph) );
+   SCIP_CALL( sdgraphBuildDistgraph(scip, g, sdprofit, *sdgraph, &vnoi, &edgeorg) );
    SCIP_CALL( sdgraphBuildMst(scip, g, vnoi, edgeorg, *sdgraph) );
 
    sdgraphFinalize(scip, &vnoi, &edgeorg);

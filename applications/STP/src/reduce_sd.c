@@ -1267,7 +1267,6 @@ void sdGetSdsCliqueTermWalks(
  */
 
 
-
 /** initializes SD structure */
 SCIP_RETCODE reduce_sdInit(
    SCIP*                 scip,               /**< SCIP */
@@ -1280,11 +1279,36 @@ SCIP_RETCODE reduce_sdInit(
    assert(scip);
 
    SCIP_CALL( SCIPallocMemory(scip, sd) );
-
    s = *sd;
 
+   s->isBiased = FALSE;
+   s->sdprofit = NULL;
    SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes biased SD structure */
+SCIP_RETCODE reduce_sdInitBiased(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   SD**                  sd                  /**< to initialize */
+)
+{
+   SD* s;
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, sd) );
+   s = *sd;
+
+   s->isBiased = TRUE;
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
+   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 
    return SCIP_OKAY;
@@ -1331,6 +1355,9 @@ void reduce_sdFree(
 
    reduce_sdgraphFree(scip, &(s->sdgraph));
    reduce_tpathsFree(scip, &(s->terminalpaths));
+
+   if( s->sdprofit )
+      reduce_sdprofitFree(scip, &(s->sdprofit));
 
    SCIPfreeMemory(scip, sd);
 }
