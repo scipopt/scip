@@ -237,7 +237,7 @@ typedef struct dijkstra_data
 typedef struct voronoi_storage
 {
    SCIP_Real*            nodes_dist;         /**< distance to base for each node */
-   int*                  nodes_pred;         /**< predecessor to each node */
+   int*                  nodes_predEdge;     /**< predecessor edge (incoming) to each node */
    int*                  nodes_base;         /**< base of each node*/
    int                   nnodes;             /**< number of nodes */
    SCIP_Bool             usingBufferArrays;  /**< are buffer arrays being used? */

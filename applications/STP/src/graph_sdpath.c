@@ -869,7 +869,7 @@ SCIP_RETCODE graph_sdStarBiased(
    SCIP_Real* RESTRICT dist = dijkdata->node_distance;
    int* RESTRICT visitlist = dijkdata->visitlist;
    STP_Bool* RESTRICT visited = dijkdata->node_visited;
-   int* node_preds;
+   int* node_predNode;
    DHEAP* dheap = dijkdata->dheap;
    const SCIP_Real* const nodebias = dijkdata->node_bias;
    const int* const nodebias_source = dijkdata->node_biassource;
@@ -895,7 +895,7 @@ SCIP_RETCODE graph_sdStarBiased(
    nvisits = 0;
    *success = FALSE;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &node_preds, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &node_predNode, nnodes) );
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
@@ -903,7 +903,7 @@ SCIP_RETCODE graph_sdStarBiased(
       assert(dist[k] == FARAWAY);
       assert(star_base[k] == SDSTAR_BASE_UNSET);
       assert(state[k] == UNKNOWN);
-      node_preds[k] = UNKNOWN;
+      node_predNode[k] = UNKNOWN;
    }
 #endif
 
@@ -923,7 +923,7 @@ SCIP_RETCODE graph_sdStarBiased(
       visited[m] = TRUE;
       dist[m] = cost_csr[e];
       star_base[m] = m;
-      node_preds[m] = star_root;
+      node_predNode[m] = star_root;
 
       /*  add epsilon to make sure that m is removed from the heap last in case of equality */
       graph_heap_correct(m, cost_csr[e] + eps, dheap);
@@ -941,7 +941,7 @@ SCIP_RETCODE graph_sdStarBiased(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
-      const int k_pred = node_preds[k];
+      const int k_pred = node_predNode[k];
 
       assert(k != star_root);
       assert(k_pred >= 0 && k_pred < nnodes);
@@ -978,7 +978,7 @@ SCIP_RETCODE graph_sdStarBiased(
                if( star_base[m] == m )
                   nstarhits++;
 
-               node_preds[m] = k;
+               node_predNode[m] = k;
                dist[m] = distnew;
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
@@ -995,7 +995,7 @@ SCIP_RETCODE graph_sdStarBiased(
 
                assert(star_base[m] != star_base[k]);
 
-               node_preds[m] = k;
+               node_predNode[m] = k;
                dist[m] = distnew;
                star_base[m] = star_base[k];
                graph_heap_correct(m, distnew, dheap);
@@ -1017,7 +1017,7 @@ SCIP_RETCODE graph_sdStarBiased(
   dijkdata->nvisits = nvisits;
   *success = (nstarhits > 0);
 
-  SCIPfreeBufferArray(scip, &node_preds);
+  SCIPfreeBufferArray(scip, &node_predNode);
 
   return SCIP_OKAY;
 }

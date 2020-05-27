@@ -30,6 +30,7 @@
 #define DHEAP_MIN_KEY  -(1e20)
 
 #include "graph.h"
+#include "reduce.h"
 #include "portab.h"
 
 
@@ -1754,95 +1755,15 @@ SCIP_RETCODE graph_dijkLimited_initSdBias(
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
-   const SCIP_Real* const costs = g->cost;
-   SCIP_Real* RESTRICT node_bias;
-   int* RESTRICT node_biassource;
-   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
 
    assert(scip && dijkdata);
    assert(!dijkdata->node_bias);
    assert(!dijkdata->node_biassource);
-   assert(isPcMw || !g->extended);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_bias), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_biassource), nnodes) );
 
-   node_bias = dijkdata->node_bias;
-   node_biassource = dijkdata->node_biassource;
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      node_bias[k] = 0.0;
-      node_biassource[k] = k;
-   }
-
-   /* main loop */
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(g->term[k]) && k != pseudoroot )
-      {
-         int minneighbor = -1;
-         SCIP_Real mincost = isPcMw ? g->prize[k] : FARAWAY;
-         SCIP_Real mincost2 = mincost;
-
-         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            const int neighbor = g->tail[e];
-
-            if( neighbor == pseudoroot )
-               continue;
-
-            if( costs[e] < mincost )
-            {
-               assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
-
-               minneighbor = neighbor;
-               mincost2 = mincost;
-               mincost = costs[e];
-            }
-            else if( costs[e] < mincost2 )
-            {
-               mincost2 = costs[e];
-            }
-         }
-
-         assert(minneighbor >= 0 || isPcMw || g->terms == 1);
-
-         if( minneighbor >= 0 )
-         {
-            const SCIP_Real bias = mincost2 - mincost;
-
-            assert(GE(bias, 0.0));
-
-            if( bias > node_bias[minneighbor] )
-            {
-               node_bias[minneighbor] = bias;
-               node_biassource[minneighbor] = k;
-            }
-         }
-      }
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !Is_term(g->term[k]) )
-         continue;
-
-      if( isPcMw )
-      {
-         if( g->prize[k] >= node_bias[k] )
-         {
-            node_bias[k] = g->prize[k];
-            node_biassource[k] = k;
-         }
-
-         continue;
-      }
-
-      node_bias[k] = FARAWAY;
-      node_biassource[k] = k;
-   }
+   reduce_sdGetNodeBias(g, dijkdata->node_bias, dijkdata->node_biassource);
 
    return SCIP_OKAY;
 }

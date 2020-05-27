@@ -235,6 +235,7 @@ extern void            reduce_starSetFailed(STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
+extern void            reduce_sdGetNodeBias(const GRAPH*, SCIP_Real* RESTRICT, int* RESTRICT);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
 extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
