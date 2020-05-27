@@ -7327,7 +7327,7 @@ SCIP_RETCODE enforceConstraint(
 
    if( inenforcement && !consdata->ispropagated )
    {
-      /* If there are boundchanges that haven't been propagated to activities yes, then do this now and update bounds of auxiliary variables,
+      /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of auxiliary variables,
        * since some nlhdlr/exprhdlr may look at auxvar bounds or activities (TODO: nlhdlr will tell us soon whether they do and then we could skip).
        * For now, do this only if called from enforcement, since updating auxvar bounds in separation doesn't seem to be right
        * (it would be ok if the boundchange cuts off the current LP solution by a nice amount, but if not, we may just add a boundchange that
