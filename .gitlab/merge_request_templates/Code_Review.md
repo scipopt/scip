@@ -5,7 +5,7 @@
 ### Code review
 
 * [ ] Is the code change correct?
-* [ ] Is the code sufficiently documented? Is the coding style OK (http://scip.zib.de/doc/html/CODE.php)?
+* [ ] Is the code sufficiently documented? Is the coding style OK (http://scipopt.org/doc/html/CODE.php)?
 * [ ] Is the naming and place of new methods and parameters clear and consistent?
 * [ ] Do emphasis settings need to be adjusted?
 

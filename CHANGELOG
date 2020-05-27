@@ -5161,7 +5161,7 @@ Build system
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   `clean` is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 Fixed bugs
 ----------
