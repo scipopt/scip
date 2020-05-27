@@ -7066,6 +7066,7 @@ SCIP_RETCODE enforceExpr(
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
@@ -7111,6 +7112,7 @@ SCIP_RETCODE enforceExpr(
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
