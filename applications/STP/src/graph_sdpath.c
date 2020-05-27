@@ -30,6 +30,7 @@
 #include "portab.h"
 #include "graph.h"
 #include "graphheaps.h"
+#include "reduce.h"
 
 
 /** internal data for clique-paths computations */
@@ -857,6 +858,7 @@ void graph_sdStar(
 SCIP_RETCODE graph_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
    int                   star_root,          /**< root of the start */
    int*                  star_base,          /**< star base node, must be initially set to SDSTAR_BASE_UNSET */
    DIJK*                 dijkdata,           /**< Dijkstra data */
@@ -871,8 +873,8 @@ SCIP_RETCODE graph_sdStarBiased(
    STP_Bool* RESTRICT visited = dijkdata->node_visited;
    int* node_predNode;
    DHEAP* dheap = dijkdata->dheap;
-   const SCIP_Real* const nodebias = dijkdata->node_bias;
-   const int* const nodebias_source = dijkdata->node_biassource;
+   const SCIP_Real* const nodebias = sdprofit->nodes_bias;
+   const int* const nodebias_source = sdprofit->nodes_biassource;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const RESTRICT range_csr = dcsr->range;

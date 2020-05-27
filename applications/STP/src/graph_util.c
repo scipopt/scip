@@ -1675,7 +1675,6 @@ SCIP_RETCODE graph_dijkLimited_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dijk->node_visited), nnodes) );
 
    dijk->node_bias = NULL;
-   dijk->node_biassource = NULL;
 
    graph_heap_create(scip, nnodes, NULL, NULL, &(dijk->dheap));
 
@@ -1742,28 +1741,6 @@ SCIP_RETCODE graph_dijkLimited_initPcShifts(
          pc_costshift[k] = 0.0;
       }
    }
-
-   return SCIP_OKAY;
-}
-
-
-/** initializes bias per node */
-SCIP_RETCODE graph_dijkLimited_initSdBias(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< the graph */
-   DIJK*                 dijkdata            /**< data for limited Dijkstra */
-)
-{
-   const int nnodes = graph_get_nNodes(g);
-
-   assert(scip && dijkdata);
-   assert(!dijkdata->node_bias);
-   assert(!dijkdata->node_biassource);
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_bias), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->node_biassource), nnodes) );
-
-   reduce_sdGetNodeBias(g, dijkdata->node_bias, dijkdata->node_biassource);
 
    return SCIP_OKAY;
 }
@@ -1837,7 +1814,6 @@ void graph_dijkLimited_free(
 {
    DIJK* dijk = *dijkdata;
 
-   SCIPfreeMemoryArrayNull(scip, &(dijk->node_biassource));
    SCIPfreeMemoryArrayNull(scip, &(dijk->node_bias));
    SCIPfreeMemoryArray(scip, &(dijk->node_distance));
    SCIPfreeMemoryArray(scip, &(dijk->visitlist));

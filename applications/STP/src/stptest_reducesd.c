@@ -134,6 +134,101 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
 }
 
 
+
+/** tests SD getter */
+static
+SCIP_RETCODE testSdGraphDistsAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SDGRAPH* sdgraph;
+   int nnodes = 5;
+   int nedges = 8;
+   const SCIP_Real* sddists;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.9); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 2.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 2.0); // 4
+   graph_edge_addBi(scip, graph, 1, 4, 1.0); // 4
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( reduce_sdgraphInit(scip, graph, &(sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+
+   sddists = reduce_sdgraphGetOrderedMstCosts(sdgraph);
+
+
+   STPTEST_ASSERT(EQ(sddists[0], 2.0));
+   STPTEST_ASSERT(EQ(sddists[1], 2.0));
+
+   reduce_sdgraphFree(scip, &sdgraph);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests SD getter */
+static
+SCIP_RETCODE testSdGraphDistsAreValid2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SDGRAPH* sdgraph;
+   int nnodes = 5;
+   int nedges = 10;
+   const SCIP_Real* sddists;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 2.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 2.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 2.0); // 4
+   graph_edge_addBi(scip, graph, 2, 4, 3.5);
+   graph_edge_addBi(scip, graph, 3, 4, 2.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( reduce_sdgraphInit(scip, graph, &(sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+
+   sddists = reduce_sdgraphGetOrderedMstCosts(sdgraph);
+
+   STPTEST_ASSERT(EQ(sddists[0], 3.5));
+   STPTEST_ASSERT(EQ(sddists[1], 2.5));
+
+   reduce_sdgraphFree(scip, &sdgraph);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that BDk test pseudo-eliminates node of degree 4 */
 static
 SCIP_RETCODE testBdkTreeDistDeletesNodeDeg4(
@@ -592,11 +687,14 @@ SCIP_RETCODE stptest_reduceSdGetter(
 )
 {
    SCIP_CALL( testSdGetterReturnsCorrectSds(scip) );
+   SCIP_CALL( testSdGraphDistsAreValid(scip) );
+   SCIP_CALL( testSdGraphDistsAreValid2(scip) );
 
    printf("reduce sd getter test: all ok \n");
 
    return SCIP_OKAY;
 }
+
 
 /** tests SD biased methods */
 SCIP_RETCODE stptest_reduceSdStarBias(

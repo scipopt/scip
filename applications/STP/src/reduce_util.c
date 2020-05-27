@@ -487,39 +487,16 @@ SCIP_RETCODE sdgraphAlloc(
 }
 
 
-/** builds distance graph */
+/** gets number of edges */
 static
-SCIP_RETCODE sdgraphBuildDistgraph(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph to initialize from */
-   SDGRAPH*              g_sd,               /**< the SD graph */
-   VNOI**                vnoi,               /**< Voronoi */
-   int**                 distedge2org        /**< array of size nedges / 2 */
-)
+int distgraphGetNedges(
+   const GRAPH*          g                   /**< graph to initialize from */
+   )
 {
-   GRAPH* distgraph;
-   int* RESTRICT distnodes_id = g_sd->nodemapOrgToDist;
-   SCIP_Real* RESTRICT nodes_vdist;
-   int* RESTRICT nodes_vbase;
-   int* RESTRICT edgeorg;
-   const int nnodes = graph_get_nNodes(g);
+   int maxnedges;
    const int nedges = graph_get_nEdges(g);
    const int nterms = g->terms;
    const SCIP_Longint terms2 = (nterms - 1) * nterms;
-   int maxnedges;
-   int nnodes_distgraph;
-
-   assert(nterms >= 1);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, distedge2org, nedges / 2) );
-   edgeorg = *distedge2org;
-    for( int e = 0; e < nedges / 2; e++ )
-       edgeorg[e] = UNKNOWN;
-
-   SCIP_CALL( graph_vnoiInit(scip, g, TRUE, vnoi) );
-   graph_vnoiCompute(scip, g, *vnoi);
-   nodes_vbase = (*vnoi)->nodes_base;
-   nodes_vdist = (*vnoi)->nodes_dist;
 
    if( nedges >= terms2 )
    {
@@ -531,9 +508,20 @@ SCIP_RETCODE sdgraphBuildDistgraph(
       maxnedges = nedges;
    }
 
-   SCIP_CALL( graph_init(scip, &(g_sd->distgraph), nterms, maxnedges, 1) );
-   distgraph = g_sd->distgraph;
-   nnodes_distgraph = 0;
+   return maxnedges;
+}
+
+
+/** adds nodes to distance graph */
+static
+void distgraphAddNodes(
+   const GRAPH*          g,                  /**< graph to initialize from */
+   int* RESTRICT         distnodes_id,       /**< IDs of nodes */
+   GRAPH*                distgraph           /**< distance graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nnodes_distgraph = 0;
 
    /* add the nodes */
    for( int k = 0; k < nnodes; k++ )
@@ -550,10 +538,60 @@ SCIP_RETCODE sdgraphBuildDistgraph(
    }
 
    assert(distgraph->knots == nnodes_distgraph);
-   assert(distgraph->knots == nterms);
+   assert(distgraph->knots == g->terms);
 
    graph_knot_chg(distgraph, 0, STP_TERM);
    distgraph->source = 0;
+}
+
+
+/** gets SD for boundary edge */
+static inline
+SCIP_Real distgraphGetBoundaryEdgeDist(
+   int                   tail,               /**< tail */
+   int                   head,               /**< head */
+   int                   vbase_tail,         /**< base */
+   int                   vbase_head,         /**< base */
+   SCIP_Real             edgecost,           /**< cost */
+   const SCIP_Real*      nodes_vdist,        /**< distance */
+   const SDPROFIT*       sdprofit            /**< profit */
+   )
+{
+   const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, vbase_head, vbase_tail);
+   const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, vbase_head, vbase_tail);
+   SCIP_Real distSimple = edgecost + nodes_vdist[tail] + nodes_vdist[head];
+   const SCIP_Real distAll = distSimple - profit_tail - profit_head;
+   const SCIP_Real distTailHead = edgecost + nodes_vdist[tail] - profit_tail;
+   const SCIP_Real distHeadTail = edgecost + nodes_vdist[head] - profit_head;
+
+   const SCIP_Real dist = miscstp_maxReal((SCIP_Real[])
+               { distAll, distTailHead, distHeadTail, edgecost,
+                 nodes_vdist[tail], nodes_vdist[head] },
+                 6);
+
+   return dist;
+}
+
+
+/** adds nodes to distance graph */
+static
+void distgraphAddEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const int*            distnodes_id,       /**< IDs of nodes */
+   const VNOI*           vnoi,               /**< Voronoi */
+   const SDPROFIT*       sdprofit,           /**< profit */
+   int* RESTRICT         edgeorg,            /**< IDs of edges */
+   GRAPH*                distgraph           /**< distance graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const SCIP_Real* nodes_vdist = vnoi->nodes_dist;
+   const int* RESTRICT nodes_vbase = vnoi->nodes_base;
+
+   for( int e = 0; e < nedges / 2; e++ )
+      edgeorg[e] = UNKNOWN;
 
    /* add the edges */
    for( int tail = 0; tail < nnodes; tail++ )
@@ -569,9 +607,12 @@ SCIP_RETCODE sdgraphBuildDistgraph(
 
          if( vbase_tail != vbase_head )
          {
-            const SCIP_Real distance = g->cost[e] + nodes_vdist[tail] + nodes_vdist[head];
+            //const SCIP_Real distance = g->cost[e] + nodes_vdist[tail] + nodes_vdist[head] - MIN(g->cost[e], profit);
             int ne;
+            const SCIP_Real distance = distgraphGetBoundaryEdgeDist(tail, head, vbase_tail, vbase_head,
+                  g->cost[e], nodes_vdist, sdprofit);
 
+            assert(LE(distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]));
             assert(Is_term(g->term[vbase_tail]));
             assert(Is_term(g->term[vbase_head]));
             assert(distnodes_id[vbase_tail] >= 0);
@@ -596,20 +637,55 @@ SCIP_RETCODE sdgraphBuildDistgraph(
                   distgraph->cost[ne]            = distance;
                   distgraph->cost[Edge_anti(ne)] = distance;
                   edgeorg[ne / 2] = e;
-                  assert(ne <= maxnedges);
+                  assert(ne <= distgraphGetNedges(g));
                }
             }
             else
             {
                edgeorg[distgraph->edges / 2] = e;
                graph_edge_add(scip, distgraph, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, distance);
-               assert(distgraph->edges <= maxnedges);
+               assert(distgraph->edges <= distgraphGetNedges(g));
             }
          }
       }
    }
+}
+
+
+/** builds distance graph */
+static
+SCIP_RETCODE sdgraphBuildDistgraph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH*              g_sd,               /**< the SD graph */
+   VNOI**                vnoi,               /**< Voronoi */
+   int**                 distedge2org        /**< array of size nedges / 2 */
+)
+{
+   SDPROFIT* sdprofit;
+   GRAPH* distgraph;
+   int* RESTRICT distnodes_id = g_sd->nodemapOrgToDist;
+   const int nedges = graph_get_nEdges(g);
+   const int nedges_distgraph = distgraphGetNedges(g);
+
+   assert(g->terms >= 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, distedge2org, nedges / 2) );
+
+   /* build biased Voronoi diagram */
+   SCIP_CALL( graph_vnoiInit(scip, g, TRUE, vnoi) );
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &sdprofit) );
+   graph_vnoiComputeImplied(scip, g, sdprofit, *vnoi);
+
+   /* build distance graph from Voronoi diagram */
+   SCIP_CALL( graph_init(scip, &(g_sd->distgraph), g->terms, nedges_distgraph, 1) );
+   distgraph = g_sd->distgraph;
+   distgraphAddNodes(g, distnodes_id, distgraph);
+   distgraphAddEdges(scip, g, distnodes_id, *vnoi, sdprofit, *distedge2org, distgraph);
 
    assert(graph_valid(scip, distgraph));
+
+   reduce_sdprofitFree(scip, &sdprofit);
 
    return SCIP_OKAY;
 }
@@ -822,6 +898,144 @@ void sdgraphFinalize(
    SCIPfreeBufferArray(scip, edgeorg);
 }
 
+
+/** allocates memory */
+static
+SCIP_RETCODE sdprofitAlloc(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDPROFIT**            sdprofit            /**< SD profit */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   SDPROFIT* sdp;
+
+   SCIP_CALL( SCIPallocMemory(scip, sdprofit) );
+   sdp = *sdprofit;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_bias), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_biassource), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_bias2), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_biassource2), nnodes) );
+
+   return SCIP_OKAY;
+}
+
+
+/** gets SD node bias */
+static
+void sdprofitBuild(
+   const GRAPH*          g,                  /**< the graph */
+   SDPROFIT*             sdprofit            /**< SD profit */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
+   const SCIP_Real* const costs = g->cost;
+   SCIP_Real* RESTRICT node_bias = sdprofit->nodes_bias;
+   int* RESTRICT node_biassource = sdprofit->nodes_biassource;
+   SCIP_Real* RESTRICT node_bias2 = sdprofit->nodes_bias2;
+   int* RESTRICT node_biassource2 = sdprofit->nodes_biassource2;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+
+   assert(graph_pc_isPcMw(g) || !g->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      node_bias[k] = 0.0;
+      node_biassource[k] = k;
+      node_bias2[k] = 0.0;
+      node_biassource2[k] = k;
+   }
+
+   /* main loop */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && k != pseudoroot )
+      {
+         int minneighbor = -1;
+         SCIP_Real mincost = isPcMw ? g->prize[k] : FARAWAY;
+         SCIP_Real mincost2 = mincost;
+
+         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            const int neighbor = g->tail[e];
+
+            if( neighbor == pseudoroot )
+               continue;
+
+            if( costs[e] < mincost )
+            {
+               assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
+
+               minneighbor = neighbor;
+               mincost2 = mincost;
+               mincost = costs[e];
+            }
+            else if( costs[e] < mincost2 )
+            {
+               mincost2 = costs[e];
+            }
+         }
+
+         assert(minneighbor >= 0 || isPcMw || g->terms == 1);
+
+         if( minneighbor >= 0 )
+         {
+            const SCIP_Real bias = mincost2 - mincost;
+
+            assert(GE(bias, 0.0));
+
+            if( bias > node_bias[minneighbor] )
+            {
+               node_bias[minneighbor] = bias;
+               node_biassource[minneighbor] = k;
+            }
+            else if( GT(bias, node_bias2[minneighbor]) )
+            {
+               node_bias2[minneighbor] = bias;
+               node_biassource2[minneighbor] = k;
+            }
+         }
+      }
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+         continue;
+
+      if( isPcMw )
+      {
+         if( g->prize[k] >= node_bias[k] )
+         {
+            node_bias[k] = g->prize[k];
+            node_biassource[k] = k;
+         }
+
+         continue;
+      }
+
+      node_bias[k] = FARAWAY;
+      node_biassource[k] = k;
+   }
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+      {
+         assert(GE(node_bias[k], node_bias2[k]));
+         assert(node_biassource[k] != node_biassource2[k] || node_biassource[k] == k);
+      }
+   }
+#endif
+}
+
+
+/*
+ * Interface methods
+ */
 
 /** apply pseudo eliminations provided */
 SCIP_RETCODE reduce_applyPseudoDeletions(
@@ -1559,92 +1773,40 @@ void reduce_redcostdataFreeMembers(
 }
 
 
-/** gets SD node bias */
-void reduce_sdGetNodeBias(
-   const GRAPH*          g,                  /**< the graph */
-   SCIP_Real* RESTRICT   node_bias,          /**< bias per node */
-   int* RESTRICT         node_biassource     /**< source terminal of bias per node */
+/** initializes SD profit */
+SCIP_RETCODE reduce_sdprofitInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDPROFIT**            sdprofit            /**< the SD profit */
 )
 {
-   const int nnodes = graph_get_nNodes(g);
-   const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
-   const SCIP_Real* const costs = g->cost;
+   assert(scip && g);
 
-   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
-   assert(graph_pc_isPcMw(g) || !g->extended);
+   SCIP_CALL( sdprofitAlloc(scip, g, sdprofit) );
+   sdprofitBuild(g, *sdprofit);
 
-   for( int k = 0; k < nnodes; k++ )
-   {
-      node_bias[k] = 0.0;
-      node_biassource[k] = k;
-   }
+   return SCIP_OKAY;
+}
 
-   /* main loop */
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(g->term[k]) && k != pseudoroot )
-      {
-         int minneighbor = -1;
-         SCIP_Real mincost = isPcMw ? g->prize[k] : FARAWAY;
-         SCIP_Real mincost2 = mincost;
 
-         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            const int neighbor = g->tail[e];
+/** frees SD profit */
+void reduce_sdprofitFree(
+   SCIP*                 scip,               /**< SCIP */
+   SDPROFIT**            sdprofit            /**< the SD profit */
+)
+{
+   SDPROFIT* sdp;
+   assert(scip && sdprofit);
 
-            if( neighbor == pseudoroot )
-               continue;
+   sdp = *sdprofit;
+   assert(sdp);
 
-            if( costs[e] < mincost )
-            {
-               assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
+   SCIPfreeMemoryArray(scip, &(sdp->nodes_biassource2));
+   SCIPfreeMemoryArray(scip, &(sdp->nodes_bias2));
+   SCIPfreeMemoryArray(scip, &(sdp->nodes_biassource));
+   SCIPfreeMemoryArray(scip, &(sdp->nodes_bias));
 
-               minneighbor = neighbor;
-               mincost2 = mincost;
-               mincost = costs[e];
-            }
-            else if( costs[e] < mincost2 )
-            {
-               mincost2 = costs[e];
-            }
-         }
-
-         assert(minneighbor >= 0 || isPcMw || g->terms == 1);
-
-         if( minneighbor >= 0 )
-         {
-            const SCIP_Real bias = mincost2 - mincost;
-
-            assert(GE(bias, 0.0));
-
-            if( bias > node_bias[minneighbor] )
-            {
-               node_bias[minneighbor] = bias;
-               node_biassource[minneighbor] = k;
-            }
-         }
-      }
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !Is_term(g->term[k]) )
-         continue;
-
-      if( isPcMw )
-      {
-         if( g->prize[k] >= node_bias[k] )
-         {
-            node_bias[k] = g->prize[k];
-            node_biassource[k] = k;
-         }
-
-         continue;
-      }
-
-      node_bias[k] = FARAWAY;
-      node_biassource[k] = k;
-   }
+   SCIPfreeMemory(scip, sdprofit);
 }
 
 
@@ -1661,7 +1823,6 @@ SCIP_RETCODE reduce_sdgraphInit(
 
    SCIP_CALL( sdgraphAlloc(scip, g, sdgraph) );
 
-   // todo already build biased!
    SCIP_CALL( sdgraphBuildDistgraph(scip, g, *sdgraph, &vnoi, &edgeorg) );
    SCIP_CALL( sdgraphBuildMst(scip, g, vnoi, edgeorg, *sdgraph) );
 

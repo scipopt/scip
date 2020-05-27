@@ -50,6 +50,9 @@ typedef struct pseudo_ancestors PSEUDOANS;
 typedef struct compressed_sparse_storages_depository CSRDEPO;
 
 
+typedef struct special_distance_implied_profit SDPROFIT;
+
+
 /** CSR like graph storage */
 typedef struct csr_storage
 {
@@ -225,9 +228,8 @@ typedef struct dijkstra_data
    DHEAP*                dheap;              /**< Dijkstra heap, initially cleaned */
    SCIP_Real*            node_distance;      /**< distances array for each node, initially set to FARAWAY */
    STP_Bool*             node_visited;       /**< stores whether a node has been visited, initially set to FALSE */
-   /* longer term arrays: */
-   SCIP_Real*            node_bias;          /**< bias per node (e.g. cost shift per node for PC) or NULL */
-   int*                  node_biassource;    /**< bias terminal per node or NULL */
+   /* long-term arrays: */
+   SCIP_Real*            node_bias;          /**< bias of node for PC problem */
    int                   nvisits;            /**< number of visited nodes, initially set to -1 */
    int                   edgelimit;          /**< number of edges to consider */
 } DIJK;
@@ -359,7 +361,6 @@ extern SCIP_Bool      graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 /* misc: */
 extern SCIP_RETCODE  graph_dijkLimited_init(SCIP*, const GRAPH*, DIJK**);
 extern SCIP_RETCODE  graph_dijkLimited_initPcShifts(SCIP*, const GRAPH*, DIJK*);
-extern SCIP_RETCODE  graph_dijkLimited_initSdBias(SCIP*, const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_reset(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_clean(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_free(SCIP*, DIJK**);
@@ -536,7 +537,7 @@ extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH
 /* graph_sdpath.c
  */
 extern void   graph_sdStar(SCIP*, const GRAPH*, SCIP_Bool, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_sdStarBiased(SCIP*, const GRAPH*, int, int*, DIJK*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_sdStarBiased(SCIP*, const GRAPH*, const SDPROFIT*, int, int*, DIJK*, SCIP_Bool*);
 extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, STP_Bool*, SCIP_Bool);
 extern SCIP_Bool graph_sdWalks(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
@@ -551,7 +552,7 @@ extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, SDCLIQUE*);
 extern SCIP_RETCODE graph_vnoiInit(SCIP*, const GRAPH*, SCIP_Bool, VNOI**);
 extern void graph_vnoiFree(SCIP*, VNOI**);
 extern SCIP_RETCODE graph_vnoiCompute(SCIP*, const GRAPH*, VNOI*);
-extern SCIP_RETCODE graph_vnoiComputeImplied(SCIP*, const GRAPH*, VNOI*);
+extern SCIP_RETCODE graph_vnoiComputeImplied(SCIP*, const GRAPH*, const SDPROFIT*, VNOI*);
 extern void   graph_voronoi(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
 extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int* RESTRICT, UF* RESTRICT, PATH* RESTRICT);

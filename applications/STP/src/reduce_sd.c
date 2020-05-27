@@ -168,6 +168,7 @@ SCIP_RETCODE sdStarBiasedProcessNode(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   node,               /**< node to process */
    const int*            edgestate,          /**< state array or NULL */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
    GRAPH*                g,                  /**< graph data structure */
    DIJK*                 dijkdata,           /**< data */
    int* RESTRICT         star_base,          /**< data to be freed */
@@ -202,7 +203,7 @@ SCIP_RETCODE sdStarBiasedProcessNode(
       runloop = FALSE;
 
       /* do the actual star run */
-      SCIP_CALL( graph_sdStarBiased(scip, g, node, star_base, dijkdata, &success) );
+      SCIP_CALL( graph_sdStarBiased(scip, g, sdprofit, node, star_base, dijkdata, &success) );
 
       if( success )
       {
@@ -3503,6 +3504,7 @@ SCIP_RETCODE reduce_sdStarBiased(
    )
 {
    DIJK* dijkdata;
+   SDPROFIT* sdprofit;
 
    int* RESTRICT star_base;
    SCIP_Bool* RESTRICT edge_deletable;
@@ -3514,7 +3516,7 @@ SCIP_RETCODE reduce_sdStarBiased(
    graph_init_dcsr(scip, g);
 
    SCIP_CALL( sdStarInit(scip, g, edgelimit, &dijkdata, &star_base, &edge_deletable) );
-   SCIP_CALL( graph_dijkLimited_initSdBias(scip, g, dijkdata) );
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &sdprofit) );
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -3524,9 +3526,10 @@ SCIP_RETCODE reduce_sdStarBiased(
          continue;
       }
 
-      SCIP_CALL( sdStarBiasedProcessNode(scip, i, edgestate, g, dijkdata, star_base, edge_deletable, nelims) );
+      SCIP_CALL( sdStarBiasedProcessNode(scip, i, edgestate, sdprofit, g, dijkdata, star_base, edge_deletable, nelims) );
    }
 
+   reduce_sdprofitFree(scip, &sdprofit);
    sdStarFinalize(scip, g, &dijkdata, &star_base, &edge_deletable);
 
    graph_free_dcsr(scip, g);

@@ -54,6 +54,16 @@ typedef struct special_distance_storage
 } SD;
 
 
+/** lightweight store for implied profit */
+struct special_distance_implied_profit
+{
+   SCIP_Real* RESTRICT   nodes_bias;         /**< bias per node */
+   SCIP_Real* RESTRICT   nodes_bias2;        /**< second best bias per node */
+   int* RESTRICT         nodes_biassource;   /**< source terminal per node */
+   int* RESTRICT         nodes_biassource2;  /**< second source terminal per node */
+};
+
+
 /** reduced cost result data */
 typedef struct reduce_costs_data
 {
@@ -99,6 +109,41 @@ typedef struct reduce_costs_parameters
    SCIP_Bool             pcmw_markroots;     /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             pcmw_fastDa;        /**< run dual ascent heuristic in fast mode? */
 } RPDA;
+
+
+/** gets profit for given node */
+inline static
+SCIP_Real reduce_sdprofitGetProfit(
+   const SDPROFIT*      sdprofit,           /**< the SD profit */
+   int                  node,               /**< node to get profit for */
+   int                  nonsource1,         /**< node that should not be a source */
+   int                  nonsource2          /**< node that should not be a source */
+)
+{
+   const int source1 = sdprofit->nodes_biassource[node];
+
+   assert(nonsource1 != nonsource2 || nonsource1 == -1);
+   assert(GE(sdprofit->nodes_bias[node], 0.0));
+   assert(LE(sdprofit->nodes_bias[node], FARAWAY));
+   assert(GE(sdprofit->nodes_bias2[node], 0.0));
+   assert(LE(sdprofit->nodes_bias2[node], FARAWAY));
+
+   if( source1 != nonsource1 && source1 != nonsource2 )
+   {
+      return sdprofit->nodes_bias[node];
+   }
+   else
+   {
+      const int source2 = sdprofit->nodes_biassource2[node];
+
+      if( source2 != nonsource1 && source2 != nonsource2 )
+      {
+         return sdprofit->nodes_bias2[node];
+      }
+   }
+
+   return 0.0;
+}
 
 
 /* reduce.c
@@ -209,6 +254,9 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 
 /* reduce_util.c
  */
+
+extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
+extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);
@@ -235,7 +283,6 @@ extern void            reduce_starSetFailed(STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
-extern void            reduce_sdGetNodeBias(const GRAPH*, SCIP_Real* RESTRICT, int* RESTRICT);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
 extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
