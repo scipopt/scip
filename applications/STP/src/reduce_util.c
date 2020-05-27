@@ -612,6 +612,9 @@ void distgraphAddEdges(
             const SCIP_Real distance = distgraphGetBoundaryEdgeDist(tail, head, vbase_tail, vbase_head,
                   g->cost[e], nodes_vdist, sdprofit);
 
+           // if( LT(distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]) )
+         //   printf("distance: %f < %f \n", distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]);
+
             assert(LE(distance, g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]));
             assert(Is_term(g->term[vbase_tail]));
             assert(Is_term(g->term[vbase_head]));
@@ -1003,7 +1006,9 @@ void sdprofitBuild(
    for( int k = 0; k < nnodes; k++ )
    {
       if( !Is_term(g->term[k]) )
+      {
          continue;
+      }
 
       if( isPcMw )
       {
@@ -1787,6 +1792,44 @@ SCIP_RETCODE reduce_sdprofitInit(
 
    return SCIP_OKAY;
 }
+
+
+/** prints SD profit statistics */
+void reduce_sdprofitPrintStats(
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const SDPROFIT*       sdprofit            /**< the SD profit */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nnodes_profit = 0;
+   int nnodes_nonprofit = 0;
+   SCIP_Real avg = 0.0;
+   const SCIP_Real* node_bias;
+
+   assert(sdprofit);
+
+   node_bias = sdprofit->nodes_bias;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+      {
+         if( GT(node_bias[k], 0.0) )
+         {
+            avg += node_bias[k];
+            nnodes_profit++;
+         }
+         else
+            nnodes_nonprofit++;
+
+         continue;
+      }
+   }
+
+   printf("Steiner nodes:  profitable=%d non-profitable=%d .... Profit: sum=%f avg=%f\n", nnodes_profit, nnodes_nonprofit,
+         avg, avg / (SCIP_Real) nnodes_profit);
+}
+
 
 
 /** frees SD profit */

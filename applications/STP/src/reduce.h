@@ -257,6 +257,7 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 
 extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
 extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
+extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
 extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);
