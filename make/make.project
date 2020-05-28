@@ -515,7 +515,11 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-LDFLAGS		+=	-l:libtbb.so.2
+ifeq ($(OSTYPE),darwin)
+  LDFLAGS   +=  -L/usr/local/lib -l tbb
+else
+  LDFLAGS		+=	-l:libtbb.so.2
+endif
 CXXFLAGS	+=	-std=c++14
 endif
 
