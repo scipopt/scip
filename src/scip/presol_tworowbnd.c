@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,7 +58,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
-#include "presol_tworowbnd.h"
+#include "scip/presol_tworowbnd.h"
 #include <string.h>
 
 #define PRESOL_NAME                    "tworowbnd"

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -5025,8 +5025,13 @@ SCIP_RETCODE tryAggregateIntVars(
    }
    c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
 
-   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+   /* check that the scalar and constant in the aggregation are not too large to avoid numerical problems */
+   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) /*lint !e653*/
+      || REALABS((SCIP_Real)(b)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) /*lint !e653*/
+      || REALABS((SCIP_Real)(a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+   {
       return SCIP_OKAY;
+   }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
    if( (a == 1 || a == -1) && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
@@ -6012,7 +6017,9 @@ SCIP_RETCODE SCIPvarChgType(
 
    if( var->negatedvar != NULL )
    {
-      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype);
+      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype
+            || SCIPvarIsBinary(var) == SCIPvarIsBinary(var->negatedvar));
+
 
       var->negatedvar->vartype = vartype; /*lint !e641*/
 
@@ -17304,9 +17311,12 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
 
 /** marks that this variable has only been introduced to define a relaxation
  *
- * The variable must not have a coefficient in the objective.
+ * The variable must not have a coefficient in the objective and must be deletable.
+ * If it is not marked deletable, it will be marked as deletable, which is only possible
+ * before the variable is added to a problem.
  *
  * @see SCIPvarIsRelaxationOnly
+ * @see SCIPvarMarkDeletable
  */
 void SCIPvarMarkRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
@@ -17314,6 +17324,9 @@ void SCIPvarMarkRelaxationOnly(
 {
    assert(var != NULL);
    assert(SCIPvarGetObj(var) == 0.0);
+
+   if( !SCIPvarIsDeletable(var) )
+      SCIPvarMarkDeletable(var);
 
    var->relaxationonly = TRUE;
 }

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1000,7 +1000,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
-   int oldnimplications;
+   SCIPdebug( int oldnimplications; )
    int startidx;
    int ntotalvars;
    SCIP_Bool delay;
@@ -1089,8 +1089,8 @@ SCIP_DECL_PROPEXEC(propExecProbing)
 
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
-   SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n",
-      nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
+   SCIPdebug( SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n",
+      nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications); )
 
    if( delay )
    {

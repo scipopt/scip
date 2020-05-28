@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -80,7 +80,6 @@ typedef struct Graph
 
 
 /** create a graph */
-SCIP_EXPORT
 SCIP_Bool create_graph(
    int                   n,                  /**< number of nodes */
    int                   m,                  /**< number of edges */
@@ -88,19 +87,16 @@ SCIP_Bool create_graph(
    );
 
 /** capture graph */
-SCIP_EXPORT
 void capture_graph(
    GRAPH*                gr                  /**< graph */
    );
 
 /** release graph */
-SCIP_EXPORT
 void release_graph(
    GRAPH**               gr                  /**< graph */
    );
 
 /** Determines Gomory/Hu cut tree for input graph with capacitated edges */
-SCIP_EXPORT
 SCIP_Bool ghc_tree(
    GRAPH*                gr,                 /**< graph */
    SCIP_Bool**           cuts,               /**< array of arrays to store cuts */

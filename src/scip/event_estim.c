@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2932,7 +2932,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/completiontype",
          "approximation of search tree completion: (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg",
-         &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
+         &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agmrsw", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/treeprofile/enabled",
          "should the event handler collect data?",

@@ -17,10 +17,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    endif()
 endif()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+   # require at least gcc 4.8
+   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+     message(WARNING "GCC version not supported, should be at least 4.8!")
+   endif()
+endif()
+
+
 set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_SUB 1)
+set(SCIP_VERSION_SUB 2)
 set(SCIP_VERSION_API 68)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
@@ -35,7 +44,7 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
-set(CPACK_PACKAGE_CONTACT "http://scip.zib.de")
+set(CPACK_PACKAGE_CONTACT "http://scipopt.org")
 include(CPack)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

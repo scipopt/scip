@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,7 +31,6 @@ extern "C" {
 #endif
 
 /** creates the CycGreedy primal heuristic and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );
