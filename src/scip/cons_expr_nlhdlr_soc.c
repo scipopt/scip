@@ -24,7 +24,7 @@
  *
  * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
  *
- * Note that v_i, for i <= n, could be 0, thus allowing a positive constant terms inside the root
+ * Note that v_i, for i <= n, could be 0, thus allowing a positive constant term inside the root.
  *
  * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2\| \leq a_n x_n+ b_n\f$
  * as the default nlhdlr will do an extended formulation.
@@ -46,7 +46,7 @@
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME           "soc"
-#define NLHDLR_DESC           "soc nonlinear handler"
+#define NLHDLR_DESC           "nonlinear handler for second-order cone structures"
 #define NLHDLR_PRIORITY             100
 #define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
 #define DEFAULT_ENFOFREQ              5 /** default value for parameter enfofreq */
@@ -103,7 +103,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_VAR**            vars;               /**< variables appearing on both sides (x) */
    SCIP_Real*            offsets;            /**< offsets of both sides (beta_i) */
-   SCIP_Real*            transcoefs;         /**< non-zeroes of linear transformation vectors (v_i) */
+   SCIP_Real*            transcoefs;         /**< non-zeros of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  termbegins;         /**< starting indices of transcoefs for each term */
    int                   nvars;              /**< total number of variables appearing */
@@ -130,7 +130,7 @@ struct SCIP_ConsExpr_NlhdlrData
  */
 
 #ifdef SCIP_DEBUG
-/** prints the  nlhdlr expression data */
+/** prints the nlhdlr expression data */
 static
 void printNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -365,8 +365,8 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->disvars = NULL;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
-      printNlhdlrExprData(scip, *nlhdlrexprdata);
+   SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
+   printNlhdlrExprData(scip, *nlhdlrexprdata);
 #endif
 
    return SCIP_OKAY;
@@ -518,7 +518,8 @@ SCIP_RETCODE generateCutSolSOC(
 
    /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_n^T x + \beta_n, i.e.,
     * \nabla f(x*)^T x - v_n^T x \leq \beta_n + \nabla f(x*)^T x* - f(x*)
-    * thus cutrhs is \beta_n - f(x*) + \nabla f(x*)^T x* */
+    * thus cutrhs is \beta_n - f(x*) + \nabla f(x*)^T x*
+    */
    cutrhs = nlhdlrexprdata->offsets[nterms - 1] - fvalue;
 
    /* add cut coefficients from lhs terms and compute cut's rhs */
@@ -651,7 +652,7 @@ SCIP_RETCODE generateCutSolDisagg(
    /* TODO: should this be >= SCIPfeastol ? */
    if( !SCIPisPositive(scip, fvalue) )
    {
-      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below feastol\n", disaggidx, fvalue);
+      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below epsilon\n", disaggidx, fvalue);
       return SCIP_OKAY;
    }
 
@@ -1869,6 +1870,7 @@ CLEANUP:
 }
 
 /** detects complex quadratic expressions that can be represented by soc constraints.
+ *
  *  These are quadratic expressions with either exactly one positive or exactly one negative eigenvalue,
  *  in addition to some extra conditions. One needs to write the quadratic as
  *  sum eigval_i (eigvec_i . x)^2 + c <= -eigval_k (eigvec_k . x)^2, where eigval_k is the negative eigenvalue,
@@ -2300,9 +2302,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
       *enforcedabove = TRUE;
       *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
-
-
-
 
    /* if we have 3 or more terms in lhs create variable for disaggregation */
    if( (*nlhdlrexprdata)->nterms > 3 )

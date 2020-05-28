@@ -6842,7 +6842,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    }
    else
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeed with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
    }
 
    *result = SCIP_DIDNOTFIND;
