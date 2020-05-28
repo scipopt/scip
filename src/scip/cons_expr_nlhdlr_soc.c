@@ -1972,6 +1972,13 @@ SCIP_RETCODE detectSocQuadraticComplex(
       return SCIP_OKAY;
    }
 
+   /* check that nvars*nvars doesn't get too large, see also SCIPgetConsExprQuadraticCurvature() */
+   if( nvars > 7000 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdlr_soc - number of quadratic variables is too large (%d) to check the curvature\n", nvars);
+      return SCIP_OKAY;
+   }
+
    assert(SCIPhashmapGetNElements(expr2idx) == nvars);
 
    /* create datastructures for constaint defining matrix and vector */
