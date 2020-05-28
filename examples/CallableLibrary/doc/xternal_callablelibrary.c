@@ -26,8 +26,8 @@
  * This example illustrates how to setup nonlinear constraints when using SCIP as callable library.
  * The example implements several small models that use specific types of constraints.
  *
- * - brachistochrone.c also shows how use the operators pow and product and to setup quadratic nonlinear constraints
- * - circlepacking.c shows how to setup nonlinear constraints that are quadratic
+ * - brachistochrone.c also shows how to use the operators pow and product and to set up quadratic nonlinear constraints
+ * - circlepacking.c shows how to set up nonlinear constraints that are quadratic
  * - gastrans.c shows how to use the operators pow and signpower
  * - spring.c shows how to use the operators pow and product
  *
