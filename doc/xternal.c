@@ -7880,7 +7880,6 @@
  * @brief methods for reoptimization related tasks
  */
 
-
 /** @defgroup DataStructures Data Structures
  *  @ingroup PUBLICCOREAPI
  *  @brief commonly used data structures
@@ -8262,6 +8261,11 @@
  * @ingroup INTERNALAPI
  * @brief headers and methods for the parallel interface of \SCIP
  *
+ */
+
+/**@defgroup PublicSymmetryMethods Symmetry
+ * @ingroup INTERNALAPI
+ * @brief methods for symmetry handling
  */
 
 /**@defgroup EXPRINTS Expression Interpreter
