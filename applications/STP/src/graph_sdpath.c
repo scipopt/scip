@@ -504,6 +504,236 @@ void sdCliqueStarUpdateNode(
 }
 
 
+#if 0
+/** gets biased special distance for two profits  */
+static inline
+SCIP_Real sdGet2ProfitsDist(
+   SCIP_Real             distBaseToBase,
+   SCIP_Real             distBaseToProfit1,
+   SCIP_Real             distBaseToProfit2,
+   SCIP_Real             profit1,
+   SCIP_Real             profit2
+   )
+{
+   const SCIP_Real distProfitToProfit = distBaseToBase - distBaseToProfit1 - distBaseToProfit2;
+   const SCIP_Real sdAll = distBaseToBase - profit1 - profit2;
+   const SCIP_Real sdProfit1 = distBaseToBase - distBaseToProfit2 - profit1;
+   const SCIP_Real sdProfit2 = distBaseToBase - distBaseToProfit1 - profit2;
+   const SCIP_Real sd_final = miscstp_maxReal((SCIP_Real[])
+               { sdAll,
+                 sdProfit1, sdProfit2,
+                 distProfitToProfit,
+                 distBaseToProfit1, distBaseToProfit2
+               },
+                 6);
+
+   assert(GE(distBaseToProfit1, 0.0));
+   assert(GE(distBaseToProfit2, 0.0));
+   assert(GE(distProfitToProfit, 0.0));
+   assert(LE(sd_final, distBaseToBase));
+
+   return sd_final;
+}
+
+
+/** gets biased special distance for one profit  */
+static inline
+SCIP_Real sdGet1ProfitDist(
+   SCIP_Real             distBaseToBase,
+   SCIP_Real             distBaseToProfit,
+   SCIP_Real             profit
+   )
+{
+   const SCIP_Real sdAll = distBaseToBase - profit;
+   const SCIP_Real distBaseToProfit2 = distBaseToBase - distBaseToProfit;
+   SCIP_Real sd_final = MAX(distBaseToProfit, distBaseToProfit2);
+
+   if( sdAll > sd_final )
+      sd_final = sdAll;
+
+   assert(GE(distBaseToProfit, 0.0));
+   assert(GE(distBaseToProfit2, 0.0));
+   assert(GE(sd_final, 0.0));
+   assert(LE(sd_final, distBaseToBase));
+
+   return sd_final;
+}
+
+
+/** gets node biased */
+static inline
+SCIP_Real sdCliqueStarGetNodeBias(
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   int                   node,
+   int                   nextnode,
+   int                   prevnode,
+   SCIP_Real             edgecost,
+   SCIP_Real             dist
+   )
+{
+   const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, node, nextnode, prevnode);
+   SCIP_Real bias = MIN(edgecost, profit);
+
+   if( dist < bias )
+      bias = dist;
+
+   assert(GE(bias, 0.0));
+
+   return bias;
+}
+
+
+/** computes SD of path
+ *  USE IN DEBUG MODE ONLY! */
+static
+void sdCliqueStarGetPathSd(
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   const GRAPH*          g,                  /**< the graph */
+   int                   startnode,          /**< start node */
+   const int*            nodes_pred,         /**< predecessor per node */
+   const int*            nodes_base,         /**< base per node */
+   SCIP_Real*            endToMaxDist,
+   SCIP_Real*            startToEndDist,
+   SCIP_Real*            maxprofit
+   )
+{
+   SCIP_Real dist = 0.0;
+   const int endnode = nodes_base[startnode];
+   int prevnode = startnode;
+   *maxprofit = 0.0;
+   *endToMaxDist = 0.0;
+
+   printf("go from %d \n", startnode);
+
+   for( int node = startnode; node != endnode; node = nodes_pred[node] )
+   {
+      int e;
+      SCIP_Real profit;
+      SCIP_Real offset;
+      const int nextnode = nodes_pred[node];
+
+      assert(nextnode != node);
+
+      for( e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         if( g->head[e] == nextnode )
+            break;
+      }
+
+      assert(e != EAT_LAST);
+
+      profit = reduce_sdprofitGetProfit(sdprofit, node, prevnode, nextnode);
+
+      printf("check node %d, profit=%f, edgecost=%f \n", node, profit, g->cost[e]);
+
+      offset = MIN(profit, g->cost[e]);
+      offset = MIN(offset, dist);
+
+      dist += g->cost[e] - offset;
+
+      if( node != startnode && profit - offset > *maxprofit )
+      {
+         *maxprofit = profit - offset;
+         *endToMaxDist = dist;
+      }
+
+      prevnode = node;
+   }
+
+   assert(LE(*endToMaxDist, dist));
+   *endToMaxDist = dist - *endToMaxDist;
+
+   *startToEndDist = dist;
+}
+
+
+/** computes SD one combined path
+  * USE IN DEBUG MODE ONLY! */
+static
+SCIP_Real sdCliqueStarGetRecomputedSd(
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            nodes_pred,         /**< predecessor per node */
+   int                   edge,               /**< edge */
+   const SCIP_Real*      nodes_dist,         /**< distance per node */
+   const int*            nodes_base          /**< base per node */
+   )
+{
+   SCIP_Real distBaseToBase;
+   SCIP_Real distBaseToTail;
+   SCIP_Real distBaseToHead;
+   SCIP_Real maxprofit_tail;
+   SCIP_Real maxprofit_head;
+   SCIP_Real distBaseToMax_tail;
+   SCIP_Real distBaseToMax_head;
+   const int tail = g->tail[edge];
+   const int head = g->head[edge];
+   const SCIP_Real edgecost = g->cost[edge];
+   SCIP_Real sd_final;
+
+   printf("\n tail=%d, head=%d, edgecost=%f \n", tail, head, g->cost[edge]);
+
+   sdCliqueStarGetPathSd(sdprofit, g, tail, nodes_pred, nodes_base, &distBaseToMax_tail, &distBaseToTail, &maxprofit_tail);
+   sdCliqueStarGetPathSd(sdprofit, g, head, nodes_pred, nodes_base, &distBaseToMax_head, &distBaseToHead, &maxprofit_head);
+
+   {
+      SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, nodes_pred[tail]);
+      SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, nodes_pred[head]);
+      const SCIP_Real bias_tail = sdCliqueStarGetNodeBias(sdprofit, tail, head, nodes_pred[tail], edgecost, distBaseToTail);
+      const SCIP_Real bias_head = sdCliqueStarGetNodeBias(sdprofit, head, tail, nodes_pred[head], edgecost, distBaseToHead);
+
+      if( bias_tail > bias_head )
+      {
+         profit_tail -= bias_tail;
+         distBaseToBase = distBaseToTail + distBaseToHead + edgecost - bias_tail;
+      }
+      else
+      {
+         profit_head -= bias_head;
+         distBaseToBase = distBaseToTail + distBaseToHead + edgecost - bias_head;
+      }
+
+      assert(GE(profit_tail, 0.0));
+      assert(GE(profit_head, 0.0));
+
+      if( GE(profit_head, maxprofit_head) || Is_term(g->term[head]) )
+      {
+         maxprofit_head = profit_head;
+         distBaseToMax_head = distBaseToHead;
+      }
+
+      if( GE(profit_tail, maxprofit_tail) || Is_term(g->term[tail]) )
+      {
+         maxprofit_tail = profit_tail;
+         distBaseToMax_tail = distBaseToTail;
+      }
+   }
+
+   printf("maxprofit_tail=%f, maxprofit_head=%f \n", maxprofit_tail, maxprofit_head);
+
+   if( GT(maxprofit_head, 0.0) && GT(maxprofit_tail, 0.0) )
+   {
+      sd_final = sdGet2ProfitsDist(distBaseToBase, distBaseToMax_tail, distBaseToMax_head, maxprofit_tail, maxprofit_head);
+   }
+   else if( GT(maxprofit_tail, 0.0) )
+   {
+      sd_final = sdGet1ProfitDist(distBaseToBase, distBaseToMax_tail, maxprofit_tail);
+   }
+   else if( GT(maxprofit_head, 0.0)  )
+   {
+      sd_final = sdGet1ProfitDist(distBaseToBase, distBaseToMax_head, maxprofit_head);
+   }
+   else
+   {
+      sd_final = distBaseToBase;
+   }
+
+   printf("sd_final=%f \n", sd_final);
+
+   return sd_final;
+}
+#endif
+
 /** updates SD between nodes */
 inline static
 void sdCliqueStarUpdateSd(
@@ -524,7 +754,7 @@ void sdCliqueStarUpdateSd(
    /* complete distance along new node: */
    SCIP_Real sdist = nodes_dist[newnode] + newdist;
 
-   if( sdprofit != NULL && newnode != nodes_base[newnode] && prednode != nodes_base[prednode]  )
+   if( sdprofit != NULL && newnode != nodes_base[newnode] && prednode != nodes_base[prednode] )
    {
       const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, newnode, prednode, nodes_pred[newnode]);
 
@@ -537,9 +767,6 @@ void sdCliqueStarUpdateSd(
 
          if( newdist > sdist )
             sdist = newdist;
-
-       //  printf("profit %f \n", profit);
-
       }
 
       assert(nodes_pred[newnode] != prednode);
@@ -682,17 +909,17 @@ void sdCliqueStarComputeSds(
       assert(CONNECT == state[k]);
       assert(CONNECT == state[k_base]);
 
-      for( int i = g->outbeg[k]; i >= 0; i = gOeat[i] )
+      for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
       {
-         const int m = gHead[i];
-         SCIP_Real newdist = k_dist + gCost[i];
+         const int m = gHead[e];
+         SCIP_Real newdist = k_dist + gCost[e];
 
          /* NOTE: need to make sure that we do not go over the center of the clique!
           * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
-         if( useProfit && m != k_predNode && k != centernode )
+         if( useProfit && m != k_predNode && k != centernode && 1  )
          {
             const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
-            const SCIP_Real bias = MIN(gCost[i], profit);
+            const SCIP_Real bias = MIN(gCost[e], profit);
             newdist -= MIN(k_dist, bias);
 
             assert(k != k_base || EQ(MIN(k_dist, bias), 0.0));
@@ -722,6 +949,7 @@ void sdCliqueStarComputeSds(
          {
             sdCliqueStarUpdateSd(sdprofit, nodes_pred, ncliquenodes,
                   m, k, newdist, nodes_dist, nodes_base, nodes_baseToClique, sds);
+
          }
 
          if( state[m] != CONNECT )

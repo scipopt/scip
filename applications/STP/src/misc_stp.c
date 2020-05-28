@@ -110,9 +110,10 @@ void pairheapRec(
 }
 
 
-/** returns maximum of given SCIP_Real values */
+/** returns maximum of given SCIP_Real values
+ *  todo check whether this is really more efficient than a variadic function */
 SCIP_Real miscstp_maxReal(
-   SCIP_Real*            realarr,            /**< array of reals */
+   const SCIP_Real*      realarr,            /**< array of reals */
    unsigned              nreals              /**< size of array of reals */
   )
 {
@@ -121,8 +122,10 @@ SCIP_Real miscstp_maxReal(
    assert(nreals >= 1);
 
    for( unsigned i = 1; i < nreals; i++ )
+   {
       if( realarr[i] > max )
          max = realarr[i];
+   }
 
    return max;
 }
