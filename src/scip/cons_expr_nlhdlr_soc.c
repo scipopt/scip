@@ -2204,18 +2204,18 @@ SCIP_RETCODE detectSOC(
  */
 
 /** nonlinear handler copy callback */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrSoc(targetscip, targetconsexprhdlr) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrCopyhdlrSoc NULL
-#endif
 
 /** callback to free data of handler */
 static
