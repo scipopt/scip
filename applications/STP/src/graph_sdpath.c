@@ -507,6 +507,8 @@ void sdCliqueStarUpdateNode(
 /** updates SD between nodes */
 inline static
 void sdCliqueStarUpdateSd(
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   const int*            nodes_pred,
    int                   ncliquenodes,       /**< number of clique nodes */
    int                   newnode,            /**< new node */
    int                   prednode,           /**< predecessor node */
@@ -520,7 +522,29 @@ void sdCliqueStarUpdateSd(
    const int sdposition = sdCliqueStarGetSdPosition(ncliquenodes,
       newnode, prednode, nodes_dist, nodes_base, baseToClique);
    /* complete distance along new node: */
-   const SCIP_Real sdist = nodes_dist[newnode] + newdist;
+   SCIP_Real sdist = nodes_dist[newnode] + newdist;
+
+   if( sdprofit != NULL && newnode != nodes_base[newnode] && prednode != nodes_base[prednode]  )
+   {
+      const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, newnode, prednode, nodes_pred[newnode]);
+
+      if( GT(profit, 0.0) )
+      {
+         sdist -= profit;
+
+         if( nodes_dist[newnode] > sdist )
+            sdist = nodes_dist[newnode];
+
+         if( newdist > sdist )
+            sdist = newdist;
+
+       //  printf("profit %f \n", profit);
+
+      }
+
+      assert(nodes_pred[newnode] != prednode);
+
+   }
 
    assert(nodes_base[newnode] != nodes_base[prednode]);
    assert(GE(newdist, 0.0) && LT(newdist, FARAWAY));
@@ -662,7 +686,7 @@ void sdCliqueStarComputeSds(
          const int m = gHead[i];
          SCIP_Real newdist = k_dist + gCost[i];
 
-         if( useProfit && m != k_predNode && 0 )
+         if( useProfit && m != k_predNode && m != nodes_base[m] && 1 )
          {
             const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
             const SCIP_Real bias = MIN(gCost[i], profit);
@@ -693,7 +717,7 @@ void sdCliqueStarComputeSds(
          /* can we update the special distances? */
          if( nodes_base[m] != k_base )
          {
-            sdCliqueStarUpdateSd(ncliquenodes,
+            sdCliqueStarUpdateSd(sdprofit, nodes_pred, ncliquenodes,
                   m, k, newdist, nodes_dist, nodes_base, nodes_baseToClique, sds);
          }
 
