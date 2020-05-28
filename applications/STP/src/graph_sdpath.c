@@ -619,6 +619,7 @@ SCIP_Real sdCliqueStarGetDistLimit(
 static
 void sdCliqueStarComputeSds(
    const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
    SDCLIQUE*             cliquedata,         /**< data */
    CLIQUEPATHS*          cliquepaths,        /**< paths data */
    SCIP_Real* RESTRICT   sds                 /**< to be filled */
@@ -639,6 +640,7 @@ void sdCliqueStarComputeSds(
    const int ncliquenodes = cliquedata->ncliquenodes;
    int nvisits = dijkdata->nvisits;
    const SCIP_Real distlimit = sdCliqueStarGetDistLimit(cliquedata, sds);
+   const SCIP_Bool useProfit = (sdprofit != NULL);
 
    assert(g->knots > 1);
    assert(dheap->size > 1);
@@ -648,6 +650,8 @@ void sdCliqueStarComputeSds(
    {
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_base = nodes_base[k];
+      const int k_predNode = nodes_pred[k];
+      const SCIP_Real k_dist = nodes_dist[k];
 
       assert(0 <= k_base && k_base < g->knots);
       assert(CONNECT == state[k]);
@@ -656,7 +660,17 @@ void sdCliqueStarComputeSds(
       for( int i = g->outbeg[k]; i >= 0; i = gOeat[i] )
       {
          const int m = gHead[i];
-         const SCIP_Real newdist = nodes_dist[k] + gCost[i];
+         SCIP_Real newdist = k_dist + gCost[i];
+
+         if( useProfit && m != k_predNode && 0 )
+         {
+            const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
+            const SCIP_Real bias = MIN(gCost[i], profit);
+            newdist -= MIN(k_dist, bias);
+
+            assert(k != k_base || EQ(MIN(k_dist, bias), 0.0));
+            assert(GE(newdist, 0.0));
+         }
 
          if( GT(newdist, distlimit) )
             continue;
@@ -1863,6 +1877,7 @@ SCIP_Bool graph_sdWalksConnected(
 SCIP_RETCODE graph_sdComputeCliqueStar(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
    SDCLIQUE*             cliquedata          /**< data */
 )
 {
@@ -1877,7 +1892,7 @@ SCIP_RETCODE graph_sdComputeCliqueStar(
    SCIP_CALL( cliquePathsInitData(scip, g, &cliquepaths) );
 
    sdCliqueStarInit(g, cliquedata, &cliquepaths);
-   sdCliqueStarComputeSds(g, cliquedata, &cliquepaths, sds);
+   sdCliqueStarComputeSds(g, sdprofit, cliquedata, &cliquepaths, sds);
 
    cliquePathsFreeData(scip, &cliquepaths);
 

@@ -544,7 +544,7 @@ extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, i
 extern SCIP_Bool graph_sdWalksTriangle(SCIP*, const GRAPH*, const int*, const int*, SCIP_Real, int, int, int, SCIP_Real*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt2(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*);
-extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, SDCLIQUE*);
+extern SCIP_RETCODE   graph_sdComputeCliqueStar(SCIP*, const GRAPH*, const SDPROFIT*, SDCLIQUE*);
 
 
 /* graph_vnoi.c

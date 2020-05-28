@@ -1145,6 +1145,7 @@ static inline
 SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    GRAPH*                cliquegraph,        /**< clique graph */
    SDCLIQUE*             sdclique            /**< clique */
@@ -1155,7 +1156,7 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
    const int nnodes_cliquegraph = graph_get_nNodes(cliquegraph);
    int nsds = 0;
 
-   SCIP_CALL( graph_sdComputeCliqueStar(scip, g, sdclique) );
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, g, sdprofit, sdclique) );
    sds_buffer = sdclique->sds;
 
    for( int k1 = 0; k1 < nnodes_cliquegraph; k1++ )
@@ -1333,7 +1334,7 @@ SCIP_RETCODE reduce_sdGetSdsCliquegraph(
    SCIP_CALL( sdCliqueInitData(scip, g, cliquegraph, cliqueNodeMap, dijkdata, &sdclique) );
 
    sdGetSdsCliqueTermWalks(g, cliqueNodeMap, sddata, cliquegraph, &sdclique);
-   SCIP_CALL( sdCliqueUpdateGraphWithStarWalks(scip, g, cliqueNodeMap, cliquegraph, &sdclique) );
+   SCIP_CALL( sdCliqueUpdateGraphWithStarWalks(scip, g, sddata->sdprofit, cliqueNodeMap, cliquegraph, &sdclique) );
 
    sdCliqueFreeData(scip, &sdclique);
 

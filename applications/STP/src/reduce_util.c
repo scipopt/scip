@@ -952,7 +952,7 @@ void sdprofitBuild(
       node_biassource2[k] = k;
    }
 
-   /* main loop */
+   /* compute profits for non-terminals */
    for( int k = 0; k < nnodes; k++ )
    {
       if( Is_term(g->term[k]) && k != pseudoroot )
@@ -999,11 +999,14 @@ void sdprofitBuild(
             {
                node_bias2[minneighbor] = bias;
                node_biassource2[minneighbor] = k;
+
+               assert(node_biassource[minneighbor] != node_biassource2[minneighbor]);
             }
          }
       }
    }
 
+   /* correct profits for terminals */
    for( int k = 0; k < nnodes; k++ )
    {
       if( !Is_term(g->term[k]) )
@@ -1018,12 +1021,19 @@ void sdprofitBuild(
             node_bias[k] = g->prize[k];
             node_biassource[k] = k;
          }
+         else if( g->prize[k] >= node_bias2[k]  )
+         {
+            node_bias2[k] = g->prize[k];
+            node_biassource2[k] = k;
+         }
 
          continue;
       }
 
       node_bias[k] = FARAWAY;
       node_biassource[k] = k;
+      node_bias2[k] = FARAWAY;
+      node_biassource2[k] = k;
    }
 
 #ifndef NDEBUG

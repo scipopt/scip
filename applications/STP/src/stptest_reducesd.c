@@ -575,7 +575,7 @@ SCIP_RETCODE testSdCliqueStarDeg3AdjacencyIsCorrect(
    graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
    cliquedata.dijkdata->edgelimit = 50;
 
-   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata) );
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, NULL, &cliquedata) );
 
    STPTEST_ASSERT(EQ(sds[0], 1.8));
    STPTEST_ASSERT(EQ(sds[1], 1.9));
@@ -631,7 +631,7 @@ SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
    graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
    cliquedata.dijkdata->edgelimit = 50;
 
-   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, &cliquedata) );
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, NULL, &cliquedata) );
 
    STPTEST_ASSERT(EQ(sds[0], 0.8)); // 1-2
    STPTEST_ASSERT(EQ(sds[1], 1.9)); // 1-3
