@@ -45,7 +45,15 @@ Build system
 
 ### Cmake
 
+adjust cmake module for Ipopt 3.13
+add cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+add warning to require minimal gcc version 4.8
+
 ### Makefile
+
+update make/make.project for mac
+fix a typo in SANITIZERFLAGS, if SHARED=true, add SANITZERFLAGS also to LIBBUILDFLAGS and always add SANITZERFLAGS to LDFLAGS
+fix GCC version check in Makefiles
 
 Fixed bugs
 ----------
