@@ -665,6 +665,7 @@ void sdCliqueStarComputeSds(
    int nvisits = dijkdata->nvisits;
    const SCIP_Real distlimit = sdCliqueStarGetDistLimit(cliquedata, sds);
    const SCIP_Bool useProfit = (sdprofit != NULL);
+   const int centernode = cliquedata->centernode;
 
    assert(g->knots > 1);
    assert(dheap->size > 1);
@@ -686,7 +687,9 @@ void sdCliqueStarComputeSds(
          const int m = gHead[i];
          SCIP_Real newdist = k_dist + gCost[i];
 
-         if( useProfit && m != k_predNode && m != nodes_base[m] && 1 )
+         /* NOTE: need to make sure that we do not go over the center of the clique!
+          * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
+         if( useProfit && m != k_predNode && k != centernode )
          {
             const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
             const SCIP_Real bias = MIN(gCost[i], profit);

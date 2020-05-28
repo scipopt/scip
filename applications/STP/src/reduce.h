@@ -303,7 +303,7 @@ extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*,
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
-extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, const int*, DIJK*, SD*, GRAPH*);
+extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, const int*, DIJK*, SD*, GRAPH*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

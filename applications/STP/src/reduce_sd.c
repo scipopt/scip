@@ -1091,6 +1091,7 @@ static inline
 SCIP_RETCODE sdCliqueInitData(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
+   int                   centernode,         /**< center node or - 1 */
    const GRAPH*          cliquegraph,        /**< clique graph */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    DIJK*                 dijkdata,           /**< data for repeated path computations */
@@ -1118,6 +1119,8 @@ SCIP_RETCODE sdCliqueInitData(
       cliquenodes[i] = -1;
 #endif
 
+   sdclique->centernode = centernode;
+   sdclique->cliqueToNodeMap = cliqueNodeMap;
    sdclique->ncliquenodes = nnodes_clique;
    sdclique->sds = sds_buffer;
    sdclique->cliquenodes = cliquenodes;
@@ -1146,7 +1149,6 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    const SDPROFIT*       sdprofit,           /**< profit or NULL */
-   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    GRAPH*                cliquegraph,        /**< clique graph */
    SDCLIQUE*             sdclique            /**< clique */
 )
@@ -1174,6 +1176,7 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
          if( k2 > k1 )
          {
 #ifndef NDEBUG
+            const int* cliqueNodeMap = sdclique->cliqueToNodeMap;
             const int v1 = cliqueNodeMap[k1];
             const int v2 = cliqueNodeMap[k2];
             assert(0 <= v1 && v1 < g->knots);
@@ -1207,7 +1210,6 @@ SCIP_RETCODE sdCliqueUpdateGraphWithStarWalks(
 static
 void sdGetSdsCliqueTermWalks(
    const GRAPH*          g,                  /**< the graph */
-   const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    SD* RESTRICT          sddata,             /**< SD */
    GRAPH* RESTRICT       cliquegraph,        /**< clique graph to be filled */
    SDCLIQUE* RESTRICT    sdclique            /**< clique */
@@ -1216,6 +1218,7 @@ void sdGetSdsCliqueTermWalks(
    const int nnodes_clique = graph_get_nNodes(cliquegraph);
    const SCIP_Real maxtreecost = reduce_sdgraphGetMaxCost(sddata->sdgraph);
    const int* const nodemark = cliquegraph->mark;
+   const int* cliqueNodeMap = sdclique->cliqueToNodeMap;
    SCIP_Real* RESTRICT sds_buffer = sdclique->sds;
    int nsds = 0;
 
@@ -1320,6 +1323,7 @@ SCIP_RETCODE reduce_sdInitBiased(
 SCIP_RETCODE reduce_sdGetSdsCliquegraph(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
+   int                   centernode,         /**< center node or - 1 */
    const int*            cliqueNodeMap,      /**< maps clique graph vertices to original ones */
    DIJK*                 dijkdata,           /**< data for repeated path computations */
    SD*                   sddata,             /**< SD */
@@ -1331,10 +1335,10 @@ SCIP_RETCODE reduce_sdGetSdsCliquegraph(
    assert(scip && g && cliqueNodeMap && dijkdata && sddata && cliquegraph);
    assert(cliquegraph->edges == (cliquegraph->knots) * (cliquegraph->knots - 1));
 
-   SCIP_CALL( sdCliqueInitData(scip, g, cliquegraph, cliqueNodeMap, dijkdata, &sdclique) );
+   SCIP_CALL( sdCliqueInitData(scip, g, centernode, cliquegraph, cliqueNodeMap, dijkdata, &sdclique) );
 
-   sdGetSdsCliqueTermWalks(g, cliqueNodeMap, sddata, cliquegraph, &sdclique);
-   SCIP_CALL( sdCliqueUpdateGraphWithStarWalks(scip, g, sddata->sdprofit, cliqueNodeMap, cliquegraph, &sdclique) );
+   sdGetSdsCliqueTermWalks(g, sddata, cliquegraph, &sdclique);
+   SCIP_CALL( sdCliqueUpdateGraphWithStarWalks(scip, g, sddata->sdprofit, cliquegraph, &sdclique) );
 
    sdCliqueFreeData(scip, &sdclique);
 

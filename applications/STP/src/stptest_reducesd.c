@@ -82,7 +82,7 @@ SCIP_RETCODE testSdGetterReturnsCorrectSds(
    graph_dijkLimited_clean(graph, dijkdata);
    dijkdata->edgelimit = 500;
 
-   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, graph, cliqueNodeMap, dijkdata, sddata, cliquegraph) );
+   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, graph, -1, cliqueNodeMap, dijkdata, sddata, cliquegraph) );
 
    for( int e = cliquegraph->outbeg[0]; e != EAT_LAST; e = cliquegraph->oeat[e] )
    {

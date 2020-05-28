@@ -252,6 +252,8 @@ typedef struct special_distance_clique
    DIJK*                 dijkdata;           /**< temporary data */
    SCIP_Real*            sds;                /**< array for SDs of clique */
    int*                  cliquenodes;        /**< nodes */
+   const int*            cliqueToNodeMap;    /**< makes clique nodes to original nodes; NON-OWNED! */
+   int                   centernode;         /**< center node or, if there is none, -1 */
    int                   ncliquenodes;       /**< number of nodes */
 } SDCLIQUE;
 

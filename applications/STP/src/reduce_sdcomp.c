@@ -215,7 +215,7 @@ SCIP_RETCODE bdkGetCliqueSds(
    for( int k = node_degree; k < STP_BDKIMP_MAXDEGREE; k++ )
       nodemark[k] = FALSE;
 
-   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, g, bdk->node_neighbors, dijkdata, bdk->sdistance, cliquegraph) );
+   SCIP_CALL( reduce_sdGetSdsCliquegraph(scip, g, node, bdk->node_neighbors, dijkdata, bdk->sdistance, cliquegraph) );
 
    return SCIP_OKAY;
 }
