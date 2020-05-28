@@ -2676,12 +2676,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    assert(consexprhdlr != NULL);
 
    /* create nonlinear handler data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
-
-   nlhdlrdata->nenfocalls = 0;
-   nlhdlrdata->prevnode = NULL;
-
-   /* TODO: create and store nonlinear handler specific data here */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectSoc, nlhdlrEvalauxSoc, nlhdlrdata) );
    assert(nlhdlr != NULL);
