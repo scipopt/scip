@@ -2610,10 +2610,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    ndisaggrs = nlhdlrexprdata->nterms - 1;
 
    /* check whether the aggregation row is in the LP */
-   if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && SCIPisGE(scip, -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow,
-               sol), SCIPgetLPFeastol(scip) ) )
+   if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol) > SCIPgetLPFeastol(scip) )
    {
-      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, TRUE, &infeasible) );
       SCIPdebugMsg(scip, "added disaggregation row to LP, cutoff=%d\n", infeasible);
 
       if( infeasible )
