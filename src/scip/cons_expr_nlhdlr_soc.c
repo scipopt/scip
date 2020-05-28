@@ -642,7 +642,6 @@ SCIP_RETCODE generateCutSolDisagg(
 
    lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
 
-   assert(4.0 * SQR(lhsval) + SQR(rhsval - disvarval) >= 0);
    denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
 
    /* compute value of function to be separated (f(x*,y*)) */
