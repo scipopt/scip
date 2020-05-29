@@ -210,9 +210,9 @@ struct SCIP_VarDataExact
    SCIP_DOMEXACT         locdom;             /**< exact local bounds */
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */
    SCIP_DOMEXACT         origdom;            /**< original domain */
-   SCIP_COLEXACT*        colexact;              /**< column in exact lp */
-   SCIP_VARSTATUS        varstatusexact;        /**< status in exact lp */
-   int                   origvarindex;       /**< index of original variable (needed for certificate), or -1 */
+   SCIP_COLEXACT*        colexact;           /**< column in exact lp */
+   SCIP_VARSTATUS        varstatusexact;     /**< status in exact lp */
+   int                   certificateindex;   /**< original probindex (needed for certificate), or -1 */
 };
 
 /** variable of the problem */

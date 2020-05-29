@@ -2110,7 +2110,7 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    var->exactdata->colexact = NULL;
    var->exactdata->varstatusexact = var->varstatus;
-   var->exactdata->origvarindex = var->index;
+   var->exactdata->certificateindex = -1;
 
    if( obj != NULL )
       SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
@@ -2151,6 +2151,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    targetvar->exactdata->colexact = NULL;
    targetvar->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
+   targetvar->exactdata->certificateindex = sourcevar->exactdata->certificateindex;
 
    return SCIP_OKAY;
 }
@@ -19257,13 +19258,26 @@ SCIP_Bool SCIPbdchginfoIsTighter(
       : bdchginfo1->newbound < bdchginfo2->newbound);
 }
 
-/** return the index of the original variable */
-int SCIPvarGetOrigIndex(
-   SCIP_VAR*             var                 /**< scip variable */
+/** returns position of variable in vipr-certificate */
+int SCIPvarGetCertificateIndex(
+   SCIP_VAR*             var                 /**< variable to get index for */
    )
 {
    assert(var != NULL);
    assert(var->exactdata != NULL);
 
-   return var->exactdata->origvarindex;
+   return var->exactdata->certificateindex;
+}
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetCertificateIndex(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(index >= 0);
+
+   var->exactdata->certificateindex = index;
 }

@@ -536,6 +536,19 @@ int SCIPvarGetProbindex(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns position of variable in vipr-certificate */
+SCIP_EXPORT
+int SCIPvarGetCertificateIndex(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   );
+
+/** sets index of variable in vipr-certificate */
+SCIP_EXPORT
+void SCIPvarSetCertificateIndex(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   );
+
 /** gets transformed variable of ORIGINAL variable */
 SCIP_EXPORT
 SCIP_VAR* SCIPvarGetTransVar(

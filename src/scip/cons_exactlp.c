@@ -59,6 +59,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/var.h"
 #include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_certificate.h"
@@ -15524,7 +15525,7 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? FALSE : TRUE;
             RatDiv(quotient, lhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
          }
 
          /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
@@ -15532,7 +15533,7 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? TRUE : FALSE;
             RatDiv(quotient, rhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
          }
 
          RatFreeBuffer(SCIPbuffer(scip), &quotient);
@@ -15556,7 +15557,7 @@ SCIP_RETCODE printCertificateConsLinear(
 
          SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
          for( i = 0; i < consdata->nvars; ++i )
-            varsindex[i] = SCIPvarGetIndex(consdata->vars[i]) - SCIPgetNVars(scip);
+            varsindex[i] = SCIPvarGetCertificateIndex(consdata->vars[i]);
 
          /* print constraint */
          if( RatIsEqual(consdata->lhs, consdata->rhs) )

@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       if( !RatIsZero(vals[i]) )
       {
          /* print the solution into certificate */
-         SCIPcertificatePrintProblemMessage(certificate, " %d ", SCIPvarGetOrigIndex(vars[i]));
+         SCIPcertificatePrintProblemMessage(certificate, " %d ", SCIPvarGetCertificateIndex(vars[i]));
          SCIPcertificatePrintProblemRational(certificate, vals[i], 10);
       }
    }
@@ -456,6 +456,8 @@ SCIP_RETCODE SCIPcertificateInit(
       const char* varname;
 
       varname = SCIPvarGetName(vars[j]);
+      SCIPvarSetCertificateIndex(vars[j], j);
+      SCIPvarSetCertificateIndex(SCIPvarGetTransVar(vars[j]), j);
       if( strstr(varname, " ") != NULL || strstr(varname, "\t") != NULL || strstr(varname, "\n") != NULL
          || strstr(varname, "\v") != NULL || strstr(varname, "\f") != NULL || strstr(varname, "\r") != NULL )
       {
@@ -532,11 +534,11 @@ SCIP_RETCODE SCIPcertificateInit(
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
       }
    }
 
@@ -1333,7 +1335,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
             certificate->workbound->isupper = FALSE;
             RatSet(certificate->workbound->boundval, SCIPcolExactGetLb(col));
          }
-         certificate->workbound->varindex = SCIPvarGetOrigIndex(SCIPcolGetVar(col->fpcol));
+         certificate->workbound->varindex = SCIPvarGetCertificateIndex(SCIPcolGetVar(col->fpcol));
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
 
@@ -1475,7 +1477,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
 
          /* retrieve the line in the certificate of the bound */
          RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
-         certificate->workbound->varindex = SCIPvarGetOrigIndex(vars[i]);
+         certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
          certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
@@ -1622,7 +1624,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
    if( branchvar != NULL )
    {
-      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetOrigIndex(branchvar),
+      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetCertificateIndex(branchvar),
          branchbound, boundtype);
    }
 

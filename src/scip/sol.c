@@ -1471,9 +1471,9 @@ SCIP_RETCODE SCIPsolUnlinkExact(
       {
          SCIP_CALL( solUnlinkVarExact(sol, set, prob->vars[v]) );
       }
-
-      sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
+
+   SCIPsolUnlink(sol, set, prob);
 
    return SCIP_OKAY;
 }
@@ -3596,6 +3596,8 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
       SCIP_ROUNDMODE roundmode;
       SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
       roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
+
+      assert(SCIPsetIsFeasEQ(set, SCIPsolGetVal(sol, set, stat, vars[i]), RatRoundReal(solval, roundmode)));
       SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],
          RatRoundReal(solval, roundmode)) );
    }
