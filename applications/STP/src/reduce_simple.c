@@ -114,7 +114,7 @@ SCIP_RETCODE reduce_simple(
       {
          assert(g->grad[i] >= 0);
 
-         if( g->grad[i] == 1 )
+         if( g->grad[i] == 1 && g->terms > 1 )
          {
             const int e1  = g->outbeg[i];
             const int i1  = g->head[e1];
