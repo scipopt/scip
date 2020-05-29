@@ -1142,8 +1142,6 @@ SCIP_RETCODE graph_sdStarBiased(
    STP_Bool* RESTRICT visited = dijkdata->node_visited;
    int* node_predNode;
    DHEAP* dheap = dijkdata->dheap;
-   const SCIP_Real* const nodebias = sdprofit->nodes_bias;
-   const int* const nodebias_source = sdprofit->nodes_biassource;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const RESTRICT range_csr = dcsr->range;
@@ -1156,8 +1154,7 @@ SCIP_RETCODE graph_sdStarBiased(
    /* NOTE: with zero edges case is already covered with state[k] = UNKNOWN if k == star_base[k] */
    const SCIP_Real eps = graph_pc_isPcMw(g) ? 0.0 : 2.0 * SCIPepsilon(scip);
 
-   assert(dcsr && dist && visitlist && visited && dheap && success);
-   assert(nodebias && nodebias_source);
+   assert(dcsr && dist && visitlist && visited && dheap && success && sdprofit);
    assert(!g->extended);
    assert(g->mark[star_root] && star_degree >= 1);
    assert(dheap->size == 0);
@@ -1230,10 +1227,14 @@ SCIP_RETCODE graph_sdStarBiased(
 
          if( state[m] != CONNECT )
          {
-            const int source = nodebias_source[k];
-            const SCIP_Bool useBias = (source != m && source != k_pred);
-            const SCIP_Real bias = (useBias)? MIN(cost_csr[e], nodebias[k]) : 0.0;
-            const SCIP_Real distnew = dist[k] + cost_csr[e] - MIN(dist[k], bias);
+            SCIP_Real distnew = dist[k] + cost_csr[e];
+            if( m != k_pred )
+            {
+               SCIP_Real profitBias = reduce_sdprofitGetProfit(sdprofit, k, m, k_pred);
+               profitBias = MIN(profitBias, cost_csr[e]);
+               profitBias = MIN(profitBias, dist[k]);
+               distnew  -= profitBias;
+            }
 
             if( GT(distnew, distlimit) )
                continue;
