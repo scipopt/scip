@@ -660,6 +660,80 @@ SCIP_RETCODE testSdCliqueStarDeg3IsCorrect(
 }
 
 
+
+/** tests clique star correctly identifies distances for degree 3 node  */
+static
+SCIP_RETCODE testSdCliqueStarDeg3IsCorrect2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SD* sddata;
+   int nnodes = 10;
+   int nedges = 24;
+   const int nsds = 3;
+   SCIP_Real sds[3];
+   int cliquenodes[] = { 1, 2, 3 };
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 3, .sds = sds };
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nsds; i++ )
+      sds[i] = FARAWAY - 1.0;
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 1;
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 7, STP_TERM);
+   graph_knot_chg(graph, 9, STP_TERM);
+
+
+   /* star: */
+   graph_edge_addBi(scip, graph, 0, 1, 2.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 2.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+
+   /* first cycle: */
+   graph_edge_addBi(scip, graph, 1, 4, 1.0);
+   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+   graph_edge_addBi(scip, graph, 5, 2, 1.0);
+
+   /* second cycle: */
+   graph_edge_addBi(scip, graph, 2, 6, 1.5);
+   graph_edge_addBi(scip, graph, 6, 7, 0.5);
+   graph_edge_addBi(scip, graph, 7, 8, 2.0);
+   graph_edge_addBi(scip, graph, 8, 3, 1.0);
+
+   /* profit path */
+   graph_edge_addBi(scip, graph, 8, 9, 10.5); /* node 8 gets profit of 0.5 */
+   graph_edge_addBi(scip, graph, 9, 5, 11.0);
+
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &(cliquedata.dijkdata)) );
+   graph_dijkLimited_clean(graph, (cliquedata.dijkdata));
+   cliquedata.dijkdata->edgelimit = 50;
+   SCIP_CALL( reduce_sdInitBiased(scip, graph, &sddata) );
+
+   SCIP_CALL( graph_sdComputeCliqueStar(scip, graph, sddata->sdprofit, &cliquedata) );
+
+   STPTEST_ASSERT(EQ(sds[0], 2.0));
+   STPTEST_ASSERT(EQ(sds[1], 4.0));
+   STPTEST_ASSERT(EQ(sds[2], 2.5));
+
+   reduce_sdFree(scip, &sddata);
+   graph_dijkLimited_free(scip, &(cliquedata.dijkdata));
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests clique star correctly identifies distances for degree 4 node  */
 static
 SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
@@ -744,6 +818,7 @@ SCIP_RETCODE stptest_reduceSdCliqueStar(
 {
 
    SCIP_CALL( testSdCliqueStarDeg3IsCorrect(scip) );
+   SCIP_CALL( testSdCliqueStarDeg3IsCorrect2(scip) );
    SCIP_CALL( testSdCliqueStarDeg3AdjacencyIsCorrect(scip) );
    SCIP_CALL( testSdCliqueStarDeg4IsCorrect(scip) );
 
