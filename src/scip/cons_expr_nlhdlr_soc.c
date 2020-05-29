@@ -640,10 +640,10 @@ SCIP_RETCODE generateCutSolDisagg(
    fvalue = denominator - rhsval - disvarval;
 
    /* if the disagg soc is not violated don't compute cut */
-   /* TODO: should this be >= SCIPfeastol ? */
-   if( !SCIPisPositive(scip, fvalue) )
+   if( fvalue <= mincutviolation )
    {
-      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below epsilon\n", disaggidx, fvalue);
+      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as violation=%g below minviolation %g\n", disaggidx,
+            fvalue, mincutviolation);
       return SCIP_OKAY;
    }
 
