@@ -49,9 +49,6 @@
 #define NLHDLR_DESC           "nonlinear handler for second-order cone structures"
 #define NLHDLR_PRIORITY             100
 #define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
-#define DEFAULT_ENFOFREQ              5 /** default value for parameter enfofreq */
-#define DEFAULT_MAXENFOROUNDSROOT    -1 /** default value for parameter maxenforoundsroot */
-#define DEFAULT_MAXENFOROUNDS        -1 /** default value for parameter maxenforounds */
 #define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
 
 /*
@@ -116,12 +113,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_NODE*            prevnode;           /**< the node for which enforcement was last called */
-   int                   nenfocalls;         /**< number of enforcement calls for the previous node */
    SCIP_Real             mincutefficacy;     /**< minimum efficacy a cut need to be added */
-   int                   enfofreq;           /**< frequency of enforcement rounds (every x levels of depth) */
-   int                   maxenforoundsroot;  /**< maximum number of enforcement rounds in the root round */
-   int                   maxenforounds;      /**< maximum number of enforcement rounds in non-root rounds */
    SCIP_Bool             compeigenvalues;    /**< whether Eigenvalue computations should be done to detect complex cases */
 };
 
@@ -2527,7 +2519,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Real rhsval;
-   int depth;
    int ndisaggrs;
    int k;
    SCIP_Bool infeasible;
@@ -2541,29 +2532,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   if( SCIPgetCurrentNode(scip) != nlhdlrdata->prevnode )
-   {
-      nlhdlrdata->nenfocalls = 0;
-      nlhdlrdata->prevnode = SCIPgetCurrentNode(scip);
-   }
-
-   /* only call separator a given number of times at each node */
-   depth = SCIPgetDepth(scip);
-   if( (depth == 0 && nlhdlrdata->maxenforoundsroot >= 0 && nlhdlrdata->nenfocalls >= nlhdlrdata->maxenforoundsroot)
-      || (depth > 0 && nlhdlrdata->maxenforounds >= 0 && nlhdlrdata->nenfocalls >= nlhdlrdata->maxenforounds)
-      || (nlhdlrdata->enfofreq == 0 && depth != 0)
-      || (nlhdlrdata->enfofreq > 0 && depth % nlhdlrdata->enfofreq != 0) )
-   {
-      SCIPdebugMsg(scip, "not running at depth=%d and nenfocalls=%d due to timing parameters (maxenforoundsroot=%d,\
-         maxenforounds=%d, enfofreq=%d)\n", depth, nlhdlrdata->nenfocalls, nlhdlrdata->maxenforoundsroot,
-            nlhdlrdata->maxenforounds, nlhdlrdata->enfofreq);
-      return SCIP_OKAY;
-   }
-
-   ++nlhdlrdata->nenfocalls;
-
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
-
 
    /* if there are three or two terms just compute gradient cut */
    if( nlhdlrexprdata->nterms < 4 )
@@ -2688,19 +2657,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/enfofreq",
-         "frequency for enforcement rounds (0: only in root node)",
-         &nlhdlrdata->enfofreq, FALSE, DEFAULT_ENFOFREQ, 0, INT_MAX, NULL, NULL) );
-
-   /* add soc nlhdlr parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxenforounds",
-         "maximal number of enforcement rounds in non-root nodes (-1: unlimited)",
-         &nlhdlrdata->maxenforounds, FALSE, DEFAULT_MAXENFOROUNDS, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxenforoundsroot",
-         "maximal number of enforcement rounds in the root node (-1: unlimited)",
-         &nlhdlrdata->maxenforoundsroot, FALSE, DEFAULT_MAXENFOROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mincutefficacy",
          "Minimum efficacy which a cut needs in order to be added.",
          &nlhdlrdata->mincutefficacy, FALSE, DEFAULT_MINCUTEFFICACY, 0.0, SCIPinfinity(scip), NULL, NULL) );
