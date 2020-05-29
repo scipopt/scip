@@ -36,6 +36,9 @@
 /** internal data for clique-paths computations */
 typedef struct special_distance_clique_paths
 {
+   SCIP_Real*            nodes_baseToMaxDist;/**< distance base to maximum profit */
+   SCIP_Real*            nodes_maxprofit;    /**< maximum profit on path */
+   SCIP_Real*            nodes_maxbias;      /**< bias for maximum profit on path */
    int*                  nodes_pred;         /**< per node: predecessor */
    int*                  nodes_base;         /**< per node: base */
    int*                  nodes_baseToClique; /**< per base: clique id
@@ -55,6 +58,9 @@ SCIP_RETCODE cliquePathsInitData(
 
    assert(scip && cliquepaths);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_baseToMaxDist), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_maxprofit), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_maxbias), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_pred), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_base), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(cliquepaths->nodes_baseToClique), nnodes) );
@@ -75,6 +81,9 @@ void cliquePathsFreeData(
    SCIPfreeBufferArray(scip, &(cliquepaths->nodes_baseToClique));
    SCIPfreeBufferArray(scip, &(cliquepaths->nodes_base));
    SCIPfreeBufferArray(scip, &(cliquepaths->nodes_pred));
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_maxbias));
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_maxprofit));
+   SCIPfreeBufferArray(scip, &(cliquepaths->nodes_baseToMaxDist));
 }
 
 
@@ -486,6 +495,11 @@ void sdCliqueStarUpdateNode(
    int                   newnode,            /**< new node */
    int                   prednode,           /**< predecessor node */
    SCIP_Real             newdist,            /**< new distance */
+   SCIP_Real             newprofit,          /**< new profit */
+   SCIP_Real             newbias,            /**< new profit */
+   SCIP_Real* RESTRICT   nodes_baseToMaxDist,/**< nodes to max */
+   SCIP_Real* RESTRICT   nodes_maxpathprofit,/**< maximum profit */
+   SCIP_Real* RESTRICT   nodes_maxpathbias,  /**< maximum bias */
    DHEAP* RESTRICT       dheap,              /**< heap */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance per node */
    int* RESTRICT         nodes_base,         /**< base per node */
@@ -495,16 +509,32 @@ void sdCliqueStarUpdateNode(
    assert(newnode >= 0 && prednode >= 0);
    assert(newnode != prednode);
    assert(GE(newdist, 0.0) && LT(newdist, FARAWAY));
+   assert(GE(nodes_baseToMaxDist[prednode], 0.0));
+   assert(GE(nodes_maxpathprofit[prednode], 0.0));
+   assert(GE(newprofit, 0.0));
+   assert(GE(newbias, 0.0));
 
    graph_heap_correct(newnode, newdist, dheap);
 
    nodes_pred[newnode] = prednode;
    nodes_dist[newnode] = newdist;
    nodes_base[newnode] = nodes_base[prednode];
+
+   if( newprofit > nodes_maxpathprofit[prednode] )
+   {
+      nodes_baseToMaxDist[newnode] = newdist;
+      nodes_maxpathprofit[newnode] = newprofit;
+      nodes_maxpathbias[newnode] = newbias;
+   }
+   else
+   {
+      nodes_baseToMaxDist[newnode] = nodes_baseToMaxDist[prednode];
+      nodes_maxpathprofit[newnode] = nodes_maxpathprofit[prednode];
+      nodes_maxpathbias[newnode] = nodes_maxpathbias[prednode];
+   }
 }
 
 
-#if 0
 /** gets biased special distance for two profits  */
 static inline
 SCIP_Real sdGet2ProfitsDist(
@@ -559,7 +589,7 @@ SCIP_Real sdGet1ProfitDist(
    return sd_final;
 }
 
-
+#if 0
 /** gets node biased */
 static inline
 SCIP_Real sdCliqueStarGetNodeBias(
@@ -734,15 +764,63 @@ SCIP_Real sdCliqueStarGetRecomputedSd(
 }
 #endif
 
+
+/** helper */
+inline static
+void sdCliqueStarGetFinalProfitData(
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   int                   node,               /**< node */
+   int                   neighbor,           /**< neighbor node */
+   const SCIP_Real*      nodes_dist,         /**< distance */
+   const int*            nodes_pred,         /**< predecessors */
+   const SCIP_Real*      nodes_baseToMaxDist,/**< nodes to max */
+   const SCIP_Real*      nodes_maxpathprofit,/**< maximum profit */
+   const SCIP_Real*      nodes_maxpathbias,  /**< bias to maximum profit */
+   SCIP_Real*            maxdist_node,       /**< pointer */
+   SCIP_Real*            maxprofit_node,     /**< pointer */
+   SCIP_Real*            maxbias_node        /**< pointer */
+   )
+{
+   if( node == nodes_pred[node] )
+   {
+      *maxprofit_node = 0.0;
+      assert(EQ(nodes_baseToMaxDist[node], 0.0));
+      assert(EQ(nodes_maxpathprofit[node], 0.0));
+      assert(EQ(nodes_maxpathbias[node], 0.0));
+   }
+   else
+   {
+      *maxprofit_node = reduce_sdprofitGetProfit(sdprofit, node, neighbor, nodes_pred[node]);
+   }
+
+   /* is the save profit better? */
+   if( *maxprofit_node < nodes_maxpathprofit[node] )
+   {
+      *maxdist_node = nodes_baseToMaxDist[node];
+      *maxprofit_node = nodes_maxpathprofit[node];
+      *maxbias_node = nodes_maxpathbias[node];
+   }
+   else
+   {
+      *maxdist_node = nodes_dist[node];
+      *maxbias_node = 0.0;
+   }
+}
+
+
 /** updates SD between nodes */
 inline static
 void sdCliqueStarUpdateSd(
    const SDPROFIT*       sdprofit,           /**< profit or NULL */
-   const int*            nodes_pred,
+   const int*            nodes_pred,         /**< predecessors */
+   const SCIP_Real*      nodes_baseToMaxDist,/**< nodes to max */
+   const SCIP_Real*      nodes_maxpathprofit,/**< maximum profit */
+   const SCIP_Real*      nodes_maxpathbias,  /**< bias to maximum profit */
    int                   ncliquenodes,       /**< number of clique nodes */
    int                   newnode,            /**< new node */
    int                   prednode,           /**< predecessor node */
    SCIP_Real             newdist,            /**< the new distance to 'newnode' (along prednode) */
+   SCIP_Real             edgecost,           /**< the edgecost from 'pred' to 'new' */
    const SCIP_Real*      nodes_dist,         /**< distance per node */
    const int*            nodes_base,         /**< base per node */
    const int*            baseToClique,       /**< mapping to clique ID */
@@ -754,24 +832,46 @@ void sdCliqueStarUpdateSd(
    /* complete distance along new node: */
    SCIP_Real sdist = nodes_dist[newnode] + newdist;
 
-   if( sdprofit != NULL && newnode != nodes_base[newnode] && prednode != nodes_base[prednode] )
+   if( sdprofit != NULL )
    {
-      const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, newnode, prednode, nodes_pred[newnode]);
+      SCIP_Real maxdist_pred;
+      SCIP_Real maxprofit_pred;
+      SCIP_Real maxbias_pred;
+      SCIP_Real maxdist_new;
+      SCIP_Real maxprofit_new;
+      SCIP_Real maxbias_new;
+      SCIP_Real distBaseToBase;
+      SCIP_Real sd_final;
 
-      if( GT(profit, 0.0) )
+      sdCliqueStarGetFinalProfitData(sdprofit, prednode, newnode, nodes_dist, nodes_pred, nodes_baseToMaxDist,
+            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_pred, &maxprofit_pred, &maxbias_pred);
+
+      sdCliqueStarGetFinalProfitData(sdprofit, newnode, prednode, nodes_dist, nodes_pred, nodes_baseToMaxDist,
+            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_new, &maxprofit_new, &maxbias_new);
+
+      distBaseToBase = nodes_dist[prednode] + nodes_dist[newnode] + maxbias_pred + maxbias_new + edgecost;
+
+      if( GT(maxprofit_new, 0.0) && GT(maxprofit_pred, 0.0) )
       {
-         sdist -= profit;
-
-         if( nodes_dist[newnode] > sdist )
-            sdist = nodes_dist[newnode];
-
-         if( newdist > sdist )
-            sdist = newdist;
+         sd_final = sdGet2ProfitsDist(distBaseToBase, maxdist_pred, maxdist_new, maxprofit_pred, maxprofit_new);
+      }
+      else if( GT(maxprofit_pred, 0.0) )
+      {
+         sd_final = sdGet1ProfitDist(distBaseToBase, maxdist_pred, maxprofit_pred);
+      }
+      else if( GT(maxprofit_new, 0.0)  )
+      {
+         sd_final = sdGet1ProfitDist(distBaseToBase, maxdist_new, maxprofit_new);
+      }
+      else
+      {
+         sd_final = distBaseToBase;
       }
 
-      assert(nodes_pred[newnode] != prednode);
-
+      assert(LE(sd_final, sdist));
+      sdist = sd_final;
    }
+
 
    assert(nodes_base[newnode] != nodes_base[prednode]);
    assert(GE(newdist, 0.0) && LT(newdist, FARAWAY));
@@ -798,12 +898,16 @@ void sdCliqueStarInit(
    DHEAP* RESTRICT dheap = dijkdata->dheap;
    const int* const cliquenodes = cliquedata->cliquenodes;
    const int ncliquenodes = cliquedata->ncliquenodes;
+   SCIP_Real* RESTRICT nodes_baseToMaxDist = cliquepaths->nodes_baseToMaxDist;
+   SCIP_Real* RESTRICT nodes_maxprofit = cliquepaths->nodes_maxprofit;
+   SCIP_Real* RESTRICT nodes_maxbias = cliquepaths->nodes_maxbias;
    int* RESTRICT nodes_base = cliquepaths->nodes_base;
    int* RESTRICT nodes_pred = cliquepaths->nodes_pred;
    int* RESTRICT nodes_baseToClique = cliquepaths->nodes_baseToClique;
    STP_Bool* RESTRICT visited = dijkdata->node_visited;
 
    assert(nodes_dist && nodes_base && dheap && cliquenodes);
+   assert(nodes_baseToMaxDist && nodes_maxprofit && nodes_maxbias);
    assert(graph_heap_isClean(dheap));
    assert(ncliquenodes >= 2);
    assert(dijkdata->edgelimit >= 0 && dijkdata->edgelimit < 20000);
@@ -830,6 +934,9 @@ void sdCliqueStarInit(
       nodes_pred[node] = node;
       nodes_dist[node] = 0.0;
       nodes_baseToClique[node] = i;
+      nodes_baseToMaxDist[node] = 0.0;
+      nodes_maxprofit[node] = 0.0;
+      nodes_maxbias[node] = 0.0;
 
       graph_heap_correct(node, 0.0, dheap);
    }
@@ -886,6 +993,9 @@ void sdCliqueStarComputeSds(
    const int* const gOeat = g->oeat;
    const int* const gHead = g->head;
    const int* const nodes_baseToClique = cliquepaths->nodes_baseToClique;
+   SCIP_Real* RESTRICT nodes_baseToMaxDist = cliquepaths->nodes_baseToMaxDist;
+   SCIP_Real* RESTRICT nodes_maxprofit = cliquepaths->nodes_maxprofit;
+   SCIP_Real* RESTRICT nodes_maxbias = cliquepaths->nodes_maxbias;
    int* RESTRICT nodes_base = cliquepaths->nodes_base;
    int* RESTRICT nodes_pred = cliquepaths->nodes_pred;
    const int ncliquenodes = cliquedata->ncliquenodes;
@@ -912,15 +1022,18 @@ void sdCliqueStarComputeSds(
       for( int e = g->outbeg[k]; e >= 0; e = gOeat[e] )
       {
          const int m = gHead[e];
+         SCIP_Real profit = 0.0;
+         SCIP_Real bias = 0.0;
          SCIP_Real newdist = k_dist + gCost[e];
 
          /* NOTE: need to make sure that we do not go over the center of the clique!
           * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
-         if( useProfit && m != k_predNode && k != centernode && 1  )
+         if( useProfit && m != k_predNode && k != centernode )
          {
-            const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
-            const SCIP_Real bias = MIN(gCost[e], profit);
-            newdist -= MIN(k_dist, bias);
+            profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
+            bias = MIN(gCost[e], profit);
+            bias = MIN(k_dist, bias);
+            newdist -= bias;
 
             assert(k != k_base || EQ(MIN(k_dist, bias), 0.0));
             assert(GE(newdist, 0.0));
@@ -934,7 +1047,8 @@ void sdCliqueStarComputeSds(
          {
             assert(!visited[m]);
 
-            sdCliqueStarUpdateNode(m, k, newdist, dheap, nodes_dist, nodes_base, nodes_pred);
+            sdCliqueStarUpdateNode(m, k, newdist, profit, bias, nodes_baseToMaxDist, nodes_maxprofit, nodes_maxbias,
+               dheap, nodes_dist, nodes_base, nodes_pred);
             visitlist[nvisits++] = m;
             visited[m] = TRUE;
 
@@ -947,9 +1061,8 @@ void sdCliqueStarComputeSds(
          /* can we update the special distances? */
          if( nodes_base[m] != k_base )
          {
-            sdCliqueStarUpdateSd(sdprofit, nodes_pred, ncliquenodes,
-                  m, k, newdist, nodes_dist, nodes_base, nodes_baseToClique, sds);
-
+            sdCliqueStarUpdateSd(sdprofit, nodes_pred, nodes_baseToMaxDist, nodes_maxprofit, nodes_maxbias,
+                  ncliquenodes, m, k, newdist, gCost[e], nodes_dist, nodes_base, nodes_baseToClique, sds);
          }
 
          if( state[m] != CONNECT )
@@ -957,7 +1070,8 @@ void sdCliqueStarComputeSds(
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( nodes_dist[m] > newdist )
             {
-               sdCliqueStarUpdateNode(m, k, newdist, dheap, nodes_dist, nodes_base, nodes_pred);
+               sdCliqueStarUpdateNode(m, k, newdist, profit, bias, nodes_baseToMaxDist, nodes_maxprofit, nodes_maxbias,
+                  dheap, nodes_dist, nodes_base, nodes_pred);
             }
          }
       }
@@ -2137,7 +2251,7 @@ SCIP_RETCODE graph_sdComputeCliqueStar(
    SDCLIQUE*             cliquedata          /**< data */
 )
 {
-   CLIQUEPATHS cliquepaths = { NULL, NULL, NULL };
+   CLIQUEPATHS cliquepaths = { NULL, NULL, NULL, NULL, NULL, NULL };
    SCIP_Real* sds = cliquedata->sds;
 
    assert(scip && g && cliquedata);
