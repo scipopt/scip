@@ -69,7 +69,8 @@ fi
 export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+#export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.13-static-build
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create all required directories
