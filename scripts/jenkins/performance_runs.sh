@@ -169,6 +169,7 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
 
   # cmake scip for presolvelib papilo
   cd ..
+  rm -rf scip-build
   mkdir -p scip-build
   cd scip-build
   cmake .. -DCMAKE_BUILD_TYPE=Release -DSOPLEX_DIR=${SOPLEX_DIR}
