@@ -121,7 +121,7 @@ BUILD_DIR=scipoptcpx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx -LA
 make -j4
 cd ..
 
