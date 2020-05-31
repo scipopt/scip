@@ -900,7 +900,8 @@ SCIP_Real sdGetSd(
    const GRAPH*          g,                  /**< graph structure */
    int                   i,                  /**< first vertex */
    int                   i2,                 /**< second vertex */
-   SCIP_Real             sd_upper,           /**< upper bound on special distance (can be FARAWAY) */
+   SCIP_Real             sd_upper,           /**< upper bound on special distance that is accepted (can be FARAWAY) */
+   SCIP_Real             sd_sufficient,      /**< bound below which to terminate (can be 0.0) */
    SD*                   sddata              /**< SD */
    )
 {
@@ -912,6 +913,7 @@ SCIP_Real sdGetSd(
    SCIP_Real sd = sd_upper;
    int nnterms1;
    int nnterms2;
+   const SCIP_Bool terminateEarly = GT(sd_sufficient, 0.0);
 
    assert(g && sddata);
    assert(i != i2);
@@ -954,6 +956,10 @@ SCIP_Real sdGetSd(
          if( sd_jk < sd )
             sd = sd_jk;
 
+         if( terminateEarly && LT(sd, sd_sufficient) )
+         {
+            return sd;
+         }
       } /* k < nnterms2 */
    } /* j < nnterms1 */
 
@@ -1248,7 +1254,7 @@ void sdGetSdsCliqueTermWalks(
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
 
-            sds_buffer[nsds] = sdGetSd(g, v1, v2, maxtreecost, sddata);
+            sds_buffer[nsds] = sdGetSd(g, v1, v2, maxtreecost, 0.0, sddata);
             cliquegraph->cost[e] = sds_buffer[nsds];
             cliquegraph->cost[flipedge(e)] = sds_buffer[nsds];
 
@@ -1314,6 +1320,40 @@ SCIP_RETCODE reduce_sdInitBiased(
    SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes biased neighbor SD structure */
+SCIP_RETCODE reduce_sdInitBiasedNeighbor(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   SD**                  sd                  /**< to initialize */
+)
+{
+   SD* s;
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, sd) );
+   s = *sd;
+
+#if 1
+   s->isBiased = TRUE;
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
+   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+#else
+   s->isBiased = FALSE;
+     s->sdprofit = NULL;
+     SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+     SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
+     reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+#endif
+
+   reduce_sdneighborUpdate(scip, g, s);
 
    return SCIP_OKAY;
 }
@@ -1813,6 +1853,67 @@ SCIP_RETCODE reduce_sd(
 
    return SCIP_OKAY;
 }
+
+
+/** implied-profit special distance test */
+SCIP_RETCODE reduce_sdBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SD*                   sdistance,          /**< special distances storage */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Real maxmstcost = reduce_sdgraphGetMaxCost(sdistance->sdgraph);
+
+   assert(LT(maxmstcost, FARAWAY));
+
+   graph_mark(g);
+
+   SCIPdebugMessage("Starting SD biased... \n");
+
+   /* traverse all edges */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+
+      if( !g->mark[i] )
+         continue;
+
+      enext = g->outbeg[i];
+      while( enext != EAT_LAST )
+      {
+         SCIP_Real sd;
+         const int e = enext;
+         const int i2 = g->head[e];
+         const SCIP_Real ecost = g->cost[e];
+
+         enext = g->oeat[e];
+
+         if( i2 < i || !g->mark[i2] )
+            continue;
+
+         sd = sdGetSd(g, i, i2, maxmstcost, ecost, sdistance);
+
+         // todo LT
+         if( SCIPisLT(scip, sd, ecost) )
+         {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
+            graph_edge_printInfo(g, e);
+#endif
+
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 /** SD test for PC */
@@ -2594,7 +2695,6 @@ SCIP_RETCODE reduce_ledge(
          blocked[vnoi[v1].edge / 2] = TRUE;
       assert(e != EAT_LAST);
    }
-
 
    for( k = 0; k < nnodes; k++ )
    {

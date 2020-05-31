@@ -197,6 +197,7 @@ extern SCIP_RETCODE    reduce_sdWalkExt(SCIP*, int, const int*, GRAPH*, SCIP_Rea
 extern SCIP_RETCODE    reduce_sdWalkExt2(SCIP*, int, const int*, GRAPH*, int*,  SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdspSap(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_sd(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);
+extern SCIP_RETCODE    reduce_sdBiased(SCIP*, SD*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdPc(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_getSd(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int*, int, int, int);
@@ -259,6 +260,7 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 /* reduce_util.c
  */
 
+extern SCIP_RETCODE    reduce_sdneighborUpdate(SCIP*, const GRAPH*, SD*);
 extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
 extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
@@ -302,6 +304,7 @@ extern void             reduce_tpathsFree(SCIP*, TPATHS**);
 extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
+extern SCIP_RETCODE     reduce_sdInitBiasedNeighbor(SCIP*, GRAPH*, SD**);
 extern void             reduce_sdFree(SCIP*, SD**);
 extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, const int*, DIJK*, SD*, GRAPH*);
 

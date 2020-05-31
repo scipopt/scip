@@ -1805,6 +1805,104 @@ SCIP_RETCODE reduce_sdprofitInit(
 }
 
 
+/** updates SDs */
+SCIP_RETCODE reduce_sdneighborUpdate(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SD*                   sddata              /**< SD */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int* nodes_nhits;
+   SCIP_Real* nodes_maxdist;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_nhits, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_maxdist, nnodes) );
+
+
+   SCIP_Real termdist1[4];
+   int neighbterms1[4];
+   SDGRAPH* sdgraph = sddata->sdgraph;
+   int nnterms1;
+int nupdates = 0;
+
+   assert(sdgraph);
+
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      nodes_nhits[i] = 0;
+      nodes_maxdist[i] = 0.0;
+   }
+
+   assert(scip && g);
+
+   for( int term = 0; term < nnodes; ++term )
+   {
+      if( Is_term(g->term[term]) )
+      {
+         const int degree = g->grad[term];
+
+         for( int i = 0; i < nnodes; ++i )
+         {
+            nodes_nhits[i] = 0;
+            nodes_maxdist[i] = 0.0;
+         }
+
+
+         for( int e = g->outbeg[term]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int head = g->head[e];
+
+            reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, head, FARAWAY, neighbterms1, termdist1, &nnterms1);
+
+            // go over all 4 neighbors
+            for( int k = 0; k < nnterms1; k++ )
+            {
+               const int neighborterm = neighbterms1[k];
+
+               assert(Is_term(g->term[neighborterm]));
+
+               nodes_nhits[neighborterm]++;
+
+               if( termdist1[k] > nodes_maxdist[neighborterm] )
+                  nodes_maxdist[neighborterm] = termdist1[k];
+            }
+         }
+
+
+
+
+
+
+         for( int i = 0; i < nnodes; ++i )
+         {
+            if( nodes_nhits[i] == degree && i != term )
+            {
+               SCIP_Real sdorg = reduce_sdgraphGetSd(term, i, sdgraph);
+
+               if( LT(nodes_maxdist[i], sdorg) )
+               {
+                  graph_knot_printInfo(g, term);
+                  graph_knot_printInfo(g, i);
+                  printf("term %d->%d: new=%f vs org=%f \n", term, i, nodes_maxdist[i], sdorg);
+                  nupdates++;
+               }
+            }
+         }
+      }
+   }
+
+   printf("g->terms=%d nupdates=%d \n", g->terms, nupdates);
+
+
+   SCIPfreeBufferArray(scip, &nodes_maxdist);
+   SCIPfreeBufferArray(scip, &nodes_nhits);
+
+   return SCIP_OKAY;
+}
+
+
 /** prints SD profit statistics */
 void reduce_sdprofitPrintStats(
    const GRAPH*          g,                  /**< graph to initialize from */
