@@ -725,9 +725,9 @@ SCIP_RETCODE reduce_bdkWithSd(
    if( g->terms < 3  )
       return SCIP_OKAY;
 
-   SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
+   //SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
 
-   return SCIP_OKAY;
+   //return SCIP_OKAY;
 
    SCIP_CALL( bdkInit(scip, sdistance, &bdk) );
    SCIPdebugMessage("starting BDK-SD Reduction: \n");

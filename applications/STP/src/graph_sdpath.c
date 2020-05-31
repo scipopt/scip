@@ -778,7 +778,8 @@ void sdCliqueStarGetFinalProfitData(
    const SCIP_Real*      nodes_maxpathbias,  /**< bias to maximum profit */
    SCIP_Real*            maxdist_node,       /**< pointer */
    SCIP_Real*            maxprofit_node,     /**< pointer */
-   SCIP_Real*            maxbias_node        /**< pointer */
+   SCIP_Real*            maxbias_node,       /**< pointer */
+   SCIP_Bool*            nodeHasMaxProfit    /**< pointer */
    )
 {
    if( node == nodes_pred[node] )
@@ -799,11 +800,13 @@ void sdCliqueStarGetFinalProfitData(
       *maxdist_node = nodes_baseToMaxDist[node];
       *maxprofit_node = nodes_maxpathprofit[node];
       *maxbias_node = nodes_maxpathbias[node];
+      *nodeHasMaxProfit = FALSE;
    }
    else
    {
       *maxdist_node = nodes_dist[node];
       *maxbias_node = 0.0;
+      *nodeHasMaxProfit = TRUE;
    }
 }
 
@@ -834,6 +837,7 @@ void sdCliqueStarUpdateSd(
 
    if( sdprofit != NULL )
    {
+      SCIP_Bool nodeHasMaxProfit;
       SCIP_Real maxdist_pred;
       SCIP_Real maxprofit_pred;
       SCIP_Real maxbias_pred;
@@ -843,13 +847,16 @@ void sdCliqueStarUpdateSd(
       SCIP_Real distBaseToBase;
       SCIP_Real sd_final;
 
-      sdCliqueStarGetFinalProfitData(sdprofit, prednode, newnode, nodes_dist, nodes_pred, nodes_baseToMaxDist,
-            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_pred, &maxprofit_pred, &maxbias_pred);
-
       sdCliqueStarGetFinalProfitData(sdprofit, newnode, prednode, nodes_dist, nodes_pred, nodes_baseToMaxDist,
-            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_new, &maxprofit_new, &maxbias_new);
+            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_new, &maxprofit_new, &maxbias_new, &nodeHasMaxProfit);
 
-      distBaseToBase = nodes_dist[prednode] + nodes_dist[newnode] + maxbias_pred + maxbias_new + edgecost;
+      sdCliqueStarGetFinalProfitData(sdprofit, prednode, newnode, nodes_dist, nodes_pred, nodes_baseToMaxDist,
+            nodes_maxpathprofit, nodes_maxpathbias, &maxdist_pred, &maxprofit_pred, &maxbias_pred, &nodeHasMaxProfit);
+
+      if( nodeHasMaxProfit )
+         distBaseToBase = nodes_dist[prednode] + nodes_dist[newnode] + maxbias_pred + maxbias_new + edgecost;
+      else
+         distBaseToBase = newdist + nodes_dist[newnode] + maxbias_pred + maxbias_new;
 
       if( GT(maxprofit_new, 0.0) && GT(maxprofit_pred, 0.0) )
       {
