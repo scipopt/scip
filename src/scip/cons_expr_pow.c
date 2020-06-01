@@ -1955,7 +1955,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    SCIP_Real childub;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real exponent;
-   SCIP_Bool iseven;
    SCIP_Bool isinteger;
    SCIP_Bool islocal;
    SCIP_Bool branchcand;
@@ -1994,7 +1993,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
 
    isinteger = EPSISINT(exponent, 0.0);
-   iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
@@ -2652,6 +2650,166 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real exponent;
+   SCIP_Bool islocal;
+   SCIP_Bool branchcand;
+   SCIP_Bool success;
+   SCIP_Real* refpointsunder;
+   SCIP_Real* refpointsover;
+   SCIP_Real refpoint;
+   SCIP_Real constant;
+   int i;
+   SCIP_ROWPREP* rowprep;
+   SCIP_ROW* row;
+   SCIP_Bool* overest;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "signpower") == 0);
+
+   /* get aux variables: we over- and/or underestimate signpower(childvar,exponent) */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) )
+   {
+      SCIPdebugMsg(scip, "skip initsepa as child <%s> seems essentially fixed [%.15g,%.15g]\n", SCIPvarGetName(childvar), childlb, childub);
+      return SCIP_OKAY;
+   }
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   exponent = exprdata->exponent;
+   assert(exponent > 1.0); /* this should have been simplified */
+
+   refpointsunder = NULL;
+   refpointsover = NULL;
+
+   if( underestimate )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsunder, 3) );
+      for( i = 0; i < 3; ++i )
+      {
+         refpointsunder[i] = SCIP_INVALID;
+      }
+   }
+   if( overestimate )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsover, 3) );
+      for( i = 0; i < 3; ++i )
+      {
+         refpointsover[i] = SCIP_INVALID;
+      }
+   }
+
+   SCIPinfoMessage(scip, NULL, "\nchoosing refpoints for expr x^%g, x in [%g, %g], under / over = %d / %d",
+         exponent, childlb, childub, underestimate, overestimate);
+
+   if( childlb >= 0.0 )
+   {
+      if( underestimate )
+         addTangentRefpoints(childlb, childub, refpointsunder);
+      if( overestimate )
+         refpointsover[0] = (childlb + childub) / 2.0;
+   }
+   else if( childub <= 0.0 )
+   {
+      if( underestimate )
+         refpointsunder[0] = (childlb + childub) / 2.0;
+      if( overestimate )
+         addTangentRefpoints(childlb, childub, refpointsunder);
+   }
+   else
+   {
+      if( underestimate )
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, childlb, childub, exponent, TRUE, refpointsunder) );
+      if( overestimate )
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, childlb, childub, exponent, FALSE, refpointsover) );
+   }
+
+   /* add cuts for all refpoints */
+   overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
+   for( i = 0; i < 6; ++i )
+   {
+      if( (overest[i] && !overestimate) || (!overest[i] && !underestimate) )
+         continue;
+
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i];
+      if( refpoint == SCIP_INVALID )
+         continue;
+      assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+
+      /* make sure enough space is available in rowprep arrays */
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
+      assert(rowprep->varssize >= 1);
+
+      if( childlb >= 0 )
+      {
+         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, &constant, rowprep->coefs, &islocal, &success);
+      }
+      else
+      {
+         /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
+         if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/
+         {
+            SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+         }
+         branchcand = TRUE;
+         estimateSignedpower(scip, exponent, exprdata->root, overest[i], childlb, childub, refpoint,
+               SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &constant, rowprep->coefs, &islocal, &branchcand,
+               &success);
+      }
+
+      if( success )
+      {
+         rowprep->nvars = 1;
+         rowprep->vars[0] = childvar;
+         rowprep->side = -constant;
+
+         /* add auxiliary variable */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+               &success) );
+
+         if( success )
+         {
+            /* add the cut */
+            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         }
+      }
+
+      if( rowprep != NULL )
+         SCIPfreeRowprep(scip, &rowprep);
+   }
+
+   SCIPfreeBufferArrayNull(scip, &refpointsunder);
+   SCIPfreeBufferArrayNull(scip, &refpointsover);
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSignpower)
@@ -2821,7 +2979,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSignpower(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSignpower) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateSignpower) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaSignpower, NULL, estimateSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
