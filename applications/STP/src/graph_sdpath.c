@@ -1045,7 +1045,7 @@ void sdCliqueStarComputeSds(
 
          /* NOTE: need to make sure that we do not go over the center of the clique!
           * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
-         if( useProfit && m != k_predNode && k != centernode && m != centernode )
+         if( useProfit && k != centernode && k != k_predNode && m != k_predNode && m != centernode )
          {
             profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
             bias = MIN(gCost[e], profit);
