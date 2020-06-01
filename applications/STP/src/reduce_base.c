@@ -2004,7 +2004,6 @@ SCIP_RETCODE redLoopStp(
 {
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real ub;
-   SCIP_Real fix;
    SCIP_Real timelimit;
    SCIP_Bool rerun = TRUE;
    const int reductbound = redparameters->reductbound;
@@ -2020,10 +2019,9 @@ SCIP_RETCODE redLoopStp(
    assert(graph_typeIsSpgLike(g));
 
    ub = -1.0;
-   fix = 0.0;
 
    SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
-   SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, NULL) );
+   SCIP_CALL( reduce_simple(scip, g, fixed, solnode, &i, NULL) );
 
    /* reduction loop */
    do
@@ -2043,12 +2041,12 @@ SCIP_RETCODE redLoopStp(
 
          assert(!rerun);
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, state, heap,
+         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase, state, heap,
                      nodearrchar, &extendedelims, randnumgen) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
-         SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &extendedelims, NULL));
+         SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &extendedelims, NULL));
 
          if( nodereplacing )
          {
@@ -2070,8 +2068,6 @@ SCIP_RETCODE redLoopStp(
 
    assert(graph_valid_ancestors(scip, g));
    SCIPfreeRandom(scip, &randnumgen);
-
-   *fixed += fix;
 
    return SCIP_OKAY;
 }
