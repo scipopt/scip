@@ -705,19 +705,30 @@ SCIP_RETCODE exprIsSemicontinuous(
          int nchildvarexprs;
          SCIP_Bool issc;
 
+         if( SCIPisConsExprExprVar(child) )
+         {
+            /* save information on semicontinuity of child */
+            SCIP_CALL( varIsSemicontinuous(scip, SCIPgetConsExprExprVarVar(child), nlhdlrdata->scvars, NULL, NULL,
+                  &var_is_sc) );
+
+            /* since child is a variable, go on regardless of the value of var_is_sc */
+            continue;
+         }
+
          SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, nlhdlrexprdata->nvars) );
          SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, child, childvarexprs, &nchildvarexprs) );
 
          issc = TRUE;
 
-         /* all nonlinear variables of a sum on/off term should be semicontinuous */
+         /* all nonlinear terms of a sum should be semicontinuous */
          for( v = 0; v < nchildvarexprs; ++v )
          {
             var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
             SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
 
-            if( !(var_is_sc || SCIPisConsExprExprVar(child)) )
+            if( !var_is_sc )
             {
+               /* non-semicontinuous child which is (due to a previous check) not a var -> expr is non-semicontinuous */
                issc = FALSE;
                break;
             }
