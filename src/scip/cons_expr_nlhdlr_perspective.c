@@ -695,6 +695,9 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
+      /* sums are treated separately because if there are variables that are non-semicontinuous but
+       * appear only linearly, we still want to apply perspective to expr
+       */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
       {
          SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
