@@ -25,6 +25,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,7 +131,10 @@ SCIP_RETCODE reduce_simple(
                if( edgestate[e1] == EDGE_BLOCKED || Is_term(g->term[i]) )
                   continue;
                else
+               {
+                  SCIPdebugMessage("delete degree 1 node: %d \n", i);
                   graph_edge_del(scip, g, e1, TRUE);
+               }
             }
             else
             {
@@ -139,6 +144,7 @@ SCIP_RETCODE reduce_simple(
                   SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
                }
 
+               SCIPdebugMessage("contract degree 1 terminal: %d \n", i);
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
             }
             elimscount++;
@@ -173,6 +179,7 @@ SCIP_RETCODE reduce_simple(
                if( !Is_term(g->term[i]) )
                {
                   SCIP_Bool conflict;
+                  SCIPdebugMessage("replace degree 2 node: %d \n", i);
                   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode, &conflict) );
 
                   if( conflict)
@@ -186,6 +193,7 @@ SCIP_RETCODE reduce_simple(
 
                if( Is_term(g->term[i1]) && Is_term(g->term[i2]) )
                {
+                  SCIPdebugMessage("contract degree 2 terminal (with terminal neighbors): %d \n", i);
 
                   if( SCIPisLT(scip, g->cost[e1], g->cost[e2]) )
                   {
@@ -207,6 +215,8 @@ SCIP_RETCODE reduce_simple(
                }
                if( Is_term(g->term[i1]) && !Is_term(g->term[i2]) && SCIPisLE(scip, g->cost[e1], g->cost[e2]) )
                {
+                  SCIPdebugMessage("contract degree 2 terminal (with one terminal neighbor): %d \n", i);
+
                   *fixed += g->cost[e1];
 
                   SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
@@ -216,6 +226,8 @@ SCIP_RETCODE reduce_simple(
                }
                if( Is_term(g->term[i2]) && !Is_term(g->term[i1]) && SCIPisLE(scip, g->cost[e2], g->cost[e1]) )
                {
+                  SCIPdebugMessage("contract degree 2 terminal (with one terminal neighbor): %d \n", i);
+
                   *fixed += g->cost[e2];
 
                   SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
@@ -252,6 +264,8 @@ SCIP_RETCODE reduce_simple(
             }
             if( ett != UNKNOWN && SCIPisLE(scip, g->cost[ett], mincost) )
             {
+               SCIPdebugMessage("contract terminal into terminal: %d \n", i);
+
                *fixed += g->cost[ett];
 
                SCIP_CALL( graph_fixed_addEdge(scip, ett, g) );
