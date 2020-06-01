@@ -142,6 +142,30 @@ static void bea_save(
    }
 }
 
+/** gets node map */
+static
+void getOrgNodeToNodeMap(
+   const GRAPH* g,
+   int* orgToNewNode
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nodecount = 0;
+
+   for( int k = 0; k < nnodes; ++k )
+   {
+      if( g->grad[k] > 0 )
+      {
+         orgToNewNode[k] = nodecount;
+         nodecount++;
+      }
+      else
+      {
+         orgToNewNode[k] = -1;
+      }
+   }
+}
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Graph Save                                               ---*/
 /*--- Function : Write a graph to a file.                                 ---*/
@@ -381,12 +405,16 @@ void graph_writeStp(
    SCIP_Real    offset
    )
 {
-   int nnodesorg;
-   int nedgesorg;
+   const int nnodes = graph_get_nNodes(g);
+   int nnodes_curr;
+   int nedges_curr;
    int hopfactor;
+   int* orgToNewNode;
 
-   assert(g  != NULL);
    assert(fp != NULL);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &orgToNewNode, nnodes) );
+   getOrgNodeToNodeMap(g, orgToNewNode);
 
    fprintf(fp, "%8x STP File, STP Format Version %2d.%02d\n",
       STP_FILE_MAGIC, STP_FILE_VERSION_MAJOR, STP_FILE_VERSION_MINOR);
@@ -447,37 +475,40 @@ void graph_writeStp(
       fprintf(fp, "End\n\n");
    }
 
-   nnodesorg = g->knots;
-   nedgesorg = g->edges / 2;
+   graph_get_nVET(g, &nnodes_curr, &nedges_curr, NULL);
 
    if( graph_pc_isRootedPcMw(g) )
    {
       const int ndummyterms = g->terms - graph_pc_nFixedTerms(g);
       assert(ndummyterms >= 0);
 
-      nnodesorg -= ndummyterms;
-      nedgesorg -= ndummyterms * 2;
+      nnodes_curr -= ndummyterms;
+      nedges_curr -= ndummyterms * 2;
    }
 
    fprintf(fp, "Section Graph\n");
-   fprintf(fp, "Nodes %d\n", nnodesorg);
-   fprintf(fp, "Edges %d\n", nedgesorg);
+   fprintf(fp, "Nodes %d\n", nnodes_curr);
+   fprintf(fp, "Edges %d\n", nedges_curr / 2);
 
    for( int i = 0; i < g->edges; i += 2 )
    {
       if (g->ieat[i] != EAT_FREE)
       {
+         const int tail = g->tail[i];
+         const int head = g->head[i];
+         const int tail_curr = orgToNewNode[tail];
+         const int head_curr = orgToNewNode[head];
+
          if( graph_pc_isPcMw(g) )
          {
-            const int tail = g->tail[i];
-            const int head = g->head[i];
-
             assert(g->extended);
 
             if( graph_pc_knotIsDummyTerm(g, tail) || graph_pc_knotIsDummyTerm(g, head) )
                continue;
          }
 
+         assert(0 <= tail_curr && tail_curr < nnodes_curr);
+         assert(0 <= head_curr && head_curr < nnodes_curr);
          assert(g->oeat[i] != EAT_FREE);
 
          if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT || g->stp_type == STP_OARSMT || graph_pc_isPcMw(g) )
@@ -485,7 +516,7 @@ void graph_writeStp(
          else
             fprintf(fp, "AA ");
 
-         fprintf(fp, "%d %d ", g->tail[i] + 1, g->head[i] + 1);
+         fprintf(fp, "%d %d ", tail_curr + 1, head_curr + 1);
 
          if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT || g->stp_type == STP_OARSMT || graph_pc_isPcMw(g) )
             fprintf(fp, "%f\n", g->cost[i]);
@@ -499,30 +530,40 @@ void graph_writeStp(
    fprintf(fp, "Terminals %d\n", g->terms);
 
    if( g->stp_type == STP_RPCSPG )
-      fprintf(fp, "RootP %d\n", g->source + 1);
+   {
+      assert(0 <= orgToNewNode[g->source] && orgToNewNode[g->source] < nnodes_curr);
+      fprintf(fp, "RootP %d\n", orgToNewNode[g->source] + 1);
+   }
 
    for( int i = 0; i < g->knots; i++ )
    {
+      const int i_curr = orgToNewNode[i];
+
+      if( g->grad[i] == 0 )
+         continue;
+
+      assert(0 <= i_curr && i_curr < nnodes_curr);
+
       if( graph_pc_isPcMw(g) )
       {
          if( i == g->source )
             continue;
 
          if( Is_pseudoTerm(g->term[i]) )
-            fprintf(fp, "TP %d %f\n", i + 1, g->prize[i]);
+            fprintf(fp, "TP %d %f\n", i_curr + 1, g->prize[i]);
 
          if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
             continue;
 
          if( Is_term(g->term[i]) && g->stp_type == STP_RPCSPG )
          {
-            fprintf(fp, "TF %d\n", i + 1);
+            fprintf(fp, "TF %d\n", i_curr + 1);
             continue;
          }
       }
 
       if (Is_term(g->term[i]) )
-         fprintf(fp, "T %d\n", i + 1);
+         fprintf(fp, "T %d\n", i_curr + 1);
    }
    fprintf(fp, "End\n\n");
 
@@ -531,7 +572,7 @@ void graph_writeStp(
    {
       fprintf(fp, "Section Hop Constraint\n");
       fprintf(fp, "limit %d\n", g->hoplimit);
-      for( int e = 0; e < g->edges; e++ )
+      for( int e = 0; e < nedges_curr / 2; e++ )
       {
          hopfactor = 1;
          fprintf(fp, "HC %d %d\n", e + 1, hopfactor);
@@ -548,6 +589,8 @@ void graph_writeStp(
    }
 
    fprintf(fp, "EOF\n");
+
+   SCIPfreeBufferArray(scip, &orgToNewNode);
 }
 
 
