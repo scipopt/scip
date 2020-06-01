@@ -2243,6 +2243,10 @@ SCIP_RETCODE reduce_da(
 #ifdef EXT_WRITE
             {
                FILE *fp;
+
+               //char filename[SCIP_MAXSTRLEN];
+               //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
+
                fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/STATS/stpall_hash.txt", "a+");
                fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
                fclose(fp);

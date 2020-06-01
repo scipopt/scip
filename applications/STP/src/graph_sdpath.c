@@ -877,6 +877,14 @@ void sdCliqueStarUpdateSd(
          sd_final = distBaseToBase;
       }
 
+#if 0
+         if( EQ(sd_final, 6.0) )
+         {
+            sdCliqueStarGetRecomputedSd(sdprofit, g, nodes_pred, edge, nodes_dist, nodes_base);
+            printf("bases %d %d \n", nodes_base[prednode], nodes_base[newnode]);
+            printf("my sd_final=%f \n", sd_final);
+         }
+#endif
       assert(LE(sd_final, sdist));
       sdist = sd_final;
    }
@@ -1037,7 +1045,7 @@ void sdCliqueStarComputeSds(
 
          /* NOTE: need to make sure that we do not go over the center of the clique!
           * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
-         if( useProfit && m != k_predNode && k != centernode )
+         if( useProfit && m != k_predNode && k != centernode && m != centernode )
          {
             profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
             bias = MIN(gCost[e], profit);
