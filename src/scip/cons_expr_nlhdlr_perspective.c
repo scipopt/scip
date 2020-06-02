@@ -1143,13 +1143,14 @@ SCIP_RETCODE computeOffValues(
    return SCIP_OKAY;
 }
 
-/** analyse on/off bounds for: 1) tightening bounds in probing for indicator = 1, 2) fixing indicator / detecting
-  * cutoff if one or both states is infeasible 3) tightening local bounds if indicator is fixed
+/** analyse on/off bounds on a variable for: 1) tightening bounds in probing for indicator = 1,
+  * 2) fixing indicator / detecting cutoff if one or both states is infeasible,
+  * 3) tightening local bounds if indicator is fixed.
   *
-  * probinglb and probingub are set to SCIP_INVALID if bounds on var shouldn't be changed in probing
+  * probinglb and probingub are set to SCIP_INVALID if bounds on var shouldn't be changed in probing.
   */
 static
-SCIP_RETCODE analyseOnoffBounds(
+SCIP_RETCODE analyseVarOnoffBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
    SCIP_VAR*             var,                /**< variable */
@@ -1169,6 +1170,11 @@ SCIP_RETCODE analyseOnoffBounds(
    SCIP_Real loclb;
    SCIP_Real locub;
    SCIP_Bool bndchgsuccess;
+
+   assert(var != NULL);
+   assert(indicator != NULL);
+   assert(infeas != NULL);
+   assert(reduceddom != NULL);
 
    /* shouldn't be called if indicator is fixed to !indvalue */
    assert((indvalue && SCIPvarGetUbLocal(indicator) > 0.5) || (!indvalue && SCIPvarGetLbLocal(indicator) < 0.5));
@@ -1211,7 +1217,10 @@ SCIP_RETCODE analyseOnoffBounds(
       }
       else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
       {
-         /* if indicator is fixed to indvalue, sclb is valid for the current node */
+         /* indicator is fixed; due to a previous check, here it can only be fixed to indvalue;
+          * therefore, sclb is valid for the current node
+          */
+
          if( indvalue == 0 )
          {
             assert(sclb == scub);
@@ -1242,7 +1251,10 @@ SCIP_RETCODE analyseOnoffBounds(
       }
       else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
       {
-         /* if indicator is fixed to indvalue, scub is valid for the current node */
+         /* indicator is fixed; due to a previous check, here it can only be fixed to indvalue;
+          * therefore, scub is valid for the current node
+          */
+
          if( indvalue == 0 )
          {
             assert(sclb == scub);
@@ -1258,7 +1270,10 @@ SCIP_RETCODE analyseOnoffBounds(
       }
    }
 
-   /* if a bound change has been found and indvalue == TRUE, try to use the new bounds */
+   /* If a bound change has been found and indvalue == TRUE, try to use the new bounds.
+    * This is only done for indvalue == TRUE since this is where enfo asks other nlhdlrs to estimate,
+    * and at indicator == FALSE we already only have a single point
+    */
    if( doprobing && indvalue && (((scub - sclb) / (locub - loclb)) <= 1.0 - nlhdlrdata->mindomreduction ||
        (sclb >= 0.0 && loclb < 0.0) || (scub <= 0.0 && locub > 0.0)) )
    {
@@ -1274,11 +1289,18 @@ SCIP_RETCODE analyseOnoffBounds(
    return SCIP_OKAY;
 }
 
-/** prepare for probing by analysing on/off variable bounds, identifying fixings / infeasibility
- * and saving variable bounds to be applied in probing
+/** looks for bound tightenings to be applied either in the current node or in probing
+ *
+ * Loops through both possible values of indicator and calls analyseVarOnoffBounds. Might update the *doprobing
+ * flag by setting it to FALSE if:
+ * - indicator is fixed or
+ * - analyseVarOnoffBounds hasn't found a sufficient improvement at indicator==1.
+ *
+ * If *doprobing==TRUE, stores bounds suggested by analyseVarOnoffBounds in order to apply them in probing together
+ * with the fixing indicator=1.
  */
 static
-SCIP_RETCODE prepareProbing(
+SCIP_RETCODE analyseOnoffBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
@@ -1286,7 +1308,7 @@ SCIP_RETCODE prepareProbing(
    SCIP_VAR***           probingvars,        /**< array to store variables whose bounds will be changed in probing */
    SCIP_INTERVAL**       probingdoms,        /**< array to store bounds to be applied in probing */
    int*                  nprobingvars,       /**< pointer to store number of vars whose bounds will be changed in probing */
-   SCIP_Bool*            doprobing,          /**< pointer to store whether we want to do probing */
+   SCIP_Bool*            doprobing,          /**< pointer to the flag telling whether we want to do probing */
    SCIP_RESULT*          result              /**< pointer to store the result */
 )
 {
@@ -1298,6 +1320,11 @@ SCIP_RETCODE prepareProbing(
    SCIP_Real probingub;
    SCIP_Bool changed;
    SCIP_Bool reduceddom;
+
+   assert(indicator != NULL);
+   assert(nprobingvars != NULL);
+   assert(doprobing != NULL);
+   assert(result != NULL);
 
    changed = FALSE;
 
@@ -1313,7 +1340,7 @@ SCIP_RETCODE prepareProbing(
       for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
          /* nothing left to do if indicator is already fixed to !indvalue
-          * (checked in the inner loop since analyseOnoff bounds might fix the indicator)
+          * (checked in the inner loop since analyseVarOnoff bounds might fix the indicator)
           */
          if( (b == 1 && SCIPvarGetUbLocal(indicator) <= 0.5) || (b == 0 && SCIPvarGetLbLocal(indicator) >= 0.5) )
          {
@@ -1323,7 +1350,7 @@ SCIP_RETCODE prepareProbing(
 
          var = nlhdlrexprdata->vars[v];
 
-         SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, &probinglb,
+         SCIP_CALL( analyseVarOnoffBounds(scip, nlhdlrdata, var, indicator, b == 1, &infeas, &probinglb,
                &probingub, *doprobing, &reduceddom) );
 
          if( infeas )
@@ -1340,6 +1367,7 @@ SCIP_RETCODE prepareProbing(
          if( !(*doprobing) )
             continue;
 
+         /* if bounds to be applied in probing have been found, store them */
          if( probinglb != SCIP_INVALID )
          {
             assert(probingub != SCIP_INVALID);
@@ -1755,7 +1783,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       nprobingvars = 0;
       doprobingind = doprobing;
 
-      SCIP_CALL( prepareProbing(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
+      SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
             &nprobingvars, &doprobingind, result) );
 
       /* don't add perspective cuts for fixed indicators since there is no use for perspectivy */
