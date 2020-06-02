@@ -888,6 +888,19 @@ SCIP_RETCODE startProbing(
    SCIP_Real newlb;
    SCIP_Real newub;
 
+   if( *solcopy == sol )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, solcopy, NULL) );
+      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->vars[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[v])) );
+      }
+      for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->indicators[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->indicators[v])) );
+      }
+   }
+
    /* go into probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -907,19 +920,6 @@ SCIP_RETCODE startProbing(
       if( SCIPisLT(scip, newub, SCIPvarGetUbLocal(probingvars[v])) || (newub <= 0.0 && SCIPvarGetUbLocal(probingvars[v]) > 0.0) )
       {
          SCIP_CALL( SCIPchgVarUbProbing(scip, probingvars[v], newub) );
-      }
-   }
-
-   if( *solcopy == sol )
-   {
-      SCIP_CALL( SCIPcreateSol(scip, solcopy, NULL) );
-      for( v = 0; v < nlhdlrexprdata->nvars; ++v )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->vars[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[v])) );
-      }
-      for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, *solcopy, nlhdlrexprdata->indicators[v], SCIPgetSolVal(scip, sol, nlhdlrexprdata->indicators[v])) );
       }
    }
 
