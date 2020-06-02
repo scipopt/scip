@@ -1793,7 +1793,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          /* ask the nonlinear handler for an estimator */
          SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, enfos[j]->nlhdlrexprdata, solcopy,
                enfos[j]->auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2,
-               addbranchscores, &addedbranchscores2j) );
+               FALSE, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
