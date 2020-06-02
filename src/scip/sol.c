@@ -3597,7 +3597,9 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
       SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
       roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
 
-      assert(SCIPsetIsFeasEQ(set, SCIPsolGetVal(sol, set, stat, vars[i]), RatRoundReal(solval, roundmode)));
+      RatDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
+           vars[i]->name, RatRoundReal(solval, roundmode), solval);
+
       SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],
          RatRoundReal(solval, roundmode)) );
    }
