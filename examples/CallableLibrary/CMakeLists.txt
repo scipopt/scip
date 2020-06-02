@@ -6,9 +6,6 @@ include(CTest)
 find_package(SCIP REQUIRED)
 include_directories(${SCIP_INCLUDE_DIRS})
 
-add_executable(circle
-   src/circle.c)
-
 add_executable(gastrans
    src/gastrans.c)
 
@@ -27,14 +24,13 @@ if(NOT LIBM)
   set(LIBM "")
 endif()
 
-target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(spring ${SCIP_LIBRARIES})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans spring brachistochrone circlepacking )
+    add_dependencies( examples gastrans spring brachistochrone circlepacking )
 endif()
 
 #
@@ -62,7 +58,6 @@ macro(addbuildandtest target)
                         )
 endmacro(addbuildandtest)
 
-addbuildandtest(circle)
 addbuildandtest(gastrans)
 addbuildandtest(spring)
 addbuildandtest(brachistochrone)

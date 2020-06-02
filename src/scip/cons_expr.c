@@ -1747,16 +1747,14 @@ SCIP_RETCODE propConss(
          assert(consdata != NULL);
 
          /* skip deleted, non-active, or propagation-disabled constraints */
-         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
-          * expression from a reverse propagation in a previous propagation round
-          * (TODO: do we still need this since we have the tag's???
-          * this means that we propagate all constraints even if there was only very few boundchanges that related to only a few constraints)
-          * in other rounds, we skip already propagated constraints
+         /* skip already propagated constraints, i.e., constraints where no variable has changed, unless allexprs is set
+          * TODO ispropagated is only unset if an original variable has been tightened; if an auxiliary variable was tightened
+          * due to some mysterious ways, then this would not unset ispropagated at the moment
           */
-         if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
+         if( !allexprs && consdata->ispropagated )
             continue;
 
          /* update activities in expression and collect initial candidates for reverse propagation */
@@ -2353,6 +2351,9 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
+
+      /* make sure we include this constraint into the next propagation round, now that more structure may have been detected */
+      consdata->ispropagated = FALSE;
    }
 
    /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
@@ -7172,6 +7173,28 @@ SCIP_RETCODE enforceConstraint(
    assert(consdata != NULL);
 
    *success = FALSE;
+
+   if( inenforcement && !consdata->ispropagated )
+   {
+      /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of auxiliary variables,
+       * since some nlhdlr/exprhdlr may look at auxvar bounds or activities (TODO: nlhdlr will tell us soon whether they do and then we could skip).
+       * For now, do this only if called from enforcement, since updating auxvar bounds in separation doesn't seem to be right
+       * (it would be ok if the boundchange cuts off the current LP solution by a nice amount, but if not, we may just add a boundchange that
+       * doesn't change the dual bound much and could confuse the stalling check for how long to do separation).
+       */
+      SCIP_Bool infeasible;
+      int ntightenings;
+
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      /* if we tightened an auxvar bound, we better communicate that */
+      if( ntightenings > 0 )
+         *result = SCIP_REDUCEDDOM;
+   }
 
    for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {

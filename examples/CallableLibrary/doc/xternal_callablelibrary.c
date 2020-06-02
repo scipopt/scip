@@ -23,14 +23,13 @@
 /**@page CALLABLELIBRARY_MAIN Callable Library
  * @author   Stefan Vigerske
  *
- * This example illustrates how to setup nonlinear constraints when using SCIP as callable library.
- * The example implements several small models that use specific types of constraints.
+ * This example implements several small models to illustrate how to set up different types of constraints when using SCIP as callable library.
+ * At the moment, only examples that show how to set up nonlinear constraints are available:
  *
- * - spring.c shows how to setup general nonlinear and quadratic constraints
- * - gastrans.c shows how to setup absolute power constraints
- * - circle.c shows how to setup second-order-cone constraints
- * - brachistochrone.c shows how to setup nonlinear constraints
- * - circlepacking.c shows how to setup quadratic constraints
+ * - \ref brachistochrone.c
+ * - \ref circlepacking.c
+ * - \ref gastrans.c
+ * - \ref spring.c
  *
  * Installation
  * ------------

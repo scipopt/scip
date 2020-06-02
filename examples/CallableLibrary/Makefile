@@ -59,7 +59,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAMES	=	spring gastrans circle brachistochrone circlepacking
+MAINNAMES	=	spring gastrans brachistochrone circlepacking
 MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 
