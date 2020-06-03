@@ -27,7 +27,6 @@
 #include "scip/scip_sol.h"
 #include "scip/cons_expr_iterator.h"
 #include "struct_cons_expr.h"
-#include "scip/cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "perspective"
@@ -1613,6 +1612,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
 
    auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
    maxdiff = 0.0;
+   *auxvalue = auxvarvalue;
 
    for( e = 0; e < expr->nenfos; ++e )
    {
