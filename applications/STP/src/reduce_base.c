@@ -513,6 +513,17 @@ SCIP_RETCODE redLoopStp_inner(
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;
 
+#if 1
+        // printf("sdstarnelims=%d \n",sdstarnelims );
+
+        int  sdstarnelimsx = 0;
+
+         SCIP_CALL( reduce_sdEdgeCliqueStar(scip, 2* getWorkLimits_stp(g, inner_rounds, stp_sdstar), g, &sdstarnelimsx) );
+
+       //  printf("sdstarnelims2=%d \n",sdstarnelimsx );
+
+#endif
+
          reduceStatsPrint(fullreduce, "sdstar", sdstarnelims);
       }
 

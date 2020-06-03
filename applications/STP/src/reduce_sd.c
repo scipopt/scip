@@ -3327,7 +3327,7 @@ SCIP_RETCODE reduce_sdEdgeCliqueStar(
          if( i2 < i || !g->mark[i2] )
             continue;
 
-         sds = FARAWAY - 1.0;
+         sds = ecost;
          cliquenodes[0] = i;
          cliquenodes[1] = i2;
          SCIP_CALL( graph_sdComputeCliqueStar(scip, g, sdprofit, &cliquedata) );
@@ -3338,11 +3338,9 @@ SCIP_RETCODE reduce_sdEdgeCliqueStar(
          if( SCIPisLT(scip, sds, ecost) )
          {
 #ifdef SCIP_DEBUG
-              SCIPdebugMessage("SD biased deletes (sd=%f):  ", sds);
-              graph_edge_printInfo(g, e);
-  #endif
             printf("SD biased deletes (sd=%f):  ", sds);
             graph_edge_printInfo(g, e);
+#endif
 
             graph_edge_del(scip, g, e, TRUE);
             (*nelims)++;
