@@ -258,12 +258,9 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 
 
 /* reduce_util.c
+ *//* reduce_util.c
  */
 
-extern SCIP_RETCODE    reduce_sdneighborUpdate(SCIP*, const GRAPH*, SD*);
-extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
-extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
-extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
 extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);
@@ -290,6 +287,18 @@ extern void            reduce_starSetFailed(STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
+extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
+extern void             reduce_tpathsFree(SCIP*, TPATHS**);
+extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
+
+
+
+/* reduce_sdutil.c
+ */
+extern SCIP_RETCODE    reduce_sdneighborUpdate(SCIP*, const GRAPH*, SD*);
+extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
+extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
+extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
@@ -299,9 +308,6 @@ extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
 extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern SCIP_Real        reduce_sdgraphGetSd(int, int, SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
-extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
-extern void             reduce_tpathsFree(SCIP*, TPATHS**);
-extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiasedNeighbor(SCIP*, GRAPH*, SD**);
