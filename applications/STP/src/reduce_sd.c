@@ -3285,6 +3285,79 @@ SCIP_RETCODE reduce_sdWalk_csr(
 }
 
 
+/** SD test */
+SCIP_RETCODE reduce_sdEdgeCliqueStar(
+   SCIP*                 scip,
+   int                   edgelimit,
+   GRAPH*                g,
+   int*                  nelims
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   SDPROFIT* sdprofit;
+   SCIP_Real sds = FARAWAY;
+   int cliquenodes[2];
+   SDCLIQUE cliquedata = { .dijkdata = NULL, .cliquenodes = cliquenodes, .ncliquenodes = 2, .sds = &sds };
+
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &(cliquedata.dijkdata)) );
+   graph_dijkLimited_clean(g, (cliquedata.dijkdata));
+   cliquedata.dijkdata->edgelimit = edgelimit;
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &sdprofit) );
+
+   graph_mark(g);
+
+   SCIPdebugMessage("Starting SD biased... \n");
+
+   /* traverse all edges */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+      if( !g->mark[i] )
+         continue;
+
+      enext = g->outbeg[i];
+      while( enext != EAT_LAST )
+      {
+         const int e = enext;
+         const int i2 = g->head[e];
+         const SCIP_Real ecost = g->cost[e];
+
+         enext = g->oeat[e];
+
+         if( i2 < i || !g->mark[i2] )
+            continue;
+
+         sds = FARAWAY - 1.0;
+         cliquenodes[0] = i;
+         cliquenodes[1] = i2;
+         SCIP_CALL( graph_sdComputeCliqueStar(scip, g, sdprofit, &cliquedata) );
+
+         graph_dijkLimited_reset(g, cliquedata.dijkdata);
+
+         // todo LT
+         if( SCIPisLT(scip, sds, ecost) )
+         {
+#ifdef SCIP_DEBUG
+              SCIPdebugMessage("SD biased deletes (sd=%f):  ", sds);
+              graph_edge_printInfo(g, e);
+  #endif
+            printf("SD biased deletes (sd=%f):  ", sds);
+            graph_edge_printInfo(g, e);
+
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+
+            break;
+         }
+      }
+   }
+
+   reduce_sdprofitFree(scip, &sdprofit);
+   graph_dijkLimited_free(scip, &(cliquedata.dijkdata));
+
+   return SCIP_OKAY;
+}
+
 
 /** SD test for PcMw using limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalkTriangle(

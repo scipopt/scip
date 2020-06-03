@@ -1007,7 +1007,7 @@ SCIP_Real sdCliqueStarGetDistLimit(
    const int nsds = (ncliquenodes * (ncliquenodes - 1)) / 2;
    SCIP_Real limit = 0.0;
 
-   assert(nsds >= 2);
+   assert(nsds >= 1);
 
    for( int i = 0; i < nsds; i++ )
    {

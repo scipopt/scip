@@ -536,6 +536,48 @@ SCIP_RETCODE testSdStarBiasedDeletesEdge3(
 }
 
 
+/** tests that SD star clique test finds edge for deletion */
+static
+SCIP_RETCODE testSdCliqueStarDeletesEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 6;
+   int nedges = 14;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 3;
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.5); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.0); // 4
+   graph_edge_addBi(scip, graph, 2, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.8);
+   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+   graph_edge_addBi(scip, graph, 5, 0, 1.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( reduce_sdEdgeCliqueStar(scip, 20, graph, &nelims) );
+
+   /* biased SD should be 1.4 */
+   STPTEST_ASSERT(nelims == 1);
+   STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that SD biased test finds edge for deletion */
 static
 SCIP_RETCODE testSdBiasedDeletesEdge(
@@ -859,7 +901,7 @@ SCIP_RETCODE stptest_reduceSdBiased(
 )
 {
    SCIP_CALL( testSdBiasedDeletesEdge(scip) );
-
+   SCIP_CALL( testSdCliqueStarDeletesEdge(scip) );
 
    printf("reduce SD biased test: all ok \n");
 

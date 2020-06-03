@@ -185,8 +185,10 @@ extern SCIP_RETCODE    reduce_npv(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, 
 extern SCIP_RETCODE    reduce_chain2(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int);
 
 
-/* reduce_sd.c
+/*
+ * reduce_sd.c
  */
+extern SCIP_RETCODE    reduce_sdEdgeCliqueStar(SCIP*, int, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdImpLongEdge(SCIP*, const int*, GRAPH*, SDGRAPH*, int*);
 extern SCIP_RETCODE    reduce_ledge(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
