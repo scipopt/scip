@@ -99,7 +99,7 @@
 #define DEFAULT_ITLIMITFACTOR           10.0 /**< multiple of root node LP iterations used as total LP iteration
                                               *   limit for obbt (<= 0: no limit ) */
 #define DEFAULT_MINITLIMIT             5000L /**< minimum LP iteration limit */
-#define DEFAULT_ONLYNONCONVEXVARS      FALSE /**< only apply obbt on non-convex variables */
+#define DEFAULT_ONLYNONCONVEXVARS       TRUE /**< only apply obbt on non-convex variables */
 #define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
                                               *   the probing mode? */
 #define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during
