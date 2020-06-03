@@ -8387,8 +8387,8 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Enforce            : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
@@ -8396,8 +8396,8 @@ void printConshdlrStatistics(
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
-   SCIPinfoMessage(scip, file, "ConsExpr Presolve  : %10s\n", "CanonTime");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Presolve           : %10s\n", "CanonTime");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 }
