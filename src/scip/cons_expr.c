@@ -4724,6 +4724,10 @@ SCIP_RETCODE canonicalizeConstraints(
    /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !*infeasible )
    {
+      /* reset one of the number of detections counter to count only current presolving round */
+      for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
+
       SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
    }
 
@@ -8336,7 +8340,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "EnfoCalls", "#IntEval", "PropCalls", "Detects", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "Detects", "EnfoCalls", "#IntEval", "PropCalls", "DetectAll", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -8348,6 +8352,7 @@ void printNlhdlrStatistics(
          continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetectionslast);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nenfocalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
@@ -10172,6 +10177,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       nlhdlr->ndomreds = 0;
       nlhdlr->nbranchscores = 0;
       nlhdlr->ndetections = 0;
+      nlhdlr->ndetectionslast = 0;
 
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
@@ -10359,6 +10365,9 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       {
          SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
       }
+
+      /* reset one of the number of detections counter to count only current round */
+      nlhdlr->ndetectionslast = 0;
    }
 
    if( conshdlrdata->branchpscostweight > 0.0 )
@@ -16954,7 +16963,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
+   {
       ++nlhdlr->ndetections;
+      ++nlhdlr->ndetectionslast;
+   }
 
    return SCIP_OKAY;
 }
