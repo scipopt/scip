@@ -1053,12 +1053,14 @@ void sdCliqueStarComputeSds(
    const SCIP_Real distlimit = sdCliqueStarGetDistLimit(cliquedata, sds);
    const SCIP_Bool useProfit = (sdprofit != NULL);
    const int centernode = cliquedata->centernode;
+   int nchecks = 0;
+   const int limit = dijkdata->edgelimit;
 
    assert(g->knots > 1);
    assert(dheap->size > 1);
 
    /* until the heap is empty */
-   while( dheap->size > 0 )
+   while( dheap->size > 0 && nchecks <= limit )
    {
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_base = nodes_base[k];
@@ -1076,6 +1078,8 @@ void sdCliqueStarComputeSds(
          SCIP_Real bias = 0.0;
          SCIP_Real newdist = k_dist + gCost[e];
 
+         nchecks++;
+
          /* NOTE: need to make sure that we do not go over the center of the clique!
           * todo: Might be an issue if we pseudo-eliminate edges...probably need to block the edges as well */
          if( useProfit && k != centernode && k != k_predNode && m != k_predNode && m != centernode )
@@ -1088,6 +1092,7 @@ void sdCliqueStarComputeSds(
             assert(k != k_base || EQ(MIN(k_dist, bias), 0.0));
             assert(GE(newdist, 0.0));
          }
+
 
          if( GT(newdist, distlimit) )
             continue;
