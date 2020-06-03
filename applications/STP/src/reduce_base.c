@@ -513,7 +513,7 @@ SCIP_RETCODE redLoopStp_inner(
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;
 
-#if 1
+#if 0
         // printf("sdstarnelims=%d \n",sdstarnelims );
 
         int  sdstarnelimsx = 0;
