@@ -45,6 +45,9 @@ typedef struct special_distance_graph SDGRAPH;
 /** Steiner nodes to terminal paths */
 typedef struct nodes_to_terminal_paths TPATHS;
 
+/** SD neighbors */
+typedef struct special_distance_neighbors SDN;
+
 
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
@@ -52,6 +55,7 @@ typedef struct special_distance_storage
    SDPROFIT*             sdprofit;           /**< SD bias for nodes */
    SDGRAPH*              sdgraph;            /**< special distance graph on terminals      */
    TPATHS*               terminalpaths;      /**< terminal paths                 */
+   SDN*                  sdneighbors;        /**< neighbors */
    SCIP_Bool             isBiased;           /**< are the SDs biased? */
 } SD;
 
@@ -295,7 +299,10 @@ extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*,
 
 /* reduce_sdutil.c
  */
+extern SCIP_RETCODE    reduce_sdneighborInit(SCIP*, const GRAPH*, SDN**);
+extern void            reduce_sdneighborFree(SCIP*, SDN**);
 extern SCIP_RETCODE    reduce_sdneighborUpdate(SCIP*, const GRAPH*, SD*);
+extern const SCIP_Bool*    reduce_sdneighborGetBlocked(const SD*);
 extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
 extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);

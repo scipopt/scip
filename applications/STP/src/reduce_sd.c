@@ -1293,6 +1293,7 @@ SCIP_RETCODE reduce_sdInit(
 
    s->isBiased = FALSE;
    s->sdprofit = NULL;
+   s->sdneighbors = NULL;
    SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
@@ -1316,6 +1317,7 @@ SCIP_RETCODE reduce_sdInitBiased(
    s = *sd;
 
    s->isBiased = TRUE;
+   s->sdneighbors = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
    SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
@@ -1403,6 +1405,9 @@ void reduce_sdFree(
 
    if( s->sdprofit )
       reduce_sdprofitFree(scip, &(s->sdprofit));
+
+   if( s->sdneighbors )
+      reduce_sdneighborFree(scip, &(s->sdneighbors));
 
    SCIPfreeMemory(scip, sd);
 }
