@@ -552,8 +552,8 @@ SCIP_Real tpathsGetDistNew(
 
 
 /** allocates TPATHS data */
-static
-SCIP_RETCODE tpathsBuild(
+static inline
+void tpathsBuild(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph */
    TPATHS*               tpaths              /**< the terminal paths */
@@ -561,9 +561,21 @@ SCIP_RETCODE tpathsBuild(
 {
    assert(STP_TPATHS_NTERMBASES == 4);
 
-   graph_get4nextTermPaths(g, g->cost, g->cost, tpaths->termpaths, tpaths->termbases, tpaths->state);
+   graph_tpathsSetAll4(g, g->cost, g->cost, NULL, tpaths);
+}
 
-   return SCIP_OKAY;
+/** allocates TPATHS data */
+static inline
+void tpathsBuildBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
+   GRAPH*                g,                  /**< graph */
+   TPATHS*               tpaths              /**< the terminal paths */
+)
+{
+   assert(STP_TPATHS_NTERMBASES == 4);
+
+   graph_tpathsSetAll4(g, g->cost, g->cost, sdprofit, tpaths);
 }
 
 
@@ -2263,7 +2275,7 @@ SCIP_RETCODE graph_tpathsInit(
    TPATHS**              tpaths              /**< the terminal paths */
 )
 {
-   assert(scip);
+   assert(scip && g);
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
@@ -2272,6 +2284,24 @@ SCIP_RETCODE graph_tpathsInit(
    return SCIP_OKAY;
 }
 
+
+/** initializes biased TPATHS structure */
+SCIP_RETCODE graph_tpathsInitBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   TPATHS**              tpaths              /**< the terminal paths */
+)
+{
+   assert(scip && g && sdprofit);
+   assert(STP_TPATHS_NTERMBASES == 4);
+
+   SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
+   SCIP_CALL( tpathsBuildBiased(scip, sdprofit, g, *tpaths) );
+
+   return SCIP_OKAY;
+}
 
 
 /** Computes next terminal to all non-terminal nodes.

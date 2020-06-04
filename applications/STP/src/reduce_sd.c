@@ -1319,7 +1319,7 @@ SCIP_RETCODE reduce_sdInitBiased(
    s->isBiased = TRUE;
    s->sdneighbors = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
-   SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( graph_tpathsInitBiased(scip, s->sdprofit, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 
