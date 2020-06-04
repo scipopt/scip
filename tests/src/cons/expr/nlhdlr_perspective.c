@@ -496,10 +496,13 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPsetSolVal(scip, sol, z_2, 0.5);
    SCIPsetSolVal(scip, sol, auxvar, 10);
 
+   SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &(expr->enfos[1]->auxvalue), sol) );
+   cr_expect_eq(expr->enfos[1]->auxvalue, 16.0);
+
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
-   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 16.0, FALSE, FALSE,
-         FALSE, FALSE, &result) );
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, expr->enfos[1]->auxvalue,
+         FALSE, FALSE, FALSE, FALSE, &result) );
    cr_expect_eq(result, SCIP_SEPARATED, "Expected result = %d, got %d", SCIP_SEPARATED, result);
    cr_assert(SCIPgetNCuts(scip) == 2);
 
