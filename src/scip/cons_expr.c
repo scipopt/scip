@@ -17201,8 +17201,10 @@ SCIP_RETCODE SCIPconsExprCutAndScore(
              * expr's auxvar
              * I don't think it makes sense to branch on that one (would it?)
              * it can also fail if everything is fixed
+             * or if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
              */
-            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
+            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
+                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0);
          }
       }
    }
