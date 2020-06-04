@@ -922,11 +922,11 @@ SCIP_Real sdGetSd(
    assert(sdgraph);
 
    /* get closest terminals of distance strictly smaller than 'sd' */
-   reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, termdist1, &nnterms1);
+   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, termdist1, &nnterms1);
    if( nnterms1 == 0 )
       return sd;
 
-   reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, i2, sd, neighbterms2, termdist2, &nnterms2);
+   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i2, sd, neighbterms2, termdist2, &nnterms2);
    if( nnterms2 == 0 )
       return sd;
 
@@ -1294,7 +1294,7 @@ SCIP_RETCODE reduce_sdInit(
    s->isBiased = FALSE;
    s->sdprofit = NULL;
    s->sdneighbors = NULL;
-   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 
@@ -1319,7 +1319,7 @@ SCIP_RETCODE reduce_sdInitBiased(
    s->isBiased = TRUE;
    s->sdneighbors = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
-   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 
@@ -1344,13 +1344,13 @@ SCIP_RETCODE reduce_sdInitBiasedNeighbor(
 #if 1
    s->isBiased = TRUE;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
-   SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+   SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 #else
    s->isBiased = FALSE;
      s->sdprofit = NULL;
-     SCIP_CALL( reduce_tpathsInit(scip, g, &(s->terminalpaths)) );
+     SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
      SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
      reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 #endif
@@ -1401,7 +1401,7 @@ void reduce_sdFree(
    assert(s);
 
    reduce_sdgraphFree(scip, &(s->sdgraph));
-   reduce_tpathsFree(scip, &(s->terminalpaths));
+   graph_tpathsFree(scip, &(s->terminalpaths));
 
    if( s->sdprofit )
       reduce_sdprofitFree(scip, &(s->sdprofit));
@@ -1536,7 +1536,7 @@ SCIP_RETCODE reduce_sd(
       return SCIP_OKAY;
 
    /* compute nearest four terminals to all non-terminals */
-   graph_get4nextTermsPaths(g, g->cost, g->cost, vnoi, vbase, state);
+   graph_get4nextTermPaths(g, g->cost, g->cost, vnoi, vbase, state);
 
    /* construct auxiliary graph to compute paths between terminals */
 
@@ -1972,7 +1972,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    /* compute nearest four terminals to each non-terminal */
-   graph_get4nextTermsPaths(g, g->cost, g->cost, vnoi, vbase, state);
+   graph_get4nextTermPaths(g, g->cost, g->cost, vnoi, vbase, state);
 
    /*
     * construct auxiliary graph to compute paths between terminals

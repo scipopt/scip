@@ -29,8 +29,6 @@
 #include "reduce.h"
 #include "portab.h"
 
-#define STP_TPATHS_NTERMBASES 4
-
 
 /** storage for edge on complete graph */
 typedef struct complete_edge
@@ -51,17 +49,6 @@ struct dynamic_complete_minimum_spanning_tree
 };
 
 
-/** Steiner nodes to terminal paths
- * NOTE: all arrays are of size STP_TPATHS_NTERMBASES * nnodes */
-struct nodes_to_terminal_paths
-{
-   PATH*                 termpaths;         /**< path data (leading to first, second, ... terminal) */
-   int*                  termbases;         /**< terminals to each non terminal */
-   int*                  state;             /**< array to mark the state of each node during calculation */
-   int                   nnodes;            /**< number of nodes of underlying graph */
-};
-
-
 /** see reduce.h */
 struct node_one_hop_star
 {
@@ -75,54 +62,6 @@ struct node_one_hop_star
    SCIP_Bool             allStarsChecked;   /**< have all stars been checked? */
 };
 
-
-
-/** allocates TPATHS data */
-static
-SCIP_RETCODE tpathsAlloc(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph */
-   TPATHS**              tpaths              /**< the terminal paths */
-)
-{
-
-   TPATHS* tp;
-   const int nnodes = graph_get_nNodes(g);
-   assert(nnodes >= 1);
-
-   SCIP_CALL( SCIPallocMemory(scip, tpaths) );
-
-   tp = *tpaths;
-   tp->nnodes = nnodes;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termpaths), nnodes * STP_TPATHS_NTERMBASES) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termbases), nnodes * STP_TPATHS_NTERMBASES) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->state), nnodes * STP_TPATHS_NTERMBASES) );
-
-   return SCIP_OKAY;
-}
-
-
-/** allocates TPATHS data */
-static
-SCIP_RETCODE tpathsBuild(
-   SCIP*                 scip,               /**< SCIP */
-   GRAPH*                g,                  /**< graph */
-   TPATHS*               tpaths              /**< the terminal paths */
-)
-{
-   int* heap;
-   const int nnodes = graph_get_nNodes(g);
-
-   assert(nnodes >= 1);
-   assert(STP_TPATHS_NTERMBASES == 4);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1)  );
-   graph_get4nextTermsPaths(g, g->cost, g->cost, tpaths->termpaths, tpaths->termbases, tpaths->state);
-   SCIPfreeBufferArray(scip, &heap);
-
-   return SCIP_OKAY;
-}
 
 /** recursive method for adding node to MST */
 static
@@ -1171,92 +1110,4 @@ void reduce_redcostdataFreeMembers(
    SCIPfreeMemoryArray(scip, &(redcostdata->nodeTo3TermsPaths));
    SCIPfreeMemoryArray(scip, &(redcostdata->rootToNodeDist));
    SCIPfreeMemoryArray(scip, &(redcostdata->redEdgeCost));
-}
-
-
-/** initializes TPATHS structure */
-SCIP_RETCODE reduce_tpathsInit(
-   SCIP*                 scip,               /**< SCIP */
-   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
-                                                  terrible design */
-   TPATHS**              tpaths              /**< the terminal paths */
-)
-{
-   assert(scip);
-   assert(STP_TPATHS_NTERMBASES == 4);
-
-   SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
-   SCIP_CALL( tpathsBuild(scip, g, *tpaths) );
-
-   return SCIP_OKAY;
-}
-
-
-/** frees TPATHS structure */
-void reduce_tpathsFree(
-   SCIP*                 scip,               /**< SCIP */
-   TPATHS**              tpaths              /**< the terminal paths */
-)
-{
-   TPATHS* tp;
-   assert(scip && tpaths);
-
-   tp = *tpaths;
-   assert(tp);
-
-   SCIPfreeMemoryArray(scip, &(tp->state));
-   SCIPfreeMemoryArray(scip, &(tp->termbases));
-   SCIPfreeMemoryArray(scip, &(tp->termpaths));
-
-   SCIPfreeMemory(scip, tpaths);
-}
-
-
-/** gets (up to) four close terminals to given node i */
-void reduce_tpathsGet4CloseTerms(
-   const GRAPH*          g,                  /**< graph */
-   const TPATHS*         tpaths,             /**< the terminal paths */
-   int                   node,               /**< node */
-   SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
-   int*                  closeterms,         /**< four close terminals */
-   SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
-   int*                  ncloseterms         /**< number of close terminals found */
-)
-{
-   const PATH* const termpaths = tpaths->termpaths;
-   const int* const termbases = tpaths->termbases;
-   const int nnodes = tpaths->nnodes;
-   int pos = node;
-   int nnterms = 0;
-
-   assert(closeterms && closeterms_dist && ncloseterms && g);
-   assert(4 <= STP_TPATHS_NTERMBASES);
-   assert(0 <= node && node < nnodes);
-   assert(nnodes == g->knots);
-   assert(GE(maxdist_strict, 0.0));
-
-   if( Is_term(g->term[node]))
-   {
-      *ncloseterms = 1;
-      closeterms[0] = node;
-      closeterms_dist[0] = 0.0;
-      return;
-   }
-
-   for( int k = 0; k < 4; k++ )
-   {
-      if( LT(termpaths[pos].dist, maxdist_strict) )
-      {
-         closeterms[nnterms] = termbases[pos];
-         closeterms_dist[nnterms++] = termpaths[pos].dist;
-      }
-      else
-      {
-         break;
-      }
-
-      pos += nnodes;
-   }
-
-   *ncloseterms = nnterms;
 }

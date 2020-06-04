@@ -814,7 +814,7 @@ SCIP_RETCODE sdneighborUpdate(
             const int neighbor = g->head[e];
            // const SCIP_Real ecost = g->cost[e];
 
-            reduce_tpathsGet4CloseTerms(g, sddata->terminalpaths, neighbor, FARAWAY, neighbterms1, termdist1, &nnterms1);
+            graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, neighbor, FARAWAY, neighbterms1, termdist1, &nnterms1);
 
             /* go over all close terminals of the neighbor */
             for( int k = 0; k < nnterms1; k++ )

@@ -194,14 +194,15 @@ typedef struct presolve_info
 } PRESOL;
 
 
-/* ONE segment of a path
- */
+/** ONE segment of a path */
 typedef struct shortest_path
 {
    SCIP_Real             dist;               /* Distance to the end of the path             */
    signed int            edge;               /* Incoming edge to go along                   */
 } PATH;
 
+/** Steiner nodes to terminal paths */
+typedef struct nodes_to_terminal_paths TPATHS;
 
 /** heap entry */
 typedef struct dijkstra_heap_entry
@@ -528,12 +529,20 @@ extern void   graph_add2ndTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_R
 extern void   graph_add3rdTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_add4thTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get3nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
-extern void   graph_get4nextTermsPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
+extern void   graph_get4nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
+extern SCIP_RETCODE     graph_tpathsInit(SCIP*, GRAPH*, TPATHS**);
+extern void             graph_tpathsFree(SCIP*, TPATHS**);
+extern void             graph_tpathsAdd2nd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsAdd3rd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsAdd4th(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsSetAll3(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsSetAll4(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
 
 
 /* graph_sdpath.c

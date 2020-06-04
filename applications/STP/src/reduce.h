@@ -42,9 +42,6 @@ typedef struct node_one_hop_star STAR;
 /** SD distance graph data */
 typedef struct special_distance_graph SDGRAPH;
 
-/** Steiner nodes to terminal paths */
-typedef struct nodes_to_terminal_paths TPATHS;
-
 /** SD neighbors */
 typedef struct special_distance_neighbors SDN;
 
@@ -293,10 +290,6 @@ extern void            reduce_starSetFailed(STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
 extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
 extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
-extern SCIP_RETCODE     reduce_tpathsInit(SCIP*, GRAPH*, TPATHS**);
-extern void             reduce_tpathsFree(SCIP*, TPATHS**);
-extern void             reduce_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
-
 
 
 /* reduce_sdutil.c

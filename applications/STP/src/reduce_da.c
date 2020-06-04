@@ -498,7 +498,7 @@ SCIP_RETCODE daInitializeDistances(
    }
    else
    {
-      graph_get4nextTermsPaths(g, costrev, costrev, vnoi, vbase, state);
+      graph_get4nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
       {
@@ -2633,7 +2633,7 @@ SCIP_RETCODE reduce_daSlackPrune(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram */
-   graph_get4nextTermsPaths(graph, costrev, costrev, vnoi, vbase, state);
+   graph_get4nextTermPaths(graph, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
    for( k = 0; k < nnodes; k++ )
