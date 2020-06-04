@@ -513,18 +513,26 @@ SCIP_Real tpathsGetDistNew(
    const SCIP_Real ecost = ((g->source == vbase[node]) ? cost[edge] : costrev[edge]);
 
 #ifndef NDEBUG
-   const int tail = g->tail[edge];
-   const int head = g->head[edge];
-   const int n = g->knots;
+   assert(node % g->knots == g->tail[edge]);
+   assert(nextnode % g->knots == g->head[edge]);
 
-   assert(node == tail || node == tail + n || node == tail + 2 * n || node == tail + 3 * n);
-   assert(nextnode == head || nextnode == head + n || nextnode == head + 2 * n || nextnode == head + 3 * n);
+   if( path[node].edge >= 0 )
+   {
+      assert(!Is_term(g->term[node % g->knots]));
+   }
+   else
+   {
+      assert(Is_term(g->term[node % g->knots]));
+   }
 #endif
 
-   if( sdprofit )
+   if( sdprofit && path[node].edge >= 0 )
    {
-      const int node_pred = (path[node].edge >= 0) ? g->tail[path[node].edge] : -1;
-      distnew = reduce_sdprofitGetBiasedDist(sdprofit, node, ecost, path[node].dist, nextnode, node_pred);
+      const int nnodes = graph_get_nNodes(g);
+      const int node_pred = g->tail[path[node].edge];
+
+      distnew = reduce_sdprofitGetBiasedDist(sdprofit, node % nnodes,
+            ecost, path[node].dist, nextnode % nnodes, node_pred);
    }
    else
    {
@@ -2328,13 +2336,16 @@ void graph_tpathsAdd1st(
          {
             SCIP_Real distnew;
 
-            if( withProfit )
+            if( withProfit && vbase[k] != k )
             {
-               const int k_pred = (path[k].edge >= 0) ? g->tail[path[k].edge] : -1;
+               int k_pred;
+               assert(path[k].edge >= 0);
+               k_pred = g->tail[path[k].edge];
                distnew = reduce_sdprofitGetBiasedDist(sdprofit, k, cost[e], k_dist, m, k_pred);
             }
             else
             {
+               assert(!withProfit || Is_term(g->term[k]));
                distnew = k_dist + cost[e];
             }
 
@@ -2408,13 +2419,14 @@ void graph_tpathsAdd2nd(
    while( nheapElems > 0 )
    {
       const int k2 = pathheapGetNearest(heap, state, &nheapElems, path);
-      assert(0 <= k2 - nnodes && k2 - nnodes < nnodes);
+      const int k = k2 - nnodes;
+      assert(0 <= k && k < nnodes);
 
       /* mark vertex k as removed from heap */
       state[k2] = UNKNOWN;
 
       /* iterate over all outgoing edges of vertex (ancestor of) k */
-      for( int e = g->outbeg[k2 - nnodes]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int head = g->head[e];
 
@@ -2505,13 +2517,14 @@ void graph_tpathsAdd3rd(
    {
       /* get the next (i.e. a nearest) vertex of the heap */
       const int k3 = pathheapGetNearest(heap, state, &nheapElems, path);
-      assert(0 <= k3 - dnnodes && k3 - dnnodes < nnodes);
+      const int k = k3 - dnnodes;
+      assert(0 <= k && k < nnodes);
 
       /* mark vertex k as removed from heap */
       state[k3] = UNKNOWN;
 
       /* iterate over all outgoing edges of vertex k */
-      for( int e = g->outbeg[k3 - dnnodes]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int head = g->head[e];
 
@@ -2604,13 +2617,14 @@ void graph_tpathsAdd4th(
    {
       /* get the next (i.e. a nearest) vertex of the heap */
       const int k4 = pathheapGetNearest(heap, state, &nHeapElems, path);
-      assert(0 <= k4 - tnnodes && k4 - tnnodes < nnodes);
+      const int k = k4 - tnnodes;
+      assert(0 <= k && k < nnodes);
 
       /* mark vertex k as removed from heap */
       state[k4] = UNKNOWN;
 
       /* iterate over all outgoing edges of vertex k */
-      for( int e = g->outbeg[k4 - tnnodes]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int head = g->head[e];
 
