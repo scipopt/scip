@@ -76,7 +76,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 #endif
 
    SCIP_Real*            exprvals0;          /**< 'off' values of the expression for each indicator variable */
-   SCIP_VAR**            vars;               /**< expression variables */
+   SCIP_VAR**            vars;               /**< expression variables (both original and auxiliary) */
    int                   nvars;              /**< total number of variables in the expression */
    int                   varssize;           /**< size of the vars array */
    SCIP_VAR**            indicators;         /**< all indicator variables for the expression */
@@ -1802,7 +1802,24 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( doprobingind )
       {
+#ifndef NDEBUG
+         SCIP_Real* solvals;
+         SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nlhdlrexprdata->nvars) );
+         for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+         {
+            solvals[v] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[v]);
+         }
+#endif
+
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
+
+#ifndef NDEBUG
+         for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+         {
+            assert(solvals[v] == SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]));
+         }
+         SCIPfreeBufferArray(scip, &solvals);
+#endif
       }
 
       /* use cuts from every suitable nlhdlr */
