@@ -63,6 +63,7 @@
 #include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_nlhdlr_quotient.h"
+#include "scip/cons_expr_nlhdlr_soc.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
@@ -4763,6 +4764,10 @@ SCIP_RETCODE canonicalizeConstraints(
    /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !*infeasible )
    {
+      /* reset one of the number of detections counter to count only current presolving round */
+      for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
+
       SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
    }
 
@@ -6881,6 +6886,10 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
+   else
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeed with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -8180,7 +8189,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "EnfoCalls", "#IntEval", "PropCalls", "Detects", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "Detects", "EnfoCalls", "#IntEval", "PropCalls", "DetectAll", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -8192,6 +8201,7 @@ void printNlhdlrStatistics(
          continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetectionslast);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nenfocalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
@@ -8227,8 +8237,8 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Enforce            : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
@@ -8236,8 +8246,8 @@ void printConshdlrStatistics(
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
-   SCIPinfoMessage(scip, file, "ConsExpr Presolve  : %10s\n", "CanonTime");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Presolve           : %10s\n", "CanonTime");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 }
@@ -10018,6 +10028,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       nlhdlr->ndomreds = 0;
       nlhdlr->nbranchscores = 0;
       nlhdlr->ndetections = 0;
+      nlhdlr->ndetectionslast = 0;
 
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
@@ -10206,6 +10217,9 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       {
          SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
       }
+
+      /* reset one of the number of detections counter to count only current round */
+      nlhdlr->ndetectionslast = 0;
    }
 
    if( conshdlrdata->branchpscostweight > 0.0 )
@@ -13390,6 +13404,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 /** prints structure of an expression a la Maple's dismantle */
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    )
 {
@@ -13414,42 +13429,42 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
             /* use depth of expression to align output */
-            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+            SCIPinfoMessage(scip, file, "%*s[%s]: ", nspaces, "", type);
 
             if( strcmp(type, "var") == 0 )
             {
                SCIP_VAR* var;
 
                var = SCIPgetConsExprExprVarVar(expr);
-               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+               SCIPinfoMessage(scip, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if(strcmp(type, "sum") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprSumConstant(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprSumConstant(expr));
             else if(strcmp(type, "prod") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprProductCoef(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprProductCoef(expr));
             else if(strcmp(type, "val") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
             else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprPowExponent(expr));
 
             /* print nl handlers associated to expr */
             if(expr->nenfos > 0 )
             {
                int i;
-               SCIPinfoMessage(scip, NULL, "   {");
+               SCIPinfoMessage(scip, file, "   {");
 
                for( i = 0; i < expr->nenfos - 1; ++i )
-                  SCIPinfoMessage(scip, NULL, "%s, ", expr->enfos[i]->nlhdlr->name);
+                  SCIPinfoMessage(scip, file, "%s, ", expr->enfos[i]->nlhdlr->name);
 
-               SCIPinfoMessage(scip, NULL, "%s}", expr->enfos[i]->nlhdlr->name);
+               SCIPinfoMessage(scip, file, "%s}", expr->enfos[i]->nlhdlr->name);
             }
 
             /* print aux var associated to expr */
             if( expr->auxvar != NULL )
-               SCIPinfoMessage(scip, NULL, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
+               SCIPinfoMessage(scip, file, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
                      SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar));
-            SCIPinfoMessage(scip, NULL, "\n");
+            SCIPinfoMessage(scip, file, "\n");
 
             break;
          }
@@ -13464,8 +13479,8 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
             if( strcmp(type, "sum") == 0 )
             {
-               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+               SCIPinfoMessage(scip, file, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
             }
 
             break;
@@ -15588,6 +15603,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
 
+   /* include nonlinear handler for SOC constraints */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrSoc(scip, conshdlr) );
+
    /* include nonlinear handler for perspective reformulations */
    SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
 
@@ -16810,7 +16828,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
+   {
       ++nlhdlr->ndetections;
+      ++nlhdlr->ndetectionslast;
+   }
 
    return SCIP_OKAY;
 }

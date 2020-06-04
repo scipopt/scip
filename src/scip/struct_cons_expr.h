@@ -211,6 +211,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this nonlinear handler */
    SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint                  ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
+   SCIP_Longint                  ndetectionslast;/**< number of detect calls in which structure was detected (success returned by detect call) (in last round) */
    SCIP_Longint                  nbranchscores; /**< number of times, branching scores were added by this nonlinear handler */
    SCIP_Longint                  nreformulates; /**< number of times, an expression has been successfully reformulated by a nonlinear handler */
 
