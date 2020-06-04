@@ -8206,6 +8206,7 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->reformulatetime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->probingtime));
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -9914,6 +9915,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->reformulatetime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->probingtime) );
 
       SCIPfreeMemory(scip, &nlhdlr->name);
       SCIPfreeMemoryNull(scip, &nlhdlr->desc);
@@ -10022,6 +10024,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->reformulatetime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->probingtime) );
    }
 
    /* reset statistics in constraint handler */
@@ -16530,6 +16533,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->reformulatetime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->probingtime) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/expr/nlhdlr/%s/enabled", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",

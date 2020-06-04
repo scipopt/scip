@@ -219,6 +219,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_CLOCK*                   proptime;   /**< time used for reverse propagation */
    SCIP_CLOCK*                   intevaltime;/**< time used for interval evaluation */
    SCIP_CLOCK*                   reformulatetime;/**< time used for expression reformulation */
+   SCIP_CLOCK*                   probingtime;/**< time spent on probing (TODO delete this later) */
 
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata));  /**< callback to free data of handler (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata));  /**< callback to free expression specific data (can be NULL) */

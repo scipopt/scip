@@ -39,6 +39,7 @@
 #define DEFAULT_MAXPROPROUNDS     1     /**< maximal number of propagation rounds in probing */
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
 #define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
+#define DEFAULT_PROBINGONLYINSEPA TRUE  /**< whether to do probing only in separation loop */
 
 /*
  * Data structures
@@ -94,6 +95,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   maxproprounds;      /**< maximal number of propagation rounds in probing */
    SCIP_Real             mindomreduction;    /**< minimal relative reduction in a variable's domain for applying probing */
    SCIP_Real             minviolprobing;     /**< minimal violation w.r.t. auxiliary variables for applying probing */
+   SCIP_Bool             probingonlyinsepa;  /**< whether to do probing only in separation loop */
 };
 
 /*
@@ -1716,7 +1718,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    doprobing = FALSE;
    nenfos = 0;
 
-   /* find suitable nlhdlrs */
+   /* find suitable nlhdlrs and check if there is enough violation to do probing */
    for( j = 0; j < expr->nenfos; ++j )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr2;
@@ -1751,7 +1753,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
    if( (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
        (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) ||
-       SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 || addbranchscores )
+       SCIPinProbing(scip)  || SCIPgetSubscipDepth(scip) != 0 )
+      doprobing = FALSE;
+
+   if( nlhdlrdata->probingonlyinsepa && addbranchscores )
       doprobing = FALSE;
 
    nrowpreps = 0;
@@ -1811,7 +1816,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
 #endif
 
+         SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
+         SCIP_CALL( SCIPstopClock(scip, nlhdlr->probingtime) );
 
 #ifndef NDEBUG
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
@@ -1909,7 +1916,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( doprobingind )
       {
+         SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( SCIPendProbing(scip) );
+         SCIP_CALL( SCIPstopClock(scip, nlhdlr->probingtime) );
       }
 
       /* add all cuts found for indicator i */
@@ -2038,9 +2047,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
 
       /* go into probing */
       SCIP_CALL( SCIPstartProbing(scip) );
-
-      /* create a probing node */
-      SCIP_CALL( SCIPnewProbingNode(scip) );
 
       changed = FALSE;
 
@@ -2524,6 +2530,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/minviolprobing",
            "minimal violation w.r.t. auxiliary variables for applying probing",
            &nlhdlrdata->minviolprobing, FALSE, DEFAULT_MINVIOLPROBING, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/probingonlyinsepa",
+           "whether to do probing only in separation",
+           &nlhdlrdata->probingonlyinsepa, FALSE, DEFAULT_PROBINGONLYINSEPA, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
