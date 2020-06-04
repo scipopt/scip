@@ -118,7 +118,7 @@ SCIP_RETCODE tpathsBuild(
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1)  );
-   graph_get4nextTerms(g, g->cost, g->cost, tpaths->termpaths, tpaths->termbases, tpaths->state);
+   graph_get4nextTermsPaths(g, g->cost, g->cost, tpaths->termpaths, tpaths->termbases, tpaths->state);
    SCIPfreeBufferArray(scip, &heap);
 
    return SCIP_OKAY;

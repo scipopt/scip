@@ -1536,7 +1536,7 @@ SCIP_RETCODE reduce_sd(
       return SCIP_OKAY;
 
    /* compute nearest four terminals to all non-terminals */
-   graph_get4nextTerms(g, g->cost, g->cost, vnoi, vbase, state);
+   graph_get4nextTermsPaths(g, g->cost, g->cost, vnoi, vbase, state);
 
    /* construct auxiliary graph to compute paths between terminals */
 
@@ -1972,7 +1972,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    /* compute nearest four terminals to each non-terminal */
-   graph_get4nextTerms(g, g->cost, g->cost, vnoi, vbase, state);
+   graph_get4nextTermsPaths(g, g->cost, g->cost, vnoi, vbase, state);
 
    /*
     * construct auxiliary graph to compute paths between terminals

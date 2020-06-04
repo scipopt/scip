@@ -1860,8 +1860,8 @@ void graph_path_st_rpcmw(
 }
 
 
-/** 2th next terminal to all non terminal nodes */
-void graph_get2next(
+/** 2nd next terminal to all non terminal nodes */
+void graph_add2ndTermPaths(
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -1954,8 +1954,8 @@ void graph_get2next(
    return;
 }
 
-/* 3th next terminal to all non terminal nodes */
-void graph_get3next(
+/** 3rd next terminal to all non terminal nodes */
+void graph_add3rdTermPaths(
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -2061,7 +2061,7 @@ void graph_get3next(
 
 
 /* 4th next terminal to all non terminal nodes */
-void graph_get4next(
+void graph_add4thTermPaths(
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -2166,8 +2166,8 @@ void graph_get4next(
    return;
 }
 
-/** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
-void graph_get3nextTerms(
+/** gets non-terminal shortest paths to 4 closest terminal for each non-terminal */
+void graph_get3nextTermPaths(
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -2185,14 +2185,14 @@ void graph_get3nextTerms(
    if( !graph_pc_isPcMw(g) )
       graph_mark(g);
 
-   /* build voronoi diagram */
+   /* build Voronoi diagram */
    graph_voronoiTerms(g, cost, path3, vbase3, state3);
 
    /* get 2nd nearest terms */
-   graph_get2next(g, cost, costrev, path3, vbase3, state3);
+   graph_add2ndTermPaths(g, cost, costrev, path3, vbase3, state3);
 
-   /* get 3th nearest terms */
-   graph_get3next(g, cost, costrev, path3, vbase3, state3);
+   /* get 3rd nearest terms */
+   graph_add3rdTermPaths(g, cost, costrev, path3, vbase3, state3);
 
 #ifndef NDEBUG
    {
@@ -2211,8 +2211,8 @@ void graph_get3nextTerms(
    return;
 }
 
-/** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
-void graph_get4nextTerms(
+/** gets non-terminal shortest paths to 4 closest terminal for each non-terminal */
+void graph_get4nextTermsPaths(
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -2234,13 +2234,13 @@ void graph_get4nextTerms(
    graph_voronoiTerms(g, cost, path4, vbase4, state4);
 
    /* get 2nd nearest terms */
-   graph_get2next(g, cost, costrev, path4, vbase4, state4);
+   graph_add2ndTermPaths(g, cost, costrev, path4, vbase4, state4);
 
    /* get 3th nearest terms */
-   graph_get3next(g, cost, costrev, path4, vbase4, state4);
+   graph_add3rdTermPaths(g, cost, costrev, path4, vbase4, state4);
 
    /* get 4th nearest terms */
-   graph_get4next(g, cost, costrev, path4, vbase4, state4);
+   graph_add4thTermPaths(g, cost, costrev, path4, vbase4, state4);
 
 #ifndef NDEBUG
    {
