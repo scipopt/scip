@@ -2583,7 +2583,7 @@ SCIP_RETCODE reduce_ledge(
    SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
 
-   graph_voronoiTerms(g, g->cost, vnoi, vbase, state);
+   graph_add1stTermPaths(g, g->cost, vnoi, vbase, state);
 
    if( nedges >= (nterms - 1) * nterms )
       maxnedges = (nterms - 1) * nterms;

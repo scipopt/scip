@@ -494,7 +494,7 @@ SCIP_RETCODE daInitializeDistances(
    if( directed )
    {
       assert(!isRpcmw);
-      graph_voronoiTerms(g, costrev, vnoi, vbase, state);
+      graph_add1stTermPaths(g, costrev, vnoi, vbase, state);
    }
    else
    {
@@ -1775,7 +1775,7 @@ void computeTransVoronoi(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram wrt incoming arcs */
-   graph_voronoiTerms(transgraph, costrev, vnoi, vbase, transgraph->path_state);
+   graph_add1stTermPaths(transgraph, costrev, vnoi, vbase, transgraph->path_state);
 }
 
 
@@ -3236,7 +3236,7 @@ SCIP_RETCODE reduce_daPcMw(
          costrev[e] = FARAWAY;
 
       /* build Voronoi diagram */
-      graph_voronoiTerms(transgraph, costrev, vnoi, vbase, state);
+      graph_add1stTermPaths(transgraph, costrev, vnoi, vbase, state);
       graph_add2ndTermPaths(transgraph, costrev, costrev, vnoi, vbase, state);
 
       /* restore original graph */

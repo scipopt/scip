@@ -150,6 +150,35 @@ SCIP_Real reduce_sdprofitGetProfit(
 }
 
 
+/** gets biased distance */
+inline static
+SCIP_Real reduce_sdprofitGetBiasedDist(
+   const SDPROFIT*      sdprofit,           /**< the SD profit */
+   int                  node,               /**< node along which to get biased distance */
+   SCIP_Real            edgecost,           /**< edge cost */
+   SCIP_Real            nodedist,           /**< node distance */
+   int                  nonsource1,         /**< node that should not be a source */
+   int                  nonsource2          /**< node that should not be a source */
+)
+{
+   SCIP_Real distnew = nodedist + edgecost;
+   const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, node, nonsource1, nonsource2);
+   SCIP_Real bias = MIN(edgecost, profit);
+   if( nodedist < bias )
+      bias = nodedist;
+
+   distnew -= bias;
+
+   assert(GE(profit, 0.0));
+   assert(GE(bias, 0.0));
+   assert(GE(edgecost, 0.0));
+   assert(GE(nodedist, 0.0));
+   assert(GE(distnew, 0.0));
+
+   return distnew;
+}
+
+
 /* reduce.c
  */
 extern SCIP_RETCODE reduceLevel0(SCIP*, GRAPH*);

@@ -537,6 +537,7 @@ extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern SCIP_RETCODE     graph_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern void             graph_tpathsFree(SCIP*, TPATHS**);
+extern void             graph_tpathsAdd1st(const GRAPH*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd2nd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd3rd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd4th(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
@@ -569,7 +570,7 @@ extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, const S
 extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int* RESTRICT, UF* RESTRICT, PATH* RESTRICT);
 extern void   graph_voronoiWithRadiusMw(SCIP*, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   graph_voronoiMw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
-extern void   graph_voronoiTerms(const GRAPH*, const SCIP_Real*, PATH*, int*, int*);
+extern void   graph_add1stTermPaths(const GRAPH*, const SCIP_Real*, PATH*, int*, int*);
 extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_Bool*, PATH*);
 extern SCIP_RETCODE   graph_voronoiExtend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);

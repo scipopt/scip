@@ -31,7 +31,8 @@
 
 
 /* todo deprecated replace */
-inline static void correct(
+inline static
+void correct(
    int* RESTRICT heap,
    int* RESTRICT state,
    int* RESTRICT count,    /* pointer to store the number of elements on the heap */
@@ -71,7 +72,8 @@ inline static void correct(
 }
 
 /* todo deprecated, replace */
-inline static int nearest(
+inline static
+int nearest(
    int* RESTRICT heap,
    int* RESTRICT state,
    int* RESTRICT count,    /* pointer to store the number of elements on the heap */
@@ -413,77 +415,6 @@ void graph_voronoi(
    }
 }
 
-/** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */
-void graph_voronoiTerms(
-   const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   PATH*                 path,               /**< path data structure (leading to respective Voronoi base) */
-   int*                  vbase,              /**< Voronoi base to each vertex */
-   int*                  state               /**< array to mark the state of each node during calculation */
-   )
-{
-   int count = 0;
-   int nbases = 0;
-   const int nnodes = graph_get_nNodes(g);
-   int* RESTRICT heap = g->path_heap;
-
-   assert(path   != NULL);
-   assert(cost   != NULL);
-   assert(heap   != NULL);
-   assert(state   != NULL);
-
-   /* initialize */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      /* set the base of vertex i */
-      if( Is_term(g->term[i]) && g->mark[i] )
-      {
-         nbases++;
-         if( g->knots > 1 )
-            heap[++count] = i;
-         vbase[i] = i;
-         path[i].dist = 0.0;
-         path[i].edge = UNKNOWN;
-         state[i] = count;
-      }
-      else
-      {
-         vbase[i] = UNKNOWN;
-         path[i].dist = FARAWAY;
-         path[i].edge = UNKNOWN;
-         state[i]     = UNKNOWN;
-      }
-   }
-
-   if( nbases == 0 )
-      return;
-
-   if( nnodes > 1 )
-   {
-      /* until the heap is empty */
-      while( count > 0 )
-      {
-         /* get the next (i.e. a nearest) vertex of the heap */
-         const int k = nearest(heap, state, &count, path);
-
-         /* mark vertex k as scanned */
-         state[k] = CONNECT;
-
-         /* iterate over all outgoing edges of vertex k */
-         for( int i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
-         {
-            const int m = g->head[i];
-
-            /* check whether the path (to m) including k is shorter than the so far best known */
-            if( (state[m]) && path[m].dist > (path[k].dist + cost[i]) && g->mark[m] )
-            {
-               correct(heap, state, &count, path, m, k, i, cost[i]);
-               vbase[m] = vbase[k];
-            }
-         }
-      }
-   }
-}
 
 
 /** build a Voronoi region, w.r.t. shortest paths, for all positive vertices */

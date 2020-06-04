@@ -1551,7 +1551,7 @@ SCIP_RETCODE reduce_boundHopR(
       costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   graph_voronoiTerms(graph, costrev, vnoi, vbase, state);
+   graph_add1stTermPaths(graph, costrev, vnoi, vbase, state);
 
    /* traverse all node, try to eliminate first the node and then all incident edges */
    for( k = 0; k < nnodes; k++ )
@@ -1731,7 +1731,7 @@ SCIP_RETCODE reduce_boundHopRc(
       costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   graph_voronoiTerms(graph, costrev, vnoi, vbase, state);
+   graph_add1stTermPaths(graph, costrev, vnoi, vbase, state);
 
    if( SCIPisLT(scip, objval, 0.0) )
    {
