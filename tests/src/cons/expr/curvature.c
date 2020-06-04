@@ -228,3 +228,55 @@ Test(curvature, variable)
 {
    SCIP_CALL( checkCurvature("<x>[C]", "var", SCIP_EXPRCURV_LINEAR) );
 }
+
+/* check curvature in the constraint data and in the nonlinear rows */
+Test(curvature, cons_and_nlrows)
+{
+   const char* inputs[3] = {
+      "[expr] <c1>: (<y>[C] + <z>[C])^2 <= 12;",
+      "[expr] <c2>: -(<x>[C] + <y>[C])^2 + <x>[C] + <y>[C] + <z>[C] <= -2;",
+      "[expr] <c3>: <x>[C] * <y>[C] * <z>[C] - <x>[C] <= 1;"
+      };
+   SCIP_EXPRCURV targetcurvs[3] = {SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE, SCIP_EXPRCURV_UNKNOWN};
+   int ninputs = 3;
+   int i;
+
+   /* disable presolving */
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* create, add, and release expression constraints */
+   for( i = 0; i < ninputs; ++i )
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool success;
+
+      SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i],
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      cr_expect(success);
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* go to the solving stage; this should have triggered CONSINITSOL */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+   cr_assert(SCIPgetNConss(scip) == ninputs);
+   cr_assert(SCIPgetNNLPNlRows(scip) == ninputs);
+
+   for( i = 0; i < ninputs; ++i )
+   {
+      SCIP_CONS* cons;
+      SCIP_NLROW* nlrow;
+
+      cons = SCIPgetConss(scip)[i];
+      assert(cons != NULL);
+
+      /* check curvature that is stored in the constraint data */
+      cr_expect(SCIPgetCurvatureConsExpr(scip, cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
+         SCIPconsGetName(cons), targetcurvs[i], SCIPgetCurvatureConsExpr(scip, cons));
+
+      /* check curvature that is stored in the nonlinear row */
+      nlrow = SCIPgetNLPNlRows(scip)[i];
+      assert(nlrow != NULL);
+      cr_expect(SCIPnlrowGetCurvature(nlrow) == targetcurvs[i]);
+   }
+}

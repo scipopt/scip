@@ -240,6 +240,7 @@ SCIP_RETCODE freeSepaData(
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
+   sepadata->nbilinvars = 0;
 
    return SCIP_OKAY;
 }
@@ -1962,10 +1963,7 @@ SCIP_RETCODE computeRltCuts(
    SCIP_Real constside;
    SCIP_Real finalside;
    int i;
-   char cutname[SCIP_MAXSTRLEN];
-
-   /* create cut name */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d%s%s", "rlt_cut", SCIProwGetIndex(row), SCIPvarGetIndex(var), uselb ? "l" : "u", uselhs ? "l" : "r");
+   char name[SCIP_MAXSTRLEN];
 
    assert(sepadata != NULL);
    assert(cut != NULL);
@@ -2018,7 +2016,9 @@ SCIP_RETCODE computeRltCuts(
    *success = TRUE;
 
    /* create an empty row which we then fill with variables step by step */
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, cutname, -SCIPinfinity(scip), SCIPinfinity(scip),
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "rlt_cut_%s_%s_%s_%s_%d", SCIProwGetName(row), uselhs ? "lhs" : "rhs",
+                       SCIPvarGetName(var), uselb ? "lb" : "ub", SCIPgetNLPs(scip));
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip),
          TRUE, FALSE, FALSE) );
 
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
@@ -2097,6 +2097,7 @@ SCIP_RETCODE computeProjRltCut(
    SCIP_Real constside;
    SCIP_Real finalside;
    int i;
+   char name[SCIP_MAXSTRLEN];
 
    assert(sepadata != NULL);
    assert(cut != NULL);
@@ -2132,6 +2133,8 @@ SCIP_RETCODE computeProjRltCut(
    *success = TRUE;
 
    /* create an empty row which we then fill with variables step by step */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "rlt_proj_cut_%d_%s_%s_%s_%d", idx, uselhs ? "lhs" : "rhs",
+                       SCIPvarGetName(var), uselb ? "lb" : "ub", SCIPgetNLPs(scip));
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, "rlt_cut", -SCIPinfinity(scip), SCIPinfinity(scip),
          TRUE, FALSE, FALSE) );
 

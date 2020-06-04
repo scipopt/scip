@@ -569,6 +569,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_expr_nlhdlr_perspective.o \
 			scip/cons_expr_nlhdlr_quadratic.o \
 			scip/cons_expr_nlhdlr_quotient.o \
+			scip/cons_expr_nlhdlr_soc.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \

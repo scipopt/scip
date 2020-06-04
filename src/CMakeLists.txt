@@ -73,6 +73,7 @@ set(scipsources
     scip/cons_expr_nlhdlr_perspective.c
     scip/cons_expr_nlhdlr_quadratic.c
     scip/cons_expr_nlhdlr_quotient.c
+    scip/cons_expr_nlhdlr_soc.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c

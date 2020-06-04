@@ -194,10 +194,10 @@
 #include "lpi/lpi.h"
 #include "lpi/type_lpi.h"
 #include "nlpi/type_expr.h"
+#include "scip/cons_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_varbound.h"
 #include "scip/heur_indicator.h"
 #include "scip/heur_trysol.h"
@@ -7481,7 +7481,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
@@ -7661,7 +7661,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
