@@ -2279,7 +2279,7 @@ SCIP_RETCODE graph_tpathsInit(
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
-   SCIP_CALL( tpathsBuild(scip, g, *tpaths) );
+   tpathsBuild(scip, g, *tpaths);
 
    return SCIP_OKAY;
 }
@@ -2298,7 +2298,7 @@ SCIP_RETCODE graph_tpathsInitBiased(
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
-   SCIP_CALL( tpathsBuildBiased(scip, sdprofit, g, *tpaths) );
+   tpathsBuildBiased(scip, sdprofit, g, *tpaths);
 
    return SCIP_OKAY;
 }
