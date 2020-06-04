@@ -494,11 +494,11 @@ SCIP_RETCODE daInitializeDistances(
    if( directed )
    {
       assert(!isRpcmw);
-      graph_voronoiTerms(scip, g, costrev, vnoi, vbase, g->path_heap, state);
+      graph_voronoiTerms(g, costrev, vnoi, vbase, state);
    }
    else
    {
-      graph_get4nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
+      graph_get4nextTerms(g, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
       {
@@ -1775,7 +1775,7 @@ void computeTransVoronoi(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram wrt incoming arcs */
-   graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+   graph_voronoiTerms(transgraph, costrev, vnoi, vbase, transgraph->path_state);
 }
 
 
@@ -2633,11 +2633,13 @@ SCIP_RETCODE reduce_daSlackPrune(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram */
-   graph_get4nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+   graph_get4nextTerms(graph, costrev, costrev, vnoi, vbase, state);
 
+#ifndef NDEBUG
    for( k = 0; k < nnodes; k++ )
       if( !Is_term(graph->term[k]) )
          assert(vbase[k + nnodes] != root );
+#endif
 
    /* RPC? If yes, restore original graph */
    if( rpc )
@@ -3234,8 +3236,8 @@ SCIP_RETCODE reduce_daPcMw(
          costrev[e] = FARAWAY;
 
       /* build Voronoi diagram */
-      graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, state);
-      graph_get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
+      graph_voronoiTerms(transgraph, costrev, vnoi, vbase, state);
+      graph_get2next(transgraph, costrev, costrev, vnoi, vbase, state);
 
       /* restore original graph */
       graph_pc_2org(scip, graph);

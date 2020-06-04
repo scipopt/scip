@@ -415,20 +415,18 @@ void graph_voronoi(
 
 /** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */
 void graph_voronoiTerms(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    PATH*                 path,               /**< path data structure (leading to respective Voronoi base) */
    int*                  vbase,              /**< Voronoi base to each vertex */
-   int*                  heap,               /**< array representing a heap */
    int*                  state               /**< array to mark the state of each node during calculation */
    )
 {
    int count = 0;
    int nbases = 0;
    const int nnodes = graph_get_nNodes(g);
+   int* RESTRICT heap = g->path_heap;
 
-   assert(g      != NULL);
    assert(path   != NULL);
    assert(cost   != NULL);
    assert(heap   != NULL);

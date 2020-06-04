@@ -280,7 +280,7 @@ SCIP_RETCODE reduce_sl(
       for( int i = 0; i < nnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
-   graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, heap, state);
+   graph_voronoiTerms(g, g->cost, vnoi, vbase, state);
 
    SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
    for( int i = 0; i < nnodes; i++ )

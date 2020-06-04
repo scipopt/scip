@@ -324,7 +324,7 @@ SCIP_RETCODE getRedCostDistances(
    for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
       redcostrev[e] = FARAWAY;
 
-   graph_get3nextTerms(scip, g, redcostrev, redcostrev, vnoi, vbase, g->path_heap, state);
+   graph_get3nextTerms(g, redcostrev, redcostrev, vnoi, vbase, state);
 
    SCIPfreeBufferArray(scip, &redcostrev);
    SCIPfreeBufferArray(scip, &pathedge);

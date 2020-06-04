@@ -1473,7 +1473,6 @@ SCIP_RETCODE reduce_sd(
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            edgepreds,          /**< array to store edge predecessors of auxiliary graph */
    SCIP_Real*            mstsdist,           /**< array to store mst distances in auxiliary graph */
-   int*                  heap,               /**< array representing a heap */
    int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
    int*                  vbase,              /**< Voronoi base to each vertex */
    int*                  nodesid,            /**< array to map nodes in auxiliary graph to original ones */
@@ -1516,7 +1515,6 @@ SCIP_RETCODE reduce_sd(
 
    assert(g != NULL);
    assert(scip != NULL);
-   assert(heap != NULL);
    assert(vnoi != NULL);
    assert(state != NULL);
    assert(vbase != NULL);
@@ -1538,7 +1536,7 @@ SCIP_RETCODE reduce_sd(
       return SCIP_OKAY;
 
    /* compute nearest four terminals to all non-terminals */
-   graph_get4nextTerms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+   graph_get4nextTerms(g, g->cost, g->cost, vnoi, vbase, state);
 
    /* construct auxiliary graph to compute paths between terminals */
 
@@ -1974,7 +1972,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    /* compute nearest four terminals to each non-terminal */
-   graph_get4nextTerms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+   graph_get4nextTerms(g, g->cost, g->cost, vnoi, vbase, state);
 
    /*
     * construct auxiliary graph to compute paths between terminals
@@ -2585,7 +2583,7 @@ SCIP_RETCODE reduce_ledge(
    SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
 
-   graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, heap, state);
+   graph_voronoiTerms(g, g->cost, vnoi, vbase, state);
 
    if( nedges >= (nterms - 1) * nterms )
       maxnedges = (nterms - 1) * nterms;

@@ -1862,24 +1862,23 @@ void graph_path_st_rpcmw(
 
 /** 2th next terminal to all non terminal nodes */
 void graph_get2next(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
-   PATH*                 path,               /**< path data structure (leading to first and second nearest terminal) */
-   int*                  vbase,              /**< first and second nearest terminal to each non terminal */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state               /**< array to mark the state of each node during calculation */
+   PATH*                 path2,              /**< path data structure (leading to first and second nearest terminal) */
+   int*                  vbase2,             /**< first and second nearest terminal to each non terminal */
+   int*                  state2              /**< array to mark the state of each node during calculation */
    )
 {
    int count;
    const int nnodes = graph_get_nNodes(g);
+   int* RESTRICT heap = g->path_heap;
    const int root = g->source;
 
-   assert(path   != NULL);
+   assert(path2   != NULL);
    assert(cost   != NULL);
    assert(heap   != NULL);
-   assert(state   != NULL);
+   assert(state2   != NULL);
    assert(costrev   != NULL);
 
    count = 0;
@@ -1890,14 +1889,14 @@ void graph_get2next(
       /* copy of node i */
       const int k = i + nnodes;
 
-      vbase[k] = UNKNOWN;
-      state[k] = UNKNOWN;
-      path[k].edge = UNKNOWN;
-      path[k].dist = FARAWAY;
+      vbase2[k] = UNKNOWN;
+      state2[k] = UNKNOWN;
+      path2[k].edge = UNKNOWN;
+      path2[k].dist = FARAWAY;
    }
 
    for( int i = 0; i < nnodes; i++ )
-      state[i] = CONNECT;
+      state2[i] = CONNECT;
 
    /* scan original nodes */
    for( int i = 0; i < nnodes; i++ )
@@ -1910,11 +1909,11 @@ void graph_get2next(
          const int j = g->head[e];
          const int k = j + nnodes;
 
-         if( !Is_term(g->term[j]) && GT(path[k].dist, path[i].dist + ((root == vbase[i])? cost[e] : costrev[e])) &&
-            vbase[i] != vbase[j] && g->mark[j] )
+         if( !Is_term(g->term[j]) && GT(path2[k].dist, path2[i].dist + ((root == vbase2[i])? cost[e] : costrev[e])) &&
+            vbase2[i] != vbase2[j] && g->mark[j] )
          {
-            correct(heap, state, &count, path, k, i, e, ((root == vbase[i])? cost[e] : costrev[e]), FSP_MODE);
-            vbase[k] = vbase[i];
+            correct(heap, state2, &count, path2, k, i, e, ((root == vbase2[i])? cost[e] : costrev[e]), FSP_MODE);
+            vbase2[k] = vbase2[i];
          }
       }
    }
@@ -1925,10 +1924,10 @@ void graph_get2next(
       while( count > 0 )
       {
          /* get the next (i.e. a nearest) vertex of the heap */
-         const int k = nearest(heap, state, &count, path);
+         const int k = nearest(heap, state2, &count, path2);
 
          /* mark vertex k as removed from heap */
-         state[k] = UNKNOWN;
+         state2[k] = UNKNOWN;
 
          assert(k - nnodes >= 0);
          /* iterate over all outgoing edges of vertex k */
@@ -1943,10 +1942,10 @@ void graph_get2next(
             jc = j + nnodes;
 
             /* check whether the path (to j) including k is shorter than the so far best known */
-            if( vbase[j] != vbase[k] && GT(path[jc].dist, path[k].dist + ((root == vbase[k])? cost[e] : costrev[e])) )
+            if( vbase2[j] != vbase2[k] && GT(path2[jc].dist, path2[k].dist + ((root == vbase2[k])? cost[e] : costrev[e])) )
             {
-               correct(heap, state, &count, path, jc, k, e, (root == vbase[k])? cost[e] : costrev[e], FSP_MODE);
-               vbase[jc] = vbase[k];
+               correct(heap, state2, &count, path2, jc, k, e, (root == vbase2[k])? cost[e] : costrev[e], FSP_MODE);
+               vbase2[jc] = vbase2[k];
             }
          }
       }
@@ -1957,25 +1956,24 @@ void graph_get2next(
 
 /* 3th next terminal to all non terminal nodes */
 void graph_get3next(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
-   PATH*                 path,               /**< path data structure (leading to first, second and third nearest terminal) */
-   int*                  vbase,              /**< first, second and third nearest terminal to each non terminal */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state               /**< array to mark the state of each node during calculation */
+   PATH*                 path3,              /**< path data structure (leading to first, second and third nearest terminal) */
+   int*                  vbase3,             /**< first, second and third nearest terminal to each non terminal */
+   int*                  state3              /**< array to mark the state of each node during calculation */
    )
 {
    int count = 0;
    const int nnodes = graph_get_nNodes(g);
    const int dnnodes = 2 * nnodes;
    const int root = g->source;
+   int* RESTRICT heap = g->path_heap;
 
-   assert(path   != NULL);
+   assert(path3   != NULL);
    assert(cost   != NULL);
    assert(heap   != NULL);
-   assert(state   != NULL);
+   assert(state3   != NULL);
    assert(costrev   != NULL);
 
    /* initialize */
@@ -1983,16 +1981,16 @@ void graph_get3next(
    {
       /* copy of node i */
       const int k = i + dnnodes;
-      vbase[k] = UNKNOWN;
-      state[k] = UNKNOWN;
-      path[k].edge = UNKNOWN;
-      path[k].dist = FARAWAY;
+      vbase3[k] = UNKNOWN;
+      state3[k] = UNKNOWN;
+      path3[k].edge = UNKNOWN;
+      path3[k].dist = FARAWAY;
    }
 
    for( int i = 0; i < nnodes; i++ )
    {
-      state[i] = CONNECT;
-      state[i + nnodes] = CONNECT;
+      state3[i] = CONNECT;
+      state3[i + nnodes] = CONNECT;
    }
 
    /* scan original nodes */
@@ -2012,11 +2010,11 @@ void graph_get3next(
 
             for( int l = 0; l < 2; l++ )
             {
-               if( GT(path[k].dist, path[v].dist + ((root == vbase[v])? cost[e] : costrev[e])) &&
-                  vbase[v] != vbase[j] && vbase[v] != vbase[j + nnodes] )
+               if( GT(path3[k].dist, path3[v].dist + ((root == vbase3[v])? cost[e] : costrev[e])) &&
+                  vbase3[v] != vbase3[j] && vbase3[v] != vbase3[j + nnodes] )
                {
-                  correct(heap, state, &count, path, k, v, e, ((root == vbase[v])? cost[e] : costrev[e]), FSP_MODE);
-                  vbase[k] = vbase[v];
+                  correct(heap, state3, &count, path3, k, v, e, ((root == vbase3[v])? cost[e] : costrev[e]), FSP_MODE);
+                  vbase3[k] = vbase3[v];
                }
                v += nnodes;
             }
@@ -2030,10 +2028,10 @@ void graph_get3next(
       while( count > 0 )
       {
          /* get the next (i.e. a nearest) vertex of the heap */
-         const int k = nearest(heap, state, &count, path);
+         const int k = nearest(heap, state3, &count, path3);
 
          /* mark vertex k as removed from heap */
-         state[k] = UNKNOWN;
+         state3[k] = UNKNOWN;
 
          assert(k - dnnodes >= 0);
 
@@ -2049,11 +2047,11 @@ void graph_get3next(
             jc = j + dnnodes;
 
             /* check whether the path (to j) including k is shorter than the so far best known */
-            if( vbase[j] != vbase[k] && vbase[j + nnodes] != vbase[k]
-               && GT(path[jc].dist, path[k].dist + ((root == vbase[k])? cost[e] : costrev[e])) ) /*TODO(state[jc])??*/
+            if( vbase3[j] != vbase3[k] && vbase3[j + nnodes] != vbase3[k]
+               && GT(path3[jc].dist, path3[k].dist + ((root == vbase3[k])? cost[e] : costrev[e])) ) /*TODO(state[jc])??*/
             {
-               correct(heap, state, &count, path, jc, k, e, (root == vbase[k])? cost[e] : costrev[e], FSP_MODE);
-               vbase[jc] = vbase[k];
+               correct(heap, state3, &count, path3, jc, k, e, (root == vbase3[k])? cost[e] : costrev[e], FSP_MODE);
+               vbase3[jc] = vbase3[k];
             }
          }
       }
@@ -2064,13 +2062,11 @@ void graph_get3next(
 
 /* 4th next terminal to all non terminal nodes */
 void graph_get4next(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
-   PATH*                 path,               /**< path data struture (leading to first, second, third and fourth nearest terminal) */
+   PATH*                 path,               /**< path data structure (leading to first, second, third and fourth nearest terminal) */
    int*                  vbase,              /**< first, second, third, and fourth nearest terminal to each non terminal */
-   int*                  heap,               /**< array representing a heap */
    int*                  state               /**< array to mark the state of each node during calculation */
    )
 {
@@ -2079,6 +2075,7 @@ void graph_get4next(
    const int dnnodes = 2 * nnodes;
    const int tnnodes = 3 * nnodes;
    const int root = g->source;
+   int* RESTRICT heap = g->path_heap;
 
    assert(path   != NULL);
    assert(cost   != NULL);
@@ -2171,34 +2168,31 @@ void graph_get4next(
 
 /** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
 void graph_get3nextTerms(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
    PATH*                 path3,              /**< path data structure (leading to first, second and third nearest terminal) */
    int*                  vbase3,             /**< first, second and third nearest terminal to each non terminal */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state               /**< array to mark the state of each node during calculation */
+   int*                  state3              /**< array to mark the state of each node during calculation */
    )
 {
    assert(g      != NULL);
    assert(path3   != NULL);
    assert(cost   != NULL);
    assert(costrev   != NULL);
-   assert(heap   != NULL);
-   assert(state   != NULL);
+   assert(state3   != NULL);
 
    if( !graph_pc_isPcMw(g) )
       graph_mark(g);
 
    /* build voronoi diagram */
-   graph_voronoiTerms(scip, g, cost, path3, vbase3, heap, state);
+   graph_voronoiTerms(g, cost, path3, vbase3, state3);
 
    /* get 2nd nearest terms */
-   graph_get2next(scip, g, cost, costrev, path3, vbase3, heap, state);
+   graph_get2next(g, cost, costrev, path3, vbase3, state3);
 
    /* get 3th nearest terms */
-   graph_get3next(scip, g, cost, costrev, path3, vbase3, heap, state);
+   graph_get3next(g, cost, costrev, path3, vbase3, state3);
 
 #ifndef NDEBUG
    {
@@ -2219,37 +2213,34 @@ void graph_get3nextTerms(
 
 /** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
 void graph_get4nextTerms(
-   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
    PATH*                 path4,              /**< path data struture (leading to first, second, third and fouth nearest terminal) */
    int*                  vbase4,             /**< first, second and third nearest terminal to each non terminal */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state               /**< array to mark the state of each node during calculation */
+   int*                  state4              /**< array to mark the state of each node during calculation */
    )
 {
    assert(g         != NULL);
    assert(path4      != NULL);
    assert(cost      != NULL);
-   assert(heap      != NULL);
-   assert(state     != NULL);
+   assert(state4     != NULL);
    assert(costrev   != NULL);
 
    if( !graph_pc_isPcMw(g) )
       graph_mark(g);
 
    /* build voronoi diagram */
-   graph_voronoiTerms(scip, g, cost, path4, vbase4, heap, state);
+   graph_voronoiTerms(g, cost, path4, vbase4, state4);
 
    /* get 2nd nearest terms */
-   graph_get2next(scip, g, cost, costrev, path4, vbase4, heap, state);
+   graph_get2next(g, cost, costrev, path4, vbase4, state4);
 
    /* get 3th nearest terms */
-   graph_get3next(scip, g, cost, costrev, path4, vbase4, heap, state);
+   graph_get3next(g, cost, costrev, path4, vbase4, state4);
 
    /* get 4th nearest terms */
-   graph_get4next(scip, g, cost, costrev, path4, vbase4, heap, state);
+   graph_get4next(g, cost, costrev, path4, vbase4, state4);
 
 #ifndef NDEBUG
    {

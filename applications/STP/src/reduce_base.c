@@ -494,7 +494,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sd || extensive )
       {
-         SCIP_CALL( reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
+         SCIP_CALL( reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
                nodereplacing, NULL));
 
          if( sdnelims <= reductbound )
