@@ -114,6 +114,7 @@ CMAINOBJ	=	cmain.o \
 			stptest_extreduce.o \
 			stptest_extutils.o \
 			stptest_graph.o \
+			stptest_graphpath.o \
 			stptest_heurlocal.o \
 			stptest_heurtm.o \
 			stptest_misc.o \

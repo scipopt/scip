@@ -82,6 +82,11 @@ extern SCIP_RETCODE    stptest_graphSetUpPcExtended(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    stptest_graphSetUpRmwOrg(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    stptest_graphSetUpRmwExtended(SCIP*, GRAPH*, int*, int*);
 
+/* stptest_graphpath.c
+ */
+extern SCIP_RETCODE    stptest_tpaths(SCIP*);
+
+
 /* stptest_extreduce.c
  */
 extern SCIP_RETCODE    stptest_extreduce(SCIP*);

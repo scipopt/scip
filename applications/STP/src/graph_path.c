@@ -531,8 +531,15 @@ SCIP_Real tpathsGetDistNew(
       const int nnodes = graph_get_nNodes(g);
       const int node_pred = g->tail[path[node].edge];
 
-      distnew = reduce_sdprofitGetBiasedDist(sdprofit, node % nnodes,
-            ecost, path[node].dist, nextnode % nnodes, node_pred);
+      if( node_pred == nextnode % nnodes )
+      {
+         distnew = path[node].dist + ecost;
+      }
+      else
+      {
+         distnew = reduce_sdprofitGetBiasedDist(sdprofit, node % nnodes,
+               ecost, path[node].dist, nextnode % nnodes, node_pred);
+      }
    }
    else
    {
@@ -2657,30 +2664,22 @@ void graph_tpathsSetAll3(
    TPATHS*               tpaths              /**< storage for terminal paths */
 )
 {
-   PATH* RESTRICT path3 = tpaths->termpaths;
-   int* RESTRICT vbase3 = tpaths->termbases;
-   int* RESTRICT state3 = tpaths->state;
-
    assert(g      != NULL);
-   assert(path3   != NULL);
    assert(cost   != NULL);
    assert(costrev   != NULL);
-   assert(state3   != NULL);
+   assert(tpaths      != NULL);
 
    if( !graph_pc_isPcMw(g) )
       graph_mark(g);
 
-   /* build Voronoi diagram */
-   graph_add1stTermPaths(g, cost, path3, vbase3, state3);
-
-   /* get 2nd nearest terms */
-   graph_add2ndTermPaths(g, cost, costrev, path3, vbase3, state3);
-
-   /* get 3rd nearest terms */
-   graph_add3rdTermPaths(g, cost, costrev, path3, vbase3, state3);
+   graph_tpathsAdd1st(g, cost, sdprofit, tpaths);
+   graph_tpathsAdd2nd(g, cost, costrev, sdprofit, tpaths);
+   graph_tpathsAdd3rd(g, cost, costrev, sdprofit, tpaths);
 
 #ifndef NDEBUG
+   if( !sdprofit )
    {
+      const PATH* RESTRICT path3 = tpaths->termpaths;
       const int nnodes = graph_get_nNodes(g);
 
       for( int level = 0; level < 2; level++ )
@@ -2706,33 +2705,22 @@ void graph_tpathsSetAll4(
    TPATHS*               tpaths              /**< storage for terminal paths */
 )
 {
-   PATH* RESTRICT path4 = tpaths->termpaths;
-   int* RESTRICT vbase4 = tpaths->termbases;
-   int* RESTRICT state4 = tpaths->state;
-
    assert(g         != NULL);
-   assert(path4      != NULL);
    assert(cost      != NULL);
-   assert(state4     != NULL);
    assert(costrev   != NULL);
 
    if( !graph_pc_isPcMw(g) )
       graph_mark(g);
 
-   /* build voronoi diagram */
-   graph_add1stTermPaths(g, cost, path4, vbase4, state4);
-
-   /* get 2nd nearest terms */
-   graph_add2ndTermPaths(g, cost, costrev, path4, vbase4, state4);
-
-   /* get 3th nearest terms */
-   graph_add3rdTermPaths(g, cost, costrev, path4, vbase4, state4);
-
-   /* get 4th nearest terms */
-   graph_add4thTermPaths(g, cost, costrev, path4, vbase4, state4);
+   graph_tpathsAdd1st(g, cost, sdprofit, tpaths);
+   graph_tpathsAdd2nd(g, cost, costrev, sdprofit, tpaths);
+   graph_tpathsAdd3rd(g, cost, costrev, sdprofit, tpaths);
+   graph_tpathsAdd4th(g, cost, costrev, sdprofit, tpaths);
 
 #ifndef NDEBUG
+   if( !sdprofit )
    {
+      PATH* RESTRICT path4 = tpaths->termpaths;
       const int nnodes = graph_get_nNodes(g);
 
       for( int level = 0; level < 3; level++ )
