@@ -1495,7 +1495,6 @@ SCIP_RETCODE fixVarsRedbased(
    /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
-      int todo; // try advanced for MW and nodereplacing for PC and STP! Or call two times...
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
    else if( graph_pc_isMw(propgraph) )
@@ -1505,6 +1504,7 @@ SCIP_RETCODE fixVarsRedbased(
    }
    else
    {
+      // todo Call two times, and with node-replacing!
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduceLevel0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );

@@ -750,6 +750,7 @@ SCIP_RETCODE sdneighborUpdate(
 
 #if 0
    // delete
+   int ndeg2= 0;
    int* termn;
    {
    SCIP_CALL(SCIPallocBufferArray(scip, &termn, nnodes));
@@ -757,7 +758,6 @@ SCIP_RETCODE sdneighborUpdate(
       termn[i] = -1;
    }
 #endif
-
 
    for( int i = 0; i < nnodes; ++i )
    {
@@ -767,8 +767,6 @@ SCIP_RETCODE sdneighborUpdate(
    }
 
    assert(sdgraph);
-
-   int ndeg2= 0;
 
    for( int term = 0; term < nnodes; ++term )
    {
@@ -923,8 +921,7 @@ SCIP_RETCODE sdneighborUpdate(
    }
    printf("\n");
 
-   printf("ndeg2=%d \n", ndeg2);
-
+ //  printf("ndeg2=%d \n", ndeg2);
 
 
    printf("g->terms=%d nupdates=%d \n", g->terms, nupdates);
