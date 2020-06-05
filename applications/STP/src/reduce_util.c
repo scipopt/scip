@@ -63,6 +63,258 @@ struct node_one_hop_star
 };
 
 
+/** bottleneck link-cut tree node */
+typedef struct bottleneck_link_cut_node
+{
+   SCIP_Real             nodedist;           /**< distance to the node */
+   SCIP_Real             edgecost;           /**< edge cost */
+   SCIP_Real             edgebottleneck;     /**< restricted bottleneck of edge */
+   int                   head;               /**< head of node in tree */
+   int                   edge;               /**< edge of node (w.r.t original graph used for initialization) */
+} BLCNODE;
+
+
+/** see reduce.h */
+struct bottleneck_link_cut_tree
+{
+   BLCNODE*              mst;               /**< the actual tree, represented by its nodes */
+   int                   root;              /**< root of the tree */
+   int                   nnodes;            /**< number of nodes */
+};
+
+
+/*
+ * local methods
+ */
+
+
+/** allocates BLC tree memory */
+static
+SCIP_RETCODE blctreeAlloc(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< the graph */
+   BLCTREE**             blctree             /**< to be initialized */
+)
+{
+   int todo; // build on reduced nodes?
+   BLCTREE *tree;
+   const int nnodes = graph_get_nNodes(graph);
+
+   SCIP_CALL( SCIPallocMemory(scip, blctree) );
+
+   tree = *blctree;
+   tree->root = UNKNOWN;
+   tree->nnodes = nnodes;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tree->mst), nnodes) );
+
+   return SCIP_OKAY;
+}
+
+
+/** sets new root*/
+static inline
+void blctreeEvert(
+   const GRAPH*          graph,              /**< the graph */
+   int                   newroot,            /**< new root */
+   BLCTREE*              blctree             /**< tree */
+)
+{
+   BLCNODE* RESTRICT tree = blctree->mst;
+   int node;
+   int nextnode;
+   const int oldroot = blctree->root;
+   assert(tree);
+   assert(newroot != oldroot);
+   assert(0 <= newroot && newroot < blctree->nnodes);
+
+   node = newroot;
+   nextnode = tree[newroot].head;
+   while( node != oldroot )
+   {
+      const int head = nextnode;
+      const int edge = tree[node].edge;
+      assert(edge != UNKNOWN);
+      assert(head != UNKNOWN);
+      assert(graph->tail[edge] == node);
+
+      nextnode = tree[head].head;
+
+      /* NOTE: node distance should not be copied */
+      tree[head].edgecost = tree[node].edgecost;
+      tree[head].edgebottleneck = tree[node].edgebottleneck;
+      tree[head].head = node;
+      tree[head].edge = flipedge_Uint(edge);
+
+      node = head;
+   }
+
+   tree[newroot].edgecost = -FARAWAY;
+   tree[newroot].edgebottleneck = FARAWAY;
+   tree[newroot].head = UNKNOWN;
+   tree[newroot].edge = UNKNOWN;
+
+   blctree->root = newroot;
+}
+
+
+/** updates path to root */
+static inline
+void blctreeUpdateRootPath(
+   int                   startnode,          /**< node to start from */
+   SCIP_Real             bottleneck,         /**< bottleneck */
+   BLCTREE*              blctree             /**< tree */
+)
+{
+   BLCNODE* RESTRICT tree = blctree->mst;
+   SCIP_Real nodedist = 0.0;
+   int node = startnode;
+   const int root = blctree->root;
+
+   assert(0 <= startnode && startnode < blctree->nnodes);
+
+   while( node != root )
+   {
+      const int head = tree[node].head;
+      assert(head != UNKNOWN);
+
+      /* take the MIN */
+      if( tree[node].edgebottleneck > bottleneck )
+      {
+         tree[node].edgebottleneck = bottleneck;
+      }
+
+      /* take the MAX */
+      if( tree[node].nodedist < nodedist )
+      {
+         tree[node].nodedist = nodedist;
+      }
+
+      nodedist += tree[node].edgecost;
+      node = head;
+   }
+}
+
+
+/** computes bottlenecks */
+static
+void blctreeComputeBottlenecks(
+   const GRAPH*          graph,              /**< the graph */
+   BLCTREE*              blctree             /**< to be built */
+)
+{
+   BLCNODE* RESTRICT mst = blctree->mst;
+   const int nnodes = graph_get_nNodes(graph);
+   const int* nodes_isMarked = graph->mark;
+   const int blcroot = blctree->root;
+
+   assert(mst);
+   assert(nnodes == blctree->nnodes);
+   assert(0 <= blctree->root && blctree->root < nnodes);
+   assert(graph->grad[blctree->root] > 0);
+   assert(graph_isMarked(graph));
+
+   for( int node = 0; node < nnodes; node++ )
+   {
+      if( !nodes_isMarked[node] )
+      {
+         assert(graph_pc_isPc(graph) || graph->grad[node] == 0);
+         continue;
+      }
+
+      if( blcroot != node )
+      {
+         /* make i the new root */
+         blctreeEvert(graph, node, blctree);
+      }
+
+      for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+
+         if( nodes_isMarked[head] )
+         {
+            /* is the edge in the tree? */
+            if( mst[head].head == node )
+               continue;
+
+            assert(mst[head].edge != e || mst[head].edge != flipedge(e));
+
+            blctreeUpdateRootPath(head, graph->cost[e], blctree);
+         }
+      }
+   }
+}
+
+
+/** builds MST and sets BLC tree accordingly */
+static
+SCIP_RETCODE blctreeBuildMst(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                graph,              /**< the graph */
+   BLCTREE*              blctree             /**< to be built */
+)
+{
+   PATH* pmst;
+   BLCNODE* RESTRICT tree = blctree->mst;
+   const int nnodes = graph_get_nNodes(graph);
+   blctree->root = graph->source;
+
+   assert(tree);
+   assert(nnodes == blctree->nnodes);
+   assert(graph->grad[graph->source] > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &pmst, nnodes) );
+   graph_path_exec(scip, graph, MST_MODE, blctree->root, graph->cost, pmst);
+
+   /* fill the tree */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int mstedge = pmst[i].edge;
+      tree[i].nodedist = 0.0;
+      tree[i].edgebottleneck = FARAWAY;
+
+      if( mstedge >= 0 )
+      {
+         const int revedge = flipedge(mstedge);
+         tree[i].edge = revedge;
+         tree[i].edgecost = graph->cost[revedge];
+         tree[i].head = graph->head[revedge];
+
+         assert(i != blctree->root);
+         assert(graph->tail[tree[i].edge] == i);
+      }
+      else
+      {
+         assert(mstedge == UNKNOWN);
+         tree[i].edgecost = -FARAWAY;
+         tree[i].edge = UNKNOWN;
+         tree[i].head = UNKNOWN;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &pmst);
+
+   return SCIP_OKAY;
+}
+
+
+/** builds BLC tree */
+static
+SCIP_RETCODE blctreeBuild(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                graph,              /**< the graph */
+   BLCTREE*              blctree             /**< to be built */
+)
+{
+   graph_mark(graph);
+
+   SCIP_CALL( blctreeBuildMst(scip, graph, blctree) );
+   blctreeComputeBottlenecks(graph, blctree);
+
+   return SCIP_OKAY;
+}
+
+
 /** recursive method for adding node to MST */
 static
 void dcmstInsert(
@@ -518,6 +770,108 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 
    return SCIP_OKAY;
 }
+
+
+/** initializes BLC tree */
+SCIP_RETCODE reduce_blctreeInit(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                graph,              /**< the graph */
+   BLCTREE**             blctree             /**< to be initialized */
+)
+{
+   assert(scip && graph && blctree);
+
+   SCIP_CALL( blctreeAlloc(scip, graph, blctree) );
+   SCIP_CALL( blctreeBuild(scip, graph, *blctree) );
+
+   return SCIP_OKAY;
+}
+
+
+/** frees BLC tree */
+void reduce_blctreeFree(
+   SCIP*                 scip,               /**< SCIP */
+   BLCTREE**             blctree             /**< to be freed */
+)
+{
+   assert(scip && blctree);
+
+   SCIPfreeMemoryArray(scip, &((*blctree)->mst));
+   SCIPfreeMemory(scip, blctree);
+}
+
+
+/** gets BLC MST edges */
+void reduce_blctreeGetMstEdges(
+   const GRAPH*          graph,              /**< graph */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   int*                  edgelist            /**< of size nodes - 1 */
+)
+{
+   const BLCNODE* mst;
+   int nodecount;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(blctree && edgelist);
+   assert(nnodes == blctree->nnodes);
+
+   mst = blctree->mst;
+   nodecount = 0;
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      const int edge = mst[i].edge;
+
+      if( edge >= 0 )
+      {
+         edgelist[nodecount++] = edge;
+      }
+      else
+      {
+         assert(i == blctree->root);
+         assert(edge == UNKNOWN);
+      }
+   }
+
+   assert(nodecount == nnodes - 1);
+}
+
+
+/** gets BLC MST bottleneck costs */
+void reduce_blctreeGetMstBottlenecks(
+   const GRAPH*          graph,              /**< graph */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   SCIP_Real*            costlist            /**< of size nodes - 1 */
+)
+{
+   const BLCNODE* mst;
+   int nodecount;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(blctree && costlist);
+   assert(nnodes == blctree->nnodes);
+
+   mst = blctree->mst;
+   nodecount = 0;
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      const int edge = mst[i].edge;
+
+      if( edge >= 0 )
+      {
+         costlist[nodecount++] = mst[i].edgebottleneck;
+      }
+      else
+      {
+         assert(i == blctree->root);
+         assert(edge == UNKNOWN);
+      }
+   }
+
+   assert(nodecount == nnodes - 1);
+}
+
 
 /** initializes dynamic MST structure */
 SCIP_RETCODE reduce_dcmstInit(

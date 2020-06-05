@@ -664,74 +664,66 @@ void graph_path_exit(
 /*---------------------------------------------------------------------------*/
 void graph_path_exec(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          p,                  /**< graph data structure */
+   const GRAPH*          g,                  /**< graph data structure */
    const int             mode,               /**< shortest path (FSP_MODE) or minimum spanning tree (MST_MODE)? */
    int                   start,              /**< start vertex */
    const SCIP_Real*      cost,               /**< edge costs */
    PATH*                 path                /**< shortest paths data structure */
    )
 {
-   int* heap;
-   int* state;
-   int k;
-   const int nnodes = p->knots;
-   int count;
+   const int nnodes = graph_get_nNodes(g);
+   int* RESTRICT heap = g->path_heap;
+   int* RESTRICT state = g->path_state;
 
-   assert(scip      != NULL);
-   assert(p      != NULL);
-   assert(start  >= 0);
-   assert(start  <  p->knots);
-   assert((mode  == FSP_MODE) || (mode == MST_MODE));
-   assert(p->path_heap   != NULL);
-   assert(p->path_state  != NULL);
-   assert(path   != NULL);
-   assert(cost   != NULL);
-   assert(p->mark[start]);
-
-   /* no nodes?, return*/
-   if( nnodes == 0 )
-      return;
-
-   heap = p->path_heap;
-   state = p->path_state;
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(start >= 0);
+   assert(start < g->knots);
+   assert((mode == FSP_MODE) || (mode == MST_MODE));
+   assert(g->path_heap != NULL);
+   assert(g->path_state != NULL);
+   assert(path != NULL);
+   assert(cost != NULL);
+   assert(g->mark[start]);
 
    /* initialize */
    for( int i = 0; i < nnodes; i++ )
    {
       state[i]     = UNKNOWN;
-      path[i].dist = FARAWAY + 1;
+      path[i].dist = FARAWAY + 1.0;
       path[i].edge = UNKNOWN;
    }
-   /* add first node to heap */
-   k            = start;
-   path[k].dist = 0.0;
+
+   path[start].dist = 0.0;
 
    if( nnodes > 1 )
    {
-      count       = 1;
-      heap[count] = k;
-      state[k]    = count;
+      /* add first node to heap */
+      int nheapElems = 1;
+      heap[nheapElems] = start;
+      state[start] = nheapElems;
 
-      while( count > 0 )
+      while( nheapElems > 0 )
       {
          /* get nearest labeled node */
-         k = pathheapGetNearest(heap, state, &count, path);
+         const int k = pathheapGetNearest(heap, state, &nheapElems, path);
 
          /* mark as scanned */
          state[k] = CONNECT;
 
-         for( int i = p->outbeg[k]; i >= 0; i = p->oeat[i] )
+         for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
          {
-            const int m = p->head[i];
-
-            assert(i != EAT_LAST);
+            const int m = g->head[e];
+            assert(e != EAT_LAST);
 
             /* node not scanned and valid? */
             if( state[m] )
             {
                /* closer than previously and valid? */
-               if( path[m].dist > ((mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i])) && p->mark[m] )
-                  pathheapCorrect(heap, state, &count, path, m, k, i, cost[i], mode);
+               if( path[m].dist > ((mode == MST_MODE) ? cost[e] : (path[k].dist + cost[e])) && g->mark[m] )
+               {
+                  pathheapCorrect(heap, state, &nheapElems, path, m, k, e, cost[e], mode);
+               }
             }
          }
       }

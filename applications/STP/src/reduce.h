@@ -45,6 +45,9 @@ typedef struct special_distance_graph SDGRAPH;
 /** SD neighbors */
 typedef struct special_distance_neighbors SDN;
 
+/** link-cut tree for bottleneck operations */
+typedef struct bottleneck_link_cut_tree BLCTREE;
+
 
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
@@ -290,10 +293,15 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 
 
 /* reduce_util.c
- *//* reduce_util.c
  */
-
 extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_blctreeInit(SCIP*, GRAPH*, BLCTREE**);
+extern void            reduce_blctreeFree(SCIP*, BLCTREE**);
+extern void            reduce_blctreeGetMstEdges(const GRAPH*, const BLCTREE*, int*);
+extern void            reduce_blctreeGetMstBottlenecks(const GRAPH*, const BLCTREE*, SCIP_Real*);
+extern SCIP_RETCODE    reduce_blctreeRebuild(SCIP*, GRAPH*, BLCTREE*);
+extern SCIP_RETCODE    reduce_blctreeUpdateProfit(SCIP*, const BLCTREE*, SDPROFIT*);
+extern SCIP_RETCODE    reduce_blctreeContractEdges(SCIP*, const BLCTREE*, GRAPH*);
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);
 SCIP_Bool              reduce_dcmstMstIsValid(SCIP*, const CSR*);

@@ -100,6 +100,7 @@ extern SCIP_RETCODE    stptest_extmldists(SCIP*);
  */
 extern SCIP_RETCODE    stptest_dcmst(SCIP*);
 extern SCIP_RETCODE    stptest_reduceStar(SCIP*);
+extern SCIP_RETCODE    stptest_reduceBLCtree(SCIP*);
 
 /* stptest_reducesd.c
  */
