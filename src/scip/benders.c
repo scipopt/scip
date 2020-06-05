@@ -1374,9 +1374,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         /* TODO SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0) ); */
-         SCIPerrorMessage("Sorry, can't add coefficient for expr constraint\n");
-         return SCIP_ERROR;
+         SCIP_CALL( SCIPaddLinearTermConsExpr(scip, cons, -1.0, var) );
       }
 
       /* releasing the variable */
@@ -1400,9 +1398,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         /* TODO SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0) ); */
-         SCIPerrorMessage("Sorry, can't add coefficient for expr constraint\n");
-         return SCIP_ERROR;
+         SCIP_CALL( SCIPaddLinearTermConsExpr(scip, cons, 1.0, var) );
       }
 
       /* releasing the variable */

@@ -15978,6 +15978,71 @@ SCIP_Real SCIPgetRhsConsExpr(
    return consdata->rhs;
 }
 
+/** adds coef * var to expression constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPaddLinearTermConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* children[2];
+   SCIP_Real coefs[2];
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearTermConsExpr can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   /* we should not have collected additional data for it
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   /* create new expression = 1 * consdata->expr + coef * var */
+   children[0] = consdata->expr;
+   coefs[0] = 1.0;
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &children[1], var) );
+   coefs[1] = coef;
+
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &consdata->expr, 2, children, coefs, 0.0) );
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[1]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[0]) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** gets absolute violation of expression constraint
  *
  * This function evaluates the constraints in the given solution.

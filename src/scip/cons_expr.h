@@ -1452,6 +1452,18 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** adds coef * var to expression constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddLinearTermConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
 /** gets absolute violation of expression constraint
  *
  * This function evaluates the constraints in the given solution.
