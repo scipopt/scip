@@ -1426,8 +1426,10 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool checkstate = (edgestate != NULL);
    const SCIP_Real maxcost = reduce_sdgraphGetMaxCost(sdgraph);
+   int nelims_new = 0;
 
    assert(scip && nelims);
+   assert(*nelims >= 0);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1445,8 +1447,12 @@ SCIP_RETCODE reduce_sdImpLongEdge(
          {
             const int enext = g->oeat[e];
             graph_edge_del(scip, g, e, TRUE);
-            (*nelims)++;
+            nelims_new++;
 
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("LE implied deletes (max. MST cost=%f):  ", sd);
+            graph_edge_printInfo(g, e);
+#endif
             e = enext;
          }
          else
@@ -1457,10 +1463,12 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    }
 
    /* graph might have become disconnected */
-   if( *nelims > 0 )
+   if( nelims_new > 0 )
    {
       SCIP_CALL( reduceLevel0(scip, g) );
    }
+
+   *nelims += nelims_new;
 
    return SCIP_OKAY;
 }
@@ -1870,8 +1878,12 @@ SCIP_RETCODE reduce_sdBiased(
    const SCIP_Real maxmstcost = reduce_sdgraphGetMaxCost(sdistance->sdgraph);
 
    assert(LT(maxmstcost, FARAWAY));
+   assert(scip && nelims);
+   assert(*nelims >= 0);
 
    graph_mark(g);
+
+   SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance->sdgraph, nelims) );
 
    SCIPdebugMessage("Starting SD biased... \n");
 
@@ -1905,7 +1917,6 @@ SCIP_RETCODE reduce_sdBiased(
             SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
             graph_edge_printInfo(g, e);
 #endif
-
             graph_edge_del(scip, g, e, TRUE);
             (*nelims)++;
 
@@ -1913,6 +1924,8 @@ SCIP_RETCODE reduce_sdBiased(
          }
       }
    }
+
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
