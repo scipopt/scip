@@ -695,6 +695,77 @@ SCIP_RETCODE testBLCworksFor3Star(
 }
 
 
+/** tests that BLC works for a tree with five nodes */
+static
+SCIP_RETCODE testBLCworksFor5Tree(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   BLCTREE* blctree;
+   GRAPH* graph;
+   int nnodes = 5;
+   int nedges = 16;
+   int mstedges[4];
+   SCIP_Real bottlenecks[4];
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, STP_TERM);
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 3, STP_TERM);
+
+   /* the MST edges */
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.1); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.2); // 4
+   graph_edge_addBi(scip, graph, 2, 4, 1.3); // 6
+
+   /* additional edges */
+   graph_edge_addBi(scip, graph, 0, 4, 1.4);
+   graph_edge_addBi(scip, graph, 1, 2, 1.5);
+   graph_edge_addBi(scip, graph, 3, 4, 1.6);
+   graph_edge_addBi(scip, graph, 1, 3, 1.7);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_blctreeInit(scip, graph, &blctree) );
+
+   reduce_blctreeGetMstEdges(graph, blctree, mstedges);
+   reduce_blctreeGetMstBottlenecks(graph, blctree, bottlenecks);
+
+   for( int i = 0; i < 4; i++ )
+   {
+      const int edge = mstedges[i];
+      assert(0 <= edge && edge < nedges);
+
+      if( (edge / 2) * 2 == 0 )
+      {
+         STPTEST_ASSERT(EQ(bottlenecks[i], 1.5));
+      }
+      else if( (edge / 2) * 2 == 2 )
+      {
+         STPTEST_ASSERT(EQ(bottlenecks[i], 1.4));
+      }
+      else if( (edge / 2) * 2 == 4 )
+      {
+         STPTEST_ASSERT(EQ(bottlenecks[i], 1.6));
+      }
+      else
+      {
+         STPTEST_ASSERT((edge / 2) * 2 == 6);
+         STPTEST_ASSERT(EQ(bottlenecks[i], 1.4));
+      }
+   }
+
+   stptest_graphTearDown(scip, graph);
+   reduce_blctreeFree(scip, &blctree);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests DCMST */
 SCIP_RETCODE stptest_dcmst(
    SCIP*                 scip                /**< SCIP data structure */
@@ -732,6 +803,7 @@ SCIP_RETCODE stptest_reduceBLCtree(
 )
 {
    SCIP_CALL( testBLCworksFor3Star(scip) );
+   SCIP_CALL( testBLCworksFor5Tree(scip) );
 
    printf("reduce BLC tree test: all ok \n");
 
