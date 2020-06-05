@@ -39,6 +39,7 @@ uname -a                            > $ERRFILE
 function cleanup {
      mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
      mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+     mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
      # move a possible data file
      if [ -f "${DATFILE}" ] ;
      then
@@ -104,7 +105,8 @@ echo @05 $TIMELIMIT                 >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
-EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+EXECNAME=$SRUN${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}
 if test -e $TMPFILE
 then
     eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
