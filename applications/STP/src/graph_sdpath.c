@@ -425,8 +425,6 @@ void sdwalkCorrectHeap(
    int    c;
    int    j;
 
-   assert(GE(newcost, 0.0));
-
    pathdist[node] = newcost;
 
    if (state[node] == UNKNOWN)
