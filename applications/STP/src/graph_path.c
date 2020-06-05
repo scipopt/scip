@@ -515,21 +515,14 @@ SCIP_Real tpathsGetDistNew(
 #ifndef NDEBUG
    assert(node % g->knots == g->tail[edge]);
    assert(nextnode % g->knots == g->head[edge]);
-
-   if( path[node].edge >= 0 )
-   {
-      assert(!Is_term(g->term[node % g->knots]));
-   }
-   else
-   {
-      assert(Is_term(g->term[node % g->knots]));
-   }
 #endif
 
    if( sdprofit && path[node].edge >= 0 )
    {
       const int nnodes = graph_get_nNodes(g);
       const int node_pred = g->tail[path[node].edge];
+
+      assert(!Is_term(g->term[node % g->knots]));
 
       if( node_pred == nextnode % nnodes )
       {
