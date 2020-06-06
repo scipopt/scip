@@ -1337,6 +1337,19 @@ SCIP_Bool graph_nw_knotIsLeaf(
    return (e == EAT_LAST );
 }
 
+
+/** is node in range? */
+SCIP_Bool graph_knot_isInRange(
+   const GRAPH*          g,                  /**< the graph */
+   int                   k                   /**< the node */
+   )
+{
+   assert(g);
+
+   return (0 <= k && k < g->knots);
+}
+
+
 /** add a vertex */
 void graph_knot_add(
    GRAPH*                p,                  /**< the graph */
@@ -2153,6 +2166,18 @@ SCIP_Bool graph_edge_isBlocked(
       return TRUE;
 
    return FALSE;
+}
+
+
+/** is edge in range? */
+SCIP_Bool graph_edge_isInRange(
+   const GRAPH*          g,                  /**< the graph */
+   int                   e                   /**< the edge */
+   )
+{
+   assert(g);
+
+   return (0 <= e && e < g->edges);
 }
 
 
