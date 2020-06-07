@@ -727,6 +727,49 @@ void sdprofitBuild(
 }
 
 
+/** updates implied profits by using exact bottleneck distances */
+static inline
+void sdprofitUpdateNode(
+   const GRAPH*          g,                  /**< graph */
+   int                   node,               /**< the node to update */
+   int                   sourceterm,         /**< the source terminal */
+   SCIP_Real             edgecost,           /**< edge cost */
+   SCIP_Real             bdist,              /**< bottleneck distance */
+   SDPROFIT*             sdprofit            /**< the SD profit */
+)
+{
+   const SCIP_Real profit = bdist - edgecost;
+
+   assert(GT(profit, 0.0));
+   assert(GE(edgecost, 0.0) && LE(edgecost, FARAWAY));
+   assert(GE(bdist, 0.0) && LE(bdist, FARAWAY));
+   assert(Is_term(g->term[sourceterm]));
+
+#ifndef NDEBUG
+   if( sourceterm == sdprofit->nodes_biassource[node] )
+   {
+      assert(GE(profit, sdprofit->nodes_bias[node]));
+
+   }
+   else if( sourceterm == sdprofit->nodes_biassource2[node] )
+   {
+      assert(GE(profit, sdprofit->nodes_bias2[node]));
+   }
+#endif
+
+   if( GT(profit, sdprofit->nodes_bias[node]) )
+   {
+      sdprofit->nodes_bias[node] = profit;
+      sdprofit->nodes_biassource[node] = sourceterm;
+   }
+   else if( GT(profit, sdprofit->nodes_bias2[node]) )
+   {
+      sdprofit->nodes_bias2[node] = profit;
+      sdprofit->nodes_biassource2[node] = sourceterm;
+   }
+}
+
+
 /** updates SDs */
 static
 SCIP_RETCODE sdneighborUpdate(
@@ -1054,7 +1097,6 @@ void reduce_sdprofitPrintStats(
 }
 
 
-
 /** frees SD profit */
 void reduce_sdprofitFree(
    SCIP*                 scip,               /**< SCIP */
@@ -1073,6 +1115,58 @@ void reduce_sdprofitFree(
    SCIPfreeMemoryArray(scip, &(sdp->nodes_bias));
 
    SCIPfreeMemory(scip, sdprofit);
+}
+
+
+/** updates implied profits by using exact bottleneck distances */
+SCIP_RETCODE reduce_sdprofitUpdateFromBLC(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   SDPROFIT*             sdprofit            /**< the SD profit */
+)
+{
+   SCIP_Real* RESTRICT candidate_bottlenecks;
+   int* RESTRICT candidate_edges;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && g && blctree && sdprofit);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_bottlenecks, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_edges, nnodes) );
+   reduce_blctreeGetMstEdges(g, blctree, candidate_edges);
+   reduce_blctreeGetMstBottlenecks(g, blctree, candidate_bottlenecks);
+
+   for( int i = 0; i < nnodes - 1; ++i )
+   {
+      const int edge = candidate_edges[i];
+      const SCIP_Real bdist = candidate_bottlenecks[i];
+      const SCIP_Real edgecost = g->cost[edge];
+
+      assert(graph_edge_isInRange(g, edge));
+      assert(LE(edgecost, bdist));
+
+      if( LT(edgecost, bdist) )
+      {
+         const int tail = g->tail[edge];
+         const int head = g->head[edge];
+
+         if( Is_term(g->term[tail]) )
+         {
+            sdprofitUpdateNode(g, head, tail, edgecost, bdist, sdprofit);
+         }
+
+         if( Is_term(g->term[head]) )
+         {
+            sdprofitUpdateNode(g, tail, head, edgecost, bdist, sdprofit);
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &candidate_edges);
+   SCIPfreeBufferArray(scip, &candidate_bottlenecks);
+
+   return SCIP_OKAY;
 }
 
 

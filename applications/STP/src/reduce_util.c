@@ -119,29 +119,34 @@ void blctreeEvert(
    BLCTREE*              blctree             /**< tree */
 )
 {
+   BLCNODE blcnode_org;
    BLCNODE* RESTRICT tree = blctree->mst;
    int node;
-   int nextnode;
    const int oldroot = blctree->root;
+
    assert(tree);
    assert(newroot != oldroot);
    assert(0 <= newroot && newroot < blctree->nnodes);
+   assert(0 <= tree[newroot].head && newroot < blctree->nnodes);
 
    node = newroot;
-   nextnode = tree[newroot].head;
+   blcnode_org = tree[newroot];
    while( node != oldroot )
    {
-      const int head = nextnode;
-      const int edge = tree[node].edge;
+      const SCIP_Real edgecost = blcnode_org.edgecost;
+      const SCIP_Real edgebottleneck = blcnode_org.edgebottleneck;
+      const int head = blcnode_org.head;
+      const int edge = blcnode_org.edge;
+
       assert(edge != UNKNOWN);
       assert(head != UNKNOWN);
       assert(graph->tail[edge] == node);
 
-      nextnode = tree[head].head;
+      blcnode_org = tree[head];
 
       /* NOTE: node distance should not be copied */
-      tree[head].edgecost = tree[node].edgecost;
-      tree[head].edgebottleneck = tree[node].edgebottleneck;
+      tree[head].edgecost = edgecost;
+      tree[head].edgebottleneck = edgebottleneck;
       tree[head].head = node;
       tree[head].edge = flipedge_Uint(edge);
 
@@ -205,7 +210,6 @@ void blctreeComputeBottlenecks(
    BLCNODE* RESTRICT mst = blctree->mst;
    const int nnodes = graph_get_nNodes(graph);
    const int* nodes_isMarked = graph->mark;
-   const int blcroot = blctree->root;
 
    assert(mst);
    assert(nnodes == blctree->nnodes);
@@ -221,7 +225,7 @@ void blctreeComputeBottlenecks(
          continue;
       }
 
-      if( blcroot != node )
+      if( blctree->root != node )
       {
          /* make i the new root */
          blctreeEvert(graph, node, blctree);
@@ -233,8 +237,8 @@ void blctreeComputeBottlenecks(
 
          if( nodes_isMarked[head] )
          {
-            /* is the edge in the tree? */
-            if( mst[head].head == node )
+            /* is the edge in the tree or already checked? */
+            if( mst[head].head == node || head < node )
                continue;
 
             assert(mst[head].edge != e || mst[head].edge != flipedge(e));
@@ -783,6 +787,21 @@ SCIP_RETCODE reduce_blctreeInit(
 
    SCIP_CALL( blctreeAlloc(scip, graph, blctree) );
    SCIP_CALL( blctreeBuild(scip, graph, *blctree) );
+
+   return SCIP_OKAY;
+}
+
+
+/** rebuilds BLC tree (needs to be initializes) */
+SCIP_RETCODE reduce_blctreeRebuild(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                graph,              /**< the graph */
+   BLCTREE*              blctree             /**< to be initialized */
+)
+{
+   assert(scip && graph && blctree);
+
+   SCIP_CALL( blctreeBuild(scip, graph, blctree) );
 
    return SCIP_OKAY;
 }

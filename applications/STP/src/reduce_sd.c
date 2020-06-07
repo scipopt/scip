@@ -1293,6 +1293,7 @@ SCIP_RETCODE reduce_sdInit(
 
    s->isBiased = FALSE;
    s->sdprofit = NULL;
+   s->blctree = NULL;
    s->sdneighbors = NULL;
    SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
@@ -1318,7 +1319,37 @@ SCIP_RETCODE reduce_sdInitBiased(
 
    s->isBiased = TRUE;
    s->sdneighbors = NULL;
+   s->blctree = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
+   SCIP_CALL( graph_tpathsInitBiased(scip, s->sdprofit, g, &(s->terminalpaths)) );
+   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
+   reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** initializes fully biased SD structure */
+SCIP_RETCODE reduce_sdInitBiasedBottleneck(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   SD**                  sd                  /**< to initialize */
+)
+{
+   SD* s;
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, sd) );
+   s = *sd;
+
+   s->isBiased = TRUE;
+   s->sdneighbors = NULL;
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
+   SCIP_CALL( reduce_blctreeInit(scip, g, &(s->blctree)) );
+   SCIP_CALL( reduce_sdprofitUpdateFromBLC(scip, g, s->blctree, s->sdprofit) );
+
    SCIP_CALL( graph_tpathsInitBiased(scip, s->sdprofit, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
@@ -1343,6 +1374,7 @@ SCIP_RETCODE reduce_sdInitBiasedNeighbor(
 
 #if 1
    s->isBiased = TRUE;
+   s->blctree = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
    SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
@@ -1350,6 +1382,7 @@ SCIP_RETCODE reduce_sdInitBiasedNeighbor(
 #else
    s->isBiased = FALSE;
      s->sdprofit = NULL;
+     s->blctree = NULL;
      SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
      SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
      reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
@@ -1406,6 +1439,9 @@ void reduce_sdFree(
    if( s->sdprofit )
       reduce_sdprofitFree(scip, &(s->sdprofit));
 
+   if( s->blctree )
+      reduce_blctreeFree(scip, &(s->blctree));
+
    if( s->sdneighbors )
       reduce_sdneighborFree(scip, &(s->sdneighbors));
 
@@ -1450,7 +1486,7 @@ SCIP_RETCODE reduce_sdImpLongEdge(
             nelims_new++;
 
 #ifdef SCIP_DEBUG
-            SCIPdebugMessage("LE implied deletes (max. MST cost=%f):  ", sd);
+            SCIPdebugMessage("LE implied deletes (max. MST cost=%f):  ", maxcost);
             graph_edge_printInfo(g, e);
 #endif
             e = enext;

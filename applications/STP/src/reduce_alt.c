@@ -22,7 +22,8 @@
  * Maximum-Weight Connected Subgraph Problem" by Daniel Rehfeldt and Thorsten Koch,
  * or in "Reduction Techniques for the Prize-Collecting Steiner Tree Problem and the Maximum-Weight Connected Subgraph Problem"
  * by Daniel Rehfeldt et al.
- *
+ * Note that special distance tests as well as extending (alternative) reduction techniques can
+ * be found in separate files.
  *
  * A list of all interface methods can be found in reduce.h.
  *
@@ -2132,6 +2133,39 @@ SCIP_RETCODE reduce_nnp(
 
    assert(graph_valid(scip, g));
    SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
+}
+
+
+/** Combined implied-profit based tests:
+ *  First elimination tests are used, afterwards
+ *  edge contraction test are applied.
+ *  NOTE: The expensive part is to build the bottlneck distances,
+ *  thus we always apply all other tests. */
+SCIP_RETCODE reduce_impliedProfitBased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   SD* sdistance;
+
+   assert(scip && g && nelims);
+   assert(*nelims >= 0);
+
+   if( g->terms <= 2 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
+
+   SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
+
+   // todo also call triangle test with low limit?
+
+   // todo call edge contraction test!
+
+   reduce_sdFree(scip, &sdistance);
 
    return SCIP_OKAY;
 }

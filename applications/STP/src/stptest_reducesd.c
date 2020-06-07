@@ -877,6 +877,62 @@ SCIP_RETCODE testSdCliqueStarDeg4IsCorrect(
    return SCIP_OKAY;
 }
 
+
+/** tests that fully biased SD deletes edge  */
+static
+SCIP_RETCODE testSdBiasedBottleneckDeletesEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   int nnodes = 9;
+   int nedges = 20;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 2;
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 8, STP_TERM);
+
+
+   /* first cycle */
+   graph_edge_addBi(scip, graph, 0, 1, 1.2); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.0); // 4
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 4, 0, 1.0);
+
+   /* bottleneck path */
+   graph_edge_addBi(scip, graph, 5, 3, 2.0);
+   graph_edge_addBi(scip, graph, 5, 6, 2.0);
+   graph_edge_addBi(scip, graph, 6, 7, 2.85);
+   graph_edge_addBi(scip, graph, 7, 0, 2.0);
+
+   /* dummy edge to avoid long edge reduction */
+   graph_edge_addBi(scip, graph, 5, 8, 3.5);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
+
+   SCIP_CALL( reduce_sdBiased(scip, sddata, graph, &nelims) );
+
+   STPTEST_ASSERT(nelims == 1);
+   STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests Bdk methods */
 SCIP_RETCODE stptest_reduceBdk(
    SCIP*                 scip                /**< SCIP data structure */
@@ -936,6 +992,19 @@ SCIP_RETCODE stptest_reduceSdGetter(
    SCIP_CALL( testSdGraphDistsAreValid2(scip) );
 
    printf("reduce sd getter test: all ok \n");
+
+   return SCIP_OKAY;
+}
+
+
+/** tests implied profit based routine */
+SCIP_RETCODE stptest_reduceSdBiasedBottleneck(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( testSdBiasedBottleneckDeletesEdge(scip) );
+
+   printf("implied profit based reductions test: all ok \n");
 
    return SCIP_OKAY;
 }
