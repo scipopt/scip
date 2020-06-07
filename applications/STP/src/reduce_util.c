@@ -395,8 +395,6 @@ SCIP_RETCODE blctreeInitBottlenecks(
    BLCTREE*              blctree             /**< to be built */
 )
 {
-   graph_mark(graph);
-
    SCIP_CALL( blctreeBuildMst(scip, graph, blctree) );
    blctreeComputeBottlenecks(graph, blctree);
 
@@ -869,6 +867,8 @@ SCIP_RETCODE reduce_blctreeInit(
 )
 {
    assert(scip && graph && blctree);
+
+   graph_mark(graph);
 
    SCIP_CALL( blctreeInitPrimitives(scip, graph, blctree) );
    SCIP_CALL( blctreeInitBottlenecks(scip, graph, *blctree) );
