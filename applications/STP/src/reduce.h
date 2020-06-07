@@ -211,6 +211,7 @@ extern SCIP_RETCODE    reduce_nnp(SCIP*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_nv(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_nvAdv(SCIP*, const int*, GRAPH*, PATH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_sl(SCIP*, const int*, GRAPH*, PATH*, double*, int*, int*, int*, STP_Bool*, int*, int*);
+extern SCIP_RETCODE    reduce_nsvImplied(SCIP*, const SD*, GRAPH*, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_cnsAdv(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    reduce_npv(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_chain2(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int);

@@ -933,6 +933,46 @@ SCIP_RETCODE testSdBiasedBottleneckDeletesEdge(
 }
 
 
+/** tests that (implied) NSV contracts edge */
+static
+SCIP_RETCODE testNsvImpliedContractsEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   int nnodes = 4;
+   int nedges = 8;
+   int nelims = 0;
+   SCIP_Real fixed = 0.0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 0.9); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 2.1); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 3.0); // 4
+   graph_edge_addBi(scip, graph, 3, 0, 2.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
+
+   SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[1] == 0);
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 /** tests that fully biased SD with biased on terminal path deletes edge  */
 static
 SCIP_RETCODE testSdBiasedBottleneckTermPathDeletesEdge(
@@ -1023,7 +1063,6 @@ SCIP_RETCODE stptest_reduceSdCliqueStar(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-
    SCIP_CALL( testSdCliqueStarDeg3IsCorrect(scip) );
    SCIP_CALL( testSdCliqueStarDeg3IsCorrect2(scip) );
    SCIP_CALL( testSdCliqueStarDeg3AdjacencyIsCorrect(scip) );
@@ -1059,6 +1098,18 @@ SCIP_RETCODE stptest_reduceSdBiasedBottleneck(
    SCIP_CALL( testSdBiasedBottleneckDeletesEdge(scip) );
 
    printf("implied profit based reductions test: all ok \n");
+
+   return SCIP_OKAY;
+}
+
+/** tests NSV */
+SCIP_RETCODE stptest_reduceNsvImplied(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( testNsvImpliedContractsEdge(scip) );
+
+   printf("implied NSV reduction test: all ok \n");
 
    return SCIP_OKAY;
 }

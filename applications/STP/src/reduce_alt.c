@@ -55,6 +55,20 @@
 #define STP_RED_ANSMAXNEIGHBORS 25
 
 
+/** NSV test data */
+typedef struct nearest_special_distance_test_data
+{
+   const SD*             sdistance;
+   SCIP_Real* RESTRICT   candidate_bottlenecks;
+   int* RESTRICT         candidate_edges;
+   int                   ncandidates;
+} NSV;
+
+
+/*
+ * Local methods
+ */
+
 
 /** ans subtest */
 static inline
@@ -235,7 +249,165 @@ void ansProcessCandidate(
 }
 
 
-/* shortest link reduction */
+/** initializes NSV test data */
+static
+SCIP_RETCODE nsvInitData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SD*             sdistance,          /**< special distances storage */
+   const GRAPH*          g,                  /**< graph structure */
+   NSV*                  nsv                 /**< NSV */
+)
+{
+   const BLCTREE* const blctree = sdistance->blctree;
+   const SDPROFIT* const sdprofit = sdistance->sdprofit;
+   SCIP_Real* RESTRICT candidate_bottlenecks;
+   int* RESTRICT candidate_edges;
+   int ncandidates;
+
+   assert(blctree);
+   assert(sdprofit);
+
+   ncandidates = reduce_blctreeGetMstNedges(blctree);
+   assert(ncandidates > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_bottlenecks, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_edges, ncandidates) );
+   reduce_blctreeGetMstEdges(g, blctree, candidate_edges);
+   reduce_blctreeGetMstBottlenecks(g, blctree, candidate_bottlenecks);
+
+   nsv->sdistance = sdistance;
+   nsv->candidate_bottlenecks = candidate_bottlenecks;
+   nsv->candidate_edges = candidate_edges;
+   nsv->ncandidates = ncandidates;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees NSV test data */
+static
+void nsvFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NSV*                  nsv                 /**< NSV */
+)
+{
+   SCIPfreeBufferArray(scip, &(nsv->candidate_edges));
+   SCIPfreeBufferArray(scip, &(nsv->candidate_bottlenecks));
+}
+
+
+/** contract edge in NSV test */
+static inline
+SCIP_RETCODE nsvContractEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge,               /**< the edge */
+   int                   end_remain,         /**< survivor */
+   int                   end_killed,         /**< other node */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+#ifndef NDEBUG
+   SCIPdebugMessage("NSV implied contracting edge: ");
+   graph_edge_printInfo(g, edge);
+#endif
+
+   SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, edge, end_remain, end_killed) );
+   graph_knot_chg(g, end_remain, STP_TERM);
+
+   (*nelims)++;
+
+   return SCIP_OKAY;
+}
+
+/** executes actual NSV test */
+static
+SCIP_RETCODE nsvExec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NSV*                  nsv,                /**< NSV */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   SCIP_Real*            fixed,              /**< offset pointer */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   const SDPROFIT* const sdprofit = nsv->sdistance->sdprofit;
+   const int ncandidates = nsv->ncandidates;
+   const int* const candidate_edges = nsv->candidate_edges;
+   const SCIP_Real* const candidate_bottlenecks = nsv->candidate_bottlenecks;
+
+   assert(sdprofit);
+
+   for( int i = 0; i < ncandidates; ++i )
+   {
+      const int edge = candidate_edges[i];
+      const SCIP_Real edgecost = g->cost[edge];
+      const int tail = g->tail[edge];
+      const int head = g->head[edge];
+      const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, -1);
+      const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, -1);
+      SCIP_Real dist_tail;
+      SCIP_Real dist_head;
+
+      assert(graph_edge_isInRange(g, edge));
+      assert(LE(edgecost, candidate_bottlenecks[i]));
+
+      if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
+      {
+         SCIPdebugMessage("NSV contract implied profit end \n");
+         SCIP_CALL( nsvContractEdge(scip, edge, tail, head, g, solnode, nelims) );
+         continue;
+      }
+
+      if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
+      {
+         SCIPdebugMessage("NSV contract implied profit end \n");
+         SCIP_CALL( nsvContractEdge(scip, flipedge(edge), head, tail, g, solnode, nelims) );
+         continue;
+      }
+
+      dist_tail = FARAWAY;
+      dist_head = FARAWAY;
+
+      if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
+      {
+         SCIPdebugMessage("NSV contract default \n");
+         SCIP_CALL( nsvContractEdge(scip, flipedge(edge), head, tail, g, solnode, nelims) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Interface methods
+ */
+
+/** implied version of NSV test */
+SCIP_RETCODE reduce_nsvImplied(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SD*             sdistance,          /**< special distances storage */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   SCIP_Real*            fixed,              /**< offset pointer */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   NSV nsv;
+   assert(scip && sdistance && fixed && nelims);
+   assert(*nelims >= 0);
+
+   SCIP_CALL( nsvInitData(scip, sdistance, g, &nsv) );
+   SCIP_CALL( nsvExec(scip, &nsv, g, solnode, fixed, nelims) );
+   nsvFreeData(scip, &nsv);
+
+   return SCIP_OKAY;
+}
+
+
+/** shortest link reduction */
 SCIP_RETCODE reduce_sl(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */

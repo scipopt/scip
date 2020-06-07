@@ -109,6 +109,7 @@ extern SCIP_RETCODE    stptest_reduceBdk(SCIP*);
 extern SCIP_RETCODE    stptest_reduceSdStarBias(SCIP*);
 extern SCIP_RETCODE    stptest_reduceSdGetter(SCIP*);
 extern SCIP_RETCODE    stptest_reduceSdBiasedBottleneck(SCIP*);
+extern SCIP_RETCODE    stptest_reduceNsvImplied(SCIP*);
 extern SCIP_RETCODE    stptest_reduceSdCliqueStar(SCIP*);
 
 

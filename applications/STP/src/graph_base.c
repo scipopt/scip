@@ -1731,7 +1731,7 @@ SCIP_RETCODE graph_knot_contractFixed(
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                 or NULL */
    int                   edge,               /**< the edge */
-   int                   t,                  /**< tail node to be contracted */
+   int                   t,                  /**< tail node to be contracted (surviving node) */
    int                   s                   /**< head node to be contracted */
    )
 {
