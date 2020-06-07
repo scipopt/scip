@@ -2157,6 +2157,8 @@ SCIP_RETCODE reduce_impliedProfitBased(
    if( g->terms <= 2 )
       return SCIP_OKAY;
 
+   /* NOTE: necessary, because we need remaining graph to be connected */
+   SCIP_CALL( reduceLevel0(scip, g) );
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
    SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
