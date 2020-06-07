@@ -527,7 +527,6 @@ SCIP_RETCODE graph_voronoiWithDist(
    assert(g        != NULL);
    assert(path     != NULL);
    assert(cost     != NULL);
-   assert(state    != NULL);
    assert(distance != NULL);
 
    heap = g->path_heap;
