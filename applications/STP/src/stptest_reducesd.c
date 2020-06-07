@@ -1056,7 +1056,6 @@ SCIP_RETCODE stptest_reduceSdBiasedBottleneck(
 )
 {
    SCIP_CALL( testSdBiasedBottleneckTermPathDeletesEdge(scip) );
-
    SCIP_CALL( testSdBiasedBottleneckDeletesEdge(scip) );
 
    printf("implied profit based reductions test: all ok \n");
