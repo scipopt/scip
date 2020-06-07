@@ -501,19 +501,19 @@ void graph_voronoiMw(
 SCIP_RETCODE graph_voronoiWithDist(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            distance,           /**< array storing path from a terminal over shortest
                                                 incident edge to nearest terminal */
    int*                  minedgepred,        /**< shortest edge predecessor array */
    int*                  vbase,              /**< array containing Voronoi base to each node */
    int*                  minarc,             /**< array to mark whether an edge is one a path corresponding to 'distance' */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state,              /**< array indicating state of each vertex during calculation of Voronoi regions */
    int*                  distnode,           /**< array to store terminal corresponding to distance stored in distance array */
    PATH*                 path                /**< array containing Voronoi paths data */
    )
 {
    SCIP_Real new;
+   int* RESTRICT heap;
+   int* RESTRICT state;
    int e;
    int k;
    int m;
@@ -527,9 +527,13 @@ SCIP_RETCODE graph_voronoiWithDist(
    assert(g        != NULL);
    assert(path     != NULL);
    assert(cost     != NULL);
-   assert(heap     != NULL);
    assert(state    != NULL);
    assert(distance != NULL);
+
+   heap = g->path_heap;
+   state = g->path_state;
+   assert(heap);
+   assert(state);
 
    count = 0;
    nbases = 0;

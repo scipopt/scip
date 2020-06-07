@@ -576,7 +576,7 @@ extern void   graph_voronoiMw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*
 extern void   graph_add1stTermPaths(const GRAPH*, const SCIP_Real*, PATH*, int*, int*);
 extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_Bool*, PATH*);
 extern SCIP_RETCODE   graph_voronoiExtend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
-extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);
+extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, const SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
 extern SCIP_RETCODE   graph_voronoiWithRadius(SCIP*, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 
 

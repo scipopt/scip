@@ -180,7 +180,6 @@ SCIP_RETCODE nvreduce_sl(
    SCIP_Real*            nodearrreal,
    SCIP_Real*            fixed,
    int*                  edgearrint,
-   int*                  heap,
    int*                  state,
    int*                  vbase,
    int*                  neighb,
@@ -198,7 +197,6 @@ SCIP_RETCODE nvreduce_sl(
    int totalelims;
 
    assert(g != NULL);
-   assert(heap != NULL);
    assert(state != NULL);
    assert(vbase != NULL);
    assert(vnoi != NULL);
@@ -215,13 +213,13 @@ SCIP_RETCODE nvreduce_sl(
       degelims = 0;
 
       /* NV-reduction */
-      SCIP_CALL( reduce_nvAdv(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, neighb, distnode, solnode, &nvelims) );
+      SCIP_CALL( reduce_nvAdv(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase, neighb, distnode, solnode, &nvelims) );
       elims += nvelims;
 
       SCIPdebugMessage("NV-reduction (in NVSL): %d \n", nvelims);
 
       /* SL-reduction */
-      SCIP_CALL( reduce_sl(scip, edgestate, g, vnoi, fixed, heap, state, vbase, neighb, visited, solnode, &slelims) );
+      SCIP_CALL( reduce_sl(scip, edgestate, g, vnoi, fixed, state, vbase, neighb, visited, solnode, &slelims) );
       elims += slelims;
 
       SCIPdebugMessage("SL-reduction (in NVSL): %d \n", slelims);
@@ -353,7 +351,6 @@ SCIP_RETCODE execPc_NVSL(
    SCIP_Real*            nodearrreal,
    SCIP_Real*            fixed,
    int*                  edgearrint,
-   int*                  heap,
    int*                  state,
    int*                  vbase,
    int*                  neighb,
@@ -366,7 +363,7 @@ SCIP_RETCODE execPc_NVSL(
    SCIP_Bool*            rerun               /**< use again? */
 )
 {
-   SCIP_CALL( nvreduce_sl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, neighb,
+   SCIP_CALL( nvreduce_sl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, state, vbase, neighb,
          distnode, solnode, visited, nelims, redbound) );
 
    if( verbose )
@@ -571,7 +568,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( nvsl || extensive )
       {
-         SCIP_CALL( nvreduce_sl(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, nodearrint, NULL,
+         SCIP_CALL( nvreduce_sl(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, state, vbase, nodearrint, NULL,
                solnode, nodearrchar, &nvslnelims, reductbound));
 
          if( nvslnelims <= reductbound )
@@ -1876,7 +1873,7 @@ SCIP_RETCODE redLoopPc(
 
          if( nvsl || extensive )
          {
-            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase,
+            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, &fix, edgearrint, state, vbase,
                   nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
          }
 

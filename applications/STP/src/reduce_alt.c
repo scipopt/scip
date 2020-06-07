@@ -242,7 +242,6 @@ SCIP_RETCODE reduce_sl(
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    double*               fixed,              /**< offset pointer */
-   int*                  heap,               /**< heap array */
    int*                  state,              /**< shortest path array */
    int*                  vbase,              /**< Voronoi/shortest path bases array */
    int*                  vrnodes,            /**< Voronoi/shortest path array  */
@@ -262,7 +261,6 @@ SCIP_RETCODE reduce_sl(
 
    assert(g != NULL);
    assert(vnoi != NULL);
-   assert(heap != NULL);
    assert(state != NULL);
    assert(vbase != NULL);
    assert(vrnodes != NULL);
@@ -487,8 +485,6 @@ SCIP_RETCODE reduce_nv(
    PATH*                 vnoi,               /**< Voronoi data structure */
    double*               fixed,              /**< offset pointer */
    int*                  edgearrint,         /**< edge int array for internal computations */
-   int*                  heap,               /**< heap array */
-   int*                  state,              /**< array for internal computations */
    int*                  vbase,              /**< array for internal computations */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                   or NULL */
@@ -518,8 +514,6 @@ SCIP_RETCODE reduce_nv(
    SCIP_Bool pc;
    assert(g != NULL);
    assert(vnoi != NULL);
-   assert(heap != NULL);
-   assert(state != NULL);
    assert(vbase != NULL);
 
    t = 0;
@@ -580,7 +574,7 @@ SCIP_RETCODE reduce_nv(
    }
 
    /* compute Voronoi regions and distances */
-   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
+   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, distnode, vnoi) );
 
    for( l = 0; l < termcount; l++ )
    {
@@ -681,8 +675,6 @@ SCIP_RETCODE reduce_nvAdv(
    SCIP_Real*            distance,           /**< nodes-sized distance array */
    double*               fixed,              /**< offset pointer */
    int*                  edgearrint,         /**< edges-sized array */
-   int*                  heap,               /**< heap array */
-   int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< Voronoi base array  */
    int*                  neighb,             /**< nodes-sized neighborhood array  */
    int*                  distnode,           /**< nodes-sized distance array  */
@@ -716,8 +708,6 @@ SCIP_RETCODE reduce_nvAdv(
    assert(g != NULL);
    assert(neighb != NULL);
    assert(vnoi != NULL);
-   assert(heap != NULL);
-   assert(state != NULL);
    assert(vbase != NULL);
 
    t = 0;
@@ -782,7 +772,7 @@ SCIP_RETCODE reduce_nvAdv(
    }
 
    /* compute Voronoi regions and distances */
-   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
+   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, distnode, vnoi) );
 
    /* main loop: try to contract (shortest) edges into terminals */
    for( l = 0; l < termcount; l++ )
