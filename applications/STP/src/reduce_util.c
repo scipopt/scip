@@ -206,6 +206,7 @@ void blctreeEvert(
    blcnode_org = tree[newroot];
    while( node != oldroot )
    {
+      const SCIP_Real nodedist = blcnode_org.nodedist;
       const SCIP_Real edgecost = blcnode_org.edgecost;
       const SCIP_Real edgebottleneck = blcnode_org.edgebottleneck;
       const int head = blcnode_org.head;
@@ -213,11 +214,11 @@ void blctreeEvert(
 
       assert(edge != UNKNOWN);
       assert(head != UNKNOWN);
-      assert(graph->tail[edge] == node);
+      assert(graph->tail[edge] == blctree->nodes_curr2org[node]);
 
       blcnode_org = tree[head];
 
-      /* NOTE: node distance should not be copied */
+      tree[head].nodedist = nodedist;
       tree[head].edgecost = edgecost;
       tree[head].edgebottleneck = edgebottleneck;
       tree[head].head = node;
@@ -332,7 +333,7 @@ SCIP_RETCODE blctreeBuildMst(
    PATH* pmst;
    BLCNODE* RESTRICT tree = blctree->mst;
    const int* nodes_curr2org = blctree->nodes_curr2org;
-   const int* nodes_org2curr = blctree->nodes_curr2org;
+   const int* nodes_org2curr = blctree->nodes_org2curr;
    const int nnodes_org = graph_get_nNodes(graph);
    const int nnodes_curr = blctree->nnodes_curr;
    blctree->root = nodes_org2curr[graph->source];
@@ -907,6 +908,18 @@ void reduce_blctreeFree(
 }
 
 
+/** gets number of BLC MST edges */
+int reduce_blctreeGetMstNedges(
+   const BLCTREE*        blctree             /**< BLC tree */
+)
+{
+   assert(blctree);
+   assert(blctree->nnodes_curr > 0);
+
+   return blctree->nnodes_curr - 1;
+}
+
+
 /** gets BLC MST edges */
 void reduce_blctreeGetMstEdges(
    const GRAPH*          graph,              /**< graph */
@@ -916,15 +929,15 @@ void reduce_blctreeGetMstEdges(
 {
    const BLCNODE* mst;
    int nodecount;
-   const int nnodes = graph_get_nNodes(graph);
+   const int nnodes_curr = blctree->nnodes_curr;
 
-   assert(blctree && edgelist);
-   assert(nnodes == blctree->nnodes_org);
+   assert(edgelist);
+   assert(graph_get_nNodes(graph) == blctree->nnodes_org);
 
    mst = blctree->mst;
    nodecount = 0;
 
-   for( int i = 0; i < nnodes; ++i )
+   for( int i = 0; i < nnodes_curr; ++i )
    {
       const int edge = mst[i].edge;
 
@@ -939,7 +952,7 @@ void reduce_blctreeGetMstEdges(
       }
    }
 
-   assert(nodecount == nnodes - 1);
+   assert(nodecount == nnodes_curr - 1);
 }
 
 
@@ -952,15 +965,15 @@ void reduce_blctreeGetMstBottlenecks(
 {
    const BLCNODE* mst;
    int nodecount;
-   const int nnodes = graph_get_nNodes(graph);
+   const int nnodes_curr = blctree->nnodes_curr;
 
    assert(blctree && costlist);
-   assert(nnodes == blctree->nnodes_org);
+   assert(graph_get_nNodes(graph) == blctree->nnodes_org);
 
    mst = blctree->mst;
    nodecount = 0;
 
-   for( int i = 0; i < nnodes; ++i )
+   for( int i = 0; i < nnodes_curr; ++i )
    {
       const int edge = mst[i].edge;
 
@@ -975,7 +988,7 @@ void reduce_blctreeGetMstBottlenecks(
       }
    }
 
-   assert(nodecount == nnodes - 1);
+   assert(nodecount == nnodes_curr - 1);
 }
 
 

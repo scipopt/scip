@@ -1128,16 +1128,19 @@ SCIP_RETCODE reduce_sdprofitUpdateFromBLC(
 {
    SCIP_Real* RESTRICT candidate_bottlenecks;
    int* RESTRICT candidate_edges;
-   const int nnodes = graph_get_nNodes(g);
+   int ncandidates;
 
    assert(scip && g && blctree && sdprofit);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_bottlenecks, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_edges, nnodes) );
+   ncandidates = reduce_blctreeGetMstNedges(blctree);
+   assert(ncandidates > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_bottlenecks, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_edges, ncandidates) );
    reduce_blctreeGetMstEdges(g, blctree, candidate_edges);
    reduce_blctreeGetMstBottlenecks(g, blctree, candidate_bottlenecks);
 
-   for( int i = 0; i < nnodes - 1; ++i )
+   for( int i = 0; i < ncandidates; ++i )
    {
       const int edge = candidate_edges[i];
       const SCIP_Real bdist = candidate_bottlenecks[i];

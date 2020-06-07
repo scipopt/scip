@@ -299,6 +299,7 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_blctreeInit(SCIP*, GRAPH*, BLCTREE**);
 extern void            reduce_blctreeFree(SCIP*, BLCTREE**);
+extern int             reduce_blctreeGetMstNedges(const BLCTREE*);
 extern void            reduce_blctreeGetMstEdges(const GRAPH*, const BLCTREE*, int*);
 extern void            reduce_blctreeGetMstBottlenecks(const GRAPH*, const BLCTREE*, SCIP_Real*);
 extern SCIP_RETCODE    reduce_blctreeRebuild(SCIP*, GRAPH*, BLCTREE*);
