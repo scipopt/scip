@@ -933,6 +933,59 @@ SCIP_RETCODE testSdBiasedBottleneckDeletesEdge(
 }
 
 
+/** tests that fully biased SD with biased on terminal path deletes edge  */
+static
+SCIP_RETCODE testSdBiasedBottleneckTermPathDeletesEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   int nnodes = 8;
+   int nedges = 18;
+   int nelims = 0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 3;
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+
+   /* first cycle */
+   graph_edge_addBi(scip, graph, 0, 1, 1.2); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.1); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.1); // 4
+   graph_edge_addBi(scip, graph, 3, 4, 1.1);
+   graph_edge_addBi(scip, graph, 4, 0, 1.0);
+
+   /* bottleneck path */
+   graph_edge_addBi(scip, graph, 2, 5, 2.0);
+   graph_edge_addBi(scip, graph, 5, 6, 2.0);
+   graph_edge_addBi(scip, graph, 6, 7, 3.1); // 14
+   graph_edge_addBi(scip, graph, 7, 1, 2.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
+
+   SCIP_CALL( reduce_sdBiased(scip, sddata, graph, &nelims) );
+
+   STPTEST_ASSERT(nelims == 2);
+   STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
+   STPTEST_ASSERT(graph->oeat[14] == EAT_FREE);
+
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests Bdk methods */
 SCIP_RETCODE stptest_reduceBdk(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1002,6 +1055,8 @@ SCIP_RETCODE stptest_reduceSdBiasedBottleneck(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testSdBiasedBottleneckTermPathDeletesEdge(scip) );
+
    SCIP_CALL( testSdBiasedBottleneckDeletesEdge(scip) );
 
    printf("implied profit based reductions test: all ok \n");
