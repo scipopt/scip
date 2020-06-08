@@ -360,6 +360,82 @@ SCIP_Bool nsvEdgeIsValid(
 }
 
 
+/** get special implied distances to terminals from both endpoints of given edge */
+static inline
+void nsvEdgeGetTermDists(
+   const GRAPH*          g,                  /**< graph structure */
+   const NSV*            nsv,                /**< NSV data */
+   int                   edge,               /**< the edge */
+   SCIP_Real             bottleneckdist,     /**< bottleneck distance */
+   SCIP_Real*            dist_tail,          /**< distance from tail */
+   SCIP_Real*            dist_head           /**< distance from head */
+   )
+{
+   SCIP_Real termdist[4];
+   int neighbterms[4];
+   int nnterms;
+   const SD* sd = nsv->sdistance;
+   const int tail = g->tail[edge];
+   const int head = g->head[edge];
+   int term_tail = -1;
+   const SCIP_Real upper_sdbound = bottleneckdist - g->cost[edge];
+
+   assert(GT(bottleneckdist, 0.0));
+   assert(GE(upper_sdbound, 0.0));
+
+   *dist_tail = FARAWAY;
+   *dist_head = FARAWAY;
+
+   if( Is_term(g->term[tail]) )
+   {
+      term_tail = tail;
+      *dist_tail = 0.0;
+   }
+   else
+   {
+      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, tail, upper_sdbound, neighbterms, termdist, &nnterms);
+
+      for( int i = 0; i < nnterms; i++ )
+      {
+         const int term = neighbterms[i];
+         assert(term != tail);
+
+         if( term == head )
+            continue;
+
+         if( termdist[i] < *dist_tail )
+         {
+            *dist_tail = termdist[i];
+            term_tail = term;
+         }
+      }
+   }
+
+   if( Is_term(g->term[head]) )
+   {
+      *dist_head = 0.0;
+   }
+   else
+   {
+      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, head, upper_sdbound, neighbterms, termdist, &nnterms);
+
+      for( int i = 0; i < nnterms; i++ )
+      {
+         const int term = neighbterms[i];
+         assert(term != head);
+
+         if( term == tail || term == term_tail )
+            continue;
+
+         if( termdist[i] < *dist_head )
+            *dist_head = termdist[i];
+      }
+   }
+
+   assert(GE(*dist_tail, 0.0));
+   assert(GE(*dist_head, 0.0));
+}
+
 
 /** contract edge in NSV test */
 static inline
@@ -375,8 +451,7 @@ SCIP_RETCODE nsvEdgeContract(
 {
    int* RESTRICT nodes_isBlocked = nsv->nodes_isBlocked;
 
-#ifndef NDEBUG
-   SCIPdebugMessage("NSV implied contracting edge: ");
+#ifdef SCIP_DEBUG
    graph_edge_printInfo(g, edge);
 #endif
 
@@ -410,6 +485,7 @@ SCIP_RETCODE nsvExec(
 
    assert(sdprofit);
 
+
    for( int i = 0; i < ncandidates; ++i )
    {
       const int edge = candidate_edges[i];
@@ -427,27 +503,35 @@ SCIP_RETCODE nsvExec(
          assert(graph_edge_isInRange(g, edge));
          assert(LE(edgecost, candidate_bottlenecks[i]));
 
+         /* cut edge? */
+         if( EQ(candidate_bottlenecks[i], FARAWAY) )
+         {
+            int todo; // check whether terminal on one side, otherwise delete
+            continue;
+         }
+
          if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
          {
-            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) \n", profit_head, edgecost);
+            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_head, edgecost);
             SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
             continue;
          }
 
          if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
          {
-            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) \n", profit_tail, edgecost);
+            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_tail, edgecost);
             SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
             continue;
          }
 
-         dist_tail = FARAWAY;
-         dist_head = FARAWAY;
+         nsvEdgeGetTermDists(g, nsv, edge, candidate_bottlenecks[i], &dist_tail, &dist_head);
 
          if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
          {
-            SCIPdebugMessage("NSV contract default \n");
-            SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
+            SCIPdebugMessage("NSV contract default ... ");
+            SCIPdebugMessage("%f + %f + %f <= %f ... ", dist_tail, edgecost, dist_head, candidate_bottlenecks[i]);
+
+            SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
          }
       }
    }

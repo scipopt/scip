@@ -933,9 +933,58 @@ SCIP_RETCODE testSdBiasedBottleneckDeletesEdge(
 }
 
 
-/** tests that (implied) NSV contracts edge */
+
+/** tests that (implied) NSV contracts edge  */
 static
 SCIP_RETCODE testNsvImpliedContractsEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   int nnodes = 6;
+   int nedges = 14;
+   int nelims = 0;
+   SCIP_Real fixed = 0.0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   /* first cycle */
+   graph_edge_addBi(scip, graph, 0, 1, 0.9); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.1); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.1); // 4
+   graph_edge_addBi(scip, graph, 3, 0, 2.1);
+
+   /* second cycle */
+   graph_edge_addBi(scip, graph, 2, 4, 1.1);
+   graph_edge_addBi(scip, graph, 4, 5, 1.1);
+   graph_edge_addBi(scip, graph, 5, 0, 2.1);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
+
+   SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[1] == 0);
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** tests that (implied) NSV contracts edge between vertex with implied profit and terminal */
+static
+SCIP_RETCODE testNsvImpliedContractsImpliedToTermEdge(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -972,6 +1021,7 @@ SCIP_RETCODE testNsvImpliedContractsEdge(
 
    return SCIP_OKAY;
 }
+
 
 /** tests that fully biased SD with biased on terminal path deletes edge  */
 static
@@ -1108,6 +1158,7 @@ SCIP_RETCODE stptest_reduceNsvImplied(
 )
 {
    SCIP_CALL( testNsvImpliedContractsEdge(scip) );
+   SCIP_CALL( testNsvImpliedContractsImpliedToTermEdge(scip) );
 
    printf("implied NSV reduction test: all ok \n");
 
