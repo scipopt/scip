@@ -304,6 +304,7 @@ extern void            reduce_blctreeFree(SCIP*, BLCTREE**);
 extern int             reduce_blctreeGetMstNedges(const BLCTREE*);
 extern void            reduce_blctreeGetMstEdges(const GRAPH*, const BLCTREE*, int*);
 extern void            reduce_blctreeGetMstBottlenecks(const GRAPH*, const BLCTREE*, SCIP_Real*);
+extern const SCIP_Bool*  reduce_blctreeGetMstEdgesState(const GRAPH*, const BLCTREE*);
 extern SCIP_RETCODE    reduce_blctreeRebuild(SCIP*, GRAPH*, BLCTREE*);
 extern SCIP_RETCODE    reduce_dcmstInit(SCIP*, int, DCMST**);
 extern void            reduce_dcmstFree(SCIP*, DCMST**);

@@ -80,6 +80,7 @@ struct bottleneck_link_cut_tree
    BLCNODE*              mst;               /**< the actual tree, represented by its nodes */
    int*                  nodes_curr2org;    /**< map */
    int*                  nodes_org2curr;    /**< map */
+   SCIP_Bool*            mstedges_isLink;   /**< is the edge on a fundamental path between terminals? */
    int                   root;              /**< root of the tree */
    int                   nnodes_org;        /**< original number of graph nodes (before reductions) */
    int                   nnodes_curr;       /**< current number of graph nodes */
@@ -160,6 +161,7 @@ SCIP_RETCODE blctreeInitPrimitives(
    tree->nnodes_org = nnodes;
    tree->nnodes_curr = nnodes_curr;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(tree->mst), nnodes_curr) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tree->mstedges_isLink), nnodes_curr) );
    SCIP_CALL( blctreeBuildNodeMap(scip, graph, tree) );
 
    return SCIP_OKAY;
@@ -322,6 +324,50 @@ void blctreeComputeBottlenecks(
 }
 
 
+
+/** sets stage of MST edges */
+static
+void blctreeComputeEdgesState(
+   const GRAPH*          graph,              /**< the graph */
+   BLCTREE*              blctree             /**< to be built */
+)
+{
+   BLCNODE* RESTRICT mst = blctree->mst;
+   SCIP_Bool* RESTRICT isTermLink = blctree->mstedges_isLink;
+   const int* nodes_curr2org = blctree->nodes_curr2org;
+   const int nnodes_curr = blctree->nnodes_curr;
+   const int blcroot = blctree->root;
+
+   assert(mst);
+   assert(0 <= blctree->root && blctree->root < nnodes_curr);
+   assert(graph_isMarked(graph));
+
+   for( int i = 0; i < nnodes_curr; i++ )
+      isTermLink[i] = FALSE;
+
+   /* mark all edges from terminals to root */
+   for( int i = 0; i < nnodes_curr; i++ )
+   {
+      const int node_org = nodes_curr2org[i];
+      assert(graph_knot_isInRange(graph, node_org));
+
+      if( Is_term(graph->term[node_org]) )
+      {
+         assert(graph->grad[node_org] > 0);
+
+         for( int node = i; node != blcroot; node = mst[node].head )
+         {
+            assert(0 <= node && node < nnodes_curr);
+
+            isTermLink[node] = TRUE;
+         }
+      }
+   }
+
+   assert(!isTermLink[blcroot]);
+
+}
+
 /** builds MST and sets BLC tree accordingly */
 static
 SCIP_RETCODE blctreeBuildMst(
@@ -397,6 +443,7 @@ SCIP_RETCODE blctreeInitBottlenecks(
 {
    SCIP_CALL( blctreeBuildMst(scip, graph, blctree) );
    blctreeComputeBottlenecks(graph, blctree);
+   blctreeComputeEdgesState(graph, blctree);
 
    return SCIP_OKAY;
 }
@@ -900,9 +947,10 @@ void reduce_blctreeFree(
 {
    assert(scip && blctree);
 
-   SCIPfreeMemoryArray(scip, &((*blctree)->mst));
    SCIPfreeMemoryArray(scip, &((*blctree)->nodes_org2curr));
    SCIPfreeMemoryArray(scip, &((*blctree)->nodes_curr2org));
+   SCIPfreeMemoryArray(scip, &((*blctree)->mstedges_isLink));
+   SCIPfreeMemoryArray(scip, &((*blctree)->mst));
 
    SCIPfreeMemory(scip, blctree);
 }
@@ -953,6 +1001,21 @@ void reduce_blctreeGetMstEdges(
    }
 
    assert(nodecount == nnodes_curr - 1);
+}
+
+
+/** returns BLC MST edges state.
+ *  I.e. whether the ede is between two terminal or not */
+const SCIP_Bool* reduce_blctreeGetMstEdgesState(
+   const GRAPH*          graph,              /**< graph */
+   const BLCTREE*        blctree             /**< BLC tree */
+)
+{
+   assert(graph && blctree);
+   assert(graph_get_nNodes(graph) == blctree->nnodes_org);
+   assert(blctree->mstedges_isLink);
+
+   return blctree->mstedges_isLink;
 }
 
 

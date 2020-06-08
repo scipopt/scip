@@ -482,9 +482,8 @@ SCIP_RETCODE nsvExec(
    const int ncandidates = nsv->ncandidates;
    const int* const candidate_edges = nsv->candidates_edge;
    const SCIP_Real* const candidate_bottlenecks = nsv->candidates_bottleneck;
-
+   const SCIP_Bool* const candidate_isLink = reduce_blctreeGetMstEdgesState(g, nsv->sdistance->blctree);
    assert(sdprofit);
-
 
    for( int i = 0; i < ncandidates; ++i )
    {
@@ -492,16 +491,8 @@ SCIP_RETCODE nsvExec(
 
       if( nsvEdgeIsValid(g, nsv, edge) )
       {
-         const SCIP_Real edgecost = g->cost[edge];
-         const int tail = g->tail[edge];
-         const int head = g->head[edge];
-         const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, -1);
-         const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, -1);
-         SCIP_Real dist_tail;
-         SCIP_Real dist_head;
-
          assert(graph_edge_isInRange(g, edge));
-         assert(LE(edgecost, candidate_bottlenecks[i]));
+         assert(LE(g->cost[edge], candidate_bottlenecks[i]));
 
          /* cut edge? */
          if( EQ(candidate_bottlenecks[i], FARAWAY) )
@@ -510,28 +501,40 @@ SCIP_RETCODE nsvExec(
             continue;
          }
 
-         if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
+         if( candidate_isLink[i] )
          {
-            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_head, edgecost);
-            SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
-            continue;
-         }
+            const SCIP_Real edgecost = g->cost[edge];
+            const int tail = g->tail[edge];
+            const int head = g->head[edge];
+            const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, -1);
+            const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, -1);
+            SCIP_Real dist_tail;
+            SCIP_Real dist_head;
 
-         if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
-         {
-            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_tail, edgecost);
-            SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
-            continue;
-         }
+            if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
+            {
+               SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_head, edgecost);
+               SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
+               continue;
+            }
 
-         nsvEdgeGetTermDists(g, nsv, edge, candidate_bottlenecks[i], &dist_tail, &dist_head);
+            if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
+            {
+               SCIPdebugMessage("NSV contract implied profit end (%f >= %f) ... ", profit_tail, edgecost);
+               SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
+               continue;
+            }
 
-         if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
-         {
-            SCIPdebugMessage("NSV contract default ... ");
-            SCIPdebugMessage("%f + %f + %f <= %f ... ", dist_tail, edgecost, dist_head, candidate_bottlenecks[i]);
+            nsvEdgeGetTermDists(g, nsv, edge, candidate_bottlenecks[i], &dist_tail, &dist_head);
 
-            SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
+            if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
+            {
+               SCIPdebugMessage("NSV contract default ... ");
+               SCIPdebugMessage("%f + %f + %f <= %f ... ", dist_tail, edgecost, dist_head, candidate_bottlenecks[i]);
+               //graph_edge_printInfo(g, edge);
+
+               SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
+            }
          }
       }
    }
