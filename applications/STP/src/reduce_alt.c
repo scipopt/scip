@@ -259,13 +259,12 @@ SCIP_RETCODE nsvInitData(
 )
 {
    const BLCTREE* const blctree = sdistance->blctree;
-   const SDPROFIT* const sdprofit = sdistance->sdprofit;
    SCIP_Real* RESTRICT candidate_bottlenecks;
    int* RESTRICT candidate_edges;
    int ncandidates;
 
    assert(blctree);
-   assert(sdprofit);
+   assert(sdistance->sdprofit);
 
    ncandidates = reduce_blctreeGetMstNedges(blctree);
    assert(ncandidates > 0);
@@ -2324,6 +2323,12 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
    SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
+
+  // SCIP_CALL( reduce_sdStarBiased(scip, 500, NULL, g, nelims) );
+
+   //
+   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, 500, sdistance->sdprofit, NULL, g, nelims) );
+
 
    // todo also call triangle test with low limit?
 

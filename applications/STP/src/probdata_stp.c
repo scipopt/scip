@@ -361,11 +361,9 @@ SCIP_RETCODE presolveStp(
    /* the actual presolving */
    SCIP_CALL( reduce(scip, graph, offset, reduction, probdata->minelims, TRUE) );
 
-
-
-
 #ifdef STP_WRITE_RED_STATS
-   graph_writeReductionStats(graph, SCIPgetProbName(scip), "~/redstats.txt");
+   graph_writeReductionStats(graph,
+         SCIPgetProbName(scip), "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redstats.txt");
    exit(1);
 #endif
 
