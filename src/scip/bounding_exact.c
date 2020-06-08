@@ -179,15 +179,15 @@ SCIP_RETCODE solveLpExact(
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas,          /**< are we aiming to prove infeasibility? */
-   SCIP_Real*            safebound           /**< store the calculated safebound here */
+   SCIP_Real*            safebound,          /**< store the calculated safebound here */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
+   SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {
    int* cstat;
    int* rstat;
    SCIP_LPALGO lpalgo = SCIP_LPALGO_DUALSIMPLEX;
    SCIP_RETCODE retcode;
-   SCIP_Bool primalfeasible = FALSE;
-   SCIP_Bool dualfeasible = FALSE;
    int niterations = 0;
 
    assert(lp != NULL);
@@ -195,10 +195,15 @@ SCIP_RETCODE solveLpExact(
    assert(set != NULL);
    assert(set->misc_exactsolve);
 
+   *primalfeasible = FALSE;
+   *dualfeasible = FALSE;
+
    if ( usefarkas )
       SCIPclockStart(stat->provedinfeaslptime, set);
    else
       SCIPclockStart(stat->provedfeaslptime, set);
+
+   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
 
    /* set up the exact lpi for the current node */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
@@ -228,8 +233,14 @@ SCIP_RETCODE solveLpExact(
    }
    if( retcode == SCIP_LPERROR )
    {
-      *lperror = TRUE;
-      SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
+      SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
+      retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
+
+      if( retcode == SCIP_LPERROR )
+      {
+         *lperror = TRUE;
+         SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
+      }
    }
 
    lpexact->solved = TRUE;
@@ -243,7 +254,7 @@ SCIP_RETCODE solveLpExact(
    if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
    {
       /* evaluate solution status and set safe bound correctly */
-      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, &primalfeasible, &dualfeasible) );
+      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeasible, dualfeasible) );
 
       assert(primalfeasible && dualfeasible);
 
@@ -253,6 +264,7 @@ SCIP_RETCODE solveLpExact(
       lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
    else if( SCIPlpiExactIsPrimalUnbounded(lpexact->lpiexact) )
    {
@@ -390,6 +402,8 @@ SCIP_RETCODE psChooseS(
    SCIP_Rational** rootprimal;
    SCIP_Bool lperror;
    SCIP_PROJSHIFTDATA* projshiftdata;
+   SCIP_Bool dualfeasible;
+   SCIP_Bool primalfeasible;
 
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
@@ -429,7 +443,7 @@ SCIP_RETCODE psChooseS(
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval);
+      solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval, &primalfeasible, &dualfeasible);
 
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
@@ -3268,7 +3282,9 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             dualfarkas,         /**< should infeasiblity be proven? */
-   SCIP_Real*            safebound           /**< store the calculated safebound here */
+   SCIP_Real*            safebound,          /**< store the calculated safebound here */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
+   SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {
    char dualboundmethod;
@@ -3335,7 +3351,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       /* exact LP */
       case 'e':
          SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas, safebound) );
+                        prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
          break;
       default:
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
@@ -3346,7 +3362,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    if( !lp->hasprovedbound )
    {
       SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas, safebound) );
+                        prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
    }
 #endif
 

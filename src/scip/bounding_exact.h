@@ -60,8 +60,10 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             dualfarkas,
-   SCIP_Real*            safebound
+   SCIP_Bool             usefarkas,          /**< are we aiming to prove infeasibility? */
+   SCIP_Real*            safebound,          /**< store the calculated safebound here */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
+   SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    );
 
 #ifdef __cplusplus

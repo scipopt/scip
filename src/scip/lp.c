@@ -33,6 +33,7 @@
 
 
 #include "lpi/lpi.h"
+#include "lpi/lpiexact.h"
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/event.h"
@@ -12602,6 +12603,18 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          goto TERMINATE;
       }
 
+      /* compute safe bound might change the solstat so we have to compute it before we evaluate the solution status */
+      if( lp->solved && set->misc_exactsolve && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      {
+         if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
+            SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid);
+         else
+            SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible);
+
+         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+               prob, itlim, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
+      }
+
       /* evaluate solution status */
       switch( SCIPlpGetSolstat(lp) )
       {
@@ -12632,10 +12645,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lp->dualchecked = FALSE;
          }
 
-         SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
+         if( !set->misc_exactsolve )
+         {
+            SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
+         }
 
-         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-               prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -12708,13 +12722,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
          if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
          {
-            if( SCIPlpiHasDualRay(lp->lpi) )
+            if( (set->misc_exactsolve && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact)) )
+               farkasvalid = TRUE;
+            else if( SCIPlpiHasDualRay(lp->lpi) )
             {
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
-
-               /* in exact solving mode, the farkas proof has to be corrected to be exact */
-               SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                     prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
              * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -12879,16 +12891,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
-            /* we need the lp solution to calculate a safe bound */
-            if( set->misc_exactsolve )
-            {
-               SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
-            }
-
-            /* the objval has to be safe (if in exact solving mode) */
-            SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
-                  eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
-
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
             if( SCIPsetIsLT(set, objval, lp->lpiobjlim) )
             {
@@ -12922,7 +12924,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                /* the objval has to be safe (if in exact solving mode) */
                SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
-                     eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
+                     eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval, &primalfeasible, &dualfeasible) );
 
                /* get solution status for the lp */
                solstat = SCIPlpGetSolstat(lp);
@@ -12952,7 +12954,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                   /* the objval has to be safe (if in exact solving mode) */
                   SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
-                        eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
+                        eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval, &primalfeasible, &dualfeasible) );
 
                   /* get solution status for the lp */
                   solstat = SCIPlpGetSolstat(lp);
@@ -13059,7 +13061,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
                         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                              prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
+                              prob, itlim, lperror, TRUE, &(lp->lpobjval), &primalfeasible, &dualfeasible) );
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
                       * with the primal simplex due to numerical problems) - treat this case like an LP error

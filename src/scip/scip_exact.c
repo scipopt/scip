@@ -282,7 +282,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
 
    SCIP_CALL( SCIPlpExactComputeSafeBound(scip->lp, scip->lpexact, scip->set, scip->messagehdlr, SCIPblkmem(scip),
          scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpexact->lpiitlim,
-         &lperror, proveinfeas, safebound) );
+         &lperror, proveinfeas, safebound, NULL, NULL) );
 
    if( lperror )
       return SCIP_ERROR;
