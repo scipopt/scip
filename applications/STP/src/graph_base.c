@@ -2180,6 +2180,17 @@ SCIP_Bool graph_edge_isInRange(
    return (0 <= e && e < g->edges);
 }
 
+/** has edge been deleted? */
+SCIP_Bool graph_edge_isDeleted(
+   const GRAPH*          g,                  /**< the graph */
+   int                   e                   /**< the edge */
+   )
+{
+   assert(g);
+
+   return (g->oeat[e] == EAT_FREE);
+}
+
 
 /** print information on edge */
 void graph_edge_printInfo(

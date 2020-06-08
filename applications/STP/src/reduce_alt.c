@@ -58,9 +58,13 @@
 /** NSV test data */
 typedef struct nearest_special_distance_test_data
 {
-   const SD*             sdistance;
-   SCIP_Real* RESTRICT   candidate_bottlenecks;
-   int* RESTRICT         candidate_edges;
+   const SD*             sdistance;        /**< NON-OWNED! */
+   SCIP_Real* RESTRICT   candidates_bottleneck;
+   int* RESTRICT         candidates_edge;
+   int* RESTRICT         candidates_tail;
+   int* RESTRICT         candidates_head;
+   int* RESTRICT         nodes_isBlocked;
+   int* RESTRICT         solnode;           /**< NON-OWNED! */
    int                   ncandidates;
 } NSV;
 
@@ -255,13 +259,19 @@ SCIP_RETCODE nsvInitData(
    SCIP*                 scip,               /**< SCIP data structure */
    const SD*             sdistance,          /**< special distances storage */
    const GRAPH*          g,                  /**< graph structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
    NSV*                  nsv                 /**< NSV */
 )
 {
    const BLCTREE* const blctree = sdistance->blctree;
-   SCIP_Real* RESTRICT candidate_bottlenecks;
-   int* RESTRICT candidate_edges;
+   SCIP_Real* RESTRICT candidates_bottleneck;
+   int* RESTRICT candidates_edge;
+   int* RESTRICT candidates_tail;
+   int* RESTRICT candidates_head;
+   int* RESTRICT nodes_isBlocked;
    int ncandidates;
+   const int nnodes = graph_get_nNodes(g);
+
 
    assert(blctree);
    assert(sdistance->sdprofit);
@@ -269,14 +279,33 @@ SCIP_RETCODE nsvInitData(
    ncandidates = reduce_blctreeGetMstNedges(blctree);
    assert(ncandidates > 0);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_bottlenecks, ncandidates) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &candidate_edges, ncandidates) );
-   reduce_blctreeGetMstEdges(g, blctree, candidate_edges);
-   reduce_blctreeGetMstBottlenecks(g, blctree, candidate_bottlenecks);
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_bottleneck, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_edge, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_tail, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_head, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isBlocked, nnodes) );
+
+   reduce_blctreeGetMstEdges(g, blctree, candidates_edge);
+   reduce_blctreeGetMstBottlenecks(g, blctree, candidates_bottleneck);
+
+   for( int i = 0; i < ncandidates; i++  )
+   {
+      const int edge = candidates_edge[i];
+      candidates_tail[i] = g->tail[edge];
+      candidates_head[i] = g->head[edge];
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+      nodes_isBlocked[i] = FALSE;
 
    nsv->sdistance = sdistance;
-   nsv->candidate_bottlenecks = candidate_bottlenecks;
-   nsv->candidate_edges = candidate_edges;
+   nsv->candidates_bottleneck = candidates_bottleneck;
+   nsv->candidates_edge = candidates_edge;
+   nsv->candidates_tail = candidates_tail;
+   nsv->candidates_head = candidates_head;
+   nsv->nodes_isBlocked = nodes_isBlocked;
+   nsv->solnode = solnode;
+
    nsv->ncandidates = ncandidates;
 
    return SCIP_OKAY;
@@ -290,29 +319,68 @@ void nsvFreeData(
    NSV*                  nsv                 /**< NSV */
 )
 {
-   SCIPfreeBufferArray(scip, &(nsv->candidate_edges));
-   SCIPfreeBufferArray(scip, &(nsv->candidate_bottlenecks));
+   SCIPfreeBufferArray(scip, &(nsv->nodes_isBlocked));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_head));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_tail));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_edge));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_bottleneck));
 }
+
+
+/** edge in NSV test can possibly still be contracted? */
+static inline
+SCIP_Bool nsvEdgeIsValid(
+   const GRAPH*          g,                  /**< graph structure */
+   const NSV*            nsv,                /**< NSV data */
+   int                   edge               /**< the edge */
+   )
+{
+   assert(graph_edge_isInRange(g, edge));
+
+   if( graph_edge_isDeleted(g, edge) )
+   {
+      return FALSE;
+   }
+   else
+   {
+      const int* const nodes_isBlocked = nsv->nodes_isBlocked;
+      const int tail = g->tail[edge];
+      const int head = g->head[edge];
+
+      if( nodes_isBlocked[tail] || nodes_isBlocked[head] )
+      {
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
 
 
 /** contract edge in NSV test */
 static inline
-SCIP_RETCODE nsvContractEdge(
+SCIP_RETCODE nsvEdgeContract(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edge,               /**< the edge */
-   int                   end_remain,         /**< survivor */
-   int                   end_killed,         /**< other node */
+   int                   end_remain,         /**< survivor end node of edge */
+   int                   end_killed,         /**< other end node */
    GRAPH*                g,                  /**< graph structure */
-   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   NSV*                  nsv,                /**< NSV data */
    int*                  nelims              /**< number of eliminations */
 )
 {
+   int* RESTRICT nodes_isBlocked = nsv->nodes_isBlocked;
+
 #ifndef NDEBUG
    SCIPdebugMessage("NSV implied contracting edge: ");
    graph_edge_printInfo(g, edge);
 #endif
 
-   SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, edge, end_remain, end_killed) );
+   nodes_isBlocked[end_remain] = TRUE;
+   nodes_isBlocked[end_killed] = TRUE;
+
+   SCIP_CALL( graph_knot_contractFixed(scip, g, nsv->solnode, edge, end_remain, end_killed) );
    graph_knot_chg(g, end_remain, STP_TERM);
 
    (*nelims)++;
@@ -326,53 +394,56 @@ SCIP_RETCODE nsvExec(
    SCIP*                 scip,               /**< SCIP data structure */
    NSV*                  nsv,                /**< NSV */
    GRAPH*                g,                  /**< graph structure */
-   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
    SCIP_Real*            fixed,              /**< offset pointer */
    int*                  nelims              /**< number of eliminations */
 )
 {
    const SDPROFIT* const sdprofit = nsv->sdistance->sdprofit;
    const int ncandidates = nsv->ncandidates;
-   const int* const candidate_edges = nsv->candidate_edges;
-   const SCIP_Real* const candidate_bottlenecks = nsv->candidate_bottlenecks;
+   const int* const candidate_edges = nsv->candidates_edge;
+   const SCIP_Real* const candidate_bottlenecks = nsv->candidates_bottleneck;
 
    assert(sdprofit);
 
    for( int i = 0; i < ncandidates; ++i )
    {
       const int edge = candidate_edges[i];
-      const SCIP_Real edgecost = g->cost[edge];
-      const int tail = g->tail[edge];
-      const int head = g->head[edge];
-      const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, -1);
-      const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, -1);
-      SCIP_Real dist_tail;
-      SCIP_Real dist_head;
 
-      assert(graph_edge_isInRange(g, edge));
-      assert(LE(edgecost, candidate_bottlenecks[i]));
-
-      if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
+      if( nsvEdgeIsValid(g, nsv, edge) )
       {
-         SCIPdebugMessage("NSV contract implied profit end \n");
-         SCIP_CALL( nsvContractEdge(scip, edge, tail, head, g, solnode, nelims) );
-         continue;
-      }
+         const SCIP_Real edgecost = g->cost[edge];
+         const int tail = g->tail[edge];
+         const int head = g->head[edge];
+         const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, head, -1);
+         const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, tail, -1);
+         SCIP_Real dist_tail;
+         SCIP_Real dist_head;
 
-      if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
-      {
-         SCIPdebugMessage("NSV contract implied profit end \n");
-         SCIP_CALL( nsvContractEdge(scip, flipedge(edge), head, tail, g, solnode, nelims) );
-         continue;
-      }
+         assert(graph_edge_isInRange(g, edge));
+         assert(LE(edgecost, candidate_bottlenecks[i]));
 
-      dist_tail = FARAWAY;
-      dist_head = FARAWAY;
+         if( Is_term(g->term[tail]) && GE(profit_head, edgecost) )
+         {
+            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) \n", profit_head, edgecost);
+            SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
+            continue;
+         }
 
-      if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
-      {
-         SCIPdebugMessage("NSV contract default \n");
-         SCIP_CALL( nsvContractEdge(scip, flipedge(edge), head, tail, g, solnode, nelims) );
+         if( Is_term(g->term[head]) && GE(profit_tail, edgecost) )
+         {
+            SCIPdebugMessage("NSV contract implied profit end (%f >= %f) \n", profit_tail, edgecost);
+            SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
+            continue;
+         }
+
+         dist_tail = FARAWAY;
+         dist_head = FARAWAY;
+
+         if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
+         {
+            SCIPdebugMessage("NSV contract default \n");
+            SCIP_CALL( nsvEdgeContract(scip, flipedge(edge), head, tail, g, nsv, nelims) );
+         }
       }
    }
 
@@ -395,11 +466,11 @@ SCIP_RETCODE reduce_nsvImplied(
 )
 {
    NSV nsv;
-   assert(scip && sdistance && fixed && nelims);
+   assert(scip && sdistance && nelims);
    assert(*nelims >= 0);
 
-   SCIP_CALL( nsvInitData(scip, sdistance, g, &nsv) );
-   SCIP_CALL( nsvExec(scip, &nsv, g, solnode, fixed, nelims) );
+   SCIP_CALL( nsvInitData(scip, sdistance, g, solnode, &nsv) );
+   SCIP_CALL( nsvExec(scip, &nsv, g, fixed, nelims) );
    nsvFreeData(scip, &nsv);
 
    return SCIP_OKAY;
@@ -2307,6 +2378,7 @@ SCIP_RETCODE reduce_nnp(
 SCIP_RETCODE reduce_impliedProfitBased(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
    int*                  nelims              /**< number of eliminations */
 )
 {
@@ -2330,9 +2402,9 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, 500, sdistance->sdprofit, NULL, g, nelims) );
 
 
-   // todo also call triangle test with low limit?
-
    // todo call edge contraction test!
+   SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, NULL, nelims) );
+
 
    reduce_sdFree(scip, &sdistance);
 
