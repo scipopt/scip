@@ -27,6 +27,7 @@
 #include "scip/scip_sol.h"
 #include "scip/cons_expr_iterator.h"
 #include "struct_cons_expr.h"
+#include "tree.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "perspective"
@@ -902,6 +903,9 @@ SCIP_RETCODE startProbing(
    int v;
    SCIP_Real newlb;
    SCIP_Real newub;
+   SCIP_Bool propagate;
+
+   propagate = (int) SCIPgetCurrentNode(scip)->depth <= SCIPgetEffectiveRootDepth(scip);
 
    if( *solcopy == sol )
    {
@@ -938,7 +942,7 @@ SCIP_RETCODE startProbing(
       }
    }
 
-   if( SCIPgetDepth(scip) == 0 )
+   if( propagate )
    {
       SCIP_Longint ndomreds;
       SCIP_Bool cutoff;
@@ -1690,6 +1694,37 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 }
 #endif
 
+/** saves local bounds on all expression variables, including auxiliary variables, obtained from propagating
+ * indicator == 1 to the corresponding SCVARDATA (should only be used in the root node)
+ * */
+static
+SCIP_RETCODE tightenOnBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_HASHMAP*         scvars,             /**< hashmap with semicontinuous variables */
+   SCIP_VAR*             indicator           /**< indicator variable */
+   )
+{
+   int v;
+   SCIP_VAR* var;
+   SCVARDATA* scvdata;
+   int pos;
+
+   for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+   {
+      var = nlhdlrexprdata->vars[v];
+      scvdata = getSCVarDataInd(scvars, var, indicator, &pos);
+
+      if( scvdata != NULL )
+      {
+         scvdata->lbs1[pos] = MAX(scvdata->lbs1[pos], SCIPvarGetLbLocal(var));
+         scvdata->ubs1[pos] = MIN(scvdata->ubs1[pos], SCIPvarGetUbLocal(var));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler enforcement callback
  *
  * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
@@ -1838,6 +1873,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( doprobingind )
       {
+         SCIP_Bool propagate;
+
+         propagate = (int) SCIPgetCurrentNode(scip)->depth <= SCIPgetEffectiveRootDepth(scip);
+
 #ifndef NDEBUG
          SCIP_Real* solvals;
          SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nlhdlrexprdata->nvars) );
@@ -1850,6 +1889,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
          SCIP_CALL( SCIPstopClock(scip, nlhdlr->probingtime) );
+
+         if( propagate )
+         {
+            /* probing propagation in the root node can provide better on/off bounds */
+            SCIP_CALL( tightenOnBounds(scip, nlhdlrexprdata, nlhdlrdata->scvars, indicator) );
+         }
 
 #ifndef NDEBUG
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
