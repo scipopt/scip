@@ -982,6 +982,52 @@ SCIP_RETCODE testNsvImpliedContractsEdge(
 }
 
 
+
+/** tests that (implied) NSV contracts edge  */
+static
+SCIP_RETCODE testNsvImpliedContractsEdge2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sddata;
+   GRAPH* graph;
+   int nnodes = 6;
+   int nedges = 14;
+   int nelims = 0;
+   SCIP_Real fixed = 0.0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.1); // 4
+   graph_edge_addBi(scip, graph, 3, 4, 0.9);
+   graph_edge_addBi(scip, graph, 4, 5, 1.9);
+   graph_edge_addBi(scip, graph, 5, 0, 2.1);
+   graph_edge_addBi(scip, graph, 5, 2, 0.9);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
+
+   SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
+
+   STPTEST_ASSERT(graph->grad[1] == 0);
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that (implied) NSV contracts edge between vertex with implied profit and terminal */
 static
 SCIP_RETCODE testNsvImpliedContractsImpliedToTermEdge(
@@ -1158,6 +1204,7 @@ SCIP_RETCODE stptest_reduceNsvImplied(
 )
 {
    SCIP_CALL( testNsvImpliedContractsEdge(scip) );
+   SCIP_CALL( testNsvImpliedContractsEdge2(scip) );
    SCIP_CALL( testNsvImpliedContractsImpliedToTermEdge(scip) );
 
    printf("implied NSV reduction test: all ok \n");
