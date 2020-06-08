@@ -203,7 +203,7 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int, SCIP_Bool);
 
 /* reduce_alt.c
  */
-extern SCIP_RETCODE    reduce_impliedProfitBased(SCIP*, GRAPH*, int*, int*);
+extern SCIP_RETCODE    reduce_impliedProfitBased(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_ans(SCIP*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_ansAdv(SCIP*, GRAPH*, int*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_ansAdv2(SCIP*, GRAPH*, int*);

@@ -58,13 +58,14 @@
 /** NSV test data */
 typedef struct nearest_special_distance_test_data
 {
-   const SD*             sdistance;        /**< NON-OWNED! */
+   const SD*             sdistance;         /**< NON-OWNED! */
    SCIP_Real* RESTRICT   candidates_bottleneck;
    int* RESTRICT         candidates_edge;
    int* RESTRICT         candidates_tail;
    int* RESTRICT         candidates_head;
    int* RESTRICT         nodes_isBlocked;
-   int* RESTRICT         solnode;           /**< NON-OWNED! */
+   int* RESTRICT         solnode;            /**< NON-OWNED! */
+   SCIP_Real*            fixed;              /**< NON-OWNED offset pointer */
    int                   ncandidates;
 } NSV;
 
@@ -260,6 +261,7 @@ SCIP_RETCODE nsvInitData(
    const SD*             sdistance,          /**< special distances storage */
    const GRAPH*          g,                  /**< graph structure */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   SCIP_Real*            fixed,              /**< offset pointer */
    NSV*                  nsv                 /**< NSV */
 )
 {
@@ -305,6 +307,7 @@ SCIP_RETCODE nsvInitData(
    nsv->candidates_head = candidates_head;
    nsv->nodes_isBlocked = nodes_isBlocked;
    nsv->solnode = solnode;
+   nsv->fixed = fixed;
 
    nsv->ncandidates = ncandidates;
 
@@ -379,6 +382,8 @@ SCIP_RETCODE nsvEdgeContract(
 
    nodes_isBlocked[end_remain] = TRUE;
    nodes_isBlocked[end_killed] = TRUE;
+
+   *(nsv->fixed) += g->cost[edge];
 
    SCIP_CALL( graph_knot_contractFixed(scip, g, nsv->solnode, edge, end_remain, end_killed) );
    graph_knot_chg(g, end_remain, STP_TERM);
@@ -466,10 +471,10 @@ SCIP_RETCODE reduce_nsvImplied(
 )
 {
    NSV nsv;
-   assert(scip && sdistance && nelims);
+   assert(scip && sdistance && nelims && fixed);
    assert(*nelims >= 0);
 
-   SCIP_CALL( nsvInitData(scip, sdistance, g, solnode, &nsv) );
+   SCIP_CALL( nsvInitData(scip, sdistance, g, solnode, fixed, &nsv) );
    SCIP_CALL( nsvExec(scip, &nsv, g, fixed, nelims) );
    nsvFreeData(scip, &nsv);
 
@@ -2379,12 +2384,13 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT) */
+   SCIP_Real*            fixed,              /**< offset pointer */
    int*                  nelims              /**< number of eliminations */
 )
 {
    SD* sdistance;
 
-   assert(scip && g && nelims);
+   assert(scip && g && nelims && fixed);
    assert(*nelims >= 0);
 
    if( g->terms <= 2 )
@@ -2403,7 +2409,7 @@ SCIP_RETCODE reduce_impliedProfitBased(
 
 
    // todo call edge contraction test!
-   SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, NULL, nelims) );
+   SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
 
 
    reduce_sdFree(scip, &sdistance);
