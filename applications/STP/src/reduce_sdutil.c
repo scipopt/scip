@@ -769,19 +769,9 @@ void sdprofitUpdateNode(
    }
    else if( sdprofit->nodes_biassource[node] == sdprofit->nodes_biassource2[node] )
    {
-      int todo; // activate and make a reduction test run! should get better...
-
-     // sdprofit->nodes_bias2[node] = profit;
-     // sdprofit->nodes_biassource2[node] = sourceterm;
-
-   //   printf("new=%f old=%f \n", profit, sdprofit->nodes_bias2[node]);
-   //   printf("source=%d old=%d \n", sourceterm, sdprofit->nodes_biassource2[node]);
-
-     //     printf(" %d equal %d==%d \n",node, sdprofit->nodes_biassource[node], sdprofit->nodes_biassource2[node]);
-
+      sdprofit->nodes_bias2[node] = profit;
+      sdprofit->nodes_biassource2[node] = sourceterm;
    }
-
-
 }
 
 
