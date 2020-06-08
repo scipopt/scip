@@ -996,6 +996,7 @@ SCIP_Bool RatIsEqualReal(
 
 /** check if real approx of rational and a real are equal */
 SCIP_Bool RatIsApproxEqualReal(
+   SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
@@ -1004,10 +1005,10 @@ SCIP_Bool RatIsApproxEqualReal(
 
    if( rat->isinf )
    {
-      return FALSE;
+      return RatIsPositive(rat) ? SCIPsetIsInfinity(set, real) : SCIPsetIsInfinity(set, -real);
    }
    else
-      return RatApproxReal(rat) == real;
+      return SCIPsetIsEQ(set, real, RatApproxReal(rat));
 }
 
 /** check if the first rational is greater than the second*/
@@ -1236,8 +1237,7 @@ int RatToString(
    }
    if( ret == strlen )
    {
-      SCIPerrorMessage("Rational string to long to fit in buffer");
-      RatPrint(rational);
+      RatDebugMessage("Rational string to long to fit in buffer. Rational : %q \n", rational);
    }
 
    return ret;

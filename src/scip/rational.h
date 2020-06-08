@@ -30,6 +30,7 @@
 #include "scip/intervalarith.h"
 #include "scip/mem.h"
 #include "scip/type_misc.h"
+#include "scip/set.h"
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #endif
@@ -396,6 +397,7 @@ SCIP_Bool RatIsEqualReal(
 /** checks if real approx of rational and a real are equal */
 SCIP_EXPORT
 SCIP_Bool RatIsApproxEqualReal(
+   SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        r1,                 /**< the rational */
    SCIP_Real             r2                  /**< the real */
    );

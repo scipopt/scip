@@ -167,25 +167,17 @@ SCIP_Bool colExactInSync(
    fpcol = colexact->fpcol;
    assert(fpcol != NULL);
 
-   assert(colexact->len == fpcol->len);
    assert(colexact->var == fpcol->var);
    assert(colexact->lpipos == fpcol->lpipos);
    assert(colexact->index == fpcol->index);
-   assert(colexact->nlprows == fpcol->nlprows);
    assert(colexact->lpipos == fpcol->lpipos);
 
-   assert(RatIsApproxEqualReal(colexact->obj, fpcol->obj));
-   assert(RatIsApproxEqualReal(colexact->flushedobj, fpcol->flushedobj));
-   assert(RatIsApproxEqualReal(colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
-   assert(RatIsApproxEqualReal(colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
-   assert(RatIsApproxEqualReal(colexact->flushedlb, fpcol->flushedlb) || (RatIsNegInfinity(colexact->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
-   assert(RatIsApproxEqualReal(colexact->flushedub, fpcol->flushedub) || (RatIsInfinity(colexact->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
-
-   for( i = 0; i < colexact->len; ++i )
-   {
-      assert(RatIsApproxEqualReal(colexact->vals[i], fpcol->vals[i]));
-      assert(colexact->linkpos[i] == fpcol->linkpos[i]);
-   }
+   assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj));
+   assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj));
+   assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
+   assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
+   assert(RatIsApproxEqualReal(set, colexact->flushedlb, fpcol->flushedlb) || (RatIsNegInfinity(colexact->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
+   assert(RatIsApproxEqualReal(set, colexact->flushedub, fpcol->flushedub) || (RatIsInfinity(colexact->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
 
    return TRUE;
 }
@@ -208,46 +200,20 @@ SCIP_Bool rowExactInSync(
 
    assert(fprow != NULL);
 
-   assert(rowexact->len == fprow->len);
-
    assert(rowexact->lpipos == fprow->lpipos);
    assert(rowexact->lppos == fprow->lppos);
 
-   synced = RatIsApproxEqualReal(rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
-   synced = synced && (RatIsApproxEqualReal(rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = RatIsApproxEqualReal(rowexact->flushedlhs, fprow->flushedlhs) || (RatIsNegInfinity(rowexact->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
-   synced = synced && (RatIsApproxEqualReal(rowexact->flushedrhs, fprow->flushedrhs) || (RatIsInfinity(rowexact->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
-   synced = synced && (RatIsApproxEqualReal(rowexact->constant, fprow->constant) );
+   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
+   synced = RatIsApproxEqualReal(set, rowexact->flushedlhs, fprow->flushedlhs) || (RatIsNegInfinity(rowexact->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->flushedrhs, fprow->flushedrhs) || (RatIsInfinity(rowexact->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant) );
 
    if( !synced )
    {
       SCIPdebug(SCIProwPrint(rowexact->fprow, msg, NULL));
       SCIPdebug(SCIProwExactPrint(rowexact, msg, NULL));
       SCIPABORT();
-   }
-
-   for( i = 0; i < rowexact->len; ++i )
-   {
-      assert(rowexact->linkpos[i] == fprow->linkpos[i]);
-      assert(rowexact->cols_index[i] == fprow->cols_index[i]);
-      assert(rowexact->valsinterval[i].inf <= fprow->vals[i] && fprow->vals[i] <= rowexact->valsinterval[i].sup);
-
-      if( !RatIsApproxEqualReal(rowexact->vals[i], fprow->vals[i]) )
-      {
-            SCIProwPrint(rowexact->fprow, msg, NULL);
-            SCIProwExactPrint(rowexact, msg, NULL);
-            SCIPABORT();
-      }
-   }
-
-   for( i = 0; i < rowexact->len; i++ )
-   {
-      if( !colExactInSync(rowexact->cols[i], set, msg) )
-      {
-         SCIPcolExactPrint(rowexact->cols[i], msg, NULL);
-         SCIPcolPrint(fprow->cols[i], msg, NULL);
-         SCIPABORT();
-      }
    }
 
    return TRUE;
