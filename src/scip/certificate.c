@@ -241,7 +241,8 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       return SCIP_OKAY;
 
    assert(scip != NULL);
-   assert(SCIPisExactSol(scip, sol));
+   assert(sol == NULL || SCIPisExactSol(scip, sol));
+
 
    if( sol == NULL )
    {
@@ -859,17 +860,19 @@ void SCIPcertificatePrintProblemRational(
    int                   base                /**< The base representation*/
    )
 {
-   char formatstr[SCIP_MAXSTRLEN];
+   SCIP_Longint len = RatStrlen(val) + 1;
+   char* formatstr;
+
+   assert(len <= INT_MAX);
+
    /* check if certificate output should be created */
-   if( certificate->file == NULL )
+   if( certificate->derivationfile == NULL )
      return;
-   if( SCIP_MAXSTRLEN == RatToString(val, formatstr, SCIP_MAXSTRLEN) )
-   {
-      SCIPerrorMessage("Rational has too long encoding \n");
-      RatPrint(val);
-      SCIPABORT();
-   }
-   SCIPcertificatePrintProblemMessage(certificate, "%s", formatstr);
+
+   BMSallocMemoryArray(&formatstr, len);
+   RatToString(val, formatstr, len);
+   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   BMSfreeMemoryArray(&formatstr);
 }
 
 
@@ -880,17 +883,19 @@ void SCIPcertificatePrintProofRational(
    int                   base                /**< The base representation*/
    )
 {
-   char formatstr[SCIP_MAXSTRLEN];
+   SCIP_Longint len = RatStrlen(val) + 1;
+   char* formatstr;
+
+   assert(len <= INT_MAX);
+
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
      return;
-   if( SCIP_MAXSTRLEN == RatToString(val, formatstr, SCIP_MAXSTRLEN) )
-   {
-      SCIPerrorMessage("Rational has too long encoding \n");
-      RatPrint(val);
-      SCIPABORT();
-   }
-   SCIPcertificatePrintProofMessage(certificate, "%s", formatstr);
+
+   BMSallocMemoryArray(&formatstr, len);
+   RatToString(val, formatstr, len);
+   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   BMSfreeMemoryArray(&formatstr);
 }
 
 /** prints a comment to the problem section of the certificate file */
