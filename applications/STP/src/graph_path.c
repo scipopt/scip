@@ -699,7 +699,6 @@ void tpathsBuild(
 /** allocates TPATHS data */
 static inline
 void tpathsBuildBiased(
-   SCIP*                 scip,               /**< SCIP */
    const SDPROFIT*       sdprofit,           /**< SD profit */
    GRAPH*                g,                  /**< graph */
    TPATHS*               tpaths              /**< the terminal paths */
@@ -2422,7 +2421,24 @@ SCIP_RETCODE graph_tpathsInitBiased(
    assert(STP_TPATHS_NTERMBASES == 4);
 
    SCIP_CALL( tpathsAlloc(scip, g, tpaths) );
-   tpathsBuildBiased(scip, sdprofit, g, *tpaths);
+   tpathsBuildBiased(sdprofit, g, *tpaths);
+
+   return SCIP_OKAY;
+}
+
+
+/** recomputes biased TPATHS structure */
+SCIP_RETCODE graph_tpathsRecomputeBiased(
+   const SDPROFIT*       sdprofit,           /**< SD profit */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const
+                                                 :( terrible design */
+   TPATHS*               tpaths              /**< the terminal paths */
+)
+{
+   assert(tpaths && g && sdprofit);
+   assert(STP_TPATHS_NTERMBASES == 4);
+
+   tpathsBuildBiased(sdprofit, g, tpaths);
 
    return SCIP_OKAY;
 }

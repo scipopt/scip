@@ -540,6 +540,7 @@ extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern SCIP_RETCODE     graph_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern SCIP_RETCODE     graph_tpathsInitBiased(SCIP*, const SDPROFIT*, GRAPH*, TPATHS**);
+extern SCIP_RETCODE     graph_tpathsRecomputeBiased(const SDPROFIT*, GRAPH*, TPATHS*);
 extern void             graph_tpathsFree(SCIP*, TPATHS**);
 extern void             graph_tpathsPrintForNode(const GRAPH*, const SDPROFIT*, const TPATHS*, int);
 extern void             graph_tpathsAdd1st(const GRAPH*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
