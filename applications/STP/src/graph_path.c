@@ -479,6 +479,11 @@ void tpathsPrintPath(
 
       graph_edge_printInfo(g, edge_curr);
 
+      if( g->oeat[edge_curr] == EAT_LAST )
+      {
+         printf("...edge killed! \n");
+      }
+
       node_pred = node_curr;
       node_curr = node_next;
       edge_curr = termpaths[node_curr + offset].edge;
