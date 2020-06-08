@@ -804,6 +804,10 @@ SCIP_RETCODE exprIsSemicontinuous(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &indicators, nbnds0, nindicators) );
    }
 
+   for( v = 0; v < nindicators; ++v )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, indicators[v]) );
+   }
    nlhdlrexprdata->indicators = indicators;
    nlhdlrexprdata->nindicators = nindicators;
    *res = TRUE;
@@ -860,13 +864,23 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
    )
 {
+   int v;
+
    if( nlhdlrexprdata->nindicators != 0 )
    {
       assert(nlhdlrexprdata->indicators != NULL);
+      for( v = nlhdlrexprdata->nindicators - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &(nlhdlrexprdata->indicators[v])) );
+      }
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indicators), nlhdlrexprdata->nindicators);
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators);
    }
 
+   for( v = nlhdlrexprdata->nvars - 1; v >= 0; --v )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &(nlhdlrexprdata->vars[v])) );
+   }
    SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->vars, nlhdlrexprdata->varssize);
 
    return SCIP_OKAY;
@@ -984,6 +998,7 @@ SCIP_RETCODE addAuxVar(
    assert(nlhdlrexprdata->nvars + 1 <= nlhdlrexprdata->varssize);
 
    nlhdlrexprdata->vars[nlhdlrexprdata->nvars] = auxvar;
+   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    SCIP_CALL( SCIPhashmapSetImageInt(auxvarmap, (void*) auxvar, nlhdlrexprdata->nvars) );
    ++(nlhdlrexprdata->nvars);
 
@@ -1421,6 +1436,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
    SCIP_HASHMAPENTRY* entry;
    SCVARDATA* data;
    int c;
+   int i;
 
    if( (*nlhdlrdata)->scvars != NULL )
    {
@@ -1544,6 +1560,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    {
       (*nlhdlrexprdata)->vars[i] = SCIPgetConsExprExprVarVar(varexprs[i]);
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*nlhdlrexprdata)->vars[i]) );
    }
    SCIPfreeBufferArray(scip, &varexprs);
 
