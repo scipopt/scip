@@ -433,6 +433,59 @@ void stRpcmwInit(
 }
 
 
+/** prints terminal path from given node */
+static
+void tpathsPrintPath(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< SD bias for nodes or NULL */
+   const TPATHS*         tpaths,             /**< storage for terminal paths */
+   int                   node,               /**< node to start from */
+   int                   level               /**< between 1 and 4 */
+)
+{
+   const int* const termbases = tpaths->termbases;
+   const int nnodes = graph_get_nNodes(g);
+   const int offset = (level - 1) * nnodes;
+   const int base = termbases[node + offset];
+   const PATH* const termpaths = tpaths->termpaths;
+   int node_pred;
+   int node_curr;
+   int node_next;
+   int edge_curr;
+   assert(1 <= level && level <= STP_TPATHS_NTERMBASES);
+   assert(graph_knot_isInRange(g, base));
+   assert(base != UNKNOWN);
+
+   node_pred = -1;
+   node_curr = node;
+   edge_curr = termpaths[node_curr + offset].edge;
+   node_next = (edge_curr >= 0) ? g->tail[edge_curr] : -1;
+
+   while( node_curr != base )
+   {
+      assert(graph_knot_isInRange(g, node_curr));
+
+      if( !graph_edge_isInRange(g, edge_curr) )
+      {
+         printf("found deleted edge, break \n");
+         break;
+      }
+
+      if( sdprofit && node_curr != node )
+      {
+         const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, node_curr, node_pred, node_next);
+         printf("node %d profit: %f \n", node_curr, profit);
+      }
+
+      graph_edge_printInfo(g, edge_curr);
+
+      node_pred = node_curr;
+      node_curr = node_next;
+      edge_curr = termpaths[node_curr + offset].edge;
+      node_next = (edge_curr >= 0) ? g->tail[edge_curr] : -1;
+   }
+}
+
 
 /** allocates TPATHS data */
 static
@@ -2367,6 +2420,54 @@ SCIP_RETCODE graph_tpathsInitBiased(
    tpathsBuildBiased(scip, sdprofit, g, *tpaths);
 
    return SCIP_OKAY;
+}
+
+
+/** prints terminal paths from given node */
+void graph_tpathsPrintForNode(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< SD bias for nodes or NULL */
+   const TPATHS*         tpaths,             /**< storage for terminal paths */
+   int                   node                /**< node to start from */
+)
+{
+   const int* termbases;
+   const int nnodes = graph_get_nNodes(g);
+   int pos;
+
+   assert(tpaths);
+   assert(graph_knot_isInRange(g, node));
+
+   printf("printing terminal paths for ");
+   graph_knot_printInfo(g, node);
+
+   if( Is_term(g->term[node]))
+   {
+      printf("single node path only: \n");
+      graph_knot_printInfo(g, node);
+
+      return;
+   }
+
+   termbases = tpaths->termbases;
+   pos = node;
+
+   for( int k = 0; k < STP_TPATHS_NTERMBASES; k++ )
+   {
+      const int base = termbases[pos];
+
+      if( base != UNKNOWN )
+      {
+         assert(graph_knot_isInRange(g, base));
+
+         printf("Path to terminal (distance=%f) ", tpaths->termpaths[pos].dist);
+         graph_knot_printInfo(g, base);
+
+         tpathsPrintPath(g, sdprofit, tpaths, node, k + 1);
+      }
+      pos += nnodes;
+   }
+
 }
 
 
