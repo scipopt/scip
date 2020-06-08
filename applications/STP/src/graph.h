@@ -549,8 +549,8 @@ extern void             graph_tpathsAdd3rd(const GRAPH*, const SCIP_Real*, const
 extern void             graph_tpathsAdd4th(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsSetAll3(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsSetAll4(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
-extern void             graph_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
-extern void             graph_tpathsGet4CloseTermsLE(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, SCIP_Real*, int*);
+extern void             graph_tpathsGet4CloseTerms(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, int*, SCIP_Real*, int*);
+extern void             graph_tpathsGet4CloseTermsLE(const GRAPH*, const TPATHS*, int, SCIP_Real, int*, int*, SCIP_Real*, int*);
 
 
 /* graph_sdpath.c

@@ -479,7 +479,7 @@ void tpathsPrintPath(
 
       graph_edge_printInfo(g, edge_curr);
 
-      if( g->oeat[edge_curr] == EAT_LAST )
+      if( graph_edge_isDeleted(g, edge_curr) )
       {
          printf("...edge killed! \n");
       }
@@ -562,6 +562,7 @@ void tpathsGet4CloseTerms(
    SCIP_Real             maxdist,            /**< maximum valid distance  */
    SCIP_Bool             distIsStrict,       /**< is 'maxdist' strict? */
    int*                  closeterms,         /**< four close terminals */
+   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
    SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
    int*                  ncloseterms         /**< number of close terminals found */
 )
@@ -571,6 +572,7 @@ void tpathsGet4CloseTerms(
    const int nnodes = tpaths->nnodes;
    int pos = node;
    int nnterms = 0;
+   const SCIP_Bool withFirstEdges = (firstedges != NULL);
 
    assert(closeterms && closeterms_dist && ncloseterms && g);
    assert(4 <= STP_TPATHS_NTERMBASES);
@@ -586,40 +588,33 @@ void tpathsGet4CloseTerms(
       return;
    }
 
-   if( distIsStrict )
+   for( int k = 0; k < 4; k++ )
    {
-      for( int k = 0; k < 4; k++ )
-      {
-         if( LT(termpaths[pos].dist, maxdist) )
-         {
-            closeterms[nnterms] = termbases[pos];
-            closeterms_dist[nnterms++] = termpaths[pos].dist;
-         }
-         else
-         {
-            break;
-         }
+      const SCIP_Bool addTerm =
+         distIsStrict ?
+            LT(termpaths[pos].dist, maxdist)
+         :  LE(termpaths[pos].dist, maxdist);
 
-         pos += nnodes;
-      }
-   }
-   else
-   {
-      for( int k = 0; k < 4; k++ )
+      if( addTerm )
       {
-         if( LE(termpaths[pos].dist, maxdist) )
-         {
-            closeterms[nnterms] = termbases[pos];
-            closeterms_dist[nnterms++] = termpaths[pos].dist;
-         }
-         else
-         {
-            break;
-         }
+         closeterms[nnterms] = termbases[pos];
 
-         pos += nnodes;
+         if( withFirstEdges )
+         {
+            firstedges[nnterms] = termpaths[pos].edge;
+         }
+         closeterms_dist[nnterms++] = termpaths[pos].dist;
       }
+      else
+      {
+         assert(distIsStrict || !LE(termpaths[pos].dist, maxdist));
+
+         break;
+      }
+
+      pos += nnodes;
    }
+
 
 #ifndef NDEBUG
    for( int k = 0; k < nnterms; k++ )
@@ -2983,12 +2978,13 @@ void graph_tpathsGet4CloseTerms(
    int                   node,               /**< node */
    SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
    int*                  closeterms,         /**< four close terminals */
+   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
    SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
    int*                  ncloseterms         /**< number of close terminals found */
 )
 {
    const SCIP_Bool isStrict = TRUE;
-   tpathsGet4CloseTerms(g, tpaths, node, maxdist_strict, isStrict, closeterms, closeterms_dist, ncloseterms);
+   tpathsGet4CloseTerms(g, tpaths, node, maxdist_strict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
 }
 
 
@@ -3000,10 +2996,11 @@ void graph_tpathsGet4CloseTermsLE(
    int                   node,               /**< node */
    SCIP_Real             maxdist_nonstrict,  /**< maximum valid distance (not strict) */
    int*                  closeterms,         /**< four close terminals */
+   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
    SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
    int*                  ncloseterms         /**< number of close terminals found */
 )
 {
    const SCIP_Bool isStrict = FALSE;
-   tpathsGet4CloseTerms(g, tpaths, node, maxdist_nonstrict, isStrict, closeterms, closeterms_dist, ncloseterms);
+   tpathsGet4CloseTerms(g, tpaths, node, maxdist_nonstrict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
 }

@@ -922,11 +922,11 @@ SCIP_Real sdGetSd(
    assert(sdgraph);
 
    /* get closest terminals of distance strictly smaller than 'sd' */
-   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, termdist1, &nnterms1);
+   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, NULL, termdist1, &nnterms1);
    if( nnterms1 == 0 )
       return sd;
 
-   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i2, sd, neighbterms2, termdist2, &nnterms2);
+   graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i2, sd, neighbterms2, NULL, termdist2, &nnterms2);
    if( nnterms2 == 0 )
       return sd;
 
@@ -1348,7 +1348,7 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
    s->sdneighbors = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
    SCIP_CALL( reduce_blctreeInit(scip, g, &(s->blctree)) );
-   SCIP_CALL( reduce_sdprofitUpdateFromBLC(scip, g, s->blctree, s->sdprofit) );
+   SCIP_CALL( reduce_sdprofitUpdateFromBLC(scip, g, s->blctree, TRUE, s->sdprofit) );
 
    SCIP_CALL( graph_tpathsInitBiased(scip, s->sdprofit, g, &(s->terminalpaths)) );
    SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );

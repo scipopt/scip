@@ -67,7 +67,7 @@ SCIP_RETCODE testTerminalPathsTo3NextFound(
    SCIP_CALL( graph_tpathsInit(scip, graph, &tpaths) );
    graph_tpathsSetAll4(graph, graph->cost, graph->cost, NULL, tpaths);
 
-   graph_tpathsGet4CloseTerms(graph, tpaths, 0, FARAWAY, closeterms, dists, &ncloseterms);
+   graph_tpathsGet4CloseTerms(graph, tpaths, 0, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(ncloseterms == 3);
    STPTEST_ASSERT(closeterms[0] == 4);
    STPTEST_ASSERT(closeterms[1] == 2);
@@ -76,7 +76,7 @@ SCIP_RETCODE testTerminalPathsTo3NextFound(
    STPTEST_ASSERT(EQ(dists[1], 2.0));
    STPTEST_ASSERT(EQ(dists[2], 2.1));
 
-   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, dists, &ncloseterms);
+   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(ncloseterms == 3);
    STPTEST_ASSERT(closeterms[0] == 2);
    STPTEST_ASSERT(closeterms[1] == 4);
@@ -133,7 +133,7 @@ SCIP_RETCODE testBiasedTerminalPathsTo4NextFound(
    SCIP_CALL( graph_tpathsInit(scip, graph, &tpaths) );
    graph_tpathsSetAll4(graph, graph->cost, graph->cost, sdprofit, tpaths);
 
-   graph_tpathsGet4CloseTerms(graph, tpaths, 0, FARAWAY, closeterms, dists, &ncloseterms);
+   graph_tpathsGet4CloseTerms(graph, tpaths, 0, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(ncloseterms == 4);
    STPTEST_ASSERT(closeterms[0] == 6);
    STPTEST_ASSERT(closeterms[1] == 2);
@@ -144,7 +144,7 @@ SCIP_RETCODE testBiasedTerminalPathsTo4NextFound(
    STPTEST_ASSERT(EQ(dists[2], 1.7));
    STPTEST_ASSERT(EQ(dists[3], 2.1));
 
-   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, dists, &ncloseterms);
+   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(ncloseterms == 4);
    STPTEST_ASSERT(closeterms[2] == 4);
    STPTEST_ASSERT(closeterms[3] == 3);

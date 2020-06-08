@@ -735,6 +735,7 @@ void sdprofitUpdateNode(
    int                   sourceterm,         /**< the source terminal */
    SCIP_Real             edgecost,           /**< edge cost */
    SCIP_Real             bdist,              /**< bottleneck distance */
+   SCIP_Bool             blctree_isUpdated,  /**< BLC tree fresh? */
    SDPROFIT*             sdprofit            /**< the SD profit */
 )
 {
@@ -746,12 +747,11 @@ void sdprofitUpdateNode(
    assert(Is_term(g->term[sourceterm]));
 
 #ifndef NDEBUG
-   if( sourceterm == sdprofit->nodes_biassource[node] )
+   if( blctree_isUpdated &&  sourceterm == sdprofit->nodes_biassource[node] )
    {
       assert(GE(profit, sdprofit->nodes_bias[node]));
-
    }
-   else if( sourceterm == sdprofit->nodes_biassource2[node] )
+   else if( blctree_isUpdated && sourceterm == sdprofit->nodes_biassource2[node] )
    {
       assert(GE(profit, sdprofit->nodes_bias2[node]));
    }
@@ -767,6 +767,21 @@ void sdprofitUpdateNode(
       sdprofit->nodes_bias2[node] = profit;
       sdprofit->nodes_biassource2[node] = sourceterm;
    }
+   else if( sdprofit->nodes_biassource[node] == sdprofit->nodes_biassource2[node] )
+   {
+      int todo; // activate and make a reduction test run! should get better...
+
+     // sdprofit->nodes_bias2[node] = profit;
+     // sdprofit->nodes_biassource2[node] = sourceterm;
+
+   //   printf("new=%f old=%f \n", profit, sdprofit->nodes_bias2[node]);
+   //   printf("source=%d old=%d \n", sourceterm, sdprofit->nodes_biassource2[node]);
+
+     //     printf(" %d equal %d==%d \n",node, sdprofit->nodes_biassource[node], sdprofit->nodes_biassource2[node]);
+
+   }
+
+
 }
 
 
@@ -857,7 +872,7 @@ SCIP_RETCODE sdneighborUpdate(
             const int neighbor = g->head[e];
            // const SCIP_Real ecost = g->cost[e];
 
-            graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, neighbor, FARAWAY, neighbterms1, termdist1, &nnterms1);
+            graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, neighbor, FARAWAY, neighbterms1, NULL, termdist1, &nnterms1);
 
             /* go over all close terminals of the neighbor */
             for( int k = 0; k < nnterms1; k++ )
@@ -1123,6 +1138,7 @@ SCIP_RETCODE reduce_sdprofitUpdateFromBLC(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    const BLCTREE*        blctree,            /**< BLC tree */
+   SCIP_Bool             blctree_isUpdated,  /**< BLC tree fresh? */
    SDPROFIT*             sdprofit            /**< the SD profit */
 )
 {
@@ -1156,18 +1172,36 @@ SCIP_RETCODE reduce_sdprofitUpdateFromBLC(
 
          if( Is_term(g->term[tail]) )
          {
-            sdprofitUpdateNode(g, head, tail, edgecost, bdist, sdprofit);
+            sdprofitUpdateNode(g, head, tail, edgecost, bdist, blctree_isUpdated, sdprofit);
          }
 
          if( Is_term(g->term[head]) )
          {
-            sdprofitUpdateNode(g, tail, head, edgecost, bdist, sdprofit);
+            sdprofitUpdateNode(g, tail, head, edgecost, bdist, blctree_isUpdated, sdprofit);
          }
       }
    }
 
    SCIPfreeBufferArray(scip, &candidate_edges);
    SCIPfreeBufferArray(scip, &candidate_bottlenecks);
+
+   return SCIP_OKAY;
+}
+
+
+/** builds implied profits by using exact bottleneck distances */
+SCIP_RETCODE reduce_sdprofitBuildFromBLC(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   SCIP_Bool             blctree_isUpdated,  /**< BLC tree fresh? */
+   SDPROFIT*             sdprofit            /**< the SD profit */
+)
+{
+   assert(scip && g && blctree && sdprofit);
+
+   sdprofitBuild(g, sdprofit);
+   SCIP_CALL( reduce_sdprofitUpdateFromBLC(scip, g, blctree, blctree_isUpdated, sdprofit) );
 
    return SCIP_OKAY;
 }

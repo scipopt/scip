@@ -372,6 +372,7 @@ void nsvEdgeGetTermDists(
    )
 {
    SCIP_Real termdist[4];
+   int firstedges[4];
    int neighbterms[4];
    int nnterms;
    const SD* sd = nsv->sdistance;
@@ -393,7 +394,8 @@ void nsvEdgeGetTermDists(
    }
    else
    {
-      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, tail, upper_sdbound, neighbterms, termdist, &nnterms);
+      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, tail, upper_sdbound, neighbterms, firstedges,
+            termdist, &nnterms);
 
       for( int i = 0; i < nnterms; i++ )
       {
@@ -401,6 +403,9 @@ void nsvEdgeGetTermDists(
          assert(term != tail);
 
          if( term == head )
+            continue;
+
+         if( (firstedges[i] / 2) == (edge / 2) )
             continue;
 
          if( termdist[i] < *dist_tail )
@@ -417,7 +422,8 @@ void nsvEdgeGetTermDists(
    }
    else
    {
-      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, head, upper_sdbound, neighbterms, termdist, &nnterms);
+      graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, head, upper_sdbound, neighbterms, firstedges,
+            termdist, &nnterms);
 
       for( int i = 0; i < nnterms; i++ )
       {
@@ -425,6 +431,9 @@ void nsvEdgeGetTermDists(
          assert(term != head);
 
          if( term == tail || term == term_tail )
+            continue;
+
+         if( (firstedges[i] / 2) == (edge / 2) )
             continue;
 
          if( termdist[i] < *dist_head )
@@ -497,7 +506,7 @@ SCIP_RETCODE nsvExec(
          /* cut edge? */
          if( EQ(candidate_bottlenecks[i], FARAWAY) )
          {
-            int todo; // check whether terminal on one side, otherwise delete
+            int todo; // check whether terminal on one side, otherwise delete the whole subgraph
             continue;
          }
 
@@ -531,7 +540,6 @@ SCIP_RETCODE nsvExec(
             {
                SCIPdebugMessage("NSV contract default ... ");
                SCIPdebugMessage("%f + %f + %f <= %f ... ", dist_tail, edgecost, dist_head, candidate_bottlenecks[i]);
-               //graph_edge_printInfo(g, edge);
 
                SCIP_CALL( nsvEdgeContract(scip, edge, tail, head, g, nsv, nelims) );
             }
@@ -2488,16 +2496,15 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
    SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
-
-  // SCIP_CALL( reduce_sdStarBiased(scip, 500, NULL, g, nelims) );
-
-   //
    SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, 500, sdistance->sdprofit, NULL, g, nelims) );
 
+   SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
+   SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
 
-   // todo call edge contraction test!
+   // reduce_sdFree(scip, &sdistance);
+   // SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
+
    SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
-
 
    reduce_sdFree(scip, &sdistance);
 
