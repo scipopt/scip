@@ -1633,6 +1633,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_INTERVAL yactivity;
       SCIP_INTERVAL zactivity;
 
+      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 2);
+
       yactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
       zactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]);
 
@@ -1649,10 +1651,16 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
+   else if( SCIPisConsExprExprVar(children[specialtermidx]) )
+   {
+      /* children[specialtermidx] can be a variable, in which case we treat it as if it is squared */
+      rhssign = 1.0;
+   }
    else
    {
       SCIP_INTERVAL rhsactivity;
 
+      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 1);
       rhsactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
 
       if( rhsactivity.inf < 0.0 )
