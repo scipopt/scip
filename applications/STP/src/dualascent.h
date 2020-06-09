@@ -36,7 +36,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
-   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
    const int*            result,             /**< solution array (solution needs to be provided) */
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */

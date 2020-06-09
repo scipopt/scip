@@ -505,7 +505,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*    prunegraph;
    PATH*    vnoi;
    PATH*    path;
-   GNODE** gnodearr;
    SCIP_Real    ubnew;
    SCIP_Real    ubbest;
    SCIP_Real    offsetnew;
@@ -516,7 +515,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    int     i;
    int     k;
    int     e;
-   int     nterms;
    int     nnodes;
    int     nedges;
    int     anterms;
@@ -542,7 +540,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    assert(soledge != NULL);
    assert(solstp_isValid(scip, g, soledge));
 
-   nterms = g->terms;
    nedges = g->edges;
    nnodes = g->knots;
    probtype = g->stp_type;
@@ -574,12 +571,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    offsetnew = 0.0;
 
    /* allocate memory for reduction methods */
-   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-   for( i = 0; i < nterms - 1; i++ )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(gnodearr[i])) ); /*lint !e866*/
-   }
-
    SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrchar, nedges) );
@@ -661,7 +652,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 #endif
 
       /*  perform reductions */
-      SCIP_CALL( reduce_daSlackPrune(scip, vars, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, &ubnew,
+      SCIP_CALL( reduce_daSlackPrune(scip, vars, prunegraph, vnoi, cost, costrev, nodearrreal, &ubnew,
             soledge, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph)) );
 
       /* delete all vertices not reachable from the root */
@@ -759,10 +750,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIPfreeBufferArray(scip, &edgearrchar);
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &globalsoledge);
-
-   for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBlockMemory(scip, &(gnodearr[i]));
-   SCIPfreeBufferArray(scip, &gnodearr);
 
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);

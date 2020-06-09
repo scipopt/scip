@@ -101,7 +101,7 @@ SCIP_RETCODE initDualAscent(
    int*                  gmark,              /**< array for marking nodes */
    int* RESTRICT         active,             /**< active vertices mark */
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
-   GNODE**               gnodearr,           /**< array containing terminal nodes*/
+   GNODE*                gnodearr,           /**< array containing terminal nodes*/
    SCIP_Real* RESTRICT   rescap,             /**< residual capacity */
    SCIP_Real*            dualobj,            /**< dual objective */
    int*                  augmentingcomponent /**< augmenting component */
@@ -130,9 +130,10 @@ SCIP_RETCODE initDualAscent(
       if( i != root )
       {
          assert(termcount < g->terms - 1);
+         assert(gnodearr);
 
-         gnodearr[termcount]->number = i;
-         gnodearr[termcount]->dist = g->grad[i];
+         gnodearr[termcount].number = i;
+         gnodearr[termcount].dist = g->grad[i];
 
          /* for variants with dummy terminals */
          if( g->grad[i] == 2 )
@@ -146,7 +147,7 @@ SCIP_RETCODE initDualAscent(
             if( a != EAT_LAST )
             {
                const int tail = g->tail[a];
-               gnodearr[termcount]->dist += g->grad[tail] - 1;
+               gnodearr[termcount].dist += g->grad[tail] - 1;
 
                if( is_pseudoroot )
                {
@@ -154,16 +155,16 @@ SCIP_RETCODE initDualAscent(
                   {
                      if( SCIPisZero(scip, g->cost[a]) )
                      {
-                        gnodearr[termcount]->dist += g->grad[g->tail[a]] - 1;
+                        gnodearr[termcount].dist += g->grad[g->tail[a]] - 1;
                      }
                   }
                }
             }
 
-            assert(gnodearr[termcount]->dist > 0);
+            assert(gnodearr[termcount].dist > 0);
          }
 
-         SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[termcount]));
+         SCIP_CALL(SCIPpqueueInsert(pqueue, &(gnodearr[termcount])));
 
          if( *augmentingcomponent == -1 )
             *augmentingcomponent = i;
@@ -188,7 +189,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
-   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
    const int*            result,             /**< solution array or NULL */
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
@@ -201,7 +201,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    SCIP_Real* RESTRICT rescap;
-   GNODE** gnodearr;
+   GNODE* gnodearr;
    int* RESTRICT edgearr;
    int* RESTRICT tailarr;
    int* RESTRICT start;
@@ -279,16 +279,10 @@ SCIP_RETCODE SCIPStpDualAscent(
    else
       unsatarcs = edgearrint;
 
-   if( gnodearrterms == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-      for( int i = 0; i < nterms - 1; i++ )
-         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
-   }
+   if( nterms > 1 )
+      SCIP_CALL( SCIPallocMemoryArray(scip, &gnodearr, nterms - 1) );
    else
-   {
-      gnodearr = gnodearrterms;
-   }
+      gnodearr = NULL;
 
    SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
 
@@ -720,13 +714,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIPfreeMemoryArray(scip, &active);
 
    SCIPpqueueFree(&pqueue);
-
-   if( gnodearrterms == NULL )
-   {
-      for( int i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBlockMemory(scip, &gnodearr[i]);
-      SCIPfreeBufferArray(scip, &gnodearr);
-   }
+   SCIPfreeMemoryArrayNull(scip, &gnodearr);
 
    /* call Ascend-And-Prune? */
    if( ascendandprune )

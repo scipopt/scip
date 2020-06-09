@@ -196,8 +196,8 @@ extern SCIP_RETCODE reduceHc(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceSap(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceNw(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE redLoopStp(SCIP*, const RPARAMS*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*);
-extern SCIP_RETCODE redLoopPc(SCIP*, const int*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, GNODE**, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
+extern SCIP_RETCODE redLoopPc(SCIP*, const int*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int, SCIP_Bool);
 
 
@@ -265,8 +265,8 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 /* reduce_da.c
  */
 extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, const RPDA*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*);
-extern SCIP_RETCODE    reduce_daSlackPrune(SCIP*, SCIP_VAR**, GRAPH*, PATH*, GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*, STP_Bool*, int*, int, SCIP_Bool);
-extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, const RPDA*, PATH*, GNODE**, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*, SCIP_Real);
+extern SCIP_RETCODE    reduce_daSlackPrune(SCIP*, SCIP_VAR**, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*, STP_Bool*, int*, int, SCIP_Bool);
+extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, const RPDA*, PATH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*, SCIP_Real);
 
 
 /* reduce_ext.c
