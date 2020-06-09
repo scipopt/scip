@@ -1351,7 +1351,10 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
    SCIP_CALL( reduce_sdprofitUpdateFromBLC(scip, g, s->blctree, TRUE, s->sdprofit) );
 
    SCIP_CALL( graph_tpathsInitBiased(scip, s->sdprofit, g, &(s->terminalpaths)) );
-   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
+   SCIP_CALL( reduce_sdgraphInitBiasedFromTpaths(scip, g, s->sdprofit, s->terminalpaths, &(s->sdgraph)) );
+
+//   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
+
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
 
    return SCIP_OKAY;

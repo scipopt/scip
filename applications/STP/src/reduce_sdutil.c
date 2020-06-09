@@ -624,7 +624,7 @@ void sdgraphUpdateDistgraphFromTpaths(
          {
             assert(vbase_tail >= 0 && vbase_head >= 0);
 
-            printf("add biased MST edge %d->%d (%f<%f) \n", vbase_tail, vbase_head, distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd));
+            //SCIPdebugMessage("add biased MST edge %d->%d (%f<%f) \n", vbase_tail, vbase_head, distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd));
 
             distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph);
 
