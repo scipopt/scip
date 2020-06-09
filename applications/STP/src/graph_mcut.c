@@ -405,7 +405,7 @@ static int bfs(
 /** global relabel heuristic that sets distance of sink to zero and relabels all other nodes using backward bfs on residual
  * graph, starting from the sink.  */
 static void globalrelabel(
-   const GRAPH* p,
+   const GRAPH* graph,
    const int    s,
    const int    t,
    int* RESTRICT dist,
@@ -426,25 +426,20 @@ static void globalrelabel(
    int*         dormmax
    )
 {
-   int i;
-   int q;
-   int k;
-   int end;
-   int nnodes;
    int currdist;
-   int nextdist;
    int nextnode;
    int actmaxloc;
    int actminloc;
    int glbmaxloc;
    int dormmaxnext;
+   const int nnodes = graph_get_nNodes(graph);
+   const int end = *glbmax;
    SCIP_Bool hit;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  graph->knots);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  graph->knots);
    assert(s      != t);
    assert(w      != NULL);
    assert(headactive != NULL);
@@ -461,15 +456,10 @@ static void globalrelabel(
    assert(headactive != NULL);
    assert(headinactive != NULL);
 
-   nnodes = p->knots;
-
-   assert(*glbmax < nnodes);
-
-   end = *glbmax;
-
+   assert(end < nnodes);
    assert(w[t] == 0);
 
-   for( i = 0; i <= end; i++ )
+   for( int i = 0; i <= end; i++ )
    {
       headactive[i] = Q_NULL;
       headinactive[i] = Q_NULL;
@@ -477,12 +467,16 @@ static void globalrelabel(
          w[i] = -1;
    }
 
-   for( i = 0; i < nnodes; i++ )
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes; i++ )
       assert(headactive[i] == Q_NULL && headinactive[i] == Q_NULL);
+#endif
 
-   for( i = end + 1; i < nnodes; i++ )
+   for( int i = end + 1; i < nnodes; i++ )
+   {
       if( w[i] == 0 )
          w[i] = -1;
+   }
 
    assert(w[t] == -1);
 
@@ -499,22 +493,24 @@ static void globalrelabel(
    /* bfs loop */
    for( currdist = 0; TRUE; currdist++ )
    {
-      nextdist = currdist + 1;
+      const int nextdist = currdist + 1;
 
       /* no more nodes with current distance? */
       if( (headactive[currdist] < 0) && (headinactive[currdist] < 0) )
          break;
 
       /* check inactive nodes */
-      for( i = headinactive[currdist]; i >= 0; i = next[i] )
+      for( int i = headinactive[currdist]; i >= 0; i = next[i] )
       {
-         for( q = edgestart[i], end = edgestart[i + 1]; q != end; q++ )
+         const int edges_start = edgestart[i];
+         const int edges_end = edgestart[i + 1];
+         for( int q = edges_start; q != edges_end; q++ )
          {
             if( residual[edgearr[q]] != 0 )
             {
                if( w[headarr[q]] < 0 )
                {
-                  k = headarr[q];
+                  const int k = headarr[q];
 
                   w[k] = 0;
 
@@ -535,13 +531,15 @@ static void globalrelabel(
       }
 
       /* check active nodes */
-      for( i = headactive[currdist]; i >= 0; i = next[i] )
+      for( int i = headactive[currdist]; i >= 0; i = next[i] )
       {
-         for( q = edgestart[i], end = edgestart[i + 1]; q != end; q++ )
+         const int edges_start = edgestart[i];
+         const int edges_end = edgestart[i + 1];
+         for( int q = edges_start; q != edges_end; q++ )
          {
             if( residual[edgearr[q]] != 0 )
             {
-               k = headarr[q];
+               const int k = headarr[q];
 
                if( w[k] < 0 )
                {
@@ -576,7 +574,7 @@ static void globalrelabel(
    assert(w[t] == 0);
 
    dormmaxnext = (*dormmax) + 1;
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( w[i] < 0 )
       {
@@ -1138,7 +1136,6 @@ void graph_mincut_exec(
    const SCIP_Bool       rerun
    )
 {
-   int    i;
    int    l;
    int    actmax;
    int    actmin;
@@ -1148,15 +1145,15 @@ void graph_mincut_exec(
    int    mindist;
    int    minnode;
    int    minedgestart;
-   int*   e;
-   int*   r;
-   int*   dist;
-   int*   prev;
-   int*   next;
-   int*   temp;
-   int*   edgecurr;
-   int*   headactive;
-   int*   headinactive;
+   int* RESTRICT e;
+   int* RESTRICT r;
+   int* RESTRICT dist;
+   int* RESTRICT prev;
+   int* RESTRICT next;
+   int* RESTRICT temp;
+   int* RESTRICT edgecurr;
+   int* RESTRICT headactive;
+   int* RESTRICT headinactive;
    int j;
    int end;
    int nnodes;
@@ -1213,14 +1210,15 @@ void graph_mincut_exec(
    /* main loop: get highest label node */
    while( actmax >= actmin )
    {
+      const int i = headactive[actmax];
+
       /* no active vertices with distance label == actmax? */
-      if( headactive[actmax] < 0 )
+      if( i < 0 )
       {
          actmax--;
          continue;
       }
 
-      i = headactive[actmax];
 
       assert(actmax <= glbmax);
       assert(dist[i] == actmax);
