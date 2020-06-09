@@ -212,19 +212,15 @@ void vnoiComputeImplied(
    const SCIP_Real* const gCost = g->cost;
    const int* const gOeat = g->oeat;
    const int* const gHead = g->head;
-  // const SCIP_Real* nodes_bias = sdprofit->nodes_bias;
-  // const int* nodes_biassource = sdprofit->nodes_biassource;
 
    assert(dheap->size > 0);
    assert(graph_get_nNodes(g) > 1);
-  // assert(nodes_bias && nodes_biassource);
 
    /* until the heap is empty */
    while( dheap->size > 0 )
    {
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_predNode = (nodes_pred[k] >= 0) ? g->tail[nodes_pred[k]] : -1;
-     // const int k_source = nodes_biassource[k];
       const SCIP_Real k_dist = nodes_dist[k];
 
       assert(CONNECT == state[k]);
@@ -237,8 +233,6 @@ void vnoiComputeImplied(
          {
             const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, k, k_predNode, m);
             const SCIP_Real bias = MIN(gCost[e], profit);
-         //   const SCIP_Bool useBias = (k_source != m && k_source != k_predNode);
-        //    const SCIP_Real bias = (useBias)? MIN(gCost[e], nodes_bias[k]) : 0.0;
             const SCIP_Real newdist = k_dist + gCost[e] - MIN(k_dist, bias);
 
             /* check whether the path (to m) including k is shorter than the so far best known */
@@ -1220,7 +1214,6 @@ SCIP_RETCODE graph_vnoiComputeImplied(
    vnoiComputeImplied(graph, sdprofit, dheap, vnoi);
 
    graph_heap_free(scip, TRUE, TRUE, &dheap);
-
 
    return SCIP_OKAY;
 }
