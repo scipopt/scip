@@ -871,7 +871,7 @@ void SCIPcertificatePrintProblemRational(
 
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
-   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   SCIPfprintf(certificate->file, "%s", formatstr);
    BMSfreeMemoryArray(&formatstr);
 }
 
