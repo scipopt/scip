@@ -31,7 +31,8 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "perspective"
 #define NLHDLR_DESC         "perspective handler for expressions"
-#define NLHDLR_PRIORITY     75
+#define NLHDLR_DETECTPRIORITY   75
+#define NLHDLR_ENFOPRIORITY     75
 
 #define DETECTSUM    FALSE
 #define MULTCUTS     TRUE
@@ -1188,7 +1189,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    BMSclearMemory(nlhdlrdata);
 
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC,
+         NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);

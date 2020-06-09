@@ -900,6 +900,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - overestimate : whether the expression needs to be over- or underestimated
  *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
  *  - rowprep : a rowprep where to store the estimator
+ *  - rowpreps: an array where to store the estimators
  *  - success : buffer to indicate whether an estimator could be computed
  *  - addbranchscores: indicates whether to register branching scores
  *  - addedbranchscores: buffer to store whether the branching score callback was successful
@@ -914,7 +915,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
    SCIP_Real targetvalue, \
-   SCIP_ROWPREP* rowprep, \
+   SCIP_PTRARRAY* rowpreps, \
    SCIP_Bool* success, \
    SCIP_Bool addbranchscores, \
    SCIP_Bool* addedbranchscores)

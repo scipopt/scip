@@ -500,7 +500,9 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, evalauxHdlr, nlhdlrdata) );
+      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr),
+      SCIPgetConsExprNlhdlrDetectPriority(sourcenlhdlr), SCIPgetConsExprNlhdlrEnfoPriority(sourcenlhdlr),
+      detectHdlr, evalauxHdlr, nlhdlrdata) );
    SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
@@ -583,7 +585,8 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr",
+         "tests nonlinear handler functionality", 10000, 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);

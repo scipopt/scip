@@ -34,7 +34,8 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "quotient"
 #define NLHDLR_DESC         "nonlinear handler for quotient expressions"
-#define NLHDLR_PRIORITY     20
+#define NLHDLR_DETECTPRIORITY   20
+#define NLHDLR_ENFOPRIORITY     20
 
 /*
  * Data structures
@@ -1080,12 +1081,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    SCIP_VAR* auxvary;
    SCIP_Bool branchingusefulx = FALSE;
    SCIP_Bool branchingusefuly = FALSE;
+   SCIP_ROWPREP* rowprep;
 
    assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
 
    *addedbranchscores = FALSE;
    *success = FALSE;
@@ -1093,6 +1095,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    /* get auxiliary variables */
    auxvarx = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->numexpr);
    auxvary = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->denomexpr);
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    if( auxvarx == auxvary )
    {
@@ -1112,6 +1116,15 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
          nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
          nlhdlrexprdata->constant, overestimate, rowprep,
          &branchingusefulx, &branchingusefuly, success) );
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    /* add branching scores if requested */
@@ -1224,8 +1237,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuotient(
    /* create nonlinear handler data */
    nlhdlrdata = NULL;
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME,
-      NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectQuotient, nlhdlrEvalauxQuotient, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC,
+      NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectQuotient, nlhdlrEvalauxQuotient, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrQuotient);

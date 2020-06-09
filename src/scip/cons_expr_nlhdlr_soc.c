@@ -47,7 +47,8 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME           "soc"
 #define NLHDLR_DESC           "nonlinear handler for second-order cone structures"
-#define NLHDLR_PRIORITY             100
+#define NLHDLR_DETECTPRIORITY       100
+#define NLHDLR_ENFOPRIORITY         100
 #define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
 #define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
 
@@ -2655,7 +2656,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    /* create nonlinear handler data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectSoc, nlhdlrEvalauxSoc, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectSoc, nlhdlrEvalauxSoc, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrSoc);
