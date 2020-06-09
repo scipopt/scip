@@ -229,6 +229,58 @@ SCIP_RETCODE testSdGraphDistsAreValid2(
 }
 
 
+/** tests SD getter */
+static
+SCIP_RETCODE testSdGraphStrongBiasedDistsAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SDPROFIT* sdprofit;
+   TPATHS* tpaths;
+   SDGRAPH* sdgraph;
+   int nnodes = 5;
+   int nedges = 8;
+   const SCIP_Real* sddists;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 2.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.9); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 2.0); // 4
+   graph_edge_addBi(scip, graph, 1, 4, 2.0); // 4
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( reduce_sdprofitInit(scip, graph, &(sdprofit)) );
+   SCIP_CALL( graph_tpathsInitBiased(scip, sdprofit, graph, &(tpaths)) );
+   SCIP_CALL( reduce_sdgraphInitBiasedFromTpaths(scip, graph, sdprofit, tpaths, &(sdgraph)) );
+
+   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+
+   sddists = reduce_sdgraphGetOrderedMstCosts(sdgraph);
+
+   STPTEST_ASSERT(EQ(sddists[0], 2.0));
+   STPTEST_ASSERT(EQ(sddists[1], 2.0));
+
+   reduce_sdgraphFree(scip, &(sdgraph));
+   graph_tpathsFree(scip, &(tpaths));
+   reduce_sdprofitFree(scip, &(sdprofit));
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that BDk test pseudo-eliminates node of degree 4 */
 static
 SCIP_RETCODE testBdkTreeDistDeletesNodeDeg4(
@@ -1175,6 +1227,9 @@ SCIP_RETCODE stptest_reduceSdGetter(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+
+   SCIP_CALL( testSdGraphStrongBiasedDistsAreValid(scip) );
+
    SCIP_CALL( testSdGetterReturnsCorrectSds(scip) );
    SCIP_CALL( testSdGraphDistsAreValid(scip) );
    SCIP_CALL( testSdGraphDistsAreValid2(scip) );
