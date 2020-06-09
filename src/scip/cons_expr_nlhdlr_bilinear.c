@@ -28,12 +28,13 @@
 #include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "bilinear"
-#define NLHDLR_DESC         "bilinear handler for expressions"
-#define NLHDLR_PRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_NAME               "bilinear"
+#define NLHDLR_DESC               "bilinear handler for expressions"
+#define NLHDLR_DETECTPRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_ENFOPRIORITY       -10
 
-#define MIN_INTERIORITY     0.01 /* minimum interiority for a reference point for applying separation */
-#define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
+#define MIN_INTERIORITY           0.01 /* minimum interiority for a reference point for applying separation */
+#define MIN_ABSBOUNDSIZE          0.1  /* minimum size of variable bounds for applying separation */
 
 #ifdef SCIP_STATISTIC
 /* properties of the bilinear nlhdlr statistics table */
@@ -1097,6 +1098,9 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    SCIP_Real violation;
    SCIP_Longint nodeid;
    SCIP_Bool mccsuccess = TRUE;
+   SCIP_ROWPREP* rowprep;
+
+   assert(rowpreps != NULL);
 
    *success = FALSE;
    *addedbranchscores = FALSE;
@@ -1197,10 +1201,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
 
    if( *success )
    {
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
       SCIPaddRowprepConstant(rowprep, linconstant);
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, x, lincoefx) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
    }
 
    return SCIP_OKAY;
@@ -1499,7 +1505,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrBilinear);

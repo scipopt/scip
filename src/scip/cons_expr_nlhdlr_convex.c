@@ -34,13 +34,15 @@
 #include "scip/dbldblarith.h"
 
 /* fundamental nonlinear handler properties */
-#define CONVEX_NLHDLR_NAME     "convex"
-#define CONVEX_NLHDLR_DESC     "handler that identifies and estimates convex expressions"
-#define CONVEX_NLHDLR_PRIORITY 50
+#define CONVEX_NLHDLR_NAME             "convex"
+#define CONVEX_NLHDLR_DESC             "handler that identifies and estimates convex expressions"
+#define CONVEX_NLHDLR_DETECTPRIORITY   50
+#define CONVEX_NLHDLR_ENFOPRIORITY     50
 
-#define CONCAVE_NLHDLR_NAME     "concave"
-#define CONCAVE_NLHDLR_DESC     "handler that identifies and estimates concave expressions"
-#define CONCAVE_NLHDLR_PRIORITY 40
+#define CONCAVE_NLHDLR_NAME            "concave"
+#define CONCAVE_NLHDLR_DESC            "handler that identifies and estimates concave expressions"
+#define CONCAVE_NLHDLR_DETECTPRIORITY  40
+#define CONCAVE_NLHDLR_ENFOPRIORITY    40
 
 #define DEFAULT_DETECTSUM      FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
@@ -1733,6 +1735,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1741,7 +1744,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
    assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -1757,6 +1760,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
    assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    if( nlhdlrexprdata->nleafs == 1 && SCIPisConsExprExprIntegral(nlhdlrexprdata->leafexprs[0]) )
    {
@@ -1779,6 +1784,15 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
          (void*)expr,
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    return SCIP_OKAY;
@@ -1813,7 +1827,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    nlhdlrdata->isnlhdlrconvex = TRUE;
    nlhdlrdata->evalsol = NULL;
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC, CONVEX_NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC,
+      CONVEX_NLHDLR_DETECTPRIORITY, CONVEX_NLHDLR_ENFOPRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONVEX_NLHDLR_NAME "/detectsum",
@@ -2058,10 +2073,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -2078,13 +2095,24 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
        (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
    SCIP_CALL( estimateVertexPolyhedral(scip, conshdlr, nlhdlr, nlhdlrexprdata, sol, FALSE, overestimate, targetvalue, rowprep, success) );
 
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
-      overestimate ? "over" : "under",
-      (void*)expr,
-      sol != NULL ? "sol" : "lp",
-      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
+         overestimate ? "over" : "under",
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
+   }
 
    if( addbranchscores )
    {
@@ -2172,7 +2200,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    nlhdlrdata->isnlhdlrconvex = FALSE;
    nlhdlrdata->evalsol = NULL;
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONCAVE_NLHDLR_NAME, CONCAVE_NLHDLR_DESC, CONCAVE_NLHDLR_PRIORITY, nlhdlrDetectConcave, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, CONCAVE_NLHDLR_NAME, CONCAVE_NLHDLR_DESC,
+      CONCAVE_NLHDLR_DETECTPRIORITY, CONCAVE_NLHDLR_ENFOPRIORITY, nlhdlrDetectConcave, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" CONCAVE_NLHDLR_NAME "/detectsum",

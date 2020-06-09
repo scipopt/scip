@@ -26,9 +26,10 @@
 #include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "default"
-#define NLHDLR_DESC         "default handler for expressions"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_NAME               "default"
+#define NLHDLR_DESC               "default handler for expressions"
+#define NLHDLR_DETECTPRIORITY     0
+#define NLHDLR_ENFOPRIORITY       0
 
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
@@ -252,10 +253,11 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    SCIP_Bool* branchcand = NULL;
    int nchildren;
    int c;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *addedbranchscores = FALSE;
@@ -271,6 +273,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    nchildren = SCIPgetConsExprExprNChildren(expr);
 
@@ -300,12 +304,18 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
       rowprep->side = -constant;
 
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
          overestimate ? "over" : "under",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
          (void*)expr,
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    if( addbranchscores )
@@ -421,7 +431,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
