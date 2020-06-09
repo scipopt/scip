@@ -1555,6 +1555,29 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
+       * Since the sum will then be linear in auxiliary variables, perspective can't improve anything for it
+       */
+      SCIP_Bool hasnondefault = FALSE;
+
+      for( i = 0; i < expr->nenfos; ++i )
+      {
+         if( strcmp(SCIPgetConsExprNlhdlrName(expr->enfos[i]->nlhdlr), "default") != 0 )
+         {
+            hasnondefault = TRUE;
+            break;
+         }
+      }
+
+      if( !hasnondefault )
+      {
+         SCIPinfoMessage(scip, NULL, "\nignoring a sum with default nlhdlr only");
+         return SCIP_OKAY;
+      }
+   }
+
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
