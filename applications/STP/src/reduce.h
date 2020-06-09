@@ -346,10 +346,12 @@ extern SCIP_RETCODE    reduce_sdprofitBuildFromBLC(SCIP*, const GRAPH*, const BL
 extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_sdgraphInitBiasedFromTpaths(SCIP*, GRAPH*, const SDPROFIT*, const TPATHS*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
 extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
 extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
 extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
+extern SCIP_Bool        reduce_sdgraphHasMstHalfMark(const SDGRAPH*);
 extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern SCIP_Real        reduce_sdgraphGetSd(int, int, SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);

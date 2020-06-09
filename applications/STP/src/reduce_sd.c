@@ -1458,20 +1458,35 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    int*                  nelims              /**< point to store number of deleted edges */
 )
 {
-   const STP_Bool* const edges_isBlocked = reduce_sdgraphGetMstHalfMark(sdgraph);
+   const STP_Bool* edges_isBlocked;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool checkstate = (edgestate != NULL);
    const SCIP_Real maxcost = reduce_sdgraphGetMaxCost(sdgraph);
    int nelims_new = 0;
+   SCIP_Bool allowEquality;
 
    assert(scip && nelims);
    assert(*nelims >= 0);
+
+   if( reduce_sdgraphHasMstHalfMark(sdgraph) )
+   {
+      edges_isBlocked = reduce_sdgraphGetMstHalfMark(sdgraph);
+      allowEquality = TRUE;
+      assert(edges_isBlocked);
+   }
+   else
+   {
+      edges_isBlocked = FALSE;
+      allowEquality = FALSE;
+   }
 
    for( int k = 0; k < nnodes; k++ )
    {
       int e = g->outbeg[k];
       while( e != EAT_LAST )
       {
+         SCIP_Bool deleteEdge;
+
          assert(e >= 0);
          if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
          {
@@ -1479,7 +1494,12 @@ SCIP_RETCODE reduce_sdImpLongEdge(
             continue;
          }
 
-         if( SCIPisGE(scip, g->cost[e], maxcost) && !edges_isBlocked[e / 2] )
+         if( allowEquality )
+            deleteEdge = SCIPisGE(scip, g->cost[e], maxcost) && !edges_isBlocked[e / 2];
+         else
+            deleteEdge = SCIPisGT(scip, g->cost[e], maxcost);
+
+         if( deleteEdge )
          {
             const int enext = g->oeat[e];
             graph_edge_del(scip, g, e, TRUE);

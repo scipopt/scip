@@ -555,16 +555,17 @@ void tpathsResetMembers(
 
 /** gets (up to) four close terminals to given node i */
 static inline
-void tpathsGet4CloseTerms(
+void tpathsGetKCloseTerms(
    const GRAPH*          g,                  /**< graph */
    const TPATHS*         tpaths,             /**< the terminal paths */
+   int                   maxnumber,          /**< number of close terms */
    int                   node,               /**< node */
    SCIP_Real             maxdist,            /**< maximum valid distance  */
    SCIP_Bool             distIsStrict,       /**< is 'maxdist' strict? */
-   int*                  closeterms,         /**< four close terminals */
-   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
-   SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
-   int*                  ncloseterms         /**< number of close terminals found */
+   int* RESTRICT         closeterms,         /**< four close terminals */
+   int* RESTRICT         firstedges,         /**< corresponding first edge (can be NULL) */
+   SCIP_Real* RESTRICT   closeterms_dist,    /**< four close terminal distance */
+   int* RESTRICT         ncloseterms         /**< number of close terminals found */
 )
 {
    const PATH* const termpaths = tpaths->termpaths;
@@ -575,7 +576,7 @@ void tpathsGet4CloseTerms(
    const SCIP_Bool withFirstEdges = (firstedges != NULL);
 
    assert(closeterms && closeterms_dist && ncloseterms && g);
-   assert(4 <= STP_TPATHS_NTERMBASES);
+   assert(maxnumber <= STP_TPATHS_NTERMBASES);
    assert(0 <= node && node < nnodes);
    assert(nnodes == g->knots);
    assert(GE(maxdist, 0.0));
@@ -585,10 +586,14 @@ void tpathsGet4CloseTerms(
       *ncloseterms = 1;
       closeterms[0] = node;
       closeterms_dist[0] = 0.0;
+
+      if( withFirstEdges )
+         firstedges[0] = UNKNOWN;
+
       return;
    }
 
-   for( int k = 0; k < 4; k++ )
+   for( int k = 0; k < maxnumber; k++ )
    {
       const SCIP_Bool addTerm =
          distIsStrict ?
@@ -2970,6 +2975,58 @@ void graph_tpathsFree(
 }
 
 
+
+/** gets (up to) four close terminals to given node i;
+ *  with strict upper bound on allowed distances */
+void graph_tpathsGetClosestTerm(
+   const GRAPH*          g,                  /**< graph */
+   const TPATHS*         tpaths,             /**< the terminal paths */
+   int                   node,               /**< node */
+   int* RESTRICT         closeterm,          /**< terminal */
+   int* RESTRICT         firstedge,          /**< corresponding first edge (can be NULL) */
+   SCIP_Real* RESTRICT   closeterm_dist      /**< terminal distance */
+)
+{
+   assert(g && tpaths && closeterm && closeterm_dist);
+   assert(graph_knot_isInRange(g, node));
+
+   if( Is_term(g->term[node]) )
+   {
+      *closeterm = node;
+      *closeterm_dist = 0.0;
+      if( firstedge )
+         *firstedge = UNKNOWN;
+   }
+   else
+   {
+      const PATH* const termpaths = tpaths->termpaths;
+      const int* const termbases = tpaths->termbases;
+
+      *closeterm = termbases[node];
+      *closeterm_dist = termpaths[0].dist;
+      if( firstedge )
+         *firstedge = termpaths[0].edge;
+   }
+}
+
+/** gets (up to) three close terminals to given node i;
+ *  with strict upper bound on allowed distances */
+void graph_tpathsGet3CloseTerms(
+   const GRAPH*          g,                  /**< graph */
+   const TPATHS*         tpaths,             /**< the terminal paths */
+   int                   node,               /**< node */
+   SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
+   int* RESTRICT         closeterms,         /**< three close terminals */
+   int* RESTRICT         firstedges,         /**< corresponding first edge (can be NULL) */
+   SCIP_Real* RESTRICT   closeterms_dist,    /**< three close terminal distance */
+   int* RESTRICT         ncloseterms         /**< number of close terminals found */
+)
+{
+   const SCIP_Bool isStrict = TRUE;
+   tpathsGetKCloseTerms(g, tpaths, 3, node, maxdist_strict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
+}
+
+
 /** gets (up to) four close terminals to given node i;
  *  with strict upper bound on allowed distances */
 void graph_tpathsGet4CloseTerms(
@@ -2977,14 +3034,14 @@ void graph_tpathsGet4CloseTerms(
    const TPATHS*         tpaths,             /**< the terminal paths */
    int                   node,               /**< node */
    SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
-   int*                  closeterms,         /**< four close terminals */
-   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
-   SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
-   int*                  ncloseterms         /**< number of close terminals found */
+   int* RESTRICT         closeterms,         /**< four close terminals */
+   int* RESTRICT         firstedges,         /**< corresponding first edge (can be NULL) */
+   SCIP_Real* RESTRICT   closeterms_dist,    /**< four close terminal distance */
+   int* RESTRICT         ncloseterms         /**< number of close terminals found */
 )
 {
    const SCIP_Bool isStrict = TRUE;
-   tpathsGet4CloseTerms(g, tpaths, node, maxdist_strict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
+   tpathsGetKCloseTerms(g, tpaths, 4, node, maxdist_strict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
 }
 
 
@@ -2995,12 +3052,12 @@ void graph_tpathsGet4CloseTermsLE(
    const TPATHS*         tpaths,             /**< the terminal paths */
    int                   node,               /**< node */
    SCIP_Real             maxdist_nonstrict,  /**< maximum valid distance (not strict) */
-   int*                  closeterms,         /**< four close terminals */
-   int*                  firstedges,         /**< corresponding first edge (can be NULL) */
-   SCIP_Real*            closeterms_dist,    /**< four close terminal distance */
-   int*                  ncloseterms         /**< number of close terminals found */
+   int* RESTRICT         closeterms,         /**< four close terminals */
+   int* RESTRICT         firstedges,         /**< corresponding first edge (can be NULL) */
+   SCIP_Real* RESTRICT   closeterms_dist,    /**< four close terminal distance */
+   int* RESTRICT         ncloseterms         /**< number of close terminals found */
 )
 {
    const SCIP_Bool isStrict = FALSE;
-   tpathsGet4CloseTerms(g, tpaths, node, maxdist_nonstrict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
+   tpathsGetKCloseTerms(g, tpaths, 4, node, maxdist_nonstrict, isStrict, closeterms, firstedges, closeterms_dist, ncloseterms);
 }

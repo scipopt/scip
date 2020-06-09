@@ -74,6 +74,8 @@ SCIP_RETCODE bdkInit(
    SCIP_CALL( SCIPallocMemory(scip, bdk) );
    bdk_d = *bdk;
 
+   assert(reduce_sdgraphHasMstHalfMark(sdistance->sdgraph));
+
    bdk_d->sdistance = sdistance;
    bdk_d->node_degree = -1;
    bdk_d->star_degree = -1;

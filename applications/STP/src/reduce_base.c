@@ -565,7 +565,7 @@ SCIP_RETCODE redLoopStp_inner(
          if( sdbiasnelims <= reductbound  )
             sdbiased = FALSE;
 
-         reduceStatsPrint(fullreduce, "sd", sdnelims);
+         reduceStatsPrint(fullreduce, "sdbiasnelims", sdbiasnelims);
 
          if( SCIPgetTotalTime(scip) > timelimit )
             break;

@@ -44,6 +44,7 @@ struct special_distance_graph
    int                   nnodesorg;          /**< number of nodes of original graph */
    int                   nedgesorg;          /**< number of edges of original graph */
    SCIP_Bool             mstcostsReady;      /**< are the mstcosts already available? */
+   SCIP_Bool             edgemarkReady;      /**< edge mark available? */
 };
 
 /** see reduce.h */
@@ -84,6 +85,7 @@ SCIP_RETCODE sdgraphAlloc(
    g_sd->nnodesorg = nnodes;
    g_sd->nedgesorg = nedges;
    g_sd->mstcostsReady = FALSE;
+   g_sd->edgemarkReady = TRUE;
 
    return SCIP_OKAY;
 }
@@ -170,6 +172,86 @@ SCIP_Real distgraphGetBoundaryEdgeDist(
                { distAll, distTailHead, distHeadTail, edgecost,
                  nodes_vdist[tail], nodes_vdist[head] },
                  6);
+   return dist;
+}
+
+
+/** gets SD for boundary edge */
+static inline
+SCIP_Real distgraphGetBoundaryEdgeDist2(
+   int                   tail,               /**< tail */
+   int                   head,               /**< head */
+   int                   vbase_tail,         /**< base */
+   int                   vbase_head,         /**< base */
+   SCIP_Real             edgecost,           /**< cost */
+   SCIP_Real             dist_tail,          /**< distance */
+   SCIP_Real             dist_head,          /**< distance */
+   const SDPROFIT*       sdprofit            /**< profit */
+   )
+{
+   const SCIP_Real profit_tail = reduce_sdprofitGetProfit(sdprofit, tail, vbase_head, vbase_tail);
+   const SCIP_Real profit_head = reduce_sdprofitGetProfit(sdprofit, head, vbase_head, vbase_tail);
+   SCIP_Real distSimple = edgecost + dist_tail + dist_head;
+   const SCIP_Real distAll = distSimple - profit_tail - profit_head;
+   const SCIP_Real distTailHead = edgecost + dist_tail - profit_tail;
+   const SCIP_Real distHeadTail = edgecost + dist_head - profit_head;
+
+   const SCIP_Real dist = miscstp_maxReal((SCIP_Real[])
+               { distAll, distTailHead, distHeadTail, edgecost,
+                   dist_tail, dist_head},
+                 6);
+   return dist;
+}
+
+
+/** gets SD for boundary edge ... choose among nearest terminals (w.r.t. implied SD) */
+static inline
+SCIP_Real distgraphGetBoundaryEdgeDistBest(
+   const GRAPH*          g,                  /**< graph  */
+   const TPATHS*         tpaths,             /**< terminal paths */
+   int                   tail,               /**< tail */
+   int                   head,               /**< head */
+   SCIP_Real             edgecost,           /**< cost */
+   const SDPROFIT*       sdprofit,           /**< profit */
+   int*                  base_tail,          /**< base of tail */
+   int*                  base_head           /**< base of head */
+   )
+{
+   SCIP_Real dists_tail[3];
+   SCIP_Real dists_head[3];
+   int terms_tail[3];
+   int terms_head[3];
+   int nterms_tail;
+   int nterms_head;
+   SCIP_Real dist = FARAWAY;
+
+   assert(g && tpaths && sdprofit);
+
+   *base_tail = -1;
+   *base_head = -1;
+
+   graph_tpathsGet3CloseTerms(g, tpaths, tail, FARAWAY, terms_tail, NULL, dists_tail, &nterms_tail);
+   graph_tpathsGet3CloseTerms(g, tpaths, head, FARAWAY, terms_head, NULL, dists_head, &nterms_head);
+
+   for( int i = 0; i < nterms_tail; ++i )
+   {
+      for( int j = 0; j < nterms_head; ++j )
+      {
+         if( terms_tail[i] != terms_head[j] )
+         {
+            const SCIP_Real distnew =
+            distgraphGetBoundaryEdgeDist2(tail, head, terms_tail[i], terms_head[j], edgecost, dists_tail[i], dists_head[j], sdprofit);
+
+            if( distnew < dist )
+            {
+               *base_tail = terms_tail[i];
+               *base_head = terms_head[j];
+               dist = distnew;
+            }
+         }
+      }
+   }
+
    return dist;
 }
 
@@ -285,6 +367,81 @@ void distgraphAddEdges(
 }
 
 
+/** adds nodes to distance graph */
+static
+void distgraphAddEdgesFromTpaths(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const int*            distnodes_id,       /**< IDs of nodes */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   const TPATHS*         tpaths,             /**< terminal paths */
+   GRAPH*                distgraph           /**< distance graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool useProfit = (sdprofit != NULL);
+
+   /* add the edges */
+   for( int tail = 0; tail < nnodes; tail++ )
+   {
+      SCIP_Real dist_tail;
+      int vbase_tail;
+      graph_tpathsGetClosestTerm(g, tpaths, tail, &vbase_tail, NULL, &dist_tail);
+
+      for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         SCIP_Real dist_head;
+         int vbase_head;
+
+         graph_tpathsGetClosestTerm(g, tpaths, head, &vbase_head, NULL, &dist_head);
+
+         if( vbase_tail != vbase_head )
+         {
+            const SCIP_Real distance = useProfit ?
+               distgraphGetBoundaryEdgeDist2(tail, head, vbase_tail, vbase_head, g->cost[e], dist_tail, dist_head, sdprofit)
+               : (g->cost[e] + dist_tail + dist_head);
+
+            assert(LE(distance, g->cost[e] + dist_tail + dist_head));
+            assert(Is_term(g->term[vbase_tail]) && Is_term(g->term[vbase_head]));
+
+            distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph);
+         }
+      }
+   }
+
+   /* update distances? */
+   if( sdprofit )
+   {
+      int vbase_tail;
+      int vbase_head;
+
+      const int edgelimit = MIN(2 * distgraph->edges, distgraph->esize);
+      assert(LE(distgraph->edges, distgraph->esize));
+
+      for( int tail = 0; tail < nnodes && distgraph->edges < edgelimit; tail++ )
+      {
+         for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int head = g->head[e];
+            const SCIP_Real distance =
+               distgraphGetBoundaryEdgeDistBest(g, tpaths, tail, head, g->cost[e], sdprofit, &vbase_tail, &vbase_head);
+
+            if( LT(distance, FARAWAY) )
+            {
+               assert(vbase_tail >= 0 && vbase_head >= 0);
+
+               distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph);
+
+               if( distgraph->edges >= edgelimit )
+                  break;
+            }
+         }
+      }
+   }
+}
+
+
 /** inserts new edge */
 static inline
 void sdgraphInsertEdge(
@@ -337,6 +494,33 @@ SCIP_RETCODE sdgraphBuildDistgraph(
    distgraph = g_sd->distgraph;
    distgraphAddNodes(g, distnodes_id, distgraph);
    distgraphAddEdges(scip, g, distnodes_id, *vnoi, sdprofit, *distedge2org, distgraph);
+
+   assert(graph_valid(scip, distgraph));
+
+   return SCIP_OKAY;
+}
+
+
+/** builds distance graph */
+static
+SCIP_RETCODE sdgraphBuildDistgraphFromTpaths(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   const SDPROFIT*       sdprofit,           /**< profit or NULL */
+   const TPATHS*         tpaths,             /**< terminal paths */
+   SDGRAPH*              g_sd                /**< the SD graph */
+)
+{
+   GRAPH* distgraph;
+   int* RESTRICT distnodes_id = g_sd->nodemapOrgToDist;
+   const int nedges_distgraph = distgraphGetNedges(g);
+
+   assert(g->terms >= 1);
+
+   SCIP_CALL( graph_init(scip, &(g_sd->distgraph), g->terms, nedges_distgraph, 1) );
+   distgraph = g_sd->distgraph;
+   distgraphAddNodes(g, distnodes_id, distgraph);
+   distgraphAddEdgesFromTpaths(scip, g, distnodes_id, sdprofit, tpaths, distgraph);
 
    assert(graph_valid(scip, distgraph));
 
@@ -1242,6 +1426,29 @@ SCIP_RETCODE reduce_sdgraphInitBiased(
 }
 
 
+/** initializes biased SD graph from given terminal paths */
+SCIP_RETCODE reduce_sdgraphInitBiasedFromTpaths(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph to initialize from */
+   const SDPROFIT*       sdprofit,           /**< SD profit */
+   const TPATHS*         tpaths,             /**< terminal paths */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   assert(scip && g && sdgraph && sdprofit && tpaths);
+
+   SCIP_CALL( sdgraphAlloc(scip, g, sdgraph) );
+   SCIP_CALL( sdgraphBuildDistgraphFromTpaths(scip, g, sdprofit, tpaths, *sdgraph) );
+   SCIP_CALL( sdgraphMstBuild(scip, g, *sdgraph) );
+
+   /* NOTE probably we never need that...for extending reductions we anyway should only take biased paths */
+   (*sdgraph)->edgemarkReady = FALSE;
+   SCIPfreeMemoryArray(scip, &(*sdgraph)->halfedge_isInMst);
+
+   return SCIP_OKAY;
+}
+
+
 /** return maximum MST edge cost */
 SCIP_Real reduce_sdgraphGetMaxCost(
    const SDGRAPH*        sdgraph             /**< the SD graph */
@@ -1254,17 +1461,34 @@ SCIP_Real reduce_sdgraphGetMaxCost(
 }
 
 
-/** initializes SD graph */
+/** returns edge mark */
 const STP_Bool* reduce_sdgraphGetMstHalfMark(
    const SDGRAPH*        sdgraph             /**< the SD graph */
 )
 {
    assert(sdgraph);
-   assert(sdgraph->halfedge_isInMst);
+   assert(reduce_sdgraphHasMstHalfMark(sdgraph));
 
    return sdgraph->halfedge_isInMst;
 }
 
+
+/** has edge mark? */
+SCIP_Bool reduce_sdgraphHasMstHalfMark(
+   const SDGRAPH*        sdgraph             /**< the SD graph */
+)
+{
+   assert(sdgraph);
+   if( sdgraph->edgemarkReady )
+   {
+      assert(sdgraph->halfedge_isInMst);
+      return TRUE;
+   }
+
+   assert(!sdgraph->halfedge_isInMst);
+
+   return FALSE;
+}
 
 /** MST costs in descending order available? */
 SCIP_Bool reduce_sdgraphHasOrderedMstCosts(
@@ -1348,7 +1572,7 @@ void reduce_sdgraphFree(
    g_sd = *sdgraph;
    assert(g_sd);
 
-   SCIPfreeMemoryArray(scip, &(g_sd->halfedge_isInMst));
+   SCIPfreeMemoryArrayNull(scip, &(g_sd->halfedge_isInMst));
    SCIPfreeMemoryArray(scip, &(g_sd->nodemapOrgToDist));
    SCIPfreeMemoryArray(scip, &(g_sd->mstsdist));
    SCIPfreeMemoryArray(scip, &(g_sd->mstcosts));
