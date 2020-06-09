@@ -108,6 +108,7 @@ typedef struct
    EXPRSTACK*            stack,              /**< stack where to add generated leafs */ \
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */ \
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< data of nlhdlr */ \
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */ \
    SCIP_Bool*            success             /**< whether we found something */ \
    )
 
@@ -879,6 +880,7 @@ SCIP_RETCODE constructExpr(
    int*                  nleafs,             /**< number of leafs in constructed expression */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to achieve */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved w.r.t. the original variables (might be NULL) */
    )
 {
@@ -940,7 +942,7 @@ SCIP_RETCODE constructExpr(
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
          {
-            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, isrootexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
+            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, isrootexpr, &stack, nlexpr2origexpr, nlhdlrdata, assumevarfixed, &success) );
             if( success )
                break;
          }
@@ -1669,7 +1671,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1689,7 +1691,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1928,7 +1930,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -1955,7 +1957,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2275,7 +2277,7 @@ SCIP_RETCODE SCIPisConsExprExprCurvature(
    nlhdlrdata.cvxprodcomp = TRUE;
    nlhdlrdata.handletrivial = TRUE;
 
-   SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, success) );
+   SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, success) );
 
    /* free created expression */
    if( rootnlexpr != NULL )
@@ -2331,7 +2333,7 @@ SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
       SCIP_Bool success;
 
       SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr,
-         targetcurv, &success) );
+         targetcurv, NULL, &success) );
 
       /* free created expression */
       if( rootnlexpr != NULL )
