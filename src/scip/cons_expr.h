@@ -1890,12 +1890,16 @@ SCIP_RETCODE SCIPprintConsExprQuadratic(
  * - semidefinite positive -> provided is set to sepaunder
  * - semidefinite negative -> provided is set to sepaover
  * - otherwise -> provided is set to none
+ *
+ * If assumevarfixed is given and some entries of x correspond to variables present in
+ * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
+   SCIP_EXPRCURV*          curv,             /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*           assumevarfixed    /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    );
 
 /** @} */

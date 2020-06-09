@@ -124,7 +124,7 @@ Test(exprquad, detectandfree1, .init = setup, .fini = teardown)
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
    cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -197,7 +197,7 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
    cr_expect_eq(bilin.pos2, 1);  /* because quaddata->quadexprterms[1].expr == cosexpr */
 
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
    cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );

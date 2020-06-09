@@ -366,7 +366,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    /* get curvature of quadratic
     * TODO as we know what curvature we want, we could first do some simple checks like computing xQx for a random x
     */
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv, assumevarfixed) );
 
    /* if not having desired curvature, return */
    if( presentcurv != wantedcurv )
