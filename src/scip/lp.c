@@ -12613,6 +12613,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                prob, itlim, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
+
+         /* check for error */
+         if( *lperror )
+         {
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
       }
 
       /* evaluate solution status */

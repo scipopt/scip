@@ -234,11 +234,13 @@ SCIP_RETCODE solveLpExact(
    if( retcode == SCIP_LPERROR )
    {
       SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
-      retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
+      retcode = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX) ? SCIPlpiExactSolveDual(lpexact->lpiexact) : SCIPlpiExactSolvePrimal(lpexact->lpiexact);
 
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
       }
    }
@@ -3359,7 +3361,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
          break;
    }
 
-   if( !lp->hasprovedbound )
+   if( !lp->hasprovedbound && !lperror )
    {
       SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
