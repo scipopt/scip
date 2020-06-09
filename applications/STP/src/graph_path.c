@@ -3003,9 +3003,9 @@ void graph_tpathsGetClosestTerm(
       const int* const termbases = tpaths->termbases;
 
       *closeterm = termbases[node];
-      *closeterm_dist = termpaths[0].dist;
+      *closeterm_dist = termpaths[node].dist;
       if( firstedge )
-         *firstedge = termpaths[0].edge;
+         *firstedge = termpaths[node].edge;
    }
 }
 
