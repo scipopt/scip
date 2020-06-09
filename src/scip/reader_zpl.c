@@ -60,6 +60,7 @@ extern "C" {
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/ratlptypes.h"
+#include "zimpl/lint.h"
 #include "zimpl/mme.h"
 
 #include "zimpl/numb.h"
@@ -162,7 +163,7 @@ void xlp_free(
    /* nothing to be done here */
 }
 
-/** does there already exists a constraint with the given name? */ 
+/** does there already exists a constraint with the given name? */
 bool xlp_conname_exists(
    const Lps*            data,               /**< pointer to reader data */
    const char*           name                /**< constraint name to check */

@@ -5194,8 +5194,6 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
 #ifdef SCIP_MOREDEBUG
-         SCIP_SOL* nlpsol;
-
          SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
 
