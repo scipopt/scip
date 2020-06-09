@@ -493,9 +493,6 @@ SCIP_RETCODE generateCutSolSOC(
    }
    fvalue = SQRT( fvalue );
 
-   /* if f(x*) = 0 then SOC can't be violated and we shouldn't be here */
-   assert(fvalue > 0.0);
-
    /* don't generate cut if we are not violated @todo: remove this once core detects better when a nlhdlr's cons is
     * violated
     */
@@ -504,6 +501,9 @@ SCIP_RETCODE generateCutSolSOC(
       SCIPdebugMsg(scip, "do not generate cut: rhsval %g, fvalue %g violation is %g\n", rhsval, fvalue, fvalue - rhsval);
       return SCIP_OKAY;
    }
+
+   /* if f(x*) = 0 then SOC can't be violated and we shouldn't be here */
+   assert(fvalue > 0.0);
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -1634,6 +1634,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_INTERVAL yactivity;
       SCIP_INTERVAL zactivity;
 
+      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 2);
+
       yactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
       zactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]);
 
@@ -1650,10 +1652,16 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
+   else if( SCIPisConsExprExprVar(children[specialtermidx]) )
+   {
+      /* children[specialtermidx] can be a variable, in which case we treat it as if it is squared */
+      rhssign = 1.0;
+   }
    else
    {
       SCIP_INTERVAL rhsactivity;
 
+      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 1);
       rhsactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
 
       if( rhsactivity.inf < 0.0 )
