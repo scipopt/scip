@@ -1680,17 +1680,13 @@ SCIP_RETCODE checkSubproblemConvexity(
 
             if( !isconvex )
             {
-               /* if not found convex, compute curvature via nlhdlr_convex and decide again
-                * TODO if assumevarfixed is not empty, then it should be used
-                */
+               /* if not found convex, compute curvature via nlhdlr_convex and decide again */
                SCIP_INTERVAL activity;
 
                /* make sure activities are uptodate, SCIPgetConsExprExprOrigCurvature currently assumes that this is already the case */
                SCIP_CALL( SCIPevalConsExprExprActivity(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &activity, TRUE, FALSE) );
 
-               SCIP_CALL( SCIPgetConsExprExprOrigCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &curv) );
-               isconvex = ((!havelhs || (curv & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
-                   ((!haverhs || (curv & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX));
+               SCIP_CALL( SCIPisConsExprExprCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }
          }
 
