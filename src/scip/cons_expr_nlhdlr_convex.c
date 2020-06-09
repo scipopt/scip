@@ -2239,6 +2239,56 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    return SCIP_OKAY;
 }
 
+/** checks whether a given expression is convex or concave w.r.t. the original variables
+ *
+ * This function uses the methods that are used in the detection algorithm of the convex nonlinear handler.
+ */
+SCIP_RETCODE SCIPisConsExprExprCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curv,               /**< curvature to check for */
+   SCIP_Bool*            success,            /**< buffer to store whether expression has curvature curv (w.r.t. original variables) */
+   SCIP_HASHMAP*         assumevarfixed      /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   )
+{
+   SCIP_CONSEXPR_NLHDLRDATA nlhdlrdata;
+   SCIP_CONSEXPR_EXPR* rootnlexpr;
+   SCIP_HASHMAP* nlexpr2origexpr;
+   int nleafs;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(curv != SCIP_EXPRCURV_UNKNOWN);
+   assert(success != NULL);
+
+   /* create temporary hashmap */
+   SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
+
+   /* prepare nonlinear handler data */
+   nlhdlrdata.isnlhdlrconvex = TRUE;
+   nlhdlrdata.evalsol = NULL;
+   nlhdlrdata.detectsum = TRUE;
+   nlhdlrdata.preferextended = FALSE;
+   nlhdlrdata.cvxquadratic = TRUE;
+   nlhdlrdata.cvxsignomial = TRUE;
+   nlhdlrdata.cvxprodcomp = TRUE;
+   nlhdlrdata.handletrivial = TRUE;
+
+   SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, success) );
+
+   /* free created expression */
+   if( rootnlexpr != NULL )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootnlexpr) );
+   }
+
+   /* free hashmap */
+   SCIPhashmapFree(&nlexpr2origexpr);
+
+   return SCIP_OKAY;
+}
+
 /** computes the curvature information w.r.t. the original variables for a given expression; this method uses the
  * methods that are used in the detection algorithm of the convex and concave nonlinear handler
  */
