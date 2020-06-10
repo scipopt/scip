@@ -1590,6 +1590,25 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
+/** add the cut and maybe report branchscores */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprocessConsExprRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   );
+
 /** checks whether an expression is quadratic and returns the corresponding coefficients
  *
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
@@ -1611,15 +1630,16 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    );
 
 /** set the copy handler callback of a nonlinear handler */
@@ -1695,10 +1715,16 @@ const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
-/** gives priority of nonlinear handler */
+/** gives detection priority of nonlinear handler */
 SCIP_EXPORT
-int SCIPgetConsExprNlhdlrPriority(
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives enforcement priority of nonlinear handler */
+SCIP_EXPORT
+int SCIPgetConsExprNlhdlrEnfoPriority(
+        SCIP_CONSEXPR_NLHDLR*      nlhdlr    /**< nonlinear handler */
 );
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

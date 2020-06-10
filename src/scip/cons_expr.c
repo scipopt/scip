@@ -798,6 +798,34 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** compares nonlinear handler by enforcement priority
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+static
+int nlhdlrEnfoCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->enfopriority != h2->enfopriority )
+      return (int)(h1->enfopriority - h2->enfopriority);
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
 /** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
 static
 SCIP_RETCODE presolveUpgrade(
@@ -1317,12 +1345,20 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               /* if already empty, then don't try to compute even better activity
-                * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
+               /* If already empty, then don't try to compute even better activity.
+                * If cons_expr were alone, then we should have noted that we are infeasible
+                * so an assert(infeasible == NULL || *infeasible) should work here.
+                * However, after reporting a cutoff due to expr->activity being empty,
+                * SCIP may wander to a different node and call propagation again.
+                * If no bounds in an expr-constraint have been relaxed when switching nodes
+                * (so expr->activitytag >= conshdlrdata->lastboundrelax), then
+                * we will still have expr->activity being empty, but will have forgotten
+                * that we found infeasibility here before (!2221#note_134120).
+                * Therefore we just set *infeasibility=TRUE here and stop.
                 */
-               assert(infeasible == NULL || *infeasible);
-               /* if( infeasible != NULL )
-                  *infeasible = TRUE; */
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
+               SCIPdebugMsg(scip, "expr %p already has empty activity -> cutoff\n", (void*)expr);
                break;
             }
 
@@ -2144,6 +2180,10 @@ SCIP_RETCODE detectNlhdlr(
 
    if( nsuccess == 0 )
       return SCIP_OKAY;
+
+   /* sort nonlinear handlers by enforcement priority, in decreasing order */
+   if( nsuccess > 1 )
+      SCIPsortDownPtrPtr((void**)nlhdlrssuccess, (void**)nlhdlrssuccessexprdata, nlhdlrEnfoCmp, nsuccess);
 
    /* copy collected nlhdlrs into expr->enfos */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
@@ -5614,9 +5654,9 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
-/** compares nonlinear handler by priority
+/** compares nonlinear handler by detection priority
  *
- * if handlers have same priority, then compare by name
+ * if handlers have same detection priority, then compare by name
  */
 static
 int nlhdlrCmp(
@@ -5633,8 +5673,8 @@ int nlhdlrCmp(
    h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
    h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
 
-   if( h1->priority != h2->priority )
-      return (int)(h1->priority - h2->priority);
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
 
    return strcmp(h1->name, h2->name);
 }
@@ -6037,7 +6077,6 @@ SCIP_RETCODE registerBranchingCandidates(
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate "\
                         "with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
-
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
             }
@@ -6822,19 +6861,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real mincutviolation;
-
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* decide on minimal violation of cut */
-   if( sol == NULL )
-      mincutviolation = SCIPgetLPFeastol(scip);  /* we enforce an LP solution */
-   else
-      mincutviolation = SCIPfeastol(scip);
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPenfoConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
@@ -6857,246 +6884,51 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
    {
-      SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
-      SCIP_Real auxvarvalue;
-      SCIP_Real cutviol;
-      SCIP_Real estimateval = SCIP_INVALID;
       SCIP_Bool sepasuccess = FALSE;
       SCIP_Bool branchscoresuccess = FALSE;
+      SCIP_PTRARRAY* rowpreps;
+      int minidx;
+      int maxidx;
+      int r;
+      SCIP_ROWPREP* rowprep;
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
       SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-               SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
+               SCIPgetSolVal(scip, sol, auxvar), rowpreps, &sepasuccess, inenforcement, &branchscoresuccess) );
 
-      if( sepasuccess )
-      {
-         /* complete estimator to cut */
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+      minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
+      maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
 
-         cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
-         if( cutviol > 0.0 )
-         {
-            auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+      assert((sepasuccess && minidx <= maxidx) || (!sepasuccess && minidx > maxidx));
 
-            /* check whether cut is weak (if f(x) not defined, then it's never weak) */
-            if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
-            {
-               /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
-                * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
-                * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
-                * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then
-                * let's call this a weak cut that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
-                *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
-                *
-                * if we are overestimating, we have z >= c'x-b >= f(x)
-                * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
-                * it's weak if c'x-b >= f(x) + (1-weakcutthreshold) * (z - f(x))
-                *   <->   c'x-b - z >= weakcutthreshold * (f(x)-z)
-                *
-                * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
-                */
-               if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
-               {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too "\
-                           "weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                           SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
-                           auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
-                  sepasuccess = FALSE;
-               }
-            }
-
-            /* save estimator value for later, see long comment above why this gives the value for c'x-b */
-            estimateval = auxvarvalue + (!overestimate ? cutviol : -cutviol);
-         }
-         else
-         {
-            sepasuccess = FALSE;
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not "\
-                     "separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-         }
-      }
-      else
+      if( !sepasuccess )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n",
                   SCIPgetConsExprNlhdlrName(nlhdlr)); )
       }
 
-      /* clean up estimator */
-      if( sepasuccess )
+      for( r = minidx; r <= maxidx; ++r )
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval "\
-                  "%g auxvalue %g (over %d)\n    ", SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
-                  auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-                  SCIPprintRowprep(scip, rowprep, enfologfile); )
+         rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
 
-         /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
-          * instead, may even scale them down, that is, scale so that max coef is close to 1
-          */
-         if( !allowweakcuts )
-         {
-            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+         assert(rowprep != NULL);
 
-            if( !sepasuccess )
-            {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
-            }
-            else
-            {
-               cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min "\
-                        "requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
-               if( sepasuccess )
-                  sepasuccess = cutviol > mincutviolation;
-            }
+         /* complete estimator to cut */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-            if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
-            {
-               /* check whether cut is weak now
-                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
-                * reconstructing estimateval from cutviol (TODO improve or remove?)
-                */
-               SCIP_Real auxvarcoef = 0.0;
-               int i;
+         /* add the cut and/or branching scores */
+         SCIP_CALL( SCIPprocessConsExprRowprep(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+               auxvalue, allowweakcuts, branchscoresuccess, inenforcement, sol, result) );
 
-               /* get absolute value of coef of auxvar in row; this makes the check more expensive than it should be */
-               for( i = 0; i < rowprep->nvars; ++i )
-               {
-                  if( rowprep->vars[i] == auxvar )
-                  {
-                     auxvarcoef = REALABS(rowprep->coefs[i]);
-                     break;
-                  }
-               }
-
-               if( auxvarcoef == 0.0 ||
-                   (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
-               {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g" \
-                           "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
-                           auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
-                  sepasuccess = FALSE;
-               }
-            }
-         }
-         else
-         {
-            /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
-
-            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which
-             * the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
-             */
-            if( !branchscoresuccess )
-               rowprep->recordmodifications = TRUE;
-
-            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
-
-            if( !sepasuccess )
-            {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n",
-                        rowprep->nmodifiedvars, cutviol); )
-            }
-
-            /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
-            if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
-            {
-               SCIP_Real violscore;
-
-#ifdef BRSCORE_ABSVIOL
-               violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
-#else
-               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL,
-                        NULL) );
-#endif
-               SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
-                        rowprep->nmodifiedvars, sol, &branchscoresuccess) );
-
-               /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
-                * expr's auxvar
-                * I don't think it makes sense to branch on that one (would it?)
-                * it can also fail if everything is fixed
-                */
-               assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
-            }
-         }
+         SCIPfreeRowprep(scip, &rowprep);
       }
 
-      /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
-      if( sepasuccess )
-      {
-         SCIP_ROW* row;
-
-         if( conshdlrdata->branchdualweight > 0.0 )
-         {
-            /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
-             * skip if gap is zero
-             */
-            if( auxvalue == SCIP_INVALID )  /*lint !e777*/
-               strcat(rowprep->name, "_estimategap=inf");
-            else if( !SCIPisEQ(scip, auxvalue, estimateval) )
-            {
-               char gap[40];
-               sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
-               strcat(rowprep->name, gap);
-            }
-         }
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-         if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
-         {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
-               SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
-         }
-         else
-         {
-            SCIP_Bool infeasible;
-
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
-            SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
-
-            /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
-             */
-            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
-
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               ++nlhdlr->ncutoffs;
-            }
-            else
-            {
-               *result = SCIP_SEPARATED;
-               ++nlhdlr->nseparated;
-            }
-         }
-
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      }
-      else if( branchscoresuccess )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching" \
-                  "candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-
-         /* well, not branched, but addConsExprExprViolScoresAuxVars() added scores to (aux)variables and that makes the
-          * expressions eligible for branching candidate, see enforceConstraints() and branching()
-          */
-         *result = SCIP_BRANCHED;
-      }
-      else
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no " \
-                  "branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ?
-                  " (!)" : ""); )
-      }
-
-      SCIPfreeRowprep(scip, &rowprep);
+      SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    }
 
    return SCIP_OKAY;
@@ -7228,7 +7060,8 @@ SCIP_RETCODE enforceExpr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
-            /* TODO or should we always just stop here? */
+            /* TODO or should we give other nlhdlr another chance? (also #3070) */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
@@ -7273,7 +7106,8 @@ SCIP_RETCODE enforceExpr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
-            /* TODO or should we always just stop here? */
+            /* TODO or should we give other nlhdlr another chance? (also #3070) */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
@@ -10190,7 +10024,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
-   /* sort nonlinear handlers by priority, in decreasing order */
+   /* sort nonlinear handlers by detection priority, in decreasing order */
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
@@ -16745,6 +16579,267 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    return SCIP_OKAY;
 }
 
+/** add the cut and maybe report branchscores */
+SCIP_RETCODE SCIPprocessConsExprRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+)
+{
+   SCIP_Real cutviol;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Real auxvarvalue;
+   SCIP_Bool sepasuccess;
+   SCIP_Real estimateval = SCIP_INVALID;
+   SCIP_Real mincutviolation;
+
+   /* decide on minimal violation of cut */
+   if( sol == NULL )
+      mincutviolation = SCIPgetLPFeastol(scip);  /* we enforce an LP solution */
+   else
+      mincutviolation = SCIPfeastol(scip);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   sepasuccess = TRUE;
+
+   cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+   if( cutviol > 0.0 )
+   {
+      auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+
+      /* check whether cut is weak (if f(x) not defined, then it's never weak) */
+      if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
+      {
+         /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
+          * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
+          * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
+          * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue),
+          * then let's call this a weak cut that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
+          *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
+          *
+          * if we are overestimating, we have z >= c'x-b >= f(x)
+          * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
+          * it's weak if c'x-b >= f(x) + (1-weakcutthreshold) * (z - f(x))
+          *   <->   c'x-b - z >= weakcutthreshold * (f(x)-z)
+          *
+          * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
+          */
+         if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+             ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too "\
+                           "weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                                     auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
+            sepasuccess = FALSE;
+         }
+      }
+
+      /* save estimator value for later, see long comment above why this gives the value for c'x-b */
+      estimateval = auxvarvalue + (!overestimate ? cutviol : -cutviol);
+   }
+   else
+   {
+      sepasuccess = FALSE;
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not "\
+                     "separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+   }
+
+   /* clean up estimator */
+   if( sepasuccess )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g "\
+                     "estimateval %g auxvalue %g (over %d)\n    ", SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                               auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+                       SCIPprintRowprep(scip, rowprep, enfologfile); )
+
+      /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
+       * instead, may even scale them down, that is, scale so that max coef is close to 1
+       */
+      if( !allowweakcuts )
+      {
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE,
+                                        conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+
+         if( !sepasuccess )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
+         }
+         else
+         {
+            cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, "\
+                           "min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
+            if( sepasuccess )
+               sepasuccess = cutviol > mincutviolation;
+         }
+
+         if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
+         {
+            /* check whether cut is weak now
+             * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
+             * reconstructing estimateval from cutviol (TODO improve or remove?)
+             */
+            SCIP_Real auxvarcoef = 0.0;
+            int i;
+
+            /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than
+             * it should be...
+             */
+            for( i = 0; i < rowprep->nvars; ++i )
+            {
+               if( rowprep->vars[i] == auxvar )
+               {
+                  auxvarcoef = REALABS(rowprep->coefs[i]);
+                  break;
+               }
+            }
+
+            if( auxvarcoef == 0.0 ||
+                (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+                ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g "\
+                              "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
+                                        auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
+               sepasuccess = FALSE;
+            }
+         }
+      }
+      else
+      {
+         /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
+
+         /* if estimate didn't report branchscores explicitly, then consider branching on those children for
+          * which the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
+          */
+         if( !branchscoresuccess )
+            rowprep->recordmodifications = TRUE;
+
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol,
+                                       &sepasuccess) );
+
+         if( !sepasuccess )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n",
+                                     rowprep->nmodifiedvars, cutviol); )
+         }
+
+         /* if cleanup left us with a useless cut, then consider branching on variables for which coef were
+          * changed
+          */
+         if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
+         {
+            SCIP_Real violscore;
+
+#ifdef BRSCORE_ABSVIOL
+            violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
+#else
+            SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL,
+                                                          NULL) );
+#endif
+            SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
+                                                        rowprep->nmodifiedvars, sol, &branchscoresuccess) );
+
+            /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
+             * expr's auxvar
+             * I don't think it makes sense to branch on that one (would it?)
+             * it can also fail if everything is fixed
+             * or if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+             */
+            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
+                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0);
+         }
+      }
+   }
+
+   /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
+   if( sepasuccess )
+   {
+      SCIP_ROW* row;
+
+      if( conshdlrdata->branchdualweight > 0.0 )
+      {
+         /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
+          * skip if gap is zero
+          */
+         if( auxvalue == SCIP_INVALID )  /*lint !e777*/
+            strcat(rowprep->name, "_estimategap=inf");
+         else if( !SCIPisEQ(scip, auxvalue, estimateval) )
+         {
+            char gap[40];
+            sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            strcat(rowprep->name, gap);
+         }
+      }
+
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+      if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
+                                  SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
+      }
+      else
+      {
+         SCIP_Bool infeasible;
+
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
+                          SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
+
+         /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only
+          * if we haven't found strong cuts before)
+          */
+         SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement,
+                               &infeasible) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            ++nlhdlr->ncutoffs;
+         }
+         else
+         {
+            *result = SCIP_SEPARATED;
+            ++nlhdlr->nseparated;
+         }
+      }
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+   else if( branchscoresuccess )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but "\
+                     "branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+
+      /* well, not branched, but addConsExprExprViolScoresAuxVars() added scores to (aux)variables and that makes the
+       * expressions eligible for branching candidate, see enforceConstraints() and branching()
+       */
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no "\
+                     "branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ?
+                                                                                    " (!)" : ""); )
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether an expression is quadratic and returns the corresponding coefficients
  *
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
@@ -17025,15 +17120,16 @@ SCIP_RETCODE SCIPgetConsExprQuadratic(
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -17058,7 +17154,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
    }
 
-   (*nlhdlr)->priority = priority;
+   (*nlhdlr)->detectpriority = detectpriority;
+   (*nlhdlr)->enfopriority = enfopriority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
    (*nlhdlr)->evalaux = evalaux;
@@ -17078,7 +17175,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
    ++conshdlrdata->nnlhdlrs;
 
-   /* sort nonlinear handlers by priority, in decreasing order
+   /* sort nonlinear handlers by detection priority, in decreasing order
     * will happen in INIT, so only do when called late
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
@@ -17202,14 +17299,24 @@ const char* SCIPgetConsExprNlhdlrDesc(
    return nlhdlr->desc;
 }
 
-/** gives priority of nonlinear handler */
-int SCIPgetConsExprNlhdlrPriority(
+/** gives detection priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
    )
 {
    assert(nlhdlr != NULL);
 
-   return nlhdlr->priority;
+   return nlhdlr->detectpriority;
+}
+
+/** gives enforcement priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrEnfoPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->enfopriority;
 }
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */
@@ -17509,6 +17616,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr)
       case SCIP_CUTOFF:
          ++nlhdlr->ncutoffs;
          break;
+      case SCIP_REDUCEDDOM:
+         ++nlhdlr->ndomreds;
+         break;
       default: ;
    }  /*lint !e788*/
 
@@ -17541,7 +17651,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success, addbranchscores, addedbranchscores) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue,
+         rowpreps, success, addbranchscores, addedbranchscores) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
