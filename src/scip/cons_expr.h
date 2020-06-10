@@ -1065,21 +1065,35 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+/** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-int SCIPgetConsExprExprNDomainUses(
+int SCIPgetConsExprExprNActivityUsesPropagation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+int SCIPgetConsExprExprNActivityUsesSeparation(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNActivityUsesPropagation and/or SCIPgetConsExprExprNActivityUsesSeparation
+ *
+ * If usedforsepa is set, then NActivityUsesSeparation is also incremented for all variables in the expression.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
+   SCIP_Bool             usedforprop,      /**< activity of expr is used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             usedforsepa       /**< activity of expr is used by separation */
    );
 
 /** returns the total number of variables in an expression

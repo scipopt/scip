@@ -104,7 +104,6 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
-   int                     ndomainuses;   /**< number of nonlinear handlers whose convexification methods depend on the bounds of the expression */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
@@ -125,7 +124,9 @@ struct SCIP_ConsExpr_Expr
                                             *  the tag allows us to decide whether the expression depends on the
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */
 
-   /* domain propagation */
+   /* activity */
+   unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
+   unsigned int            nactivityusessepa; /**< number of nonlinear handler whose separation (estimate or enfo) depends on the activity of the expression */
    SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */

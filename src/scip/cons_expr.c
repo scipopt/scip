@@ -499,7 +499,8 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
-   expr->ndomainuses = 0;
+   expr->nactivityusesprop = 0;
+   expr->nactivityusessepa = 0;
 
    return SCIP_OKAY;
 }
@@ -14900,33 +14901,52 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    return expr->isintegral;
 }
 
-/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+/** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
-int SCIPgetConsExprExprNDomainUses(
+int SCIPgetConsExprExprNActivityUsesPropagation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
    assert(expr != NULL);
-   return expr->ndomainuses;
+   return expr->nactivityusesprop;
 }
 
-/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
-SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+int SCIPgetConsExprExprNActivityUsesSeparation(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nactivityusessepa;
+}
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNActivityUsesPropagation and/or SCIPgetConsExprExprNActivityUsesSeparation
+ *
+ * If usedforsepa is set, then NActivityUsesSeparation is also incremented for all variables in the expression.
+ */
+SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
+   SCIP_Bool             usedforprop,      /**< activity of expr is used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             usedforsepa       /**< activity of expr is used by separation */
    )
 {
    assert(conshdlr != NULL);
    assert(expr != NULL);
-   assert(expr->ndomainuses >= 0);
 
-   ++(expr->ndomainuses);
+   if( usedforsepa )
+      ++(expr->nactivityusessepa);
+   if( usedforprop )
+      ++(expr->nactivityusesprop);
 
-   /* increase the ndomainuses counter for all sub-expressions of the given expression */
-   if( SCIPgetConsExprExprNChildren(expr) > 0 )
+   /* increase the nactivityusedsepa counter for all sub-expressions of the given expression */
+   if( usedforsepa && SCIPgetConsExprExprNChildren(expr) > 0 )
    {
       SCIP_CONSEXPR_ITERATOR* it;
 
@@ -14935,9 +14955,8 @@ SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
       SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
       for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         ++(expr->ndomainuses);
-      }
+         if( SCIPisConsExprExprVar(expr) )
+            ++(expr->nactivityusessepa);
 
       /* free iterator */
       SCIPexpriteratorFree(&it);

@@ -2116,7 +2116,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
       leaf = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage((*nlhdlrexprdata)->nlexpr2origexpr, (*nlhdlrexprdata)->leafexprs[c]);
       assert(leaf != NULL);
 
-      SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr, leaf) );
+      SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, leaf, FALSE, TRUE) );
    }
 
    return SCIP_OKAY;

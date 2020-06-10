@@ -110,6 +110,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
+   /* notify children if that we will need their activity for domain propagation */
+   if( (mymethods & (SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP)) != 0 )
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr,
+            SCIPgetConsExprExprChildren(expr)[c], TRUE, FALSE) );
+      }
+
+
    /* return sepa possibility if exprhdlr for expr has an estimate callback and enforcement is not ensured already */
    if( SCIPhasConsExprExprHdlrEstimate(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
    {
@@ -196,8 +205,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
          {
             for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
             {
-               SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr,
-                  SCIPgetConsExprExprChildren(expr)[c]) );
+               SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr,
+                  SCIPgetConsExprExprChildren(expr)[c], FALSE, TRUE) );
             }
          }
 
