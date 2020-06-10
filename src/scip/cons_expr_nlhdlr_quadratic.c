@@ -301,12 +301,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    if( propagable )
    {
       int nquadexprs;
+      int i;
 
       *success = TRUE;
       *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
 
       SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nquadexprs) );
+
+      /* notify children of quadratic that we will need their activity for propagation */
+      for( i = 0; i < nquadexprs; ++i )
+      {
+         SCIP_CONSEXPR_EXPR* argexpr;
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, NULL, NULL);
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, argexpr, TRUE, FALSE) );
+      }
    }
 
    /* check if we are going to separate or not */

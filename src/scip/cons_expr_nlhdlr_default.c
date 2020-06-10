@@ -187,21 +187,22 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       if( sepabelow || sepaabove )
       {
          SCIP_EXPRCURV* childcurv;
-         SCIP_Bool isconvex;
-         SCIP_Bool isconcave;
+         SCIP_EXPRCURV requiredcurv;
+         SCIP_Bool hasrequiredcurv;
 
          /* allocate memory to store the required curvature of the children */
          SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
 
-         /* check whether the expression is convex and concave
-          *
-          * TODO add a method that computes the curvature of an expression when the children are considered to be variables
-          */
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
+         /* check whether the expression is convex, if sepabelow, and whether the expression is concave, if sepaabove */
+         requiredcurv = (sepabelow ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN) | (sepaabove ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN);
+         assert(requiredcurv != SCIP_EXPRCURV_UNKNOWN);  /* because we have sepabelow || sepaabove */
 
-         /* use the curvature to decide whether bounds on the children are used to refine under- or overestimates */
-         if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, requiredcurv, &hasrequiredcurv, childcurv) );
+
+         /* we assume that the exprhdlr will use activity on all children iff we are not convex on the right side
+          * TODO it would be better to request the activityuses count directly from the exprhdlr than infering it from curvature, but with the currently available exprhdlr that wouldn't make a difference
+          */
+         if( !hasrequiredcurv )
          {
             for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
             {

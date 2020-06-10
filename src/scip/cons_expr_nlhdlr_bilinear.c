@@ -998,6 +998,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          SCIPcaptureConsExprExpr(expr);
          SCIP_CALL( SCIPhashmapInsertInt(nlhdlrdata->exprmap, (void*)expr, nlhdlrdata->nexprs) );
          ++nlhdlrdata->nexprs;
+
+         /* tell child1 and child2 that we will use its activity for both estimate and domain propagation */
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child1, TRUE, TRUE) );
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child2, TRUE, TRUE) );
       }
    }
 
