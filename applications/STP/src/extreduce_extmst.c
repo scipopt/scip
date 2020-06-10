@@ -1425,6 +1425,7 @@ SCIP_Bool mstCompRuleOut(
    SCIP_Real mstweight;
    SCIP_Real tree_cost = extdata->tree_cost;
    const SCIP_Bool isPc = (graph->prize != NULL);
+   SCIP_Bool ruledOut;
 
    assert(isPc == graph_pc_isPc(graph));
 
@@ -1439,9 +1440,11 @@ SCIP_Bool mstCompRuleOut(
    mstweight = reduce_dcmstGetWeight(scip, &topmst);
 
    assert(extreduce_mstTopCompObjValid(scip, graph, mstweight, extdata));
+   assert(topmst.nedges_max % 2 == 0);
 
+   ruledOut = (topmst.nedges_max > 2)? LE(mstweight, tree_cost) : LT(mstweight, tree_cost);
 
-   if( LT(mstweight, tree_cost) )
+   if( ruledOut )
    {
       SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
 
