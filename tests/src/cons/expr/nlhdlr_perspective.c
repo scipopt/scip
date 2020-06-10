@@ -263,6 +263,14 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs);
    SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs);
 
+   /* for a sum, detect wants another (non default) nlhdlr to have detected; pretend that convex has detected */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
+   expr->nenfos = 2;
+   expr->enfos[0]->nlhdlr = nlhdlr_conv;
+   expr->enfos[1]->nlhdlr = nlhdlr;
+
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    enforcebelow = TRUE;
