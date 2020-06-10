@@ -17625,11 +17625,12 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    if( quaddata->curvaturechecked )
    {
       *curv = quaddata->curvature;
-      return SCIP_OKAY;
+      /* if we are convex or concave on the full set of variables, then we will also be so on a subset */
+      if( assumevarfixed == NULL || quaddata->curvature != SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_OKAY;
    }
-   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN);
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL);
 
-   quaddata->curvaturechecked = TRUE;
    *curv = SCIP_EXPRCURV_UNKNOWN;
 
    n  = quaddata->nquadexprs;
@@ -17668,6 +17669,10 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
       assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
 
+      /* skip expr if it is a variable mentioned in assumevarfixed */
+      if( assumevarfixed != NULL && SCIPisConsExprExprVar(quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(quadexprterm.expr)) )
+         continue;
+
       if( quadexprterm.sqrcoef == 0.0 )
       {
          assert(quadexprterm.nadjbilin > 0);
@@ -17691,8 +17696,14 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
       bilinexprterm = quaddata->bilinexprterms[i];
 
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1));
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2));
+      /* each factor should have been added to expr2matrix unless it corresponds to a variable mentioned in assumevarfixed */
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPisConsExprExprVar(bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr1))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPisConsExprExprVar(bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr2))));
+
+      /* skip bilinear terms where at least one of the factors should be assumed to be fixed (i.e., not present in expr2matrix map) */
+      if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )
+         continue;
+
       row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
       col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
 
@@ -17713,20 +17724,22 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
    /* check convexity */
    if( !SCIPisNegative(scip, alleigval[0]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONVEX;
-   }
+      *curv = SCIP_EXPRCURV_CONVEX;
    else if( !SCIPisPositive(scip, alleigval[n-1]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONCAVE;
-   }
+      *curv = SCIP_EXPRCURV_CONCAVE;
 
 CLEANUP:
    SCIPhashmapFree(&expr2matrix);
    SCIPfreeBufferArray(scip, &matrix);
    SCIPfreeBufferArray(scip, &alleigval);
 
-   *curv = quaddata->curvature;
+   /* if checked convexity on full Q matrix, then remember it
+    * if indefinite on submatrix, then it will also be indefinite on full matrix, so can remember that, too */
+   if( assumevarfixed == NULL || (*curv == SCIP_EXPRCURV_UNKNOWN) )
+   {
+      quaddata->curvature = *curv;
+      quaddata->curvaturechecked = TRUE;
+   }
 
    return SCIP_OKAY;
 }
