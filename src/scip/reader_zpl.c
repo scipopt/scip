@@ -65,6 +65,7 @@ extern "C" {
 #include <gmp.h>
 #endif
 #include "zimpl/ratlptypes.h"
+#include "zimpl/lint.h"
 #include "zimpl/mme.h"
 
 #include "zimpl/numb.h"

@@ -35,6 +35,7 @@
 #include <gmp.h>
 #endif
 #ifdef SCIP_WITH_ZIMPL
+#include "zimpl/lint.h"
 #include "zimpl/numb.h"
 #endif
 #ifdef SCIP_WITH_MPFR
