@@ -56,7 +56,7 @@
 SCIP_Bool show;
 
 enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
-enum STP_REDTYPE {stp_bdk, stp_sdstar};
+enum STP_REDTYPE {stp_bdk, stp_sdstar, stp_sdstarbot};
 
 
 /** returns limit parameter for SPG method */
@@ -75,8 +75,11 @@ int getWorkLimits_stp(
       case stp_bdk:
          limit = (roundnumber == 0) ? STP_REDBOUND_BDK : STP_REDBOUND_BDK2;
          break;
-      case stp_sdstar:
+      case stp_sdstarbot:
          limit = (roundnumber == 0) ? STP_REDBOUND_SDSTAR : STP_REDBOUND_SDSTAR2;
+         break;
+      case stp_sdstar:
+         limit = STP_REDBOUND_SDSTAR;
          break;
       default:
          assert(0);
@@ -560,7 +563,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sdbiased || extensive )
       {
-         SCIP_CALL( reduce_impliedProfitBased(scip, g, solnode, fixed, &sdbiasnelims) );
+         SCIP_CALL( reduce_impliedProfitBased(scip, getWorkLimits_stp(g, inner_rounds, stp_sdstarbot), g, solnode, fixed, &sdbiasnelims) );
 
          if( sdbiasnelims <= reductbound  )
             sdbiased = FALSE;

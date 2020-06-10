@@ -1933,6 +1933,7 @@ SCIP_RETCODE reduce_sdBiased(
    int*                  nelims              /**< number of eliminations */
 )
 {
+   const SDPROFIT* sdprofit = sdistance->sdprofit;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Real maxmstcost = reduce_sdgraphGetMaxCost(sdistance->sdgraph);
 
@@ -1957,6 +1958,7 @@ SCIP_RETCODE reduce_sdBiased(
       enext = g->outbeg[i];
       while( enext != EAT_LAST )
       {
+         SCIP_Bool deleteEdge;
          SCIP_Real sd;
          const int e = enext;
          const int i2 = g->head[e];
@@ -1969,8 +1971,23 @@ SCIP_RETCODE reduce_sdBiased(
 
          sd = sdGetSd(g, i, i2, maxmstcost, ecost, sdistance);
 
-         // todo LT
-         if( SCIPisLT(scip, sd, ecost) )
+         deleteEdge = SCIPisLT(scip, sd, ecost);
+
+         if( !deleteEdge && SCIPisEQ(scip, sd, ecost) )
+         {
+            const SCIP_Real profit1 = reduce_sdprofitGetProfit(sdprofit, i, -1, -1);
+            const SCIP_Real profit2 = reduce_sdprofitGetProfit(sdprofit, i2, -1, -1);
+
+            if( EQ(profit1, 0.0) && EQ(profit2, 0.0) )
+            {
+               assert(!Is_term(g->term[i]));
+               assert(!Is_term(g->term[i2]));
+
+               deleteEdge = TRUE;
+            }
+         }
+
+         if( deleteEdge )
          {
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
