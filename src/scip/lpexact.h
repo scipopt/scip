@@ -553,7 +553,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
-   SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
+   SCIP_Bool*            dualfeasible,       /**< pointer to store whether the solution is dual feasible, or NULL */
+   SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    );
 
 /** stores LP solution with infinite objective value in the columns and rows */

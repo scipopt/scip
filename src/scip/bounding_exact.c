@@ -255,8 +255,9 @@ SCIP_RETCODE solveLpExact(
 
    if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
    {
+      SCIP_Bool overwritefplp = lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ? FALSE : TRUE;
       /* evaluate solution status and set safe bound correctly */
-      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeasible, dualfeasible) );
+      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeasible, dualfeasible, overwritefplp) );
 
       assert(primalfeasible && dualfeasible);
 
@@ -267,6 +268,7 @@ SCIP_RETCODE solveLpExact(
       lp->hasprovedbound = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      lp->validsollp = stat->lpcount;
    }
    else if( SCIPlpiExactIsPrimalUnbounded(lpexact->lpiexact) )
    {

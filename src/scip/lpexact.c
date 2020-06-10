@@ -5019,7 +5019,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
-   SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
+   SCIP_Bool*            dualfeasible,       /**< pointer to store whether the solution is dual feasible, or NULL */
+   SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    )
 {
    SCIP_COLEXACT** lpicols;
@@ -5107,6 +5108,13 @@ SCIP_RETCODE SCIPlpExactGetSol(
       RatSet(lpicols[c]->redcost, redcost[c]);
       lpicols[c]->basisstatus = (unsigned int) cstat[c];
       lpicols[c]->validredcostlp = lpcount;
+      if( overwritefplp )
+      {
+         lp->fplp->lpicols[c]->primsol =  RatApproxReal(primsol[c]);
+         lp->fplp->lpicols[c]->redcost =  RatApproxReal(redcost[c]);
+         lp->fplp->lpicols[c]->basisstatus = (unsigned int) cstat[c];
+         lp->fplp->lpicols[c]->validredcostlp = lpcount;
+      }
       if( stillprimalfeasible )
       {
          stillprimalfeasible =
@@ -5117,7 +5125,11 @@ SCIP_RETCODE SCIPlpExactGetSol(
 
       /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
       if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
+      {
          RatSetReal(lpicols[c]->redcost, 0.0);
+         if( overwritefplp )
+            lp->fplp->lpicols[c]->redcost = 0;
+      }
 
       /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
          * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
@@ -5164,6 +5176,13 @@ SCIP_RETCODE SCIPlpExactGetSol(
       RatAdd(lpirows[r]->activity, activity[r], lpirows[r]->constant);
       lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
+      if( overwritefplp )
+      {
+         lp->fplp->lpirows[r]->dualsol = RatApproxReal(dualsol[r]);
+         lp->fplp->lpirows[r]->activity = RatApproxReal(lpirows[r]->activity);
+         lp->fplp->lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
+         lp->fplp->lpirows[r]->validactivitylp = lpcount;
+      }
       if( stillprimalfeasible )
       {
          stillprimalfeasible =
