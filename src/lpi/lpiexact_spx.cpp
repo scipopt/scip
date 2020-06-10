@@ -1338,6 +1338,9 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
 
    try
    {
+      soplex::Rational spxlb;
+      soplex::Rational spxub;
+
       for( i = 0; i < ncols; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsRational());
@@ -1354,7 +1357,10 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
             return SCIP_LPERROR;
          }
 
-         lpi->spx->changeBoundsRational(ind[i], RatGetGMP(lb[i]), RatGetGMP(ub[i]));
+         SpxRSetRat(lpi, spxlb, lb[i]);
+         SpxRSetRat(lpi, spxub, ub[i]);
+
+         lpi->spx->changeBoundsRational(ind[i], spxlb, spxub);
          assert(lpi->spx->lowerRational(ind[i]) <= lpi->spx->upperRational(ind[i]));
       }
    }
@@ -1400,10 +1406,17 @@ SCIP_RETCODE SCIPlpiExactChgSides(
 
    try
    {
+      soplex::Rational spxlhs;
+      soplex::Rational spxrhs;
+
       for( i = 0; i < nrows; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numRowsRational());
-         lpi->spx->changeRangeRational(ind[i], RatGetGMP(lhs[i]), RatGetGMP(rhs[i]));
+
+         SpxRSetRat(lpi, spxlhs, lhs[i]);
+         SpxRSetRat(lpi, spxrhs, rhs[i]);
+
+         lpi->spx->changeRangeRational(ind[i], spxlhs, spxrhs);
          assert(lpi->spx->lhsRational(ind[i]) <= lpi->spx->rhsRational(ind[i]));
       }
    }
@@ -1430,6 +1443,8 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_Rational*        newval              /**< new value of coefficient */
    )
 {
+   soplex::Rational spxval;
+
    SCIPdebugMessage("calling SCIPlpiChgCoef()\n");
 
    assert(lpi != NULL);
@@ -1441,7 +1456,8 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElementRational(row, col, RatGetGMP(newval)) );
+   SpxRSetRat(lpi, spxval, newval);
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElementRational(row, col, spxval) );
 
    return SCIP_OKAY;
 }
@@ -1489,11 +1505,15 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 
    try
    {
+      soplex::Rational spxobj;
+
       for( i = 0; i < ncols; ++i )
       {
          assert(obj[i] != NULL);
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsRational());
-         lpi->spx->changeObjRational(ind[i], RatGetGMP(obj[i]));
+
+         SpxRSetRat(lpi, spxobj, obj[i]);
+         lpi->spx->changeObjRational(ind[i], spxobj);
       }
    }
 #ifndef NDEBUG
