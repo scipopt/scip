@@ -244,6 +244,12 @@ SCIP_RETCODE solveLpExact(
          SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
       }
    }
+   if( !(*lperror) )
+   {
+      SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &lpexact->primalfeas, &lpexact->dualfeas);
+      lp->primalfeasible = lpexact->primalfeasible;
+      lp->dualfeasible = lpexact->dualfeasible;
+   }
 
    lpexact->solved = TRUE;
 
