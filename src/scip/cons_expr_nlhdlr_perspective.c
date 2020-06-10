@@ -2037,7 +2037,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                              SCIPgetNLPs(scip),
                              SCIPvarGetName(indicator));
 
-         SCIP_CALL( SCIPconsExprCutAndScore(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+         SCIP_CALL( SCIPprocessConsExprRowprep(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
                auxvalue, allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), addbranchscores, solcopy,
                &resultr) );
 

@@ -1544,6 +1544,25 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
+/** add the cut and maybe report branchscores */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprocessConsExprRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   );
+
 /** checks whether an expression is quadratic and returns the corresponding coefficients
  *
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
@@ -1764,25 +1783,6 @@ SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** @} */
-
-/** add the cut and may be report branchscores */
-SCIP_EXPORT
-SCIP_RETCODE SCIPconsExprCutAndScore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
-   SCIP_CONS*            cons,               /**< expression constraint */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
-   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable */
-   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
-   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
-   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
-   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_RESULT*          result              /**< pointer to store the result */
-   );
 
 /**@name Quadratic expression functions */
 /**@{ */
