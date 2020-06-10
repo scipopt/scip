@@ -231,13 +231,50 @@ void graph_writeReductionStats(
    graph_get_nVET(graph, &nnodes_real, &nedges_real, NULL);
 
    assert(nnodes_real <= nnodes);
-   assert(nedges_real <= nedges_real);
+   assert(nedges_real <= nedges);
    assert(nedges % 2 == 0);
    assert(nedges_real % 2 == 0);
 
    file = fopen(filename, "a+");
 
    fprintf(file, "%s: %d %d     %d %d \n", probname, nnodes, nedges / 2, nnodes_real, nedges_real / 2);
+   fclose(file);
+}
+
+
+/** Write (append) reduction ratio statistics of current graph to file.
+ *  Call before graph packing!*/
+void graph_writeReductionRatioStats(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           probname,           /**< Name of the problem */
+   const char*           filename            /**< Name of the output file */
+)
+{
+   FILE* file;
+   int nnodes_real;
+   int nedges_real;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   SCIP_Real ratio_nodes;
+   SCIP_Real ratio_edges;
+
+   assert(filename && probname);
+
+   graph_get_nVET(graph, &nnodes_real, &nedges_real, NULL);
+
+   assert(nnodes_real <= nnodes);
+   assert(nedges_real <= nedges);
+   assert(nedges % 2 == 0);
+   assert(nedges_real % 2 == 0);
+   assert(nnodes >= 1);
+   assert(nedges >= 2);
+
+   ratio_nodes = (SCIP_Real) nnodes_real / (SCIP_Real) nnodes;
+   ratio_edges = (SCIP_Real) nedges_real / (SCIP_Real) nedges;
+
+   file = fopen(filename, "a+");
+
+   fprintf(file, "%s: %f %f   \n", probname, ratio_nodes, ratio_edges);
    fclose(file);
 }
 
