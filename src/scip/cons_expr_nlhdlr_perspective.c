@@ -1722,7 +1722,6 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
  * */
 static
 SCIP_RETCODE tightenOnBounds(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
    SCIP_HASHMAP*         scvars,             /**< hashmap with semicontinuous variables */
    SCIP_VAR*             indicator           /**< indicator variable */
@@ -1916,7 +1915,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          if( propagate )
          {
             /* probing propagation in the root node can provide better on/off bounds */
-            SCIP_CALL( tightenOnBounds(scip, nlhdlrexprdata, nlhdlrdata->scvars, indicator) );
+            SCIP_CALL( tightenOnBounds(nlhdlrexprdata, nlhdlrdata->scvars, indicator) );
          }
 
 #ifndef NDEBUG
