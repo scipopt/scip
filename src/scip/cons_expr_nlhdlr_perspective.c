@@ -1837,11 +1837,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          doprobing = TRUE;
    }
 
-   /* only do probing if expr is nonconvex and we are not in probing already */
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   if( (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
-       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) ||
-       SCIPinProbing(scip)  || SCIPgetSubscipDepth(scip) != 0 )
+   /* only do probing if tightening the domain of expr is useful (ndomainuses > 0)
+    * and we are not in probing or a subscip
+    */
+   if( SCIPgetConsExprExprNDomainUses(expr) == 0 || SCIPinProbing(scip)  || SCIPgetSubscipDepth(scip) != 0 )
       doprobing = FALSE;
 
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
