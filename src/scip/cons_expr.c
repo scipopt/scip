@@ -15991,8 +15991,7 @@ SCIP_RETCODE SCIPaddLinearTermConsExpr(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_CONSEXPR_EXPR* children[2];
-   SCIP_Real coefs[2];
+   SCIP_CONSEXPR_EXPR* varexpr;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -16024,17 +16023,26 @@ SCIP_RETCODE SCIPaddLinearTermConsExpr(
    assert(consdata->varexprs == NULL);
    assert(!consdata->catchedevents);
 
-   /* create new expression = 1 * consdata->expr + coef * var */
-   children[0] = consdata->expr;
-   coefs[0] = 1.0;
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexpr, var) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &children[1], var) );
-   coefs[1] = coef;
+   /* append to sum, if consdata->expr is sum and not used anywhere else */
+   if( SCIPgetConsExprExprNUses(consdata->expr) == 1 && SCIPgetConsExprExprHdlr(consdata->expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, consdata->expr, varexpr, coef) );
+   }
+   else
+   {
+      /* create new expression = 1 * consdata->expr + coef * var */
+      SCIP_CONSEXPR_EXPR* children[2] = { consdata->expr, varexpr };
+      SCIP_Real coefs[2] = { 1.0, coef };
 
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &consdata->expr, 2, children, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &consdata->expr, 2, children, coefs, 0.0) );
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[0]) );
+      /* release old root expr */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[0]) );
+   }
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
 
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;
