@@ -188,12 +188,17 @@ SCIP_RETCODE solveLpExact(
    int* rstat;
    SCIP_LPALGO lpalgo = SCIP_LPALGO_DUALSIMPLEX;
    SCIP_RETCODE retcode;
+   SCIP_Bool overwritefplp = FALSE;
    int niterations = 0;
 
    assert(lp != NULL);
    assert(lpexact != NULL);
    assert(set != NULL);
    assert(set->misc_exactsolve);
+
+   /* we need to overwrite the fp lp solution in the lp if we had, e.g. bound violations before */
+   if( !(*primalfeasible) || !(*dualfeasible) )
+      overwritefplp = TRUE;
 
    *primalfeasible = FALSE;
    *dualfeasible = FALSE;
@@ -261,7 +266,8 @@ SCIP_RETCODE solveLpExact(
 
    if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
    {
-      SCIP_Bool overwritefplp = lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ? FALSE : TRUE;
+      /* overwrite fp lp solution if we changed the solution status to feaasible */
+      overwritefplp = overwritefplp || (lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ? FALSE : TRUE);
       /* evaluate solution status and set safe bound correctly */
       SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeasible, dualfeasible, overwritefplp) );
 
