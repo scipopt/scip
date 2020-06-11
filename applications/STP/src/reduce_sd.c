@@ -2079,6 +2079,7 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
    SDN* sdneighbors = sdistance->sdneighbors;
    const SCIP_Bool* nodes_isBlocked = reduce_sdneighborGetBlocked(sdneighbors);
    const SCIP_Real maxmstcost = reduce_sdgraphGetMaxCost(sdistance->sdgraph);
+   int nupdates = 0;
 
    assert(scip && nelims);
    assert(sdneighbors);
@@ -2086,7 +2087,15 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
    assert(nodes_isBlocked);
    graph_mark(g);
 
-   SCIP_CALL( reduce_sdUpdateWithSdNeighbors(scip, g, sdistance) );
+   SCIP_CALL( reduce_sdUpdateWithSdNeighbors(scip, g, sdistance, &nupdates) );
+
+   if( nupdates == 0 )
+      return SCIP_OKAY;
+
+   assert(!reduce_sdgraphHasMstHalfMark(sdistance->sdgraph));
+
+   int todo; // try again, but skip blocked nodes!
+  // SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance->sdgraph, nelims) );
 
    SCIPdebugMessage("Starting SD neighbor biased... \n");
 
@@ -2123,6 +2132,8 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
 
          if( deleteEdge )
          {
+          //  printf("SD biased neighbor deletes (sd=%f):  ", sd);
+          //  graph_edge_printInfo(g, e);
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("SD biased neighbor deletes (sd=%f):  ", sd);
             graph_edge_printInfo(g, e);
