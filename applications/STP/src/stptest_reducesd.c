@@ -706,7 +706,7 @@ SCIP_RETCODE testSdBiasedNeighborDeletesEdge(
    graph_edge_addBi(scip, graph, 1, 5, 1.0); // dummy edge
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
-   SCIP_CALL( reduce_sdInitBiased(scip, graph, &sddata) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
    SCIP_CALL( reduce_sdAddNeighborSd(scip, graph, sddata) );
 
    SCIP_CALL( reduce_sdBiasedNeighbor(scip, sddata, graph, &nelims) );
@@ -754,7 +754,7 @@ SCIP_RETCODE testSdBiasedNeighborDeletesEdge2(
    graph_edge_addBi(scip, graph, 6, 4, 2.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
-   SCIP_CALL( reduce_sdInitBiased(scip, graph, &sddata) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
    SCIP_CALL( reduce_sdAddNeighborSd(scip, graph, sddata) );
 
    SCIP_CALL( reduce_sdBiasedNeighbor(scip, sddata, graph, &nelims) );
@@ -1248,7 +1248,7 @@ SCIP_RETCODE testSdBiasedBottleneckTermPathDeletesEdge(
    /* bottleneck path */
    graph_edge_addBi(scip, graph, 2, 5, 2.0);
    graph_edge_addBi(scip, graph, 5, 6, 2.0);
-   graph_edge_addBi(scip, graph, 6, 7, 3.1); // 14
+   graph_edge_addBi(scip, graph, 6, 7, 3.105); // 14
    graph_edge_addBi(scip, graph, 7, 1, 2.0);
 
 
@@ -1259,7 +1259,7 @@ SCIP_RETCODE testSdBiasedBottleneckTermPathDeletesEdge(
 
    STPTEST_ASSERT(nelims == 2);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
-   STPTEST_ASSERT(graph->oeat[14] == EAT_FREE);
+   STPTEST_ASSERT(graph->oeat[14] == EAT_FREE); // deleted by SD MST
 
 
    reduce_sdFree(scip, &sddata);
