@@ -962,7 +962,7 @@ void estimateRoot(
 
       /* need to linearize right of 0 */
       if( xref < 0.0 )
-         xref = xlb;
+         xref = 0.0;
 
       if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xub) )
       {
@@ -2338,14 +2338,14 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
    exponent = exprdata->exponent;
    assert(exponent > 1.0); /* exponent == 1 should have been simplified */
 
-   /* adjust the reference point */
-   refpoint = SCIPisLT(scip, refpoint, childlb) ? childlb : refpoint;
-   refpoint = SCIPisGT(scip, refpoint, childub) ? childub : refpoint;
-   assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
-
    if( childlb >= 0.0 )
    {
       SCIP_Real glb;
+
+      /* make sure we linearize in convex region */
+      if( refpoint < 0.0 )
+         refpoint = 0.0;
+
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
 
       *branchcand = *islocal;
