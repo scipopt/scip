@@ -39,32 +39,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** data structure to store a single term associated to a quadratic variable
- */
-struct SCIP_QuadExprTerm
-{
-   SCIP_CONSEXPR_EXPR*   expr;               /**< quadratic expression */
-   SCIP_Real             lincoef;            /**< linear coefficient of variable */
-   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
-
-   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
-   int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
-   int*                  adjbilin;           /**< indices of associated bilinear terms */
-};
-typedef struct SCIP_QuadExprTerm SCIP_QUADEXPRTERM;
-
-/** data structure to store a single bilinear term (similar to SCIP_QUADELEM)
- * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
- */
-struct SCIP_BilinExprTerm
-{
-   SCIP_CONSEXPR_EXPR*   expr1;              /**< first factor of bilinear term expr1 * expr2 */
-   SCIP_CONSEXPR_EXPR*   expr2;              /**< second factor of bilinear term expr1 * expr2 */
-   SCIP_Real             coef;               /**< coef of bilinear term expr1 * expr2 */
-   int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
-};
-typedef struct SCIP_BilinExprTerm SCIP_BILINEXPRTERM;
-
 #ifdef __cplusplus
 }
 #endif

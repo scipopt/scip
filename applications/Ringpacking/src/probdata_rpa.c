@@ -2039,8 +2039,9 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
          quadvars1[5] = yvars[l]; quadvars2[5] = yvars[l]; quadcoefs[5] =  1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "over_%d_%d", k, l);
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
-               quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip)) );
+         SCIP_CALL( SCIPcreateConsExprQuadratic(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
+               quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip),
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(subscip, cons) );
          SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -2059,8 +2060,9 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
       quadvars1[1] = yvars[k]; quadvars2[1] = yvars[k]; quadcoefs[1] = 1.0;
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "bound_%d", k);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
-            0.0, SQR(rints[type] - rexts[elemtype])) );
+      SCIP_CALL( SCIPcreateConsExprQuadratic(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+            0.0, SQR(rints[type] - rexts[elemtype]),
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );

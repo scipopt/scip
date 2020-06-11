@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_bilinear.h
+/**@file   cons_expr_nlhdlr_bilinear.c
  * @brief  bilinear nonlinear handler
  * @author Benjamin Mueller
  */
@@ -28,18 +28,21 @@
 #include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "bilinear"
-#define NLHDLR_DESC         "bilinear handler for expressions"
-#define NLHDLR_PRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_NAME               "bilinear"
+#define NLHDLR_DESC               "bilinear handler for expressions"
+#define NLHDLR_DETECTPRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_ENFOPRIORITY       -10
 
-#define MIN_INTERIORITY     0.01 /* minimum interiority for a reference point for applying separation */
-#define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
+#define MIN_INTERIORITY           0.01 /* minimum interiority for a reference point for applying separation */
+#define MIN_ABSBOUNDSIZE          0.1  /* minimum size of variable bounds for applying separation */
 
+#ifdef SCIP_STATISTIC
 /* properties of the bilinear nlhdlr statistics table */
 #define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
 #define TABLE_DESC_BILINEAR                 "bilinear nlhdlr statistics table"
 #define TABLE_POSITION_BILINEAR             12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+#endif
 
 /*
  * Data structures
@@ -732,6 +735,7 @@ void reversePropBilinear(
    }
 }
 
+#ifdef SCIP_STATISTIC
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
@@ -810,6 +814,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    return SCIP_OKAY;
 }
+#endif
 
 /*
  * Callback methods of nonlinear handler
@@ -1093,6 +1098,9 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    SCIP_Real violation;
    SCIP_Longint nodeid;
    SCIP_Bool mccsuccess = TRUE;
+   SCIP_ROWPREP* rowprep;
+
+   assert(rowpreps != NULL);
 
    *success = FALSE;
    *addedbranchscores = FALSE;
@@ -1193,10 +1201,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
 
    if( *success )
    {
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
       SCIPaddRowprepConstant(rowprep, linconstant);
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, x, lincoefx) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, y, lincoefy) );
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
    }
 
    return SCIP_OKAY;
@@ -1495,7 +1505,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrBilinear);
@@ -1526,11 +1537,13 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
          "maximum depth to apply separation",
          &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
+#ifdef SCIP_STATISTIC
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, TRUE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
+#endif
 
    return SCIP_OKAY;
 }

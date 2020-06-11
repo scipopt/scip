@@ -3757,7 +3757,7 @@ SCIP_RETCODE getImpliedBounds(
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
- *  For a product x*y, with y a binary variable and x a continous variable with finite bounds,
+ *  For a product x*y, with y a binary variable and x a continuous variable with finite bounds,
  *  an auxiliary variable z and the inequalities \f$ x^L y \leq z \leq x^U y \f$ and \f$ x - (1-y) x^U \leq z \leq x - (1-y) x^L \f$ are added.
  * 
  *  If x is a linear term consisting of more than one variable, it is split up in groups of linear terms of length at most maxnrvar.
@@ -16568,7 +16568,11 @@ SCIP_Bool SCIPisRowprepViolationReliable(
    return reliable;
 }
 
-/** Merge terms that use same variable and eliminate zero coefficients.
+/** Merge terms that use same variable and eliminate zero coefficients and fixed variables.
+ *
+ * Removes a variable if its bounds have a relative difference of below epsilon.
+ * Local bounds are checked for local rows, otherwise global bounds are used.
+ * If the bounds are not absolute equal, the bound that relaxes the row is used.
  *
  * Terms are sorted by variable (@see SCIPvarComp) after return.
  */
@@ -16602,6 +16606,24 @@ void SCIPmergeRowprepTerms(
          continue;
       }
 
+      /* move term i into side if fixed */
+      if( rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbLocal(rowprep->vars[i]), SCIPvarGetUbLocal(rowprep->vars[i])) )
+      {
+         if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbLocal(rowprep->vars[i]);
+         else
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbLocal(rowprep->vars[i]);
+         rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+      }
+      else if( !rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbGlobal(rowprep->vars[i]), SCIPvarGetUbGlobal(rowprep->vars[i])) )
+      {
+         if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbGlobal(rowprep->vars[i]);
+         else
+            rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbGlobal(rowprep->vars[i]);
+         rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+      }
+
       if( rowprep->coefs[i] == 0.0 )
       {
          /* move term j to position i */
@@ -16621,6 +16643,24 @@ void SCIPmergeRowprepTerms(
       ++j;
    }
 
+   /* move term i into side if fixed */
+   if( rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbLocal(rowprep->vars[i]), SCIPvarGetUbLocal(rowprep->vars[i])) )
+   {
+      if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbLocal(rowprep->vars[i]);
+      else
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbLocal(rowprep->vars[i]);
+      rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+   }
+   else if( !rowprep->local && SCIPisRelEQ(scip, SCIPvarGetLbGlobal(rowprep->vars[i]), SCIPvarGetUbGlobal(rowprep->vars[i])) )
+   {
+      if( (rowprep->coefs[i] > 0.0) == (rowprep->sidetype == SCIP_SIDETYPE_RIGHT) )
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetLbGlobal(rowprep->vars[i]);
+      else
+         rowprep->side -= rowprep->coefs[i] * SCIPvarGetUbGlobal(rowprep->vars[i]);
+      rowprep->coefs[i] = 0.0;  /* so will be cleaned out below */
+   }
+
    /* remaining term can have coef zero -> forget about it */
    if( rowprep->coefs[i] == 0.0 )
       --i;
@@ -16629,7 +16669,7 @@ void SCIPmergeRowprepTerms(
    rowprep->nvars = i+1;
 }
 
-/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled */
+/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled and the variable is not fixed */
 static
 SCIP_RETCODE rowprepRecordModifiedVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16640,6 +16680,10 @@ SCIP_RETCODE rowprepRecordModifiedVar(
    int oldsize;
 
    if( !rowprep->recordmodifications )
+      return SCIP_OKAY;
+
+   /* do not record for fixed variables, as they are not suitable for branching */
+   if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       return SCIP_OKAY;
 
    /* increase modifiedvars array size */

@@ -293,8 +293,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-   SCIPinfoMessage(scip, NULL, " -> %gx%+gy%+gxy%+gx^2%+gy^2%+g (x=<%s>, y=<%s>)\n", exprdata.xcoef, exprdata.ycoef, exprdata.xycoef, exprdata.xxcoef, exprdata.yycoef, exprdata.constant, SCIPvarGetName(exprdata.varx), SCIPvarGetName(exprdata.vary));
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, " -> %gx%+gy%+gxy%+gx^2%+gy^2%+g (x=<%s>, y=<%s>)\n", exprdata.xcoef, exprdata.ycoef, exprdata.xycoef, exprdata.xxcoef, exprdata.yycoef, exprdata.constant, SCIPvarGetName(exprdata.varx), exprdata.vary != NULL ? SCIPvarGetName(exprdata.vary) : "na");
 #endif
 
    /* separable function is not of interest (for this unittest) */
@@ -344,6 +344,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
    *auxvalue += nlhdlrexprdata->xxcoef * xval * xval;
    *auxvalue += nlhdlrexprdata->ycoef * yval;
    *auxvalue += nlhdlrexprdata->yycoef * yval * yval;
+   *auxvalue += nlhdlrexprdata->xycoef * xval * yval;
 
    return SCIP_OKAY;
 }
@@ -499,7 +500,9 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, evalauxHdlr, nlhdlrdata) );
+      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr),
+      SCIPgetConsExprNlhdlrDetectPriority(sourcenlhdlr), SCIPgetConsExprNlhdlrEnfoPriority(sourcenlhdlr),
+      detectHdlr, evalauxHdlr, nlhdlrdata) );
    SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
@@ -582,7 +585,8 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, evalauxHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr",
+         "tests nonlinear handler functionality", 10000, 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
@@ -591,7 +595,9 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, enfoHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
+#ifndef SCIP_DEBUG
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+#endif
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
 /*
    SCIP_CALL( SCIPpresolve(scip) );
@@ -600,6 +606,10 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 */
    SCIP_CALL( SCIPsolve(scip) );
    /* SCIP_CALL( SCIPprintBestSol(scip, NULL, TRUE) ); */
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+#endif
 
    cr_assert(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
    cr_assert(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(scip));

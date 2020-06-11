@@ -241,6 +241,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
+/** returns expression handler for logarithm expressions */
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrLog(
+        SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+);
+
 /** gives the name of an expression handler */
 SCIP_EXPORT
 const char* SCIPgetConsExprExprHdlrName(
@@ -450,6 +456,32 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
    );
 
+/** creates and captures an expression representing a quadratic function */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nlinvars,         /**< number of linear terms */
+   SCIP_VAR**              linvars,          /**< array with variables in linear part */
+   SCIP_Real*              lincoefs,         /**< array with coefficients of variables in linear part */
+   int                     nquadterms,       /**< number of quadratic terms */
+   SCIP_VAR**              quadvars1,        /**< array with first variables in quadratic terms */
+   SCIP_VAR**              quadvars2,        /**< array with second variables in quadratic terms */
+   SCIP_Real*              quadcoefs         /**< array with coefficients of quadratic terms */
+   );
+
+/** creates and captures an expression representing a monomial */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprExprMonomial(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nfactors,         /**< number of factors in monomial */
+   SCIP_VAR**              vars,             /**< variables in the monomial */
+   SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
+   );
+
 /** appends child to the children list of expr */
 SCIP_EXPORT
 SCIP_RETCODE SCIPappendConsExprExpr(
@@ -542,6 +574,12 @@ SCIP_Bool SCIPisConsExprExprVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** returns whether an expression is a value expression */
+SCIP_EXPORT
+SCIP_Bool SCIPisConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -625,6 +663,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 SCIP_EXPORT
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    );
 
@@ -804,6 +843,9 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
+ *
+ * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExprActivity(
@@ -811,7 +853,8 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   SCIP_Bool               validsufficient,  /**< whether any valid activity is sufficient */
+   SCIP_Bool               global            /**< whether to evaluate expressions w.r.t. global bounds */
    );
 
 /** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
@@ -911,6 +954,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
+ * @note this function can only be called in SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
@@ -1019,6 +1063,23 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
 SCIP_EXPORT
 SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
    );
 
 /** returns the total number of variables in an expression
@@ -1158,6 +1219,13 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_EXPORT
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
@@ -1216,11 +1284,12 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
  *  input:
  *  - scip            : SCIP main data structure
  *  - cons            : the nonlinear constraint to upgrade
+ *  - nvarexprs       : total number of variable expressions in the expression constraint
  *  - nupgdconss      : pointer to store number of constraints that replace this constraint
  *  - upgdconss       : array to store constraints that replace this constraint
  *  - upgdconsssize   : length of the provided upgdconss array
  */
-#define SCIP_DECL_EXPRCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
+#define SCIP_DECL_EXPRCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvarexprs, \
       int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 
@@ -1270,11 +1339,8 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
 /** creates and captures a expr constraint with all its constraint flags set to their
@@ -1292,6 +1358,43 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
+/** creates and captures a quadratic expression constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   );
+
 /** @} */
 
 /**@name Expression Constraint Methods */
@@ -1302,6 +1405,37 @@ SCIP_EXPORT
 SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the root curvature of the given expression constraint
+ *
+ * @note The curvature information are computed during CONSINITSOL.
+ */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+ *
+ * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expr in each SCIP_CONSEXPR_QUADEXPRTERM will be a variable expressions and
+ * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetQuadExprConsExpr(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   );
+
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** gets the left hand side of an expression constraint */
@@ -1410,6 +1544,38 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    );
 
+/** add the cut and maybe report branchscores */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprocessConsExprRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   );
+
+/** checks whether an expression is quadratic and returns the corresponding coefficients
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
+   );
+
 /** @} */
 
 /**@name Nonlinear Handler Methods */
@@ -1418,15 +1584,16 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    );
 
 /** set the copy handler callback of a nonlinear handler */
@@ -1502,10 +1669,16 @@ const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
-/** gives priority of nonlinear handler */
+/** gives detection priority of nonlinear handler */
 SCIP_EXPORT
-int SCIPgetConsExprNlhdlrPriority(
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives enforcement priority of nonlinear handler */
+SCIP_EXPORT
+int SCIPgetConsExprNlhdlrEnfoPriority(
+        SCIP_CONSEXPR_NLHDLR*      nlhdlr    /**< nonlinear handler */
 );
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */
@@ -1610,6 +1783,111 @@ SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** @} */
+
+/**@name Quadratic expression functions */
+/**@{ */
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * It can return the constant part, the number, arguments, and coefficients of the purely linear part
+ * and the number of quadratic terms and bilinear terms.
+ * Note that for arguments that appear in the quadratic part, a linear coefficient is
+ * stored with the quadratic term.
+ * Use SCIPgetConsExprQuadraticQuadTermData() and SCIPgetConsExprQuadraticBilinTermData()
+ * to access the data for a quadratic or bilinear term.
+ *
+ * This function returns pointers to internal data in linexprs and lincoefs.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   SCIP_Real*                    constant,         /**< buffer to store constant term, or NULL */
+   int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
+   int*                          nbilinexprs       /**< buffer to store number of bilinear expressions terms, or NULL */
+   );
+
+/** gives the data of a quadratic expression term
+ *
+ * For a term a*expr^2 + b*expr + sum_i (c_i * expr * otherexpr_i), returns
+ * expr, a, b, the number of summands, and indices of bilinear terms in the quadratic expressions bilinexprterms.
+ *
+ * This function returns pointers to internal data in adjbilin.
+ * The user must not change this data.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticQuadTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of quadratic term */
+   SCIP_CONSEXPR_EXPR**          expr,             /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
+   SCIP_Real*                    lincoef,          /**< buffer to store linear coefficient of variable, or NULL */
+   SCIP_Real*                    sqrcoef,          /**< buffer to store square coefficient of variable, or NULL */
+   int*                          nadjbilin,        /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
+   int**                         adjbilin          /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   );
+
+/** gives the data of a bilinear expression term
+ *
+ * For a term a*expr1*expr2, returns
+ * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ */
+SCIP_EXPORT
+void SCIPgetConsExprQuadraticBilinTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of bilinear term */
+   SCIP_CONSEXPR_EXPR**          expr1,            /**< buffer to store first factor, or NULL */
+   SCIP_CONSEXPR_EXPR**          expr2,            /**< buffer to store second factor, or NULL */
+   SCIP_Real*                    coef,             /**< buffer to coefficient, or NULL */
+   int*                          pos2              /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   );
+
+/** returns whether all expressions that are used in a quadratic expression are variable expression
+ *
+ * @return TRUE iff all linexprs and quadexprterms[.].expr in quaddata are variable expressions
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPareConsExprQuadraticExprsVariables(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata          /**< quadratic coefficients data */
+   );
+
+/** evaluates quadratic term in a solution w.r.t. auxiliary variables
+ *
+ * \note This assumes that for every expr used in the quadratic data, an auxiliary variable is available.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPevalConsExprQuadraticAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic form */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   );
+
+/** prints quadratic expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression conshdlr */
+   SCIP_CONSEXPR_QUADEXPR* quaddata          /**< quadratic form */
+   );
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
+   );
+
+/** @} */
+
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function
  *

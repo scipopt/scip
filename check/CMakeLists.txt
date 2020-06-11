@@ -554,7 +554,8 @@ add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
-add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+# waiting for #3017
+# add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 
 #
 # test writing and reading solutions

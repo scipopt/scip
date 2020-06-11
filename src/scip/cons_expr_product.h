@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
    SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real             constant            /**< constant coefficient of product */
+   SCIP_Real             coefficient         /**< constant coefficient of product */
    );
 
 /** gets the constant coefficient of a product expression */

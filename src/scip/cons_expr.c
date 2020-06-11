@@ -60,12 +60,15 @@
 #include "scip/cons_expr_nlhdlr_bilinear.h"
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
-#include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_nlhdlr_perspective.h"
+#include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_nlhdlr_quotient.h"
+#include "scip/cons_expr_nlhdlr_soc.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/debug.h"
+#include "nlpi/nlpi_ipopt.h" /* for LAPACK */
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -175,6 +178,8 @@ struct SCIP_ConsData
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
    unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
 
+   SCIP_EXPRCURV         curv;               /**< curvature of the root expression w.r.t. the original variables */
+
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
    int                   nlockspos;          /**< number of positive locks */
@@ -204,6 +209,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsignpowhdlr; /**< signed power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprexphdlr;     /**< exponential expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprloghdlr;     /**< logarithm expression handler */
 
    /* nonlinear handler */
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
@@ -417,16 +423,8 @@ SCIP_RETCODE freeAuxVar(
 
    SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-   /* check that if not finishing up, noone else is still using the auxvar
-    * once we release it, noone else would take care of unlocking it
-    * note that we do not free auxvars in exitsolve if we are restarting
-    * TODO: this doesn't work when run from unittests, so should find a safer way to define exceptions than checking the stage
-    */
-   /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
-
-   /* remove variable locks; we assume that no other plugin is still using the auxvar for deducing any type of
-    * reductions or cutting planes; unfortunately, we cannot check the auxvar->nuses here because the auxiliary
-    * variable might be still captured by SCIP's NLP or some other plugin
+   /* remove variable locks
+    * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
     */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
@@ -501,9 +499,17 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
+   expr->ndomainuses = 0;
 
    return SCIP_OKAY;
 }
+
+/** frees data of quadratic representation of expression, if any */
+static
+void quadFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression whose quadratic data will be released */
+   );
 
 static
 SCIP_DECL_CONSEXPR_MAPVAR(transformVar)
@@ -774,6 +780,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
    conshdlrdata->exprsignpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "signpower");
    conshdlrdata->exprexphdlr = SCIPfindConsExprExprHdlr(conshdlr, "exp");
+   conshdlrdata->exprloghdlr = SCIPfindConsExprExprHdlr(conshdlr, "log");
 
    /* copy nonlinear handlers */
    for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
@@ -791,6 +798,34 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** compares nonlinear handler by enforcement priority
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+static
+int nlhdlrEnfoCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->enfopriority != h2->enfopriority )
+      return (int)(h1->enfopriority - h2->enfopriority);
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
 /** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
 static
 SCIP_RETCODE presolveUpgrade(
@@ -803,6 +838,7 @@ SCIP_RETCODE presolveUpgrade(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
    SCIP_CONS** upgdconss;
    int upgdconsssize;
    int nupgdconss_;
@@ -835,6 +871,9 @@ SCIP_RETCODE presolveUpgrade(
       SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
    SCIPdebugPrintCons(scip, cons, NULL);
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
    {
@@ -843,7 +882,8 @@ SCIP_RETCODE presolveUpgrade(
 
       assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
 
-      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, consdata->nvarexprs, &nupgdconss_,
+         upgdconss, upgdconsssize) );
 
       while( nupgdconss_ < 0 )
       {
@@ -852,7 +892,8 @@ SCIP_RETCODE presolveUpgrade(
          upgdconsssize = -nupgdconss_;
          SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
 
-         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, consdata->nvarexprs, &nupgdconss_,
+            upgdconss, upgdconsssize) );
 
          assert(nupgdconss_ != 0);
       }
@@ -911,8 +952,16 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    conshdlrdata = (SCIP_CONSHDLRDATA*)intevalvardata;
    assert(conshdlrdata != NULL);
 
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   if( global )
+   {
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+   }
+   else
+   {
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+   }
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
    /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
@@ -1026,8 +1075,16 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    assert(scip != NULL);
    assert(var != NULL);
 
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
+   if( global )
+   {
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+   }
+   else
+   {
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+   }
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
    /* relax variable bounds, if there are bounds and variable is not fixed
@@ -1183,6 +1240,7 @@ SCIP_RETCODE forwardPropExpr(
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
+   SCIP_Bool               global,           /**< whether to evaluate expressions w.r.t. global bounds */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable, or NULL */
    void*                   intevalvardata,   /**< data to be passed to intevalvar call */
    SCIP_QUEUE*             reversepropqueue, /**< queue to add candidates for reverse propagation, or NULL */
@@ -1258,7 +1316,7 @@ SCIP_RETCODE forwardPropExpr(
                else if( child->auxvar != NULL )
                {
                   SCIP_INTERVAL auxvarbounds;
-                  auxvarbounds = intevalvar(scip, child->auxvar, intevalvardata);
+                  auxvarbounds = intevalvar(scip, child->auxvar, global, intevalvardata);
                   assert(reversepropqueue == NULL || child->inqueue ||
                      ((auxvarbounds.inf <= -SCIP_INTERVAL_INFINITY || SCIPisRelGE(scip, child->activity.inf, auxvarbounds.inf)) &&
                       (auxvarbounds.sup >=  SCIP_INTERVAL_INFINITY || SCIPisRelLE(scip, child->activity.sup, auxvarbounds.sup))));
@@ -1287,12 +1345,20 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               /* if already empty, then don't try to compute even better activity
-                * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
+               /* If already empty, then don't try to compute even better activity.
+                * If cons_expr were alone, then we should have noted that we are infeasible
+                * so an assert(infeasible == NULL || *infeasible) should work here.
+                * However, after reporting a cutoff due to expr->activity being empty,
+                * SCIP may wander to a different node and call propagation again.
+                * If no bounds in an expr-constraint have been relaxed when switching nodes
+                * (so expr->activitytag >= conshdlrdata->lastboundrelax), then
+                * we will still have expr->activity being empty, but will have forgotten
+                * that we found infeasibility here before (!2221#note_134120).
+                * Therefore we just set *infeasibility=TRUE here and stop.
                 */
-               assert(infeasible == NULL || *infeasible);
-               /* if( infeasible != NULL )
-                  *infeasible = TRUE; */
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
+               SCIPdebugMsg(scip, "expr %p already has empty activity -> cutoff\n", (void*)expr);
                break;
             }
 
@@ -1334,7 +1400,8 @@ SCIP_RETCODE forwardPropExpr(
 
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = expr->activity;
-                  SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, intevalvar, intevalvardata) );
+                  SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+                     &nlhdlrinterval, intevalvar, global, intevalvardata) );
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 #endif
@@ -1350,7 +1417,7 @@ SCIP_RETCODE forwardPropExpr(
             {
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
                SCIP_INTERVAL exprhdlrinterval = expr->activity;
-               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, global, intevalvardata) );
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, exprhdlrinterval.inf, exprhdlrinterval.sup);
 #endif
@@ -1387,7 +1454,7 @@ SCIP_RETCODE forwardPropExpr(
             /* get interval with auxiliary variable bounds */
             if( expr->auxvar != NULL )
             {
-               auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
+               auxvarbounds = intevalvar(scip, expr->auxvar, global, intevalvardata);
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, " auxvar <%s> bounds: [%.15g,%.15g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
 #endif
@@ -1681,16 +1748,14 @@ SCIP_RETCODE propConss(
          assert(consdata != NULL);
 
          /* skip deleted, non-active, or propagation-disabled constraints */
-         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
-          * expression from a reverse propagation in a previous propagation round
-          * (TODO: do we still need this since we have the tag's???
-          * this means that we propagate all constraints even if there was only very few boundchanges that related to only a few constraints)
-          * in other rounds, we skip already propagated constraints
+         /* skip already propagated constraints, i.e., constraints where no variable has changed, unless allexprs is set
+          * TODO ispropagated is only unset if an original variable has been tightened; if an auxiliary variable was tightened
+          * due to some mysterious ways, then this would not unset ispropagated at the moment
           */
-         if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
+         if( !allexprs && consdata->ispropagated )
             continue;
 
          /* update activities in expression and collect initial candidates for reverse propagation */
@@ -1698,7 +1763,8 @@ SCIP_RETCODE propConss(
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, FALSE, intEvalVarBoundTightening,
+            (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
 #ifdef SCIP_DEBUG
@@ -1945,7 +2011,8 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, NULL, cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
+         NULL, NULL, cutoff, NULL) );
       assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
@@ -2114,6 +2181,10 @@ SCIP_RETCODE detectNlhdlr(
    if( nsuccess == 0 )
       return SCIP_OKAY;
 
+   /* sort nonlinear handlers by enforcement priority, in decreasing order */
+   if( nsuccess > 1 )
+      SCIPsortDownPtrPtr((void**)nlhdlrssuccess, (void**)nlhdlrssuccessexprdata, nlhdlrEnfoCmp, nsuccess);
+
    /* copy collected nlhdlrs into expr->enfos */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
    for( e = 0; e < nsuccess; ++e )
@@ -2161,6 +2232,14 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
+   /* ensure that activies are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
+    * for example, this happens if globally valid expression constraints are added during the tree search
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   }
+
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
    {
@@ -2176,7 +2255,7 @@ SCIP_RETCODE detectNlhdlrs(
           * we do this here to have bounds for the auxiliary variables and for a reverseprop call at the end
           * we don't do auxiliary variables if in presolve, so do only in solving
           */
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE, TRUE) );
          if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
          {
             SCIPdebugMsg(scip, "infeasibility detected in activity calculation of constraint <%s>\n", SCIPconsGetName(conss[i]));
@@ -2273,6 +2352,17 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
+
+      /* make sure we include this constraint into the next propagation round, now that more structure may have been detected */
+      consdata->ispropagated = FALSE;
+   }
+
+   /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
+    * is called in a local node
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
 
    SCIPexpriteratorFree(&it);
@@ -2734,7 +2824,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
 
    /* for real variables notify constraints to repropagate and possibly resimplify */
-   if( SCIPisConsExprExprVar(expr) )
+   if( SCIPisConsExprExprVar(expr) && ((SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || ((eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0)) )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS** conss;
@@ -2750,8 +2840,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          assert(conss[c] != NULL);  /*lint !e613*/
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
 
-         /* if boundchange, then mark constraints to be propagated again */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
+         /* if boundtightening, then mark constraints to be propagated again */
+         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
          {
             consdata->ispropagated = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
@@ -2976,7 +3066,7 @@ SCIP_RETCODE addLocks(
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
       SCIP_INTERVAL activity;
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, SCIPconsGetHdlr(cons), consdata->expr, &activity, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, SCIPconsGetHdlr(cons), consdata->expr, &activity, TRUE, FALSE) );
    }
 
    /* remember locks */
@@ -3351,7 +3441,7 @@ SCIP_RETCODE reformulateConsExprExpr(
                      /* make sure valid activities are available for the new expr (and its children)
                       * we might expect them to be present in nlhdlr detect later
                       */
-                     SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE) );
+                     SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE, FALSE) );
 
                      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
                         *infeasible = TRUE;
@@ -3408,7 +3498,7 @@ SCIP_RETCODE reformulateConsExprExpr(
                         /* make sure valid activities are available for the new expr (and its children)
                          * we might expect them to be present in nlhdlr detect later
                          */
-                        SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE) );
+                        SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE, FALSE) );
 
                         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
                            *infeasible = TRUE;
@@ -4446,6 +4536,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
          /* remove nonlinear handlers in expression and their data */
          SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+
+         /* remove quadratic info */
+         quadFree(scip, expr);
       }
    }
 
@@ -4671,6 +4764,10 @@ SCIP_RETCODE canonicalizeConstraints(
    /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !*infeasible )
    {
+      /* reset one of the number of detections counter to count only current presolving round */
+      for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
+
       SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
    }
 
@@ -5557,9 +5654,9 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
-/** compares nonlinear handler by priority
+/** compares nonlinear handler by detection priority
  *
- * if handlers have same priority, then compare by name
+ * if handlers have same detection priority, then compare by name
  */
 static
 int nlhdlrCmp(
@@ -5576,52 +5673,10 @@ int nlhdlrCmp(
    h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
    h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
 
-   if( h1->priority != h2->priority )
-      return (int)(h1->priority - h2->priority);
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
 
    return strcmp(h1->name, h2->name);
-}
-
-/** frees auxiliary variables which have been added to compute an outer approximation */
-static
-SCIP_RETCODE freeAuxVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSDATA* consdata;
-   int i;
-
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      if( consdata->expr == NULL )
-         continue;
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
 }
 
 /** calls separation initialization callback for each expression */
@@ -5678,8 +5733,6 @@ SCIP_RETCODE initSepa(
             /* only init sepa if there is an initsepa callback */
             if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
                continue;
-
-            assert(!expr->enfos[e]->issepainit);
 
             /* check whether expression needs to be under- or overestimated */
             overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
@@ -5823,6 +5876,11 @@ void addConsExprExprsViolScore(
             100*weight / weightsum, violscore,
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          *success = TRUE;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "skip score for fixed variable <%s>[%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       }
    }
 }
@@ -6019,7 +6077,6 @@ SCIP_RETCODE registerBranchingCandidates(
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate "\
                         "with score %g\n", SCIPvarGetName(var), lb, ub, violscore); )
-
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violscore, SCIP_INVALID) );
                *success = TRUE;
             }
@@ -6804,19 +6861,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real mincutviolation;
-
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* decide on minimal violation of cut */
-   if( sol == NULL )
-      mincutviolation = SCIPgetLPFeastol(scip);  /* we enforce an LP solution */
-   else
-      mincutviolation = SCIPfeastol(scip);
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPenfoConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
@@ -6829,252 +6874,61 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
+   else
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeed with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
+   }
 
    *result = SCIP_DIDNOTFIND;
 
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
    {
-      SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
-      SCIP_Real auxvarvalue;
-      SCIP_Real cutviol;
-      SCIP_Real estimateval = SCIP_INVALID;
       SCIP_Bool sepasuccess = FALSE;
       SCIP_Bool branchscoresuccess = FALSE;
+      SCIP_PTRARRAY* rowpreps;
+      int minidx;
+      int maxidx;
+      int r;
+      SCIP_ROWPREP* rowprep;
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
       SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-               SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
+               SCIPgetSolVal(scip, sol, auxvar), rowpreps, &sepasuccess, inenforcement, &branchscoresuccess) );
 
-      if( sepasuccess )
-      {
-         /* complete estimator to cut */
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+      minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
+      maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
 
-         cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
-         if( cutviol > 0.0 )
-         {
-            auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+      assert((sepasuccess && minidx <= maxidx) || (!sepasuccess && minidx > maxidx));
 
-            /* check whether cut is weak (if f(x) not defined, then it's never weak) */
-            if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
-            {
-               /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
-                * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
-                * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
-                * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then
-                * let's call this a weak cut that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
-                *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
-                *
-                * if we are overestimating, we have z >= c'x-b >= f(x)
-                * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
-                * it's weak if c'x-b >= f(x) + (1-weakcutthreshold) * (z - f(x))
-                *   <->   c'x-b - z >= weakcutthreshold * (f(x)-z)
-                *
-                * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
-                */
-               if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
-               {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too "\
-                           "weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                           SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
-                           auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
-                  sepasuccess = FALSE;
-               }
-            }
-
-            /* save estimator value for later, see long comment above why this gives the value for c'x-b */
-            estimateval = auxvarvalue + (!overestimate ? cutviol : -cutviol);
-         }
-         else
-         {
-            sepasuccess = FALSE;
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not "\
-                     "separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-         }
-      }
-      else
+      if( !sepasuccess )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n",
                   SCIPgetConsExprNlhdlrName(nlhdlr)); )
       }
 
-      /* clean up estimator */
-      if( sepasuccess )
+      for( r = minidx; r <= maxidx; ++r )
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval "\
-                  "%g auxvalue %g (over %d)\n    ", SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
-                  auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-                  SCIPprintRowprep(scip, rowprep, enfologfile); )
+         rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
 
-         /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
-          * instead, may even scale them down, that is, scale so that max coef is close to 1
-          */
-         if( !allowweakcuts )
-         {
-            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+         assert(rowprep != NULL);
 
-            if( !sepasuccess )
-            {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
-            }
-            else
-            {
-               cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min "\
-                        "requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
-               if( sepasuccess )
-                  sepasuccess = cutviol > mincutviolation;
-            }
+         /* complete estimator to cut */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-            if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
-            {
-               /* check whether cut is weak now
-                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
-                * reconstructing estimateval from cutviol (TODO improve or remove?)
-                */
-               SCIP_Real auxvarcoef = 0.0;
-               int i;
+         /* add the cut and/or branching scores */
+         SCIP_CALL( SCIPprocessConsExprRowprep(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+               auxvalue, allowweakcuts, branchscoresuccess, inenforcement, sol, result) );
 
-               /* get absolute value of coef of auxvar in row; this makes the check more expensive than it should be */
-               for( i = 0; i < rowprep->nvars; ++i )
-               {
-                  if( rowprep->vars[i] == auxvar )
-                  {
-                     auxvarcoef = REALABS(rowprep->coefs[i]);
-                     break;
-                  }
-               }
-
-               if( auxvarcoef == 0.0 ||
-                   (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
-               {
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g" \
-                           "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
-                           auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
-                  sepasuccess = FALSE;
-               }
-            }
-         }
-         else
-         {
-            /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
-
-            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which
-             * the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
-             */
-            if( !branchscoresuccess )
-               rowprep->recordmodifications = TRUE;
-
-            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
-
-            if( !sepasuccess )
-            {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n",
-                        rowprep->nmodifiedvars, cutviol); )
-            }
-
-            /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
-            if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
-            {
-               SCIP_Real violscore;
-
-#ifdef BRSCORE_ABSVIOL
-               violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
-#else
-               SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL,
-                        NULL) );
-#endif
-               SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
-                        rowprep->nmodifiedvars, sol, &branchscoresuccess) );
-
-               /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
-                * expr's auxvar
-                * I don't think it makes sense to branch on that one (would it?)
-                * it can also fail if everything is fixed
-                */
-               assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
-            }
-         }
+         SCIPfreeRowprep(scip, &rowprep);
       }
 
-      /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
-      if( sepasuccess )
-      {
-         SCIP_ROW* row;
-
-         if( conshdlrdata->branchdualweight > 0.0 )
-         {
-            /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
-             * skip if gap is zero
-             */
-            if( auxvalue == SCIP_INVALID )  /*lint !e777*/
-               strcat(rowprep->name, "_estimategap=inf");
-            else if( !SCIPisEQ(scip, auxvalue, estimateval) )
-            {
-               char gap[40];
-               sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
-               strcat(rowprep->name, gap);
-            }
-         }
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-         if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
-         {
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
-               SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
-         }
-         else
-         {
-            SCIP_Bool infeasible;
-
-            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
-            SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
-
-            /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
-             */
-            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
-
-            if( infeasible )
-            {
-               *result = SCIP_CUTOFF;
-               ++nlhdlr->ncutoffs;
-            }
-            else
-            {
-               *result = SCIP_SEPARATED;
-               ++nlhdlr->nseparated;
-            }
-         }
-
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      }
-      else if( branchscoresuccess )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching" \
-                  "candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
-
-         /* well, not branched, but addConsExprExprViolScoresAuxVars() added scores to (aux)variables and that makes the
-          * expressions eligible for branching candidate, see enforceConstraints() and branching()
-          */
-         *result = SCIP_BRANCHED;
-      }
-      else
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no " \
-                  "branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ?
-                  " (!)" : ""); )
-      }
-
-      SCIPfreeRowprep(scip, &rowprep);
+      SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    }
 
    return SCIP_OKAY;
@@ -7126,7 +6980,9 @@ SCIP_RETCODE enforceExpr(
 
    /* no sufficient violation w.r.t. the original variables -> skip expression */
    if( !overestimate && !underestimate )
+   {
       return SCIP_OKAY;
+   }
 
    /* check aux-violation w.r.t. each nonlinear handlers and try to enforce when there is a decent violation */
    for( e = 0; e < expr->nenfos; ++e )
@@ -7141,7 +6997,7 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s>" \
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> " \
             "auxvalue: %.15g\n", (void*)expr, expr->evalvalue, SCIPgetSolVal(scip, sol, expr->auxvar),
             expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
@@ -7160,7 +7016,7 @@ SCIP_RETCODE enforceExpr(
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
       if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with" \
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with " \
                   "auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr,
                   expr->exprhdlr->name, auxviol, origviol, underestimate, overestimate); )
 
@@ -7204,7 +7060,8 @@ SCIP_RETCODE enforceExpr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
-            /* TODO or should we always just stop here? */
+            /* TODO or should we give other nlhdlr another chance? (also #3070) */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
@@ -7249,7 +7106,8 @@ SCIP_RETCODE enforceExpr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    nlhdlr <%s> separating the current solution by cut\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             expr->lastenforced = conshdlrdata->enforound;
-            /* TODO or should we always just stop here? */
+            /* TODO or should we give other nlhdlr another chance? (also #3070) */
+            break;
          }
 
          if( hdlrresult == SCIP_REDUCEDDOM )
@@ -7309,6 +7167,28 @@ SCIP_RETCODE enforceConstraint(
    assert(consdata != NULL);
 
    *success = FALSE;
+
+   if( inenforcement && !consdata->ispropagated )
+   {
+      /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of auxiliary variables,
+       * since some nlhdlr/exprhdlr may look at auxvar bounds or activities (TODO: nlhdlr will tell us soon whether they do and then we could skip).
+       * For now, do this only if called from enforcement, since updating auxvar bounds in separation doesn't seem to be right
+       * (it would be ok if the boundchange cuts off the current LP solution by a nice amount, but if not, we may just add a boundchange that
+       * doesn't change the dual bound much and could confuse the stalling check for how long to do separation).
+       */
+      SCIP_Bool infeasible;
+      int ntightenings;
+
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      /* if we tightened an auxvar bound, we better communicate that */
+      if( ntightenings > 0 )
+         *result = SCIP_REDUCEDDOM;
+   }
 
    for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
@@ -8294,7 +8174,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "EnfoCalls", "#IntEval", "PropCalls", "Detects", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "Detects", "EnfoCalls", "#IntEval", "PropCalls", "DetectAll", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -8306,6 +8186,7 @@ void printNlhdlrStatistics(
          continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetectionslast);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nenfocalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
@@ -8340,8 +8221,8 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Enforce            : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
@@ -8349,8 +8230,8 @@ void printConshdlrStatistics(
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
-   SCIPinfoMessage(scip, file, "ConsExpr Presolve  : %10s\n", "CanonTime");
-   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, "Presolve           : %10s\n", "CanonTime");
+   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 }
@@ -9312,6 +9193,105 @@ SCIP_RETCODE removeSingleLockedVars(
    return SCIP_OKAY;
 }
 
+/* presolving method to check if there is a single linear continuous variable that can be made implicit integer */
+static
+SCIP_RETCODE presolveImplint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< expression constraints */
+   int                   nconss,             /**< total number of expression constraints */
+   int*                  nchgvartypes,       /**< pointer to update the total number of changed variable types */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nchgvartypes != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* nothing can be done if there are no integer variables available */
+   if( SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* get sum expression handler */
+   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_EXPR** children;
+      int nchildren;
+
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      children = SCIPgetConsExprExprChildren(consdata->expr);
+      nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+      /* the constraint must be an equality constraint with an integer constraint side; also, the root expression
+       * needs to be a sum expression with at least two children
+       */
+      if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)
+         && nchildren > 1 && SCIPgetConsExprExprHdlr(consdata->expr) == sumhdlr
+         && SCIPisIntegral(scip, SCIPgetConsExprExprSumConstant(consdata->expr)) )
+      {
+         SCIP_Real* coefs;
+         SCIP_VAR* cand = NULL;
+         SCIP_Bool fail = FALSE;
+         int i;
+
+         coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+
+         /* find candidate variable and check whether all coefficients are integral */
+         for( i = 0; i < nchildren; ++i )
+         {
+            /* check coefficient */
+            if( !SCIPisIntegral(scip, coefs[i]) )
+            {
+               fail = TRUE;
+               break;
+            }
+
+            if( !SCIPisConsExprExprIntegral(children[i]) )
+            {
+               /* the child must be a variable expression and the first non-integral expression */
+               if( cand != NULL || !SCIPisConsExprExprVar(children[i]) || !SCIPisEQ(scip, REALABS(coefs[i]), 1.0) )
+               {
+                  fail = TRUE;
+                  break;
+               }
+
+               /* store candidate variable */
+               cand = SCIPgetConsExprExprVarVar(children[i]);
+            }
+         }
+
+         if( !fail && cand != NULL )
+         {
+            SCIPdebugMsg(scip, "make variable <%s> implicit integer due to constraint <%s>\n",
+               SCIPvarGetName(cand), SCIPconsGetName(conss[c]));
+
+            /* change variable type */
+            SCIP_CALL( SCIPchgVarType(scip, cand, SCIP_VARTYPE_IMPLINT, infeasible) );
+
+            if( *infeasible )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
  *  expression contraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
  *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
@@ -9530,6 +9510,124 @@ SCIP_RETCODE presolSingleLockedVars(
    return SCIP_OKAY;
 }
 
+/*
+ * quadratic representation of expression
+ */
+
+/** frees data of quadratic representation of expression, if any */
+static
+void quadFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression whose quadratic data will be released */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   expr->quadchecked = FALSE;
+
+   if( expr->quaddata == NULL )
+      return;
+
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->linexprs, expr->quaddata->nlinexprs);
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
+
+   for( i = 0; i < expr->quaddata->nquadexprs; ++i )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->quadexprterms[i].adjbilin,
+         expr->quaddata->quadexprterms[i].adjbilinsize);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->quadexprterms, expr->quaddata->nquadexprs);
+
+   SCIPfreeBlockMemory(scip, &expr->quaddata);
+}
+
+/** first time seen quadratically and
+ * seen before linearly --> --nlinterms; assign 2; ++nquadterms
+ * not seen before linearly --> assing 1; ++nquadterms
+ *
+ * seen before --> assign += 1
+ */
+static
+SCIP_RETCODE quadDetectProcessExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< the expression */
+   SCIP_HASHMAP*         seenexpr,           /**< hash map */
+   int*                  nquadterms,         /**< number of quadratic terms */
+   int*                  nlinterms           /**< number of linear terms */
+   )
+{
+   if( SCIPhashmapExists(seenexpr, (void*)expr) )
+   {
+      int nseen = SCIPhashmapGetImageInt(seenexpr, (void*)expr);
+
+      if( nseen < 0 )
+      {
+         /* only seen linearly before */
+         assert(nseen == -1);
+
+         --*nlinterms;
+         ++*nquadterms;
+         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)expr, 2) );
+      }
+      else
+      {
+         assert(nseen > 0);
+         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)expr, nseen + 1) );
+      }
+   }
+   else
+   {
+      ++*nquadterms;
+      SCIP_CALL( SCIPhashmapInsertInt(seenexpr, (void*)expr, 1) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns a quadexprterm that contains the expr
+ *
+ * it either finds one that already exists or creates a new one
+ */
+static
+SCIP_RETCODE quadDetectGetQuadexprterm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< the expression */
+   SCIP_HASHMAP*         expr2idx,           /**< map: expr to index in quadexpr->quadexprterms */
+   SCIP_HASHMAP*         seenexpr,           /**< map: expr to number of times it was seen */
+   SCIP_CONSEXPR_QUADEXPR* quadexpr,         /**< data of quadratic representation of expression */
+   SCIP_CONSEXPR_QUADEXPRTERM** quadexprterm /**< buffer to store quadexprterm */
+   )
+{
+   assert(expr != NULL);
+   assert(expr2idx != NULL);
+   assert(quadexpr != NULL);
+   assert(quadexprterm != NULL);
+
+   if( SCIPhashmapExists(expr2idx, (void*)expr) )
+   {
+      *quadexprterm = &quadexpr->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void*)expr)];
+      assert((*quadexprterm)->expr == expr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(expr2idx, expr, quadexpr->nquadexprs) );
+      *quadexprterm = &quadexpr->quadexprterms[quadexpr->nquadexprs];
+      ++quadexpr->nquadexprs;
+
+      (*quadexprterm)->expr = expr;
+      (*quadexprterm)->sqrcoef = 0.0;
+      (*quadexprterm)->lincoef = 0.0;
+      (*quadexprterm)->nadjbilin = 0;
+      (*quadexprterm)->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void*)expr);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*quadexprterm)->adjbilin, (*quadexprterm)->adjbilinsize) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -9650,8 +9748,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
       expr, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -9732,8 +9829,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
       expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-      SCIPconsIsStickingAtNode(cons)) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
    SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
@@ -9871,7 +9967,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
-   /* sort nonlinear handlers by priority, in decreasing order */
+   /* sort nonlinear handlers by detection priority, in decreasing order */
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
@@ -9915,6 +10011,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       nlhdlr->ndomreds = 0;
       nlhdlr->nbranchscores = 0;
       nlhdlr->ndetections = 0;
+      nlhdlr->ndetectionslast = 0;
 
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
@@ -10001,14 +10098,6 @@ static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
 
-   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
-    * removed all of his captures on variables
-    */
-   if( SCIPgetNRuns(scip) > 1 )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -10048,11 +10137,12 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
-   /* skip a number of initializations if we are already infeasible
+   /* skip a number of initializations if we have solved already
     * if infeasibility was found by our boundtightening, then curvature check may also fail as some exprhdlr (e.g., pow)
     * assumes nonempty activities in expressions
     */
-   if( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(scip) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE &&
+      SCIPgetStatus(scip) != SCIP_STATUS_UNBOUNDED && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
    {
       SCIP_CONSDATA* consdata;
       int c;
@@ -10069,6 +10159,19 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
          /* call curvature detection of expression handlers; TODO do we really need this? */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
 
+         /* call the curvature detection algorithm of the convex and concave nonlinear handler if the curvature
+          * detection of the expression handlers could not detect anything
+          */
+         if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
+         {
+            SCIP_CALL( SCIPgetConsExprExprOrigCurvature(scip, conshdlr, consdata->expr, &consdata->curv) );
+         }
+         else
+         {
+            consdata->curv = SCIPgetConsExprExprCurvature(consdata->expr);
+         }
+         SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
+
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
@@ -10077,6 +10180,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
                SCIP_CALL( createNlRow(scip, conss[c]) );
                assert(consdata->nlrow != NULL);
             }
+            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
       }
@@ -10095,6 +10199,9 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       {
          SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
       }
+
+      /* reset one of the number of detections counter to count only current round */
+      nlhdlr->ndetectionslast = 0;
    }
 
    if( conshdlrdata->branchpscostweight > 0.0 )
@@ -10144,8 +10251,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, !restart) );
+         /* remove nonlinear handlers in expression and their data and auxiliary variables */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
+
+         /* remove quadratic info */
+         quadFree(scip, expr);
       }
    }
 
@@ -10234,7 +10344,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
       SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
       SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
       SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10549,6 +10659,19 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
+   /* try to change continuous variables that appear linearly to be implicit integer */
+   if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+   {
+      SCIP_CALL( presolveImplint(scip, conshdlr, conss, nconss, nchgvartypes, &infeasible) );
+
+      if( infeasible )
+      {
+         SCIPdebugMsg(scip, "presolveImplint() detected infeasibility\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+   }
+
    /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip)
       && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd' )
@@ -10704,6 +10827,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
 
          /* remove nonlinear handlers in expression and their data; keep auxiliary variable */
          SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+
+         /* remove quadratic info */
+         quadFree(scip, expr);
       }
 
       SCIPexpriteratorFree(&it);
@@ -10846,7 +10972,7 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    /* create copy (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
       targetexpr, sourcedata->lhs, sourcedata->rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release target expr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
@@ -10981,7 +11107,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
       consexprtree, lhs, rhs,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    assert(*cons != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
@@ -11458,6 +11584,16 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    return SCIPconshdlrGetData(conshdlr)->exprexphdlr;
 }
 
+/** returns expression handler for logarithm expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrLog(
+        SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+)
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprloghdlr;
+}
+
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -11861,7 +11997,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrIntEval(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
-      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, intevalvardata) );
+      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, global, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
 
       ++expr->exprhdlr->nintevalcalls;
@@ -12437,6 +12573,180 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** creates and captures an expression representing a quadratic function */
+SCIP_RETCODE SCIPcreateConsExprExprQuadratic(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nlinvars,         /**< number of linear terms */
+   SCIP_VAR**              linvars,          /**< array with variables in linear part */
+   SCIP_Real*              lincoefs,         /**< array with coefficients of variables in linear part */
+   int                     nquadterms,       /**< number of quadratic terms */
+   SCIP_VAR**              quadvars1,        /**< array with first variables in quadratic terms */
+   SCIP_VAR**              quadvars2,        /**< array with second variables in quadratic terms */
+   SCIP_Real*              quadcoefs         /**< array with coefficients of quadratic terms */
+   )
+{
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_Real* coefs;
+   int i;
+
+   assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
+   assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &children, nquadterms + nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nquadterms + nlinvars) );
+
+   /* create children for quadratic terms */
+   for( i = 0; i < nquadterms; ++i )
+   {
+      assert(quadvars1 != NULL && quadvars1[i] != NULL);
+      assert(quadvars2 != NULL && quadvars2[i] != NULL);
+
+      /* quadratic term */
+      if( quadvars1[i] == quadvars2[i] )
+      {
+         SCIP_CONSEXPR_EXPR* xexpr;
+
+         /* create variable expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &xexpr, quadvars1[i]) );
+
+         /* create pow expression */
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], xexpr, 2.0) );
+
+         /* release variable expression; note that the variable expression is still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+      }
+      else /* bilinear term */
+      {
+         SCIP_CONSEXPR_EXPR* exprs[2];
+
+         /* create variable expressions */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &exprs[0], quadvars1[i]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &exprs[1], quadvars2[i]) );
+
+         /* create product expression */
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &children[i], 2, exprs, 1.0) );
+
+         /* release variable expressions; note that the variable expressions are still captured by children[i] */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      }
+
+      /* store coefficient */
+      coefs[i] = quadcoefs[i];
+   }
+
+   /* create children for linear terms */
+   for( i = 0; i < nlinvars; ++i )
+   {
+      assert(linvars != NULL && linvars[i] != NULL);
+
+      /* create variable expression; release variable expression after the sum expression has been created */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[nquadterms + i], linvars[i]) );
+
+      /* store coefficient */
+      coefs[nquadterms + i] = lincoefs[i];
+   }
+
+   /* create sum expression */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nquadterms + nlinvars, children, coefs, 0.0) );
+
+   /* release children */
+   for( i = 0; i < nquadterms + nlinvars; ++i )
+   {
+      assert(children[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &children);
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an expression representing a monomial */
+SCIP_RETCODE SCIPcreateConsExprExprMonomial(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   int                     nfactors,         /**< number of factors in monomial */
+   SCIP_VAR**              vars,             /**< variables in the monomial */
+   SCIP_Real*              exponents         /**< exponent in each factor, or NULL if all 1.0 */
+   )
+{
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+   assert(nfactors >= 0);
+
+   /* return 1 as constant expression if there are no factors */
+   if( nfactors == 0 )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, 1.0) );
+   }
+   else if( nfactors == 1 )
+   {
+      /* only one factor and exponent is 1 => return factors[0] */
+      if( exponents == NULL || exponents[0] == 1.0 )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, vars[0]) );
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR* varexpr;
+
+         /* create variable and power expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[0]) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, varexpr, exponents[0]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+      }
+   }
+   else
+   {
+      SCIP_CONSEXPR_EXPR** children;
+      int i;
+
+      /* allocate memory to store the children */
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nfactors) );
+
+      /* create children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         /* check whether to create a power expression or not, i.e., exponent == 1 */
+         if( exponents == NULL || exponents[i] == 1.0 )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &children[i], vars[i]) );
+         }
+         else
+         {
+            SCIP_CONSEXPR_EXPR* varexpr;
+
+            /* create variable and pow expression */
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, vars[i]) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &children[i], varexpr, exponents[i]) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+         }
+      }
+
+      /* create product expression */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nfactors, children, 1.0) );
+
+      /* release children */
+      for( i = 0; i < nfactors; ++i )
+      {
+         assert(children[i] != NULL);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
+      }
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &children);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** appends child to the children list of expr */
 SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12595,6 +12905,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    /* handle the root expr separately: free enfodata and expression data here */
    SCIP_CALL( freeEnfoData(scip, NULL, *rootexpr, TRUE) );
 
+   /* free quadratic info */
+   quadFree(scip, *rootexpr);
+
    if( (*rootexpr)->exprdata != NULL )
    {
       assert((*rootexpr)->exprhdlr->freedata != NULL);
@@ -12634,6 +12947,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
             /* free child's enfodata and expression data when entering child */
             SCIP_CALL( freeEnfoData(scip, NULL, child, TRUE) );
+
+            /* free quadratic info */
+            quadFree(scip, child);
 
             if( child->exprdata != NULL )
             {
@@ -12731,6 +13047,16 @@ SCIP_Bool SCIPisConsExprExprVar(
    assert(expr != NULL);
 
    return strcmp(expr->exprhdlr->name, "var") == 0;
+}
+
+/** returns whether an expression is a value expression */
+SCIP_Bool SCIPisConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(expr->exprhdlr->name, "val") == 0;
 }
 
 /** returns the variable used for linearizing a given expression (return value might be NULL)
@@ -13060,6 +13386,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 /** prints structure of an expression a la Maple's dismantle */
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    )
 {
@@ -13084,44 +13411,42 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
             /* use depth of expression to align output */
-            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+            SCIPinfoMessage(scip, file, "%*s[%s]: ", nspaces, "", type);
 
             if( strcmp(type, "var") == 0 )
             {
                SCIP_VAR* var;
 
                var = SCIPgetConsExprExprVarVar(expr);
-               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+               SCIPinfoMessage(scip, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if(strcmp(type, "sum") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprSumConstant(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprSumConstant(expr));
             else if(strcmp(type, "prod") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprProductCoef(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprProductCoef(expr));
             else if(strcmp(type, "val") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
             else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
-            else if(strcmp(type, "exp") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "log") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "abs") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else
-               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
+               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprPowExponent(expr));
 
+            /* print nl handlers associated to expr */
             if(expr->nenfos > 0 )
             {
                int i;
-               SCIPinfoMessage(scip, NULL, "   {");
+               SCIPinfoMessage(scip, file, "   {");
 
                for( i = 0; i < expr->nenfos - 1; ++i )
-                  SCIPinfoMessage(scip, NULL, "%s, ", expr->enfos[i]->nlhdlr->name);
+                  SCIPinfoMessage(scip, file, "%s, ", expr->enfos[i]->nlhdlr->name);
 
-               SCIPinfoMessage(scip, NULL, "%s}", expr->enfos[i]->nlhdlr->name);
+               SCIPinfoMessage(scip, file, "%s}", expr->enfos[i]->nlhdlr->name);
             }
-            SCIPinfoMessage(scip, NULL, "\n");
+
+            /* print aux var associated to expr */
+            if( expr->auxvar != NULL )
+               SCIPinfoMessage(scip, file, "  (%s in [%g, %g])", SCIPvarGetName(expr->auxvar),
+                     SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar));
+            SCIPinfoMessage(scip, file, "\n");
 
             break;
          }
@@ -13136,8 +13461,8 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
             if( strcmp(type, "sum") == 0 )
             {
-               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+               SCIPinfoMessage(scip, file, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
             }
 
             break;
@@ -13538,13 +13863,17 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
+ *
+ * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   SCIP_Bool               validsufficient,  /**< whether any valid activity is sufficient */
+   SCIP_Bool               global            /**< whether to evaluate expressions w.r.t. global bounds */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -13564,7 +13893,8 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
       (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
    {
       /* update activity of expression */
-      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, NULL, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, global, intEvalVarBoundTightening,
+         conshdlrdata, NULL, NULL, NULL) );
 
       assert(expr->activitytag == conshdlrdata->curboundstag);
    }
@@ -13956,6 +14286,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
+ * @note this function can only be called in SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13972,6 +14303,12 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
+      return SCIP_INVALIDCALL;
+   }
 
    /* if we already have auxvar, then just return it */
    if( expr->auxvar != NULL )
@@ -14008,13 +14345,14 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
       MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
-   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
     * or to copy the variable to a subscip
     */
    SCIPvarMarkRelaxationOnly(expr->auxvar);
+
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
@@ -14372,7 +14710,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    assert(conshdlr != NULL);
 
    /* ensure activities are uptodate */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, FALSE) );
 
    childcurvsize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
@@ -14492,6 +14830,21 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
+   /* shortcut for expr without children */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
@@ -14520,6 +14873,52 @@ SCIP_Bool SCIPisConsExprExprIntegral(
 {
    assert(expr != NULL);
    return expr->isintegral;
+}
+
+/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+int SCIPgetConsExprExprNDomainUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->ndomainuses;
+}
+
+/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(expr->ndomainuses >= 0);
+
+   ++(expr->ndomainuses);
+
+   /* increase the ndomainuses counter for all sub-expressions of the given expression */
+   if( SCIPgetConsExprExprNChildren(expr) > 0 )
+   {
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      /* create and initialize iterator */
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+      for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         ++(expr->ndomainuses);
+      }
+
+      /* free iterator */
+      SCIPexpriteratorFree(&it);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns the total number of variables in an expression
@@ -14797,6 +15196,17 @@ unsigned int SCIPgetConsExprLastBoundRelaxTag(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
 
    return conshdlrdata->lastboundrelax;
+}
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   assert(consexprhdlr != NULL);
+
+   return (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
 }
 
 /** collects all bilinear terms for a given set of constraints
@@ -15132,6 +15542,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for logarithmic expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "log") == 0);
+   conshdlrdata->exprloghdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
@@ -15174,8 +15585,14 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
 
+   /* include nonlinear handler for SOC constraints */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrSoc(scip, conshdlr) );
+
    /* include nonlinear handler for perspective reformulations */
    SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
+
+   /* include nonlinear handler for quotient expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuotient(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
@@ -15288,11 +15705,8 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsExpr() call, if you don't need all the information */
@@ -15333,13 +15747,14 @@ SCIP_RETCODE SCIPcreateConsExpr(
    consdata->lhs = lhs;
    consdata->rhs = rhs;
    consdata->consindex = conshdlrdata->lastconsindex++;
+   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
 
    /* capture expression */
    SCIPcaptureConsExprExpr(consdata->expr);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -15359,7 +15774,68 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    )
 {
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a quadratic expression constraint */
+SCIP_RETCODE SCIPcreateConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_EXPR* expr;
+
+   assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
+   assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* get expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* create quadratic expression */
+   SCIP_CALL( SCIPcreateConsExprExprQuadratic(scip, conshdlr, &expr, nlinvars, linvars, lincoefs, nquadterms,
+      quadvars1, quadvars2, quadcoefs) );
+   assert(expr != NULL);
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs, initial, separate, enforce, check, propagate,
+      local, modifiable, dynamic, removable) );
+
+   /* release quadratic expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    return SCIP_OKAY;
 }
@@ -15386,6 +15862,84 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    assert(consdata != NULL);
 
    return consdata->expr;
+}
+
+/** returns the root curvature of the given expression constraint
+ *
+ * @note The curvature information are computed during CONSINITSOL.
+ */
+SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not expression\n");
+      SCIPABORT();
+      return SCIP_EXPRCURV_UNKNOWN;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->curv;
+}
+
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+ *
+ * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expr in each SCIP_CONSEXPR_QUADEXPRTERM will be a variable expressions and
+ * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
+ */
+SCIP_RETCODE SCIPgetQuadExprConsExpr(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(quaddata != NULL);
+
+   /* check whether constraint expression is quadratic in extended formulation */
+   SCIP_CALL( SCIPgetConsExprQuadratic(scip, SCIPconsGetHdlr(cons), SCIPgetExprConsExpr(scip, cons), quaddata) );
+
+   /* if not quadratic in non-extended formulation, then do not return quaddata */
+   if( *quaddata != NULL && !(*quaddata)->allexprsarevars )
+      *quaddata = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** gets the expr constraint as a nonlinear row representation. */
+SCIP_RETCODE SCIPgetNlRowConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
+
+   return SCIP_OKAY;
 }
 
 /** gets the left hand side of an expression constraint */
@@ -15654,17 +16208,557 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    return SCIP_OKAY;
 }
 
+/** add the cut and maybe report branchscores */
+SCIP_RETCODE SCIPprocessConsExprRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+)
+{
+   SCIP_Real cutviol;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Real auxvarvalue;
+   SCIP_Bool sepasuccess;
+   SCIP_Real estimateval = SCIP_INVALID;
+   SCIP_Real mincutviolation;
+
+   /* decide on minimal violation of cut */
+   if( sol == NULL )
+      mincutviolation = SCIPgetLPFeastol(scip);  /* we enforce an LP solution */
+   else
+      mincutviolation = SCIPfeastol(scip);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   sepasuccess = TRUE;
+
+   cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+   if( cutviol > 0.0 )
+   {
+      auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+
+      /* check whether cut is weak (if f(x) not defined, then it's never weak) */
+      if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
+      {
+         /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
+          * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
+          * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
+          * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue),
+          * then let's call this a weak cut that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
+          *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
+          *
+          * if we are overestimating, we have z >= c'x-b >= f(x)
+          * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
+          * it's weak if c'x-b >= f(x) + (1-weakcutthreshold) * (z - f(x))
+          *   <->   c'x-b - z >= weakcutthreshold * (f(x)-z)
+          *
+          * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
+          */
+         if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+             ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too "\
+                           "weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                                     auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
+            sepasuccess = FALSE;
+         }
+      }
+
+      /* save estimator value for later, see long comment above why this gives the value for c'x-b */
+      estimateval = auxvarvalue + (!overestimate ? cutviol : -cutviol);
+   }
+   else
+   {
+      sepasuccess = FALSE;
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not "\
+                     "separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+   }
+
+   /* clean up estimator */
+   if( sepasuccess )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g "\
+                     "estimateval %g auxvalue %g (over %d)\n    ", SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue,
+                               auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+                       SCIPprintRowprep(scip, rowprep, enfologfile); )
+
+      /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
+       * instead, may even scale them down, that is, scale so that max coef is close to 1
+       */
+      if( !allowweakcuts )
+      {
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE,
+                                        conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+
+         if( !sepasuccess )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
+         }
+         else
+         {
+            cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, "\
+                           "min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
+            if( sepasuccess )
+               sepasuccess = cutviol > mincutviolation;
+         }
+
+         if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
+         {
+            /* check whether cut is weak now
+             * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
+             * reconstructing estimateval from cutviol (TODO improve or remove?)
+             */
+            SCIP_Real auxvarcoef = 0.0;
+            int i;
+
+            /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive than
+             * it should be...
+             */
+            for( i = 0; i < rowprep->nvars; ++i )
+            {
+               if( rowprep->vars[i] == auxvar )
+               {
+                  auxvarcoef = REALABS(rowprep->coefs[i]);
+                  break;
+               }
+            }
+
+            if( auxvarcoef == 0.0 ||
+                (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+                ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
+            {
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g "\
+                              "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
+                                        auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
+               sepasuccess = FALSE;
+            }
+         }
+      }
+      else
+      {
+         /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
+
+         /* if estimate didn't report branchscores explicitly, then consider branching on those children for
+          * which the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
+          */
+         if( !branchscoresuccess )
+            rowprep->recordmodifications = TRUE;
+
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol,
+                                       &sepasuccess) );
+
+         if( !sepasuccess )
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n",
+                                     rowprep->nmodifiedvars, cutviol); )
+         }
+
+         /* if cleanup left us with a useless cut, then consider branching on variables for which coef were
+          * changed
+          */
+         if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
+         {
+            SCIP_Real violscore;
+
+#ifdef BRSCORE_ABSVIOL
+            violscore = getExprAbsAuxViolation(scip, expr, auxvalue, sol, NULL, NULL);
+#else
+            SCIP_CALL( SCIPgetConsExprExprRelAuxViolation(scip, conshdlr, expr, auxvalue, sol, &violscore, NULL,
+                                                          NULL) );
+#endif
+            SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
+                                                        rowprep->nmodifiedvars, sol, &branchscoresuccess) );
+
+            /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
+             * expr's auxvar
+             * I don't think it makes sense to branch on that one (would it?)
+             * it can also fail if everything is fixed
+             * or if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+             */
+            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
+                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0);
+         }
+      }
+   }
+
+   /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
+   if( sepasuccess )
+   {
+      SCIP_ROW* row;
+
+      if( conshdlrdata->branchdualweight > 0.0 )
+      {
+         /* store remaining gap |f(x)-estimateval| in row name, which could be used in getDualBranchscore
+          * skip if gap is zero
+          */
+         if( auxvalue == SCIP_INVALID )  /*lint !e777*/
+            strcat(rowprep->name, "_estimategap=inf");
+         else if( !SCIPisEQ(scip, auxvalue, estimateval) )
+         {
+            char gap[40];
+            sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            strcat(rowprep->name, gap);
+         }
+      }
+
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+      if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
+                                  SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
+      }
+      else
+      {
+         SCIP_Bool infeasible;
+
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
+                          SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
+
+         /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only
+          * if we haven't found strong cuts before)
+          */
+         SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement,
+                               &infeasible) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            ++nlhdlr->ncutoffs;
+         }
+         else
+         {
+            *result = SCIP_SEPARATED;
+            ++nlhdlr->nseparated;
+         }
+      }
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+   else if( branchscoresuccess )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but "\
+                     "branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+
+      /* well, not branched, but addConsExprExprViolScoresAuxVars() added scores to (aux)variables and that makes the
+       * expressions eligible for branching candidate, see enforceConstraints() and branching()
+       */
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no "\
+                     "branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ?
+                                                                                    " (!)" : ""); )
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether an expression is quadratic and returns the corresponding coefficients
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ */
+SCIP_RETCODE SCIPgetConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
+   )
+{
+   SCIP_HASHMAP* expr2idx;
+   SCIP_HASHMAP* seenexpr = NULL;
+   int nquadterms = 0;
+   int nlinterms = 0;
+   int nbilinterms = 0;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(quaddata != NULL);
+
+   if( expr->quadchecked )
+   {
+      *quaddata = expr->quaddata;
+      return SCIP_OKAY;
+   }
+   assert(expr->quaddata == NULL);
+
+   *quaddata = NULL;
+   expr->quadchecked = TRUE;
+
+   /* check if expression is a quadratic expression */
+   SCIPdebugMsg(scip, "checking if expr %p is quadratic\n", (void*)expr);
+
+   /* handle single square term */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
+      SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+   {
+      SCIPdebugMsg(scip, "expr looks like square: fill data structures\n", (void*)expr);
+      SCIP_CALL( SCIPallocClearBlockMemory(scip, &expr->quaddata) );
+
+      expr->quaddata->nquadexprs = 1;
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &expr->quaddata->quadexprterms, 1) );
+      expr->quaddata->quadexprterms[0].expr = SCIPgetConsExprExprChildren(expr)[0];
+      expr->quaddata->quadexprterms[0].sqrcoef = 1.0;
+
+      expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(expr->quaddata->quadexprterms[0].expr);
+
+      *quaddata = expr->quaddata;
+
+      return SCIP_OKAY;
+   }
+
+   /* handle single bilinear term */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+      SCIPgetConsExprExprNChildren(expr) == 2 )
+   {
+      SCIPdebugMsg(scip, "expr looks like bilinear product: fill data structures\n", (void*)expr);
+      SCIP_CALL( SCIPallocClearBlockMemory(scip, &expr->quaddata) );
+      expr->quaddata->nquadexprs = 2;
+
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &expr->quaddata->quadexprterms, 2) );
+      expr->quaddata->quadexprterms[0].expr = SCIPgetConsExprExprChildren(expr)[0];
+      expr->quaddata->quadexprterms[0].nadjbilin = 1;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->quadexprterms[0].adjbilin, 1) );
+      expr->quaddata->quadexprterms[0].adjbilin[0] = 0;
+
+      expr->quaddata->quadexprterms[1].expr = SCIPgetConsExprExprChildren(expr)[1];
+      expr->quaddata->quadexprterms[1].nadjbilin = 1;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->quadexprterms[1].adjbilin, 1) );
+      expr->quaddata->quadexprterms[1].adjbilin[0] = 0;
+
+      expr->quaddata->nbilinexprterms = 1;
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &expr->quaddata->bilinexprterms, 1) );
+
+      expr->quaddata->bilinexprterms[0].expr1 = SCIPgetConsExprExprChildren(expr)[1];
+      expr->quaddata->bilinexprterms[0].expr2 = SCIPgetConsExprExprChildren(expr)[0];
+      expr->quaddata->bilinexprterms[0].coef = 1.0;
+
+      expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(expr->quaddata->quadexprterms[0].expr) && SCIPisConsExprExprVar(expr->quaddata->quadexprterms[1].expr);
+
+      *quaddata = expr->quaddata;
+
+      return SCIP_OKAY;
+   }
+
+   /* neither a sum, nor a square, nor a bilinear term */
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&seenexpr, SCIPblkmem(scip), 2*SCIPgetConsExprExprNChildren(expr)) );
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      assert(child != NULL);
+
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
+         SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_CALL( quadDetectProcessExpr(SCIPgetConsExprExprChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
+      }
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+         SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
+      {
+         ++nbilinterms;
+         SCIP_CALL( quadDetectProcessExpr(SCIPgetConsExprExprChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
+         SCIP_CALL( quadDetectProcessExpr(SCIPgetConsExprExprChildren(child)[1], seenexpr, &nquadterms, &nlinterms) );
+      }
+      else
+      {
+         /* first time seen linearly --> assign -1; ++nlinterms
+          * not first time --> assign +=1;
+          */
+         if( SCIPhashmapExists(seenexpr, (void*)child) )
+         {
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) > 0);
+
+            SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)child, SCIPhashmapGetImageInt(seenexpr, (void*)child) + 1) );
+         }
+         else
+         {
+            ++nlinterms;
+            SCIP_CALL( SCIPhashmapInsertInt(seenexpr, (void*)child, -1) );
+         }
+      }
+   }
+
+   if( nquadterms == 0 )
+   {
+      /* only linear sum */
+      SCIPhashmapFree(&seenexpr);
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "expr looks quadratic: fill data structures\n", (void*)expr);
+
+   /* expr2idx maps expressions to indices; if index > 0, it is its index in the linexprs array, otherwise -index-1 is
+    * its index in the quadexprterms array
+    */
+   SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), nquadterms + nlinterms) );
+
+   /* allocate memory, etc */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &expr->quaddata) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->quadexprterms, nquadterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->linexprs, nlinterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->lincoefs, nlinterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->quaddata->bilinexprterms, nbilinterms) );
+
+   expr->quaddata->constant = SCIPgetConsExprExprSumConstant(expr);
+
+   expr->quaddata->allexprsarevars = TRUE;
+   /* for every term of the sum-expr */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_Real coef;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
+
+      assert(child != NULL);
+      assert(coef != 0.0);
+
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
+         SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_CONSEXPR_QUADEXPRTERM* quadexprterm;
+         assert(SCIPgetConsExprExprNChildren(child) == 1);
+
+         child = SCIPgetConsExprExprChildren(child)[0];
+         assert(SCIPhashmapGetImageInt(seenexpr, (void *)child) > 0);
+
+         SCIP_CALL( quadDetectGetQuadexprterm(scip, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == child);
+         quadexprterm->sqrcoef = coef;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+      }
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+         SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
+      {
+         SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterm;
+         SCIP_CONSEXPR_QUADEXPRTERM* quadexprterm;
+         SCIP_CONSEXPR_EXPR* expr1;
+         SCIP_CONSEXPR_EXPR* expr2;
+
+         assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
+
+         expr1 = SCIPgetConsExprExprChildren(child)[0];
+         expr2 = SCIPgetConsExprExprChildren(child)[1];
+         assert(expr1 != NULL && expr2 != NULL);
+
+         bilinexprterm = &expr->quaddata->bilinexprterms[expr->quaddata->nbilinexprterms];
+
+         bilinexprterm->coef = coef;
+         if( SCIPhashmapGetImageInt(seenexpr, (void*)expr1) >= SCIPhashmapGetImageInt(seenexpr, (void*)expr2) )
+         {
+            bilinexprterm->expr1 = expr1;
+            bilinexprterm->expr2 = expr2;
+         }
+         else
+         {
+            bilinexprterm->expr1 = expr2;
+            bilinexprterm->expr2 = expr1;
+         }
+
+         SCIP_CALL( quadDetectGetQuadexprterm(scip, expr1, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == expr1);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
+         ++quadexprterm->nadjbilin;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+
+         SCIP_CALL( quadDetectGetQuadexprterm(scip, expr2, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == expr2);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
+         ++quadexprterm->nadjbilin;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+
+         ++expr->quaddata->nbilinexprterms;
+
+         /* store position of second factor in quadexprterms */
+         bilinexprterm->pos2 = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2);
+      }
+      else /* linear term */
+      {
+         if( SCIPhashmapGetImageInt(seenexpr, (void*)child) < 0 )
+         {
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) == -1);
+
+            /* expression only appears linearly */
+            expr->quaddata->linexprs[expr->quaddata->nlinexprs] = child;
+            expr->quaddata->lincoefs[expr->quaddata->nlinexprs] = coef;
+            expr->quaddata->nlinexprs++;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(child);
+         }
+         else
+         {
+            /* expression appears non-linearly: set lin coef */
+            SCIP_CONSEXPR_QUADEXPRTERM* quadexprterm;
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) > 0);
+
+            SCIP_CALL( quadDetectGetQuadexprterm(scip, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+            assert(quadexprterm->expr == child);
+            quadexprterm->lincoef = coef;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPisConsExprExprVar(quadexprterm->expr);
+         }
+      }
+   }
+   assert(expr->quaddata->nquadexprs == nquadterms);
+   assert(expr->quaddata->nlinexprs == nlinterms);
+   assert(expr->quaddata->nbilinexprterms == nbilinterms);
+
+   SCIPhashmapFree(&seenexpr);
+   SCIPhashmapFree(&expr2idx);
+
+#ifdef DEBUG_DETECT
+   SCIP_CALL( SCIPprintConsExprQuadratic(scip, conshdlr, expr->quaddata) );
+#endif
+
+   expr->quadchecked = TRUE;
+   *quaddata = expr->quaddata;
+
+   return SCIP_OKAY;
+}
+
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15689,7 +16783,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
    }
 
-   (*nlhdlr)->priority = priority;
+   (*nlhdlr)->detectpriority = detectpriority;
+   (*nlhdlr)->enfopriority = enfopriority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
    (*nlhdlr)->evalaux = evalaux;
@@ -15709,7 +16804,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
    ++conshdlrdata->nnlhdlrs;
 
-   /* sort nonlinear handlers by priority, in decreasing order
+   /* sort nonlinear handlers by detection priority, in decreasing order
     * will happen in INIT, so only do when called late
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
@@ -15833,14 +16928,24 @@ const char* SCIPgetConsExprNlhdlrDesc(
    return nlhdlr->desc;
 }
 
-/** gives priority of nonlinear handler */
-int SCIPgetConsExprNlhdlrPriority(
+/** gives detection priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
    )
 {
    assert(nlhdlr != NULL);
 
-   return nlhdlr->priority;
+   return nlhdlr->detectpriority;
+}
+
+/** gives enforcement priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrEnfoPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->enfopriority;
 }
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */
@@ -15965,7 +17070,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
+   {
       ++nlhdlr->ndetections;
+      ++nlhdlr->ndetectionslast;
+   }
 
    return SCIP_OKAY;
 }
@@ -16016,7 +17124,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(SCIPintevalConsExprNlhdlr)
    if( nlhdlr->inteval != NULL )
    {
       SCIP_CALL( SCIPstartClock(scip, nlhdlr->intevaltime) );
-      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, intevalvar, intevalvardata) );
+      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, intevalvar, global, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, nlhdlr->intevaltime) );
 
       ++nlhdlr->nintevalcalls;
@@ -16137,6 +17245,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr)
       case SCIP_CUTOFF:
          ++nlhdlr->ncutoffs;
          break;
+      case SCIP_REDUCEDDOM:
+         ++nlhdlr->ndomreds;
+         break;
       default: ;
    }  /*lint !e788*/
 
@@ -16169,7 +17280,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success, addbranchscores, addedbranchscores) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue,
+         rowpreps, success, addbranchscores, addedbranchscores) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
@@ -16177,6 +17289,383 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 
    return SCIP_OKAY;
 }
+
+/* Quadratic expression functions */
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * It can return the constant part, the number, arguments, and coefficients of the purely linear part
+ * and the number of quadratic terms and bilinear terms.
+ * Note that for arguments that appear in the quadratic part, a linear coefficient is
+ * stored with the quadratic term.
+ * Use SCIPgetConsExprQuadraticQuadTermData() and SCIPgetConsExprQuadraticBilinTermData()
+ * to access the data for a quadratic or bilinear term.
+ *
+ * This function returns pointers to internal data in linexprs and lincoefs.
+ * The user must not change this data.
+ */
+void SCIPgetConsExprQuadraticData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   SCIP_Real*                    constant,         /**< buffer to store constant term, or NULL */
+   int*                          nlinexprs,        /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
+   int*                          nbilinexprs       /**< buffer to store number of bilinear expressions terms, or NULL */
+   )
+{
+   assert(quaddata != NULL);
+
+   if( constant != NULL )
+      *constant = quaddata->constant;
+   if( nlinexprs != NULL )
+      *nlinexprs = quaddata->nlinexprs;
+   if( linexprs != NULL )
+      *linexprs = quaddata->linexprs;
+   if( lincoefs != NULL )
+      *lincoefs = quaddata->lincoefs;
+   if( nquadexprs != NULL )
+      *nquadexprs = quaddata->nquadexprs;
+   if( nbilinexprs != NULL )
+      *nbilinexprs = quaddata->nbilinexprterms;
+}
+
+/** gives the data of a quadratic expression term
+ *
+ * For a term a*expr^2 + b*expr + sum_i (c_i * expr * otherexpr_i), returns
+ * expr, a, b, the number of summands, and indices of bilinear terms in the quadratic expressions bilinexprterms.
+ *
+ * This function returns pointers to internal data in adjbilin.
+ * The user must not change this data.
+ */
+void SCIPgetConsExprQuadraticQuadTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of quadratic term */
+   SCIP_CONSEXPR_EXPR**          expr,             /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
+   SCIP_Real*                    lincoef,          /**< buffer to store linear coefficient of variable, or NULL */
+   SCIP_Real*                    sqrcoef,          /**< buffer to store square coefficient of variable, or NULL */
+   int*                          nadjbilin,        /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
+   int**                         adjbilin          /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   )
+{
+   SCIP_CONSEXPR_QUADEXPRTERM* quadexprterm;
+
+   assert(quaddata != NULL);
+   assert(quaddata->quadexprterms != NULL);
+   assert(termidx >= 0);
+   assert(termidx < quaddata->nquadexprs);
+
+   quadexprterm = &quaddata->quadexprterms[termidx];
+
+   if( expr != NULL )
+      *expr = quadexprterm->expr;
+   if( lincoef != NULL )
+      *lincoef = quadexprterm->lincoef;
+   if( sqrcoef != NULL )
+      *sqrcoef = quadexprterm->sqrcoef;
+   if( nadjbilin != NULL )
+      *nadjbilin = quadexprterm->nadjbilin;
+   if( adjbilin != NULL )
+      *adjbilin = quadexprterm->adjbilin;
+}
+
+/** gives the data of a bilinear expression term
+ *
+ * For a term a*expr1*expr2, returns
+ * expr1, expr2, a, and the position of the quadratic expression term of expr2 in the quadratic expressions quadexprterms.
+ */
+void SCIPgetConsExprQuadraticBilinTermData(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata,         /**< quadratic coefficients data */
+   int                           termidx,          /**< index of bilinear term */
+   SCIP_CONSEXPR_EXPR**          expr1,            /**< buffer to store first factor, or NULL */
+   SCIP_CONSEXPR_EXPR**          expr2,            /**< buffer to store second factor, or NULL */
+   SCIP_Real*                    coef,             /**< buffer to coefficient, or NULL */
+   int*                          pos2              /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   )
+{
+   SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterm;
+
+   assert(quaddata != NULL);
+   assert(quaddata->bilinexprterms != NULL);
+   assert(termidx >= 0);
+   assert(termidx < quaddata->nbilinexprterms);
+
+   bilinexprterm = &quaddata->bilinexprterms[termidx];
+
+   if( expr1 != NULL )
+      *expr1 = bilinexprterm->expr1;
+   if( expr2 != NULL )
+      *expr2 = bilinexprterm->expr2;
+   if( coef != NULL )
+      *coef = bilinexprterm->coef;
+   if( pos2 != NULL )
+      *pos2 = bilinexprterm->pos2;
+}
+
+/** returns whether all expressions that are used in a quadratic expression are variable expression
+ *
+ * @return TRUE iff all linexprs and quadexprterms[.].expr in quaddata are variable expressions
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPareConsExprQuadraticExprsVariables(
+   SCIP_CONSEXPR_QUADEXPR*       quaddata          /**< quadratic coefficients data */
+   )
+{
+   assert(quaddata != NULL);
+
+   return quaddata->allexprsarevars;
+}
+
+/** evaluates quadratic term in a solution w.r.t. auxiliary variables
+ *
+ * \note This assumes that for every expr used in the quadratic data, an auxiliary variable is available.
+ */
+SCIP_Real SCIPevalConsExprQuadraticAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic form */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   )
+{
+   SCIP_Real auxvalue;
+   int i;
+
+   assert(scip != NULL);
+   assert(quaddata != NULL);
+
+   auxvalue = quaddata->constant;
+
+   for( i = 0; i < quaddata->nlinexprs; ++i ) /* linear exprs */
+      auxvalue += quaddata->lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quaddata->linexprs[i]));
+
+   for( i = 0; i < quaddata->nquadexprs; ++i ) /* quadratic terms */
+   {
+      SCIP_CONSEXPR_QUADEXPRTERM* quadexprterm;
+      SCIP_Real solval;
+
+      quadexprterm = &quaddata->quadexprterms[i];
+      assert(SCIPgetConsExprExprAuxVar(quadexprterm->expr) != NULL);
+
+      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(quadexprterm->expr));
+      auxvalue += (quadexprterm->lincoef + quadexprterm->sqrcoef * solval) * solval;
+   }
+
+   for( i = 0; i < quaddata->nbilinexprterms; ++i ) /* bilinear terms */
+   {
+      SCIP_CONSEXPR_BILINEXPRTERM* bilinexprterm;
+
+      bilinexprterm = &quaddata->bilinexprterms[i];
+      assert(SCIPgetConsExprExprAuxVar(bilinexprterm->expr1) != NULL);
+      assert(SCIPgetConsExprExprAuxVar(bilinexprterm->expr2) != NULL);
+      auxvalue += bilinexprterm->coef *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm->expr1)) *
+         SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(bilinexprterm->expr2));
+   }
+
+   return auxvalue;
+}
+
+/** prints quadratic expression */
+SCIP_RETCODE SCIPprintConsExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression conshdlr */
+   SCIP_CONSEXPR_QUADEXPR* quaddata          /**< quadratic form */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+   assert(quaddata != NULL);
+
+   if( conshdlr == NULL )
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   SCIPinfoMessage(scip, NULL, "Constant: %g\n", quaddata->constant);
+   SCIPinfoMessage(scip, NULL, "Linear: \n");
+   for( c = 0; c < quaddata->nlinexprs; ++c )
+   {
+      SCIPinfoMessage(scip, NULL, "%g * ", quaddata->lincoefs[c]);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->linexprs[c], NULL) );
+      SCIPinfoMessage(scip, NULL, " + ");
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Quadratic: \n");
+   for( c = 0; c < quaddata->nquadexprs; ++c )
+   {
+      SCIPinfoMessage(scip, NULL, "(%g * sqr(", quaddata->quadexprterms[c].sqrcoef);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->quadexprterms[c].expr, NULL) );
+      SCIPinfoMessage(scip, NULL, ") + %g) * ", quaddata->quadexprterms[c].lincoef);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->quadexprterms[c].expr, NULL) );
+      SCIPinfoMessage(scip, NULL, " + ");
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Bilinear: \n");
+   for( c = 0; c < quaddata->nbilinexprterms; ++c )
+   {
+      SCIPinfoMessage(scip, NULL, "%g * ", quaddata->bilinexprterms[c].coef);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->bilinexprterms[c].expr1, NULL) );
+      SCIPinfoMessage(scip, NULL, " * ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->bilinexprterms[c].expr2, NULL) );
+      SCIPinfoMessage(scip, NULL, " + ");
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Bilinear of quadratics: \n");
+   for( c = 0; c < quaddata->nquadexprs; ++c )
+   {
+      int i;
+      SCIPinfoMessage(scip, NULL, "For ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->quadexprterms[c].expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "we see:\n");
+      for( i = 0; i < quaddata->quadexprterms[c].nadjbilin; ++i )
+      {
+         SCIPinfoMessage(scip, NULL, "%g * ", quaddata->bilinexprterms[quaddata->quadexprterms[c].adjbilin[i]].coef);
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->bilinexprterms[quaddata->quadexprterms[c].adjbilin[i]].expr1, NULL) );
+         SCIPinfoMessage(scip, NULL, " * ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, quaddata->bilinexprterms[quaddata->quadexprterms[c].adjbilin[i]].expr2, NULL) );
+         SCIPinfoMessage(scip, NULL, " + ");
+      }
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ */
+SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
+   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
+   )
+{
+   SCIP_HASHMAP* expr2matrix;
+   double* matrix;
+   double* alleigval;
+   int nvars;
+   int nn;
+   int n;
+   int i;
+
+   assert(quaddata != NULL);
+   assert(curv != NULL);
+
+   if( quaddata->curvaturechecked )
+   {
+      *curv = quaddata->curvature;
+      return SCIP_OKAY;
+   }
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN);
+
+   quaddata->curvaturechecked = TRUE;
+   *curv = SCIP_EXPRCURV_UNKNOWN;
+
+   n  = quaddata->nquadexprs;
+
+   /* do not check curvature if nn will be too large
+    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
+    * sqrt(2*214748364/8) = 7327.1475350234
+    */
+   if( n > 7000 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "consexpr - number of quadratic variables is too large (%d) to check the curvature\n", n);
+      return SCIP_OKAY;
+   }
+
+   /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
+
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
+   nn = n * n;
+   assert(nn > 0);
+   assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2matrix, SCIPblkmem(scip), n) );
+
+   /* fill matrix's diagonal */
+   nvars = 0;
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_CONSEXPR_QUADEXPRTERM quadexprterm;
+
+      quadexprterm = quaddata->quadexprterms[i];
+
+      assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
+
+      if( quadexprterm.sqrcoef == 0.0 )
+      {
+         assert(quadexprterm.nadjbilin > 0);
+         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
+         goto CLEANUP;
+      }
+
+      matrix[nvars * n + nvars] = quadexprterm.sqrcoef;
+
+      /* remember row of variable in matrix */
+      SCIP_CALL( SCIPhashmapInsert(expr2matrix, (void *)quadexprterm.expr, (void *)(size_t)nvars) );
+      nvars++;
+   }
+
+   /* fill matrix's upper-diagonal */
+   for( i = 0; i < quaddata->nbilinexprterms; ++i )
+   {
+      SCIP_CONSEXPR_BILINEXPRTERM bilinexprterm;
+      int col;
+      int row;
+
+      bilinexprterm = quaddata->bilinexprterms[i];
+
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2));
+      row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
+      col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
+
+      assert(row != col);
+
+      if( row < col )
+         matrix[row * n + col] = bilinexprterm.coef / 2.0;
+      else
+         matrix[col * n + row] = bilinexprterm.coef / 2.0;
+   }
+
+   /* compute eigenvalues */
+   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      goto CLEANUP;
+   }
+
+   /* check convexity */
+   if( !SCIPisNegative(scip, alleigval[0]) )
+   {
+      quaddata->curvature = SCIP_EXPRCURV_CONVEX;
+   }
+   else if( !SCIPisPositive(scip, alleigval[n-1]) )
+   {
+      quaddata->curvature = SCIP_EXPRCURV_CONCAVE;
+   }
+
+CLEANUP:
+   SCIPhashmapFree(&expr2matrix);
+   SCIPfreeBufferArray(scip, &matrix);
+   SCIPfreeBufferArray(scip, &alleigval);
+
+   *curv = quaddata->curvature;
+
+   return SCIP_OKAY;
+}
+
+
 
 /* computes a facet of the convex or concave envelope of a vertex polyhedral function
  * see (doxygen-)comment of this function in cons_expr.h

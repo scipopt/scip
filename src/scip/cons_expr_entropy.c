@@ -137,7 +137,8 @@ SCIP_RETCODE reverseProp(
    /* intersection = childentropy -> nothing can be learned */
    if( SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, childentropy, intersection) )
    {
-      *interval = childinterval;
+      SCIPintervalSetBounds(interval, 0.0, SCIP_INTERVAL_INFINITY);
+      SCIPintervalIntersect(interval, *interval, childinterval);
       return SCIP_OKAY;
    }
 
@@ -500,6 +501,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
 
    /* compute resulting intervals */
    SCIP_CALL( reverseProp(scip, exprinterval, childinterval, &newinterval) );
+   assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newinterval) || newinterval.inf >= 0.0);
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newinterval, force, reversepropqueue, infeasible, nreductions) );

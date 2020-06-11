@@ -19,6 +19,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#include <scip/misc.h>
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
@@ -316,6 +317,7 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_Bool overestimate;
    SCIP_Bool dummy;
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_PTRARRAY* rowpreps;
 
    /* set variable bounds */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
@@ -346,23 +348,27 @@ Test(nlhdlrbilinear, separation_single)
 
    /* auxvar = -1.25 => McCormick relaxation is violated so the resulting cut should be one of the McCormick inequalities */
    overestimate = FALSE;
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success, FALSE, &dummy) );
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
    cr_expect(!success);
-   SCIPfreeRowprep(scip, &rowprep);
+   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) > SCIPgetPtrarrayMaxIdx(scip, rowpreps));
+   SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
 
    /* auxvar = -1.23 => point is in the convex hull of McCormick and thus we should use the bilinear inequality */
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr), -1.23) );
    overestimate = FALSE;
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success, FALSE, &dummy) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
    cr_expect(success);
+   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
+   cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
    SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 0.5790816326530611, 0.3637755102040817, -1.0, -0.7846938775510204) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
 
    /* free memory */
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -380,6 +386,7 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_Bool overestimate;
    SCIP_Bool dummy;
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_PTRARRAY* rowpreps;
 
    /* set variable bounds */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
@@ -412,23 +419,27 @@ Test(nlhdlrbilinear, separation_two)
    /* auxvar = -0.1 => McCormick should do the job */
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr), -0.1) );
    overestimate = FALSE;
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success, FALSE, &dummy) );
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
    cr_expect(!success);
-   SCIPfreeRowprep(scip, &rowprep);
+   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) > SCIPgetPtrarrayMaxIdx(scip, rowpreps));
+   SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
 
    /* auxvar = 0.1 => both inequalities needs to be used */
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr), 0.1) );
    overestimate = FALSE;
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success, FALSE, &dummy) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
    cr_expect(success);
+   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
+   cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
    SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 1.45445115010332, 0.9772255750516624, -1.0, -1.9213268615442665) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
 
    /* free memory */
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -465,7 +476,7 @@ Test(nlhdlrbilinear, inteval_corner)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -10.0), "expect -10.0 got %g\n", SCIPintervalGetInf(interval));
@@ -504,7 +515,7 @@ Test(nlhdlrbilinear, inteval_single_line)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -3.0625), "expect -3.0625 got %g\n", SCIPintervalGetInf(interval));
@@ -550,7 +561,7 @@ Test(nlhdlrbilinear, inteval_three_lines)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -19.2), "expect -19.2 got %g\n", SCIPintervalGetInf(interval));
@@ -593,7 +604,7 @@ Test(nlhdlrbilinear, inteval_parallel)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -0.25), "expect -0.25 got %g\n", SCIPintervalGetInf(interval));
@@ -635,7 +646,7 @@ Test(nlhdlrbilinear, reverseprop_single)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
    cr_expect(SCIPisEQ(scip, activity.inf, -1.0));
    cr_expect(SCIPisEQ(scip, activity.sup, 0.0));
 
@@ -687,7 +698,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
@@ -746,7 +757,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 

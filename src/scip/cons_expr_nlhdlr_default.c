@@ -26,9 +26,10 @@
 #include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "default"
-#define NLHDLR_DESC         "default handler for expressions"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_NAME               "default"
+#define NLHDLR_DESC               "default handler for expressions"
+#define NLHDLR_DETECTPRIORITY     0
+#define NLHDLR_ENFOPRIORITY       0
 
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
@@ -156,6 +157,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    if( *success )
    {
+      SCIP_Bool sepabelow;
+      SCIP_Bool sepaabove;
+
       /* remember in the nlhdlr exprdata (pointer) which methods we advertised */
       *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
       /* augment mymethods in enforcemethods */
@@ -166,6 +170,40 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
        */
       *enforcedbelow = TRUE;
       *enforcedabove = TRUE;
+
+      sepabelow = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0;
+      sepaabove = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
+
+      /* update ndomainuses counter for the children if under- or overestimators will be computed */
+      if( sepabelow || sepaabove )
+      {
+         SCIP_EXPRCURV* childcurv;
+         SCIP_Bool isconvex;
+         SCIP_Bool isconcave;
+
+         /* allocate memory to store the required curvature of the children */
+         SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
+
+         /* check whether the expression is convex and concave
+          *
+          * TODO add a method that computes the curvature of an expression when the children are considered to be variables
+          */
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
+
+         /* use the curvature to decide whether bounds on the children are used to refine under- or overestimates */
+         if( (sepabelow && !isconvex) || (sepaabove && !isconcave) )
+         {
+            for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+            {
+               SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr,
+                  SCIPgetConsExprExprChildren(expr)[c]) );
+            }
+         }
+
+         /* free memory */
+         SCIPfreeBufferArray(scip, &childcurv);
+      }
    }
 
    return SCIP_OKAY;
@@ -215,10 +253,11 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    SCIP_Bool* branchcand = NULL;
    int nchildren;
    int c;
+   SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(rowprep != NULL);
+   assert(rowpreps != NULL);
    assert(success != NULL);
 
    *addedbranchscores = FALSE;
@@ -234,6 +273,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
    nchildren = SCIPgetConsExprExprNChildren(expr);
 
@@ -263,12 +304,18 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
       rowprep->side = -constant;
 
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
          overestimate ? "over" : "under",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
          (void*)expr,
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+   else
+   {
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    if( addbranchscores )
@@ -343,7 +390,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    assert(expr != NULL);
 
    /* call the interval evaluation callback of the expression handler */
-   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, intevalvardata) );
+   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, global, intevalvardata) );
 
    return SCIP_OKAY;
 }
@@ -384,7 +431,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);

@@ -17,13 +17,13 @@
  * @brief  Simple Gas Transportation Model
  * @author Stefan Vigerske
  *
- * This example shows how to setup abspower constraints in SCIP when using SCIP as callable library.
+ * This example shows how to setup nonlinear constraints with signpower-expression when using SCIP as callable library.
  * The example implements a model for the distribution of gas through a network of pipelines, which
  * is formulated as a cost minimization subject to nonlinear flow-pressure relations, material balances,
  * and pressure bounds. The Belgian gas network is used as an example.
  *
  * The model is taken from the GAMS model library:
- * http://www.gams.com/modlib/libhtml/gastrans.htm
+ * https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_gastrans.html
  *
  * Original model source:
  * @par
@@ -39,6 +39,10 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+
+#include "scip/cons_expr_var.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_pow.h"
 
 /* Model parameters */
 
@@ -155,6 +159,7 @@ SCIP_RETCODE setupProblem(
    SCIP_CONS* pressurediffcons[narcs];
    SCIP_CONS* pressureloss[narcs];
 
+   SCIP_CONSHDLR* conshdlr;
    char name[SCIP_MAXSTRLEN];
    int i;
    int j;
@@ -234,7 +239,7 @@ SCIP_RETCODE setupProblem(
    }
 
    /* create pressure difference constraints and add to problem
-    * pressurediff[node1 to node2] = pressure[node1] - pressure[2]
+    * pressurediff[node1 to node2] = pressure[node1] - pressure[node2]
     */
    for( i = 0; i < narcs; ++i )
    {
@@ -263,24 +268,35 @@ SCIP_RETCODE setupProblem(
     * where coef = 96.074830e-15*power(diameter(i)^5/lambda/compressibility/temperatur/length(i)/density
     * and lambda = (2*log10(3.7*diameter(i)/rugosity))^(-2);
     */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
    for( i = 0; i < narcs; ++i )
    {
+      SCIP_CONSEXPR_EXPR* exprflow;
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coefs[2];
+      SCIP_CONSEXPR_EXPR* exprsum;
       SCIP_Real coef;
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressureloss_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
 
       coef = 96.074830e-15 * pow(arcdata[i].diameter, 5.0) * pow(2.0*log10(3.7*arcdata[i].diameter / rugosity), 2.0)
          / compressibility / gastemp / arcdata[i].length / density;
 
-      if( arcdata[i].active )
-      {
-         /* we can also use an abspower constraint here, because flow(i) is positive for active arcs */
-         SCIP_CALL( SCIPcreateConsBasicAbspower(scip, &pressureloss[i], name, flow[i], pressurediff[i], 2.0, 0.0,  coef, -SCIPinfinity(scip), 0.0) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateConsBasicAbspower(scip, &pressureloss[i], name, flow[i], pressurediff[i], 2.0, 0.0, -coef, 0.0, 0.0) );
-      }
+      /* we can always use the signpower-expression, because flow(i) is positive for active arcs */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprflow, flow[i]) );
+      SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &exprs[0], exprflow, 2.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprflow) );
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], pressurediff[i]) );
+
+      coefs[0] = 1.0;
+      coefs[1] = arcdata[i].active ? coef : -coef;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &exprsum, 2, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressureloss_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &pressureloss[i], name, exprsum, arcdata[i].active ? -SCIPinfinity(scip) : 0.0, 0.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprsum) );
 
       SCIP_CALL( SCIPaddCons(scip, pressureloss[i]) );
    }
