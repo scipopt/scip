@@ -457,9 +457,17 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
    /* use gradient cut for underestimate (globally valid) */
    else
    {
-      /* no gradient cut possible if reference point is too close at 0 */
       if( SCIPisZero(scip, refpoint) )
-         return SCIP_OKAY;
+      {
+         /* if refpoint is 0 (then lb=0 probably), then slope is infinite, then try to move away from 0 */
+         if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
+            return SCIP_OKAY;
+
+         if( !SCIPisInfinity(scip, SCIPvarGetUbLocal(childvar)) )
+            refpoint = 0.9 * SCIPvarGetLbLocal(childvar) + 0.1 * SCIPvarGetUbLocal(childvar);
+         else
+            refpoint = 0.1;
+      }
 
       /* -x*(1+log(x*)) + x* <= -x*log(x) */
       *coefs = -(1.0 + log(refpoint));
