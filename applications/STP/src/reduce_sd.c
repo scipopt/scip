@@ -1587,9 +1587,6 @@ SCIP_RETCODE reduce_sdImpLongEdge(
             graph_edge_del(scip, g, e, TRUE);
             nelims_new++;
 
-            printf("LE implied deletes (max. MST cost=%f):  ", maxcost);
-                        graph_edge_printInfo(g, e);
-
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("LE implied deletes (max. MST cost=%f):  ", maxcost);
             graph_edge_printInfo(g, e);

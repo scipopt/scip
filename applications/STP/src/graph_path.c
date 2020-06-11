@@ -613,8 +613,6 @@ void tpathsGetKCloseTerms(
       else
       {
          assert(distIsStrict || !LE(termpaths[pos].dist, maxdist));
-
-         break;
       }
 
       pos += nnodes;
