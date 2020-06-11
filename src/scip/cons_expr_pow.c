@@ -1616,7 +1616,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       /* important special case: quadratic case */
       if( overestimate )
       {
-         SCIPaddSquareSecant(scip, 1.0, childlb, childub, refpoint, coefs, constant, success);
+         SCIPaddSquareSecant(scip, 1.0, childlb, childub, coefs, constant, success);
          *islocal = TRUE; /* secants are only valid locally */
       }
       else

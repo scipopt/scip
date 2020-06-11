@@ -466,7 +466,7 @@ SCIP_RETCODE computeRltCuts(
 
          /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
          if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
-            SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, refpointvar, &coefvar, &finalside, success);
+            SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, &coefvar, &finalside, success);
          else
             SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), &coefvar, &finalside, success);
 
