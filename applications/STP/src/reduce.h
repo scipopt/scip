@@ -58,6 +58,7 @@ typedef struct special_distance_storage
    SDN*                  sdneighbors;        /**< neighbors */
    BLCTREE*              blctree;            /**< bottleneck tree (or NULL) */
    SCIP_Bool             isBiased;           /**< are the SDs biased? */
+   SCIP_Bool             hasNeigborUpdate;   /**< with neighbor update? NOTE: does not allow certain methods */
 } SD;
 
 
@@ -221,7 +222,7 @@ extern SCIP_RETCODE    reduce_chain2(SCIP*, GRAPH*, PATH*, int*, int*, int*, int
  * reduce_sd.c
  */
 extern SCIP_RETCODE    reduce_sdEdgeCliqueStar(SCIP*, int, GRAPH*, int*);
-extern SCIP_RETCODE    reduce_sdImpLongEdge(SCIP*, const int*, GRAPH*, SDGRAPH*, int*);
+extern SCIP_RETCODE    reduce_sdImpLongEdge(SCIP*, const int*, GRAPH*, SD*, int*);
 extern SCIP_RETCODE    reduce_ledge(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);

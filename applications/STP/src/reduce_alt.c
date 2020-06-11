@@ -2505,8 +2505,6 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
    SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
 
-
-
    // reduce_sdFree(scip, &sdistance);
    // SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 

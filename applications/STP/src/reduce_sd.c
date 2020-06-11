@@ -1369,6 +1369,7 @@ SCIP_RETCODE reduce_sdInit(
    SCIP_CALL( SCIPallocMemory(scip, sd) );
    s = *sd;
 
+   s->hasNeigborUpdate = FALSE;
    s->isBiased = FALSE;
    s->sdprofit = NULL;
    s->blctree = NULL;
@@ -1395,6 +1396,7 @@ SCIP_RETCODE reduce_sdInitBiased(
    SCIP_CALL( SCIPallocMemory(scip, sd) );
    s = *sd;
 
+   s->hasNeigborUpdate = FALSE;
    s->isBiased = TRUE;
    s->sdneighbors = NULL;
    s->blctree = NULL;
@@ -1422,6 +1424,7 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
    SCIP_CALL( SCIPallocMemory(scip, sd) );
    s = *sd;
 
+   s->hasNeigborUpdate = FALSE;
    s->isBiased = TRUE;
    s->sdneighbors = NULL;
    SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
@@ -1448,8 +1451,11 @@ SCIP_RETCODE reduce_sdAddNeighborSd(
 {
    assert(scip && g && sd);
    assert(!sd->sdneighbors);
+   assert(!sd->hasNeigborUpdate);
 
    SCIP_CALL( reduce_sdneighborInit(scip, g, &(sd->sdneighbors)) );
+
+   sd->hasNeigborUpdate = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1515,19 +1521,29 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    GRAPH*                g,                  /**< graph data structure */
-   SDGRAPH*              sdgraph,            /**< SD graph data structure */
+   SD*                   sdistance,          /**< special distances storage */
    int*                  nelims              /**< point to store number of deleted edges */
 )
 {
+   SDGRAPH* sdgraph = sdistance->sdgraph;
    const STP_Bool* edges_isBlocked;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool checkstate = (edgestate != NULL);
    const SCIP_Real maxcost = reduce_sdgraphGetMaxCost(sdgraph);
    int nelims_new = 0;
+   const SCIP_Bool* nodes_isBlocked = NULL;
+   SCIP_Bool withBlockedNodes = FALSE;
    SCIP_Bool allowEquality;
 
    assert(scip && nelims);
    assert(*nelims >= 0);
+
+   if( sdistance->hasNeigborUpdate )
+   {
+      nodes_isBlocked = reduce_sdneighborGetBlocked(sdistance->sdneighbors);
+      withBlockedNodes = TRUE;
+      assert(nodes_isBlocked);
+   }
 
    if( reduce_sdgraphHasMstHalfMark(sdgraph) )
    {
@@ -1544,12 +1560,17 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    for( int k = 0; k < nnodes; k++ )
    {
       int e = g->outbeg[k];
+
+      if( withBlockedNodes && nodes_isBlocked[k] )
+         continue;
+
       while( e != EAT_LAST )
       {
          SCIP_Bool deleteEdge;
+         const SCIP_Bool edgeIsForbidden =
+            (checkstate && edgestate[e] == EDGE_BLOCKED) || (withBlockedNodes && nodes_isBlocked[g->head[e]]);
 
-         assert(e >= 0);
-         if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
+         if( edgeIsForbidden )
          {
             e = g->oeat[e];
             continue;
@@ -1565,6 +1586,9 @@ SCIP_RETCODE reduce_sdImpLongEdge(
             const int enext = g->oeat[e];
             graph_edge_del(scip, g, e, TRUE);
             nelims_new++;
+
+            printf("LE implied deletes (max. MST cost=%f):  ", maxcost);
+                        graph_edge_printInfo(g, e);
 
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("LE implied deletes (max. MST cost=%f):  ", maxcost);
@@ -1998,10 +2022,11 @@ SCIP_RETCODE reduce_sdBiased(
    assert(LT(maxmstcost, FARAWAY));
    assert(scip && nelims);
    assert(*nelims >= 0);
+   assert(!sdistance->hasNeigborUpdate);
 
    graph_mark(g);
 
-   SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance->sdgraph, nelims) );
+   SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance, nelims) );
 
    SCIPdebugMessage("Starting SD biased... \n");
 
@@ -2066,7 +2091,7 @@ SCIP_RETCODE reduce_sdBiased(
 
 
 /** implied-profit neighbor special distance test
- *  NOTE: invalidates SD for other methods! todo add a flag and check it */
+ *  NOTE: invalidates SD for other methods! */
 SCIP_RETCODE reduce_sdBiasedNeighbor(
    SCIP*                 scip,               /**< SCIP data structure */
    SD*                   sdistance,          /**< special distances storage */
@@ -2093,9 +2118,8 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
       return SCIP_OKAY;
 
    assert(!reduce_sdgraphHasMstHalfMark(sdistance->sdgraph));
-
-   int todo; // try again, but skip blocked nodes!
-  // SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance->sdgraph, nelims) );
+   assert(sdistance->hasNeigborUpdate);
+   SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance, nelims) );
 
    SCIPdebugMessage("Starting SD neighbor biased... \n");
 
