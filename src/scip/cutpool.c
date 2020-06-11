@@ -492,6 +492,7 @@ SCIP_RETCODE SCIPcutpoolClear(
    assert(cutpool != NULL);
 
    /* free cuts */
+   SCIPhashtableRemoveAll(cutpool->hashtable);
    for( i = 0; i < cutpool->ncuts; ++i )
    {
       if( cutpool->globalcutpool )

@@ -126,6 +126,7 @@ Fixed bugs
 - Fixed handling of constant term in quadratic objective of pip-reader.
 - Fixed incorrect value string for parameter estimation/completiontype
 - Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
 
 Miscellaneous
 -------------
