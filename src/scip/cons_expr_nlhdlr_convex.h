@@ -58,17 +58,6 @@ SCIP_RETCODE SCIPhasConsExprExprCurvature(
    SCIP_HASHMAP*         assumevarfixed      /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    );
 
-/** computes the curvature information w.r.t. the original variables for a given expression; this method uses the
- * methods that are used in the detection algorithm of the convex and concave nonlinear handler
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_EXPRCURV*        curv                /**< pointer to store the curvature */
-   );
-
 #ifdef __cplusplus
 }
 #endif
