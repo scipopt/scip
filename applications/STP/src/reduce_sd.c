@@ -2096,7 +2096,6 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
    int*                  nelims              /**< number of eliminations */
 )
 {
- //  const SDPROFIT* sdprofit = sdistance->sdprofit;
    const int nnodes = graph_get_nNodes(g);
    SDN* sdneighbors = sdistance->sdneighbors;
    const SCIP_Bool* nodes_isBlocked = reduce_sdneighborGetBlocked(sdneighbors);

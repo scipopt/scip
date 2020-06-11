@@ -1053,9 +1053,11 @@ SCIP_RETCODE sdneighborMarkCloseNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph to initialize from */
    int                   sourcenode,         /**< (neighbor) node to mark from */
-   SDN*                  sdneighbors         /**< SD */
+   SD*                   sddata              /**< SD */
 )
 {
+   const SDPROFIT* sdprofit = sddata->sdprofit;
+   SDN* const sdneighbors = sddata->sdneighbors;
    DIJK* RESTRICT dijkdata = sdneighbors->dijkdata;
    int* RESTRICT nodes_nhits = sdneighbors->nodes_nhits;
    SCIP_Real* RESTRICT nodes_maxdist = sdneighbors->nodes_maxdist;
@@ -1063,12 +1065,10 @@ SCIP_RETCODE sdneighborMarkCloseNodes(
    SCIP_Real* RESTRICT distance = dijkdata->node_distance;
    int* RESTRICT hitlist = sdneighbors->hitlist;
    int nvisits;
-int todo;
 
    assert(dijkdata && nodes_nhits && nodes_maxdist && hitlist);
 
-// todo try bias!
-   SCIP_CALL( graph_sdCloseNodesBiased(scip, g, NULL, sourcenode, dijkdata) );
+   SCIP_CALL( graph_sdCloseNodesBiased(scip, g, sdprofit, sourcenode, dijkdata) );
 
    nvisits = dijkdata->nvisits;
    assert(nvisits >= 0);
@@ -1273,7 +1273,7 @@ SCIP_RETCODE sdneighborUpdateExec(
          for( int e = g->outbeg[term]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int neighbor = g->head[e];
-            SCIP_CALL( sdneighborMarkCloseNodes(scip, g, neighbor, sdneighbors) );
+            SCIP_CALL( sdneighborMarkCloseNodes(scip, g, neighbor, sddata) );
          }
 
          for( int i = 0; i < sdneighbors->nnodesHit; i++ )
