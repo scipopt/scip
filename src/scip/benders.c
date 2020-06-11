@@ -1683,10 +1683,10 @@ SCIP_RETCODE checkSubproblemConvexity(
                /* if not found convex, compute curvature via nlhdlr_convex and decide again */
                SCIP_INTERVAL activity;
 
-               /* make sure activities are uptodate, SCIPgetConsExprExprOrigCurvature currently assumes that this is already the case */
+               /* make sure activities are uptodate, SCIPhasConsExprExprCurvature currently assumes that this is already the case */
                SCIP_CALL( SCIPevalConsExprExprActivity(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &activity, TRUE, FALSE) );
 
-               SCIP_CALL( SCIPisConsExprExprCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
+               SCIP_CALL( SCIPhasConsExprExprCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }
          }
 

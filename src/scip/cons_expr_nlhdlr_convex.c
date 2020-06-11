@@ -2245,7 +2245,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
  *
  * This function uses the methods that are used in the detection algorithm of the convex nonlinear handler.
  */
-SCIP_RETCODE SCIPisConsExprExprCurvature(
+SCIP_RETCODE SCIPhasConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
