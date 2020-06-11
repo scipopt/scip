@@ -85,6 +85,72 @@ void getArticulationPoints(
 }
 
 
+/** prune */
+static
+SCIP_RETCODE cutEdgePrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   cutedge,            /**< the edge */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   graph_edge_del(scip, g, cutedge, TRUE);
+
+   SCIP_CALL( reduceLevel0(scip, g) );
+
+   return SCIP_OKAY;
+}
+
+
+/** probe */
+static
+SCIP_RETCODE cutEdgeProbe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   start,              /**< the node to start from */
+   int                   end,                /**< note to ignore */
+   SCIP_Bool* RESTRICT   nodes_visited,
+   SCIP_Bool*            terminalFound       /**< found? */
+)
+{
+   int* RESTRICT stackarr;
+   int stacksize = 0;
+   const int nnodes = graph_get_nNodes(g);
+   *terminalFound = FALSE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+
+   nodes_visited[start] = TRUE;
+   nodes_visited[end] = TRUE;
+   stackarr[stacksize++] = start;
+
+   while( stacksize > 0 )
+   {
+      const int node = stackarr[--stacksize];
+
+      for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         if( !nodes_visited[head] )
+         {
+            if( Is_term(g->term[head]) )
+            {
+               *terminalFound = TRUE;
+               stacksize = 0;
+               break;
+            }
+
+            nodes_visited[head] = TRUE;
+            stackarr[stacksize++] = head;
+         }
+      }
+   }
+
+   SCIPfreeBuffer(scip, &stackarr)
+
+   return SCIP_OKAY;
+}
+
 
 /** basic reduction tests for the STP */
 SCIP_RETCODE reduce_simple(
@@ -863,6 +929,60 @@ SCIP_RETCODE reduce_rpt(
 
    SCIPfreeBufferArray(scip, &dijkedge);
    SCIPfreeBufferArray(scip, &dijkdist);
+
+   return SCIP_OKAY;
+}
+
+
+/** try to remove cute edge and prune one side of the graph */
+SCIP_RETCODE reduce_cutEdgeTryPrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   cutedge,            /**< the edge */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool*            success             /**< could we prune the edge? */
+)
+{
+   SCIP_Bool* RESTRICT nodes_visited;
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool terminalFound;
+   const int tail = g->tail[cutedge];
+   const int head = g->head[cutedge];
+
+   assert(scip && success);
+   assert(graph_edge_isInRange(g, cutedge));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_visited, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      nodes_visited[i] = FALSE;
+
+   *success = FALSE;
+
+   /* first side */
+   SCIP_CALL( cutEdgeProbe(scip, g, tail, head, nodes_visited, &terminalFound) );
+   if( !terminalFound )
+   {
+      SCIP_CALL( cutEdgePrune(scip, cutedge, g) );
+      assert(g->grad[tail] == 0);
+      *success = TRUE;
+   }
+
+   /* try second side? */
+   if( !(*success) )
+   {
+      SCIP_CALL( cutEdgeProbe(scip, g, head, tail, nodes_visited, &terminalFound) );
+      if( !terminalFound )
+      {
+         SCIP_CALL( cutEdgePrune(scip, cutedge, g) );
+         assert(g->grad[head] == 0);
+         *success = TRUE;
+      }
+   }
+
+  // int c = 0;
+  // SCIP_CALL( reduce_aritculations(scip, g, NULL, &c ) );
+
+   SCIPfreeBufferArray(scip, &nodes_visited);
 
    return SCIP_OKAY;
 }

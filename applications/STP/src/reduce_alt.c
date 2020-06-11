@@ -506,7 +506,14 @@ SCIP_RETCODE nsvExec(
          /* cut edge? */
          if( EQ(candidate_bottlenecks[i], FARAWAY) )
          {
-            int todo; // check whether terminal on one side, otherwise delete the whole subgraph
+            SCIP_Bool pruned;
+            SCIP_CALL( reduce_cutEdgeTryPrune(scip, edge, g, &pruned) );
+
+            if( !pruned )
+            {
+               SCIP_CALL( nsvEdgeContract(scip, edge, g->tail[edge], g->head[edge], g, nsv, nelims) );
+            }
+
             continue;
          }
 
