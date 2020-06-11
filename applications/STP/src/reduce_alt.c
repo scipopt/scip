@@ -2499,8 +2499,8 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
    SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, NULL, g, nelims) );
 
-  // SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );
-  // SCIP_CALL( reduce_sdBiasedNeighbor(scip, sdistance, g, nelims) );
+   SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );
+   SCIP_CALL( reduce_sdBiasedNeighbor(scip, sdistance, g, nelims) );
 
    SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
    SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );

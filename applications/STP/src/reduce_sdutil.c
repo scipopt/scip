@@ -30,6 +30,8 @@
 #include "portab.h"
 
 #define STP_SDN_NCLOSETERMS 4
+#define STP_SDN_MAXDEGREE 4
+#define STP_SDN_MAXNVISITS 4
 
 
 /** see reduce.h */
@@ -270,10 +272,12 @@ void distgraphInsertEdge(
    SCIP_Real              edgecost,          /**< cost */
    int                    edgeid,            /**< ID or -1 */
    int* RESTRICT          edgeorg,           /**< IDs of edges or NULL */
-   GRAPH*                 distgraph          /**< the SD graph */
+   GRAPH*                 distgraph,         /**< the SD graph */
+   SCIP_Bool*             success            /**< could the edge be added? */
 )
 {
    int ne;
+   *success = TRUE;
 
 #ifndef NDEBUG
    assert(sdnode1 != sdnode2);
@@ -308,10 +312,19 @@ void distgraphInsertEdge(
    }
    else
    {
-      if( edgeorg != NULL )
-         edgeorg[distgraph->edges / 2] = edgeid;
+      assert(distgraph->edges <= distgraph->esize);
 
-      graph_edge_add(scip, distgraph, sdnode1, sdnode2, edgecost, edgecost);
+      if( distgraph->edges == distgraph->esize  )
+      {
+         *success = FALSE;
+      }
+      else
+      {
+         if( edgeorg != NULL )
+            edgeorg[distgraph->edges / 2] = edgeid;
+
+         graph_edge_add(scip, distgraph, sdnode1, sdnode2, edgecost, edgecost);
+      }
    }
 }
 
@@ -352,6 +365,7 @@ void distgraphAddEdges(
 
          if( vbase_tail != vbase_head )
          {
+            SCIP_Bool success;
             const SCIP_Real distance = useProfit ?
                distgraphGetBoundaryEdgeDist(tail, head, vbase_tail, vbase_head, g->cost[e], nodes_vdist, sdprofit)
                : (g->cost[e] + nodes_vdist[tail] + nodes_vdist[head]);
@@ -364,8 +378,9 @@ void distgraphAddEdges(
             assert(Is_term(g->term[vbase_head]));
 
             distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, e,
-                  edgeorg, distgraph);
+                  edgeorg, distgraph, &success);
 
+            assert(success);
          }
       }
    }
@@ -403,6 +418,7 @@ void distgraphAddEdgesFromTpaths(
 
          if( vbase_tail != vbase_head )
          {
+            SCIP_Bool success;
             const SCIP_Real distance = useProfit ?
                distgraphGetBoundaryEdgeDist2(tail, head, vbase_tail, vbase_head, g->cost[e], dist_tail, dist_head, sdprofit)
                : (g->cost[e] + dist_tail + dist_head);
@@ -410,7 +426,8 @@ void distgraphAddEdgesFromTpaths(
             assert(LE(distance, g->cost[e] + dist_tail + dist_head));
             assert(Is_term(g->term[vbase_tail]) && Is_term(g->term[vbase_head]));
 
-            distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph);
+            distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph, &success);
+            assert(success);
          }
       }
    }
@@ -522,12 +539,13 @@ void sdgraphInsertEdge(
    SDGRAPH*               sdgraph            /**< the SD graph */
 )
 {
+   SCIP_Bool success;
    const int* nodesid = sdgraph->nodemapOrgToDist;
    const int sdnode1 = nodesid[term1];
    const int sdnode2 = nodesid[term2];
    assert(sdgraph->distgraph);
 
-   distgraphInsertEdge(scip, sdnode1, sdnode2, edgecost, -1, NULL, sdgraph->distgraph);
+   distgraphInsertEdge(scip, sdnode1, sdnode2, edgecost, -1, NULL, sdgraph->distgraph, &success);
 }
 
 
@@ -627,11 +645,13 @@ void sdgraphUpdateDistgraphFromTpaths(
 
          if( LT(distance, FARAWAY) && LT(distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd)) )
          {
+            SCIP_Bool success;
             assert(vbase_tail >= 0 && vbase_head >= 0);
 
             //SCIPdebugMessage("add biased MST edge %d->%d (%f<%f) \n", vbase_tail, vbase_head, distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd));
 
-            distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph);
+            distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph, &success);
+            assert(success);
 
             if( distgraph->edges >= edgelimit )
                break;
@@ -1089,13 +1109,19 @@ SCIP_RETCODE sdneighborUpdate(
    SCIP_Real* RESTRICT closeterms_dist = sdn->closeterms_distN;
    int* RESTRICT closeterms = sdn->closetermsN;
    const int nnodes = graph_get_nNodes(g);
-   const int maxdegree = 4;
+   const int maxdegree = STP_SDN_MAXDEGREE;
 
    SCIP_CALL(SCIPallocBufferArray(scip, &nodes_nhits, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &nodes_maxdist, nnodes));
 
+//#define STP_SDN_PRINT
+
+#ifdef STP_SDN_PRINT
+   printf("start SDN update \n");
+#endif
+
    SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) );
-   dijkdata->edgelimit = 100;
+   dijkdata->edgelimit = STP_SDN_MAXNVISITS;
 
    graph_init_dcsr(scip, g);
 
@@ -1178,31 +1204,33 @@ SCIP_RETCODE sdneighborUpdate(
       }
    }
 
-
+#ifdef STP_SDN_PRINT
    printf("\n before \n");
 
    for( int i = 0; i < MIN(10, g->terms - 1); i++ )
    {
       printf("%f ", sdgraph->mstcosts[i]);
    }
+
    printf("\n after \n");
+#endif
 
    SCIP_CALL( sdgraphMstBuild(scip, g, sdgraph) );
    sdgraphMstSortCosts(sdgraph);
 
-
+#ifdef STP_SDN_PRINT
    for( int i = 0; i < MIN(10, g->terms - 1); i++ )
    {
       printf("%f ", sdgraph->mstcosts[i]);
 
    }
-   printf("\n");
 
+   printf("\n");
    printf("g->terms=%d nupdates=%d \n", g->terms, *nupdates);
-  // exit(1);
+   exit(1);
+#endif
 
    graph_free_dcsr(scip, g);
-
    graph_dijkLimited_free(scip, &dijkdata);
 
    SCIPfreeBufferArray(scip, &nodes_maxdist);
