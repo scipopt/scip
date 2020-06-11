@@ -1555,6 +1555,77 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
+/** computes an estimator for a product expression as a vertex polyhedral function */
+static
+SCIP_RETCODE estimateVertexPolyhedralProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_Bool             overestimate,       /**< should estimator overestimate expr (TRUE) or underestimate (FALSE) */
+   SCIP_Real             targetvalue,        /**< no need to compute facet if value in xstar would be worse than target value */
+   SCIP_Bool             initial,            /**< is this called from initsepa or enforcement? */
+   SCIP_Real*            coefs,              /**< array to store cut coefficients */
+   SCIP_Real*            constant,           /**< pointer to store cut constant */
+   SCIP_Bool*            success             /**< pointer to store whether estimation was successful */
+   )
+{
+   SCIP_INTERVAL childbnds;
+   SCIP_Real* box;
+   SCIP_Real* xstar;
+   int i;
+   int nfixed;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* var;
+   int nchildren;
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   /* Since the product is multilinear, its convex and concave envelopes are piecewise linear.*/
+
+   /* assemble box, check for unbounded variables, assemble xstar */
+   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nchildren) );
+   for( i = 0, nfixed = 0; i < nchildren; ++i )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[i];
+      var = SCIPgetConsExprExprAuxVar(child);
+
+      childbnds.inf = SCIPvarGetLbLocal(var);
+      childbnds.sup = SCIPvarGetUbLocal(var);
+      if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
+         SCIPintervalIntersectEps(&childbnds, SCIPfeastol(scip), childbnds, SCIPgetConsExprExprActivity(scip, child));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbnds));
+
+      if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
+      {
+         SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
+         goto CLEANUP;
+      }
+
+      box[2*i] = childbnds.inf;
+      box[2*i+1] = childbnds.sup;
+
+      xstar[i] = initial ? 0.5 * (box[2*i] + box[2*i+1]) : SCIPgetSolVal(scip, sol, var);
+
+      if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
+         ++nfixed;
+   }
+
+   if( nfixed < nchildren && nchildren - nfixed <= SCIP_MAXVERTEXPOLYDIM )
+   {
+      SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, prodfunction, &exprdata->coefficient,
+            xstar, box, nchildren, targetvalue, success, coefs, constant) );
+   }
+
+   CLEANUP:
+   SCIPfreeBufferArray(scip, &xstar);
+   SCIPfreeBufferArray(scip, &box);
+
+   return SCIP_OKAY;
+}
+
 /** separates a multilinear constraint of the form \f$ f(x) := a \Pi_{i = 1}^n x_i = w \f$ where \f$ x_i \f$ are the
  * auxiliary variables of the children and \f$ w \f$ is the auxiliary variable of expr. If \f$ f(x^*) > w^* \f$, then we
  * look for an affine underestimator of \f$ f(x) \f$ which separates \f$ (x^*, w^*) \f$ from the feasible region, i.e.
@@ -1569,7 +1640,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* var;
    int nchildren;
 
    assert(scip != NULL);
@@ -1667,51 +1737,121 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
    }
    else
    {
-      SCIP_INTERVAL childbnds;
-      SCIP_Real* box;
-      SCIP_Real* xstar;
-      int i;
-      int nfixed;
+      SCIP_CALL( estimateVertexPolyhedralProduct(scip, conshdlr, expr, exprdata, sol, overestimate, targetvalue, FALSE,
+            coefs, constant, success) );
+   }
 
-      /* Since the product is multilinear, its convex and concave envelopes are piecewise linear.*/
+   return SCIP_OKAY;
+}
 
-      /* assemble box, check for unbounded variables, assemble xstar */
-      SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nchildren) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nchildren) );
-      for( i = 0, nfixed = 0; i < nchildren; ++i )
+/** init sepa callback that initializes LP */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
+{
+   int nchildren;
+   SCIP_Bool success;
+   SCIP_Real constant;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Bool overest[2];
+   int i;
+   int v;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   overest[0] = FALSE;
+   overest[1] = TRUE;
+
+   for( i = (underestimate ? 0 : 1); i <= (overestimate ? 1 : 0); ++i )
+   {
+      SCIP_ROWPREP* rowprep;
+      SCIP_ROW* row;
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+
+      /* make sure enough space is available in rowprep arrays */
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
+      assert(rowprep->varssize >= nchildren);
+
+      constant = 0.0;
+
+      if( nchildren == 2 )
       {
-         child = SCIPgetConsExprExprChildren(expr)[i];
-         var = SCIPgetConsExprExprAuxVar(child);
+         SCIP_VAR* x;
+         SCIP_VAR* y;
+         SCIP_INTERVAL bndx;
+         SCIP_INTERVAL bndy;
 
-         childbnds.inf = SCIPvarGetLbLocal(var);
-         childbnds.sup = SCIPvarGetUbLocal(var);
-         if( SCIPgetConsExprExprActivityTag(child) >= SCIPgetConsExprLastBoundRelaxTag(conshdlr) )
-            SCIPintervalIntersectEps(&childbnds, SCIPfeastol(scip), childbnds, SCIPgetConsExprExprActivity(scip, child));
-         assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbnds));
+         /* collect variables */
+         x = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+         assert(x != NULL);
+         bndx.inf = SCIPvarGetLbLocal(x);
+         bndx.sup = SCIPvarGetUbLocal(x);
 
-         if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
-         {
-            SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
-            goto CLEANUP;
-         }
+         y = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
+         assert(y != NULL);
+         bndy.inf = SCIPvarGetLbLocal(y);
+         bndy.sup = SCIPvarGetUbLocal(y);
 
-         box[2*i] = childbnds.inf;
-         box[2*i+1] = childbnds.sup;
-
-         xstar[i] = SCIPgetSolVal(scip, sol, var);
-
-         if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
-            ++nfixed;
+         /* build estimator */
+         SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, (bndx.inf + bndx.sup) / 2.0, bndy.inf,
+               bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overest[i], &(rowprep->coefs[0]), &(rowprep->coefs[1]), &constant,
+               &success);
+      }
+      else
+      {
+            SCIP_CALL( estimateVertexPolyhedralProduct(scip, conshdlr, expr, exprdata, NULL, overest[i],
+                  overest[i] ? SCIPinfinity(scip) : -SCIPinfinity(scip), TRUE, rowprep->coefs, &constant, &success) );
       }
 
-      if( nfixed < nchildren && nchildren - nfixed <= SCIP_MAXVERTEXPOLYDIM )
+      if( !success )
       {
-         SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, prodfunction, &exprdata->coefficient, xstar, box, nchildren, targetvalue, success, coefs, constant) );
+         SCIPdebugMsg(scip, "failed to compute an estimator in initsepaProduct\n");
+         goto CLEANUP;
       }
 
-CLEANUP:
-      SCIPfreeBufferArray(scip, &xstar);
-      SCIPfreeBufferArray(scip, &box);
+      /* add variables to rowprep */
+      rowprep->nvars = nchildren;
+      for( v = 0; v < nchildren; ++v )
+      {
+         rowprep->vars[v] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[v]);
+         assert(rowprep->vars[v] != NULL);
+      }
+
+      /* add auxiliary variable and side */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+      rowprep->side = -constant;
+
+      /* straighten out numerics */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+      if( !success )
+      {
+         SCIPdebugMsg(scip, "failed to cleanup rowprep numerics\n");
+         goto CLEANUP;
+      }
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_product%p_initsepa",
+                          overest[i] ? "over" : "under", (void*)expr);
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "\ninitsepa product computed row: ");
+      SCIPprintRow(scip, row, NULL);
+#endif
+
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+ CLEANUP:
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    return SCIP_OKAY;
@@ -1909,7 +2049,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaProduct, NULL, estimateProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );

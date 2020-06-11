@@ -2013,9 +2013,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    if( overestimate )
       SCIP_CALL( SCIPallocBufferArray(scip, &refpointsover, 3) );
 
-   SCIPinfoMessage(scip, NULL, "\nchoosing refpoints for expr x^%g, x in [%g, %g], under / over = %d / %d",
-                                   exponent, childlb, childub, underestimate, overestimate);
-
    SCIP_CALL( chooseRefpoints(scip, exprdata, childlb, childub, exponent, refpointsunder, refpointsover) );
 
    overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
@@ -2033,8 +2030,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
          continue;
 
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
-
-      SCIPinfoMessage(scip, NULL, "\nunderestimation refpoint %g;", refpoint);
 
       /* built a cut at refpoint */
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -2717,9 +2712,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
          refpointsover[i] = SCIP_INVALID;
       }
    }
-
-   SCIPinfoMessage(scip, NULL, "\nchoosing refpoints for expr x^%g, x in [%g, %g], under / over = %d / %d",
-         exponent, childlb, childub, underestimate, overestimate);
 
    if( childlb >= 0.0 )
    {
