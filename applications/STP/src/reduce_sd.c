@@ -2109,16 +2109,27 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
    assert(nodes_isBlocked);
    graph_mark(g);
 
+   SCIPdebugMessage("Starting SD neighbor biased... \n");
+
    SCIP_CALL( reduce_sdUpdateWithSdNeighbors(scip, g, sdistance, &nupdates) );
 
    if( nupdates == 0 )
+   {
+      SCIPdebugMessage("...no updates found, returning \n");
       return SCIP_OKAY;
+   }
 
    assert(!reduce_sdgraphHasMstHalfMark(sdistance->sdgraph));
    assert(sdistance->hasNeigborUpdate);
    SCIP_CALL( reduce_sdImpLongEdge(scip, NULL, g, sdistance, nelims) );
 
-   SCIPdebugMessage("Starting SD neighbor biased... \n");
+   if( nupdates < (int) ((SCIP_Real) g->terms / 25.0) )
+   {
+      SCIPdebugMessage("...not enough updates found, returning \n");
+   //   printf("...not enough updates found, returning \n");
+
+      return SCIP_OKAY;
+   }
 
    /* traverse all edges */
    for( int i = 0; i < nnodes; i++ )

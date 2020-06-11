@@ -57,6 +57,13 @@ struct special_distance_neighbors
    SCIP_Real*            closeterms_distN;   /**< paths to N closest terms */
    int*                  closetermsN;        /**< close terminals */
    SCIP_Bool*            nodes_isBlocked;    /**< node is blocked */
+   /** temporary arrays start: */
+   DIJK*                 dijkdata;
+   int*                  nodes_nhits;
+   SCIP_Real*            nodes_maxdist;
+   int*                  hitlist;
+   /** temporary arrays end */
+   int                   nnodesHit;
    int                   N;                  /**< the number of closest terms per node */
 };
 
@@ -1045,25 +1052,27 @@ static inline
 SCIP_RETCODE sdneighborMarkCloseNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph to initialize from */
-   int                   sourcenode,
-   int* RESTRICT         nodes_nhits,
-   SCIP_Real* RESTRICT   nodes_maxdist,
-   DIJK*                 dijkdata,
-   SD*                   sddata              /**< SD */
+   int                   sourcenode,         /**< (neighbor) node to mark from */
+   SDN*                  sdneighbors         /**< SD */
 )
 {
+   DIJK* RESTRICT dijkdata = sdneighbors->dijkdata;
+   int* RESTRICT nodes_nhits = sdneighbors->nodes_nhits;
+   SCIP_Real* RESTRICT nodes_maxdist = sdneighbors->nodes_maxdist;
    const int* const visitlist = dijkdata->visitlist;
    SCIP_Real* RESTRICT distance = dijkdata->node_distance;
+   int* RESTRICT hitlist = sdneighbors->hitlist;
    int nvisits;
 int todo;
 
-   assert(dijkdata && g);
+   assert(dijkdata && nodes_nhits && nodes_maxdist && hitlist);
 
 // todo try bias!
    SCIP_CALL( graph_sdCloseNodesBiased(scip, g, NULL, sourcenode, dijkdata) );
 
    nvisits = dijkdata->nvisits;
    assert(nvisits >= 0);
+   assert(sdneighbors->nnodesHit >= 0);
 
    for( int k = 0; k < nvisits; k++ )
    {
@@ -1077,7 +1086,8 @@ int todo;
 
       if( nodes_nhits[node] == 0 )
       {
-         // todo save node in list
+         hitlist[sdneighbors->nnodesHit++] = node;
+         assert(EQ(nodes_maxdist[node], 0.0));
       }
 
       nodes_nhits[node]++;
@@ -1092,54 +1102,155 @@ int todo;
 }
 
 
-/** updates SDs by using neighbor argument */
+/** helper */
 static
-SCIP_RETCODE sdneighborUpdate(
+SCIP_RETCODE sdneighborUpdateInit(
    SCIP*                 scip,               /**< SCIP */
-   GRAPH*                g,                  /**< graph to initialize from */
-   SDN*                  sdn,                /**< SD neighbors */
-   SD*                   sddata,             /**< SD */
-   int*                  nupdates            /**< number of distance updates */
+   GRAPH*                g,                  /**< graph  */
+   SDN*                  sdn                 /**< SD neighbors */
 )
 {
-   SDGRAPH* sdgraph = sddata->sdgraph;
-   DIJK* dijkdata;
+   const int N = sdn->N;
+   SCIP_Real* const RESTRICT closeterms_distN = sdn->closeterms_distN;
+   int* const RESTRICT closetermsN = sdn->closetermsN;
+   const int nnodes = graph_get_nNodes(g);
    int* RESTRICT nodes_nhits;
    SCIP_Real* RESTRICT nodes_maxdist;
-   SCIP_Real* RESTRICT closeterms_dist = sdn->closeterms_distN;
-   int* RESTRICT closeterms = sdn->closetermsN;
-   const int nnodes = graph_get_nNodes(g);
-   const int maxdegree = STP_SDN_MAXDEGREE;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &nodes_nhits, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &nodes_maxdist, nnodes));
+   assert(N >= 1);
+   assert(!sdn->nodes_nhits);
+   assert(!sdn->nodes_maxdist);
+   assert(!sdn->hitlist);
+   assert(!sdn->dijkdata);
 
-//#define STP_SDN_PRINT
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sdn->nodes_nhits), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sdn->nodes_maxdist), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(sdn->hitlist), nnodes) );
+   nodes_nhits = sdn->nodes_nhits;
+   nodes_maxdist = sdn->nodes_maxdist;
 
-#ifdef STP_SDN_PRINT
-   printf("start SDN update \n");
-#endif
-
-   SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) );
-   dijkdata->edgelimit = STP_SDN_MAXNVISITS;
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &(sdn->dijkdata)) );
+   sdn->dijkdata->edgelimit = STP_SDN_MAXNVISITS;
 
    graph_init_dcsr(scip, g);
 
-   // todo extra method
    for( int i = 0; i < nnodes; ++i )
    {
-      closeterms_dist[i] = FARAWAY;
-      closeterms[i] = UNKNOWN;
       nodes_nhits[i] = 0;
       nodes_maxdist[i] = 0.0;
       sdn->nodes_isBlocked[i] = FALSE;
    }
 
-   assert(sdgraph);
+   for( int i = 0; i < N * nnodes; ++i )
+   {
+      closeterms_distN[i] = FARAWAY;
+      closetermsN[i] = UNKNOWN;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** helper */
+static
+void sdneighborUpdateFree(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph  */
+   SDN*                  sdn                 /**< SD neighbors */
+)
+{
+   graph_free_dcsr(scip, g);
+   graph_dijkLimited_free(scip, &(sdn->dijkdata));
+
+   SCIPfreeBufferArray(scip, &(sdn->hitlist));
+   SCIPfreeBufferArray(scip, &(sdn->nodes_maxdist));
+   SCIPfreeBufferArray(scip, &(sdn->nodes_nhits));
+}
+
+
+/** updates single node */
+static inline
+void sdneighborUpdateNode(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   int                   node,               /**< node to update */
+   int                   term,               /**< terminal */
+   SDN*                  sdn,                /**< SD neighbors */
+   SDGRAPH*              sdgraph,            /**< SD graph */
+   int*                  nupdates            /**< number of distance updates */
+)
+{
+   SCIP_Real* RESTRICT nodes_maxdist = sdn->nodes_maxdist;
+   const SCIP_Real sd_new = nodes_maxdist[node];
+
+   assert(node != term);
+   assert(GT(sd_new, 0.0) && LT(sd_new, FARAWAY));
+
+   if( Is_term(g->term[node]) )
+   {
+      /* update the SD MST */
+      const SCIP_Real sd_org = reduce_sdgraphGetSd(term, node, sdgraph);
+      if( LT(sd_new, sd_org) )
+      {
+         (*nupdates)++;
+         sdn->nodes_isBlocked[term] = TRUE;
+         sdgraphInsertEdge(scip, term, node, sd_new, sdgraph);
+  //graph_knot_printInfo(g, term);  graph_knot_printInfo(g, i); printf("term %d->%d: new=%f vs org=%f \n", term, i, nodes_maxdist[i], sdorg);
+      }
+   }
+   else
+   {
+      SCIP_Real* RESTRICT closeterms_distN = sdn->closeterms_distN;
+      int* RESTRICT closetermsN = sdn->closetermsN;
+      SCIP_Real sd_max = 0.0;
+      int node_max = -1;
+      const int N = sdn->N;
+      const int nnodes = g->knots;
+
+      assert(N >= 1);
+
+      /* get maximum old SD */
+      for( int i = 0; i < N; i++ )
+      {
+         const int node_i = node + i * nnodes;
+         if( GT(closeterms_distN[node_i], sd_max)  )
+         {
+            sd_max = closeterms_distN[node_i];
+            node_max = node_i;
+         }
+      }
+
+      assert(GT(sd_max, 0.0));
+
+      if( LT(sd_new, sd_max) )
+      {
+         (*nupdates)++;
+         closeterms_distN[node_max] = sd_new;
+         closetermsN[node_max] = term;
+      }
+   }
+}
+
+
+/** updates SDs by using neighbor argument */
+static
+SCIP_RETCODE sdneighborUpdateExec(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph to initialize from */
+   SD*                   sddata,             /**< SD */
+   int*                  nupdates            /**< number of distance updates */
+)
+{
+   SDN* const sdneighbors = sddata->sdneighbors;
+   SDGRAPH* const sdgraph = sddata->sdgraph;
+   int* RESTRICT nodes_nhits = sdneighbors->nodes_nhits;
+   SCIP_Real* RESTRICT nodes_maxdist = sdneighbors->nodes_maxdist;
+   int* RESTRICT hitlist = sdneighbors->hitlist;
+   const int nnodes = graph_get_nNodes(g);
+   const int maxdegree = STP_SDN_MAXDEGREE;
 
    *nupdates = 0;
 
-   // todo extra method
    for( int term = 0; term < nnodes; ++term )
    {
       if( Is_term(g->term[term]) )
@@ -1149,68 +1260,71 @@ SCIP_RETCODE sdneighborUpdate(
          if( degree > maxdegree )
             continue;
 
-         // todo clean-up method
+#ifndef NDEBUG
          for( int i = 0; i < nnodes; ++i )
          {
-            nodes_nhits[i] = 0;
-            nodes_maxdist[i] = 0.0;
+            assert(nodes_nhits[i] == 0);
+            assert(EQ(nodes_maxdist[i], 0.0));
          }
+#endif
+         sdneighbors->nnodesHit = 0;
 
          /* loop over all neighbors */
          for( int e = g->outbeg[term]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int neighbor = g->head[e];
-
-            SCIP_CALL( sdneighborMarkCloseNodes(scip, g, neighbor, nodes_nhits, nodes_maxdist, dijkdata, sddata) );
+            SCIP_CALL( sdneighborMarkCloseNodes(scip, g, neighbor, sdneighbors) );
          }
 
-         // todo loop over list
-         for( int i = 0; i < nnodes; ++i )
+         for( int i = 0; i < sdneighbors->nnodesHit; i++ )
          {
-            assert(nodes_nhits[i] <= degree);
+            const int hitnode = hitlist[i];
 
-            if( nodes_nhits[i] == degree && i != term )
+            assert(graph_knot_isInRange(g, hitnode));
+            assert(0 < nodes_nhits[hitnode] && nodes_nhits[hitnode] <= degree);
+
+            if( nodes_nhits[hitnode] == degree && hitnode != term )
             {
-               const SCIP_Real sd_new = nodes_maxdist[i];
-               assert(GT(sd_new, 0.0) && LT(sd_new, FARAWAY));
-
-               if( Is_term(g->term[i]) )
-               {
-                  /* update the SD MST */
-                  const SCIP_Real sd_org = reduce_sdgraphGetSd(term, i, sdgraph);
-                  if( LT(sd_new, sd_org) )
-                  {
-                     (*nupdates)++;
-                     sdn->nodes_isBlocked[term] = TRUE;
-                     sdgraphInsertEdge(scip, term, i, sd_new, sdgraph);
-
-     //     graph_knot_printInfo(g, term);  graph_knot_printInfo(g, i); printf("term %d->%d: new=%f vs org=%f \n", term, i, nodes_maxdist[i], sdorg);
-                  }
-               }
-               else
-               {
-                  int todo; //  todo proper update
-                  /* update the terminal paths */
-                  if( LT(sd_new, closeterms_dist[i]) )
-                  {
-                     (*nupdates)++;
-                     closeterms_dist[i] = sd_new;
-                     closeterms[i] = term;
-                  }
-               }
+               sdneighborUpdateNode(scip, g, hitnode, term, sdneighbors, sdgraph, nupdates);
             }
-         }
 
+            nodes_nhits[hitnode] = 0;
+            nodes_maxdist[hitnode] = 0.0;
+         }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** updates SDs by using neighbor argument */
+static
+SCIP_RETCODE sdneighborUpdate(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph to initialize from */
+   SD*                   sddata,             /**< SD */
+   int*                  nupdates            /**< number of distance updates */
+)
+{
+   SDN* sdn = sddata->sdneighbors;
+   SDGRAPH* sdgraph = sddata->sdgraph;
+   assert(sdgraph);
+
+//#define STP_SDN_PRINT
+
+#ifdef STP_SDN_PRINT
+   printf("start SDN update \n");
+#endif
+
+   sdneighborUpdateInit(scip, g, sdn);
+   SCIP_CALL( sdneighborUpdateExec(scip, g, sddata, nupdates) );
 
 #ifdef STP_SDN_PRINT
    printf("\n before \n");
 
    for( int i = 0; i < MIN(10, g->terms - 1); i++ )
-   {
       printf("%f ", sdgraph->mstcosts[i]);
-   }
 
    printf("\n after \n");
 #endif
@@ -1220,21 +1334,14 @@ SCIP_RETCODE sdneighborUpdate(
 
 #ifdef STP_SDN_PRINT
    for( int i = 0; i < MIN(10, g->terms - 1); i++ )
-   {
       printf("%f ", sdgraph->mstcosts[i]);
-
-   }
 
    printf("\n");
    printf("g->terms=%d nupdates=%d \n", g->terms, *nupdates);
-   exit(1);
+   //exit(1);
 #endif
 
-   graph_free_dcsr(scip, g);
-   graph_dijkLimited_free(scip, &dijkdata);
-
-   SCIPfreeBufferArray(scip, &nodes_maxdist);
-   SCIPfreeBufferArray(scip, &nodes_nhits);
+   sdneighborUpdateFree(scip, g, sdn);
 
    return SCIP_OKAY;
 
@@ -1267,30 +1374,36 @@ void reduce_sdneighborGetCloseTerms(
    int* RESTRICT         ncloseterms         /**< number of close terminals found */
 )
 {
-   const int* terms = sdneighbor->closetermsN;
-   const SCIP_Real* dists = sdneighbor->closeterms_distN;
+   const int nnodes = graph_get_nNodes(g);
+   const int N = sdneighbor->N;
+   const int* const terms = sdneighbor->closetermsN;
+   const SCIP_Real* const dists = sdneighbor->closeterms_distN;
+   int nterms = 0;
 
    assert(graph_knot_isInRange(g, node));
+   assert(N >= 1);
 
-   *ncloseterms = 0;
-
-   if( terms[node] >= 0 && LT(dists[node], maxdist_strict)  )
+   for( int i = 0; i < N; i++ )
    {
-      *ncloseterms = 1;
-      closeterms_dist[0] = dists[node];
-      closeterms[0] = terms[node];
+      const int node_i = node + i * nnodes;
 
-      assert(graph_knot_isInRange(g, closeterms[0]));
-      assert(GE(closeterms_dist[0], 0.0));
+      if( terms[node_i] < 0 )
+         break;
+
+      if( LT(dists[node_i], maxdist_strict)  )
+      {
+         *ncloseterms = 1;
+         closeterms_dist[nterms] = dists[node_i];
+         closeterms[nterms] = terms[node_i];
+
+         assert(graph_knot_isInRange(g, closeterms[nterms]));
+         assert(GE(closeterms_dist[nterms], 0.0));
+
+         nterms++;
+      }
    }
 
-#if 0
-   for( int i = 0; i < sdneighbor->N; i++ )
-   {
-
-   }
-#endif
-
+   *ncloseterms = nterms;
 }
 
 
@@ -1310,10 +1423,15 @@ SCIP_RETCODE reduce_sdneighborInit(
    SCIP_CALL( SCIPallocMemory(scip, sdn) );
 
    sdneighbors = *sdn;
+   sdneighbors->nnodesHit = -1;
    sdneighbors->N = N;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sdneighbors->nodes_isBlocked), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sdneighbors->closeterms_distN), N * nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sdneighbors->closetermsN), N * nnodes) );
+   sdneighbors->hitlist = NULL;
+   sdneighbors->nodes_maxdist = NULL;
+   sdneighbors->nodes_nhits = NULL;
+   sdneighbors->dijkdata = NULL;
 
    return SCIP_OKAY;
 }
@@ -1345,7 +1463,7 @@ SCIP_RETCODE reduce_sdUpdateWithSdNeighbors(
    assert(scip && g && sddata && nupdates);
    assert(sddata->sdneighbors);
 
-   sdneighborUpdate(scip, g, sddata->sdneighbors, sddata, nupdates);
+   sdneighborUpdate(scip, g, sddata, nupdates);
 
    return SCIP_OKAY;
 }
