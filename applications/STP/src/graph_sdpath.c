@@ -1465,6 +1465,109 @@ SCIP_RETCODE graph_sdStarBiased(
 }
 
 
+/** limited Dijkstra with node bias that stops at terminals */
+SCIP_RETCODE graph_sdCloseNodesBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,           /**< SD profit or NULL */
+   int                   sourcenode,         /**< node to start from */
+   DIJK*                 dijkdata            /**< Dijkstra data */
+   )
+{
+   int nchecks;
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Real* RESTRICT dist = dijkdata->node_distance;
+   int* RESTRICT visitlist = dijkdata->visitlist;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
+   int* RESTRICT node_predNode;
+   DHEAP* dheap = dijkdata->dheap;
+   int* const state = dheap->position;
+   DCSR* const dcsr = g->dcsr_storage;
+   const RANGE* const RESTRICT range_csr = dcsr->range;
+   const int* const RESTRICT head_csr = dcsr->head;
+   const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   int nvisits = 0;
+   const int edgelimit = dijkdata->edgelimit;
+
+   assert(dcsr && dist && visitlist && visited && dheap);
+   assert(!g->extended);
+   assert(dheap->size == 0);
+   assert(edgelimit >= 1);
+
+   nvisits = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &node_predNode, nnodes) );
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+   {
+      assert(EQ(dist[k], FARAWAY));
+      assert(state[k] == UNKNOWN);
+   }
+#endif
+
+   dist[sourcenode] = 0.0;
+   visitlist[(nvisits)++] = sourcenode;
+   graph_heap_correct(sourcenode, 0.0, dheap);
+   node_predNode[sourcenode] = -1;
+
+   nchecks = 0;
+
+   while( dheap->size > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labeled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+      const int k_pred = node_predNode[k];
+
+      assert(state[k] == CONNECT);
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( state[m] != CONNECT )
+         {
+            SCIP_Real distnew = dist[k] + cost_csr[e];
+            if( sdprofit && m != k_pred && k != sourcenode )
+            {
+               SCIP_Real profitBias = reduce_sdprofitGetProfit(sdprofit, k, m, k_pred);
+               profitBias = MIN(profitBias, cost_csr[e]);
+               profitBias = MIN(profitBias, dist[k]);
+               distnew -= profitBias;
+            }
+
+            if( LT(distnew, dist[m]) )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               node_predNode[m] = k;
+               dist[m] = distnew;
+
+               if( !Is_term(g->term[m]) )
+               {
+                  graph_heap_correct(m, distnew, dheap);
+               }
+            }
+
+         }
+         nchecks++;
+      }
+   }
+
+  dijkdata->nvisits = nvisits;
+  SCIPfreeBufferArray(scip, &node_predNode);
+
+  return SCIP_OKAY;
+}
+
+
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
 SCIP_Bool graph_sdWalks(
    SCIP*                 scip,               /**< SCIP data structure */

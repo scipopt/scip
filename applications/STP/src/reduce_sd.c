@@ -967,6 +967,84 @@ SCIP_Real sdGetSd(
 }
 
 
+
+/** gets special distance to a pair of nodes */
+static
+SCIP_Real sdGetSdNeighbor(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   i,                  /**< first vertex */
+   int                   i2,                 /**< second vertex */
+   SCIP_Real             sd_upper,           /**< upper bound on special distance that is accepted (can be FARAWAY) */
+   SCIP_Real             sd_sufficient,      /**< bound below which to terminate (can be 0.0) */
+   SD*                   sddata              /**< SD */
+   )
+{
+   SCIP_Real termdist1[4];
+   SCIP_Real termdist2[4];
+   int neighbterms1[4];
+   int neighbterms2[4];
+   SDGRAPH* sdgraph;
+   SDN* sdneighbors;
+   SCIP_Real sd = sd_upper;
+   int nnterms1;
+   int nnterms2;
+   const SCIP_Bool terminateEarly = GT(sd_sufficient, 0.0);
+
+   assert(g && sddata);
+   assert(i != i2);
+
+   sdgraph = sddata->sdgraph;
+   sdneighbors = sddata->sdneighbors;
+   assert(sdgraph && sdneighbors);
+
+   /* get closest terminals of distance strictly smaller than 'sd' */
+   reduce_sdneighborGetCloseTerms(g, sdneighbors, i, sd, neighbterms1, termdist1, &nnterms1);
+   if( nnterms1 == 0 )
+      return sd;
+
+   reduce_sdneighborGetCloseTerms(g, sdneighbors, i2, sd, neighbterms2, termdist2, &nnterms2);
+   if( nnterms2 == 0 )
+      return sd;
+
+   assert(nnterms1 <= 4 && nnterms2 <= 4);
+
+   for( int j = 0; j < nnterms1; j++ )
+   {
+      const int tj = neighbterms1[j];
+      assert(tj >= 0);
+
+      for( int k = 0; k < nnterms2; k++ )
+      {
+         SCIP_Real sd_jk = MAX(termdist1[j], termdist2[k]);
+         const int tk = neighbterms2[k];
+
+         assert(Is_term(g->term[tk]));
+         assert(Is_term(g->term[tj]));
+         assert(tk >= 0);
+
+         if( tj != tk)
+         {
+            /* get terminal-to-terminal special distance */
+            const SCIP_Real sdt_jk = reduce_sdgraphGetSd(tj, tk, sdgraph);
+
+            if( sdt_jk > sd_jk )
+               sd_jk = sdt_jk;
+         }
+
+         if( sd_jk < sd )
+            sd = sd_jk;
+
+         if( terminateEarly && LT(sd, sd_sufficient) )
+         {
+            return sd;
+         }
+      } /* k < nnterms2 */
+   } /* j < nnterms1 */
+
+   return sd;
+}
+
+
 /** is node of degree 3 pseudo-deletable? */
 static inline
 SCIP_Bool isPseudoDeletableDeg3(
@@ -1361,37 +1439,17 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
 }
 
 
-/** initializes biased neighbor SD structure */
-SCIP_RETCODE reduce_sdInitBiasedNeighbor(
+/** adds biased neighbor SD structure */
+SCIP_RETCODE reduce_sdAddNeighborSd(
    SCIP*                 scip,               /**< SCIP */
-   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
-                                                  terrible design */
-   SD**                  sd                  /**< to initialize */
+   const GRAPH*          g,                  /**< graph */
+   SD*                   sd                  /**< to add to */
 )
 {
-   SD* s;
-   assert(scip);
+   assert(scip && g && sd);
+   assert(!sd->sdneighbors);
 
-   SCIP_CALL( SCIPallocMemory(scip, sd) );
-   s = *sd;
-
-#if 1
-   s->isBiased = TRUE;
-   s->blctree = NULL;
-   SCIP_CALL( reduce_sdprofitInit(scip, g, &(s->sdprofit)) );
-   SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
-   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
-   reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
-#else
-   s->isBiased = FALSE;
-     s->sdprofit = NULL;
-     s->blctree = NULL;
-     SCIP_CALL( graph_tpathsInit(scip, g, &(s->terminalpaths)) );
-     SCIP_CALL( reduce_sdgraphInit(scip, g, &(s->sdgraph)) );
-     reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
-#endif
-
-   reduce_sdneighborUpdate(scip, g, s);
+   SCIP_CALL( reduce_sdneighborInit(scip, g, &(sd->sdneighbors)) );
 
    return SCIP_OKAY;
 }
@@ -1991,6 +2049,82 @@ SCIP_RETCODE reduce_sdBiased(
          {
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
+            graph_edge_printInfo(g, e);
+#endif
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+
+            break;
+         }
+      }
+   }
+
+   assert(graph_valid(scip, g));
+
+   return SCIP_OKAY;
+}
+
+
+/** implied-profit neighbor special distance test
+ *  NOTE: invalidates SD for other methods! todo add a flag and check it */
+SCIP_RETCODE reduce_sdBiasedNeighbor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SD*                   sdistance,          /**< special distances storage */
+   GRAPH*                g,                  /**< graph structure */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+ //  const SDPROFIT* sdprofit = sdistance->sdprofit;
+   const int nnodes = graph_get_nNodes(g);
+   SDN* sdneighbors = sdistance->sdneighbors;
+   const SCIP_Bool* nodes_isBlocked = reduce_sdneighborGetBlocked(sdneighbors);
+   const SCIP_Real maxmstcost = reduce_sdgraphGetMaxCost(sdistance->sdgraph);
+
+   assert(scip && nelims);
+   assert(sdneighbors);
+   assert(*nelims >= 0);
+   assert(nodes_isBlocked);
+   graph_mark(g);
+
+   SCIP_CALL( reduce_sdUpdateWithSdNeighbors(scip, g, sdistance) );
+
+   SCIPdebugMessage("Starting SD neighbor biased... \n");
+
+   /* traverse all edges */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+
+      if( !g->mark[i] || nodes_isBlocked[i] )
+         continue;
+
+      enext = g->outbeg[i];
+      while( enext != EAT_LAST )
+      {
+         SCIP_Bool deleteEdge;
+         SCIP_Real sd;
+         const int e = enext;
+         const int i2 = g->head[e];
+         const SCIP_Real ecost = g->cost[e];
+         enext = g->oeat[e];
+
+         if( i2 < i || !g->mark[i2] || nodes_isBlocked[i2] )
+            continue;
+
+         sd = sdGetSd(g, i, i2, maxmstcost, ecost, sdistance);
+
+         deleteEdge = SCIPisLT(scip, sd, ecost);
+
+         if( !deleteEdge )
+         {
+            sd = sdGetSdNeighbor(g, i, i2, maxmstcost, ecost, sdistance);
+            deleteEdge = SCIPisLT(scip, sd, ecost);
+         }
+
+         if( deleteEdge )
+         {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("SD biased neighbor deletes (sd=%f):  ", sd);
             graph_edge_printInfo(g, e);
 #endif
             graph_edge_del(scip, g, e, TRUE);

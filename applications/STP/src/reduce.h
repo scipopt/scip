@@ -237,6 +237,7 @@ extern SCIP_RETCODE    reduce_sdWalkExt2(SCIP*, int, const int*, GRAPH*, int*,  
 extern SCIP_RETCODE    reduce_sdspSap(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_sd(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);
 extern SCIP_RETCODE    reduce_sdBiased(SCIP*, SD*, GRAPH*, int*);
+extern SCIP_RETCODE    reduce_sdBiasedNeighbor(SCIP*, SD*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdPc(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_getSd(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int*, int, int, int);
@@ -336,9 +337,11 @@ extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 /* reduce_sdutil.c
  */
 extern SCIP_RETCODE    reduce_sdneighborInit(SCIP*, const GRAPH*, SDN**);
+
+extern void            reduce_sdneighborGetCloseTerms(const GRAPH*, const SDN*, int, SCIP_Real, int* RESTRICT, SCIP_Real* RESTRICT, int* RESTRICT);
 extern void            reduce_sdneighborFree(SCIP*, SDN**);
-extern SCIP_RETCODE    reduce_sdneighborUpdate(SCIP*, const GRAPH*, SD*);
-extern const SCIP_Bool*    reduce_sdneighborGetBlocked(const SD*);
+extern const SCIP_Bool*    reduce_sdneighborGetBlocked(const SDN*);
+extern SCIP_RETCODE    reduce_sdUpdateWithSdNeighbors(SCIP*, GRAPH*, SD*);
 extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
 extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern SCIP_RETCODE    reduce_sdprofitUpdateFromBLC(SCIP*, const GRAPH*, const BLCTREE*, SCIP_Bool, SDPROFIT*);
@@ -358,7 +361,7 @@ extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiasedBottleneck(SCIP*, GRAPH*, SD**);
-extern SCIP_RETCODE     reduce_sdInitBiasedNeighbor(SCIP*, GRAPH*, SD**);
+extern SCIP_RETCODE     reduce_sdAddNeighborSd(SCIP*, const GRAPH*, SD*);
 extern void             reduce_sdFree(SCIP*, SD**);
 extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, const int*, DIJK*, SD*, GRAPH*);
 
