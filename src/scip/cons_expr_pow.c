@@ -525,6 +525,11 @@ void estimateSignedpower(
       else
       {
          /* overestimator is tangent */
+
+         /* we must linearize left of 0 */
+         if( xref > 0.0 )
+            xref = 0.0;
+
          computeTangent(scip, TRUE, exponent, xref, constant, slope, success);
 
          /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
@@ -651,6 +656,12 @@ void estimateHyperbolaPositive(
       if( xlb >= 0.0 || xub <= 0.0 )
       {
          /* underestimate and fixed sign -> tangent */
+
+         /* make sure xref has the same sign as xlb,xub */
+         if( xref < 0.0 && xlb >= 0.0 )
+            xref = xlb;
+         else if( xref > 0.0 && xub <= 0.0 )
+            xref = xub;
 
          if( SCIPisZero(scip, xref) )
          {
@@ -861,6 +872,10 @@ void estimateHyperbolaMixed(
       {
          /* overestimation -> tangent */
 
+         /* need to linearize left of 0 */
+         if( xref > 0.0 )
+            xref = 0.0;
+
          if( SCIPisZero(scip, xref) )
          {
             /* if xref is very close to 0.0, then slope would be infinite
@@ -944,6 +959,11 @@ void estimateRoot(
    else
    {
       /* overestimate -> tangent */
+
+      /* need to linearize right of 0 */
+      if( xref < 0.0 )
+         xref = xlb;
+
       if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xub) )
       {
          /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
@@ -1589,11 +1609,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    isinteger = EPSISINT(exponent, 0.0);
    iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
-   /* adjust the reference point */
-   refpoint = SCIPisLT(scip, refpoint, childlb) ? childlb : refpoint;
-   refpoint = SCIPisGT(scip, refpoint, childub) ? childub : refpoint;
-   assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
-
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
    {
@@ -1635,6 +1650,11 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
       SCIP_Real glb;
+
+      /* make sure we linearize in convex region (if we will linearize) */
+      if( refpoint < 0.0 )
+         refpoint = 0.0;
+
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
 
       /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
