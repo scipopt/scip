@@ -89,11 +89,34 @@ void getArticulationPoints(
 static
 SCIP_RETCODE cutEdgePrune(
    SCIP*                 scip,               /**< SCIP data structure */
+   int                   start,              /**< the node to start from */
+   int                   end,                /**< note to ignore */
    int                   cutedge,            /**< the edge */
    GRAPH*                g                   /**< graph data structure */
 )
 {
-   graph_edge_del(scip, g, cutedge, TRUE);
+   if( Is_term(g->term[start]) )
+   {
+      int e = g->outbeg[start];
+
+      while( e >= 0 )
+      {
+         const int enext = g->oeat[e];
+         const int head = g->head[e];
+         if( head != end )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+         }
+
+         assert(!Is_term(g->term[head]));
+
+         e = enext;
+      }
+   }
+   else
+   {
+      graph_edge_del(scip, g, cutedge, TRUE);
+   }
 
    SCIP_CALL( reduceLevel0(scip, g) );
 
@@ -962,8 +985,8 @@ SCIP_RETCODE reduce_cutEdgeTryPrune(
    SCIP_CALL( cutEdgeProbe(scip, g, tail, head, nodes_visited, &terminalFound) );
    if( !terminalFound )
    {
-      SCIP_CALL( cutEdgePrune(scip, cutedge, g) );
-      assert(g->grad[tail] == 0);
+      SCIP_CALL( cutEdgePrune(scip, tail, head, cutedge, g) );
+      assert(g->grad[tail] == 0 || Is_term(g->term[tail]));
       *success = TRUE;
    }
 
@@ -973,8 +996,8 @@ SCIP_RETCODE reduce_cutEdgeTryPrune(
       SCIP_CALL( cutEdgeProbe(scip, g, head, tail, nodes_visited, &terminalFound) );
       if( !terminalFound )
       {
-         SCIP_CALL( cutEdgePrune(scip, cutedge, g) );
-         assert(g->grad[head] == 0);
+         SCIP_CALL( cutEdgePrune(scip, head, tail, cutedge, g) );
+         assert(g->grad[head] == 0 || Is_term(g->term[head]));
          *success = TRUE;
       }
    }

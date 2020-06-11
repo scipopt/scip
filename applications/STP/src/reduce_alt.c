@@ -554,6 +554,9 @@ SCIP_RETCODE nsvExec(
       }
    }
 
+   assert(graph_valid(scip, g));
+
+
    return SCIP_OKAY;
 }
 

@@ -30,6 +30,7 @@
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                             */
 //#define SCIP_DEBUG
+
 #include "scip/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
