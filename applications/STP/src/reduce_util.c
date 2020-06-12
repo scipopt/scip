@@ -66,7 +66,8 @@ struct node_one_hop_star
 /** bottleneck link-cut tree node */
 typedef struct bottleneck_link_cut_node
 {
-   SCIP_Real             nodedist;           /**< distance to the node */
+   SCIP_Real             dist_edgetail;      /**< distance for edge tail */
+   SCIP_Real             dist_edgehead;      /**< distance for edge tail */
    SCIP_Real             edgecost;           /**< edge cost */
    SCIP_Real             edgebottleneck;     /**< restricted bottleneck of edge */
    int                   head;               /**< head of node in tree */
@@ -178,7 +179,8 @@ void blctreeResetNode(
    BLCNODE* RESTRICT tree = blctree->mst;
    assert(0 <= i && i < blctree->nnodes_curr);
 
-   tree[i].nodedist = 0.0;
+   tree[i].dist_edgetail = 0.0;
+   tree[i].dist_edgehead = 0.0;
    tree[i].edgebottleneck = FARAWAY;
    tree[i].edgecost = -FARAWAY;
    tree[i].edge = UNKNOWN;
@@ -208,7 +210,8 @@ void blctreeEvert(
    blcnode_org = tree[newroot];
    while( node != oldroot )
    {
-      const SCIP_Real nodedist = blcnode_org.nodedist;
+      const SCIP_Real dist_tail = blcnode_org.dist_edgetail;
+      const SCIP_Real dist_head = blcnode_org.dist_edgehead;
       const SCIP_Real edgecost = blcnode_org.edgecost;
       const SCIP_Real edgebottleneck = blcnode_org.edgebottleneck;
       const int head = blcnode_org.head;
@@ -220,7 +223,9 @@ void blctreeEvert(
 
       blcnode_org = tree[head];
 
-      tree[head].nodedist = nodedist;
+      /* swap! */
+      tree[head].dist_edgetail = dist_head;
+      tree[head].dist_edgehead = dist_tail;
       tree[head].edgecost = edgecost;
       tree[head].edgebottleneck = edgebottleneck;
       tree[head].head = node;
@@ -233,17 +238,15 @@ void blctreeEvert(
    blctree->root = newroot;
 }
 
-
-/** updates path to root */
+/** gets cost of path */
 static inline
-void blctreeUpdateRootPath(
+SCIP_Real blctreeGetRootPathCost(
    int                   startnode,          /**< node to start from */
-   SCIP_Real             bottleneck,         /**< bottleneck */
-   BLCTREE*              blctree             /**< tree */
+   const BLCTREE*        blctree             /**< tree */
 )
 {
-   BLCNODE* RESTRICT tree = blctree->mst;
-   SCIP_Real nodedist = 0.0;
+   const BLCNODE* const tree = blctree->mst;
+   SCIP_Real pathcost = 0.0;
    int node = startnode;
    const int root = blctree->root;
 
@@ -254,6 +257,37 @@ void blctreeUpdateRootPath(
       const int head = tree[node].head;
       assert(head != UNKNOWN);
 
+      pathcost += tree[node].edgecost;
+
+      node = head;
+   }
+
+   return pathcost;
+}
+
+
+/** updates path to root */
+static inline
+void blctreeUpdateRootPath(
+   int                   startnode,          /**< node to start from */
+   SCIP_Real             bottleneck,         /**< bottleneck */
+   BLCTREE*              blctree             /**< tree */
+)
+{
+   BLCNODE* RESTRICT tree = blctree->mst;
+   SCIP_Real nodedist_tail = 0.0;
+   const SCIP_Real pathcost = blctreeGetRootPathCost(startnode, blctree);
+   int node = startnode;
+   const int root = blctree->root;
+
+   assert(0 <= startnode && startnode < blctree->nnodes_org);
+
+   while( node != root )
+   {
+      SCIP_Real nodedist_head;
+      const int head = tree[node].head;
+      assert(head != UNKNOWN);
+
       /* take the MIN */
       if( tree[node].edgebottleneck > bottleneck )
       {
@@ -261,12 +295,22 @@ void blctreeUpdateRootPath(
       }
 
       /* take the MAX */
-      if( tree[node].nodedist < nodedist )
+      if( tree[node].dist_edgetail < nodedist_tail )
       {
-         tree[node].nodedist = nodedist;
+         tree[node].dist_edgetail = nodedist_tail;
       }
 
-      nodedist += tree[node].edgecost;
+      nodedist_tail += tree[node].edgecost;
+
+      nodedist_head = pathcost - nodedist_tail;
+      assert(GE(nodedist_head, 0.0));
+
+      /* take the MAX */
+      if( tree[node].dist_edgehead < nodedist_head )
+      {
+         tree[node].dist_edgehead = nodedist_head;
+      }
+
       node = head;
    }
 }
@@ -408,7 +452,8 @@ SCIP_RETCODE blctreeBuildMst(
          tree[k_curr].edge = revedge;
          tree[k_curr].edgecost = graph->cost[revedge];
          tree[k_curr].head = head_curr;
-         tree[k_curr].nodedist = 0.0;
+         tree[k_curr].dist_edgetail = 0.0;
+         tree[k_curr].dist_edgehead = 0.0;
          tree[k_curr].edgebottleneck = FARAWAY;
 
          assert(k_org != graph->source);
@@ -992,6 +1037,49 @@ void reduce_blctreeGetMstEdges(
       if( edge >= 0 )
       {
          edgelist[nodecount++] = edge;
+      }
+      else
+      {
+         assert(i == blctree->root);
+         assert(edge == UNKNOWN);
+      }
+   }
+
+   assert(nodecount == nnodes_curr - 1);
+}
+
+
+/** gets BLC MST edges (maximum) distances from tail to cut */
+void reduce_blctreeGetMstEdgesToCutDist(
+   const GRAPH*          graph,              /**< graph */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   SCIP_Real* RESTRICT   tails2CutDist,      /**< of size nodes - 1 */
+   SCIP_Real* RESTRICT   heads2CutDist       /**< of size nodes - 1 */
+)
+{
+   const BLCNODE* mst;
+   int nodecount;
+   const int nnodes_curr = blctree->nnodes_curr;
+
+   assert(tails2CutDist && heads2CutDist);
+   assert(graph_get_nNodes(graph) == blctree->nnodes_org);
+
+   mst = blctree->mst;
+   nodecount = 0;
+
+   for( int i = 0; i < nnodes_curr; ++i )
+   {
+      const int edge = mst[i].edge;
+
+      if( edge >= 0 )
+      {
+         const SCIP_Real taildist = mst[i].dist_edgetail;
+         const SCIP_Real headdist = mst[i].dist_edgehead;
+         assert(GE(taildist, 0.0));
+         assert(GE(headdist, 0.0));
+
+         tails2CutDist[nodecount] = taildist;
+         heads2CutDist[nodecount++] = taildist;
       }
       else
       {

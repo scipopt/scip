@@ -60,6 +60,8 @@ typedef struct nearest_special_distance_test_data
 {
    const SD*             sdistance;         /**< NON-OWNED! */
    SCIP_Real* RESTRICT   candidates_bottleneck;
+   SCIP_Real* RESTRICT   candidates_taildist;
+   SCIP_Real* RESTRICT   candidates_headdist;
    int* RESTRICT         candidates_edge;
    int* RESTRICT         candidates_tail;
    int* RESTRICT         candidates_head;
@@ -267,6 +269,8 @@ SCIP_RETCODE nsvInitData(
 {
    const BLCTREE* const blctree = sdistance->blctree;
    SCIP_Real* RESTRICT candidates_bottleneck;
+   SCIP_Real* RESTRICT candidates_taildist;
+   SCIP_Real* RESTRICT candidates_headdist;
    int* RESTRICT candidates_edge;
    int* RESTRICT candidates_tail;
    int* RESTRICT candidates_head;
@@ -282,12 +286,15 @@ SCIP_RETCODE nsvInitData(
    assert(ncandidates > 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_bottleneck, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_taildist, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_headdist, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_edge, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_tail, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_head, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isBlocked, nnodes) );
 
    reduce_blctreeGetMstEdges(g, blctree, candidates_edge);
+   reduce_blctreeGetMstEdgesToCutDist(g, blctree, candidates_taildist, candidates_headdist);
    reduce_blctreeGetMstBottlenecks(g, blctree, candidates_bottleneck);
 
    for( int i = 0; i < ncandidates; i++  )
@@ -302,6 +309,8 @@ SCIP_RETCODE nsvInitData(
 
    nsv->sdistance = sdistance;
    nsv->candidates_bottleneck = candidates_bottleneck;
+   nsv->candidates_taildist = candidates_taildist;
+   nsv->candidates_headdist = candidates_headdist;
    nsv->candidates_edge = candidates_edge;
    nsv->candidates_tail = candidates_tail;
    nsv->candidates_head = candidates_head;
@@ -326,6 +335,8 @@ void nsvFreeData(
    SCIPfreeBufferArray(scip, &(nsv->candidates_head));
    SCIPfreeBufferArray(scip, &(nsv->candidates_tail));
    SCIPfreeBufferArray(scip, &(nsv->candidates_edge));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_headdist));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_taildist));
    SCIPfreeBufferArray(scip, &(nsv->candidates_bottleneck));
 }
 
@@ -366,7 +377,7 @@ void nsvEdgeGetTermDists(
    const GRAPH*          g,                  /**< graph structure */
    const NSV*            nsv,                /**< NSV data */
    int                   edge,               /**< the edge */
-   SCIP_Real             bottleneckdist,     /**< bottleneck distance */
+   int                   candidate_id,       /**< id of candidate */
    SCIP_Real*            dist_tail,          /**< distance from tail */
    SCIP_Real*            dist_head           /**< distance from head */
    )
@@ -374,15 +385,17 @@ void nsvEdgeGetTermDists(
    SCIP_Real termdist[4];
    int firstedges[4];
    int neighbterms[4];
-   int nnterms;
    const SD* sd = nsv->sdistance;
+   int nnterms;
    const int tail = g->tail[edge];
    const int head = g->head[edge];
    int term_tail = -1;
+   const SCIP_Real bottleneckdist = nsv->candidates_bottleneck[candidate_id];
    const SCIP_Real upper_sdbound = bottleneckdist - g->cost[edge];
 
    assert(GT(bottleneckdist, 0.0));
    assert(GE(upper_sdbound, 0.0));
+   assert(nsv->candidates_edge[candidate_id] == edge);
 
    *dist_tail = FARAWAY;
    *dist_head = FARAWAY;
@@ -394,6 +407,8 @@ void nsvEdgeGetTermDists(
    }
    else
    {
+      const SCIP_Real* const cutdists_tail = nsv->candidates_taildist;
+
       graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, tail, upper_sdbound, neighbterms, firstedges,
             termdist, &nnterms);
 
@@ -414,6 +429,9 @@ void nsvEdgeGetTermDists(
             term_tail = term;
          }
       }
+
+      if( cutdists_tail[candidate_id] < *dist_tail )
+         *dist_tail = cutdists_tail[candidate_id];
    }
 
    if( Is_term(g->term[head]) )
@@ -422,6 +440,8 @@ void nsvEdgeGetTermDists(
    }
    else
    {
+      const SCIP_Real* const cutdists_head = nsv->candidates_headdist;
+
       graph_tpathsGet4CloseTermsLE(g, sd->terminalpaths, head, upper_sdbound, neighbterms, firstedges,
             termdist, &nnterms);
 
@@ -439,6 +459,9 @@ void nsvEdgeGetTermDists(
          if( termdist[i] < *dist_head )
             *dist_head = termdist[i];
       }
+
+      if( cutdists_head[candidate_id] < *dist_head )
+         *dist_head = cutdists_head[candidate_id];
    }
 
    assert(GE(*dist_tail, 0.0));
@@ -541,7 +564,7 @@ SCIP_RETCODE nsvExec(
                continue;
             }
 
-            nsvEdgeGetTermDists(g, nsv, edge, candidate_bottlenecks[i], &dist_tail, &dist_head);
+            nsvEdgeGetTermDists(g, nsv, edge, i, &dist_tail, &dist_head);
 
             if( LE(dist_tail + edgecost + dist_head, candidate_bottlenecks[i]) )
             {
