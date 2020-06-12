@@ -1579,7 +1579,7 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 }
 
 
-
+#if 0
 /** tests that node can be deleted */
 static
 SCIP_RETCODE testPcNode3NotPseudoDeletedBySd1(
@@ -1611,7 +1611,7 @@ SCIP_RETCODE testPcNode3NotPseudoDeletedBySd1(
 
    graph->source = 1;
 
-   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 1, 0.9);
    graph_edge_addBi(scip, graph, 0, 2, 1.0);
    graph_edge_addBi(scip, graph, 0, 3, 1.0);
    graph_edge_addBi(scip, graph, 1, 4, 1.0);
@@ -1639,7 +1639,7 @@ SCIP_RETCODE testPcNode3NotPseudoDeletedBySd1(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 
 /** frees, etc. */
@@ -1674,7 +1674,7 @@ SCIP_RETCODE stptest_extreduce(
 
    SCIP_CALL( testPcNodesPseudoDeletedBySd1(scip) );
    SCIP_CALL( testPcNode3PseudoDeletedBySd1(scip) );
-   SCIP_CALL( testPcNode3NotPseudoDeletedBySd1(scip) );
+   //SCIP_CALL( testPcNode3NotPseudoDeletedBySd1(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd1(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd2(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd3(scip) );
