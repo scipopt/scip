@@ -1642,7 +1642,7 @@ SCIP_RETCODE reversePropQueue(
       }
 
       /* if allexprs is set, then make sure that all children of expr with children are in the queue
-       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability and so we do here (TODO correct, right?; this goes together with TODO above */
+       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability and so we do here (TODO correct, right?; this goes together with TODO above
        */
       if( allexprs )
       {
@@ -7030,6 +7030,10 @@ SCIP_RETCODE enforceExpr(
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
+      /* skip nlhdlr that do not want to participate in any separation */
+      if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+         continue;
+
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
@@ -7080,8 +7084,8 @@ SCIP_RETCODE enforceExpr(
                "%g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name,
                auxviol, origviol, underestimate, overestimate, allowweakcuts); )
 
-      /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
-      if( overestimate && auxoverestimate )  /*lint !e777*/
+      /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side and nlhdlr wants to be called for separation on this side, then call separation of nlhdlr */
+      if( overestimate && auxoverestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
@@ -7126,8 +7130,8 @@ SCIP_RETCODE enforceExpr(
          }
       }
 
-      /* if we want underestimation and violation w.r.t. auxiliary variables is also present on this side, then call separation of nlhdlr */
-      if( underestimate && auxunderestimate )  /*lint !e777*/
+      /* if we want underestimation and violation w.r.t. auxiliary variables is also present on this side and nlhdlr wants to be called for separation on this side, then call separation of nlhdlr */
+      if( underestimate && auxunderestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
