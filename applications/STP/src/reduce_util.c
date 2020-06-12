@@ -238,6 +238,7 @@ void blctreeEvert(
    blctree->root = newroot;
 }
 
+
 /** gets cost of path */
 static inline
 SCIP_Real blctreeGetRootPathCost(
@@ -257,8 +258,9 @@ SCIP_Real blctreeGetRootPathCost(
       const int head = tree[node].head;
       assert(head != UNKNOWN);
 
-      pathcost += tree[node].edgecost;
+      SCIPdebugMessage("%d  ", node);
 
+      pathcost += tree[node].edgecost;
       node = head;
    }
 
@@ -279,6 +281,8 @@ void blctreeUpdateRootPath(
    const SCIP_Real pathcost = blctreeGetRootPathCost(startnode, blctree);
    int node = startnode;
    const int root = blctree->root;
+
+   SCIPdebugMessage(" ....  blctreeUpdateRootPath %d->%d  pathcost=%f \n", startnode, root, pathcost);
 
    assert(0 <= startnode && startnode < blctree->nnodes_org);
 
@@ -310,6 +314,10 @@ void blctreeUpdateRootPath(
       {
          tree[node].dist_edgehead = nodedist_head;
       }
+
+      SCIPdebugMessage("node=%d dist_tail=%f  dist_head=%f edge %d->%d: \n", node, tree[node].dist_edgetail,
+            tree[node].dist_edgehead, node, head);
+
 
       node = head;
    }
@@ -360,6 +368,8 @@ void blctreeComputeBottlenecks(
                continue;
 
             assert(mst[head].edge != e || mst[head].edge != flipedge(e));
+
+            SCIPdebugMessage("---CEHCK EDGE: %d->%d  root=%d \n", node_org, head_org, node);
 
             blctreeUpdateRootPath(head, graph->cost[e], blctree);
          }
@@ -1078,8 +1088,13 @@ void reduce_blctreeGetMstEdgesToCutDist(
          assert(GE(taildist, 0.0));
          assert(GE(headdist, 0.0));
 
+#ifdef SCIP_DEBUG
+         graph_edge_printInfo(graph, edge);
+         printf("taildist=%f headdist=%f \n", taildist, headdist);
+#endif
+
          tails2CutDist[nodecount] = taildist;
-         heads2CutDist[nodecount++] = taildist;
+         heads2CutDist[nodecount++] = headdist;
       }
       else
       {
