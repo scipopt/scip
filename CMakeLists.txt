@@ -470,7 +470,7 @@ else()
     endif()
 endif()
 
-find_package(Criterion)
+find_package(CRITERION)
 
 # export compilation settings to header file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${CMAKE_BINARY_DIR}/scip/config.h @ONLY)
