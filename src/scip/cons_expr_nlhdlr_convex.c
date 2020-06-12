@@ -108,6 +108,7 @@ typedef struct
    EXPRSTACK*            stack,              /**< stack where to add generated leafs */ \
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */ \
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< data of nlhdlr */ \
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */ \
    SCIP_Bool*            success             /**< whether we found something */ \
    )
 
@@ -365,7 +366,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    /* get curvature of quadratic
     * TODO as we know what curvature we want, we could first do some simple checks like computing xQx for a random x
     */
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv, assumevarfixed) );
 
    /* if not having desired curvature, return */
    if( presentcurv != wantedcurv )
@@ -879,6 +880,7 @@ SCIP_RETCODE constructExpr(
    int*                  nleafs,             /**< number of leafs in constructed expression */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to achieve */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved w.r.t. the original variables (might be NULL) */
    )
 {
@@ -940,7 +942,7 @@ SCIP_RETCODE constructExpr(
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
          {
-            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, isrootexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
+            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, isrootexpr, &stack, nlexpr2origexpr, nlhdlrdata, assumevarfixed, &success) );
             if( success )
                break;
          }
@@ -1669,7 +1671,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1689,7 +1691,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1928,7 +1930,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -1955,7 +1957,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2239,27 +2241,28 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
    return SCIP_OKAY;
 }
 
-/** computes the curvature information w.r.t. the original variables for a given expression; this method uses the
- * methods that are used in the detection algorithm of the convex and concave nonlinear handler
+/** checks whether a given expression is convex or concave w.r.t. the original variables
+ *
+ * This function uses the methods that are used in the detection algorithm of the convex nonlinear handler.
  */
-SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
+SCIP_RETCODE SCIPhasConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_EXPRCURV*        curv                /**< pointer to store the curvature */
+   SCIP_EXPRCURV         curv,               /**< curvature to check for */
+   SCIP_Bool*            success,            /**< buffer to store whether expression has curvature curv (w.r.t. original variables) */
+   SCIP_HASHMAP*         assumevarfixed      /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    )
 {
    SCIP_CONSEXPR_NLHDLRDATA nlhdlrdata;
    SCIP_CONSEXPR_EXPR* rootnlexpr;
    SCIP_HASHMAP* nlexpr2origexpr;
    int nleafs;
-   int i;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
-   assert(curv != NULL);
-
-   *curv = SCIP_EXPRCURV_UNKNOWN;
+   assert(curv != SCIP_EXPRCURV_UNKNOWN);
+   assert(success != NULL);
 
    /* create temporary hashmap */
    SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
@@ -2274,30 +2277,12 @@ SCIP_RETCODE SCIPgetConsExprExprOrigCurvature(
    nlhdlrdata.cvxprodcomp = TRUE;
    nlhdlrdata.handletrivial = TRUE;
 
-   /* call constructExpr() for the convex and concave case */
-   for( i = 0; i < 2; ++i )
+   SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, success) );
+
+   /* free created expression */
+   if( rootnlexpr != NULL )
    {
-      SCIP_EXPRCURV targetcurv = (i == 0) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
-      SCIP_Bool success;
-
-      SCIP_CALL( constructExpr(scip, conshdlr, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr,
-         targetcurv, &success) );
-
-      /* free created expression */
-      if( rootnlexpr != NULL )
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootnlexpr) );
-      }
-
-      /* curvature detection was successful -> leave loop */
-      if( success )
-      {
-         *curv = targetcurv;
-         break;
-      }
-
-      /* clear hashmap */
-      SCIP_CALL( SCIPhashmapRemoveAll(nlexpr2origexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootnlexpr) );
    }
 
    /* free hashmap */

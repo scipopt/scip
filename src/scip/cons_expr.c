@@ -5463,7 +5463,7 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
-   /* @todo pass correct curvature */
+   /* better curvature info will be set in INITSOL just before nlrow is added to NLP */
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
          0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
 
@@ -10159,12 +10159,28 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
          /* call curvature detection of expression handlers; TODO do we really need this? */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
 
-         /* call the curvature detection algorithm of the convex and concave nonlinear handler if the curvature
+         /* call the curvature detection algorithm of the convex nonlinear handler if the curvature
           * detection of the expression handlers could not detect anything
           */
          if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
          {
-            SCIP_CALL( SCIPgetConsExprExprOrigCurvature(scip, conshdlr, consdata->expr, &consdata->curv) );
+            /* Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            SCIP_Bool success = FALSE;
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
          }
          else
          {
@@ -15978,6 +15994,79 @@ SCIP_Real SCIPgetRhsConsExpr(
    return consdata->rhs;
 }
 
+/** adds coef * var to expression constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPaddLinearTermConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* varexpr;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearTermConsExpr can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   /* we should not have collected additional data for it
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexpr, var) );
+
+   /* append to sum, if consdata->expr is sum and not used anywhere else */
+   if( SCIPgetConsExprExprNUses(consdata->expr) == 1 && SCIPgetConsExprExprHdlr(consdata->expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, consdata->expr, varexpr, coef) );
+   }
+   else
+   {
+      /* create new expression = 1 * consdata->expr + coef * var */
+      SCIP_CONSEXPR_EXPR* children[2] = { consdata->expr, varexpr };
+      SCIP_Real coefs[2] = { 1.0, coef };
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &consdata->expr, 2, children, coefs, 0.0) );
+
+      /* release old root expr */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[0]) );
+   }
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** gets absolute violation of expression constraint
  *
  * This function evaluates the constraints in the given solution.
@@ -17542,7 +17631,8 @@ SCIP_RETCODE SCIPprintConsExprQuadratic(
 SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
+   SCIP_EXPRCURV*          curv,             /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*           assumevarfixed    /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    )
 {
    SCIP_HASHMAP* expr2matrix;
@@ -17559,11 +17649,12 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    if( quaddata->curvaturechecked )
    {
       *curv = quaddata->curvature;
-      return SCIP_OKAY;
+      /* if we are convex or concave on the full set of variables, then we will also be so on a subset */
+      if( assumevarfixed == NULL || quaddata->curvature != SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_OKAY;
    }
-   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN);
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL);
 
-   quaddata->curvaturechecked = TRUE;
    *curv = SCIP_EXPRCURV_UNKNOWN;
 
    n  = quaddata->nquadexprs;
@@ -17602,6 +17693,10 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
       assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
 
+      /* skip expr if it is a variable mentioned in assumevarfixed */
+      if( assumevarfixed != NULL && SCIPisConsExprExprVar(quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(quadexprterm.expr)) )
+         continue;
+
       if( quadexprterm.sqrcoef == 0.0 )
       {
          assert(quadexprterm.nadjbilin > 0);
@@ -17625,8 +17720,14 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
       bilinexprterm = quaddata->bilinexprterms[i];
 
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1));
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2));
+      /* each factor should have been added to expr2matrix unless it corresponds to a variable mentioned in assumevarfixed */
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPisConsExprExprVar(bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr1))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPisConsExprExprVar(bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr2))));
+
+      /* skip bilinear terms where at least one of the factors should be assumed to be fixed (i.e., not present in expr2matrix map) */
+      if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )
+         continue;
+
       row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
       col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
 
@@ -17647,20 +17748,22 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
    /* check convexity */
    if( !SCIPisNegative(scip, alleigval[0]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONVEX;
-   }
+      *curv = SCIP_EXPRCURV_CONVEX;
    else if( !SCIPisPositive(scip, alleigval[n-1]) )
-   {
-      quaddata->curvature = SCIP_EXPRCURV_CONCAVE;
-   }
+      *curv = SCIP_EXPRCURV_CONCAVE;
 
 CLEANUP:
    SCIPhashmapFree(&expr2matrix);
    SCIPfreeBufferArray(scip, &matrix);
    SCIPfreeBufferArray(scip, &alleigval);
 
-   *curv = quaddata->curvature;
+   /* if checked convexity on full Q matrix, then remember it
+    * if indefinite on submatrix, then it will also be indefinite on full matrix, so can remember that, too */
+   if( assumevarfixed == NULL || (*curv == SCIP_EXPRCURV_UNKNOWN) )
+   {
+      quaddata->curvature = *curv;
+      quaddata->curvaturechecked = TRUE;
+   }
 
    return SCIP_OKAY;
 }
