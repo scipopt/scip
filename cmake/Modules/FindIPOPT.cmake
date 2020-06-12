@@ -35,11 +35,22 @@
 # (To distribute this file outside of YCM, substitute the full
 #  License text for the above reference.)
 
-
 if(NOT WIN32)
   # On non Windows systems we use PkgConfig to find IPOPT
   find_package(PkgConfig QUIET)
-  if(PKG_CONFIG_FOUND AND NOT IPOPT_DIR)
+
+  if(NOT IPOPT_DIR)
+    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
+    if(IPOPT_DIR_TEST)
+      set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
+    endif()
+  endif()
+
+  if(IPOPT_DIR)
+    set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig/:$ENV{PKG_CONFIG_PATH}")
+  endif()
+
+  if(PKG_CONFIG_FOUND)
 
     if(IPOPT_FIND_VERSION)
       if(IPOPT_FIND_VERSION_EXACT)
@@ -72,10 +83,8 @@ if(NOT WIN32)
 
   # If pkg-config fails, try to find the package using IPOPT_DIR
   if(NOT _PC_IPOPT_FOUND)
-    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
-    if(IPOPT_DIR_TEST)
-      set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
-    else()
+
+    if(NOT IPOPT_DIR_TEST)
       set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
     endif()
 
@@ -203,7 +212,6 @@ foreach( INCLUDE_DIR ${IPOPT_INCLUDE_DIRS} )
         string(REGEX REPLACE "\"" "" IPOPT_VERSION ${IPOPT_VERSION})
       endif()
     endforeach()
-    #MESSAGE("found Ipopt ${IPOPT_VERSION}")
   endif()
 endforeach()
 
