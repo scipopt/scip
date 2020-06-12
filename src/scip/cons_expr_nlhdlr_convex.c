@@ -1642,25 +1642,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
+   assert(enforcing != NULL);
+   assert(participating != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   *success = FALSE;
+   /* we currently do not participate if only activity computation is required */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+      return SCIP_OKAY;
 
-   /* we currently cannot contribute in presolve */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* ignore pure constants and variables */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
    assert(nlhdlrdata->isnlhdlrconvex);
-
-   /* ignore pure constants and variables */
-   if( SCIPgetConsExprExprNChildren(expr) == 0 )
-      return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "nlhdlr_convex detect for expr %p\n", (void*)expr);
 
@@ -1670,7 +1666,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
     */
    SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
 
-   if( !*enforcedbelow )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONVEX, NULL, NULL) );
@@ -1678,9 +1674,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-         *enforcedbelow = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *success = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
 
          SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
       }
@@ -1690,7 +1684,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       }
    }
 
-   if( !*enforcedabove && nlexpr == NULL )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not convex */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
@@ -1698,16 +1692,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-         *enforcedabove = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *success = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
 
          SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
       }
    }
 
-   assert(*success || nlexpr == NULL);
-   if( !*success )
+   /* everything we participate in we also enforce */
+   *enforcing |= *participating;
+
+   assert(*participating || nlexpr == NULL);
+   if( !*participating )
    {
       SCIPhashmapFree(&nlexpr2origexpr);
       return SCIP_OKAY;
@@ -1861,22 +1856,20 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(rowpreps != NULL);
+   assert(success != NULL);
 
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
    assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
-   assert(rowpreps != NULL);
-   assert(success != NULL);
+
+   /* we must be called only for the side that we indicated to participate in during DETECT */
+   assert(SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert( overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX);
 
    *success = FALSE;
    *addedbranchscores = FALSE;
-
-   /* if estimating on non-convex side, then do nothing */
-   curvature = SCIPgetConsExprExprCurvature(nlexpr);
-   assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
-   if( ( overestimate && curvature == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && curvature == SCIP_EXPRCURV_CONCAVE) )
-      return SCIP_OKAY;
 
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
@@ -2018,25 +2011,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
+   assert(enforcing != NULL);
+   assert(participating != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   *success = FALSE;
+   /* we currently do not participate if only activity computation is required */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+      return SCIP_OKAY;
 
-   /* we currently cannot contribute in presolve */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* ignore pure constants and variables */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
    assert(!nlhdlrdata->isnlhdlrconvex);
-
-   /* ignore pure constants and variables */
-   if( SCIPgetConsExprExprNChildren(expr) == 0 )
-      return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "nlhdlr_concave detect for expr %p\n", (void*)expr);
 
@@ -2046,7 +2035,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
     */
    SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
 
-   if( !*enforcedbelow )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
@@ -2061,9 +2050,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-         *enforcedbelow = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *success = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
 
          SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr <= auxvar\n", (void*)expr);
       }
@@ -2073,7 +2060,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
       }
    }
 
-   if( !*enforcedabove && nlexpr == NULL )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not concave */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONVEX, NULL, NULL) );
@@ -2088,16 +2075,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-         *enforcedabove = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *success = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
 
          SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr >= auxvar\n", (void*)expr);
       }
    }
 
-   assert(*success || nlexpr == NULL);
-   if( !*success )
+   /* everything we participate in we also enforce (at the moment) */
+   *enforcing |= *participating;
+
+   assert(*participating || nlexpr == NULL);
+   if( !*participating )
    {
       SCIPhashmapFree(&nlexpr2origexpr);
       return SCIP_OKAY;
@@ -2202,19 +2190,17 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    assert(rowpreps != NULL);
    assert(success != NULL);
 
-   *success = FALSE;
-   *addedbranchscores = FALSE;
-
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
    assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
 
-   /* if estimating on non-concave side, then do nothing */
-   curvature = SCIPgetConsExprExprCurvature(nlexpr);
-   assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
-   if( ( overestimate && curvature == SCIP_EXPRCURV_CONCAVE) ||
-       (!overestimate && curvature == SCIP_EXPRCURV_CONVEX) )
-      return SCIP_OKAY;
+   /* we must be called only for the side that we indicated to participate in during DETECT */
+   assert(SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX);
+   assert( overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
+
+   *success = FALSE;
+   *addedbranchscores = FALSE;
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
