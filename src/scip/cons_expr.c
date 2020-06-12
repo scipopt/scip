@@ -450,22 +450,30 @@ SCIP_RETCODE freeAuxVar(
    return SCIP_OKAY;
 }
 
-/** frees data used for enforcement, that is, nonlinear handlers and auxiliary variables */
+/** frees data used for enforcement, that is, nonlinear handlers
+ *
+ * can also clear indicators whether expr needs enforcement methods, that is,
+ * free an associated auxiliary variable and reset the activityusage counts
+ */
 static
 SCIP_RETCODE freeEnfoData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, can be NULL */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression whose enforcement data will be released */
-   SCIP_Bool             freeauxvar          /**< whether aux var should be released */
+   SCIP_Bool             freeauxvar          /**< whether aux var should be released and activity usage counts be reset */
    )
 {
    int e;
 
-   /* free auxiliary variable */
    if( freeauxvar )
    {
+      /* free auxiliary variable */
       SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
       assert(expr->auxvar == NULL);
+
+      /* reset count on activity usage */
+      expr->nactivityusesprop = 0;
+      expr->nactivityusessepa = 0;
    }
 
    /* free data stored by nonlinear handlers */
@@ -499,8 +507,6 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
-   expr->nactivityusesprop = 0;
-   expr->nactivityusessepa = 0;
 
    return SCIP_OKAY;
 }
@@ -2323,6 +2329,12 @@ SCIP_RETCODE detectNlhdlrs(
          }
       }
 
+      /* mark that we will need activity for root expression if constraint may be propagated */
+      if( SCIPconsIsPropagationEnabled(cons) )
+      {
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, consdata->expr, TRUE, FALSE) );
+      }
+
       SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
       expr = SCIPexpriteratorGetCurrent(it);
       while( !SCIPexpriteratorIsEnd(it) )
@@ -2345,13 +2357,14 @@ SCIP_RETCODE detectNlhdlrs(
             }
          }
 
-         /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
-          *   an auxvar equals (or approximates) to value of this expression or we are at the root expression (expr==consdata->expr)
-          *   thus, we need to find nlhdlrs
-          * during presolve: we do detect for all expressions for now, expecting the handler to only become
-          *   active if they want to contribute in propagation
+         /* if there is an auxiliary variable here, then there is some-one requiring that
+          *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
+          *   thus, we need to find nlhdlrs that separate or estimate
+          * if there is activity usage, then there is some-one requiring that
+          *   activity of this expression is updated
+          *   thus, we need to find nlhdlrs that do interval-evaluation
           */
-         if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+         if( expr->auxvar != NULL || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
             SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
 
@@ -4551,7 +4564,7 @@ SCIP_RETCODE canonicalizeConstraints(
          assert(expr->auxvar == NULL);  /* should not have been created yet or have been removed in INITPRE (if restart) */
 
          /* remove nonlinear handlers in expression and their data */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
          /* remove quadratic info */
          quadFree(scip, expr);
@@ -10284,7 +10297,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* remove nonlinear handlers in expression and their data and auxiliary variables */
+         /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
          SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
          /* remove quadratic info */
@@ -14367,6 +14380,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
       return SCIP_OKAY;
    }
 
+   /* if we already have ran detect of nlhdlrs on expr, then we need to redo this,
+    * since the addition of an auxvar now means that we will require sepabelow and/or sepaabove
+    */
+   SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
@@ -14954,6 +14972,17 @@ SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
 {
    assert(conshdlr != NULL);
    assert(expr != NULL);
+
+   if( !usedforprop && !usedforsepa )
+      return SCIP_OKAY;
+
+   if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && expr->nenfos > 0 )
+   {
+      /* if we already have ran detect of nlhdlrs on expr, then we need to redo this,
+       * since the addition of activity usage now means that we will require some nlhdlr that computes activity
+       */
+      SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+   }
 
    if( usedforsepa )
       ++(expr->nactivityusessepa);
