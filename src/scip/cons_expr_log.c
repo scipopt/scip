@@ -285,8 +285,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
             return SCIP_OKAY;
          }
 
-         if( SCIPvarGetUbLocal(childvar) < 1.0 )
-            refpoint = 0.9 * SCIPvarGetLbLocal(childvar) + 0.1 * SCIPvarGetUbLocal(childvar);
+         if( SCIPvarGetUbLocal(childvar) < 0.2 )
+            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
          else
             refpoint = 0.1;
       }

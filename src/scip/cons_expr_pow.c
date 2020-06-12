@@ -973,8 +973,8 @@ void estimateRoot(
          }
 
          /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
-         if( xub < 1.0 )
-            xref = 0.9 * xlb + 0.1 * xub;
+         if( xub < 0.2 )
+            xref = 0.5 * xlb + 0.5 * xub;
          else
             xref = 0.1;
       }
