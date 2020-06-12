@@ -2280,11 +2280,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    SCIP_Real conslhs;
    SCIP_Real consrhs;
    SCIP_Bool enforcebelow;
+   SCIP_Bool success;
 
    assert(expr != NULL);
 
-   /* TODO is it worth to detect during presolving and then try to apply some bound strengthening? */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /* don't try if no sepa is required
+   /* TODO implement some bound strengthening
+    */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
       return SCIP_OKAY;
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
@@ -2293,22 +2296,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsExpr(scip, cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsExpr(scip, cons));
 
-   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, success) );
+   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
 
-   if( ! *success )
+   if( !success )
       return SCIP_OKAY;
 
    /* inform what we can do */
-   if( enforcebelow )
-   {
-      *enforcedbelow = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   }
-   else
-   {
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   }
+   *participating = enforcebelow ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   *enforcing |= *participating;
 
    /* if we have 3 or more terms in lhs create variable for disaggregation */
    if( (*nlhdlrexprdata)->nterms > 3 )
