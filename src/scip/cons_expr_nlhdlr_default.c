@@ -54,7 +54,11 @@ SCIP_RETCODE evalExprInAux(
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(childvar != NULL); /* because we created auxvars in detect for every child */
+      /* there should be an auxiliary variable, because we created them in detect for every child if we said that we will separate
+       * at the moment, EVALAUX should only be called for nlhdlr for which we said that we will separate
+       * if that changes, then we should handle this here, e.g., via *val = SCIPgetConsExprExprValue(expr); break;
+       */
+      assert(childvar != NULL);
 
       childvals[c] = SCIPgetSolVal(scip, sol, childvar);
    }
@@ -69,151 +73,86 @@ SCIP_RETCODE evalExprInAux(
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRENFO_METHOD mymethods;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_Bool estimateusesactivity = FALSE;
    int c;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
+   assert(enforcing != NULL);
+   assert(participating != NULL);
    assert(nlhdlrexprdata != NULL);
-
-   *success = FALSE;
-
-   /* we currently do not get active in presolve, the core will call the exprhdlr directly */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
-   mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);
 
-   /* return interval evaluation possibility if exprhdlr for expr has a inteval callback and no one already provides (a good) inteval */
-   if( SCIPhasConsExprExprHdlrIntEval(exprhdlr) && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) == 0 )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
    {
-      mymethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
-      *success = TRUE;
+      /* having reverseprop but no inteval is something that we don't support at the moment for simplicity */
+      assert(!SCIPhasConsExprExprHdlrReverseProp(exprhdlr) || SCIPhasConsExprExprHdlrIntEval(exprhdlr));
+
+      /* participate in inteval and/or reverseprop if that is not yet provided in enforcing and we have inteval */
+      if( SCIPhasConsExprExprHdlrIntEval(exprhdlr) )
+         *participating = SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
    }
 
-   /* return reverse propagation possibility if exprhdlr for expr has a reverseprop callback and no one already provides (a good) reverseprop */
-   if( SCIPhasConsExprExprHdlrReverseProp(exprhdlr) && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) == 0 )
+   /* participate in sepa if exprhdlr for expr has an estimate callback and sepa below or above is still missing */
+   if( ((*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != SCIP_CONSEXPR_EXPRENFO_SEPABOTH) && SCIPhasConsExprExprHdlrEstimate(exprhdlr) )
    {
-      /* one could claim that reverse propagation is sufficient for enforcement, but separation is probably stronger
-       * so, not setting enforcedbelow/above to TRUE here for now
-       */
-      mymethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
-      *success = TRUE;
+      /* communicate back that the nlhdlr will provide the separation on the currently missing sides */
+      if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+
+      if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
 
-   /* notify children if that we will need their activity for domain propagation */
-   if( (mymethods & (SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP)) != 0 )
-      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-      {
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr,
-            SCIPgetConsExprExprChildren(expr)[c], TRUE, FALSE) );
-      }
+   if( !*participating )
+      return SCIP_OKAY;
 
+   /* since this is the default handler, we enforce where we participate */
+   *enforcing |= *participating;
 
-   /* return sepa possibility if exprhdlr for expr has an estimate callback and enforcement is not ensured already */
-   if( SCIPhasConsExprExprHdlrEstimate(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
+   /* increment activity usage counter and create auxiliary variables if necessary
+    * if separating, first guess whether we will use activities in estimate
+    * we assume that the exprhdlr will use activity on all children iff we are estimating on a nonconvex side
+    * TODO it would be better to request this information directly from the exprhdlr than inferring it from curvature, but with the currently available exprhdlr that wouldn't make a difference
+    */
+   if( (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 )
    {
-      /* make sure that an (auxiliary) variable exists for every child */
-      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      SCIP_EXPRCURV* childcurv;
+      SCIP_EXPRCURV requiredcurv;
+
+      /* allocate memory to store the required curvature of the children (though we don't use it) */
+      SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
+
+      /* check whether the expression is convex, if sepabelow, and whether the expression is concave, if sepaabove */
+      requiredcurv  = ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN);
+      requiredcurv |= ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN);
+      assert(requiredcurv != SCIP_EXPRCURV_UNKNOWN);  /* because we have sepabelow or sepaabove */
+
+      SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, requiredcurv, &estimateusesactivity, childcurv) );
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &childcurv);
+   }
+
+   /* indicate enforcement methods required in children:
+    * - if separating, make sure that (auxiliary) variables exist
+    * - if separation requires curvature, then increment activityusage count with usedforsepa == TRUE
+    * - if activity computation, then increment activityusage count with usedforprop == TRUE
+    */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      /* todo skip this for value-expressions? would then need update in evalExprInAux, too */
+      if( (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 )
       {
-         /* todo skip this for value-expressions? would then need update in evalExprInAux, too */
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
       }
 
-      /* communicate back what the nlhdlr will do
-       * - it will enforce via estimation/separation on those sides that are not enforced yet
-       * - it needs to be called for this expression (success = TRUE)
-       */
-      if( !*enforcedbelow )
-      {
-         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *enforcedbelow = TRUE;
-         *success = TRUE;
-      }
-
-      if( !*enforcedabove )
-      {
-         mymethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *enforcedabove = TRUE;
-         *success = TRUE;
-      }
-   }
-#if 0 /* TODO branching method needs to distinguish whether we do separation (thus added auxvar) or only propagate (no auxvar) */
-   else if( (!*enforcedbelow || !*enforcedabove) &&
-      (mymethods & SCIP_CONSEXPR_EXPRENFO_INTEVAL) != 0 &&
-      (mymethods & SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) != 0 )
-   {
-      /* return branching score possibility if enforcement is not ensured yet, but we provide propagation,
-       * since propagation and branching should be sufficient for enforcement, too
-       */
-      mymethods |= SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE;
-      *enforcedbelow = TRUE;
-      *enforcedabove = TRUE;
-      *success = TRUE;
-   }
-#endif
-
-   /* it does not makes much sense to advertise a brscore callback if we do not also enforce via separation or propagation */
-
-   if( *success )
-   {
-      SCIP_Bool sepabelow;
-      SCIP_Bool sepaabove;
-
-      /* remember in the nlhdlr exprdata (pointer) which methods we advertised */
-      *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
-      /* augment mymethods in enforcemethods */
-      *enforcemethods |= mymethods;
-
-      /* since this is the default handler, it should always enforce, even if none of the stronger enforcement methods (estimate/separate) are available
-       * this allows to handle value-expressions, for example
-       */
-      *enforcedbelow = TRUE;
-      *enforcedabove = TRUE;
-
-      sepabelow = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0;
-      sepaabove = (mymethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
-
-      /* update ndomainuses counter for the children if under- or overestimators will be computed */
-      if( sepabelow || sepaabove )
-      {
-         SCIP_EXPRCURV* childcurv;
-         SCIP_EXPRCURV requiredcurv;
-         SCIP_Bool hasrequiredcurv;
-
-         /* allocate memory to store the required curvature of the children */
-         SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
-
-         /* check whether the expression is convex, if sepabelow, and whether the expression is concave, if sepaabove */
-         requiredcurv = (sepabelow ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN) | (sepaabove ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN);
-         assert(requiredcurv != SCIP_EXPRCURV_UNKNOWN);  /* because we have sepabelow || sepaabove */
-
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, requiredcurv, &hasrequiredcurv, childcurv) );
-
-         /* we assume that the exprhdlr will use activity on all children iff we are not convex on the right side
-          * TODO it would be better to request the activityuses count directly from the exprhdlr than infering it from curvature, but with the currently available exprhdlr that wouldn't make a difference
-          */
-         if( !hasrequiredcurv )
-         {
-            for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-            {
-               SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr,
-                  SCIPgetConsExprExprChildren(expr)[c], FALSE, TRUE) );
-            }
-         }
-
-         /* free memory */
-         SCIPfreeBufferArray(scip, &childcurv);
-      }
+      SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c],
+         *participating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY, estimateusesactivity) );
    }
 
    return SCIP_OKAY;
@@ -225,16 +164,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-   {
-      /* if we did not say that we separated, then we did not introduce auxvars
-       * in that case, return the expression value, though it is a bit odd that we are still called
-       */
-      *auxvalue = SCIPgetConsExprExprValue(expr);
-
-      return SCIP_OKAY;
-   }
-
    SCIP_CALL( evalExprInAux(scip, expr, auxvalue, sol) );
 
    return SCIP_OKAY;
@@ -245,10 +174,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 { /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-
-   /* if we will not separate, then don't call initsepa */
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-      return SCIP_OKAY;
 
    /* call the separation initialization callback of the expression handler */
    SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
@@ -271,18 +196,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    assert(success != NULL);
 
    *addedbranchscores = FALSE;
-
-   /* if we did not say that we will separate on this side, then stand by it */
-   if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-   if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
@@ -382,10 +295,6 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
 { /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-
-   /* if we have not separated, then don't call exitsepa */
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-      return SCIP_OKAY;
 
    /* call the separation deinitialization callback of the expression handler */
    SCIP_CALL( SCIPexitsepaConsExprExprHdlr(scip, expr) );

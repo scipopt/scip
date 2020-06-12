@@ -5768,6 +5768,8 @@ SCIP_RETCODE initSepa(
             SCIP_Bool overestimate;
             assert(expr->enfos[e] != NULL);
 
+            /* TODO call only intisepa if nlhdlr will also sepa, and only over/underestimate on the sides it advertised */
+
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
 
