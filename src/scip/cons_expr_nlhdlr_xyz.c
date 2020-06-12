@@ -133,7 +133,6 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitXyz)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectXyz)
 { /*lint --e{715}*/
-   *success = FALSE;
 
    return SCIP_OKAY;
 }
