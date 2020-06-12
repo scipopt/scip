@@ -226,22 +226,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata;
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_Bool propagable;
-   SCIP_Bool separate = FALSE;
    SCIP_Bool nlhdlrconvexdoesquadratic;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
+   assert(enforcing != NULL);
+   assert(participating != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   *success = FALSE;
-
-   /* don't check if enforcement is already ensured */
-   if( *enforcedbelow && *enforcedabove )
+   /* don't check if all enforcement methods are already ensured */
+   if( *enforcing & SCIP_CONSEXPR_EXPRENFO_ALL )
       return SCIP_OKAY;
 
    /* if it is not a sum of at least two terms, it is not interesting */
@@ -303,8 +298,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       int nquadexprs;
       int i;
 
-      *success = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+      *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+      *enforcing |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
       SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nquadexprs) );
@@ -321,14 +316,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    /* check if we are going to separate or not */
    nlexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
 
-   /* for now, we do not care about separation if we are not solving */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* for now, we do not care about separation if it is not required */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
    {
       SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate\n", (void*)expr);
       return SCIP_OKAY;
    }
 
-   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* separation should only be required in solving stage */
 
    /* if nlhdlr_convex handles convex quadratic, then we don't (and vice versa)
     * TODO nlhdlr_convex is supposed to take this over permanently, but for now I keep both possibilities
@@ -351,7 +346,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
     */
    if( (nlexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE) && ! propagable ) /*lint !e845*/
    {
-      *success = FALSE;
+      assert(*participating == SCIP_CONSEXPR_EXPRENFO_NONE);
       SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
       return SCIP_OKAY;
    }
@@ -362,10 +357,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
             (void*)expr);
 
       /* we will estimate the expression from below, that is handle expr <= auxvar */
-      *enforcedbelow = TRUE;
-      *success = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-      separate = TRUE;
+      *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+      *enforcing |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    }
    else if( nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
    {
@@ -373,14 +366,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
             (void*)expr);
 
       /* we will estimate the expression from above, that is handle expr >= auxvar */
-      *enforcedabove = TRUE;
-      *success = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-      separate = TRUE;
+      *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+      *enforcing |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
 
    /* we only need auxiliary variables if we are going to separate */
-   if( separate )
+   if( *participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
    {
       SCIP_CONSEXPR_EXPR** linexprs;
       int nquadexprs;
@@ -463,6 +454,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    assert(rowpreps != NULL);
    assert(success != NULL);
 
+   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
+    * propagate them, but it does not separate these; we should not be called to estimate on indefinite quadratics, though
+    */
+   assert(nlhdlrexprdata->curvature != SCIP_EXPRCURV_UNKNOWN);
+   assert(!overestimate || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
+   assert( overestimate || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX);
+
 #ifndef NDEBUG
    /* check that quaddata hasn't changed (or at least the pointer to it) */
    SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
@@ -472,23 +470,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
 
    *success = FALSE;
    *addedbranchscores = FALSE;
-
-   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them, but it does not separate these
-    */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
-   {
-      SCIPdebugMsg(scip, "not estimating due to unknown curvature\n");
-      return SCIP_OKAY;
-   }
-
-   /* if estimating on non-convex side, then do nothing */
-   if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
-   {
-      SCIPdebugMsg(scip, "not estimating on nonconvex side (overestimate=%d, curv=%s)\n", overestimate, SCIPexprcurvGetName(nlhdlrexprdata->curvature));
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
