@@ -429,9 +429,10 @@ void nsvEdgeGetTermDists(
             term_tail = term;
          }
       }
-
+#if 0
       if( cutdists_tail[candidate_id] < *dist_tail )
          *dist_tail = cutdists_tail[candidate_id];
+#endif
    }
 
    if( Is_term(g->term[head]) )
@@ -455,13 +456,14 @@ void nsvEdgeGetTermDists(
 
          if( (firstedges[i] / 2) == (edge / 2) )
             continue;
-
          if( termdist[i] < *dist_head )
             *dist_head = termdist[i];
       }
-
+#if 0
       if( cutdists_head[candidate_id] < *dist_head )
          *dist_head = cutdists_head[candidate_id];
+#endif
+
    }
 
    assert(GE(*dist_tail, 0.0));
@@ -2540,8 +2542,8 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
    SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
 
-   // reduce_sdFree(scip, &sdistance);
-   // SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
+ //  reduce_sdFree(scip, &sdistance);
+ //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
    SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
 
