@@ -665,7 +665,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * If SCIP_CONSEXPR_EXPRENFO_SEPABELOW or SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set, then at least one of the
  * callbacks ENFO and ESTIMATE need to be implemented. Also EVALAUX will be called in this case.
  * If SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP need to be implemented.
- * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata.
+ * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
+ * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
  *
  * If a nonlinear handler decides to participate in SEPABELOW or SEPAABOVE, then it shall
  * create auxiliary variables for those subexpressions where they will be required.

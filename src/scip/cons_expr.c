@@ -2060,19 +2060,17 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
    SCIP_CONS*            cons,               /**< constraint for which expr == consdata->expr, otherwise NULL */
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that participate at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer for participation of nlhdlrs */
    SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool enforcedbelow;
-   SCIP_Bool enforcedabove;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
-   SCIP_Bool nlhdlrenforcedbelow;
-   SCIP_Bool nlhdlrenforcedabove;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethodsnew;
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipating;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    int ntightenings;
    int nsuccess;
@@ -2092,17 +2090,32 @@ SCIP_RETCODE detectNlhdlr(
    assert(expr->nenfos == 0);
    assert(expr->enfos == NULL);
 
-   /* analyze expression with nonlinear handlers
-    * if nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
-    * if nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
+   /* check which enforcement methods are required by setting flags in enforcemethods for those that are NOT required
+    * - if no auxiliary variable, then do not need sepabelow or sepaabove
+    * - if auxiliary variable, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * - if auxiliary variable, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
+    * - if noone uses activity, then do not need activity methods
     */
-   nsuccess = 0;
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
-   enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
+   if( expr->auxvar == NULL )
+      enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+   else
+   {
+      if( SCIPgetConsExprExprNLocksPos(expr) == 0)  /* no need for underestimation */
+         enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+      if( SCIPgetConsExprExprNLocksNeg(expr) == 0)  /* no need for overestimation */
+         enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   }
+   if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
+      enforcemethods |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
-   SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); start with below %d above %d\n",
-      cons != NULL ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
+   nsuccess = 0;
+
+   SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); requiring%s%s%s\n",
+      cons != NULL ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
+      (enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0 ? "" : " sepabelow",
+      (enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0 ? "" : " sepaabove",
+      (enforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0 ? "" : " activity");
 
    for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
@@ -2117,45 +2130,45 @@ SCIP_RETCODE detectNlhdlr(
 
       /* call detect routine of nlhdlr */
       nlhdlrexprdata = NULL;
-      success = FALSE;
-      nlhdlrenforcemethods = enforcemethods;
-      nlhdlrenforcedbelow = enforcedbelow;
-      nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      enforcemethodsnew = enforcemethods;
+      nlhdlrparticipating = SCIP_CONSEXPR_EXPRENFO_NONE;
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
-      /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
-      assert(nlhdlrenforcemethods >= enforcemethods);
-      assert(nlhdlrenforcedbelow >= enforcedbelow);
-      assert(nlhdlrenforcedabove >= enforcedabove);
+      /* detection is only allowed to augment to nlhdlrenforcemethods, so previous enforcemethods must still be set */
+      assert((enforcemethodsnew & enforcemethods) == enforcemethods);
 
-      if( !success )
+      /* because of the previous assert, nlhdlrenforcenew ^ enforcemethods are the methods enforced by this nlhdlr */
+      nlhdlrenforcemethods = enforcemethodsnew ^ enforcemethods;
+
+      /* nlhdlr needs to participate for the methods it is enforcing */
+      assert(nlhdlrparticipating & nlhdlrenforcemethods == nlhdlrenforcemethods);
+
+      if( nlhdlrparticipating == SCIP_CONSEXPR_EXPRENFO_NONE )
       {
-         /* nlhdlrexprdata can only be non-NULL if it provided some functionality */
+         /* nlhdlrexprdata can only be non-NULL if the nlhdlr participates */
          assert(nlhdlrexprdata == NULL);
-         assert(nlhdlrenforcemethods == enforcemethods);
-         assert(nlhdlrenforcedbelow == enforcedbelow);
-         assert(nlhdlrenforcedabove == enforcedabove);
+         /* nlhdlr cannot have added an enforcement method if it doesn't participate (actually redundant due to previous asserts) */
+         assert(nlhdlrenforcemethods == SCIP_CONSEXPR_EXPRENFO_NONE);
 
          continue;
       }
 
-      SCIPdebugMsg(scip, "nlhdlr <%s> detect successful; now enforced below: %d above: %d methods: %d\n",
-         SCIPgetConsExprNlhdlrName(nlhdlr), nlhdlrenforcedbelow, nlhdlrenforcedabove, nlhdlrenforcemethods);
+      SCIPdebugMsg(scip, "nlhdlr <%s> detect successful; sepabelow: %s, sepaabove: %s, activity: %s\n",
+         SCIPgetConsExprNlhdlrName(nlhdlr),
+         ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
 
-      /* if the nlhdlr enforces, then it must have added at least one enforcement method */
-      assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
-
-      /* remember nlhdlr and its data */
+      /* remember nlhdlr and its data TODO remember participating */
       nlhdlrssuccess[nsuccess] = nlhdlr;
       nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
+      nlhdlrparticipation[nsuccess] = nlhdlrparticipating;
       ++nsuccess;
 
       /* update enforcement flags */
-      enforcemethods = nlhdlrenforcemethods;
-      enforcedbelow = nlhdlrenforcedbelow;
-      enforcedabove = nlhdlrenforcedabove;
+      enforcemethods = enforcemethodsnew;
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && (nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0 )
       {
          /* call reverse propagation of nlhdlr
           * This can ensure that just created auxiliary variables take only values that are within the domain of functions that use them,
@@ -2168,14 +2181,12 @@ SCIP_RETCODE detectNlhdlr(
       }
    }
 
-   /* stop if the expression cannot be enforced but we are already in solving stage
+   /* stop if an enforcement method is missing but we are already in solving stage
     * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
     */
-   if( (!enforcedbelow || !enforcedabove) && !*infeasible && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( enforcemethods != SCIP_CONSEXPR_EXPRENFO_ALL && !*infeasible && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      SCIPerrorMessage("no nonlinear handler provided enforcement for %s expression %s auxvar\n",
-         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
-         (!enforcedbelow && !enforcedabove) ? "==" : (!enforcedbelow ? "<=" : ">="));
+      SCIPerrorMessage("no nonlinear handler provided some of the required enforcement methods\n");
       return SCIP_ERROR;
    }
 
@@ -2193,6 +2204,7 @@ SCIP_RETCODE detectNlhdlr(
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
       expr->enfos[e]->nlhdlr = nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = nlhdlrssuccessexprdata[e];
+      expr->enfos[e]->nlhdlrparticipation = nlhdlrparticipation[e];
       expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
@@ -2212,6 +2224,7 @@ SCIP_RETCODE detectNlhdlrs(
 {
    SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess;   /* buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /* buffer for exprdata of nlhdlrs */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation; /* buffer for participation of nlhdlrs */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
@@ -2232,6 +2245,7 @@ SCIP_RETCODE detectNlhdlrs(
    /* allocate some buffer for temporary storage of nlhdlr detect result */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrparticipation, conshdlrdata->nnlhdlrs) );
 
    /* ensure that activies are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
     * for example, this happens if globally valid expression constraints are added during the tree search
@@ -2367,6 +2381,7 @@ SCIP_RETCODE detectNlhdlrs(
    }
 
    SCIPexpriteratorFree(&it);
+   SCIPfreeBufferArray(scip, &nlhdlrparticipation);
    SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrssuccess);
 
@@ -17181,13 +17196,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    assert(nlhdlr != NULL);
    assert(nlhdlr->detect != NULL);
    assert(nlhdlr->detecttime != NULL);
-   assert(success != NULL);
+   assert(participating != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, cons, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, cons, enforcing, participating, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
-   if( *success )
+   if( *participating != SCIP_CONSEXPR_EXPRENFO_NONE )
    {
       ++nlhdlr->ndetections;
       ++nlhdlr->ndetectionslast;
