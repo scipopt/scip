@@ -816,27 +816,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_CONSEXPR_EXPR** children;
    SCIP_Real* coefs;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_Bool success;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
+   assert(participating != NULL);
+   assert(enforcing != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrdata != NULL);
 
-   *success = TRUE;
-
-   /* do not run in presolve, as we only do separation */
-   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
-   {
-      *success = FALSE;
+   /* do not run if we have no auxvar to add a cut for */
+   if( SCIPgetConsExprExprAuxVar(expr) == NULL )
       return SCIP_OKAY;
-   }
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
@@ -846,17 +840,16 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    /* ignore sums */
    if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
 
+   /* ignore unknown curvature or linear (e.g., variables and constants) */
    if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_UNKNOWN || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR )
    {
       SCIPdebugMsg(scip, "curvature of expr %p is %s\n", expr, SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(expr)));
-      *success = FALSE;
       return SCIP_OKAY;
    }
+
+   success = TRUE;
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
@@ -890,14 +883,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    {
       if( SCIPexprcurvMultiply(coefs[c], SCIPgetConsExprExprCurvature(children[c])) != (*nlhdlrexprdata)->curvature )
       {
-         *success = FALSE;
+         success = FALSE;
          break;
       }
       SCIP_CALL( addTerm(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, children[c], coefs[c]) );
    }
 
    if( (*nlhdlrexprdata)->nonoffterms == 0 )
-      *success = FALSE;
+      success = FALSE;
 
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
@@ -905,27 +898,28 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIPfreeBufferArray(scip, &children);
    }
 
-   if( *success )
+   if( success )
    {
       SCIPdebugMsg(scip, "\ndetected an on/off expr");
 
       /* depending on curvature, set enforcemethods */
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
       {
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *enforcedbelow = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
          SCIPdebugMsg(scip, "detected expr to be convex -> can enforce expr <= auxvar\n");
       }
       else if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONCAVE )
       {
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *enforcedabove = TRUE;
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
          SCIPdebugMsg(scip, "detected expr to be concave -> can enforce expr >= auxvar\n");
       }
       /* save varexprs to nlhdlrexprdata */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
       SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
       assert(*nlhdlrexprdata != NULL);
+
+      /* we enforce if we participate, probably because we do not need the convex or default nlhdlr to run as well */
+      *enforcing |= *participating;
    }
    else
    {
@@ -1011,13 +1005,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(result != NULL);
    assert(nlhdlrdata != NULL);
 
-   /* if estimating on non-convex side, then do nothing */
-   if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
-   {
-      SCIPdebugMsg(scip, "Estimating on non-convex side, do nothing\n");
-      return SCIP_OKAY;
-   }
+   /* we should be called only for the convex side */
+   assert(!overestimate || (nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE));
+   assert( overestimate || (nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX));
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
