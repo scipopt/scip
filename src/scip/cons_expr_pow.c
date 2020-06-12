@@ -964,10 +964,16 @@ void estimateRoot(
       if( xref < 0.0 )
          xref = 0.0;
 
-      if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xub) )
+      if( SCIPisZero(scip, xref) )
       {
+         if( SCIPisZero(scip, xub) )
+         {
+            *success = FALSE;
+            return;
+         }
+
          /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
-         if( !SCIPisInfinity(scip, xub) )
+         if( xub < 1.0 )
             xref = 0.9 * xlb + 0.1 * xub;
          else
             xref = 0.1;

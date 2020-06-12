@@ -459,7 +459,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
          if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
             return SCIP_OKAY;
 
-         if( !SCIPisInfinity(scip, SCIPvarGetUbLocal(childvar)) )
+         if( SCIPvarGetUbLocal(childvar) < 1.0 )
             refpoint = 0.9 * SCIPvarGetLbLocal(childvar) + 0.1 * SCIPvarGetUbLocal(childvar);
          else
             refpoint = 0.1;
