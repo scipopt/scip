@@ -2200,6 +2200,18 @@ bool ScipNLP::get_bounds_info(
       assert(x_l[i] <= x_u[i]);
 #endif
 
+   /* Ipopt performs better when unused variables do not appear, which we can achieve by fixing them,
+    * since Ipopts TNLPAdapter will hide them from Ipopts NLP. In the dual solution, bound multipliers (z_L, z_U)
+    * for fixed variables have value 0.0.
+    */
+   for( int i = 0; i < n; ++i )
+      if( SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) == 0 )
+      {
+         SCIPdebugMessage("fix unused variable x%d [%g,%g] to 0.0 or bound\n", i, x_l[i], x_u[i]);
+         assert(x_l[i] <= x_u[i]);
+         x_l[i] = x_u[i] = MAX(MIN(x_u[i], 0.0), x_l[i]);
+      }
+
    for( int i = 0; i < m; ++i )
    {
       g_l[i] = SCIPnlpiOracleGetConstraintLhs(nlpiproblem->oracle, i);
