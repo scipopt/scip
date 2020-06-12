@@ -127,6 +127,7 @@ Fixed bugs
 - Fixed incorrect value string for parameter estimation/completiontype
 - Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
 - Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value.
 
 Miscellaneous
 -------------
