@@ -48,6 +48,7 @@ Build system
 adjust cmake module for Ipopt 3.13
 add cmake variable BLISS_LIBRARY_DIR to pass a bliss library
 add warning to require minimal gcc version 4.8
+rename FindCriterion cmake findmodule to FindCRITERION
 
 ### Makefile
 
