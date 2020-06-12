@@ -1624,7 +1624,9 @@ SCIP_RETCODE reversePropQueue(
       }
       else
       {
-         /* if node without enforcement (before detect?, added due to allexprs=TRUE?), call reverse propagation callback of exprhdlr directly */
+         /* if node without enforcement (before detect?, added due to allexprs=TRUE?), call reverse propagation callback of exprhdlr directly
+          * TODO we should remove this, shouldn't we? for propagation, we should always have run nlhdlr detect before
+          */
          int nreds = 0;
 
 #ifdef SCIP_DEBUG
@@ -1640,7 +1642,7 @@ SCIP_RETCODE reversePropQueue(
       }
 
       /* if allexprs is set, then make sure that all children of expr with children are in the queue
-       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability
+       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability and so we do here (TODO correct, right?; this goes together with TODO above */
        */
       if( allexprs )
       {
@@ -1651,7 +1653,7 @@ SCIP_RETCODE reversePropQueue(
 
             child = SCIPgetConsExprExprChildren(expr)[i];
 
-            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 )
+            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0) )
             {
                /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)child, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))); */
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
@@ -14060,8 +14062,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback and we see a tightening */
-   if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
+   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and should have a nlhdlr with a reverseprop callback and we see a tightening */
+   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0) )
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
