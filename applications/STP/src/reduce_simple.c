@@ -105,10 +105,9 @@ SCIP_RETCODE cutEdgePrune(
          const int head = g->head[e];
          if( head != end )
          {
+            assert(!Is_term(g->term[head]));
             graph_edge_del(scip, g, e, TRUE);
          }
-
-         assert(!Is_term(g->term[head]));
 
          e = enext;
       }
