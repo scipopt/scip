@@ -1086,6 +1086,7 @@ SCIP_RETCODE buildPowEstimator(
 /** fills an array of reference points for estimating on the convex side */
 static
 void addTangentRefpoints(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lb,                 /**< lower bound on the child variable */
    SCIP_Real             ub,                 /**< upper bound on the child variable */
    SCIP_Real*            refpoints           /**< array to store the reference points */
@@ -1093,13 +1094,39 @@ void addTangentRefpoints(
 {
    assert(refpoints != NULL);
 
-   refpoints[0] = (7.0 * lb + ub) / 8.0;
-   refpoints[1] = (lb + ub) / 2.0;
-   refpoints[2] = (lb + 7.0 * ub) / 8.0;
+   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+   {
+      refpoints[0] = -1.0;
+      refpoints[1] = 0.0;
+      refpoints[2] = 1.0;
+   }
+   else if( SCIPisInfinity(scip, -lb) )
+   {
+      refpoints[0] = ub - 2.0;
+      refpoints[1] = ub - 1.0;
+      refpoints[2] = ub;
+   }
+   else if( SCIPisInfinity(scip, ub) )
+   {
+      refpoints[0] = lb;
+      refpoints[1] = lb + 1.0;
+      refpoints[2] = lb + 2.0;
+   }
+   else
+   {
+      refpoints[0] = (7.0 * lb + ub) / 8.0;
+      refpoints[1] = (lb + ub) / 2.0;
+      refpoints[2] = (lb + 7.0 * ub) / 8.0;
+   }
+
 }
 
 /** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd),
  *  where x has mixed signs
+ *
+ *  the reference points are: the lower and upper bounds (one for secant and one for tangent);
+ *  and for the second tangent, the point on the convex part of the function between exprdata->root
+ *  and the corresponding bound
  */
 static
 SCIP_RETCODE addSignpowerRefpoints(
@@ -1114,31 +1141,49 @@ SCIP_RETCODE addSignpowerRefpoints(
 {
    assert(refpoints != NULL);
 
+   if( (underestimate && SCIPisInfinity(scip, -lb)) || (!underestimate && SCIPisInfinity(scip, ub)) )
+      return SCIP_OKAY;
+
    if( exprdata->root == SCIP_INVALID )
    {
       SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
    }
 
-   refpoints[0] = lb;
-   refpoints[1] = ub;
-
-   if( underestimate )
-      refpoints[2] = (-lb * exprdata->root + ub) / 2.0;
+   if( underestimate && SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, -lb) )
+   {
+      refpoints[0] = lb;
+      refpoints[1] = -lb * exprdata->root;
+      refpoints[2] = -lb * exprdata->root + 1.0;
+   }
+   else if( !underestimate && SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+   {
+      refpoints[0] = -ub * exprdata->root - 1.0;
+      refpoints[1] = -ub * exprdata->root;
+      refpoints[2] = ub;
+   }
    else
-      refpoints[2] = (lb - ub * exprdata->root) / 2.0;
+   {
+      refpoints[0] = lb;
+      refpoints[2] = ub;
+      if( underestimate )
+         refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
+      else
+         refpoints[1] = (lb - ub * exprdata->root) / 2.0;
+   }
 
    return SCIP_OKAY;
 }
 
+/** choose reference points for adding initsepa cuts for a power expression */
 static
-SCIP_RETCODE chooseRefpoints(
+SCIP_RETCODE chooseRefpointsPow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
    SCIP_Real             lb,                 /**< lower bound on the child variable */
    SCIP_Real             ub,                 /**< upper bound on the child variable */
    SCIP_Real             exponent,           /**< exponent */
-   SCIP_Real*            refpointsunder,     /**< array to store reference points for underestimators */
-   SCIP_Real*            refpointsover       /**< array to store reference points for overestimators */
+   SCIP_Real*            refpointsunder,     /**< array to store reference points for underestimators (NULL if not needed) */
+   SCIP_Real*            refpointsover       /**< array to store reference points for overestimators (NULL if not needed) */
 )
 {
    SCIP_Bool convex;
@@ -1157,8 +1202,17 @@ SCIP_RETCODE chooseRefpoints(
    concave = FALSE;
    mixedsign = lb < 0.0 && ub > 0.0;
 
+   /* convex case:
+    * - parabola with an even degree or positive domain
+    * - hyperbola with a positive domain
+    * - even hyperbola with a negative domain
+    */
    if( (exponent > 1.0 && (lb >= 0 || even)) || (exponent < 0.0 && lb >= 0) || (exponent < 0.0 && even && ub <= 0.0) )
       convex = TRUE;
+   /* concave case:
+    * - parabola with a negative domain and (due to previous if) an uneven degree
+    * - root
+    */
    else if( ub <= 0 || (exponent > 0.0 && exponent < 1.0) )
       concave = TRUE;
 
@@ -1170,13 +1224,14 @@ SCIP_RETCODE chooseRefpoints(
       }
 
       if( convex )
-         addTangentRefpoints(lb, ub, refpointsunder);
-      else if( concave || (exponent < 0.0 && even && mixedsign) ) /* concave or mixed even hyperbola */
+         addTangentRefpoints(scip, lb, ub, refpointsunder);
+      else if( (concave && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)) ||
+               (exponent < 0.0 && even && mixedsign) ) /* concave with finite bounds or mixed even hyperbola */
          refpointsunder[0] = (lb + ub) / 2.0;
       else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
          SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, TRUE, refpointsunder) );
-      else /* mixed odd hyperbola */
-         assert(exponent < 0.0 && !even && mixedsign);
+      else /* mixed odd hyperbola or an infinite bound */
+         assert((exponent < 0.0 && !even && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
    }
 
    if( refpointsover != NULL )
@@ -1186,14 +1241,14 @@ SCIP_RETCODE chooseRefpoints(
          refpointsover[i] = SCIP_INVALID;
       }
 
-      if( convex )
+      if( convex && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          refpointsover[0] = (lb + ub) / 2.0;
       else if( concave )
-         addTangentRefpoints(lb, ub, refpointsover);
+         addTangentRefpoints(scip, lb, ub, refpointsover);
       else if( exponent > 1.0 && !even && lb < 0.0 && ub > 0.0 ) /* mixed signpower */
          SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, FALSE, refpointsover) );
-      else /* mixed hyperbola */
-         assert(exponent < 0.0 && mixedsign);
+      else /* mixed hyperbola or an infinite bound */
+         assert((exponent < 0.0 && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
    }
 
    return SCIP_OKAY;
@@ -1945,7 +2000,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    return SCIP_OKAY;
 }
 
-/** init sepa callback that initializes LP */
+/** init sepa callback that initializes LP for a power expression */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
 {
@@ -2013,7 +2068,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    if( overestimate )
       SCIP_CALL( SCIPallocBufferArray(scip, &refpointsover, 3) );
 
-   SCIP_CALL( chooseRefpoints(scip, exprdata, childlb, childub, exponent, refpointsunder, refpointsover) );
+   SCIP_CALL( chooseRefpointsPow(scip, exprdata, childlb, childub, exponent, refpointsunder, refpointsover) );
 
    overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
 
@@ -2645,6 +2700,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP for a signpower expression */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
 {
@@ -2716,16 +2772,16 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
    if( childlb >= 0.0 )
    {
       if( underestimate )
-         addTangentRefpoints(childlb, childub, refpointsunder);
-      if( overestimate )
+         addTangentRefpoints(scip, childlb, childub, refpointsunder);
+      if( overestimate && !SCIPisInfinity(scip, childub) )
          refpointsover[0] = (childlb + childub) / 2.0;
    }
    else if( childub <= 0.0 )
    {
-      if( underestimate )
+      if( underestimate && !SCIPisInfinity(scip, -childlb) )
          refpointsunder[0] = (childlb + childub) / 2.0;
       if( overestimate )
-         addTangentRefpoints(childlb, childub, refpointsunder);
+         addTangentRefpoints(scip, childlb, childub, refpointsunder);
    }
    else
    {
