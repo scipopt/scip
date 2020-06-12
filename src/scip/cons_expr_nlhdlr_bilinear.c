@@ -932,11 +932,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
+   assert(participating != NULL);
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata);
-
-   *success = FALSE;
 
    /* only during solving will we have the extra inequalities that we rely on so much here */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
@@ -960,7 +959,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
       /* detection is only successful if both children have an auxiliary variable */
       if( var1 != NULL && var2 != NULL && !SCIPvarIsBinary(var1) && !SCIPvarIsBinary(var2) )
       {
-         *success = TRUE;
+         /* we want to join separation and domain propagation, if not disabled by parameter */
+         *participating = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+         if( nlhdlrdata->useinteval || nlhdlrdata->usereverseprop )
+            *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
          /* create expression data for the nonlinear handler */
          SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
@@ -1006,7 +1008,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    }
 
 #ifdef SCIP_DEBUG
-   if( *success )
+   if( *participating )
    {
       SCIPdebugMsg(scip, "detected expr ");
       SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
