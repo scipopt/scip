@@ -62,6 +62,15 @@ if(NOT WIN32)
       pkg_check_modules(_PC_IPOPT QUIET ipopt)
     endif()
 
+    message("---")
+    message("_PC_IPOPT_FOUND ${_PC_IPOPT_FOUND}")
+    message("---")
+    message("_PC_IPOPT_LDFLAGS ${_PC_IPOPT_LDFLAGS}")
+    message("_PC_IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS}")
+    message("_PC_IPOPT_LIBRARIES ${_PC_IPOPT_LIBRARIES}")
+    message("_PC_IPOPT_LIBRARY_DIRS ${_PC_IPOPT_LIBRARY_DIRS}")
+    message("_PC_IPOPT_CFLAGS_OTHER ${_PC_IPOPT_CFLAGS_OTHER}")
+    message("---")
 
     if(_PC_IPOPT_FOUND)
       set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
@@ -71,6 +80,7 @@ if(NOT WIN32)
         find_library(${_LIBRARY}_PATH
                      NAMES ${_LIBRARY}
                      PATHS ${_PC_IPOPT_LIBRARY_DIRS})
+          message("found library ${_LIBRARY} in ${${_LIBRARY}_PATH}")
         list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
       endforeach()
     else()
@@ -79,6 +89,9 @@ if(NOT WIN32)
 
   endif()
 
+  message("IPOPT_INCLUDE_DIRS ${IPOPT_INCLUDE_DIRS}")
+  message("IPOPT_DEFINITIONS ${IPOPT_DEFINITIONS}")
+  message("IPOPT_LIBRARIES ${IPOPT_LIBRARIES}")
   set(IPOPT_LINK_FLAGS "")
 
   # If pkg-config fails, try to find the package using IPOPT_DIR
