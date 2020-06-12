@@ -1369,6 +1369,8 @@ SCIP_RETCODE forwardPropExpr(
                break;
             }
 
+            /* TODO we should skip this expression if expr->nenfos == 0 and we have already run detection on constraints (some flag may be needed?) */
+
 #ifdef DEBUG_PROP
             SCIPdebugMsg(scip, "interval evaluation of expr %p ", (void*)expr);
             SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
@@ -1395,13 +1397,17 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_INTERVAL nlhdlrinterval;
                int e;
 
-               /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
+               /* for expressions with enforcement, nlhdlrs take care of interval evaluation */
                for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity); ++e )
                {
+                  /* skip nlhdlr if it does not want to participate in activity computation */
+                  if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
+                     continue;
+
                   nlhdlr = expr->enfos[e]->nlhdlr;
                   assert(nlhdlr != NULL);
 
-                  /* skip nlhdlr if it does not provide interval evaluation */
+                  /* skip nlhdlr if it does not provide interval evaluation (so it may only provide reverse propagation) */
                   if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
                      continue;
 
@@ -1422,7 +1428,7 @@ SCIP_RETCODE forwardPropExpr(
             }
             else
             {
-               /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+               /* for node without enforcement (before detect?), call the callback of the exprhdlr directly */
                SCIP_INTERVAL exprhdlrinterval = expr->activity;
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, global, intevalvardata) );
 #ifdef DEBUG_PROP
@@ -1596,6 +1602,10 @@ SCIP_RETCODE reversePropQueue(
             SCIP_CONSEXPR_NLHDLR* nlhdlr;
             int nreds;
 
+            /* skip nlhdlr if it does not want to participate in activity computation */
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
+               continue;
+
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
 
@@ -1614,7 +1624,7 @@ SCIP_RETCODE reversePropQueue(
       }
       else
       {
-         /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly */
+         /* if node without enforcement (before detect?, added due to allexprs=TRUE?), call reverse propagation callback of exprhdlr directly */
          int nreds = 0;
 
 #ifdef SCIP_DEBUG
