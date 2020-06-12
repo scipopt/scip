@@ -2159,7 +2159,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenforcemethods = enforcemethodsnew ^ enforcemethods;
 
       /* nlhdlr needs to participate for the methods it is enforcing */
-      assert(nlhdlrparticipating & nlhdlrenforcemethods == nlhdlrenforcemethods);
+      assert((nlhdlrparticipating & nlhdlrenforcemethods) == nlhdlrenforcemethods);
 
       if( nlhdlrparticipating == SCIP_CONSEXPR_EXPRENFO_NONE )
       {
@@ -2342,7 +2342,7 @@ SCIP_RETCODE detectNlhdlrs(
       }
 
       /* mark that we will need activity for root expression if constraint may be propagated */
-      if( SCIPconsIsPropagationEnabled(cons) )
+      if( SCIPconsIsPropagationEnabled(conss[i]) )
       {
          SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, consdata->expr, TRUE, FALSE) );
       }
@@ -2378,7 +2378,7 @@ SCIP_RETCODE detectNlhdlrs(
           */
          if( expr->auxvar != NULL || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible) );
 
             if( *infeasible )
                break;

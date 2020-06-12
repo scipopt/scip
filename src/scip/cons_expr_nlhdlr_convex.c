@@ -1684,7 +1684,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       }
    }
 
-   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not convex */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not convex */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
@@ -1850,7 +1850,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
-   SCIP_EXPRCURV curvature;
    SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
@@ -2060,7 +2059,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
       }
    }
 
-   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not concave */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not concave */
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
          SCIP_EXPRCURV_CONVEX, NULL, NULL) );
@@ -2181,7 +2180,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
-   SCIP_EXPRCURV curvature;
    SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);

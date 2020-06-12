@@ -2285,7 +2285,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    assert(expr != NULL);
 
    /* don't try if no sepa is required
-   /* TODO implement some bound strengthening
+    * TODO implement some bound strengthening
     */
    if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
       return SCIP_OKAY;
