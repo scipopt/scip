@@ -614,6 +614,7 @@ extern void graph_writeReductionRatioStats(const GRAPH*, const char*, const char
 extern SCIP_RETCODE graph_writeGml(const GRAPH*, const char*, const SCIP_Bool*);
 extern SCIP_RETCODE graph_writeGmlSub(const GRAPH*, const char*, const SCIP_Bool*);
 extern void graph_writeStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
+extern void graph_writeStpByName(SCIP*, const GRAPH*, const char*, SCIP_Real);
 extern void graph_writeStpOrg(SCIP*, const GRAPH*, const char*);
 
 

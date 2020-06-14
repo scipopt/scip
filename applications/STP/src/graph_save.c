@@ -435,6 +435,24 @@ SCIP_RETCODE graph_writeGmlSub(
 
 
 /** writes graph in .stp format to file */
+void graph_writeStpByName(
+   SCIP* scip,
+   const GRAPH* g,
+   const char*  filename,
+   SCIP_Real    offset
+   )
+{
+   FILE *fp;
+   assert(filename);
+
+   fp = fopen(filename, "a+");
+   graph_writeStp(scip, g, fp, offset);
+
+   fclose(fp);
+}
+
+
+/** writes graph in .stp format to file */
 void graph_writeStp(
    SCIP* scip,
    const GRAPH* g,
