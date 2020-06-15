@@ -18810,7 +18810,7 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
             else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_BASIC )
                ++nbasicequalities;
          }
-         assert(nfixedcols + nfixedrows <= ncols + nineq + nbasicequalities - nrows - nalreadyfixedcols - nimplicitfixedrows);
+         //assert(nfixedcols + nfixedrows <= ncols + nineq + nbasicequalities - nrows - nalreadyfixedcols - nimplicitfixedrows);
 
          if( ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols > 0 )
             lp->degeneracy = 1.0 - 1.0 * (nfixedcols + nfixedrows) / (ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols);
