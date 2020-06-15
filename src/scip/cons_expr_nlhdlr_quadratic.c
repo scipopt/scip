@@ -236,7 +236,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    assert(nlhdlrexprdata != NULL);
 
    /* don't check if all enforcement methods are already ensured */
-   if( *enforcing & SCIP_CONSEXPR_EXPRENFO_ALL )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_ALL) == SCIP_CONSEXPR_EXPRENFO_ALL )
       return SCIP_OKAY;
 
    /* if it is not a sum of at least two terms, it is not interesting */
@@ -292,8 +292,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CALL( SCIPprintConsExprQuadratic(scip, conshdlr, quaddata) );
 #endif
 
-   /* every propagable quadratic expression will be handled since we can propagate */
-   if( propagable )
+   /* every propagable quadratic expression will be handled if required since we can propagate */
+   if( propagable && (*enforcing & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
    {
       int nquadexprs;
       int i;

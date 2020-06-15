@@ -143,12 +143,12 @@ SCIP_RETCODE detect(
    cr_expect_eq(enforcing, participating);
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
-      cr_expect((enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
+      cr_expect(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
-      cr_expect((enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
+      cr_expect(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE);
    }
 
    if( participating != SCIP_CONSEXPR_EXPRENFO_NONE )

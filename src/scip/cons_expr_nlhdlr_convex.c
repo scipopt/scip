@@ -1647,7 +1647,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(nlhdlrexprdata != NULL);
 
    /* we currently do not participate if only activity computation is required */
-   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
       return SCIP_OKAY;
 
    /* ignore pure constants and variables */
@@ -2015,7 +2015,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    assert(nlhdlrexprdata != NULL);
 
    /* we currently do not participate if only activity computation is required */
-   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
       return SCIP_OKAY;
 
    /* ignore pure constants and variables */
