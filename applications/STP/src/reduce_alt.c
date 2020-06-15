@@ -63,6 +63,7 @@ typedef struct nearest_special_distance_test_data
    SCIP_Real* RESTRICT   candidates_taildist;
    SCIP_Real* RESTRICT   candidates_headdist;
    int* RESTRICT         candidates_edge;
+   SCIP_Bool* RESTRICT   candidates_isLink;
    int* RESTRICT         candidates_tail;
    int* RESTRICT         candidates_head;
    int* RESTRICT         nodes_isBlocked;
@@ -275,6 +276,7 @@ SCIP_RETCODE nsvInitData(
    int* RESTRICT candidates_tail;
    int* RESTRICT candidates_head;
    int* RESTRICT nodes_isBlocked;
+   SCIP_Bool* RESTRICT candidates_isLink;
    int ncandidates;
    const int nnodes = graph_get_nNodes(g);
 
@@ -289,11 +291,13 @@ SCIP_RETCODE nsvInitData(
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_taildist, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_headdist, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_edge, ncandidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates_isLink, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_tail, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates_head, ncandidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isBlocked, nnodes) );
 
    reduce_blctreeGetMstEdges(g, blctree, candidates_edge);
+   reduce_blctreeGetMstEdgesState(g, blctree, candidates_isLink);
    reduce_blctreeGetMstEdgesToCutDist(g, blctree, candidates_taildist, candidates_headdist);
    reduce_blctreeGetMstBottlenecks(g, blctree, candidates_bottleneck);
 
@@ -312,6 +316,7 @@ SCIP_RETCODE nsvInitData(
    nsv->candidates_taildist = candidates_taildist;
    nsv->candidates_headdist = candidates_headdist;
    nsv->candidates_edge = candidates_edge;
+   nsv->candidates_isLink = candidates_isLink;
    nsv->candidates_tail = candidates_tail;
    nsv->candidates_head = candidates_head;
    nsv->nodes_isBlocked = nodes_isBlocked;
@@ -334,6 +339,7 @@ void nsvFreeData(
    SCIPfreeBufferArray(scip, &(nsv->nodes_isBlocked));
    SCIPfreeBufferArray(scip, &(nsv->candidates_head));
    SCIPfreeBufferArray(scip, &(nsv->candidates_tail));
+   SCIPfreeBufferArray(scip, &(nsv->candidates_isLink));
    SCIPfreeBufferArray(scip, &(nsv->candidates_edge));
    SCIPfreeBufferArray(scip, &(nsv->candidates_headdist));
    SCIPfreeBufferArray(scip, &(nsv->candidates_taildist));
@@ -429,10 +435,9 @@ void nsvEdgeGetTermDists(
             term_tail = term;
          }
       }
-#if 0
+
       if( cutdists_tail[candidate_id] < *dist_tail )
          *dist_tail = cutdists_tail[candidate_id];
-#endif
    }
 
    if( Is_term(g->term[head]) )
@@ -459,11 +464,9 @@ void nsvEdgeGetTermDists(
          if( termdist[i] < *dist_head )
             *dist_head = termdist[i];
       }
-#if 0
+
       if( cutdists_head[candidate_id] < *dist_head )
          *dist_head = cutdists_head[candidate_id];
-#endif
-
    }
 
    assert(GE(*dist_tail, 0.0));
@@ -516,7 +519,7 @@ SCIP_RETCODE nsvExec(
    const int ncandidates = nsv->ncandidates;
    const int* const candidate_edges = nsv->candidates_edge;
    const SCIP_Real* const candidate_bottlenecks = nsv->candidates_bottleneck;
-   const SCIP_Bool* const candidate_isLink = reduce_blctreeGetMstEdgesState(g, nsv->sdistance->blctree);
+   const SCIP_Bool* const candidate_isLink = nsv->candidates_isLink;
    assert(sdprofit);
 
    for( int i = 0; i < ncandidates; ++i )

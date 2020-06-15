@@ -375,6 +375,12 @@ void blctreeComputeBottlenecks(
          }
       }
    }
+
+   /* NOTE necessary for correct computation of edge state! */
+   if( blctree->root != nodes_org2curr[graph->source] )
+   {
+      blctreeEvert(graph, nodes_org2curr[graph->source], blctree);
+   }
 }
 
 
@@ -395,6 +401,7 @@ void blctreeComputeEdgesState(
    assert(mst);
    assert(0 <= blctree->root && blctree->root < nnodes_curr);
    assert(graph_isMarked(graph));
+   assert(blctree->root == blctree->nodes_org2curr[graph->source]);
 
    for( int i = 0; i < nnodes_curr; i++ )
       isTermLink[i] = FALSE;
@@ -458,6 +465,8 @@ SCIP_RETCODE blctreeBuildMst(
       {
          const int revedge = flipedge(mstedge);
          const int head_curr = nodes_org2curr[graph->head[revedge]];
+
+         SCIPdebugMessage("MST edge %d->%d \n", k_org, graph->head[revedge]);
 
          tree[k_curr].edge = revedge;
          tree[k_curr].edgecost = graph->cost[revedge];
@@ -1109,16 +1118,36 @@ void reduce_blctreeGetMstEdgesToCutDist(
 
 /** returns BLC MST edges state.
  *  I.e. whether the ede is between two terminal or not */
-const SCIP_Bool* reduce_blctreeGetMstEdgesState(
+void reduce_blctreeGetMstEdgesState(
    const GRAPH*          graph,              /**< graph */
-   const BLCTREE*        blctree             /**< BLC tree */
+   const BLCTREE*        blctree,            /**< BLC tree */
+   SCIP_Bool*            statelist           /**< of size nodes - 1 */
 )
 {
-   assert(graph && blctree);
+   const BLCNODE* mst = blctree->mst;
+   int nodecount = 0;
+   const int nnodes_curr = blctree->nnodes_curr;
+
+   assert(graph && blctree && statelist);
    assert(graph_get_nNodes(graph) == blctree->nnodes_org);
    assert(blctree->mstedges_isLink);
 
-   return blctree->mstedges_isLink;
+   for( int i = 0; i < nnodes_curr; ++i )
+   {
+      const int edge = mst[i].edge;
+
+      if( edge >= 0 )
+      {
+         statelist[nodecount++] = blctree->mstedges_isLink[i];
+      }
+      else
+      {
+         assert(i == blctree->root);
+         assert(edge == UNKNOWN);
+      }
+   }
+
+   assert(nodecount == nnodes_curr - 1);
 }
 
 

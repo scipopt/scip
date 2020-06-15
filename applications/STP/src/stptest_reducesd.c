@@ -1118,9 +1118,11 @@ SCIP_RETCODE testNsvImpliedContractsEdge(
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
 
+//   graph_writeGml(graph, "unit.gml", NULL);
+
    SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
 
-   STPTEST_ASSERT(graph->grad[1] == 0);
+   STPTEST_ASSERT(graph->grad[1] == 0 || graph->grad[0] == 0);
 
    reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, graph);
@@ -1166,7 +1168,7 @@ SCIP_RETCODE testNsvImpliedContractsEdge2(
 
    SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
 
-   STPTEST_ASSERT(graph->grad[1] == 0);
+   STPTEST_ASSERT(graph->grad[1] == 0 || graph->grad[0] == 0);
 
    reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, graph);
@@ -1209,7 +1211,7 @@ SCIP_RETCODE testNsvImpliedContractsCutDistEdge(
 
    SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
 
-   STPTEST_ASSERT(graph->grad[1] == 0);
+   STPTEST_ASSERT(graph->grad[1] == 0 || graph->grad[0] == 0);
    STPTEST_ASSERT(nelims == 1);
 
 
@@ -1258,8 +1260,8 @@ SCIP_RETCODE testNsvImpliedContractsCutDistMiddleEdge(
 
    SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
 
-   STPTEST_ASSERT(graph->grad[1] == 0);
    STPTEST_ASSERT(nelims == 1);
+   STPTEST_ASSERT(graph->grad[2] == 0 || graph->grad[0] == 0);
 
    reduce_sdFree(scip, &sddata);
    stptest_graphTearDown(scip, graph);
@@ -1451,12 +1453,12 @@ SCIP_RETCODE stptest_reduceNsvImplied(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_CALL( testNsvImpliedContractsCutDistMiddleEdge(scip) );
-   SCIP_CALL( testNsvImpliedContractsCutDistEdge(scip) );
-
    SCIP_CALL( testNsvImpliedContractsEdge(scip) );
    SCIP_CALL( testNsvImpliedContractsEdge2(scip) );
    SCIP_CALL( testNsvImpliedContractsImpliedToTermEdge(scip) );
+
+   SCIP_CALL( testNsvImpliedContractsCutDistMiddleEdge(scip) );
+   SCIP_CALL( testNsvImpliedContractsCutDistEdge(scip) );
 
    printf("implied NSV reduction test: all ok \n");
 
