@@ -346,6 +346,8 @@ SCIP_RETCODE graph_writeGml(
    /* write GML format closing */
    SCIPgmlWriteClosing(file);
 
+   fclose(file);
+
    return SCIP_OKAY;
 }
 
