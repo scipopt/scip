@@ -2348,7 +2348,7 @@ SCIP_RETCODE detectNlhdlrs(
       }
 
       /* mark that we will need activity for root expression if constraint may be propagated */
-      if( SCIPconsIsPropagationEnabled(conss[i]) )
+      if( SCIPconsIsPropagated(conss[i]) )
       {
          SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, consdata->expr, TRUE, FALSE) );
       }
