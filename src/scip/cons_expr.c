@@ -14342,6 +14342,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VARTYPE vartype;
+   SCIP_INTERVAL activity;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -14393,8 +14394,17 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    /* type of auxiliary variable depends on integrality information of the expression */
    vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
-      MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
+   /* get activity of expression to initialize variable bounds */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
+   /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
+    * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
+    */
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity));
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), activity.inf ),
+      MIN( SCIPinfinity(scip), activity.sup ), 0.0, vartype) ); /*lint !e666*/
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
