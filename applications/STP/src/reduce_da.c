@@ -224,11 +224,8 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 )
 {
    const SCIP_Real* redcosts = redcostdata->redEdgeCost;
-   int* nodearrint;
-   STP_Bool* nodearrchar;
    const int daroot = redcostdata->redCostRoot;
    const int nedges = graph->edges;
-   const int nnodes = graph->knots;
    SCIP_Bool success;
    SCIP_Bool soladded;
    SCIP_Real objval;
@@ -236,14 +233,8 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    *bestimproved = FALSE;
    soladded = FALSE;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
-
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, nodearrint, daroot, nodearrchar, &success, FALSE));
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
    assert(success && solstp_isValid(scip, graph, result));
-
-   SCIPfreeBufferArray(scip, &nodearrint);
-   SCIPfreeBufferArray(scip, &nodearrchar);
 
    SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
    assert(solstp_isValid(scip, graph, result));
@@ -317,7 +308,6 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
    SCIP_Real*            upperbound,         /**< upperbound pointer */
    int*                  result1,            /**< sol int array corresponding to upper bound */
    int*                  result2,            /**< sol int array corresponding to best new solution (might be worse than upper bound) */
-   int*                  vbase,              /**< int array */
    int*                  pathedge,           /**< int array */
    STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    SCIP_Bool*            apsol               /**< ascend-prune sol? */
@@ -331,7 +321,7 @@ SCIP_RETCODE computeSteinerTreeRedCostsPcMw(
 
    /* compute new solution and store it in result2 */
 
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, -1, &success, FALSE) );
    assert(success);
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
@@ -1604,7 +1594,6 @@ SCIP_RETCODE computePertubedSol(
    SCIP_Real* bestcost,
    SCIP_Real* pathdist,
    int* state,
-   int* vbase,
    int* pathedge,
    int* result,
    int* result2,
@@ -1644,7 +1633,7 @@ SCIP_RETCODE computePertubedSol(
          /* compute new solution */
          SCIP_Real bound;
          SCIP_Bool success;
-         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, bestcost, result2, vbase, -1, nodearrchar, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, bestcost, result2, -1, &success, FALSE) );
          assert(success);
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
@@ -1674,7 +1663,7 @@ SCIP_RETCODE computePertubedSol(
       SCIPfreeBufferArray(scip, &transcost);
    }
 
-   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, pathedge, nodearrchar, apsol) );
 
    /* does result not contain a valid solution? */
    if( !(*apsol) )
@@ -1723,7 +1712,7 @@ SCIP_RETCODE computePertubedSol(
    lb += offset;
    *lpobjval = lb;
 
-   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, vbase, pathedge, nodearrchar, apsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, pathedge, nodearrchar, apsol) );
 
    assert(!(*apsol) || solstp_isValid(scip, graph, result));
 
@@ -2586,7 +2575,7 @@ SCIP_RETCODE reduce_daSlackPrune(
             printf("in bnd  FAIL %d not marked, but terminal, \n", k);
 #endif
 
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, root, &success, FALSE) );
 
    objprune = getSolObj(scip, graph, edgearrint2);
 
@@ -2951,7 +2940,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* compute first primal solution */
    upperbound = FARAWAY;
    havenewsol = FALSE;
-   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
+   SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, pathedge, nodearrchar, &havenewsol) );
 
    assert(havenewsol && upperbound < FARAWAY);
    assert(solstp_isValid(scip, graph, result));
@@ -3015,7 +3004,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
 
       /* try to improve both dual and primal bound */
-      SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, state, vbase, pathedge, result, result2,
+      SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, state, pathedge, result, result2,
             transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, 0) );
 
       assert(solstp_isValid(scip, graph, result));
@@ -3074,7 +3063,7 @@ SCIP_RETCODE reduce_daPcMw(
          assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
          /* try to improve both dual and primal bound */
-         SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, state, vbase, pathedge, result, result2,
+         SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, state, pathedge, result, result2,
                transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, run) );
 
          SCIPdebugMessage("DA: pertubated run %d ub: %f \n", run, upperbound);
@@ -3197,7 +3186,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
 
       havenewsol = FALSE;
-      SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, &upperbound, result, result2, vbase, pathedge, nodearrchar, &havenewsol) );
+      SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, &upperbound, result, result2, pathedge, nodearrchar, &havenewsol) );
 
       SCIPdebugMessage("ROOTRUNS upperbound %f \n", upperbound);
       if( pool )

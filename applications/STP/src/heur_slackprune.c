@@ -675,7 +675,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
 
       /* compute potential new guiding solution */
-      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, nodearrint, prunegraph->source, nodearrchar, &apsuccess, FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, prunegraph->source, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )

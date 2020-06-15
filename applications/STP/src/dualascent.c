@@ -720,13 +720,8 @@ SCIP_RETCODE SCIPStpDualAscent(
    if( ascendandprune )
    {
        SCIP_Bool success;
-       STP_Bool* RESTRICT mynodearrchar = NULL;
 
-       SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
-
-       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, mynodearrchar, &success, TRUE) );
-
-       SCIPfreeBufferArray(scip, &mynodearrchar);
+       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, root, &success, TRUE) );
    }
 
    if( edgearrint == NULL )
@@ -1149,7 +1144,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    if( ascendandprune )
    {
       SCIP_Bool success;
-      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, -1, active, &success, TRUE));
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, -1, &success, TRUE));
    }
 
    /* free memory */

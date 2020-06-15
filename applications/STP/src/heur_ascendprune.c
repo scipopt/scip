@@ -208,11 +208,8 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    SCIP_Real*        redcosts;
    SCIP_Bool         success;
    int       e;
-   int       nnodes;
    int       nedges;
    int*      edgearrint;
-   int*      nodearrint;
-   STP_Bool*     nodearrchar;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -236,10 +233,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* todo: delete this file and move to slack-prune */
-
    nedges = graph->edges;
-   nnodes = graph->knots;
    success = FALSE;
 
    /* get best current solution */
@@ -267,8 +261,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    /* allocate memory for ascent and prune */
    SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes ) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+
 
    for( e = 0; e < nedges; e++ )
    {
@@ -308,7 +301,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    }
 
    /* perform ascent and prune */
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, nodearrint, graph->source, nodearrchar, &success, TRUE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, graph->source, &success, TRUE) );
 
    if( success )
    {
@@ -323,10 +316,9 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &nodearrchar);
-   SCIPfreeBufferArray(scip, &nodearrint);
-   SCIPfreeBufferArray(scip, &edgearrint);
    SCIPfreeBufferArray(scip, &redcosts);
+   SCIPfreeBufferArray(scip, &edgearrint);
+
 
    return SCIP_OKAY;
 }
@@ -344,9 +336,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    const GRAPH*          g,                  /**< the graph */
    const SCIP_Real*      redcosts,           /**< the reduced costs */
    int*                  result,             /**< int edges array to store solution */
-   int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
    )
@@ -355,7 +345,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP_Real* nval = NULL;
    int* const mark = g->mark;
    int* const newedges = result;
-   int* const nodechild = nodearrint;
+   int* nodechild;
    int* edgeancestor;
    const int nnodes = g->knots;
    const int nedges = g->edges;
@@ -365,11 +355,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
    SCIP_Bool success;
 
+   STP_Bool* nodearrchar;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodechild, nnodes ) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+
    assert(g != NULL);
    assert(scip != NULL);
    assert(redcosts != NULL);
    assert(result != NULL);
-   assert(nodearrint != NULL);
    assert(nodearrchar != NULL);
    assert(!pcmw || g->extended);
 
@@ -382,9 +376,12 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    /* DFS to identify 0-redcost subgraph */
    {
-      int* const queue = nodearrint;
+      int* RESTRICT queue;
       STP_Bool* const scanned = nodearrchar;
       int qsize;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes ) );
+
 
       /*
        * construct new graph corresponding to zero cost paths from the root to all terminals
@@ -446,6 +443,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          if( mark[head] )
             newedges[nnewedges++] = a;
       }
+
+      SCIPfreeBufferArray(scip, &queue);
    }
 
    if( nnewedges == 0 )
@@ -453,6 +452,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       assert(g->stp_type == STP_RMWCSP);
       *solfound = TRUE;
       solstp_getTrivialSol(g, result);
+
+      SCIPfreeBufferArray(scip, &nodearrchar);
+      SCIPfreeBufferArray(scip, &nodechild);
 
       return SCIP_OKAY;
    }
@@ -642,6 +644,10 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    graph_free(scip, &newgraph, TRUE);
    SCIPfreeBufferArray(scip, &edgeancestor);
    SCIPfreeBufferArrayNull(scip, &nval);
+
+   SCIPfreeBufferArray(scip, &nodearrchar);
+   SCIPfreeBufferArray(scip, &nodechild);
+
 
    return SCIP_OKAY;
 }
