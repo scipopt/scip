@@ -151,8 +151,6 @@ SCIP_RETCODE blctreeInitPrimitives(
    int nnodes_curr;
    const int nnodes = graph_get_nNodes(graph);
 
-   assert(!graph_pc_isPc(graph));
-   // todo for PC this needs to be changed!
    graph_get_nVET(graph, &(nnodes_curr), NULL, NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, blctree) );
@@ -347,6 +345,7 @@ void blctreeComputeBottlenecks(
 
       assert(graph_knot_isInRange(graph, node_org));
       assert(graph->grad[node_org] > 0);
+      assert(!graph_pc_isPc(graph) || !graph_pc_knotIsDummyTerm(graph, node_org));
 
       if( blctree->root != node )
       {
@@ -369,7 +368,7 @@ void blctreeComputeBottlenecks(
 
             assert(mst[head].edge != e || mst[head].edge != flipedge(e));
 
-            SCIPdebugMessage("---CEHCK EDGE: %d->%d  root=%d \n", node_org, head_org, node);
+            SCIPdebugMessage("---CHECK EDGE: %d->%d  root=%d \n", node_org, head_org, node);
 
             blctreeUpdateRootPath(head, graph->cost[e], blctree);
          }
@@ -411,6 +410,7 @@ void blctreeComputeEdgesState(
    {
       const int node_org = nodes_curr2org[i];
       assert(graph_knot_isInRange(graph, node_org));
+      assert(!graph_pc_isPc(graph) || !graph_pc_knotIsDummyTerm(graph, node_org));
 
       if( Is_term(graph->term[node_org]) )
       {
@@ -443,12 +443,16 @@ SCIP_RETCODE blctreeBuildMst(
    const int* nodes_org2curr = blctree->nodes_org2curr;
    const int nnodes_org = graph_get_nNodes(graph);
    const int nnodes_curr = blctree->nnodes_curr;
+   int mstnodescount = 0;
    blctree->root = nodes_org2curr[graph->source];
 
    assert(tree);
    assert(nnodes_org == blctree->nnodes_org);
    assert(nnodes_curr > 0);
    assert(graph->grad[graph->source] > 0);
+   assert(!graph_pc_isMw(graph));
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
+   assert(!graph_pc_isPcMw(graph) || graph_pc_isRootedPcMw(graph));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pmst, nnodes_org) );
    graph_path_exec(scip, graph, MST_MODE, graph->source, graph->cost, pmst);
@@ -474,6 +478,7 @@ SCIP_RETCODE blctreeBuildMst(
          tree[k_curr].dist_edgetail = 0.0;
          tree[k_curr].dist_edgehead = 0.0;
          tree[k_curr].edgebottleneck = FARAWAY;
+         mstnodescount++;
 
          assert(k_org != graph->source);
          assert(k_curr != blctree->root);
@@ -481,7 +486,7 @@ SCIP_RETCODE blctreeBuildMst(
          assert(graph->tail[tree[k_curr].edge] == k_org);
       }
 #ifndef NDEBUG
-      else
+      else if( !graph_pc_isPc(graph) )
       {
          assert(k_curr == blctree->root);
          assert(k_org == graph->source);
@@ -490,6 +495,13 @@ SCIP_RETCODE blctreeBuildMst(
    }
 
    blctreeResetNode(blctree->root, blctree);
+
+   if( graph_pc_isPc(graph)  )
+   {
+      /* + 1 for the root */
+      blctree->nnodes_curr = mstnodescount + 1;
+   }
+
 
    SCIPfreeBufferArray(scip, &pmst);
 

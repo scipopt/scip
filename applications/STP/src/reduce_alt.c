@@ -2511,7 +2511,7 @@ SCIP_RETCODE reduce_nnp(
 /** Combined implied-profit based tests:
  *  First elimination tests are used, afterwards
  *  edge contraction test are applied.
- *  NOTE: The expensive part is to build the bottlneck distances,
+ *  NOTE: The expensive part is to build the bottleneck distances,
  *  thus we always apply all other tests. */
 SCIP_RETCODE reduce_impliedProfitBased(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2523,6 +2523,8 @@ SCIP_RETCODE reduce_impliedProfitBased(
 )
 {
    SD* sdistance;
+   int nelimsnew = 0;
+   const int isPcMw = graph_pc_isPcMw(g);
 
    assert(scip && g && nelims && fixed);
    assert(*nelims >= 0);
@@ -2534,16 +2536,24 @@ SCIP_RETCODE reduce_impliedProfitBased(
    SCIP_CALL( reduceLevel0(scip, g) );
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
-   SCIP_CALL( reduce_sdBiased(scip, sdistance, g, nelims) );
-   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, NULL, g, nelims) );
+   if( !isPcMw )
+   {
+      SCIP_CALL( reduce_sdBiased(scip, sdistance, g, &nelimsnew) );
+   }
+   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, NULL, g, &nelimsnew) );
+
+   *nelims += nelimsnew;
 
 #if 0
    SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );
    SCIP_CALL( reduce_sdBiasedNeighbor(scip, sdistance, g, nelims) );
 #endif
 
-   SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
-   SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
+   if( nelimsnew > 0 )
+   {
+      SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
+      SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
+   }
 
  //  reduce_sdFree(scip, &sdistance);
  //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
