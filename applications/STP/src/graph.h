@@ -337,6 +337,7 @@ extern void           graph_csr_free(SCIP*, CSR**);
 extern SCIP_Bool      graph_csr_costsAreInSync(const GRAPH*, const CSR*, const SCIP_Real*);
 extern SCIP_Bool      graph_csr_isValid(const CSR*, SCIP_Bool verbose);
 extern SCIP_Bool      graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
+extern void           graph_buildOrgNodesToReducedMap(const GRAPH*, int*);
 /* CSR depository: */
 extern SCIP_RETCODE   graph_csrdepo_init(SCIP*, int, int, CSRDEPO**);
 extern void           graph_csrdepo_free(SCIP*, CSRDEPO**);

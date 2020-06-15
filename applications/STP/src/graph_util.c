@@ -271,6 +271,36 @@ void csrdepoFillCSR(
 
 
 /*
+ * Misc
+ */
+
+/** builds mapping from original vertices to non-zero degree ones */
+void graph_buildOrgNodesToReducedMap(
+   const GRAPH*          g,                  /**< the graph */
+   int*                  map                 /**< map */
+)
+{
+   int nodescount = 0;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(map);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( g->grad[i] == 0 )
+      {
+         map[i] = UNKNOWN;
+      }
+      else
+      {
+         map[i] = nodescount++;
+      }
+   }
+}
+
+
+
+/*
  * CSR Depository
  */
 
