@@ -248,7 +248,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detecting expr %p aka ", (void*)expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIPinfoMessage(scip, NULL, "Have to enforce: Below? %s. Above? %s\n", *enforcedbelow ? "no" : "yes", *enforcedabove ? "no" : "yes");
+   SCIPinfoMessage(scip, NULL, "Have to enforce %d\n", *enforcing);
 #endif
 
    /* check whether expression is quadratic (a sum with at least one square or bilinear term) */

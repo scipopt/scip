@@ -959,15 +959,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
       /* detection is only successful if both children have an auxiliary variable */
       if( var1 != NULL && var2 != NULL && !SCIPvarIsBinary(var1) && !SCIPvarIsBinary(var2) )
       {
-         /* we want to join separation and domain propagation, if not disabled by parameter */
-         *participating = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
-         if( nlhdlrdata->useinteval || nlhdlrdata->usereverseprop )
-            *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
-
          /* create expression data for the nonlinear handler */
-         SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
-         BMSclearMemory(*nlhdlrexprdata);
-
+         SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
          (*nlhdlrexprdata)->lastnodeid = -1;
 
          /* ensure that there is enough memory to store the detected expression */
@@ -1002,9 +995,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          ++nlhdlrdata->nexprs;
 
          /* tell child1 and child2 that we will use its activity for both estimate and domain propagation */
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child1, TRUE, TRUE) );
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child2, TRUE, TRUE) );
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child1, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child2, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
       }
+   }
+
+   if( *nlhdlrexprdata != NULL )
+   {
+      /* we want to join separation and domain propagation, if not disabled by parameter */
+      *participating = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      if( nlhdlrdata->useinteval || nlhdlrdata->usereverseprop )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
    }
 
 #ifdef SCIP_DEBUG
@@ -1012,7 +1013,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    {
       SCIPdebugMsg(scip, "detected expr ");
       SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, " participating: %d\n", *participating);
    }
 #endif
 

@@ -146,27 +146,35 @@ SCIP_RETCODE freeEnfoData(
 /* creates and adds two expression constraints and check output of SCIPgetBilinearExprsExpr */
 Test(nlhdlrbilinear, collect_product_expressions)
 {
-   SCIP_CONS* cons;
+   SCIP_CONS* conss[2];
    SCIP_CONSEXPR_EXPR** exprs;
    SCIP_CONSEXPR_EXPR* expr;
    const char* inputs[2] = {"<t_x> * <t_y> + <t_y> * <t_z>", "exp(<t_x>) * sin(<t_y>)"};
+   SCIP_Bool infeasible;
    int nexprs;
    int c;
 
    /* transform problem */
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
-   /* create constraints; call INITLP manually before adding each constraint to SCIP */
+   /* create constraints */
    for( c = 0; c < 2; ++c )
    {
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, inputs[c], NULL, &expr) );
-      SCIP_CALL( createAndDetect(&cons, expr) );
-
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[c], "cons", expr, -100.0, 100.0) );
+      SCIP_CALL( SCIPaddConsLocks(scip, conss[c], 1, 0) );
       /* add and release constraint */
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPaddCons(scip, conss[c]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
+
+   SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, conss, 2, &infeasible) );
+
+   SCIP_CALL( SCIPaddConsLocks(scip, conss[0], -1, 0) );
+   SCIP_CALL( SCIPaddConsLocks(scip, conss[1], -1, 0) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
+   SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
 
    /* check whether all product expressions could be found */
    exprs = SCIPgetConsExprNlhdlrBilinearExprs(nlhdlr);
