@@ -1280,6 +1280,8 @@ SCIP_RETCODE forwardPropExpr(
       if( infeasible != NULL )
          *infeasible = TRUE;
 
+      rootexpr->activitytag = conshdlrdata->curboundstag;
+
       return SCIP_OKAY;
    }
 
@@ -1669,7 +1671,7 @@ SCIP_RETCODE reversePropQueue(
 
             child = SCIPgetConsExprExprChildren(expr)[i];
 
-            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0) )
+            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0 || !SCIPconshdlrGetData(conshdlr)->nlhdlrsactive) )
             {
                /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)child, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))); */
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
@@ -1798,7 +1800,7 @@ SCIP_RETCODE propConss(
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, !allexprs, force, TRUE, FALSE, intEvalVarBoundTightening,
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, conshdlrdata->nlhdlrsactive && !allexprs, force, TRUE, FALSE, intEvalVarBoundTightening,
             (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -14056,7 +14058,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
 
    /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and should have a nlhdlr with a reverseprop callback and we see a tightening */
-   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0) )
+   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !SCIPconshdlrGetData(conshdlr)->nlhdlrsactive) )
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
