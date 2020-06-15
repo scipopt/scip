@@ -659,6 +659,12 @@ SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
    SCIP_RESULT*          result              /**< result pointer */
    );
 
+/** forces an exact lp to be solved in the next exact bound computation */
+void SCIPlpExactForceExactSolve(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 #ifdef __cplusplus
 }
 #endif

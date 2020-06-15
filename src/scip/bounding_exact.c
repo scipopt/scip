@@ -3314,7 +3314,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    assert(!lp->hasprovedbound);
 
    /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat) )
+   if( lpexact->forceexactsolve || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat)) )
       lpexact->forceexactsolve = TRUE;
 
    /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result

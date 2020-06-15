@@ -4596,6 +4596,7 @@ SCIP_RETCODE solveNode(
                   SCIPtreeSetFocusNodeLP(tree, TRUE);
                   solvelpagain = TRUE;
                   forcedlpsolve = TRUE; /* this LP must be solved without error - otherwise we have to abort */
+                  SCIPlpExactForceExactSolve(lp->lpexact, set);
                }
             }
             break;

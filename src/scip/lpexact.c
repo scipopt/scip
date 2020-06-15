@@ -6040,3 +6040,19 @@ SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
 
    return SCIP_OKAY;
 }
+
+/** forces an exact lp to be solved in the next exact bound computation */
+void SCIPlpExactForceExactSolve(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->misc_exactsolve )
+      return;
+
+   assert(lpexact != NULL);
+
+   lpexact->forceexactsolve = TRUE;
+}
