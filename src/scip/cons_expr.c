@@ -2105,7 +2105,6 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipating;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
-   int ntightenings;
    int nsuccess;
    int e, h;
 
@@ -2201,6 +2200,7 @@ SCIP_RETCODE detectNlhdlr(
       /* update enforcement flags */
       enforcemethods = enforcemethodsnew;
 
+#if 0 // FIXME I take this out for now, as I removed the corresponding forwardPropExpr call in detectNlhdlrs, but we may want to do a proper propConss call (with activitytag incremented) after detect (if not in presolve)
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && (nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0 )
       {
          /* call reverse propagation of nlhdlr
@@ -2212,6 +2212,7 @@ SCIP_RETCODE detectNlhdlr(
           */
          SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
       }
+#endif
    }
 
    /* stop if an enforcement method is missing but we are already in solving stage
@@ -2286,11 +2287,6 @@ SCIP_RETCODE detectNlhdlrs(
        */
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
    }
-   else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      /* this is to make sure that the forwardPropExpr() below indeed reevaluates all exprs when it is called with usedactivityonly == FALSE */
-      SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   }
 
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
@@ -2303,23 +2299,6 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* make sure activities in expression are uptodate by calling forwardPropExpr with usedactivityonly == FALSE
-          * we do this here for
-          * - nlhdlrs that use activity in detect (e.g., convex, concave, soc),
-          * - to have bounds for auxiliary variables that are going to be created,
-          * - and for a reverseprop call at the end
-          * Currently do this only during SOLVING, as we don't do auxiliary variables if in presolve and have no nlhdlr that uses activities for detect in presolve.
-          * (TODO probably this should be removed here and we should make sure that a NLHDLR that requires activities will get even during detect and also in presolve)
-          */
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, FALSE, TRUE, intEvalVarBoundTightening, conshdlrdata, NULL, NULL, NULL) );
-         assert(consdata->expr->activitytag == conshdlrdata->curboundstag);
-         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity) )
-         {
-            SCIPdebugMsg(scip, "infeasibility detected in activity calculation of constraint <%s>\n", SCIPconsGetName(conss[i]));
-            *infeasible = TRUE;
-            break;
-         }
-
 #ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
@@ -3127,17 +3106,6 @@ SCIP_RETCODE addLocks(
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       return SCIP_OKAY;
 
-   /* make sure activities are uptodate when root expression is locked for the first time */
-   if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
-   {
-      /*
-      SCIP_INTERVAL activity;
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, SCIPconsGetHdlr(cons), consdata->expr, &activity, TRUE, FALSE) );
-      */
-      SCIP_CALL( forwardPropExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, FALSE, FALSE, FALSE, TRUE, intEvalVarBoundTightening,
-         SCIPconshdlrGetData(SCIPconsGetHdlr(cons)), NULL, NULL, NULL) );
-   }
-
    /* remember locks */
    consdata->nlockspos += nlockspos;
    consdata->nlocksneg += nlocksneg;
@@ -3502,19 +3470,7 @@ SCIP_RETCODE reformulateConsExprExpr(
                {
                   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, expr, &refexpr) );
                   if( expr != refexpr )
-                  {
-                     SCIP_INTERVAL activity;
-
                      *changed = TRUE;
-
-                     /* make sure valid activities are available for the new expr (and its children)
-                      * we might expect them to be present in nlhdlr detect later
-                      */
-                     SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE, FALSE) );
-
-                     if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
-                        *infeasible = TRUE;
-                  }
                }
                else
                {
@@ -3560,18 +3516,7 @@ SCIP_RETCODE reformulateConsExprExpr(
                      /* stop calling other nonlinear handlers as soon as the reformulation was successful */
                      if( refexpr != NULL && refexpr != expr )
                      {
-                        SCIP_INTERVAL activity;
-
                         *changed = TRUE;
-
-                        /* make sure valid activities are available for the new expr (and its children)
-                         * we might expect them to be present in nlhdlr detect later
-                         */
-                        SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE, FALSE) );
-
-                        if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
-                           *infeasible = TRUE;
-
                         break;
                      }
                   }
@@ -14801,7 +14746,6 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPRCURV curv;
-   SCIP_INTERVAL activity;
    SCIP_EXPRCURV* childcurv;
    int childcurvsize;
    SCIP_Bool success;
@@ -14813,9 +14757,6 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
-
-   /* ensure activities are uptodate */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, FALSE) );
 
    childcurvsize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
