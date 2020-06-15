@@ -62,16 +62,6 @@ if(NOT WIN32)
       pkg_check_modules(_PC_IPOPT QUIET ipopt)
     endif()
 
-    message("---")
-    message("_PC_IPOPT_FOUND ${_PC_IPOPT_FOUND}")
-    message("---")
-    message("_PC_IPOPT_LDFLAGS ${_PC_IPOPT_LDFLAGS}")
-    message("_PC_IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS}")
-    message("_PC_IPOPT_LIBRARIES ${_PC_IPOPT_LIBRARIES}")
-    message("_PC_IPOPT_LIBRARY_DIRS ${_PC_IPOPT_LIBRARY_DIRS}")
-    message("_PC_IPOPT_CFLAGS_OTHER ${_PC_IPOPT_CFLAGS_OTHER}")
-    message("---")
-
     if(_PC_IPOPT_FOUND)
       set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
       set(IPOPT_DEFINITIONS ${_PC_IPOPT_CFLAGS_OTHER} CACHE STRING "Additional compiler flags for IPOPT")
@@ -79,19 +69,17 @@ if(NOT WIN32)
       foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
         find_library(${_LIBRARY}_PATH
                      NAMES ${_LIBRARY}
-                     PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-          message("found library ${_LIBRARY} in ${${_LIBRARY}_PATH}")
+                     PATHS ${_PC_IPOPT_LIBRARY_DIRS}
+                     NO_DEFAULT_PATH)
         list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
       endforeach()
+      list(APPEND IPOPT_LIBRARIES ${_PC_IPOPT_LDFLAGS})
     else()
       set(IPOPT_DEFINITIONS "")
     endif()
 
   endif()
 
-  message("IPOPT_INCLUDE_DIRS ${IPOPT_INCLUDE_DIRS}")
-  message("IPOPT_DEFINITIONS ${IPOPT_DEFINITIONS}")
-  message("IPOPT_LIBRARIES ${IPOPT_LIBRARIES}")
   set(IPOPT_LINK_FLAGS "")
 
   # If pkg-config fails, try to find the package using IPOPT_DIR
@@ -234,4 +222,7 @@ mark_as_advanced(IPOPT_INCLUDE_DIRS
                  IPOPT_LINK_FLAGS)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(IPOPT FOUND_VAR IPOPT_FOUND REQUIRED_VARS IPOPT_LIBRARIES VERSION_VAR IPOPT_VERSION)
+find_package_handle_standard_args(IPOPT
+  FOUND_VAR IPOPT_FOUND
+  REQUIRED_VARS IPOPT_LIBRARIES
+  VERSION_VAR IPOPT_VERSION)
