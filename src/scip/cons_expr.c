@@ -215,6 +215,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
+   SCIP_Bool                nlhdlrsactive;   /**< whether nlhdlrs are active, i.e., detectNlhdlrs() has finished */
 
    /* constraint upgrades */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -2045,7 +2046,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, conshdlrdata->nlhdlrsactive, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
          NULL, NULL, cutoff, NULL) );
       assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -2407,6 +2408,9 @@ SCIP_RETCODE detectNlhdlrs(
    {
       SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
+
+   /* remember that detect has been run */
+   conshdlrdata->nlhdlrsactive = TRUE;
 
    SCIPexpriteratorFree(&it);
    SCIPfreeBufferArray(scip, &nlhdlrparticipation);
@@ -4555,6 +4559,7 @@ SCIP_RETCODE canonicalizeConstraints(
          quadFree(scip, expr);
       }
    }
+   conshdlrdata->nlhdlrsactive = FALSE;
 
    /* allocate memory for storing locks of each constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
@@ -7182,6 +7187,7 @@ SCIP_RETCODE enforceConstraint(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   assert(conshdlrdata->nlhdlrsactive);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10310,6 +10316,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
+   /* nlhdlrs are no longer active */
+   conshdlrdata->nlhdlrsactive = FALSE;
+
    /* free nonlinear row representations */
    for( c = 0; c < nconss; ++c )
    {
@@ -10394,6 +10403,13 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
+   /* FIXME if this is called for a constraint that is added during solve, then
+    * conshldrdata->nlhdlrsactive will already be TRUE, which means that SCIPevalConsExprExprActivity will
+    * only evaluate activity where nlhdlrs already exist, which may not be the case for exprs that
+    * we only appear in the recently added constraint
+    * maybe we need to set nlhdlrsactive=FALSE here?
+    */
+
    /* register non linear handlers TODO: do we want this here? */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
 
@@ -13938,7 +13954,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
       (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
    {
       /* update activity of expression */
-      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, TRUE, FALSE, FALSE, global, intEvalVarBoundTightening,
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, conshdlrdata->nlhdlrsactive, FALSE, FALSE, global, intEvalVarBoundTightening,
          conshdlrdata, NULL, NULL, NULL) );
 
       assert(expr->activitytag == conshdlrdata->curboundstag);
