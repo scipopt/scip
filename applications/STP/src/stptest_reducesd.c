@@ -1080,6 +1080,73 @@ SCIP_RETCODE testSdBiasedBottleneckDeletesEdge(
 }
 
 
+#if 0
+/** tests that (implied) NSV contracts edge  */
+static
+SCIP_RETCODE testNsvRpcImpliedContractsEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sdistance;
+   GRAPH* graph;
+   int nnodes = 6;
+   int nedges = 14;
+   int nelims = 0;
+   SCIP_Real fixed = 0.0;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+
+   /* first cycle */
+   graph_edge_addBi(scip, graph, 0, 1, 0.9); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.1); // 2
+   graph_edge_addBi(scip, graph, 2, 3, 1.1); // 4
+   graph_edge_addBi(scip, graph, 3, 0, 2.1);
+
+   /* second cycle */
+   graph_edge_addBi(scip, graph, 2, 4, 1.1);
+   graph_edge_addBi(scip, graph, 4, 5, 1.1);
+   graph_edge_addBi(scip, graph, 5, 0, 2.1);
+
+   graph_pc_initPrizes(scip, graph, nnodes);
+   graph->prize[0] = FARAWAY;
+   graph->prize[1] = 0.0;
+   graph->prize[2] = 0.0;
+   graph->prize[3] = 2.0;
+   graph->prize[4] = FARAWAY;
+   graph->prize[5] = 0.0;
+
+
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sdistance) );
+
+//  SCIP_CALL( reduce_nsvImplied(scip, sdistance, graph, NULL, fixed, nelims) );
+
+
+//   graph_writeGml(graph, "unit.gml", NULL);
+
+
+   STPTEST_ASSERT(1);
+
+   printf("nelims=%d \n", nelims);
+
+
+   reduce_sdFree(scip, &sdistance);
+   stptest_graphTearDown(scip, graph);
+
+   assert(0);
+
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** tests that (implied) NSV contracts edge  */
 static
@@ -1117,8 +1184,6 @@ SCIP_RETCODE testNsvImpliedContractsEdge(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph, &sddata) );
-
-//   graph_writeGml(graph, "unit.gml", NULL);
 
    SCIP_CALL( reduce_nsvImplied(scip, sddata, graph, NULL, &fixed, &nelims) );
 
@@ -1453,6 +1518,8 @@ SCIP_RETCODE stptest_reduceNsvImplied(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+ //  SCIP_CALL( testNsvRpcImpliedContractsEdge(scip) );
+
    SCIP_CALL( testNsvImpliedContractsEdge(scip) );
    SCIP_CALL( testNsvImpliedContractsEdge2(scip) );
    SCIP_CALL( testNsvImpliedContractsImpliedToTermEdge(scip) );

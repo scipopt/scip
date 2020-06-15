@@ -128,12 +128,18 @@ SCIP_RETCODE blctreeBuildNodeMap(
       }
       else
       {
-         assert(!graph_pc_isPc(graph) || graph->grad[i] == 0);
+         assert(graph_pc_isPc(graph) || graph->grad[i] == 0);
          nodes_org2curr[i] = UNKNOWN;
       }
    }
 
-   assert(nodecount_curr == nnodes_curr);
+   assert(nodecount_curr <= nnodes_curr);
+   assert(graph_pc_isPc(graph) || nodecount_curr == nnodes_curr);
+
+   if( graph_pc_isPc(graph) )
+   {
+      blctree->nnodes_curr = nodecount_curr;
+   }
 
    return SCIP_OKAY;
 }
@@ -443,7 +449,6 @@ SCIP_RETCODE blctreeBuildMst(
    const int* nodes_org2curr = blctree->nodes_org2curr;
    const int nnodes_org = graph_get_nNodes(graph);
    const int nnodes_curr = blctree->nnodes_curr;
-   int mstnodescount = 0;
    blctree->root = nodes_org2curr[graph->source];
 
    assert(tree);
@@ -478,7 +483,6 @@ SCIP_RETCODE blctreeBuildMst(
          tree[k_curr].dist_edgetail = 0.0;
          tree[k_curr].dist_edgehead = 0.0;
          tree[k_curr].edgebottleneck = FARAWAY;
-         mstnodescount++;
 
          assert(k_org != graph->source);
          assert(k_curr != blctree->root);
@@ -486,7 +490,7 @@ SCIP_RETCODE blctreeBuildMst(
          assert(graph->tail[tree[k_curr].edge] == k_org);
       }
 #ifndef NDEBUG
-      else if( !graph_pc_isPc(graph) )
+      else
       {
          assert(k_curr == blctree->root);
          assert(k_org == graph->source);
@@ -495,13 +499,6 @@ SCIP_RETCODE blctreeBuildMst(
    }
 
    blctreeResetNode(blctree->root, blctree);
-
-   if( graph_pc_isPc(graph)  )
-   {
-      /* + 1 for the root */
-      blctree->nnodes_curr = mstnodescount + 1;
-   }
-
 
    SCIPfreeBufferArray(scip, &pmst);
 

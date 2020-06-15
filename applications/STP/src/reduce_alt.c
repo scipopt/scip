@@ -2532,17 +2532,25 @@ SCIP_RETCODE reduce_impliedProfitBased(
    if( g->terms <= 2 )
       return SCIP_OKAY;
 
-   /* NOTE: necessary, because we need remaining graph to be connected */
-   SCIP_CALL( reduceLevel0(scip, g) );
+   /* NOTE: pruning is necessary, because we need remaining graph to be connected */
+   if( isPcMw )
+   {
+      reduceLevel0RpcRmw(scip, g, fixed);
+   }
+   else
+   {
+      SCIP_CALL( reduceLevel0(scip, g) );
+   }
+
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
+
+   /* first call edge elimination tests */
    if( !isPcMw )
    {
       SCIP_CALL( reduce_sdBiased(scip, sdistance, g, &nelimsnew) );
    }
    SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, NULL, g, &nelimsnew) );
-
-   *nelims += nelimsnew;
 
 #if 0
    SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );
@@ -2553,11 +2561,13 @@ SCIP_RETCODE reduce_impliedProfitBased(
    {
       SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
       SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
+      *nelims += nelimsnew;
    }
 
  //  reduce_sdFree(scip, &sdistance);
  //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
+   /* now call edge contraction tests */
    SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
 
    reduce_sdFree(scip, &sdistance);
