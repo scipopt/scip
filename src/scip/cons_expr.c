@@ -1245,6 +1245,7 @@ SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
+   SCIP_Bool               usedactivityonly, /**< whether to only evaluate expressions which activity is used */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Bool               global,           /**< whether to evaluate expressions w.r.t. global bounds */
@@ -1288,6 +1289,13 @@ SCIP_RETCODE forwardPropExpr(
 
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity)); /* handled in previous if() */
 
+      return SCIP_OKAY;
+   }
+
+   /* if activity is of root expr not used, but usedactivityonly is set, then do nothing */
+   if( usedactivityonly && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 )
+   {
+      SCIPdebugMsg(scip, "activity of root expression is not used but usedactivityonly == TRUE, skip forwardPropExpr\n");
       return SCIP_OKAY;
    }
 
@@ -1369,7 +1377,14 @@ SCIP_RETCODE forwardPropExpr(
                break;
             }
 
-            /* TODO we should skip this expression if expr->nenfos == 0 and we have already run detection on constraints (some flag may be needed?) */
+            /* if activity of expr is not used, but usedactivityonly is set, then do nothing */
+            if( usedactivityonly && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
+            {
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, "expr %p activity is not, skip inteval\n");
+#endif
+               break;
+            }
 
 #ifdef DEBUG_PROP
             SCIPdebugMsg(scip, "interval evaluation of expr %p ", (void*)expr);
@@ -1782,7 +1797,7 @@ SCIP_RETCODE propConss(
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, FALSE, intEvalVarBoundTightening,
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, !allexprs, force, TRUE, FALSE, intEvalVarBoundTightening,
             (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -2030,7 +2045,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
          NULL, NULL, cutoff, NULL) );
       assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -7226,7 +7241,7 @@ SCIP_RETCODE enforceConstraint(
       SCIP_Bool infeasible;
       int ntightenings;
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
       if( infeasible )
       {
          *result = SCIP_CUTOFF;
@@ -13965,7 +13980,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
       (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
    {
       /* update activity of expression */
-      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, global, intEvalVarBoundTightening,
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, TRUE, FALSE, FALSE, global, intEvalVarBoundTightening,
          conshdlrdata, NULL, NULL, NULL) );
 
       assert(expr->activitytag == conshdlrdata->curboundstag);
