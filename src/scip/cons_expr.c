@@ -2262,7 +2262,6 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_INTERVAL activity;
    int i;
 
    assert(conss != NULL || nconss == 0);
@@ -2280,12 +2279,17 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrparticipation, conshdlrdata->nnlhdlrs) );
 
-   /* ensure that activies are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
-    * for example, this happens if globally valid expression constraints are added during the tree search
-    */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
+      /* ensure that activities are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
+       * for example, this happens if globally valid expression constraints are added during the tree search
+       */
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   }
+   else if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      /* this is to make sure that the forwardPropExpr() below indeed reevaluates all exprs when it is called with usedactivityonly == FALSE */
+      SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
 
    *infeasible = FALSE;
@@ -2299,12 +2303,17 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* make sure activities in expression are uptodate
-          * we do this here to have bounds for the auxiliary variables and for a reverseprop call at the end
-          * we don't do auxiliary variables if in presolve, so do only in solving
+         /* make sure activities in expression are uptodate by calling forwardPropExpr with usedactivityonly == FALSE
+          * we do this here for
+          * - nlhdlrs that use activity in detect (e.g., convex, concave, soc),
+          * - to have bounds for auxiliary variables that are going to be created,
+          * - and for a reverseprop call at the end
+          * Currently do this only during SOLVING, as we don't do auxiliary variables if in presolve and have no nlhdlr that uses activities for detect in presolve.
+          * (TODO probably this should be removed here and we should make sure that a NLHDLR that requires activities will get even during detect and also in presolve)
           */
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE, TRUE) );
-         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, FALSE, TRUE, intEvalVarBoundTightening, conshdlrdata, NULL, NULL, NULL) );
+         assert(consdata->expr->activitytag == conshdlrdata->curboundstag);
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity) )
          {
             SCIPdebugMsg(scip, "infeasibility detected in activity calculation of constraint <%s>\n", SCIPconsGetName(conss[i]));
             *infeasible = TRUE;
