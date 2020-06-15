@@ -1573,7 +1573,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
       if( !hasnondefault )
       {
-         SCIPinfoMessage(scip, NULL, "\nignoring a sum with default nlhdlr only");
          return SCIP_OKAY;
       }
    }
@@ -1777,7 +1776,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
+   SCIPinfoMessage(scip, NULL, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, " at\n");
    for( i = 0; i < nlhdlrexprdata->nvars; ++i )
@@ -1840,7 +1839,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    /* only do probing if tightening the domain of expr is useful (ndomainuses > 0)
     * and we are not in probing or a subscip
     */
-   if( SCIPgetConsExprExprNDomainUses(expr) == 0 || SCIPinProbing(scip)  || SCIPgetSubscipDepth(scip) != 0 )
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   if( SCIPgetConsExprExprNDomainUses(expr) == 0 || SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
+      (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
+      (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) )
       doprobing = FALSE;
 
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
@@ -1958,9 +1960,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             assert(rowprep != NULL);
 
 #ifdef SCIP_DEBUG
-            SCIPdebugMsg(scip, "rowprep for expr ");
+            SCIPinfoMessage(scip, NULL, "rowprep for expr ");
             SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-            SCIPinfoMessage(scip, NULL, " before perspectivy is: \n");
+            SCIPinfoMessage(scip, NULL, "rowprep before perspectivy is: \n");
             SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
