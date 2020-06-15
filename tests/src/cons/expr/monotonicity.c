@@ -146,16 +146,15 @@ SCIP_RETCODE testMonotonicity(
    SCIP_MONOTONE        expectedres         /**< expected result */
    )
 {
-   SCIP_INTERVAL activity;
+   SCIP_MONOTONE monotonicity;
 
    cr_assert(i < SCIPgetConsExprExprNChildren(expr));
 
-   /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
+   /* evaluate monotonicity */
+   SCIP_CALL( SCIPgetConsExprExprMonotonicity(scip, conshdlr, expr, i, &monotonicity) );
 
-   /* check curvature */
-   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "got %d, expected %d",
-      SCIPgetConsExprExprMonotonicity(scip, expr, i), expectedres);
+   /* check monotonicity */
+   cr_expect(monotonicity == expectedres, "got %d, expected %d", monotonicity, expectedres);
 
    return SCIP_OKAY;
 }

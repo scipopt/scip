@@ -142,12 +142,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    assert(nlhdlr != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(enforcemethods != NULL);
-   assert(enforcedbelow != NULL);
-   assert(enforcedabove != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
+   assert(enforcing != NULL);
+   assert(participating != NULL);
 
    /* only look at sum expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
@@ -309,16 +305,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    else
       return SCIP_OKAY; /* indefinite */
 
-   /* communicate that we will enforce one side by separation */
-   *enforcemethods |= exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   *enforcedbelow |= exprdata.convex;
-   *enforcedabove |= !exprdata.convex;
-   *success = TRUE;
-   SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
-
+   /* communicate that we will participate on one side by separation */
+   *participating = exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    /* communicate that we will also do inteval and reverseprop */
-   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL;
-   *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
+   *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   /* everything where we participate, we do thoroughly */
+   *enforcing |= *participating;
+
+   SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
    return SCIP_OKAY;
 }

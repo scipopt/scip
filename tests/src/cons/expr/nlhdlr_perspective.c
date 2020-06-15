@@ -173,11 +173,9 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
 
@@ -191,17 +189,12 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
@@ -218,11 +211,9 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
 
@@ -248,17 +239,12 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs);
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
-   cr_assert(enforceabove);
-   cr_assert(!enforcebelow);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
@@ -276,11 +262,9 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
    SCIP_RESULT result;
@@ -310,17 +294,12 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
    SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs);
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );

@@ -115,10 +115,8 @@ SCIP_RETCODE detect(
    SCIP_INTERVAL activity;
    SCIP_Bool changed;
    SCIP_Bool infeas;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_CONS* cons;
 
    /* create expression and constraint */
@@ -139,27 +137,22 @@ SCIP_RETCODE detect(
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
+   cr_expect_eq(enforcing, participating);
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
-      cr_expect(success);
-      cr_expect(enforceabove);
-      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
+      cr_expect((enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
-      cr_expect(success);
-      cr_expect(enforcebelow);
-      cr_expect((provided & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
+      cr_expect((enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0);
    }
 
-   if( success )
+   if( participating != SCIP_CONSEXPR_EXPRENFO_NONE )
    {
       cr_assert_not_null(nlhdlrexprdata);
       SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );

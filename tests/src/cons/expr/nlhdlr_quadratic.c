@@ -115,11 +115,9 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_VAR* var;
@@ -137,16 +135,14 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
-   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
+   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
@@ -178,14 +174,13 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
  */
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* cosexpr;
    SCIP_CONS* cons;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool infeasible;
 
@@ -213,16 +208,14 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)), "cos", "expecting cos got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)));
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
-   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
+   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
@@ -371,10 +364,8 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -387,17 +378,13 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(!success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_expect_null(nlhdlrexprdata);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -409,10 +396,8 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -425,17 +410,13 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(!success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_expect_null(nlhdlrexprdata);
 
    /* no auxiliary variables */
@@ -459,10 +440,8 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -479,16 +458,12 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -513,10 +488,8 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -533,16 +506,12 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -646,10 +615,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_INTERVAL interval;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
@@ -675,16 +642,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -765,10 +728,8 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_INTERVAL interval;
@@ -792,16 +753,12 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
