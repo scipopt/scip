@@ -292,19 +292,23 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CALL( SCIPprintConsExprQuadratic(scip, conshdlr, quaddata) );
 #endif
 
-   /* every propagable quadratic expression will be handled if required since we can propagate */
-   if( propagable && (*enforcing & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
+   /* every propagable quadratic expression will be handled since we can propagate */
+   if( propagable )
    {
+      SCIP_CONSEXPR_EXPR** linexprs;
+      int nlinexprs;
       int nquadexprs;
       int i;
 
       *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
       *enforcing |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
-      SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
+      SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, NULL);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nquadexprs) );
 
       /* notify children of quadratic that we will need their activity for propagation */
+      for( i = 0; i < nlinexprs; ++i )
+         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, linexprs[i], TRUE, FALSE) );
       for( i = 0; i < nquadexprs; ++i )
       {
          SCIP_CONSEXPR_EXPR* argexpr;
