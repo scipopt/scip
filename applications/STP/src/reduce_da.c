@@ -2166,12 +2166,13 @@ SCIP_RETCODE reduce_da(
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
       SCIP_Real cutoffbound = -1.0;
+      SCIP_Bool havenewsol = FALSE;
 
       /* main reduction loop */
       for( int run = 0; run < nruns; run++ )
       {
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
-         SCIP_Bool havenewsol = FALSE;
+         havenewsol = FALSE;
          redcostdata.redCostRoot = terms[run];
 
          /* graph vanished? */
@@ -2280,7 +2281,7 @@ SCIP_RETCODE reduce_da(
 
          if( extended )
          {
-            const SCIP_Bool havenewsol = solstp_isUnreduced(scip, graph, result);
+            havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
             assert(!havenewsol || solstp_isValid(scip, graph, result));
 
             SCIP_CALL( extreduce_updatePseudoDeletableNodes(scip, &redcostdata, (havenewsol ? result : NULL), pseudoDelNodes,

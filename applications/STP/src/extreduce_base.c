@@ -512,7 +512,7 @@ SCIP_RETCODE extreduce_updatePseudoDeletableNodes(
 )
 {
 
-   assert(scip && redcostdata && result && graph);
+   assert(scip && redcostdata && graph);
 
    SCIP_CALL( pseudodeleteExecute(scip, redcostdata, result, graph, pseudoDelNodes, edgedeletable, NULL, NULL) );
 
