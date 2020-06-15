@@ -183,6 +183,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
 
    /* z1 <= x1 <= 3*z1 */
    SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
@@ -221,6 +222,7 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x1>+<x2>)", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
 
    /* z1 <= x1 <= 3*z1 */
    SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
