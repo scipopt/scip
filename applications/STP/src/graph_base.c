@@ -2317,6 +2317,37 @@ void graph_printInfo(
 }
 
 
+/** print information on graph that has been subject to reductions  */
+void graph_printInfoReduced(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   int nnodes;
+   int nedges;
+   int nterms;
+
+   graph_get_nVET(g, &nnodes, &nedges, &nterms);
+
+   if( graph_pc_isPcMw(g) )
+   {
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d, isExtended=%d \n",
+            nnodes, nedges, nterms, g->source, g->stp_type, g->extended);
+
+      if( graph_pc_isPc(g) )
+      {
+         printf("non-leaf terminals=%d, ", graph_pc_nNonLeafTerms(g));
+         printf("fixed terminals=%d, ", graph_pc_nFixedTerms(g));
+         printf("proper terminals=%d \n", graph_pc_nProperPotentialTerms(g));
+      }
+   }
+   else
+   {
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d \n", nnodes,
+            nedges, nterms, g->source, g->stp_type);
+   }
+}
+
+
 /** get number of nodes */
 int graph_get_nNodes(
    const GRAPH*    graph               /**< the graph */

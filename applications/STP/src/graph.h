@@ -373,6 +373,7 @@ extern void          graph_dijkLimited_free(SCIP*, DIJK**);
 extern void   graph_mark(GRAPH*);
 extern void   graph_show(const GRAPH*);
 extern void   graph_printInfo(const GRAPH*);
+extern void   graph_printInfoReduced(const GRAPH*);
 extern void   graph_uncover(GRAPH*);
 extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
 extern void   graph_free_history(SCIP*, GRAPH*);
