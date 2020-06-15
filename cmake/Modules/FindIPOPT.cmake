@@ -71,6 +71,9 @@ if(NOT WIN32)
                      NAMES ${_LIBRARY}
                      PATHS ${_PC_IPOPT_LIBRARY_DIRS}
                      NO_DEFAULT_PATH)
+        find_library(${_LIBRARY}_PATH
+                     NAMES ${_LIBRARY}
+                     PATHS ${_PC_IPOPT_LIBRARY_DIRS})
         list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
       endforeach()
       list(APPEND IPOPT_LIBRARIES ${_PC_IPOPT_LDFLAGS})
