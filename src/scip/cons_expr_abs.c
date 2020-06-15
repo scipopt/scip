@@ -529,8 +529,6 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL childbounds;
-   SCIP_Real childinf;
-   SCIP_Real childsup;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -540,13 +538,11 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childbounds = SCIPgetConsExprExprActivity(scip, child);
-   childinf = SCIPintervalGetInf(childbounds);
-   childsup = SCIPintervalGetSup(childbounds);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
 
-   if( childsup <= 0.0 )
+   if( childbounds.sup <= 0.0 )
       *result = SCIP_MONOTONE_DEC;
-   else if( childinf >= 0.0 )
+   else if( childbounds.inf >= 0.0 )
       *result = SCIP_MONOTONE_INC;
    else
       *result = SCIP_MONOTONE_UNKNOWN;

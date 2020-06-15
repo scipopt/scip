@@ -931,8 +931,9 @@ void buildQuadExprMatrix(
  * We say try because the expression might still turn out not to be an SOC at this point.
  */
 static
-void tryFillNlhdlrExprDataQuad(
+SCIP_RETCODE tryFillNlhdlrExprDataQuad(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expr constraint handler */
    SCIP_CONSEXPR_EXPR**  occurringexprs,     /**< array of all occurring expressions (nvars many) */
    SCIP_Real*            eigvecmatrix,       /**< array containing the Eigenvectors */
    SCIP_Real*            eigvals,            /**< array containing the Eigenvalues */
@@ -1013,7 +1014,7 @@ void tryFillNlhdlrExprDataQuad(
 
    /* process constant; if constant is negative -> no soc */
    if( SCIPisNegative(scip, *lhsconstant) )
-      return;
+      return SCIP_OKAY;
 
    /* we need lhsconstant to be >= 0 */
    if( *lhsconstant < 0.0 )
@@ -1045,19 +1046,22 @@ void tryFillNlhdlrExprDataQuad(
       rhstermlb = offsets[nextterm];
       for( j = 0; j < nvars; ++j )
       {
+         SCIP_INTERVAL activity;
          SCIP_Real aux;
 
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE, TRUE) );
+
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
-            aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
+            aux = activity.inf;
             assert(!SCIPisInfinity(scip, aux));
          }
          else
          {
-            aux = SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
+            aux = activity.sup;
             assert(!SCIPisInfinity(scip, -aux));
          }
 
@@ -1073,19 +1077,22 @@ void tryFillNlhdlrExprDataQuad(
       rhstermub = offsets[nextterm];
       for( j = 0; j < nvars; ++j )
       {
+         SCIP_INTERVAL activity;
          SCIP_Real aux;
 
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE, TRUE) );
+
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
-            aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).sup;
+            aux = activity.sup;
             assert(!SCIPisInfinity(scip, -aux));
          }
          else
          {
-            aux =  SCIPgetConsExprExprActivity(scip, occurringexprs[j]).inf;
+            aux = activity.inf;
             assert(!SCIPisInfinity(scip, aux));
          }
 
@@ -1110,7 +1117,7 @@ void tryFillNlhdlrExprDataQuad(
 
       /* if rhs changes sign -> not a SOC */
       if( SCIPisLT(scip, rhstermlb, 0.0) && SCIPisGT(scip, rhstermub, 0.0) )
-         return;
+         return SCIP_OKAY;
 
       signfactor = SCIPisLE(scip, rhstermub, 0.0) ? -1.0 : 1.0;
 
@@ -1141,6 +1148,8 @@ void tryFillNlhdlrExprDataQuad(
    termbegins[nextterm] = nexttranscoef;
 
    *success = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar
@@ -1636,8 +1645,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 2);
 
-      yactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
-      zactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &yactivity, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], &zactivity, FALSE, TRUE) );
 
       if( SCIPisNegative(scip, yactivity.inf + zactivity.inf) )
       {
@@ -1662,7 +1671,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_INTERVAL rhsactivity;
 
       assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 1);
-      rhsactivity = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &rhsactivity, FALSE, TRUE) );
 
       if( rhsactivity.inf < 0.0 )
       {
@@ -2076,8 +2085,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 1) );
 
    /* try to fill the nlhdlrexprdata (at this point, it can still fail) */
-   tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
-         transcoefsidx, offsets, &lhsconstant, &nterms, success);
+   SCIP_CALL( tryFillNlhdlrExprDataQuad(scip, conshdlr, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
+         transcoefsidx, offsets, &lhsconstant, &nterms, success) );
 
    if( !(*success) )
       goto CLEANUP;

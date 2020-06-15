@@ -818,9 +818,7 @@ SCIP_Real SCIPgetConsExprExprDerivative(
  * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
  * - interval evaluation (intervals for children only)
  * - reverse propagation
- * - monotonicity computation
- * - convexity detection
- * - structure detection
+ * - estimate and enforce (for exprs where activity usage was signaled during nlhdlr detect)
  */
 SCIP_EXPORT
 SCIP_INTERVAL SCIPgetConsExprExprActivity(
@@ -1029,12 +1027,14 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the monotonicity of an expression w.r.t. to a given child */
+/** computes the monotonicity of an expression w.r.t. to a given child */
 SCIP_EXPORT
-SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
+SCIP_RETCODE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   childidx            /**< index of child */
+   int                   childidx,           /**< index of child */
+   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
    );
 
 /** returns the number of positive rounding locks of an expression */

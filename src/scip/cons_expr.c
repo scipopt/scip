@@ -3002,7 +3002,7 @@ SCIP_RETCODE propagateLocks(
                /* store the monotonicity for each child */
                for( i = 0; i < expr->nchildren; ++i )
                {
-                  SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, expr, i, &expr->monotonicity[i]) );
+                  SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, i, &expr->monotonicity[i]) );
                }
             }
             break;
@@ -13878,9 +13878,7 @@ SCIP_Real SCIPgetConsExprExprDerivative(
  * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
  * - interval evaluation (intervals for children only)
  * - reverse propagation
- * - monotonicity computation
- * - convexity detection
- * - structure detection
+ * - estimate and enforce (for exprs where activity usage was signaled during nlhdlr detect)
  */
 SCIP_INTERVAL SCIPgetConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -14847,26 +14845,29 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    return SCIP_OKAY;
 }
 
-/** returns the monotonicity of an expression w.r.t. to a given child */
-SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
+/** computes the monotonicity of an expression w.r.t. to a given child */
+SCIP_RETCODE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   childidx            /**< index of child */
+   int                   childidx,           /**< index of child */
+   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
    )
 {
-   SCIP_MONOTONE monotonicity = SCIP_MONOTONE_UNKNOWN;
-
    assert(expr != NULL);
    assert(childidx >= 0 || expr->nchildren == 0);
    assert(childidx < expr->nchildren);
+   assert(monotonicity != NULL);
+
+   *monotonicity = SCIP_MONOTONE_UNKNOWN;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( expr->exprhdlr->monotonicity != NULL )
    {
-      SCIP_CALL_ABORT( (*expr->exprhdlr->monotonicity)(scip, expr, childidx, &monotonicity) );
+      SCIP_CALL_ABORT( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, childidx, monotonicity) );
    }
 
-   return monotonicity;
+   return SCIP_OKAY;
 }
 
 /** returns the number of positive rounding locks of an expression */

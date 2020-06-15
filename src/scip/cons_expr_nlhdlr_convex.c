@@ -470,12 +470,12 @@ DECL_CURVCHECK(curvCheckSignomial)
       if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
          exponents[i] = 1.0;
-         bounds[i] = SCIPgetConsExprExprActivity(scip, child);
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &bounds[i], FALSE, TRUE) );
       }
       else
       {
          exponents[i] = SCIPgetConsExprExprPowExponent(child);
-         bounds[i] = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(child)[0]);
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &bounds[i], FALSE, TRUE) );
       }
    }
 
@@ -623,14 +623,14 @@ DECL_CURVCHECK(curvCheckProductComposite)
 
    assert(c != 0.0);
 
-   fbounds = SCIPgetConsExprExprActivity(scip, f);
-   hbounds = SCIPgetConsExprExprActivity(scip, h);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, f, &fbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, h, &hbounds, FALSE, TRUE) );
 
    /* if h has mixed sign, then cannot conclude anything */
    if( hbounds.inf < 0.0 && hbounds.sup > 0.0 )
       return SCIP_OKAY;
 
-   fmonotonicity = SCIPgetConsExprExprMonotonicity(scip, f, 0);
+   SCIP_CALL( SCIPgetConsExprExprMonotonicity(scip, conshdlr, f, 0, &fmonotonicity) );
 
    /* if f is not monotone, then cannot conclude anything */
    if( fmonotonicity == SCIP_MONOTONE_UNKNOWN )

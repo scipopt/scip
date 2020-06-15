@@ -266,12 +266,14 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr: cons_expr constraint handler
  *  - expr : expression to check the monotonicity for
  *  - childidx : index of the considered child expression
  *  - result : buffer to store the monotonicity
  */
 #define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
    SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    int childidx, \
    SCIP_MONOTONE* result)
