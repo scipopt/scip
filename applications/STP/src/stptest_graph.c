@@ -313,6 +313,24 @@ SCIP_RETCODE stptest_graphSetUpPcOrg(
 }
 
 
+/** sets up graph for rooted PC */
+SCIP_RETCODE stptest_graphSetUpRpcOrg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   SCIP_CALL( stptest_graphSetUpRpcExtended(scip, graph, nnodes_new, nedges_new) );
+
+   graph_pc_2org(scip, graph);
+
+   assert(graph_pc_isRootedPcMw(graph));
+
+   return SCIP_OKAY;
+}
+
+
 /** sets up graph for RMW */
 SCIP_RETCODE stptest_graphSetUpRmwOrg(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -376,6 +394,30 @@ SCIP_RETCODE stptest_graphSetUpPcExtended(
    return SCIP_OKAY;
 }
 
+
+
+/** sets up graph for RPC */
+SCIP_RETCODE stptest_graphSetUpRpcExtended(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   int*                  nnodes_new,         /**< to store new number of nodes (if != NULL)  */
+   int*                  nedges_new          /**< to store new number of edge (if != NULL) */
+   )
+{
+   graph->stp_type = STP_RPCSPG;
+
+   SCIP_CALL( graph_transRpc(scip, graph) );
+
+   stptest_graphSetUp(scip, graph);
+
+   if( nnodes_new )
+      *nnodes_new = graph->knots;
+
+   if( nedges_new )
+      *nedges_new = graph->edges;
+
+   return SCIP_OKAY;
+}
 
 /** tests CSR depository */
 SCIP_RETCODE stptest_csrdepo(
