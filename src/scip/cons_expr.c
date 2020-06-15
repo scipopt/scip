@@ -3130,8 +3130,12 @@ SCIP_RETCODE addLocks(
    /* make sure activities are uptodate when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
+      /*
       SCIP_INTERVAL activity;
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, SCIPconsGetHdlr(cons), consdata->expr, &activity, TRUE, FALSE) );
+      */
+      SCIP_CALL( forwardPropExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, FALSE, FALSE, FALSE, TRUE, intEvalVarBoundTightening,
+         SCIPconshdlrGetData(SCIPconsGetHdlr(cons)), NULL, NULL, NULL) );
    }
 
    /* remember locks */
