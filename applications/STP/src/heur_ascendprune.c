@@ -724,9 +724,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       redcostgraph.root = g->source;
    }
 
-   assert(Is_term(g->term[root]));
+   assert(Is_term(g->term[redcostgraph.root]));
    assert(graph_valid(scip, g));
-   assert(!graph_pc_isPcMw(g) || graph_pc_knotIsFixedTerm(g, root));
+   assert(!graph_pc_isPcMw(g) || graph_pc_knotIsFixedTerm(g, redcostgraph.root));
 
    SCIP_CALL( redcostGraphMark(scip, g, &redcostgraph) );
 
