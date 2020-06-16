@@ -329,8 +329,8 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   /* adding a constraint also adds locks */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
@@ -351,6 +351,12 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, x, 4.0, 1.0, x, -3.0, -3.0, 2.0);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

@@ -278,7 +278,9 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
+   /* adds locks which are needed for detectNlhdlrs */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert_not(infeasible);
 
@@ -354,6 +356,12 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_expect_eq(2.0, bilin.coef, "Expecting bilincoef %g in quad term, got %g\n", 2.0, bilin.coef);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr1), y);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr2), x);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }

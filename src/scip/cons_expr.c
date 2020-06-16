@@ -10405,12 +10405,21 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
-   /* FIXME if this is called for a constraint that is added during solve, then
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if this is called for a constraint that is added during solve, then
     * conshldrdata->nlhdlrsactive will already be TRUE, which means that SCIPevalConsExprExprActivity will
     * only evaluate activity where nlhdlrs already exist, which may not be the case for exprs that
     * we only appear in the recently added constraint
-    * maybe we need to set nlhdlrsactive=FALSE here?
+    * setting nlhdlrsactive=FALSE should help on this
+    * TODO maybe nlhdlrsactive should move into expr
+    * TODO as detect now also makes sense for conss that never separate, detect should probably move into
+    * initsol and/or enablecons or activecons
     */
+   conshdlrdata->nlhdlrsactive = FALSE;
 
    /* register non linear handlers TODO: do we want this here? */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
@@ -10418,6 +10427,8 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    /* if creating auxiliary variables detected an infeasible (because of bounds), stop initing lp */
    if( *infeasible )
       return SCIP_OKAY;
+
+   assert(conshdlrdata->nlhdlrsactive);
 
    /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
@@ -10786,6 +10797,8 @@ static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool nlhdlrswereactive;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
@@ -10796,8 +10809,24 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* consLock can be called for a new constraint before its INITLP
+    * lock computation may require activity evaluation, which must work
+    * in the pre-nlhdlrdetect mode (i.e., use exprhdlr on every expr)
+    * for this constraint
+    * its a bit dirty, but temporarily resetting nlhdlrsactive to FALSE
+    * should do the trick
+    * see also comment in consInitLP
+    */
+   nlhdlrswereactive = conshdlrdata->nlhdlrsactive;
+   conshdlrdata->nlhdlrsactive = FALSE;
+
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
+
+   conshdlrdata->nlhdlrsactive = nlhdlrswereactive;
 
    return SCIP_OKAY;
 }
@@ -10844,6 +10873,26 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
       assert(SCIPconsGetData(cons)->nlocksneg == 0);
 
       SCIP_CALL( addLocks(scip, cons, 1, 0) );
+   }
+
+   /* FIXME/TODO that's for getting DETECT run early for constraints that are added during solve
+    * though it may be rerun in INITLP
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_Bool infeasible;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      conshdlrdata->nlhdlrsactive = FALSE;
+
+      /* register non linear handlers TODO: do we want this here? */
+      SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+
+      assert(!infeasible);
+      assert(conshdlrdata->nlhdlrsactive);
    }
 
    return SCIP_OKAY;
