@@ -1836,11 +1836,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          doprobing = TRUE;
    }
 
-   /* only do probing if tightening the domain of expr is useful (ndomainuses > 0)
+   /* only do probing if tightening the domain of expr is useful (using curvature for now)
     * and we are not in probing or a subscip
+    * TODO use (updated) ndomainuses
     */
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   if( SCIPgetConsExprExprNDomainUses(expr) == 0 || SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
+   if( SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) )
       doprobing = FALSE;
