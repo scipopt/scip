@@ -55,7 +55,7 @@
 #define HEUR_USESSUBSCIP      FALSE           /**< does the heuristic use a secondary SCIP instance?                                 */
 
 #define DEFAULT_MAXFREQPRUNE     FALSE         /**< executions of the heuristic at maximum frequency?                               */
-#define ASCENPRUNE_MINLPIMPROVE     0.05          /**< minimum percentual improvement of dual bound (wrt to gap) mandatory to execute heuristic */
+#define ASCENPRUNE_MINLPIMPROVE     0.2          /**< minimum percentual improvement of dual bound (wrt to gap) mandatory to execute heuristic */
 
 #ifdef WITH_UG
 int getUgRank(void);
@@ -623,9 +623,6 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    assert(result != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   printf("CALL \n");
-
-
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -665,6 +662,8 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
          return SCIP_OKAY;
    }
 
+   printf("CALL ascend-prune \n");
+
    heurdata->lastdualbound = dualbound;
 
    /* allocate memory for ascend-and-prune */
@@ -672,8 +671,6 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
 
    SCIPStpGetRedcosts(scip, vars, graph, redcosts);
-
-
 
    /* perform ascent and prune */
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, graph->source, &solAdded, TRUE) );
