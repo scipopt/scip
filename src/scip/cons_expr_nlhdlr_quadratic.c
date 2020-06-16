@@ -335,7 +335,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
     * this is currently only used to decide whether we want to separate, so it can be skipped if in presolve
     */
    SCIPdebugMsg(scip, "checking convexity of expr %p\n", (void*)expr);
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &nlexprdata->curvature) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &nlexprdata->curvature, NULL) );
 
    /* if convex and non propagable -> quadratic is of the form sum x_i^2 + sum y_i -> we do not want to handle it
     * TODO: we can check if it is of this form before we allocate all the data
