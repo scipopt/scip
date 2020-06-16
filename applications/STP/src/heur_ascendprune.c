@@ -143,6 +143,42 @@ SCIP_RETCODE checkRedCostGraph(
 
    return SCIP_OKAY;
 }
+
+
+static
+SCIP_RETCODE checkRedCostEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const RCGRAPH*        redcostgraph        /**< the redcost graph */
+)
+{
+   const int* const subgraphedges = redcostgraph->edgelist;
+   SCIP_Bool* halfedge_mark;
+   const int nedges = graph_get_nEdges(g);
+   const int nedges_redocst = redcostgraph->nedges_half;
+
+   assert(subgraphedges);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &halfedge_mark, nedges / 2) );
+   BMSclearMemoryArray(halfedge_mark, nedges / 2);
+
+   for( int e = 0; e < nedges_redocst; e++ )
+   {
+      const int halfedge = subgraphedges[e] / 2;
+
+      if( halfedge_mark[halfedge] )
+      {
+         printf("checkRedCostEdges FAIL at %d \n", e);
+         return SCIP_ERROR;
+      }
+
+      halfedge_mark[halfedge] = TRUE;
+   }
+
+   SCIPfreeMemoryArray(scip, &halfedge_mark);
+
+   return SCIP_OKAY;
+}
 #endif
 
 
@@ -240,11 +276,31 @@ SCIP_RETCODE redcostGraphMark(
       }
    }
 
+   /* we need to make sure that the dummy terminals are connected from the root */
+   if( pcmw && root_redcost != g->source )
+   {
+      assert(graph_pc_isRootedPcMw(g));
+      assert(mark[g->source]);
+
+      for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+         if( mark[head] && graph_pc_knotIsDummyTerm(g, head) && !SCIPisZero(scip, redcosts[a]) )
+         {
+            subgraphedges[nnewedges++] = a;
+         }
+      }
+   }
+
    SCIPfreeBufferArray(scip, &scanned);
    SCIPfreeBufferArray(scip, &queue);
 
    redcostgraph->nnodes = nnewnodes;
    redcostgraph->nedges_half = nnewedges;
+
+#ifdef DEBUG_ASCENDPRUNE
+   SCIP_CALL( checkRedCostEdges(scip, g, redcostgraph) );
+#endif
 
    return SCIP_OKAY;
 }
