@@ -305,7 +305,7 @@ SCIP_RETCODE redcostGraphMark(
    return SCIP_OKAY;
 }
 
-#ifndef NDEBUG
+
 /** gets number of terms that are marked */
 static
 int redcostGetNTermsMarked(
@@ -324,7 +324,6 @@ int redcostGetNTermsMarked(
 
    return nterms;
 }
-#endif
 
 
 /** builds graphs */
@@ -452,10 +451,13 @@ void redcostGraphFree(
    RCGRAPH*              redcostgraph
    )
 {
-   graph_free(scip, &(redcostgraph->newgraph), TRUE);
-   SCIPfreeBufferArray(scip, &(redcostgraph->edgeNew2OrgMap));
-   SCIPfreeBufferArray(scip, &(redcostgraph->nodeOrg2NewMap));
-   SCIPfreeBufferArray(scip, &(redcostgraph->edgelist));
+   if( redcostgraph->newgraph )
+   {
+      graph_free(scip, &(redcostgraph->newgraph), TRUE);
+   }
+   SCIPfreeBufferArrayNull(scip, &(redcostgraph->edgeNew2OrgMap));
+   SCIPfreeBufferArrayNull(scip, &(redcostgraph->nodeOrg2NewMap));
+   SCIPfreeBufferArrayNull(scip, &(redcostgraph->edgelist));
 }
 
 
@@ -621,6 +623,9 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    assert(result != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
+   printf("CALL \n");
+
+
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -667,6 +672,8 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
 
    SCIPStpGetRedcosts(scip, vars, graph, redcosts);
+
+
 
    /* perform ascent and prune */
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, graph->source, &solAdded, TRUE) );
@@ -729,8 +736,17 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( redcostgraph.nedges_half == 0 )
    {
       assert(g->stp_type == STP_RMWCSP);
-      *solfound = TRUE;
       solstp_getTrivialSol(g, result);
+      redcostGraphFree(scip, &redcostgraph);
+
+      return SCIP_OKAY;
+   }
+
+   if( graph_typeIsSpgLike(g) && g->terms != redcostGetNTermsMarked(g, &redcostgraph) )
+   {
+      printf("not all terminals could be reached (%d < %d) abort ascend-and-prune \n",  g->terms,  redcostGetNTermsMarked(g, &redcostgraph) );
+      redcostGraphFree(scip, &redcostgraph);
+      *solfound = FALSE;
 
       return SCIP_OKAY;
    }
