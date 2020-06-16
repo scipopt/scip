@@ -215,6 +215,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
+   SCIP_Bool                indetect;        /**< whether we are currently in detectNlhdlr */
 
    /* constraint upgrades */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -1299,9 +1300,11 @@ SCIP_RETCODE forwardPropExpr(
    /* if activity of rootexpr is not used, but expr participated in detect, then we do nothing
     * it seems wrong to be called for such an expression, so I also add an assert
     * if there turns out to be a good reason, then we might need an additional mode for forwardPropExpr
+    * found a reason: during detect, we are in some in-between state where we may want to eval activity
+    * on exprs that we did not notify about their activity usage
     */
-   assert(!rootexpr->enfoinitialized || rootexpr->nactivityusesprop > 0 || rootexpr->nactivityusessepa > 0);
-   if( rootexpr->enfoinitialized && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 )
+   assert(!rootexpr->enfoinitialized || rootexpr->nactivityusesprop > 0 || rootexpr->nactivityusessepa > 0 || conshdlrdata->indetect);
+   if( rootexpr->enfoinitialized && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 && !conshdlrdata->indetect)
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "root expr activity is not used but enfo initialized, skip inteval\n");
@@ -1388,7 +1391,7 @@ SCIP_RETCODE forwardPropExpr(
             }
 
             /* if activity of expr is not used, but expr participated in detect, then do nothing */
-            if( expr->enfoinitialized && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
+            if( expr->enfoinitialized && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && !conshdlrdata->indetect )
             {
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, "expr %p activity is not used but enfo initialized, skip inteval\n", (void*)expr);
@@ -2127,6 +2130,7 @@ SCIP_RETCODE detectNlhdlr(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
+   assert(!conshdlrdata->indetect);
 
    /* there should be no enforcer yet, i.e., detection should not have been run already */
    assert(expr->nenfos == 0);
@@ -2152,6 +2156,7 @@ SCIP_RETCODE detectNlhdlr(
       enforcemethods |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
    nsuccess = 0;
+   conshdlrdata->indetect = TRUE;
 
    SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); requiring%s%s%s\n",
       cons != NULL ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
@@ -2224,6 +2229,8 @@ SCIP_RETCODE detectNlhdlr(
       }
 #endif
    }
+
+   conshdlrdata->indetect = FALSE;
 
    /* stop if an enforcement method is missing but we are already in solving stage
     * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
