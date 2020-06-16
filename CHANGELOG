@@ -56,11 +56,13 @@ Build system
 Fixed bugs
 ----------
 
-- Fixed handling of constant term in quadratic objective of pip-reader.
+- Fixed handling of constant term in quadratic objective of pip-reader
 - Fixed incorrect value string for parameter estimation/completiontype
 - Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
 - Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
-- Fixed inability to set a value in a solution if it was within epsilon to the current value.
+- Fixed inability to set a value in a solution if it was within epsilon to the current value
+- Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
+  to end of SCIP structs
 
 Miscellaneous
 -------------
