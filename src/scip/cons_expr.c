@@ -2194,7 +2194,7 @@ SCIP_RETCODE detectNlhdlr(
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "participating" : "no",
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
 
-      /* remember nlhdlr and its data TODO remember participating */
+      /* remember nlhdlr and its data */
       nlhdlrssuccess[nsuccess] = nlhdlr;
       nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
       nlhdlrparticipation[nsuccess] = nlhdlrparticipating;
