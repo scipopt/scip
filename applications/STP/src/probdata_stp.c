@@ -3399,6 +3399,8 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    assert(graph != NULL);
    assert(edgevars != NULL);
 
+   *success = FALSE;
+
    /* create a new primal solution (initialized to zero) */
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
