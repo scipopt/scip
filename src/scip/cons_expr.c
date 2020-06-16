@@ -215,7 +215,6 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
-   SCIP_Bool                nlhdlrsactive;   /**< whether nlhdlrs are active, i.e., detectNlhdlrs() has finished */
 
    /* constraint upgrades */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -508,6 +507,9 @@ SCIP_RETCODE freeEnfoData(
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
+
+   /* we need to look at this in detect again */
+   expr->enfoinitialized = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1246,7 +1248,6 @@ SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
-   SCIP_Bool               usedactivityonly, /**< whether to only evaluate expressions which activity is used */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_Bool               global,           /**< whether to evaluate expressions w.r.t. global bounds */
@@ -1295,10 +1296,16 @@ SCIP_RETCODE forwardPropExpr(
       return SCIP_OKAY;
    }
 
-   /* if activity is of root expr not used, but usedactivityonly is set, then do nothing */
-   if( usedactivityonly && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 )
+   /* if activity of rootexpr is not used, but expr participated in detect, then we do nothing
+    * it seems wrong to be called for such an expression, so I also add an assert
+    * if there turns out to be a good reason, then we might need an additional mode for forwardPropExpr
+    */
+   assert(!rootexpr->enfoinitialized || rootexpr->nactivityusesprop > 0 || rootexpr->nactivityusessepa > 0);
+   if( rootexpr->enfoinitialized && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 )
    {
-      SCIPdebugMsg(scip, "activity of root expression is not used but usedactivityonly == TRUE, skip forwardPropExpr\n");
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, "root expr activity is not used but enfo initialized, skip inteval\n");
+#endif
       return SCIP_OKAY;
    }
 
@@ -1380,11 +1387,11 @@ SCIP_RETCODE forwardPropExpr(
                break;
             }
 
-            /* if activity of expr is not used, but usedactivityonly is set, then do nothing */
-            if( usedactivityonly && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
+            /* if activity of expr is not used, but expr participated in detect, then do nothing */
+            if( expr->enfoinitialized && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
             {
 #ifdef DEBUG_PROP
-               SCIPdebugMsg(scip, "expr %p activity is not, skip inteval\n");
+               SCIPdebugMsg(scip, "expr %p activity is not used but enfo initialized, skip inteval\n", (void*)expr);
 #endif
                break;
             }
@@ -1671,7 +1678,7 @@ SCIP_RETCODE reversePropQueue(
 
             child = SCIPgetConsExprExprChildren(expr)[i];
 
-            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0 || !SCIPconshdlrGetData(conshdlr)->nlhdlrsactive) )
+            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0 || !child->enfoinitialized) )
             {
                /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)child, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))); */
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
@@ -1800,7 +1807,7 @@ SCIP_RETCODE propConss(
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, conshdlrdata->nlhdlrsactive && !allexprs, force, TRUE, FALSE, intEvalVarBoundTightening,
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, FALSE, intEvalVarBoundTightening,
             (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -2048,7 +2055,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, conshdlrdata->nlhdlrsactive, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, FALSE, intEvalVarRedundancyCheck,
          NULL, NULL, cutoff, NULL) );
       assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
@@ -2359,6 +2366,8 @@ SCIP_RETCODE detectNlhdlrs(
       {
          if( expr->nenfos > 0 )
          {
+            assert(expr->enfoinitialized);
+
             /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
              * then also the subtree has been investigated already and we can stop iterating further down
              * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
@@ -2367,12 +2376,15 @@ SCIP_RETCODE detectNlhdlrs(
             if( expr == consdata->expr )
             {
                SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+               assert(!expr->enfoinitialized);
             }
-            else
-            {
-               expr = SCIPexpriteratorSkipDFS(it);
-               continue;
-            }
+         }
+
+         /* skip expression which was already considered by detect */
+         if( expr->enfoinitialized )
+         {
+            expr = SCIPexpriteratorSkipDFS(it);
+            continue;
          }
 
          /* if there is an auxiliary variable here, then there is some-one requiring that
@@ -2389,6 +2401,13 @@ SCIP_RETCODE detectNlhdlrs(
             if( *infeasible )
                break;
          }
+
+         /* remember that we looked at this expression during detectNlhdlrs
+          * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
+          * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
+          * we have not initialized enforcement yet and expressions which are just not used in enforcement
+          */
+         expr->enfoinitialized = TRUE;
 
          expr = SCIPexpriteratorGetNext(it);
       }
@@ -2410,9 +2429,6 @@ SCIP_RETCODE detectNlhdlrs(
    {
       SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
-
-   /* remember that detect has been run */
-   conshdlrdata->nlhdlrsactive = TRUE;
 
    SCIPexpriteratorFree(&it);
    SCIPfreeBufferArray(scip, &nlhdlrparticipation);
@@ -4561,7 +4577,6 @@ SCIP_RETCODE canonicalizeConstraints(
          quadFree(scip, expr);
       }
    }
-   conshdlrdata->nlhdlrsactive = FALSE;
 
    /* allocate memory for storing locks of each constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
@@ -7191,10 +7206,10 @@ SCIP_RETCODE enforceConstraint(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->nlhdlrsactive);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->expr->enfoinitialized);
 
    *success = FALSE;
 
@@ -7209,7 +7224,7 @@ SCIP_RETCODE enforceConstraint(
       SCIP_Bool infeasible;
       int ntightenings;
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, inenforcement, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, &infeasible, &ntightenings) );
       if( infeasible )
       {
          *result = SCIP_CUTOFF;
@@ -10324,9 +10339,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
-   /* nlhdlrs are no longer active */
-   conshdlrdata->nlhdlrsactive = FALSE;
-
    /* free nonlinear row representations */
    for( c = 0; c < nconss; ++c )
    {
@@ -10416,25 +10428,15 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* if this is called for a constraint that is added during solve, then
-    * conshldrdata->nlhdlrsactive will already be TRUE, which means that SCIPevalConsExprExprActivity will
-    * only evaluate activity where nlhdlrs already exist, which may not be the case for exprs that
-    * we only appear in the recently added constraint
-    * setting nlhdlrsactive=FALSE should help on this
-    * TODO maybe nlhdlrsactive should move into expr
-    * TODO as detect now also makes sense for conss that never separate, detect should probably move into
+   /* TODO as detect now also makes sense for conss that never separate, detect should probably move into
     * initsol and/or enablecons or activecons
     */
-   conshdlrdata->nlhdlrsactive = FALSE;
-
-   /* register non linear handlers TODO: do we want this here? */
+   /* register non linear handlers */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
 
    /* if creating auxiliary variables detected an infeasible (because of bounds), stop initing lp */
    if( *infeasible )
       return SCIP_OKAY;
-
-   assert(conshdlrdata->nlhdlrsactive);
 
    /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
@@ -10804,7 +10806,6 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool nlhdlrswereactive;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
@@ -10818,21 +10819,8 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* consLock can be called for a new constraint before its INITLP
-    * lock computation may require activity evaluation, which must work
-    * in the pre-nlhdlrdetect mode (i.e., use exprhdlr on every expr)
-    * for this constraint
-    * its a bit dirty, but temporarily resetting nlhdlrsactive to FALSE
-    * should do the trick
-    * see also comment in consInitLP
-    */
-   nlhdlrswereactive = conshdlrdata->nlhdlrsactive;
-   conshdlrdata->nlhdlrsactive = FALSE;
-
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
-
-   conshdlrdata->nlhdlrsactive = nlhdlrswereactive;
 
    return SCIP_OKAY;
 }
@@ -10886,19 +10874,12 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
     */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Bool infeasible;
 
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-      conshdlrdata->nlhdlrsactive = FALSE;
-
-      /* register non linear handlers TODO: do we want this here? */
+      /* register non linear handlers  */
       SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
 
       assert(!infeasible);
-      assert(conshdlrdata->nlhdlrsactive);
    }
 
    return SCIP_OKAY;
@@ -14009,7 +13990,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
       (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
    {
       /* update activity of expression */
-      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, conshdlrdata->nlhdlrsactive, FALSE, FALSE, global, intEvalVarBoundTightening,
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, global, intEvalVarBoundTightening,
          conshdlrdata, NULL, NULL, NULL) );
 
       assert(expr->activitytag == conshdlrdata->curboundstag);
@@ -14113,7 +14094,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
 
    /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and should have a nlhdlr with a reverseprop callback and we see a tightening */
-   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !SCIPconshdlrGetData(conshdlr)->nlhdlrsactive) )
+   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !expr->enfoinitialized) )
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));

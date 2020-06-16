@@ -103,6 +103,7 @@ struct SCIP_ConsExpr_Expr
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements */
+   SCIP_Bool               enfoinitialized;/**< whether enforcements have been initialized, i.e., expr ran through DETECT (may still have nenfos=0) */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
 
    /* separation */
