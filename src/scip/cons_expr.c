@@ -5748,7 +5748,9 @@ SCIP_RETCODE initSepa(
             SCIP_Bool overestimate;
             assert(expr->enfos[e] != NULL);
 
-            /* TODO call only intisepa if nlhdlr will also sepa, and only over/underestimate on the sides it advertised */
+            /* only call initsepa if it will actually separate */
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+               continue;
 
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
@@ -7546,6 +7548,10 @@ SCIP_RETCODE analyzeViolation(
          for( e = 0; e < expr->nenfos; ++e )
          {
             SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+            /* some nlhdlr cannot produce an auxvalue if they are not separating, i.e., work on aux variables */
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+               continue;
 
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
