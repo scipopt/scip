@@ -61,6 +61,8 @@ Known bugs
 Features
 --------
 
+- in-tree restarts due to tree size estimation have been made compatible with orbital fixing
+
 Performance improvements
 ------------------------
 
