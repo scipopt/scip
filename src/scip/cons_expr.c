@@ -98,6 +98,8 @@
 
 #define BRANCH_RANDNUMINITSEED      20191229 /**< seed for random number generator, which is used to select from several similar good branching candidates */
 
+#define BILIN_MAXNAUXEXPRS                10 /**< maximal number of auxiliary expressions per bilinear term */
+
 /* properties of the expression constraint handler statistics table */
 #define TABLE_NAME_EXPR                          "expression"
 #define TABLE_DESC_EXPR                          "expression constraint handler statistics"
@@ -294,6 +296,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_BILINTERM* bilinterms;      /**< bilinear terms */
    int                      nbilinterms;     /**< total number of bilinear terms */
    int                      bilintermssize;  /**< size of bilinterms array */
+   int                      bilinmaxnauxexprs; /**< maximal number of auxiliary expressions per bilinear term */
 
    /* branching */
    SCIP_RANDNUMGEN*         branchrandnumgen;/**< random number generated used in branching variable selection */
@@ -9012,8 +9015,6 @@ SCIP_RETCODE addTermBilinExpr(
       }
       term->auxexprs[pos] = auxexpr;
       ++(term->nauxexprs);
-      if( term->nauxexprs > 10 )
-         SCIPinfoMessage(scip, NULL, "\nterm has %d auxexprs", term->nauxexprs);
       *added = TRUE;
    }
    else
@@ -15586,16 +15587,6 @@ SCIP_RETCODE bilinearTermsInsertImplicit(
    }
    assert(SCIPvarCompare(x, y) < 1);
 
-   /* create auxexpr */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
-   auxexpr->underestimate = !overestimate;
-   auxexpr->overestimate = overestimate;
-   auxexpr->auxvar = auxvar;
-   auxexpr->coefs[0] = coefaux;
-   auxexpr->coefs[1] = coefx;
-   auxexpr->coefs[2] = coefy;
-   auxexpr->cst = cst;
-
    /* check if the term has already been added */
    /* use a new entry to find the image in the bilinear hash table */
    entry.x = x;
@@ -15658,6 +15649,22 @@ SCIP_RETCODE bilinearTermsInsertImplicit(
       SCIP_CALL( SCIPcaptureVar(scip, x) );
       SCIP_CALL( SCIPcaptureVar(scip, y) );
    }
+
+   /* create auxexpr if term doesn't already have the maximal allowed number of auxexprs */
+   if( (term->nauxexprs == 0 && (term->auxvar == NULL || conshdlrdata->bilinmaxnauxexprs > 1)) ||
+       (term->nauxexprs > 0 && conshdlrdata->bilinmaxnauxexprs > term->nauxexprs) )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
+      auxexpr->underestimate = !overestimate;
+      auxexpr->overestimate = overestimate;
+      auxexpr->auxvar = auxvar;
+      auxexpr->coefs[0] = coefaux;
+      auxexpr->coefs[1] = coefx;
+      auxexpr->coefs[2] = coefy;
+      auxexpr->cst = cst;
+   }
+   else
+      return SCIP_OKAY;
 
    if( term->existing && term->auxvar != NULL )
    {
@@ -15770,6 +15777,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/vpdualsimplex",
          "whether to use dual simplex instead of primal simplex for LP that computes facet of vertex-polyhedral function",
          &conshdlrdata->vp_dualsimplex, TRUE, VERTEXPOLY_USEDUALSIMPLEX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/bilinmaxnauxexprs",
+           "maximal number of auxiliary expressions per bilinear term",
+           &conshdlrdata->bilinmaxnauxexprs, FALSE, BILIN_MAXNAUXEXPRS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprods",
          "whether to reformulate products of binary variables during presolving",
