@@ -50,7 +50,6 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXNAUXEXPRS          10 /**< default value for parameter maxnauxexprs */
 #define DEFAULT_MAXUNKNOWNTERMS      -1 /**< default value for parameter maxunknownterms */
 #define DEFAULT_MAXUSEDVARS          -1 /**< default value for parameter maxusedvars */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
@@ -102,7 +101,6 @@ struct SCIP_SepaData
    int                   nbilinterms;        /**< total number of bilinear terms */
 
    /* parameters */
-   int                   maxnauxexprs;       /**< maximum number of linearisation expressions per bilinear term */
    int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used */
    int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts */
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
@@ -2567,7 +2565,7 @@ SCIP_RETCODE separateRltCuts(
    int* bestunderestimators;
    int* bestoverestimators;
 
-   assert(projlp != NULL);
+   assert(!sepadata->useprojection || projlp != NULL);
 
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
@@ -3032,11 +3030,6 @@ SCIP_RETCODE SCIPincludeSepaRlt(
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolRlt) );
 
    /* add RLT separator parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-                              "separating/" SEPA_NAME "/maxnauxexprs",
-      "maximal number of linearisation expressions per bilinear term (-1: unlimited)",
-      &sepadata->maxnauxexprs, FALSE, DEFAULT_MAXNAUXEXPRS, -1, INT_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxncuts",
          "maximal number of rlt-cuts that are added per round (-1: unlimited)",
