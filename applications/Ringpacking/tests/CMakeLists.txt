@@ -29,7 +29,7 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules)
 
 # find Criterion
-find_package(Criterion)
+find_package(CRITERION)
 
 #
 # unit tests depend on the presence of the Criterion framework

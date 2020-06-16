@@ -6,6 +6,11 @@
 Features
 --------
 
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+
+- in-tree restarts due to tree size estimation have been made compatible with orbital fixing
+
 Performance improvements
 ------------------------
 
@@ -16,6 +21,11 @@ Interface changes
 -----------------
 ### New and changed callbacks
 ### Deleted and changed API methods
+
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
@@ -49,6 +59,8 @@ Miscellaneous
 -------------
 
 - in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
 
 Known bugs
 ----------
@@ -57,11 +69,6 @@ Known bugs
 
 @section RN701 SCIP 7.0.1
 *************************
-
-Features
---------
-
-- in-tree restarts due to tree size estimation have been made compatible with orbital fixing
 
 Performance improvements
 ------------------------
@@ -102,16 +109,33 @@ Build system
 
 ### Cmake
 
+- Fixed cmake module for Ipopt to support Ipopt 3.13
+- Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+- Added warning to require minimal GCC version 4.8
+- Renamed FindCriterion cmake findmodule to FindCRITERION
+
 ### Makefile
+
+- Updated make/make.project for macOS
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS).
+- Fixed GCC version check in make/make.linux.gnu.dbg
 
 Fixed bugs
 ----------
 
-- Fixed handling of constant term in quadratic objective of pip-reader.
+- Fixed handling of constant term in quadratic objective of pip-reader
 - Fixed incorrect value string for parameter estimation/completiontype
+- Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value
+- Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
+  to end of SCIP structs
 
 Miscellaneous
 -------------
+
+- Variables that are marked as relaxation-only are no longer checked against debug solutions if
+  they are captured by the transformed problem only.
 
 Known bugs
 ----------
@@ -5280,7 +5304,7 @@ Build system
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   `clean` is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 Fixed bugs
 ----------

@@ -9,7 +9,7 @@
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
 *                                                                           *
 *  You should have received a copy of the ZIB Academic License              *
-*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*  along with SCIP; see the file COPYING. If not email to scipopt.org.      *
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -27,7 +27,7 @@ Currently not supported, but planned for future versions:
  - other LP solvers than SoPlex
 
 Please let us know (e-mail to berthold@zib.de and gleixner@zib.de), if you are missing any of these or any other features.
-Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
+Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scipopt.org/bugs.shtml)
 
 To use SCIP from MATLAB, you have to do the following:
  - Compile SoPlex and ZIMPL with 'make ... SHARED=true'

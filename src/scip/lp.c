@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -9090,7 +9090,6 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->soldirection = NULL;
    (*lp)->lazycols = NULL;
    (*lp)->rows = NULL;
-   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->lpobjval = 0.0;
    (*lp)->glbpseudoobjval = 0.0;
    (*lp)->relglbpseudoobjval = 0.0;
@@ -9145,6 +9144,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->flushaddedrows = FALSE;
    (*lp)->updateintegrality = TRUE;
    (*lp)->flushed = TRUE;
+   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->primalchecked = TRUE;

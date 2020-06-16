@@ -871,7 +871,14 @@ SCIP_RETCODE makeExprtree(
          }
 
          case nlCallArg1:
+            nargs = 1;
+            /*lint -fallthrough*/
+
          case nlCallArg2:
+            if( opcode == nlCallArg2 )
+               nargs = 2;
+               /*lint -fallthrough*/
+
          case nlCallArgN:
          {
             GamsFuncCode func;
@@ -1124,7 +1131,7 @@ SCIP_RETCODE makeExprtree(
 
                case fnpoly: /* univariate polynomial */
                {
-                  SCIPdebugPrintf("univariate polynomial of degree %d\n", nargs-1);
+                  SCIPdebugPrintf("univariate polynomial of degree %d\n", nargs-2);
                   assert(nargs >= 0);
                   switch( nargs )
                   {
@@ -1158,22 +1165,22 @@ SCIP_RETCODE makeExprtree(
                         int nmonomials;
                         int zero;
 
-                        nmonomials = nargs-1;
-                        SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-1) );
+                        nmonomials = nargs-2;
+                        SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-2) );
 
                         zero = 0;
                         constant = 0.0;
-                        for( ; nargs > 0; --nargs )
+                        for( ; nargs > 1; --nargs )
                         {
                            assert(stackpos > 0);
 
                            term1 = stack[stackpos-1];
                            assert(SCIPexprGetOperator(term1) == SCIP_EXPR_CONST);
 
-                           if( nargs > 1 )
+                           if( nargs > 2 )
                            {
-                              exponent = (SCIP_Real)(nargs-1);
-                              SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[nargs-2], SCIPexprGetOpReal(term1), 1, &zero, &exponent) );
+                              exponent = (SCIP_Real)(nargs-2);
+                              SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[nargs-3], SCIPexprGetOpReal(term1), 1, &zero, &exponent) );
                            }
                            else
                               constant = SCIPexprGetOpReal(term1);
@@ -1308,7 +1315,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    assert(scip != NULL);
    assert(gmo != NULL);
 
-   gev = gmoEnvironment(gmo);
+   gev = (gevHandle_t) gmoEnvironment(gmo);
    assert(gev != NULL);
 
    /* we want a real objective function, if it is linear, otherwise keep the GAMS single-variable-objective? */
@@ -1604,7 +1611,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoNLCodeSizeMaxRow(gmo)+1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoNLCodeSizeMaxRow(gmo)+1) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, gmoPPool(gmo), gmoNLConst(gmo)) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, (double*)gmoPPool(gmo), gmoNLConst(gmo)) );
 
       /* translate special GAMS constants into SCIP variants (gmo does not seem to do this...) */
       for( i = 0; i < gmoNLConst(gmo); ++i )

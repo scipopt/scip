@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -5194,8 +5194,6 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
 #ifdef SCIP_MOREDEBUG
-         SCIP_SOL* nlpsol;
-
          SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
 
