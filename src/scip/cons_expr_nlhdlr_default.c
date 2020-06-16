@@ -128,8 +128,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
 
       /* check whether the expression is convex, if sepabelow, and whether the expression is concave, if sepaabove */
-      requiredcurv  = ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN);
-      requiredcurv |= ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN);
+      requiredcurv = (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN;
+      requiredcurv = (SCIP_EXPRCURV)(requiredcurv | ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN));
       assert(requiredcurv != SCIP_EXPRCURV_UNKNOWN);  /* because we have sepabelow or sepaabove */
 
       SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, requiredcurv, &estimateusesactivity, childcurv) );
