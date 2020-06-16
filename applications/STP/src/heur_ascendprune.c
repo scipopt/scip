@@ -235,7 +235,8 @@ SCIP_RETCODE redcostGraphMark(
          if( SCIPisZero(scip, redcosts[a]) )
          {
             SCIP_Bool isRootEdge;
-            if( pcmw && k == root_redcost && graph_pc_knotIsDummyTerm(g, head) )
+            /* NOTE: avoid dummy edges */
+            if( pcmw && k == g->source && graph_pc_knotIsDummyTerm(g, head) )
                continue;
 
             /* vertex not visited yet? */
@@ -285,7 +286,7 @@ SCIP_RETCODE redcostGraphMark(
       for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
       {
          const int head = g->head[a];
-         if( mark[head] && graph_pc_knotIsDummyTerm(g, head) && !SCIPisZero(scip, redcosts[a]) )
+         if( mark[head] && graph_pc_knotIsDummyTerm(g, head) )
          {
             subgraphedges[nnewedges++] = a;
          }
