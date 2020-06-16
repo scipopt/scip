@@ -3375,7 +3375,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
          break;
    }
 
-   if( !lp->hasprovedbound && !lperror )
+   if( !lp->hasprovedbound && !(*lperror) )
    {
       SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
