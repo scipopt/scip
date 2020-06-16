@@ -10430,11 +10430,6 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    /* TODO as detect now also makes sense for conss that never separate, detect should probably move into
     * initsol and/or enablecons or activecons
     */
@@ -10812,7 +10807,6 @@ static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
@@ -10822,9 +10816,6 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 
    if( consdata->expr == NULL )
       return SCIP_OKAY;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
@@ -14997,7 +14988,7 @@ SCIP_Bool SCIPisConsExprExprIntegral(
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
-int SCIPgetConsExprExprNActivityUsesPropagation(
+unsigned int SCIPgetConsExprExprNActivityUsesPropagation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -15009,7 +15000,7 @@ int SCIPgetConsExprExprNActivityUsesPropagation(
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
-int SCIPgetConsExprExprNActivityUsesSeparation(
+unsigned int SCIPgetConsExprExprNActivityUsesSeparation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {

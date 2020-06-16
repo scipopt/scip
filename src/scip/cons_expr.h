@@ -1070,7 +1070,7 @@ SCIP_Bool SCIPisConsExprExprIntegral(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-int SCIPgetConsExprExprNActivityUsesPropagation(
+unsigned int SCIPgetConsExprExprNActivityUsesPropagation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
@@ -1079,7 +1079,7 @@ int SCIPgetConsExprExprNActivityUsesPropagation(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-int SCIPgetConsExprExprNActivityUsesSeparation(
+unsigned int SCIPgetConsExprExprNActivityUsesSeparation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

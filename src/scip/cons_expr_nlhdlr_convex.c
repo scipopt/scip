@@ -1849,30 +1849,28 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nlexpr != NULL);
    assert(rowpreps != NULL);
    assert(success != NULL);
 
-   nlexpr = nlhdlrexprdata->nlexpr;
-   assert(nlexpr != NULL);
-   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlhdlrexprdata->nlexpr) == expr);
 
    /* we must be called only for the side that we indicated to participate in during DETECT */
-   assert(SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
-   assert(!overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
-   assert( overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX);
+   assert(SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!overestimate || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert( overestimate || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX);
 
    *success = FALSE;
    *addedbranchscores = FALSE;
 
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
-   assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
+   assert(auxvalue == SCIPgetConsExprExprValue(nlhdlrexprdata->nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
@@ -2179,23 +2177,21 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConcave)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConcave)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_ROWPREP* rowprep;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nlexpr != NULL);
    assert(rowpreps != NULL);
    assert(success != NULL);
 
-   nlexpr = nlhdlrexprdata->nlexpr;
-   assert(nlexpr != NULL);
-   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlhdlrexprdata->nlexpr) == expr);
 
    /* we must be called only for the side that we indicated to participate in during DETECT */
-   assert(SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
-   assert(!overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX);
-   assert( overestimate || SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!overestimate || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX);
+   assert( overestimate || SCIPgetConsExprExprCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
 
    *success = FALSE;
    *addedbranchscores = FALSE;
