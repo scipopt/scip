@@ -3,9 +3,6 @@
 @section RN701 SCIP 7.0.1
 *************************
 
-Features
---------
-
 Performance improvements
 ------------------------
 
@@ -45,16 +42,16 @@ Build system
 
 ### Cmake
 
-adjust cmake module for Ipopt 3.13
-add cmake variable BLISS_LIBRARY_DIR to pass a bliss library
-add warning to require minimal gcc version 4.8
-rename FindCriterion cmake findmodule to FindCRITERION
+- Fixed cmake module for Ipopt to support Ipopt 3.13
+- Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+- Added warning to require minimal GCC version 4.8
+- Renamed FindCriterion cmake findmodule to FindCRITERION
 
 ### Makefile
 
-update make/make.project for mac
-fix a typo in SANITIZERFLAGS, if SHARED=true, add SANITZERFLAGS also to LIBBUILDFLAGS and always add SANITZERFLAGS to LDFLAGS
-fix GCC version check in Makefiles
+- Updated make/make.project for macOS
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS).
+- Fixed GCC version check in make/make.linux.gnu.dbg
 
 Fixed bugs
 ----------
