@@ -948,20 +948,6 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
    unsigned int*           hashval           /**< pointer to store the hash value */
    );
 
-/** creates and gives the auxiliary variable for a given expression
- *
- * @note if auxiliary variable already present for that expression, then only returns this variable
- * @note for a variable expression it returns the corresponding variable
- * @note this function can only be called in SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
-   );
-
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
@@ -1083,17 +1069,34 @@ unsigned int SCIPgetConsExprExprNActivityUsesSeparation(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNActivityUsesPropagation and/or SCIPgetConsExprExprNActivityUsesSeparation
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) use auxiliary variable of the expression
  *
- * If usedforsepa is set, then NActivityUsesSeparation is also incremented for all variables in the expression.
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
+unsigned int SCIPgetConsExprExprNAuxvarUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+ *
+ * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if useactivityforprop or useactivityforsepa is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
+ * - if useactivityforsepa is eanbled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ *   and also increments this count for all variables in the expression.
+ *
+ * The distinction into useactivityforprop and useactivityforsepa is to recognize variables which domain influences
+ * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
-   SCIP_Bool             usedforprop,      /**< activity of expr is used by domain propagation or activity calculation (inteval) */
-   SCIP_Bool             usedforsepa       /**< activity of expr is used by separation */
+   SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             useactivityforsepa  /**< whether activity of expr will be used by estimate or cut generation */
    );
 
 /** returns the total number of variables in an expression

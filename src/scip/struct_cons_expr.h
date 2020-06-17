@@ -103,8 +103,11 @@ struct SCIP_ConsExpr_Expr
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements */
-   SCIP_Bool               enfoinitialized;/**< whether enforcements have been initialized, i.e., expr ran through DETECT (may still have nenfos=0) */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
+   SCIP_Bool               enfoinitialized;/**< whether enforcements have been initialized, i.e., expr ran through DETECT (may still have nenfos=0) */
+   unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
+   unsigned int            nactivityusessepa; /**< number of nonlinear handler whose separation (estimate or enfo) depends on the activity of the expression */
+   unsigned int            nauxvaruses;   /**< number of nonlinear handlers whose separation uses an auxvar in the expression */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
@@ -126,8 +129,6 @@ struct SCIP_ConsExpr_Expr
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */
 
    /* activity */
-   unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
-   unsigned int            nactivityusessepa; /**< number of nonlinear handler whose separation (estimate or enfo) depends on the activity of the expression */
    SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */

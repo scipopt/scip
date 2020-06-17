@@ -640,13 +640,13 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * in enforcing the relation between this expression (expr) and its auxiliary variable (auxvar) via
  * linear under- or overestimation, cut generation, and/or activity computation and propagation.
  *
- * We distinguish the following enforcement method":
+ * We distinguish the following enforcement methods:
  * - SCIP_CONSEXPR_EXPRENFO_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
  * - SCIP_CONSEXPR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
  * - SCIP_CONSEXPR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
  *
  * On input, parameter enforcing indicates for any of these methods, whether
- * - it is not necessary to have such a method, e.g., because no auxvar exists for expr, or noone uses or set activities of this expression,
+ * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or noone uses or set activities of this expression,
  *   or due to analysis of the expression, expr >= auxvar is not necessary to be satisfied,
  * - or there already exists a nonlinear handler that will provide this method in an "enforcement" sense, that is,
  *   it believes that noone else could provide this method in a stronger sense. (This is mainly used by the default nlhdlr to check whether
@@ -670,13 +670,14 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
  * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
  *
- * If a nonlinear handler decides to participate in SEPABELOW or SEPAABOVE, then it shall
- * create auxiliary variables for those subexpressions where they will be required.
- * If it also uses activity for some subexpressions, then it shall call @ref SCIPincrementConsExprExprNActivityUses()
- * for these subexpressions with usedforsepa = TRUE.
+ * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
+ * @ref SCIPregisterConsExprExprUsage() for every subexpression that it will use and indicate whether
+ * - it will use an auxiliary variables,
+ * - it will use activity for some subexpressions when computing estimators or cuts, and
+ * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
  *
- * If a nonlinear handler decides to participate in activity computation and propagation, then it shall
- * call @ref SCIPincrementConsExprExprNActivityUses() for these subexpressions with usedforprop = TRUE.
+ * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterConsExprExprUsage().
+ *   They will be available when the INITSEPA call is called.
  *
  * - scip SCIP data structure
  * - conshdlr expr-constraint handler

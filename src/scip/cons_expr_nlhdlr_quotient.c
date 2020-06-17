@@ -1034,7 +1034,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
           *
           * TODO check the curvature of the univariate quotient
           */
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, (*nlhdlrexprdata)->numexpr, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, (*nlhdlrexprdata)->numexpr, FALSE, TRUE, TRUE) );
       }
    }
 

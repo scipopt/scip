@@ -139,19 +139,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    }
 
    /* indicate enforcement methods required in children:
-    * - if separating, make sure that (auxiliary) variables exist
+    * - if separating, make sure that (auxiliary) variable will exist
     * - if separation requires curvature, then increment activityusage count with usedforsepa == TRUE
     * - if activity computation, then increment activityusage count with usedforprop == TRUE
     */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      /* todo skip this for value-expressions? would then need update in evalExprInAux, too */
-      if( (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 )
-      {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
-      }
-
-      SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c],
+      /* todo skip auxvarusage for value-expressions? would then need update in evalExprInAux, too */
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c],
+         *participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH,
          *participating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY, estimateusesactivity) );
    }
 

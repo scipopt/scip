@@ -472,9 +472,10 @@ SCIP_RETCODE freeEnfoData(
       SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
       assert(expr->auxvar == NULL);
 
-      /* reset count on activity usage */
+      /* reset count on activity and auxvar usage */
       expr->nactivityusesprop = 0;
       expr->nactivityusessepa = 0;
+      expr->nauxvaruses = 0;
    }
 
    /* free data stored by nonlinear handlers */
@@ -2137,13 +2138,13 @@ SCIP_RETCODE detectNlhdlr(
    assert(expr->enfos == NULL);
 
    /* check which enforcement methods are required by setting flags in enforcemethods for those that are NOT required
-    * - if no auxiliary variable, then do not need sepabelow or sepaabove
-    * - if auxiliary variable, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
-    * - if auxiliary variable, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
+    * - if no auxiliary variable usage, then do not need sepabelow or sepaabove
+    * - if auxiliary variable usage, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * - if auxiliary variable usage, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
     * - if noone uses activity, then do not need activity methods
     */
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
-   if( expr->auxvar == NULL )
+   if( expr->nauxvaruses == 0 )
       enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
    else
    {
@@ -2314,58 +2315,23 @@ SCIP_RETCODE detectNlhdlrs(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-      {
-#ifdef WITH_DEBUG_SOLUTION
-         if( SCIPdebugIsMainscip(scip) )
-         {
-            SCIP_SOL* debugsol;
-
-            SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-
-            if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
-            {
-               /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
-                * in SCIPcreateConsExprExprAuxVar()
-                */
-               SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0) );
-            }
-         }
-#endif
-      }
-
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
-      if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])) )
-      {
-         /* ensure auxiliary variable for root expression exists (not always necessary, but it simplifies things) */
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
-         assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
+      /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
+       *   this way we can treat the root expression like other expression when enforcing via separation
+       * if constraint will be propagated, then register activity usage of root expression
+       */
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, consdata->expr,
+         SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])),
+         SCIPconsIsPropagated(conss[i]),
+         FALSE) );
 
-         /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
-         SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, TRUE, infeasible, NULL) );
-         if( *infeasible )
-         {
-            SCIPdebugMsg(scip, "infeasibility detected while creating vars: lhs of constraint (%g) > ub of node (%g)\n",
-               consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
-            break;
-         }
-
-         SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, TRUE, infeasible, NULL) );
-         if( *infeasible )
-         {
-            SCIPdebugMsg(scip, "infeasibility detected while creating vars: rhs of constraint (%g) < lb of node (%g)\n",
-               consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
-            break;
-         }
-      }
-
-      /* mark that we will need activity for root expression if constraint may be propagated */
-      if( SCIPconsIsPropagated(conss[i]) )
-      {
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, consdata->expr, TRUE, FALSE) );
-      }
+      /* if a constraint is separated, we currently need it to be initial, too
+       * this is because INITLP will create the auxiliary variables that are used for any separation
+       * TODO we may relax this with a little more programming effort when required, see also TODO in INITLP
+       */
+      assert((!SCIPconsIsSeparated(conss[i]) && !SCIPconsIsEnforced(conss[i])) || SCIPconsIsInitial(conss[i]));
 
       SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
       expr = SCIPexpriteratorGetCurrent(it);
@@ -2394,14 +2360,14 @@ SCIP_RETCODE detectNlhdlrs(
             continue;
          }
 
-         /* if there is an auxiliary variable here, then there is some-one requiring that
+         /* if there is auxvar usage, then some-one requires that
           *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
           *   thus, we need to find nlhdlrs that separate or estimate
           * if there is activity usage, then there is some-one requiring that
           *   activity of this expression is updated
           *   thus, we need to find nlhdlrs that do interval-evaluation
           */
-         if( expr->auxvar != NULL || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
+         if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
             SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible) );
 
@@ -5967,7 +5933,107 @@ int nlhdlrCmp(
    return strcmp(h1->name, h2->name);
 }
 
-/** calls separation initialization callback for each expression */
+/** creates auxiliary variable for a given expression
+ *
+ * @note for a variable expression it does nothing
+ * @note this function can only be called in stage SCIP_STAGE_SOLVING
+ */
+static
+SCIP_RETCODE createAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VARTYPE vartype;
+   SCIP_INTERVAL activity;
+   char name[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(expr->nauxvaruses > 0);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   {
+      SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
+      return SCIP_INVALIDCALL;
+   }
+
+   /* if we already have auxvar, then do nothing */
+   if( expr->auxvar != NULL )
+      return SCIP_OKAY;
+
+   /* if expression is a variable-expression, then do nothing */
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->auxvarid >= 0);
+
+   /* it doesn't harm much to have an auxvar for a constant, as this can be handled well by the default hdlr,
+    * but it usually indicates a missing simplify
+    * if we find situations where we need to have an auxvar for a constant, then remove this assert
+    */
+   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
+
+   /* create and capture auxiliary variable */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%s_%d", expr->exprhdlr->name, conshdlrdata->auxvarid);
+   ++conshdlrdata->auxvarid;
+
+   /* type of auxiliary variable depends on integrality information of the expression */
+   vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
+
+   /* get activity of expression to initialize variable bounds */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
+   /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
+    * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
+    */
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity));
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), activity.inf ),
+      MIN( SCIPinfinity(scip), activity.sup ), 0.0, vartype) ); /*lint !e666*/
+
+   /* mark the auxiliary variable to be added for the relaxation only
+    * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
+    * or to copy the variable to a subscip
+    */
+   SCIPvarMarkRelaxationOnly(expr->auxvar);
+
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
+
+   SCIPdebugMsg(scip, "added auxiliary variable <%s> [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
+
+   /* add variable locks in both directions */
+   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      /* store debug solution value of auxiliary variable
+       * assumes that expression has been evaluated in debug solution before
+       */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
+   }
+#endif
+
+   /* catch bound change events on this variable, since bounds on this variable take part of activity computation */
+   assert(expr->auxfilterpos == -1);
+   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, &expr->auxfilterpos) );
+
+   return SCIP_OKAY;
+}
+
+/** initializes separation for constraint
+ *
+ * for each expression:
+ * - creates auxiliary variables where required
+ * - calls separation initialization callback of nlhdlrs
+ */
 static
 SCIP_RETCODE initSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5990,6 +6056,7 @@ SCIP_RETCODE initSepa(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    *infeasible = FALSE;
    for( c = 0; c < nconss && !*infeasible; ++c )
@@ -5997,51 +6064,112 @@ SCIP_RETCODE initSepa(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      /* call separation initialization callback for 'initial' constraints only */
-      if( !SCIPconsIsInitial(conss[c]) )
-         continue;
-
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+#ifdef WITH_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
       {
-         /* call initsepa of all nlhdlrs in expr */
-         for( e = 0; e < expr->nenfos; ++e )
+         SCIP_SOL* debugsol;
+
+         SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+         if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
          {
-            SCIP_CONSEXPR_NLHDLR* nlhdlr;
-            SCIP_Bool underestimate;
-            SCIP_Bool overestimate;
-            assert(expr->enfos[e] != NULL);
+            /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
+             * in createAuxVar()
+             */
+            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0) );
+         }
+      }
+#endif
 
-            /* only call initsepa if it will actually separate */
-            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-               continue;
 
-            nlhdlr = expr->enfos[e]->nlhdlr;
-            assert(nlhdlr != NULL);
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         if( expr->nauxvaruses == 0 )
+            continue;
 
-            /* only init sepa if there is an initsepa callback */
-            if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
-               continue;
+         if( SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPRITERATOR_ENTEREXPR )
+         {
+            /* on entering, create auxiliary variables */
+            SCIP_CALL( createAuxVar(scip, conshdlr, expr) );
+         }
+         else
+         {
+            /* on leaving, call initsepa of nlhdlrs
+             * auxvars for all subexpressions, where required, should be available
+             *
+             * TODO skip if !SCIPconsIsInitial(conss[c]) ?
+             *   but at the moment, initSepa() is called from INITLP anyway, so we have SCIPconsIsInitial(conss[c]) anyway
+             */
 
-            /* check whether expression needs to be under- or overestimated */
-            overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-            underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-            assert(underestimate || overestimate);
-
-            /* call the separation initialization callback of the nonlinear handler */
-            SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, conss[c], nlhdlr, expr,
-               expr->enfos[e]->nlhdlrexprdata, overestimate, underestimate, infeasible) );
-            expr->enfos[e]->issepainit = TRUE;
-
-            if( *infeasible )
+            /* call initsepa of all nlhdlrs in expr */
+            for( e = 0; e < expr->nenfos; ++e )
             {
-               /* stop everything if we detected infeasibility */
-               SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
-               break;
+               SCIP_CONSEXPR_NLHDLR* nlhdlr;
+               SCIP_Bool underestimate;
+               SCIP_Bool overestimate;
+               assert(expr->enfos[e] != NULL);
+
+               /* skip if initsepa was already called, e.g., because this expression is also part of a constraint
+                * which participated in a previous initSepa() call
+                */
+               if( expr->enfos[e]->issepainit )
+                  continue;
+
+               /* only call initsepa if it will actually separate */
+               if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+                  continue;
+
+               nlhdlr = expr->enfos[e]->nlhdlr;
+               assert(nlhdlr != NULL);
+
+               /* only init sepa if there is an initsepa callback */
+               if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
+                  continue;
+
+               /* check whether expression needs to be under- or overestimated */
+               overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+               underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+               assert(underestimate || overestimate);
+
+               /* call the separation initialization callback of the nonlinear handler */
+               SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, conss[c], nlhdlr, expr,
+                  expr->enfos[e]->nlhdlrexprdata, overestimate, underestimate, infeasible) );
+               expr->enfos[e]->issepainit = TRUE;
+
+               if( *infeasible )
+               {
+                  /* stop everything if we detected infeasibility */
+                  SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
+                  break;
+               }
             }
+         }
+      }
+
+      if( *infeasible )
+         break;
+
+      if( !*infeasible && consdata->expr->auxvar != NULL )
+      {
+         /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
+         SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, TRUE, infeasible, NULL) );
+         if( *infeasible )
+         {
+            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar ub (%g) using lhs of constraint (%g)\n",
+               SCIPvarGetUbLocal(consdata->expr->auxvar), consdata->lhs);
+            break;
+         }
+
+         SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, TRUE, infeasible, NULL) );
+         if( *infeasible )
+         {
+            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar lb (%g) using rhs of constraint (%g)\n",
+               SCIPvarGetLbLocal(consdata->expr->auxvar), consdata->rhs);
+            break;
          }
       }
    }
@@ -10496,7 +10624,11 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
-   /* call seaparation initialization callbacks of the expression handlers */
+   /* create auxiliary variables and call separation initialization callbacks of the expression handlers
+    * TODO if we ever want to allow constraints that are separated but not initial, then we need to call initSepa also
+    *   during SEPALP, ENFOLP, etc, whenever a constraint may be separated the first time
+    *   for now, there is an assert in detectNlhdlrs to require initial if separated
+    */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;
@@ -14400,118 +14532,6 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
 }
 
 
-/** creates and gives the auxiliary variable for a given expression
- *
- * @note if auxiliary variable already present for that expression, then only returns this variable
- * @note for a variable expression it returns the corresponding variable
- * @note this function can only be called in SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VARTYPE vartype;
-   SCIP_INTERVAL activity;
-   char name[SCIP_MAXSTRLEN];
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(expr != NULL);
-
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
-   {
-      SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
-      return SCIP_INVALIDCALL;
-   }
-
-   /* if we already have auxvar, then just return it */
-   if( expr->auxvar != NULL )
-   {
-      if( auxvar != NULL )
-         *auxvar = expr->auxvar;
-      return SCIP_OKAY;
-   }
-
-   /* if expression is a variable-expression, then return that variable */
-   if( expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
-   {
-      if( auxvar != NULL )
-         *auxvar = SCIPgetConsExprExprVarVar(expr);
-      return SCIP_OKAY;
-   }
-
-   /* if we already have ran detect of nlhdlrs on expr, then we need to redo this,
-    * since the addition of an auxvar now means that we will require sepabelow and/or sepaabove
-    */
-   SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->auxvarid >= 0);
-
-   /* it doesn't harm much to have an auxvar for a constant, as this can be handled well by the default hdlr,
-    * but it usually indicates a missing simplify
-    * if we find situations where we need to have an auxvar for a constant, then remove this assert
-    */
-   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
-
-   /* create and capture auxiliary variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%s_%d", expr->exprhdlr->name, conshdlrdata->auxvarid);
-   ++conshdlrdata->auxvarid;
-
-   /* type of auxiliary variable depends on integrality information of the expression */
-   vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
-
-   /* get activity of expression to initialize variable bounds */
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
-   /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
-    * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
-    */
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity));
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), activity.inf ),
-      MIN( SCIPinfinity(scip), activity.sup ), 0.0, vartype) ); /*lint !e666*/
-
-   /* mark the auxiliary variable to be added for the relaxation only
-    * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
-    * or to copy the variable to a subscip
-    */
-   SCIPvarMarkRelaxationOnly(expr->auxvar);
-
-   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
-
-   SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
-
-   /* add variable locks in both directions */
-   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
-
-#ifdef WITH_DEBUG_SOLUTION
-   if( SCIPdebugIsMainscip(scip) )
-   {
-      /* store debug solution value of auxiliary variable
-       * assumes that expression has been evaluated in debug solution before
-       */
-      SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
-   }
-#endif
-
-   /* catch bound change events on this variable, since bounds on this variable take part of activity computation */
-   assert(expr->auxfilterpos == -1);
-   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, &expr->auxfilterpos) );
-
-   if( auxvar != NULL )
-      *auxvar = expr->auxvar;
-
-   return SCIP_OKAY;
-}
-
 /** @name Simplifying methods
  *
  * This is largely inspired in Joel Cohen's
@@ -15031,39 +15051,65 @@ unsigned int SCIPgetConsExprExprNActivityUsesSeparation(
    return expr->nactivityusessepa;
 }
 
-/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNActivityUsesPropagation and/or SCIPgetConsExprExprNActivityUsesSeparation
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) use auxiliary variable of the expression
  *
- * If usedforsepa is set, then NActivityUsesSeparation is also incremented for all variables in the expression.
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
-SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
+unsigned int SCIPgetConsExprExprNAuxvarUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nauxvaruses;
+}
+
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+ *
+ * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if useactivityforprop or useactivityforsepa is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
+ * - if useactivityforsepa is eanbled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ *   and also increments this count for all variables in the expression.
+ *
+ * The distinction into useactivityforprop and useactivityforsepa is to recognize variables which domain influences
+ * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ */
+SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
-   SCIP_Bool             usedforprop,      /**< activity of expr is used by domain propagation or activity calculation (inteval) */
-   SCIP_Bool             usedforsepa       /**< activity of expr is used by separation */
+   SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             useactivityforsepa  /**< whether activity of expr will be used by estimate or cut generation */
    )
 {
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
-   if( !usedforprop && !usedforsepa )
-      return SCIP_OKAY;
-
-   if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && expr->nenfos > 0 )
+   if( expr->enfoinitialized &&
+      ( (expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepa)) ||
+        (expr->nauxvaruses == 0 && useauxvar)
+      ) )
    {
-      /* if we already have ran detect of nlhdlrs on expr, then we need to redo this,
-       * since the addition of activity usage now means that we will require some nlhdlr that computes activity
+      /* if we already have ran detect of nlhdlrs on expr, then we need to redo this if
+       * the we will require additional enforcement methods, that is,
+       * - activity of expr was not used before but will be used now, or
+       * - auxiliary variable of expr was not required before but will be used now
        */
       SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
    }
 
-   if( usedforsepa )
-      ++(expr->nactivityusessepa);
-   if( usedforprop )
+   if( useauxvar )
+      ++(expr->nauxvaruses);
+
+   if( useactivityforprop )
       ++(expr->nactivityusesprop);
 
+   if( useactivityforsepa )
+      ++(expr->nactivityusessepa);
+
    /* increase the nactivityusedsepa counter for all sub-expressions of the given expression */
-   if( usedforsepa && SCIPgetConsExprExprNChildren(expr) > 0 )
+   if( useactivityforsepa && SCIPgetConsExprExprNChildren(expr) > 0 )
    {
       SCIP_CONSEXPR_ITERATOR* it;
 
@@ -15077,6 +15123,16 @@ SCIP_RETCODE SCIPincrementConsExprExprNActivityUses(
 
       /* free iterator */
       SCIPexpriteratorFree(&it);
+   }
+
+   if( useactivityforprop )
+   {
+      /* if activity will be used for propagation, then make sure there is a valid activity
+       * this way, we can do a reversepropcall after detectNlhdlr
+       * TODO should we call with validsufficient = FALSE?
+       */
+      SCIP_INTERVAL activity;
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
    }
 
    return SCIP_OKAY;

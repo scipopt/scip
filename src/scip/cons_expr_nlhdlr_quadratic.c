@@ -308,12 +308,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
       /* notify children of quadratic that we will need their activity for propagation */
       for( i = 0; i < nlinexprs; ++i )
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, linexprs[i], TRUE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], FALSE, TRUE, FALSE) );
       for( i = 0; i < nquadexprs; ++i )
       {
          SCIP_CONSEXPR_EXPR* argexpr;
          SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, NULL, NULL);
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, argexpr, TRUE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE) );
       }
    }
 
