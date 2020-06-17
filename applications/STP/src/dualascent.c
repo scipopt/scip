@@ -112,8 +112,8 @@ void dapathsSetRunParams(
 
    dapaths->startnode = start;
 
-   assert(transgraph->oeat[root] >= 0);
-   dapaths->distlimit = transgraph->cost[transgraph->oeat[root]];
+   assert(transgraph->outbeg[root] >= 0);
+   dapaths->distlimit = transgraph->cost[transgraph->outbeg[root]];
 
 #ifndef NDEBUG
    assert(GT(dapaths->distlimit, 0.0));
@@ -125,8 +125,8 @@ void dapathsSetRunParams(
    }
 #endif
 
-   printf("maxprize=%f \n", maxprize);
-   printf("distlimit=%f \n", dapaths->distlimit);
+   //printf("maxprize=%f \n", maxprize);
+   //printf("distlimit=%f \n", dapaths->distlimit);
 }
 
 

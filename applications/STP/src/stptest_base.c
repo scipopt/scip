@@ -37,6 +37,11 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
+
+
+   SCIP_CALL( stptest_dapaths(scip) );
+
+
    SCIP_CALL( stptest_reduceSdBiased(scip) );
 
    SCIP_CALL( stptest_reduceNsvImplied(scip) );

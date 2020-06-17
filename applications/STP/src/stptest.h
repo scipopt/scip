@@ -120,6 +120,12 @@ extern SCIP_RETCODE    stptest_reduceSdCliqueStar(SCIP*);
 extern SCIP_RETCODE    stptest_pcreduce(SCIP*);
 
 
+/* stptest_da.c
+ */
+extern SCIP_RETCODE    stptest_dapaths(SCIP*);
+
+
+
 /* stptest_misc.c
  */
 extern SCIP_RETCODE    stptest_pseudoAncestors(SCIP*);

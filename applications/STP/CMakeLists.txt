@@ -59,6 +59,7 @@ add_executable(scipstp
     src/reduce_util.c
     src/shortestpath.c
     src/stptest_base.c
+    src/stptest_da.c
     src/stptest_extreduce.c
     src/stptest_extutils.c
     src/stptest_graph.c

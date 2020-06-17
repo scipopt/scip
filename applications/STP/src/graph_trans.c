@@ -851,6 +851,264 @@ SCIP_RETCODE graph_transPcmw2rooted(
 
 
 
+
+/** obtains an SAP from prize collecting problems */
+SCIP_RETCODE graph_transPcGetSap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   GRAPH**               newgraph,           /**< the new graph */
+   SCIP_Real*            offset              /**< offset (in/out) */
+   )
+{
+   SCIP_Real prizesum = 0.0;
+   int e;
+   int maxpvert;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nterms = graph->terms;
+   const int stp_type = graph->stp_type;
+   int pseudoroot;
+
+   assert(scip && graph && graph->prize && offset);
+   assert(graph->knots == graph->ksize);
+   assert(graph->edges == graph->esize);
+   assert(graph->extended);
+   assert(*offset >= 0.0);
+
+   if( graph_pc_isPc(graph) )
+   {
+      *offset += graph_pc_getNonLeafTermOffset(scip, graph);
+   }
+
+   graph->stp_type = STP_SAP;
+   SCIP_CALL( graph_copy(scip, graph, newgraph) );
+   graph->stp_type = stp_type;
+
+   /* for each terminal, except for the root, three edges (i.e. six arcs) are to be added */
+   SCIP_CALL( graph_resize(scip, (*newgraph), ((*newgraph)->ksize + 1), ((*newgraph)->esize + 2 * (nterms - 1)) , -1) );
+
+   assert((*newgraph)->source == root);
+
+   /* new pseudo-root */
+   pseudoroot = (*newgraph)->knots;
+   graph_knot_add((*newgraph), -1);
+
+   maxpvert = -1;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(graph->term[k]) && (maxpvert == -1 || graph->prize[k] > graph->prize[maxpvert]) )
+         maxpvert = k;
+   }
+
+   /* compute upper bound on best prize sum */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pseudoTerm(graph->term[k]) )
+      {
+         prizesum += graph->prize[k];
+
+         if( stp_type == STP_PCSPG && k != maxpvert )
+         {
+            SCIP_Real minin = FARAWAY;
+            for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+               if( !graph_pc_knotIsDummyTerm(graph, graph->tail[e]) && graph->cost[e] < minin )
+                  minin = graph->cost[e];
+
+            assert(!SCIPisZero(scip, minin));
+
+            prizesum -= MIN(minin, graph->prize[k]);
+         }
+      }
+   }
+
+   assert(SCIPisLT(scip, prizesum, FARAWAY));
+
+   *offset -= prizesum;
+   SCIP_CALL( graph_pc_presolInit(scip, *newgraph) );
+
+   e = (*newgraph)->outbeg[root];
+
+   while( e != EAT_LAST )
+   {
+      const int enext = (*newgraph)->oeat[e];
+      const int head = (*newgraph)->head[e];
+
+      if( Is_term((*newgraph)->term[head]) )
+      {
+         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e], TRUE, FALSE);
+         (*newgraph)->cost[flipedge(e)] = FARAWAY;
+         assert((*newgraph)->head[e] == head);
+         assert((*newgraph)->tail[e] == pseudoroot);
+      }
+      else
+      {
+         (*newgraph)->cost[e] = prizesum;
+      }
+
+      e = enext;
+   }
+
+   graph_pc_presolExit(scip, *newgraph);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      /* is the kth node a terminal other than the root? */
+      if( Is_pseudoTerm((*newgraph)->term[k]) )
+         graph_edge_add(scip, (*newgraph), k, pseudoroot, 0.0, FARAWAY);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** builds new rooted SAP graph for prize-collecting problems (with given root for SAP) */
+SCIP_RETCODE graph_transPcGetRsap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   GRAPH**               newgraph,           /**< the new graph */
+   const int*            rootcands,          /**< array containing all vertices that could be used as root */
+   int                   nrootcands,         /**< number of all vertices that could be used as root */
+   int                   saproot             /**< the root of the new SAP */
+   )
+{
+   GRAPH* p;
+   int twinterm;
+   int nnodes;
+   const int oldroot = graph->source;
+   const int stp_type = graph->stp_type;
+
+   assert(scip && graph && graph->prize && rootcands);
+   assert(graph->knots == graph->ksize);
+   assert(graph->edges == graph->esize);
+   assert(graph_pc_isPcMw(graph) && !graph_pc_isRootedPcMw(graph));
+
+   graph_pc_2transcheck(scip, graph);
+
+   assert(Is_pseudoTerm(graph->term[saproot]));
+
+   /* copy graph to obtain an SAP */
+   graph->stp_type = STP_SAP;
+   SCIP_CALL( graph_copy(scip, graph, newgraph) );
+   graph->stp_type = stp_type;
+
+   p = *newgraph;
+   twinterm = -1;
+
+   for( int e = p->outbeg[saproot]; e != EAT_LAST; e = p->oeat[e] )
+   {
+      const int head = p->head[e];
+      if( Is_term(p->term[head]) && head != oldroot )
+      {
+         graph_knot_chg(p, head, STP_TERM_NONE);
+         twinterm = head;
+         graph_edge_del(scip, p, e, FALSE);
+         break;
+      }
+   }
+
+   assert(twinterm >= 0);
+
+   SCIP_CALL( graph_pc_presolInit(scip, p) );
+
+   for( int e = graph->outbeg[oldroot]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      const int head = graph->head[e];
+
+      assert(graph->head[e] == p->head[e]);
+      assert(graph->tail[e] == p->tail[e]);
+
+      if( Is_term(graph->term[head]) && head != twinterm )
+      {
+         assert(Is_term(p->term[head]));
+
+         (void) graph_edge_redirect(scip, p, e, saproot, head, graph->cost[e], TRUE, FALSE);
+         p->cost[flipedge(e)] = FARAWAY;
+
+#ifndef NDEBUG
+         assert(p->grad[head] == 2);
+         for( int e2 = p->outbeg[head]; e2 != EAT_LAST; e2 = p->oeat[e2] )
+            assert(p->head[e2] == saproot || Is_pseudoTerm(p->term[p->head[e2]]));
+#endif
+      }
+      else
+      {
+         graph_edge_del(scip, p, e, FALSE);
+      }
+   }
+
+   assert(p->grad[twinterm] == 0 && p->grad[oldroot] == 0);
+
+   graph_pc_presolExit(scip, p);
+
+   nnodes = p->knots;
+   p->source = saproot;
+   graph_knot_chg(p, saproot, STP_TERM);
+
+   for( int k = 0; k < nnodes; k++ )
+      p->mark[k] = (p->grad[k] > 0);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, p, nnodes) );
+   SCIP_CALL( graph_pc_initTerm2Edge(scip, p, nnodes) );
+
+   for( int k = 0; k < nnodes; k++)
+   {
+      p->term2edge[k] = graph->term2edge[k];
+      if( k < graph->norgmodelknots )
+         p->prize[k] = graph->prize[k];
+      else
+         p->prize[k] = 0.0;
+   }
+
+   p->term2edge[saproot] = TERM2EDGE_FIXEDTERM;
+   p->term2edge[twinterm] = TERM2EDGE_NOTERM;
+
+   assert(p->stp_type == STP_SAP);
+
+   if( nrootcands > 0 )
+   {
+      SCIP_CALL( graph_pc_presolInit(scip, p) );
+      for( int k = 0; k < nrootcands; k++ )
+      {
+         int e;
+         int head = -1;
+         const int rootcand = rootcands[k];
+
+         if( rootcand == saproot )
+            continue;
+
+         assert(Is_pseudoTerm(p->term[rootcand]));
+
+         for( e = p->outbeg[rootcand]; e != EAT_LAST; e = p->oeat[e] )
+         {
+            head = p->head[e];
+
+            if( Is_term(p->term[head]) && p->term2edge[head] >= 0 )
+            {
+               assert(p->grad[head] == 2 && head != saproot);
+
+               graph_knot_chg(p, head, STP_TERM_NONE);
+               p->term2edge[head] = TERM2EDGE_NOTERM;
+               graph_knot_del(scip, p, head, FALSE);
+               break;
+            }
+         }
+         assert(e != EAT_LAST && head >= 0);
+
+         graph_pc_knotToFixedTermProperty(p, rootcand);
+      }
+      graph_pc_presolExit(scip, p);
+   }
+
+   graph_knot_chg(p, oldroot, STP_TERM_NONE);
+   p->prize[saproot] = 0.0;
+
+   return SCIP_OKAY;
+}
+
+
 /** alters the graph for node-weighted Steiner tree problems */
 SCIP_RETCODE graph_transNw2pc(
    SCIP*                 scip,               /**< SCIP data structure */

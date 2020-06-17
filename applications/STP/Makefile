@@ -111,6 +111,7 @@ CMAINOBJ	=	cmain.o \
 			solpool.o \
 			solstp.o \
 			stptest_base.o \
+			stptest_da.o \
 			stptest_extreduce.o \
 			stptest_extutils.o \
 			stptest_graph.o \
