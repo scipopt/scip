@@ -3121,9 +3121,9 @@ SCIP_RETCODE SCIPlpPsdataFree(
    projshiftdata = lp->projshiftdata;
    if( projshiftdata->projshiftdatacon )
    {
-      if( projshiftdata->projshifthaspoint )
+      if( projshiftdata->interiorpoint != NULL )
          RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
-      if( projshiftdata->projshifthasray )
+      if( projshiftdata->interiorray != NULL )
          RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
       RatFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
       RatFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
