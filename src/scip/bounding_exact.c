@@ -254,6 +254,7 @@ SCIP_RETCODE solveLpExact(
       SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &lpexact->primalfeasible, &lpexact->dualfeasible);
       lp->primalfeasible = lpexact->primalfeasible;
       lp->dualfeasible = lpexact->dualfeasible;
+      lpexact->solisbasic = TRUE;
    }
 
    lpexact->solved = TRUE;
