@@ -1613,13 +1613,13 @@ SCIP_RETCODE createInitialCuts(
    }
    else
    {
-      if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
+      if( graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph) )
       {
-         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
+         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
       }
       else
       {
-         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
+         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
       }
    }
 

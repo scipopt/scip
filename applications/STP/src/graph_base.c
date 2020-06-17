@@ -3880,7 +3880,7 @@ SCIP_Bool graph_typeIsSpgLike(
    const int type = g->stp_type;
    assert(g);
 
-   return (type == STP_SPG || type == STP_RSMT || type == STP_GSTP);
+   return (type == STP_SPG || type == STP_RSMT || type == STP_GSTP || type == STP_OARSMT);
 }
 
 /** is the given graph undirected? */
