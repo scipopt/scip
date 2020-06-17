@@ -190,8 +190,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    const int*            result,             /**< solution array or NULL */
-   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
-   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
    SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
@@ -269,15 +267,8 @@ SCIP_RETCODE SCIPStpDualAscent(
    else
       rescap = redcost;
 
-   if( nodearrint == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
-   else
-      cutverts = nodearrint;
-
-   if( edgearrint == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
-   else
-      unsatarcs = edgearrint;
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
 
    if( nterms > 1 )
       SCIP_CALL( SCIPallocMemoryArray(scip, &gnodearr, nterms - 1) );
@@ -724,11 +715,8 @@ SCIP_RETCODE SCIPStpDualAscent(
        SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, root, &success, TRUE) );
    }
 
-   if( edgearrint == NULL )
-      SCIPfreeBufferArray(scip, &unsatarcs);
-
-   if( nodearrint == NULL )
-      SCIPfreeBufferArray(scip, &cutverts);
+   SCIPfreeBufferArray(scip, &unsatarcs);
+   SCIPfreeBufferArray(scip, &cutverts);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);

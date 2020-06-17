@@ -1613,14 +1613,9 @@ SCIP_RETCODE createInitialCuts(
    }
    else
    {
-      if( graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph) )
-      {
-         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, graph->source, FALSE, -1.0) );
-      }
+      const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
+
+      SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, doAscendPrune, NULL, graph->source, FALSE, -1.0) );
    }
 
    return SCIP_OKAY;

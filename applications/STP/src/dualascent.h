@@ -37,8 +37,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    const int*            result,             /**< solution array (solution needs to be provided) */
-   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
-   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
    SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
