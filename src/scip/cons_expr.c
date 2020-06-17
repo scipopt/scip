@@ -2285,7 +2285,7 @@ SCIP_RETCODE detectNlhdlrs(
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
    assert(infeasible != NULL);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initlp */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2337,7 +2337,7 @@ SCIP_RETCODE detectNlhdlrs(
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])) )
       {
          /* ensure auxiliary variable for root expression exists (not always necessary, but it simplifies things) */
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
@@ -2441,6 +2441,274 @@ SCIP_RETCODE detectNlhdlrs(
    SCIPfreeBufferArray(scip, &nlhdlrparticipation);
    SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrssuccess);
+
+   return SCIP_OKAY;
+}
+
+/** checks for a linear variable that can be increased or decreased without harming feasibility */
+static
+void findUnlockedLinearVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   int poslock;
+   int neglock;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(consdata != NULL);
+
+   consdata->linvarincr = NULL;
+   consdata->linvardecr = NULL;
+   consdata->linvarincrcoef = 0.0;
+   consdata->linvardecrcoef = 0.0;
+
+   /* root expression is not a sum -> no unlocked linear variable available */
+   if( SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return;
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(consdata->expr); ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      child = SCIPgetConsExprExprChildren(consdata->expr)[i];
+      assert(child != NULL);
+
+      /* check whether the child is a variable expression */
+      if( SCIPisConsExprExprVar(child) )
+      {
+         SCIP_VAR* var = SCIPgetConsExprExprVarVar(child);
+         SCIP_Real coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
+
+         if( coef > 0.0 )
+         {
+            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+         }
+         else
+         {
+            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+         }
+
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+         {
+            /* for a*x + f(y) \in [lhs, rhs], we can decrease x without harming other constraints */
+            /* if we have already one candidate, then take the one where the loss in the objective function is less */
+            if( (consdata->linvardecr == NULL) ||
+               (SCIPvarGetObj(consdata->linvardecr) / consdata->linvardecrcoef > SCIPvarGetObj(var) / coef) )
+            {
+               consdata->linvardecr = var;
+               consdata->linvardecrcoef = coef;
+            }
+         }
+
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+         {
+            /* for a*x + f(y) \in [lhs, rhs], we can increase x without harm */
+            /* if we have already one candidate, then take the one where the loss in the objective function is less */
+            if( (consdata->linvarincr == NULL) ||
+               (SCIPvarGetObj(consdata->linvarincr) / consdata->linvarincrcoef > SCIPvarGetObj(var) / coef) )
+            {
+               consdata->linvarincr = var;
+               consdata->linvarincrcoef = coef;
+            }
+         }
+      }
+   }
+
+   assert(consdata->linvarincr == NULL || consdata->linvarincrcoef != 0.0);
+   assert(consdata->linvardecr == NULL || consdata->linvardecrcoef != 0.0);
+
+#ifdef SCIP_DEBUG
+   if( consdata->linvarincr != NULL )
+   {
+      SCIPdebugMsg(scip, "may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvarincr));
+   }
+   if( consdata->linvardecr != NULL )
+   {
+      SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvardecr));
+   }
+#endif
+}
+
+/* forward declaration */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< expression constraint */
+   );
+
+/** initializes (pre)solving data of constraints
+ *
+ * This initializes data in a constraint that is used for separation, propagation, etc, and assumes that expressions will
+ * not be modified.
+ * In particular, this function
+ * - runs the detection method of nlhldrs
+ * - collects all bilinear terms
+ *
+ * This function can be called in presolve and solve and can be called several times with different sets of constraints,
+ * e.g., it should be called in INITSOL and for constraints that are added during solve.
+ */
+static
+SCIP_RETCODE initSolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   /* register non linear handlers */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+
+   /* if detect found problems to be infeasible, e.g., because of bounds, then stop */
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   /* make sure that we reevaluate activity of all expressions
+    * this is to prevent that the activity of a new child of an expression (as generated by simplify or other presolving)
+    * is not uptodate while the activity in the expression itself is still valid, so that forwardPropExpr will not reevaluate
+    * the child and this creates problems in reversepropagation
+    * TODO add a forwardPropExpr() call to SCIPincrementConsExprNActivityUses() instead?
+    */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      /* check for a linear variable that can be increase or decreased without harming feasibility */
+      findUnlockedLinearVar(scip, conshdlr, consdata);
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         /* call curvature detection of expression handlers; TODO do we really need this? */
+         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
+
+         /* call the curvature detection algorithm of the convex nonlinear handler if the curvature
+          * detection of the expression handlers could not detect anything
+          */
+         if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
+         {
+            /* Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            SCIP_Bool success = FALSE;
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
+         }
+         else
+         {
+            consdata->curv = SCIPgetConsExprExprCurvature(consdata->expr);
+         }
+         SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
+
+         /* add nlrow representation to NLP, if NLP had been constructed */
+         if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+         {
+            if( consdata->nlrow == NULL )
+            {
+               SCIP_CALL( createNlRow(scip, conss[c]) );
+               assert(consdata->nlrow != NULL);
+            }
+            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deinitializes (pre)solving data of constraints
+ *
+ * This removes initialization data in a constraint that was created in initSolve().
+ *
+ * This function can be called in presolve and solve and can be called several times with different sets of constraints,
+ * e.g., it should be called in EXITSOL and for constraints that are deactivated during solve,
+ * or it should be called in presolve before modifying constraint data
+ */
+static
+SCIP_RETCODE deinitSolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   /* call deinitialization callbacks of expression and nonlinear handlers
+    * free nonlinear handlers information from expressions
+    * remove auxiliary variables and activityusagecounts from expressions
+    */
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      assert(conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
+
+         /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
+
+         /* remove quadratic info */
+         quadFree(scip, expr);
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         /* remove row from NLP, if still in solving
+          * if we are in exitsolve, the whole NLP will be freed anyway
+          */
+         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         {
+            SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+         }
+
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+
+      /* forget about linear variables that can be increased or decreased without harming feasibility */
+      consdata->linvardecr = NULL;
+      consdata->linvarincr = NULL;
+
+      /* forget about curvature */
+      consdata->curv = SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -4560,30 +4828,7 @@ SCIP_RETCODE canonicalizeConstraints(
    havechange = conshdlrdata->ncanonicalizecalls == 1;
 
    /* free nonlinear handlers information from expressions */  /* TODO can skip this in first presolve round */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CONSEXPR_EXPR* expr;
-
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIPdebugMsg(scip, "free nonlinear handler data for expression %p\n", (void*)expr);
-
-         assert(expr->auxvar == NULL);  /* should not have been created yet or have been removed in INITPRE (if restart) */
-
-         /* remove nonlinear handlers in expression and their data */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
-
-         /* remove quadratic info */
-         quadFree(scip, expr);
-      }
-   }
+   SCIP_CALL( deinitSolve(scip, conshdlr, conss, nconss) );
 
    /* allocate memory for storing locks of each constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
@@ -4811,15 +5056,7 @@ SCIP_RETCODE canonicalizeConstraints(
       for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
          conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
 
-      SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
-
-      /* make sure that we reevaluate activity of all expressions
-       * this is to prevent that the activity of a new child of an expression (as generated by simplify or other presolving)
-       * is not uptodate while the activity in the expression itself is still valid, so that forwardPropExpr will not reevaluate
-       * the child and this creates problems in reversepropagation
-       * TODO add a forwardPropExpr() call to SCIPincrementConsExprNActivityUses() instead?
-       */
-      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, infeasible) );
    }
 
    /* free allocated memory */
@@ -7840,95 +8077,6 @@ SCIP_RETCODE consSepa(
    return SCIP_OKAY;
 }
 
-/** checks for a linear variable that can be increased or decreased without harming feasibility */
-static
-void consdataFindUnlockedLinearVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
-   )
-{
-   int poslock;
-   int neglock;
-   int i;
-
-   assert(conshdlr != NULL);
-   assert(consdata != NULL);
-
-   consdata->linvarincr = NULL;
-   consdata->linvardecr = NULL;
-   consdata->linvarincrcoef = 0.0;
-   consdata->linvardecrcoef = 0.0;
-
-   /* root expression is not a sum -> no unlocked linear variable available */
-   if( SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
-      return;
-
-   for( i = 0; i < SCIPgetConsExprExprNChildren(consdata->expr); ++i )
-   {
-      SCIP_CONSEXPR_EXPR* child;
-
-      child = SCIPgetConsExprExprChildren(consdata->expr)[i];
-      assert(child != NULL);
-
-      /* check whether the child is a variable expression */
-      if( SCIPisConsExprExprVar(child) )
-      {
-         SCIP_VAR* var = SCIPgetConsExprExprVarVar(child);
-         SCIP_Real coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
-
-         if( coef > 0.0 )
-         {
-            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-         }
-         else
-         {
-            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-         }
-
-         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
-         {
-            /* for a*x + f(y) \in [lhs, rhs], we can decrease x without harming other constraints */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
-            if( (consdata->linvardecr == NULL) ||
-               (SCIPvarGetObj(consdata->linvardecr) / consdata->linvardecrcoef > SCIPvarGetObj(var) / coef) )
-            {
-               consdata->linvardecr = var;
-               consdata->linvardecrcoef = coef;
-            }
-         }
-
-         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
-         {
-            /* for a*x + f(y) \in [lhs, rhs], we can increase x without harm */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
-            if( (consdata->linvarincr == NULL) ||
-               (SCIPvarGetObj(consdata->linvarincr) / consdata->linvarincrcoef > SCIPvarGetObj(var) / coef) )
-            {
-               consdata->linvarincr = var;
-               consdata->linvarincrcoef = coef;
-            }
-         }
-      }
-   }
-
-   assert(consdata->linvarincr == NULL || consdata->linvarincrcoef != 0.0);
-   assert(consdata->linvardecr == NULL || consdata->linvardecrcoef != 0.0);
-
-#ifdef SCIP_DEBUG
-   if( consdata->linvarincr != NULL )
-   {
-      SCIPdebugMsg(scip, "may increase <%s> to become feasible\n", SCIPvarGetName(consdata->linvarincr));
-   }
-   if( consdata->linvardecr != NULL )
-   {
-      SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvardecr));
-   }
-#endif
-}
-
 /** Given a solution where every expression constraint is either feasible or can be made feasible by
  *  moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
  *
@@ -10200,6 +10348,7 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool infeasible;
    int i;
 
    /* skip a number of initializations if we have solved already
@@ -10209,62 +10358,14 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
    if( SCIPgetStatus(scip) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE &&
       SCIPgetStatus(scip) != SCIP_STATUS_UNBOUNDED && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
    {
-      SCIP_CONSDATA* consdata;
-      int c;
+      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, &infeasible) );
 
-      for( c = 0; c < nconss; ++c )
-      {
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-         assert(consdata != NULL);
-         assert(consdata->expr != NULL);
-
-         /* check for a linear variable that can be increase or decreased without harming feasibility */
-         consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
-
-         /* call curvature detection of expression handlers; TODO do we really need this? */
-         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
-
-         /* call the curvature detection algorithm of the convex nonlinear handler if the curvature
-          * detection of the expression handlers could not detect anything
-          */
-         if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
-         {
-            /* Check only for those curvature that may result in a convex inequality, i.e.,
-             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-             */
-            SCIP_Bool success = FALSE;
-            if( !SCIPisInfinity(scip, -consdata->lhs) )
-            {
-               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-               if( success )
-                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
-            }
-            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-               if( success )
-                  consdata->curv = SCIP_EXPRCURV_CONVEX;
-            }
-         }
-         else
-         {
-            consdata->curv = SCIPgetConsExprExprCurvature(consdata->expr);
-         }
-         SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
-
-         /* add nlrow representation to NLP, if NLP had been constructed */
-         if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
-         {
-            if( consdata->nlrow == NULL )
-            {
-               SCIP_CALL( createNlRow(scip, conss[c]) );
-               assert(consdata->nlrow != NULL);
-            }
-            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
-            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
-         }
-      }
+      /* collect all bilinear terms
+       * TODO this should eventually move into initSolve, but currently the bilinearTerms methods cannot handle
+       * addition (and removal?) of constraints during solve, so we do this only for constraints that are
+       * present in INITSOL
+       */
+      SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -10304,43 +10405,12 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-   int c;
    int i;
+
+   SCIP_CALL( deinitSolve(scip, conshdlr, conss, nconss) );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   /* call deinitialization callbacks of expression and nonlinear handlers
-    * free nonlinear handlers information from expressions
-    * remove auxiliary variables from expressions, if not restarting; otherwise do so in CONSINITPRE
-    */
-   for( c = 0; c < nconss; ++c )
-   {
-      assert(conss != NULL);
-      assert(conss[c] != NULL);
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
-
-         /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
-
-         /* remove quadratic info */
-         quadFree(scip, expr);
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
 
    /* deinitialize nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
@@ -10351,18 +10421,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       if( nlhdlr->exit != NULL )
       {
          SCIP_CALL( (*nlhdlr->exit)(scip, nlhdlr) );
-      }
-   }
-
-   /* free nonlinear row representations */
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
-      if( consdata->nlrow != NULL )
-      {
-         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -10438,21 +10496,8 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
-   /* TODO as detect now also makes sense for conss that never separate, detect should probably move into
-    * initsol and/or enablecons or activecons
-    */
-   /* register non linear handlers */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
-
-   /* if creating auxiliary variables detected an infeasible (because of bounds), stop initing lp */
-   if( *infeasible )
-      return SCIP_OKAY;
-
    /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
-
-   /* collect all bilinear terms */
-   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -10618,10 +10663,6 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 
          if( maypropfeasible )
          {
-            /* update information on linear variables that may be in- or decreased, if initsolve has not done so yet */
-            if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
-               consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
-
             if( consdata->lhsviol > SCIPfeastol(scip) )
             {
                /* check if there is a variable which may help to get the left hand side satisfied
@@ -10836,6 +10877,7 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible = FALSE;
 
    /* store variable expressions */
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
@@ -10854,7 +10896,6 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
       if( !consdata->issimplified )
       {
          SCIP_CONSEXPR_EXPR* simplified;
-         SCIP_Bool infeasible;
          SCIP_Bool changed;
 
          /* simplify constraint */
@@ -10875,18 +10916,13 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
       SCIP_CALL( addLocks(scip, cons, 1, 0) );
    }
 
-   /* FIXME/TODO that's for getting DETECT run early for constraints that are added during solve
-    * though it may be rerun in INITLP
-    */
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && !infeasible )
    {
-      SCIP_Bool infeasible;
-
-      /* register non linear handlers  */
-      SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
-
-      assert(!infeasible);
+      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible) );
    }
+
+   /* TODO deal with infeasibility */
+   assert(!infeasible);
 
    return SCIP_OKAY;
 }
@@ -10901,37 +10937,16 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   if( SCIPgetStage(scip) < SCIP_STAGE_EXITSOLVE )
+   {
+      SCIP_CALL( deinitSolve(scip, conshdlr, &cons, 1) );
+   }
+
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(cons)) );
    }
-
-#ifdef SCIP_DISABLED_CODE   /* we probably don't need this (?) */
-   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_ITERATOR* it;
-
-      consdata = SCIPconsGetData(cons);
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIPdebugMsg(scip, "consdeactivate: free nonlinear handler data for expression %p\n", (void*)expr);
-
-         /* remove nonlinear handlers in expression and their data; keep auxiliary variable */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
-
-         /* remove quadratic info */
-         quadFree(scip, expr);
-      }
-
-      SCIPexpriteratorFree(&it);
-   }
-#endif
 
    /* remove locks that have been added in consActiveExpr() */
    if( !SCIPconsIsChecked(cons) )
@@ -14408,7 +14423,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
    {
       SCIPerrorMessage("it is not possible to create auxiliary variables during stage=%d\n", SCIPgetStage(scip));
       return SCIP_INVALIDCALL;
@@ -16370,7 +16385,7 @@ SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
    assert(consdata != NULL);
 
    /* check for a linear variable that can be increased or decreased without harming feasibility */
-   consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
+   findUnlockedLinearVar(scip, conshdlr, consdata);
 
    *var = consdata->linvardecr;
    *coef = consdata->linvardecrcoef;
@@ -16398,7 +16413,7 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    assert(consdata != NULL);
 
    /* check for a linear variable that can be increased or decreased without harming feasibility */
-   consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
+   findUnlockedLinearVar(scip, conshdlr, consdata);
 
    *var = consdata->linvarincr;
    *coef = consdata->linvarincrcoef;
