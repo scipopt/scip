@@ -115,7 +115,7 @@ Build system
 ### Makefile
 
 - Updated make/make.project for macOS
-- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS).
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS)
 - Fixed GCC version check in make/make.linux.gnu.dbg
 
 Fixed bugs
