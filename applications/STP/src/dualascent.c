@@ -74,6 +74,69 @@ typedef struct dual_ascent_paths
  * @{
  */
 
+#ifndef NDEBUG
+/** can all terminal be reached? */
+static
+SCIP_Bool allTermsReachable(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   const SCIP_Real*      redcost             /**< array to store reduced costs */
+   )
+{
+   int* RESTRICT queue;
+   STP_Bool* RESTRICT scanned;
+   int qsize;
+   const int nnodes = graph_get_nNodes(g);
+   const int root = g->source;
+   int termscount;
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &queue, nnodes ) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &scanned, nnodes) );
+
+   BMSclearMemoryArray(scanned, nnodes);
+
+   termscount = 1;
+   qsize = 0;
+   scanned[root] = TRUE;
+   queue[qsize++] = root;
+
+   /* DFS */
+   while( qsize > 0 )
+   {
+      const int k = queue[--qsize];
+      scanned[k] = TRUE;
+
+      for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( SCIPisZero(scip, redcost[a]) )
+         {
+            /* vertex not visited yet? */
+            if( !scanned[head] )
+            {
+               scanned[head] = TRUE;
+               queue[qsize++] = head;
+
+               if( Is_term(g->term[head]) )
+                  termscount++;
+            }
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &scanned);
+   SCIPfreeMemoryArray(scip, &queue);
+
+  // printf("%d vs %d \n", termscount, g->terms);
+
+   return (termscount == g->terms);
+}
+
+
+
+#endif
+
 
 /** sets shortest path parameters: start node and distance limit */
 static
@@ -1334,6 +1397,9 @@ SCIP_RETCODE dualascent_pathsPcMw(
    dapathsComputeRedCosts(transgraph, &dapaths, redcost, objval);
 
    dapathsFreeMembers(scip, &dapaths);
+
+   assert(allTermsReachable(scip, transgraph, redcost));
+
 
    return SCIP_OKAY;
 }
