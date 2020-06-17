@@ -3,40 +3,6 @@
 @section RN701 SCIP 7.0.1
 *************************
 
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
-### Deleted and changed API methods
-
-### New API functions
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
 Build system
 ------------
 
@@ -69,9 +35,6 @@ Miscellaneous
 
 - Variables that are marked as relaxation-only are no longer checked against debug solutions if
   they are captured by the transformed problem only.
-
-Known bugs
-----------
 
 @section RN700 SCIP 7.0.0
 *************************
