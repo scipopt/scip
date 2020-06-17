@@ -801,7 +801,7 @@ void graph_path_exit(
 void graph_path_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   const int             mode,               /**< shortest path (FSP_MODE) or minimum spanning tree (MST_MODE)? */
+   int                   mode,               /**< shortest path (FSP_MODE) or minimum spanning tree (MST_MODE)? */
    int                   start,              /**< start vertex */
    const SCIP_Real*      cost,               /**< edge costs */
    PATH*                 path                /**< shortest paths data structure */
@@ -865,6 +865,76 @@ void graph_path_exec(
       }
    }
 }
+
+
+/** distance limited Dijkstra */
+void graph_pathLimitedExec(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge cost */
+   int                   startnode,          /**< start */
+   SCIP_Real             distlimit,          /**< distance limit */
+   DIJK*                 dijkdata            /**< Dijkstra data */
+)
+{
+   SCIP_Real* RESTRICT dist = dijkdata->node_distance;
+   int* RESTRICT visitlist = dijkdata->visitlist;
+   STP_Bool* RESTRICT visited = dijkdata->node_visited;
+   DHEAP* dheap = dijkdata->dheap;
+   int* const state = dheap->position;
+   int nvisits = 0;
+
+   assert(dist && visitlist && visited && dheap && cost);
+   assert(dheap->size == 0);
+   assert(graph_knot_isInRange(g, startnode));
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+   {
+      assert(dist[k] == FARAWAY);
+      assert(state[k] == UNKNOWN);
+   }
+#endif
+
+   dist[startnode] = 0.0;
+   visitlist[(nvisits)++] = startnode;
+   visited[startnode] = TRUE;
+   graph_heap_correct(startnode, 0.0, dheap);
+
+   while( dheap->size > 0 )
+   {
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      assert(state[k] == CONNECT);
+
+      for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( state[m] != CONNECT )
+         {
+            const SCIP_Real distnew = dist[k] + cost[e];
+
+            if( GT(distnew, distlimit) )
+               continue;
+
+            if( !visited[m] )
+            {
+               assert(nvisits < g->knots);
+               visitlist[(nvisits)++] = m;
+               visited[m] = TRUE;
+            }
+
+            if( LT(distnew, dist[m]) )
+            {
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   dijkdata->nvisits = nvisits;
+}
+
 
 /** limited Dijkstra, stopping at terminals */
 void graph_sdPaths(

@@ -53,6 +53,19 @@
 #endif
 
 
+
+/** internal data for path based dual-ascent */
+typedef struct dual_ascent_paths
+{
+   DIJK*                 dijklimited;        /**< Dijkstra data */
+   SCIP_Real*            costs_reversed;     /**< reversed edge costs */
+   SCIP_Real             distlimit;          /**< limit */
+   int                   startnode;          /**< node */
+} DAPATHS;
+
+
+
+
 /**@} */
 
 
@@ -62,8 +75,152 @@
  */
 
 
-/** returns whether node realtail is active or leads to active node other than dfsbase */
+/** sets shortest path parameters: start node and distance limit */
 static
+void dapathsSetRunParams(
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   DAPATHS*              dapaths             /**< to be initialized */
+   )
+{
+   int start = -1;
+   SCIP_Real maxprize = 0.0;
+   const int nnodes = graph_get_nNodes(transgraph);
+   const int root = transgraph->source;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !Is_term(transgraph->term[i]) )
+         continue;
+
+      if( i == root )
+         continue;
+
+      assert(transgraph->grad[i] == 2);
+
+      for( int e = transgraph->inpbeg[i]; e != EAT_LAST; e = transgraph->ieat[e] )
+      {
+         if( GT(transgraph->cost[e], maxprize) )
+         {
+            start = i;
+            maxprize = transgraph->cost[e];
+         }
+      }
+   }
+
+   assert(graph_knot_isInRange(transgraph, start ));
+   assert(GT(maxprize, 0.0));
+
+   dapaths->startnode = start;
+
+   assert(transgraph->oeat[root] >= 0);
+   dapaths->distlimit = transgraph->cost[transgraph->oeat[root]];
+
+#ifndef NDEBUG
+   assert(GT(dapaths->distlimit, 0.0));
+   assert(LT(dapaths->distlimit, FARAWAY));
+
+   for( int e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
+   {
+      assert(EQ(transgraph->cost[e], dapaths->distlimit));
+   }
+#endif
+
+   printf("maxprize=%f \n", maxprize);
+   printf("distlimit=%f \n", dapaths->distlimit);
+}
+
+
+/** initializes */
+static
+SCIP_RETCODE dapathsInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   DAPATHS*              dapaths             /**< to be initialized */
+   )
+{
+   const int nedges = graph_get_nEdges(transgraph);
+   SCIP_CALL( graph_dijkLimited_init(scip, transgraph, &(dapaths->dijklimited)) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->costs_reversed), nedges) );
+   graph_get_edgeRevCosts(transgraph, dapaths->costs_reversed);
+
+   dapathsSetRunParams(transgraph, dapaths);
+
+   return SCIP_OKAY;
+}
+
+
+/** runs */
+static
+void dapathsRunShortestPaths(
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   DAPATHS*              dapaths             /**< to be initialized */
+   )
+{
+   const SCIP_Real* revcosts = dapaths->costs_reversed;
+   const int start = dapaths->startnode;
+   const SCIP_Real distlimit = dapaths->distlimit;
+   DIJK* dijklimited = dapaths->dijklimited;
+
+   assert(GT(distlimit, 0.0));
+
+   graph_pathLimitedExec(transgraph, revcosts, start, distlimit, dijklimited);
+}
+
+
+/** computes reduced costs */
+static
+void dapathsComputeRedCosts(
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   const DAPATHS*        dapaths,            /**< to be initialized */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
+   SCIP_Real*            objval             /**< pointer to store (dual) objective value */
+)
+{
+   const int nnodes = graph_get_nNodes(transgraph);
+   const int nedges = graph_get_nEdges(transgraph);
+   const DIJK* dijklimited = dapaths->dijklimited;
+   const SCIP_Real* const node_distance = dijklimited->node_distance;
+   const SCIP_Real distlimit = dapaths->distlimit;
+
+   BMScopyMemoryArray(redcost, transgraph->cost, nedges);
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      const SCIP_Real dist_i = MIN(node_distance[i], distlimit);
+      for( int e = transgraph->outbeg[i]; e != EAT_LAST; e = transgraph->oeat[e] )
+      {
+         const int j = transgraph->head[e];
+         const SCIP_Real dist_j = node_distance[j];
+
+         if( LT(dist_j, distlimit) )
+         {
+            const SCIP_Real offset = MAX(0.0, dist_i - dist_j);
+            assert(LE(offset, redcost[e]));
+
+            redcost[e] -= offset;
+         }
+      }
+   }
+
+   *objval = distlimit;
+}
+
+
+/** frees */
+static
+void dapathsFreeMembers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DAPATHS*              dapaths             /**< to be initialized */
+   )
+{
+   SCIPfreeBufferArray(scip, &(dapaths->costs_reversed));
+   graph_dijkLimited_free(scip, &(dapaths->dijklimited));
+}
+
+
+/** returns whether node realtail is active or leads to active node other than dfsbase */
+static inline
 SCIP_Bool is_active(
    const int*            active,             /**< active nodes array */
    int                   realtail,           /**< vertex to start from */
@@ -182,7 +339,7 @@ SCIP_RETCODE initDualAscent(
 }
 
 /** dual ascent heuristic */
-SCIP_RETCODE SCIPStpDualAscent(
+SCIP_RETCODE dualascent_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
@@ -727,7 +884,7 @@ SCIP_RETCODE SCIPStpDualAscent(
 }
 
 /** dual ascent heuristic for PCSPG and MWCSP */
-SCIP_RETCODE SCIPStpDualAscentPcMw(
+SCIP_RETCODE dualascent_execPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
@@ -1155,7 +1312,32 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    graph_free(scip, &transgraph, TRUE);
 
    return SCIP_OKAY;
-
 }
+
+
+/** path based dual ascent heuristic */
+SCIP_RETCODE dualascent_pathsPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
+   SCIP_Real*            objval,             /**< pointer to store (dual) objective value */
+   const int*            result              /**< solution array or NULL */
+)
+{
+   DAPATHS dapaths = { NULL, NULL, -1.0, -1 };
+
+   assert(scip && transgraph && redcost && objval);
+
+   SCIP_CALL( dapathsInit(scip, transgraph, &dapaths) );
+
+   dapathsRunShortestPaths(transgraph, &dapaths);
+   dapathsComputeRedCosts(transgraph, &dapaths, redcost, objval);
+
+   dapathsFreeMembers(scip, &dapaths);
+
+   return SCIP_OKAY;
+}
+
+
 
 /**@} */

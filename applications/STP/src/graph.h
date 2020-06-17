@@ -403,6 +403,7 @@ extern int    graph_get_nEdges(const GRAPH*);
 extern int    graph_get_nTerms(const GRAPH*);
 extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
 extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
+extern void   graph_get_edgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
@@ -519,7 +520,8 @@ extern SCIP_Real graph_pc_solGetObj(SCIP*, const GRAPH*, const int*, SCIP_Real);
 /* graph_path.c
  */
 extern void   graph_path_exit(SCIP*, GRAPH*);
-extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Real*, PATH*);
+extern void   graph_path_exec(SCIP*, const GRAPH*, int, int, const SCIP_Real*, PATH*);
+extern void   graph_pathLimitedExec(const GRAPH*, const SCIP_Real*, int, SCIP_Real, DIJK*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);

@@ -1609,13 +1609,13 @@ SCIP_RETCODE createInitialCuts(
 
    if( pc || mw )
    {
-      SCIP_CALL( SCIPStpDualAscentPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
+      SCIP_CALL( dualascent_execPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
    }
    else
    {
       const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
 
-      SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, &lpobjval, TRUE, doAscendPrune, NULL, graph->source, FALSE, -1.0) );
+      SCIP_CALL( dualascent_exec(scip, graph, NULL, &lpobjval, TRUE, doAscendPrune, NULL, graph->source, FALSE, -1.0) );
    }
 
    return SCIP_OKAY;

@@ -29,7 +29,7 @@
 #include "graph.h"
 
 /** dual ascent heuristic */
-SCIP_RETCODE SCIPStpDualAscent(
+SCIP_RETCODE dualascent_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    );
 
 /** dual ascent heuristic for the PCSPG and the MWCSP */
-SCIP_RETCODE SCIPStpDualAscentPcMw(
+SCIP_RETCODE dualascent_execPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
@@ -52,6 +52,16 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    SCIP_Bool             ascendandprune,     /**< perform ascend-and-prune and add solution? */
    int                   nruns               /**< number of dual ascent runs */
    );
+
+
+/** path based dual ascent heuristic */
+SCIP_RETCODE dualascent_pathsPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
+   SCIP_Real*            objval,             /**< pointer to store (dual) objective value */
+   const int*            result              /**< solution array or NULL */
+);
 
 
 #endif /* APPLICATIONS_STP_SRC_DUALASCENT_H_ */
