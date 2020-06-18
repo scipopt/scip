@@ -301,6 +301,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP for a logarithm expression */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
 {
@@ -343,13 +344,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
 
    for( i = 0; i < 4; ++i )
    {
-      SCIP_Real refpoint;
-
       if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
          continue;
 
-      refpoint = overest[i] ? refpointsover[i] : SCIP_INVALID;
-      assert(SCIPisLE(scip, refpoint, ub) && SCIPisGE(scip, refpoint, lb));
+      assert(i == 4 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb)));
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
@@ -358,7 +356,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
       success = TRUE;
 
       if( overest[i] )
-         SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
+         SCIPaddLogLinearization(scip, refpointsover[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
 
       if( !overest[i] )
          SCIPaddLogSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
