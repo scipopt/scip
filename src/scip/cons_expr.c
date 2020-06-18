@@ -9168,7 +9168,8 @@ SCIP_Bool isSingleLockedCand(
       && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPgetConsExprExprNLocksPos(expr)
       && SCIPgetConsExprExprVarNConss(expr) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY;
+      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 }
 
 /** removes all variable expressions that are contained in a given expression from a hash map */
