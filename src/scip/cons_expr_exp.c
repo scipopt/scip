@@ -260,30 +260,16 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
 
    if( overestimate )
    {
-      if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
-      {
-         refpointsunder[0] = -4.0;
-         refpointsunder[1] = 0.0;
-         refpointsunder[2] = 2.0;
-      }
-      else if( SCIPisInfinity(scip, -lb) )
-      {
-         refpointsunder[0] = ub - 4.0;
-         refpointsunder[1] = ub - 2.0;
-         refpointsunder[2] = ub;
-      }
-      else if( SCIPisInfinity(scip, ub) )
-      {
-         refpointsunder[0] = lb;
-         refpointsunder[1] = lb + 2.0;
-         refpointsunder[2] = lb + 4.0;
-      }
-      else
-      {
-         refpointsunder[0] = (7.0 * lb + ub) / 8.0;
-         refpointsunder[1] = (lb + ub) / 2.0;
-         refpointsunder[2] = (lb + 7.0 * ub) / 8.0;
-      }
+      SCIP_Real lbfinite;
+      SCIP_Real ubfinite;
+
+      /* make bounds finite */
+      lbfinite = SCIPisInfinity(scip, -lb) ? MIN(-5.0, ub - 0.1*REALABS(ub)) : lb;
+      ubfinite = SCIPisInfinity(scip, ub) ? MAX( 3.0, lb + 0.1*REALABS(lb)) : ub;
+
+      refpointsunder[0] = (7.0 * lbfinite + ubfinite) / 8.0;
+      refpointsunder[1] = (lbfinite + ubfinite) / 2.0;
+      refpointsunder[2] = (lbfinite + 7.0 * ubfinite) / 8.0;
    }
 
    overest = (SCIP_Bool[4]) {FALSE, FALSE, FALSE, TRUE};

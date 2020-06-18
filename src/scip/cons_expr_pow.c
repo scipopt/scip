@@ -1094,30 +1094,15 @@ void addTangentRefpoints(
 {
    assert(refpoints != NULL);
 
-   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
-   {
-      refpoints[0] = -1.0;
-      refpoints[1] = 0.0;
-      refpoints[2] = 1.0;
-   }
-   else if( SCIPisInfinity(scip, -lb) )
-   {
-      refpoints[0] = ub - 2.0;
-      refpoints[1] = ub - 1.0;
-      refpoints[2] = ub;
-   }
-   else if( SCIPisInfinity(scip, ub) )
-   {
-      refpoints[0] = lb;
-      refpoints[1] = lb + 1.0;
-      refpoints[2] = lb + 2.0;
-   }
-   else
-   {
-      refpoints[0] = (7.0 * lb + ub) / 8.0;
-      refpoints[1] = (lb + ub) / 2.0;
-      refpoints[2] = (lb + 7.0 * ub) / 8.0;
-   }
+   /* make bounds finite */
+   if( SCIPisInfinity(scip, -lb) )
+      lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
+   if( SCIPisInfinity(scip,  ub) )
+      ub = MAX( 10.0, lb + 0.1*REALABS(lb));  /*lint !e666 */
+
+   refpoints[0] = (7.0 * lb + ub) / 8.0;
+   refpoints[1] = (lb + ub) / 2.0;
+   refpoints[2] = (lb + 7.0 * ub) / 8.0;
 
 }
 
@@ -1149,27 +1134,18 @@ SCIP_RETCODE addSignpowerRefpoints(
       SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
    }
 
-   if( underestimate && SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, -lb) )
-   {
-      refpoints[0] = lb;
-      refpoints[1] = -lb * exprdata->root;
-      refpoints[2] = -lb * exprdata->root + 1.0;
-   }
-   else if( !underestimate && SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-   {
-      refpoints[0] = -ub * exprdata->root - 1.0;
-      refpoints[1] = -ub * exprdata->root;
-      refpoints[2] = ub;
-   }
+   /* make bounds finite */
+   if( SCIPisInfinity(scip, -lb) )
+      lb = -ub * exprdata->root - 1.0;
+   if( SCIPisInfinity(scip,  ub) )
+      ub = -lb * exprdata->root + 1.0;
+
+   refpoints[0] = lb;
+   refpoints[2] = ub;
+   if( underestimate )
+      refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
    else
-   {
-      refpoints[0] = lb;
-      refpoints[2] = ub;
-      if( underestimate )
-         refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
-      else
-         refpoints[1] = (lb - ub * exprdata->root) / 2.0;
-   }
+      refpoints[1] = (lb - ub * exprdata->root) / 2.0;
 
    return SCIP_OKAY;
 }
