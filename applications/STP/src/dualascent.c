@@ -82,6 +82,7 @@ static
 SCIP_Bool allTermsReachable(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
+   int                   root,               /**< root for DA */
    const SCIP_Real*      redcost             /**< array to store reduced costs */
    )
 {
@@ -89,7 +90,6 @@ SCIP_Bool allTermsReachable(
    STP_Bool* RESTRICT scanned;
    int qsize;
    const int nnodes = graph_get_nNodes(g);
-   const int root = g->source;
    int termscount;
 
    SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &queue, nnodes ) );
@@ -130,7 +130,7 @@ SCIP_Bool allTermsReachable(
    SCIPfreeMemoryArray(scip, &scanned);
    SCIPfreeMemoryArray(scip, &queue);
 
-  // printf("%d vs %d \n", termscount, g->terms);
+//   printf("%d vs %d \n", termscount, g->terms);
 
    return (termscount == g->terms);
 }
@@ -986,7 +986,8 @@ SCIP_RETCODE dualascent_exec(
    SCIPfreeBufferArray(scip, &unsatarcs);
    SCIPfreeBufferArray(scip, &cutverts);
 
-   assert(allTermsReachable(scip, g, rescap));
+
+   assert(allTermsReachable(scip, g, root, rescap));
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
@@ -1419,7 +1420,7 @@ SCIP_RETCODE dualascent_execPcMw(
    SCIPfreeBufferArray(scip, &sat);
    SCIPfreeBufferArray(scip, &stackarr);
 
-   assert(allTermsReachable(scip, transgraph, rescap));
+   assert(allTermsReachable(scip, transgraph, root, rescap));
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
@@ -1449,7 +1450,7 @@ SCIP_RETCODE dualascent_pathsPcMw(
 
    dapathsFreeMembers(scip, &dapaths);
 
-   assert(allTermsReachable(scip, transgraph, redcost));
+   assert(allTermsReachable(scip, transgraph, transgraph->source, redcost));
 
    return SCIP_OKAY;
 }
