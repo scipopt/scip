@@ -312,8 +312,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    /* everything where we participate, we do thoroughly */
    *enforcing |= *participating;
 
-   SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, exprdata.exprx, TRUE, FALSE) );
-   SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, exprdata.expry, TRUE, FALSE) );
+   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, exprdata.exprx, FALSE, TRUE, FALSE) );
+   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, exprdata.expry, FALSE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 

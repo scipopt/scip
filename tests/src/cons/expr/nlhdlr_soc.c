@@ -42,6 +42,12 @@ static SCIP_VAR* w;
 static SCIP_VAR* z;
 static SCIP_VAR* u;
 
+static SCIP_CONSEXPR_EXPR* xexpr;
+static SCIP_CONSEXPR_EXPR* yexpr;
+static SCIP_CONSEXPR_EXPR* wexpr;
+static SCIP_CONSEXPR_EXPR* zexpr;
+static SCIP_CONSEXPR_EXPR* uexpr;
+
 static SCIP_CONSEXPR_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
@@ -84,6 +90,12 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIP_CALL( SCIPaddVar(scip, z) );
    SCIP_CALL( SCIPaddVar(scip, u) );
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &uexpr, u) );
 }
 
 /* releases variables, frees scip */
@@ -108,7 +120,7 @@ TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
 static
 void checkData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_VAR**            vars,
+   SCIP_CONSEXPR_EXPR**  vars,
    SCIP_Real*            offsets,
    SCIP_Real*            transcoefs,
    int*                  transcoefsidx,
@@ -132,8 +144,8 @@ void checkData(
    for( i = 0; i < nvars; ++i )
    {
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
-      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected variable %d to be %s, but got %s\n",
-         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(nlhdlrexprdata->vars[i]));
+      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
+         i + 1, vars[i], nlhdlrexprdata->vars[i]);
    }
 
    /* FIXME the remaining tests assume a certain order and sign and thus are not invariant to
@@ -272,7 +284,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(normexpr)};
+   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, yexpr, zexpr, normexpr};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
    SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
    int transcoefsidx[4] = {0, 1, 2, 3};
@@ -329,8 +341,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[2]);
-   SCIP_VAR* vars[3] = {x, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
+   SCIP_CONSEXPR_EXPR* vars[3] = {xexpr, normexpr->children[0]->children[2], normexpr};
    int nterms = 4;
    SCIP_Real offsets[4] = {SQRT(2.0), -4.0, SQRT(8.0) /* constant */, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -386,8 +397,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
-   SCIP_VAR* vars[3] = {x, sinauxvar, y};
+   SCIP_CONSEXPR_EXPR* vars[3] = {xexpr, expr->children[2]->children[0], yexpr};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
    SCIP_Real transcoefs[3] = {SQRT(2.0), 1.0, 3.0};
    int transcoefsidx[3] = {0, 1, 2};
@@ -442,9 +452,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
-   SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
+   SCIP_CONSEXPR_EXPR* vars[3] = {yexpr, expr->children[2]->children[0], expr->children[1]->children[0]};
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -545,7 +553,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* vars[4] = {x, z, y, u};
+   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
    SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0}; /* hyperbolic, constant is second to last of lhs */
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
@@ -646,9 +654,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
-   SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
+   SCIP_CONSEXPR_EXPR* vars[3] = {yexpr, expr->children[2]->children[0], expr->children[1]->children[0]};
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -704,7 +710,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* vars[4] = {x, z, y, u};
+   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
    SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0};
    int nnonzeroes[5] = {1, 1, 0, 2, 2};
@@ -761,7 +767,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* vars[3] = {z, y, x};
+   SCIP_CONSEXPR_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
    SCIP_Real offsets[4] = {-0.5321193159399078, -1.1644355645349063, SQRT(17.0909090909091), 3.275663328435811};
    int nnonzeroes[4] = {3, 3, 0, 3};
@@ -820,7 +826,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* vars[3] = {z, y, x};
+   SCIP_CONSEXPR_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
    int nnonzeroes[4] = {3, 3, 0, 3};
    SCIP_Real offsets[4] = {-1.1644355645349063, 0.5321193159399078, SQRT(17.0909090909091), 3.275663328435811};

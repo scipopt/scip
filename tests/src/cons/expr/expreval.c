@@ -21,7 +21,7 @@
 
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
-#include "scip/struct_cons_expr.h"  /* I want an easy way to set locks in expression */
+#include "scip/struct_cons_expr.h"  /* I want an easy way to set locks in expression and create an auxvar */
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sum.h"
@@ -549,7 +549,8 @@ Test(evalexpr, viol, .description = "Tests expression violation.")
    SCIP_CALL( createExpr(&xexpr, &yexpr, &const_expr, &prodexpr, &sumexpr, &mainexpr) );
 
    /* make it look like an expression with an auxvar */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, mainexpr, &auxvar) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   mainexpr->auxvar = auxvar;
    mainexpr->nlocksneg = 1;
 
    /* initialize solution values */
@@ -597,6 +598,7 @@ Test(evalexpr, viol, .description = "Tests expression violation.")
 
 
    mainexpr->nlocksneg = 0;
+   SCIP_CALL( SCIPreleaseVar(scip, &mainexpr->auxvar) );
 
    /* release all expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
