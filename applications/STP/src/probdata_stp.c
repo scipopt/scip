@@ -66,6 +66,7 @@
 #define SYM_CONS_LIMIT 20000         /**< maximum number of symmetry inequalities for MWCSP and PCSPG */
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
 
+#define CUT_MINREDUCTION_RATIO 0.95
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
 #define CUT_MAXTOTNEDGES  50000
@@ -1637,10 +1638,16 @@ SCIP_RETCODE setParams(
 #ifndef WITH_UG
    if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
    {
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
+	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
+	   assert(LE(redratio, 1.0));
+
+	   if( redratio < CUT_MINREDUCTION_RATIO )
+	   {
+		  SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
+		  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
+		  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
+		  SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
+	   }
    }
 #endif
 
