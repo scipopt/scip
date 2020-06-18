@@ -62,7 +62,7 @@ typedef struct dual_ascent_paths
    SCIP_Bool*            nodes_abort;        /**< nodes to abort at */
    SCIP_Real             maxdist;            /**< current max distance */
    int                   nstartnodes;        /**< number of */
-   int                   startnode;          /**< node */
+   int                   centernode;         /**< node for PC/MW */
 } DAPATHS;
 
 
@@ -151,6 +151,7 @@ void dapathsSetRunParams(
    int* RESTRICT startnodes = dapaths->startnodes;
    const int nnodes = graph_get_nNodes(transgraph);
    const int root = transgraph->source;
+   int centernode = -1;
    int nstartnodes = 0;
 
    BMSclearMemoryArray(nodes_abort, nnodes);
@@ -172,7 +173,7 @@ void dapathsSetRunParams(
          {
             if( GT(transgraph->cost[e], 0.0) )
             {
-               const int centernode = transgraph->tail[e];
+               centernode = transgraph->tail[e];
                assert(transgraph->grad[centernode] == 2 * (transgraph->terms - 1));
                nodes_abort[centernode] = TRUE;
             }
@@ -182,8 +183,11 @@ void dapathsSetRunParams(
       startnodes[nstartnodes++] = i;
    }
 
+   assert(centernode >= 0);
+
    dapaths->nstartnodes = nstartnodes;
    dapaths->maxdist = -FARAWAY;
+   dapaths->centernode = centernode;
    assert(transgraph->outbeg[root] >= 0);
 }
 
@@ -242,6 +246,8 @@ void dapathsUpdateRedCosts(
    assert(GE(*objval, 0.0));
    assert(nvisits >= 0);
 
+   //printf("update with maxdist=%f: \n", maxdist);
+
    // go over all visited...in and out separated.. todo maybe use visited edge list if slow
    for( int k = 0; k < nvisits; k++ )
    {
@@ -261,6 +267,13 @@ void dapathsUpdateRedCosts(
             assert(LE(offset, redcost[e]));
 
             redcost[e] -= offset;
+
+#if 0
+            if( !Is_term(transgraph->term[node_i]) && !Is_term(transgraph->term[node_j]) )
+            {
+               printf("%d->%d...c=%f \n", node_i, node_j, redcost[e]);
+            }
+#endif
          }
       }
    }
@@ -279,7 +292,7 @@ void dapathsRunShortestPaths(
    )
 {
    const int* startnodes = dapaths->startnodes;
-   const SCIP_Bool* nodes_abort = dapaths->nodes_abort;
+   SCIP_Bool* nodes_abort = dapaths->nodes_abort;
    DIJK* dijklimited = dapaths->dijklimited;
    const int nstarts = dapaths->nstartnodes;
 
@@ -295,6 +308,12 @@ void dapathsRunShortestPaths(
 
       graph_dijkLimited_reset(transgraph, dijklimited);
    }
+
+   /* finally we make sure that we reach the root */
+   assert(nodes_abort[dapaths->centernode]);
+   nodes_abort[dapaths->centernode] = FALSE;
+   graph_pathInLimitedExec(transgraph, redcost, nodes_abort, dapaths->centernode, dijklimited, &(dapaths->maxdist));
+   dapathsUpdateRedCosts(transgraph, dapaths, redcost, objval);
 }
 
 

@@ -73,9 +73,9 @@ SCIP_RETCODE testDaPathsPcMw3EdgesWorks(
 
    SCIP_CALL( dualascent_pathsPcMw(scip, transgraph, redcosts, &obj, NULL) );
 
-   STPTEST_ASSERT(EQ(redcosts[0], 4.0));
-   STPTEST_ASSERT(EQ(redcosts[1], 1.1));
-   STPTEST_ASSERT(EQ(redcosts[2], 2.0));
+   STPTEST_ASSERT(EQ(redcosts[0], 2.9));
+   STPTEST_ASSERT(EQ(redcosts[1], 1.9));
+   STPTEST_ASSERT(EQ(redcosts[2], 0.1));
    STPTEST_ASSERT(EQ(redcosts[3], 0.0));
 
    graph_free(scip, &transgraph, TRUE);
