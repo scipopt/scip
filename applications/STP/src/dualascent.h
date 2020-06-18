@@ -64,4 +64,13 @@ SCIP_RETCODE dualascent_pathsPcMw(
 );
 
 
+/** can all terminal be reached via reduced costs from given root? */
+SCIP_Bool dualascent_allTermsReachable(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   int                   root,               /**< root for reduced costs */
+   const SCIP_Real*      redcost             /**< reduced costs */
+);
+
+
 #endif /* APPLICATIONS_STP_SRC_DUALASCENT_H_ */

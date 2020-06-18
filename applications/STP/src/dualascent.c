@@ -37,6 +37,7 @@
 #define DA_MAXDEVIATION_LOWER   0.01  /**< lower bound for max deviation for dual ascent */
 #define DA_MAXDEVIATION_UPPER   0.9   /**< upper bound for max deviation for dual ascent */
 #define DA_EPS                  (5e-7)
+#define DAPATHS_HITLIMIT 20
 
 /* do depth-first search */
 #define DFS
@@ -59,6 +60,7 @@ typedef struct dual_ascent_paths
 {
    DIJK*                 dijklimited;        /**< Dijkstra data */
    int*                  startnodes;         /**< start nodes */
+   int*                  nodes_hits;         /**< counts how often a node has been hit */
    SCIP_Bool*            nodes_abort;        /**< nodes to abort at */
    SCIP_Real             maxdist;            /**< current max distance */
    int                   nstartnodes;        /**< number of */
@@ -76,68 +78,6 @@ typedef struct dual_ascent_paths
  * @{
  */
 
-#ifndef NDEBUG
-/** can all terminal be reached? */
-static
-SCIP_Bool allTermsReachable(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph */
-   int                   root,               /**< root for DA */
-   const SCIP_Real*      redcost             /**< array to store reduced costs */
-   )
-{
-   int* RESTRICT queue;
-   STP_Bool* RESTRICT scanned;
-   int qsize;
-   const int nnodes = graph_get_nNodes(g);
-   int termscount;
-
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &queue, nnodes ) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &scanned, nnodes) );
-
-   BMSclearMemoryArray(scanned, nnodes);
-
-   termscount = 1;
-   qsize = 0;
-   scanned[root] = TRUE;
-   queue[qsize++] = root;
-
-   /* DFS */
-   while( qsize > 0 )
-   {
-      const int k = queue[--qsize];
-      scanned[k] = TRUE;
-
-      for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
-
-         if( SCIPisZero(scip, redcost[a]) )
-         {
-            /* vertex not visited yet? */
-            if( !scanned[head] )
-            {
-               scanned[head] = TRUE;
-               queue[qsize++] = head;
-
-               if( Is_term(g->term[head]) )
-                  termscount++;
-            }
-         }
-      }
-   }
-
-   SCIPfreeMemoryArray(scip, &scanned);
-   SCIPfreeMemoryArray(scip, &queue);
-
-//   printf("%d vs %d \n", termscount, g->terms);
-
-   return (termscount == g->terms);
-}
-
-
-
-#endif
 
 
 /** sets shortest path parameters: start node and abort nodes */
@@ -203,8 +143,12 @@ SCIP_RETCODE dapathsInit(
    const int nnodes = graph_get_nNodes(transgraph);
    SCIP_CALL( graph_dijkLimited_init(scip, transgraph, &(dapaths->dijklimited)) );
 
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->nodes_hits), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->nodes_abort), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->startnodes), nnodes) );
+
+   BMSclearMemoryArray(dapaths->nodes_hits, nnodes);
 
    dapathsSetRunParams(transgraph, dapaths);
 
@@ -227,13 +171,13 @@ void dapathsInitRedCosts(
 }
 
 
-/** updates reduced costs */
+/** updates reduced costs and hit count */
 static
-void dapathsUpdateRedCosts(
+void dapathsUpdate(
    const GRAPH*          transgraph,         /**< transformed SAP graph */
    const DAPATHS*        dapaths,            /**< to be initialized */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
-   SCIP_Real*            objval             /**< pointer to store (dual) objective value */
+   SCIP_Real*            objval              /**< pointer to store (dual) objective value */
 )
 {
    const DIJK* dijklimited = dapaths->dijklimited;
@@ -241,6 +185,8 @@ void dapathsUpdateRedCosts(
    const int* const visitlist = dijklimited->visitlist;
    const SCIP_Real maxdist = dapaths->maxdist;
    const int nvisits = dijklimited->nvisits;
+   int* RESTRICT nodes_hits = dapaths->nodes_hits;
+   SCIP_Bool* RESTRICT nodes_abort = dapaths->nodes_abort;
 
    assert(GE(maxdist, 0.0));
    assert(GE(*objval, 0.0));
@@ -256,6 +202,15 @@ void dapathsUpdateRedCosts(
 
       assert(graph_knot_isInRange(transgraph, node_i));
 
+      if( nodes_hits[node_i] > DAPATHS_HITLIMIT )
+      {
+         nodes_abort[node_i] = TRUE;
+      }
+      else
+      {
+         nodes_hits[node_i]++;
+      }
+
       for( int e = transgraph->outbeg[node_i]; e >= 0; e = transgraph->oeat[e] )
       {
          const int node_j = transgraph->head[e];
@@ -267,6 +222,9 @@ void dapathsUpdateRedCosts(
             assert(LE(offset, redcost[e]));
 
             redcost[e] -= offset;
+
+            if( redcost[e] < 0.0 )
+               redcost[e] = 0.0;
 
 #if 0
             if( !Is_term(transgraph->term[node_i]) && !Is_term(transgraph->term[node_j]) )
@@ -304,16 +262,20 @@ void dapathsRunShortestPaths(
       assert(graph_knot_isInRange(transgraph, start) && Is_term(transgraph->term[start]));
 
       graph_pathInLimitedExec(transgraph, redcost, nodes_abort, start, dijklimited, &(dapaths->maxdist));
-      dapathsUpdateRedCosts(transgraph, dapaths, redcost, objval);
+      dapathsUpdate(transgraph, dapaths, redcost, objval);
 
       graph_dijkLimited_reset(transgraph, dijklimited);
    }
 
    /* finally we make sure that we reach the root */
+#if 1
    assert(nodes_abort[dapaths->centernode]);
-   nodes_abort[dapaths->centernode] = FALSE;
+
+   BMSclearMemoryArray(dapaths->nodes_abort, transgraph->knots);
+   nodes_abort[transgraph->source] = TRUE;
    graph_pathInLimitedExec(transgraph, redcost, nodes_abort, dapaths->centernode, dijklimited, &(dapaths->maxdist));
-   dapathsUpdateRedCosts(transgraph, dapaths, redcost, objval);
+   dapathsUpdate(transgraph, dapaths, redcost, objval);
+#endif
 }
 
 
@@ -326,6 +288,7 @@ void dapathsFreeMembers(
 {
    SCIPfreeBufferArray(scip, &(dapaths->startnodes));
    SCIPfreeBufferArray(scip, &(dapaths->nodes_abort));
+   SCIPfreeBufferArray(scip, &(dapaths->nodes_hits));
    graph_dijkLimited_free(scip, &(dapaths->dijklimited));
 }
 
@@ -987,7 +950,7 @@ SCIP_RETCODE dualascent_exec(
    SCIPfreeBufferArray(scip, &cutverts);
 
 
-   assert(allTermsReachable(scip, g, root, rescap));
+   assert(dualascent_allTermsReachable(scip, g, root, rescap));
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
@@ -1420,7 +1383,7 @@ SCIP_RETCODE dualascent_execPcMw(
    SCIPfreeBufferArray(scip, &sat);
    SCIPfreeBufferArray(scip, &stackarr);
 
-   assert(allTermsReachable(scip, transgraph, root, rescap));
+   assert(dualascent_allTermsReachable(scip, transgraph, root, rescap));
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
@@ -1440,7 +1403,7 @@ SCIP_RETCODE dualascent_pathsPcMw(
    const int*            result              /**< solution array or NULL */
 )
 {
-   DAPATHS dapaths = { NULL, NULL, NULL, -1.0, -1, -1 };
+   DAPATHS dapaths = { NULL, NULL, NULL, NULL, -1.0, -1, -1 };
 
    assert(scip && transgraph && redcost && objval);
 
@@ -1450,9 +1413,65 @@ SCIP_RETCODE dualascent_pathsPcMw(
 
    dapathsFreeMembers(scip, &dapaths);
 
-   assert(allTermsReachable(scip, transgraph, transgraph->source, redcost));
-
    return SCIP_OKAY;
+}
+
+
+/** can all terminal be reached via reduced costs from given root? */
+SCIP_Bool dualascent_allTermsReachable(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   int                   root,               /**< root for reduced costs */
+   const SCIP_Real*      redcost             /**< reduced costs */
+   )
+{
+   int* RESTRICT queue;
+   STP_Bool* RESTRICT scanned;
+   int qsize;
+   const int nnodes = graph_get_nNodes(g);
+   int termscount;
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &queue, nnodes ) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &scanned, nnodes) );
+
+   BMSclearMemoryArray(scanned, nnodes);
+
+   termscount = 1;
+   qsize = 0;
+   scanned[root] = TRUE;
+   queue[qsize++] = root;
+
+   /* DFS */
+   while( qsize > 0 )
+   {
+      const int k = queue[--qsize];
+      scanned[k] = TRUE;
+
+      for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( SCIPisZero(scip, redcost[a]) )
+         {
+            /* vertex not visited yet? */
+            if( !scanned[head] )
+            {
+               scanned[head] = TRUE;
+               queue[qsize++] = head;
+
+               if( Is_term(g->term[head]) )
+                  termscount++;
+            }
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &scanned);
+   SCIPfreeMemoryArray(scip, &queue);
+
+//   printf("%d vs %d \n", termscount, g->terms);
+
+   return (termscount == g->terms);
 }
 
 
