@@ -252,6 +252,9 @@ SCIP_RETCODE estimate(
    cr_expect((participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0);
    enforceabove = (participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
 
+   SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeas) );
+   SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
+
    /* estimate on enforced side */
    targetvalue = enforceabove ? SCIPinfinity(scip) : -SCIPinfinity(scip);
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );

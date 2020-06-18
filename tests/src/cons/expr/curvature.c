@@ -234,7 +234,7 @@ Test(curvature, cons_and_nlrows)
 {
    const char* inputs[3] = {
       "[expr] <c1>: (<y>[C] + <z>[C])^2 <= 12;",
-      "[expr] <c2>: -(<x>[C] + <y>[C])^2 + <x>[C] + <y>[C] + <z>[C] == -2;",
+      "[expr] <c2>: -(<x>[C] + <y>[C])^2 + <x>[C] + <y>[C] + <z>[C] == -5;",
       "[expr] <c3>: <x>[C] * <y>[C] * <z>[C] - <x>[C] <= 1;"
       };
    SCIP_EXPRCURV targetcurvs[3] = {SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE, SCIP_EXPRCURV_UNKNOWN};

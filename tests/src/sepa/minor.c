@@ -103,11 +103,10 @@ Test(minor, detect, .init = setup, .fini = teardown)
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
    cr_assert(SCIPgetNConss(scip) == NCONSS);
-
-   /* call the detection of the nonlinear handlers to create auxiliary variables */
    cr_assert(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
-   SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr),
-      SCIPconshdlrGetNConss(conshdlr), &infeasible) );
+
+   /* make sure INITLP has been run to get auxiliary variables */
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
    cr_assert(!infeasible);
 
    /* get separator data */
@@ -147,11 +146,10 @@ Test(minor, detect_aux, .init = setup, .fini = teardown)
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
    cr_assert(SCIPgetNConss(scip) == 1);
-
-   /* call the detection of the nonlinear handlers to create auxiliary variables */
    cr_assert(SCIPconshdlrGetNConss(conshdlr) == 1);
-   SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr),
-      SCIPconshdlrGetNConss(conshdlr), &infeasible) );
+
+   /* make sure INITLP has been run to get auxiliary variables */
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
    cr_assert(!infeasible);
 
    /* get separator data */

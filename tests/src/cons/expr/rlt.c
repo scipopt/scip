@@ -92,15 +92,12 @@ void setup(void)
    SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
    SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
 
-   /* go to the presolving stage */
+   /* go to the solving stage (calls detectnlhdlrs) */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
-   /* create auxiliary variables for all expressions */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), &infeasible) );
-   assert(!infeasible);
-
-   /* store all bilinear terms in the data of the expression constraint handler */
-   SCIP_CALL( SCIPcollectConsExprBilinTerms(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr)) );
+   /* initialize LP (creates auxvars and collects bilinear terms) */
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   cr_assert(!infeasible);
 
    /* create sepadata */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );

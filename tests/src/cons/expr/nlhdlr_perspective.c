@@ -304,6 +304,9 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
    cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
+   /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_expr to do that for us */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIPsetSolVal(scip, sol, x_1, 0.0);
    SCIPsetSolVal(scip, sol, x_2, 4.0);
@@ -324,5 +327,6 @@ Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

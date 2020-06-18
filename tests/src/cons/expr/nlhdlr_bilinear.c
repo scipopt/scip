@@ -83,13 +83,8 @@ SCIP_RETCODE createAndDetect(
    SCIP_CONSEXPR_EXPR*   rootexpr           /**< root expression of the constraint */
    )
 {
-   SCIP_Bool infeasible;
-
    SCIP_CALL( SCIPcreateConsExprBasic(scip, cons, "cons", rootexpr, -100.0, 100.0) );
-   SCIP_CALL( SCIPaddConsLocks(scip, *cons, 1, 0) );
-   SCIP_CALL( SCIPinitlpCons(scip, *cons, &infeasible) );
-   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
-   SCIP_CALL( SCIPaddConsLocks(scip, *cons, -1, 0) );
+   SCIP_CALL( SCIPaddCons(scip, *cons) );
 
    return SCIP_OKAY;
 }
@@ -149,32 +144,29 @@ Test(nlhdlrbilinear, collect_product_expressions)
    SCIP_CONS* conss[2];
    SCIP_CONSEXPR_EXPR** exprs;
    SCIP_CONSEXPR_EXPR* expr;
-   const char* inputs[2] = {"<t_x> * <t_y> + <t_y> * <t_z>", "exp(<t_x>) * sin(<t_y>)"};
+   //const char* inputs[2] = {"<t_x> * <t_y> + <t_y> * <t_z>", "exp(<t_x>) * sin(<t_y>)"};
+   const char* inputs[2] = {"<x> * <y> + <y> * <z>", "exp(<x>) * sin(<y>)"};
    SCIP_Bool infeasible;
    int nexprs;
    int c;
-
-   /* transform problem */
-   TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
    /* create constraints */
    for( c = 0; c < 2; ++c )
    {
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, inputs[c], NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[c], "cons", expr, -100.0, 100.0) );
-      SCIP_CALL( SCIPaddConsLocks(scip, conss[c], 1, 0) );
       /* add and release constraint */
       SCIP_CALL( SCIPaddCons(scip, conss[c]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-   SCIP_CALL( SCIPdetectConsExprNlhdlrs(scip, conshdlr, conss, 2, &infeasible) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/enabled", FALSE) );
 
-   SCIP_CALL( SCIPaddConsLocks(scip, conss[0], -1, 0) );
-   SCIP_CALL( SCIPaddConsLocks(scip, conss[1], -1, 0) );
+   /* transform problem, initialize solve, initlp */
+   TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
-   SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
-   SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
 
    /* check whether all product expressions could be found */
    exprs = SCIPgetConsExprNlhdlrBilinearExprs(nlhdlr);
@@ -340,6 +332,7 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
 
+   SCIP_CALL( SCIPconstructLP(scip, &dummy) );
 
    /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
    cr_assert( SCIPgetConsExprExprAuxVar(expr) != NULL);
@@ -409,6 +402,8 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
 
+   SCIP_CALL( SCIPconstructLP(scip, &dummy) );
+
    /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
    cr_assert( SCIPgetConsExprExprAuxVar(expr) != NULL);
 
@@ -475,8 +470,8 @@ Test(nlhdlrbilinear, inteval_corner)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
 
-   /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
-   cr_assert( SCIPgetConsExprExprAuxVar(expr) != NULL);
+   /* INITSOL should have added a request for an auxiliary variable to the product expression (tight might change in the future) */
+   cr_assert( SCIPgetConsExprExprNAuxvarUses(expr) > 0);
 
    /* add linear inequality x <= -y + 7 => maximum of xy is attained at (3,4) */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -1.0, 7.0, &success) );
@@ -554,10 +549,16 @@ Test(nlhdlrbilinear, inteval_three_lines)
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
    /* create expression constraint */
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[0], x));
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[1], y));
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[0], SCIPvarGetTransVar(x)));
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[1], SCIPvarGetTransVar(y)));
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 2, varexprs, -2.0));
    SCIP_CALL( createAndDetect(&cons, expr) );
+
+   /* simplify replaced expr by a sum of 1 term, coef -2, and term being the product we want */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetConsExprExprChildren(SCIPgetExprConsExpr(scip, cons))[0];
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 
    /* add -x <= -y + 3.5 and x <= -0.6 y -2.25 */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
@@ -567,9 +568,11 @@ Test(nlhdlrbilinear, inteval_three_lines)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 0.1, 3.5, &success) );
    cr_expect(success);
 
-   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt)
+    * here we want to reevaluate the whole constraint, to get the factor of -2 again
+    */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), &interval, FALSE, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -19.2), "expect -19.2 got %g\n", SCIPintervalGetInf(interval));
@@ -578,7 +581,6 @@ Test(nlhdlrbilinear, inteval_three_lines)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[1]) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[0]) );
 }
@@ -697,7 +699,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
    /* create expression */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
 
    /* add inequality x <= 0.7 y + 0.1 */
@@ -756,7 +758,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
    /* create expression */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
 
    /* add inequality -x <= y */
