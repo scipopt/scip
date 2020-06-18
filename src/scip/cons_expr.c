@@ -15086,6 +15086,10 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
+   /* do not store auxvar request for variables */
+   if( useauxvar && SCIPisConsExprExprVar(expr) )
+      useauxvar = FALSE;
+
    if( expr->enfoinitialized &&
       ( (expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepa)) ||
         (expr->nauxvaruses == 0 && useauxvar)
@@ -15108,6 +15112,16 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    if( useactivityforsepa )
       ++(expr->nactivityusessepa);
 
+   if( useactivityforprop )
+   {
+      /* if activity will be used for propagation, then make sure there is a valid activity
+       * this way, we can do a reversepropcall after detectNlhdlr
+       * TODO should we call with validsufficient = FALSE?
+       */
+      SCIP_INTERVAL activity;
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
+   }
+
    /* increase the nactivityusedsepa counter for all sub-expressions of the given expression */
    if( useactivityforsepa && SCIPgetConsExprExprNChildren(expr) > 0 )
    {
@@ -15123,16 +15137,6 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
 
       /* free iterator */
       SCIPexpriteratorFree(&it);
-   }
-
-   if( useactivityforprop )
-   {
-      /* if activity will be used for propagation, then make sure there is a valid activity
-       * this way, we can do a reversepropcall after detectNlhdlr
-       * TODO should we call with validsufficient = FALSE?
-       */
-      SCIP_INTERVAL activity;
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
    }
 
    return SCIP_OKAY;
