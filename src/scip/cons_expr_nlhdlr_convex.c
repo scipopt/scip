@@ -1778,15 +1778,12 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
 
       for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
       {
-         SCIP_CONSEXPR_EXPR* leaf;
          SCIP_VAR* var;
-         SCIP_INTERVAL bounds;
 
-         leaf = nlhdlrexprdata->leafexprs[i];
+         var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
 
-         bounds = SCIPgetConsExprExprActivity(scip, leaf);
-         lb = bounds.inf;
-         ub = bounds.sup;
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
 
          if( ub > -INITLPMAXVARVAL )
             lb = MAX(lb, -INITLPMAXVARVAL);
@@ -1799,7 +1796,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
          if( SCIPisInfinity(scip,  ub) )
             ub = MAX( 10.0, lb + 0.1*REALABS(lb));  /*lint !e666 */
 
-         var = SCIPgetConsExprExprAuxVar(leaf);
          if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
             SCIPsetSolVal(scip, sol, var, lambda * ub + (1.0 - lambda) * lb);
          else
