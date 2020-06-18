@@ -26,6 +26,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_var.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "bilinear"
@@ -945,19 +946,27 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    if( SCIPgetConsExprExprHdlrProduct(conshdlr) == SCIPgetConsExprExprHdlr(expr) && SCIPgetConsExprExprNChildren(expr) == 2
       && (nlhdlrdata->exprmap == NULL || !SCIPhashmapExists(nlhdlrdata->exprmap, (void*)expr)) )
    {
-      SCIP_CONSEXPR_EXPR* child1 = SCIPgetConsExprExprChildren(expr)[0];
-      SCIP_CONSEXPR_EXPR* child2 = SCIPgetConsExprExprChildren(expr)[1];
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
+      SCIP_CONSEXPR_EXPR** children;
+      SCIP_Bool valid;
+      int c;
 
-      assert(child1 != NULL);
-      assert(child2 != NULL);
+      children = SCIPgetConsExprExprChildren(expr);
+      assert(children != NULL);
 
-      var1 = SCIPgetConsExprExprAuxVar(child1);
-      var2 = SCIPgetConsExprExprAuxVar(child2);
+      /* detection is only successful if both children have will have auxiliary variable or are variables that are not binary variables */
+      valid = TRUE;
+      for( c = 0; c < 2; ++c )
+      {
+         assert(children[c] != NULL);
+         if( SCIPgetConsExprExprNAuxvarUses(children[c]) == 0 &&
+            (!SCIPisConsExprExprVar(children[c]) || SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[c]))) )
+         {
+            valid = FALSE;
+            break;
+         }
+      }
 
-      /* detection is only successful if both children have an auxiliary variable */
-      if( var1 != NULL && var2 != NULL && !SCIPvarIsBinary(var1) && !SCIPvarIsBinary(var2) )
+      if( valid )
       {
          /* create expression data for the nonlinear handler */
          SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -994,9 +1003,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          SCIP_CALL( SCIPhashmapInsertInt(nlhdlrdata->exprmap, (void*)expr, nlhdlrdata->nexprs) );
          ++nlhdlrdata->nexprs;
 
-         /* tell child1 and child2 that we will use its activity for both estimate and domain propagation */
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child1, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
-         SCIP_CALL( SCIPincrementConsExprExprNActivityUses(scip, conshdlr, child2, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
+         /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
       }
    }
 

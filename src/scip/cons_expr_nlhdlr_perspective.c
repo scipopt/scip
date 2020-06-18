@@ -828,8 +828,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrdata != NULL);
 
-   /* do not run if we have no auxvar to add a cut for */
-   if( SCIPgetConsExprExprAuxVar(expr) == NULL )
+   /* do not run if we will have no auxvar to add a cut for */
+   if( SCIPgetConsExprExprNAuxvarUses(expr) == 0 )
       return SCIP_OKAY;
 
 #ifdef SCIP_DEBUG

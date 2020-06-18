@@ -386,13 +386,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
       for( i = 0; i < nlinexprs; ++i ) /* expressions appearing linearly */
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, linexprs[i], NULL) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], TRUE, FALSE, FALSE) );
       }
       for( i = 0; i < nquadexprs; ++i ) /* expressions appearing quadratically */
       {
          SCIP_CONSEXPR_EXPR* quadexpr;
          SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &quadexpr, NULL, NULL, NULL, NULL);
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, quadexpr, NULL) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, quadexpr, TRUE, FALSE, FALSE) );
       }
 
       SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate and separate\n", (void*)expr);
