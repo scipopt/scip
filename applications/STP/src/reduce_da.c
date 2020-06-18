@@ -2927,8 +2927,18 @@ SCIP_RETCODE reduce_daPcMw(
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
 
-   SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE,
-         NULL, root, TRUE, damaxdeviation) );
+   if( paramsda->pcmw_fastDa  )
+   {
+      SCIP_CALL( dualascent_pathsPcMw(scip, transgraph, cost, &lpobjval, NULL) );
+
+      // todo probably we might try to continue from the reduced cost we have already
+      if( !dualascent_allTermsReachable(scip, graph, transgraph->source, cost) )
+         SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE, NULL, root, TRUE, damaxdeviation) );
+   }
+   else
+   {
+      SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE, NULL, root, TRUE, damaxdeviation) );
+   }
 
    lpobjval += offset;
    bestlpobjval = lpobjval;
