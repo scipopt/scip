@@ -939,7 +939,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    assert(nlhdlrdata);
 
    /* only during solving will we have the extra inequalities that we rely on so much here */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
       return SCIP_OKAY;
 
    /* check for product expressions with two children */

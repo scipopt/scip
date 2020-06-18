@@ -327,7 +327,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       return SCIP_OKAY;
    }
 
-   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* separation should only be required in solving stage */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE);  /* separation should only be required in (init)solving stage */
 
    /* if nlhdlr_convex handles convex quadratic, then we don't (and vice versa)
     * TODO nlhdlr_convex is supposed to take this over permanently, but for now I keep both possibilities

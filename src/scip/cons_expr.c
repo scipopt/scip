@@ -2198,6 +2198,8 @@ SCIP_RETCODE detectNlhdlr(
          /* nlhdlr cannot have added an enforcement method if it doesn't participate (actually redundant due to previous asserts) */
          assert(nlhdlrenforcemethods == SCIP_CONSEXPR_EXPRENFO_NONE);
 
+         SCIPdebugMsg(scip, "nlhdlr <%s> detect unsuccessful\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+
          continue;
       }
 
@@ -10487,13 +10489,6 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       SCIPgetStatus(scip) != SCIP_STATUS_UNBOUNDED && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
    {
       SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, &infeasible) );
-
-      /* collect all bilinear terms
-       * TODO this should eventually move into initSolve, but currently the bilinearTerms methods cannot handle
-       * addition (and removal?) of constraints during solve, so we do this only for constraints that are
-       * present in INITSOL
-       */
-      SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -10630,6 +10625,13 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
     *   for now, there is an assert in detectNlhdlrs to require initial if separated
     */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
+
+   /* collect all bilinear terms for which an auxvar is present
+    * TODO this will only do something for the first call of initlp after initsol, because it cannot handle
+    * addition (and removal?) of constraints during solve
+    * this is typically the majority of constraints, but the method should be made more flexible
+    */
+   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
