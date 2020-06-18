@@ -521,7 +521,7 @@ extern SCIP_Real graph_pc_solGetObj(SCIP*, const GRAPH*, const int*, SCIP_Real);
  */
 extern void   graph_path_exit(SCIP*, GRAPH*);
 extern void   graph_path_exec(SCIP*, const GRAPH*, int, int, const SCIP_Real*, PATH*);
-extern void   graph_pathLimitedExec(const GRAPH*, const SCIP_Real*, int, SCIP_Real, DIJK*);
+extern void   graph_pathInLimitedExec(const GRAPH*, const SCIP_Real*, const SCIP_Bool*, int, DIJK*, SCIP_Real*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);

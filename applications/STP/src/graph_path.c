@@ -867,35 +867,37 @@ void graph_path_exec(
 }
 
 
-/** distance limited Dijkstra */
-void graph_pathLimitedExec(
+/** limited Dijkstra on incoming edges */
+void graph_pathInLimitedExec(
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge cost */
+   const SCIP_Real*      edges_cost,         /**< edge cost */
+   const SCIP_Bool*      nodes_abort,        /**< nodes to abort at */
    int                   startnode,          /**< start */
-   SCIP_Real             distlimit,          /**< distance limit */
-   DIJK*                 dijkdata            /**< Dijkstra data */
+   DIJK*                 dijkdata,           /**< Dijkstra data */
+   SCIP_Real*            abortdistance       /**< distance at which abort happened */
 )
 {
-   SCIP_Real* RESTRICT dist = dijkdata->node_distance;
+   SCIP_Real* RESTRICT nodes_dist = dijkdata->node_distance;
    int* RESTRICT visitlist = dijkdata->visitlist;
    STP_Bool* RESTRICT visited = dijkdata->node_visited;
    DHEAP* dheap = dijkdata->dheap;
    int* const state = dheap->position;
    int nvisits = 0;
 
-   assert(dist && visitlist && visited && dheap && cost);
+   assert(nodes_dist && visitlist && visited && dheap && edges_cost && nodes_abort && abortdistance);
    assert(dheap->size == 0);
    assert(graph_knot_isInRange(g, startnode));
 
 #ifndef NDEBUG
    for( int k = 0; k < g->knots; k++ )
    {
-      assert(dist[k] == FARAWAY);
+      assert(nodes_dist[k] == FARAWAY);
       assert(state[k] == UNKNOWN);
    }
 #endif
 
-   dist[startnode] = 0.0;
+   *abortdistance = -FARAWAY;
+   nodes_dist[startnode] = 0.0;
    visitlist[(nvisits)++] = startnode;
    visited[startnode] = TRUE;
    graph_heap_correct(startnode, 0.0, dheap);
@@ -905,16 +907,19 @@ void graph_pathLimitedExec(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       assert(state[k] == CONNECT);
 
-      for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
+      if( nodes_abort[k] )
       {
-         const int m = g->head[e];
+         *abortdistance = nodes_dist[k];
+         break;
+      }
+
+      for( int e = g->inpbeg[k]; e >= 0; e = g->ieat[e] )
+      {
+         const int m = g->tail[e];
 
          if( state[m] != CONNECT )
          {
-            const SCIP_Real distnew = dist[k] + cost[e];
-
-            if( GT(distnew, distlimit) )
-               continue;
+            const SCIP_Real distnew = nodes_dist[k] + edges_cost[e];
 
             if( !visited[m] )
             {
@@ -923,9 +928,9 @@ void graph_pathLimitedExec(
                visited[m] = TRUE;
             }
 
-            if( LT(distnew, dist[m]) )
+            if( LT(distnew, nodes_dist[m]) )
             {
-               dist[m] = distnew;
+               nodes_dist[m] = distnew;
                graph_heap_correct(m, distnew, dheap);
             }
          }
