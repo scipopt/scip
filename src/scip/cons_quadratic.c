@@ -7655,7 +7655,7 @@ SCIP_RETCODE generateCutNonConvex(
          else
          {
             /* not convex -> secant approximation */
-            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef,
+            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), &coef,
                &constant, success);
          }
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
