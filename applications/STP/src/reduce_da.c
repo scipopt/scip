@@ -2895,7 +2895,7 @@ SCIP_RETCODE reduce_daPcMw(
 
    assert(scip && nelims && nodearrchar);
 
-   if( graph->terms <= 2 )
+   if( graph->terms <= 3 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
