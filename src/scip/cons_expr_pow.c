@@ -1110,8 +1110,8 @@ void addTangentRefpoints(
  *  where x has mixed signs
  *
  *  the reference points are: the lower and upper bounds (one for secant and one for tangent);
- *  and for the second tangent, the point on the convex part of the function between exprdata->root
- *  and the corresponding bound
+ *  and for the second tangent, the point on the convex part of the function between the point
+ *  deciding between tangent and secant and the corresponding bound
  */
 static
 SCIP_RETCODE addSignpowerRefpoints(
@@ -1143,9 +1143,28 @@ SCIP_RETCODE addSignpowerRefpoints(
    refpoints[0] = lb;
    refpoints[2] = ub;
    if( underestimate )
-      refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
-   else
-      refpoints[1] = (lb - ub * exprdata->root) / 2.0;
+   {
+      /* secant point */
+      refpoints[0] = lb;
+
+      /* tangent points, depending on the special point */
+      if( -lb * exprdata->root < ub - 2.0 )
+         refpoints[2] = ub;
+      if( -lb * exprdata->root < ub - 4.0 )
+         refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
+   }
+
+   if( !underestimate )
+   {
+      /* secant point */
+      refpoints[2] = ub;
+
+      /* tangent points, depending on the special point */
+      if( -ub * exprdata->root > lb + 2.0 )
+         refpoints[0] = lb;
+      if( -ub * exprdata->root > lb + 4.0 )
+         refpoints[1] = (lb - ub * exprdata->root) / 2.0;
+   }
 
    return SCIP_OKAY;
 }
