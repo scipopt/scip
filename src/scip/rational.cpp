@@ -1095,6 +1095,79 @@ SCIP_Bool RatIsLE(
    return RatIsGE(rat2, rat1);
 }
 
+/** check if the rational is greater than than the double */
+SCIP_Bool RatIsGTReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   )
+{
+   assert(rat != NULL);
+
+   if( rat->isinf )
+   {
+      return rat->val < 0;
+   }
+   else
+   {
+      return rat->val > real;
+   }
+}
+
+/** check if the rational is greater or equal than than the double */
+SCIP_Bool RatIsGEReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   )
+{
+   assert(rat != NULL);
+
+   if( rat->isinf )
+   {
+      return RatApproxReal(rat) == real;
+   }
+   else
+   {
+      return rat->val >= real;
+   }
+}
+
+/** check if the rational is less than than the double */
+SCIP_Bool RatIsLTReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   )
+{
+   assert(rat != NULL);
+
+   if( rat->isinf )
+   {
+      return rat->val < 0;
+   }
+   else
+   {
+      return rat->val < real;
+   }
+}
+
+/** check if the rational is less or equal than than the double */
+SCIP_Bool RatIsLEReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   )
+{
+   assert(rat != NULL);
+
+   if( rat->isinf )
+   {
+      return RatApproxReal(rat) == real;
+   }
+   else
+   {
+      return rat->val <= real;
+   }
+}
+
+
 
 /** check if the rational is zero */
 SCIP_Bool RatIsZero(

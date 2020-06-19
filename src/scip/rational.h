@@ -438,6 +438,34 @@ SCIP_Bool RatIsGE(
    SCIP_Rational*        r2                  /**< the second rational */
    );
 
+/** check if the rational is greater than than the double */
+SCIP_EXPORT
+SCIP_Bool RatIsGTReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   );
+
+/** check if the rational is greater or equal than than the double */
+SCIP_EXPORT
+SCIP_Bool RatIsGEReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   );
+
+/** check if the rational is less than than the double */
+SCIP_EXPORT
+SCIP_Bool RatIsLTReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   );
+
+/** check if the rational is less or equal than than the double */
+SCIP_EXPORT
+SCIP_Bool RatIsLEReal(
+   SCIP_Rational*        rat,                /**< The rational */
+   SCIP_Real             real                /**< The real */
+   );
+
 /** checks if the rational is zero */
 SCIP_EXPORT
 SCIP_Bool RatIsZero(
