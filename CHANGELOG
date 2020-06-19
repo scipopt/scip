@@ -110,7 +110,16 @@ Build system
 
 ### Cmake
 
+adjust cmake module for Ipopt 3.13
+add cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+add warning to require minimal gcc version 4.8
+rename FindCriterion cmake findmodule to FindCRITERION
+
 ### Makefile
+
+update make/make.project for mac
+fix a typo in SANITIZERFLAGS, if SHARED=true, add SANITZERFLAGS also to LIBBUILDFLAGS and always add SANITZERFLAGS to LDFLAGS
+fix GCC version check in Makefiles
 
 Fixed bugs
 ----------
@@ -118,6 +127,8 @@ Fixed bugs
 - Fixed handling of constant term in quadratic objective of pip-reader.
 - Fixed incorrect value string for parameter estimation/completiontype
 - Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value.
 
 Miscellaneous
 -------------
@@ -5292,7 +5303,7 @@ Build system
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   `clean` is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 Fixed bugs
 ----------

@@ -276,10 +276,19 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 
       /* get reference point */
       refpoint = SCIPgetSolVal(scip, sol, childvar);
-      if( SCIPisLE(scip, refpoint, 0.0) )
+      if( !SCIPisPositive(scip, refpoint) )
       {
-         *success = FALSE;
-         return SCIP_OKAY;
+         /* if refpoint is 0 (then lb=0 probably) or below, then slope is infinite, then try to move away from 0 */
+         if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+
+         if( SCIPvarGetUbLocal(childvar) < 0.2 )
+            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
+         else
+            refpoint = 0.1;
       }
 
       SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);

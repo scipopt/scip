@@ -124,7 +124,7 @@ Test(exprquad, detectandfree1, .init = setup, .fini = teardown)
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
    cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -197,9 +197,53 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
    cr_expect_eq(bilin.pos2, 1);  /* because quaddata->quadexprterms[1].expr == cosexpr */
 
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
    cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects x^2 + 2*x*y + y^2 + y*z - z^2 as quadratic expression and convexity in (x,y) */
+Test(exprquad, detectandfree3, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_QUADEXPR* quaddata = NULL;
+   SCIP_EXPRCURV curv;
+   SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
+   SCIP_HASHMAP* assumevarfixed;
+
+   /* create expression and simplify it */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + 2*<x>*<y> + <y>^2 + <y>*<z> - <z>^2", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
+   cr_expect(changed);
+   cr_expect_not(infeasible);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+
+   /* detect */
+   SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
+   cr_assert_not_null(quaddata);
+
+   cr_expect_eq(quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", quaddata->nlinexprs);
+   cr_expect_eq(quaddata->nquadexprs, 3, "Expecting 3 quadratic terms, got %d\n", quaddata->nquadexprs);
+   cr_expect_eq(quaddata->nbilinexprterms, 2, "Expecting 2 bilinear terms, got %d\n", quaddata->nbilinexprterms);
+   cr_expect(quaddata->allexprsarevars);
+
+   /* we are indefinite (aka "unknown") */
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
+   cr_assert_eq(curv, SCIP_EXPRCURV_UNKNOWN);
+
+   /* check again, but now assume that z will be fixed; then we should be convex */
+   SCIP_CALL( SCIPhashmapCreate(&assumevarfixed, SCIPblkmem(scip), 1) );
+   SCIP_CALL( SCIPhashmapInsert(assumevarfixed, (void*)z, NULL) );
+
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, assumevarfixed) );
+   cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
+
+   SCIPhashmapFree(&assumevarfixed);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

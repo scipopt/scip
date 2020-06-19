@@ -1452,6 +1452,18 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** adds coef * var to expression constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddLinearTermConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
 /** gets absolute violation of expression constraint
  *
  * This function evaluates the constraints in the given solution.
@@ -1878,12 +1890,16 @@ SCIP_RETCODE SCIPprintConsExprQuadratic(
  * - semidefinite positive -> provided is set to sepaunder
  * - semidefinite negative -> provided is set to sepaover
  * - otherwise -> provided is set to none
+ *
+ * If assumevarfixed is given and some entries of x correspond to variables present in
+ * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
-   SCIP_EXPRCURV*          curv              /**< pointer to store the curvature of quadratics */
+   SCIP_EXPRCURV*          curv,             /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*           assumevarfixed    /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    );
 
 /** @} */
