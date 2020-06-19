@@ -40,8 +40,10 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/pub_tree.h"
 #include "scip/rational.h"
 #include "scip/set.h"
+#include "scip/sepastoreexact.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
@@ -54,6 +56,8 @@
 #include "scip/var.h"
 #include <string.h>
 #include <inttypes.h>
+/** @todo exip: remove this and find a clean implementation to access sepastoreex */
+#include "scip/struct_scip.h"
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIProwExactComp)
@@ -2422,6 +2426,26 @@ SCIP_RETCODE lpExactFlushChgRows(
    return SCIP_OKAY;
 }
 
+/** gets finite part of objective value of current LP that results from LOOSE variables only.
+ * returns reference, so be careful not to change!
+ */
+static
+SCIP_Rational* getFiniteLooseObjvalExact(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && RatIsZero(lp->looseobjval)));
+   assert(lp->flushed);
+   assert(lp->looseobjvalinf == 0);
+
+   return lp->looseobjval;
+}
+
 /*
  * Column methods
  */
@@ -2501,6 +2525,147 @@ SCIP_RETCODE SCIPcolExactCreate(
 
    return SCIP_OKAY;
 }
+
+/** sets parameter of type SCIP_Real in exact LP solver, ignoring unknown parameters */
+static
+SCIP_RETCODE lpExactSetRealpar(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
+   SCIP_Real             value,              /**< value to set parameter to */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   retcode = SCIPlpiExactSetRealpar(lp->lpiexact, lpparam, value);
+
+   /* check, if parameter is unknown */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   *success = TRUE;
+
+   return retcode;
+}
+
+/** sets parameter of type SCIP_Real in exact LP solver, ignoring unknown parameters */
+static
+SCIP_RETCODE lpExactSetIntpar(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
+   int                   value,              /**< value to set parameter to */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   retcode = SCIPlpiExactSetIntpar(lp->lpiexact, lpparam, value);
+
+   /* check, if parameter is unknown */
+   if( retcode == SCIP_PARAMETERUNKNOWN )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   *success = TRUE;
+
+   return retcode;
+}
+
+/** sets the objective limit of the exact LP solver
+ *
+ *  Note that we are always minimizing.
+ */
+static
+SCIP_RETCODE lpExactSetObjlim(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             objlim,             /**< new objective limit */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
+    * solver's objective limit handling, so we return here and do not apply the objective limit. */
+   if( set->lp_disablecutoff )
+      return SCIP_OKAY;
+
+   /* convert SCIP infinity value to lp-solver infinity value if necessary */
+   if( SCIPsetIsInfinity(set, objlim) )
+      objlim = SCIPlpiExactInfinity(lp->lpiexact);
+
+   if( objlim != lp->lpiobjlim ) /*lint !e777*/
+   {
+      SCIP_CALL( lpExactSetRealpar(lp, SCIP_LPPAR_OBJLIM, objlim, success) );
+      if( *success )
+      {
+         SCIP_Real actualobjlim;
+
+         /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+         SCIP_CALL( SCIPlpiExactGetRealpar(lp->lpiexact, SCIP_LPPAR_OBJLIM, &actualobjlim) );
+         if( actualobjlim != lp->lpiobjlim ) /*lint !e777*/
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->primalfeasible = FALSE;
+            lp->primalchecked = FALSE;
+            RatSetString(lp->lpobjval, "inf");
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpiobjlim = actualobjlim;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the iteration limit of the LP solver */
+static
+SCIP_RETCODE lpExactSetIterationLimit(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   int                   itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
+   )
+{
+   SCIP_Bool success;
+
+   assert(lp != NULL);
+   assert(itlim >= -1);
+
+   if( itlim == -1 )
+      itlim = INT_MAX;
+
+   if( itlim != lp->lpiitlim )
+   {
+      SCIP_CALL( lpExactSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim, &success) );
+      if( success )
+      {
+         if( itlim > lp->lpiitlim )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            RatSetString(lp->lpobjval, "inf");
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpiitlim = itlim;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** frees an LP column */
 SCIP_RETCODE SCIPcolExactFree(
@@ -3264,12 +3429,12 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->glbpseudoobjvalinf = 0;
    (*lp)->interleavedbfreq = 10;
    (*lp)->ninfiniteboundcols = 0;
+   (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
+   (*lp)->cutoffbound = SCIPsetInfinity(set);
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->pseudoobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->glbpseudoobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->looseobjval) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->cutoffbound) );
-   SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpiobjlim) );
 
    return SCIP_OKAY;
 }
@@ -3311,8 +3476,6 @@ SCIP_RETCODE SCIPlpExactFree(
    RatFreeBlock(blkmem, &(*lp)->pseudoobjval);
    RatFreeBlock(blkmem, &(*lp)->glbpseudoobjval);
    RatFreeBlock(blkmem, &(*lp)->looseobjval);
-   RatFreeBlock(blkmem, &(*lp)->cutoffbound);
-   RatFreeBlock(blkmem, &(*lp)->lpiobjlim);
 
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
@@ -3380,7 +3543,6 @@ SCIP_RETCODE SCIPlpExactAddRow(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
    )
@@ -3419,6 +3581,604 @@ SCIP_RETCODE SCIPlpExactAddRow(
    rowExactUpdateAddLP(rowexact, set);
 
    return SCIP_OKAY;
+}
+
+/** flushes the exact LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
+static
+SCIP_RETCODE lpExactFlushAndSolve(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int                   harditlim,          /**< maximal number of LP iterations to perform (hard limit for all LP calls), or -1 for no limit */
+   SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
+   )
+{
+   int* cstat;
+   int* rstat;
+   SCIP_Bool solveagain;
+   SCIP_Bool success;
+   SCIP_RETCODE retcode;
+   char algo;
+   SCIP_LP* lp;
+
+   assert(lpexact != NULL);
+   assert(lpexact->fplp != NULL);
+   assert(set != NULL);
+   assert(lperror != NULL);
+   assert(set->misc_exactsolve);
+
+   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
+   algo = set->lp_initalgorithm;
+   lp = lpexact->fplp;
+   solveagain = FALSE;
+
+   /* set up the exact lpi for the current node */
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+
+   assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
+
+   /* set the correct basis information for warmstart */
+   if( !fromscratch )
+   {
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, lpexact->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, lpexact->nlpirows) );
+
+      SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
+      SCIP_CALL( SCIPlpiExactSetBase(lpexact->lpiexact, cstat, rstat) );
+
+      SCIPsetFreeBufferArray(set, &cstat);
+      SCIPsetFreeBufferArray(set, &rstat);
+   }
+   else
+      SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
+
+   /* solve with given settings (usually fast but imprecise) */
+   if( SCIPsetIsInfinity(set, lp->cutoffbound) )
+   {
+      SCIP_CALL( lpExactSetObjlim(lpexact, set, lp->cutoffbound, &success) );
+   }
+   else
+   {
+      SCIP_CALL( lpExactSetObjlim(lpexact, set, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS), &success) );
+   }
+   SCIP_CALL( lpExactSetIterationLimit(lpexact, harditlim) );
+
+   do {
+      solveagain = FALSE;
+      /* solve the lp exactly */
+      switch(algo)
+      {
+         case 's':
+            retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
+            break;
+         default:
+            SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
+            SCIPABORT();
+      }
+      if( retcode == SCIP_LPERROR )
+      {
+         SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
+         retcode = SCIPlpiExactSolvePrimal(lpexact->lpiexact);
+
+         if( retcode == SCIP_LPERROR )
+         {
+            *lperror = TRUE;
+            lpexact->solved = FALSE;
+            lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+            SCIPdebugMessage("Error solving lp exactly. \n");
+         }
+      }
+      if( retcode != SCIP_LPERROR )
+      {
+         SCIP_CALL( SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &(lpexact->primalfeasible), &(lpexact->dualfeasible)) );
+         lpexact->solisbasic = TRUE;
+      }
+
+      /* only one should return true */
+      assert(!(SCIPlpiExactIsOptimal(lpexact->lpiexact) && SCIPlpiExactIsObjlimExc(lpexact->lpiexact) && SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) &&
+            SCIPlpiExactExistsPrimalRay(lpexact->lpiexact) && SCIPlpiExactIsIterlimExc(lpexact->lpiexact) && SCIPlpiExactIsTimelimExc(lpexact->lpiexact)));
+
+      /* evaluate solution status */
+      if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
+      {
+         assert(lpexact->primalfeasible && lpexact->dualfeasible);
+
+         SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, lpexact->lpobjval) );
+         SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
+               RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+         lp->validsollp = stat->lpcount;
+
+         if( !SCIPsetIsInfinity(set, lpexact->lpiobjlim) && lp->lpobjval > lpexact->lpiobjlim )
+         {
+            /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
+            RatDebugMessage("optimal solution %q exceeds objective limit %.15g\n", lpexact->lpobjval, lp->lpiobjlim);
+            lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+            RatSetString(lpexact->lpobjval, "inf");
+         }
+      }
+      else if( SCIPlpiExactIsObjlimExc(lpexact->lpiexact) )
+      {
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+         RatSetString(lpexact->lpobjval, "inf");
+      }
+      else if( SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) )
+      {
+         RatSetString(lpexact->lpobjval, "inf");
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+      }
+      else if( SCIPlpiExactIsPrimalUnbounded(lpexact->lpiexact) )
+      {
+         RatSetString(lpexact->lpobjval, "-inf");
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
+      }
+      else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
+      {
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+      }
+      else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
+      {
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      }
+      else
+      {
+         SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
+            stat->nnodes, algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
+         lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_ERROR;
+         return SCIP_LPERROR;
+      }
+   }
+   while( solveagain == TRUE );
+
+   lpexact->solved = TRUE;
+
+   SCIPsetDebugMsg(set, "solving exact LP with %s returned solstat=%d (internal status: %d, primalfeasible=%u, dualfeasible=%u)\n",
+      algo, lpexact->lpsolstat, SCIPlpiExactGetInternalStatus(lpexact->lpiexact),
+      SCIPlpiExactIsPrimalFeasible(lpexact->lpiexact), SCIPlpiExactIsDualFeasible(lpexact->lpiexact));
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
+SCIP_RETCODE SCIPlpExactSolveAndEval(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool             usefarkas           /**< are we aiming to prove infeasibility? */
+   )
+{
+   SCIP_RETCODE retcode;
+   SCIP_Bool needprimalray;
+   SCIP_Bool needdualray;
+   SCIP_Bool overwritefplp;
+   SCIP_Bool primalfeasible;
+   SCIP_Bool dualfeasible;
+   SCIP_Bool* primalfeaspointer;
+   SCIP_Bool* dualfeaspointer;
+   int harditlim;
+   SCIP_Bool farkasvalid;
+   SCIP_Bool fromscratch;
+   SCIP_Bool wasfromscratch;
+   SCIP_Longint oldnlps;
+
+   assert(lp != NULL);
+   assert(lpexact != NULL);
+   assert(prob != NULL);
+   assert(prob->nvars >= lp->ncols);
+   assert(lperror != NULL);
+
+   retcode = SCIP_OKAY;
+   *lperror = FALSE;
+
+   /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
+   needprimalray = TRUE;
+   needdualray = TRUE;
+
+   /* we need to overwrite the fp lp solution in the lp if we had, e.g. bound violations before */
+   if( !(lp->primalfeasible) || !(lp->dualfeasible) )
+      overwritefplp = TRUE;
+   else
+      overwritefplp = FALSE;
+
+   /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
+   harditlim = (int) MIN(itlim, INT_MAX);
+
+   if( usefarkas )
+      SCIPclockStart(stat->provedinfeaslptime, set);
+   else
+      SCIPclockStart(stat->provedfeaslptime, set);
+
+
+   /* set initial LP solver settings */
+   fromscratch = FALSE;
+   primalfeasible = FALSE;
+   dualfeasible = FALSE;
+
+   /* solve the LP */
+   oldnlps = stat->nlps;
+   SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
+         prob, eventqueue, harditlim, fromscratch, lperror) );
+   assert(!(*lperror) || !lp->solved);
+
+   /* check for error */
+   if( *lperror )
+   {
+      retcode = SCIP_OKAY;
+      lp->hasprovedbound = FALSE;
+      lp->lpsolstat = lpexact->lpsolstat;
+      goto TERMINATE;
+   }
+
+   /* evaluate solution status */
+   switch( lpexact->lpsolstat )
+   {
+   case SCIP_LPSOLSTAT_OPTIMAL:
+      /* get LP solution and possibly check the solution's feasibility again */
+      if( set->lp_checkprimfeas )
+      {
+         primalfeaspointer = &primalfeasible;
+         lp->primalchecked = TRUE;
+      }
+      else
+      {
+         /* believe in the primal feasibility of the LP solution */
+         primalfeasible = TRUE;
+         primalfeaspointer = NULL;
+         lp->primalchecked = FALSE;
+      }
+      if( set->lp_checkdualfeas )
+      {
+         dualfeaspointer = &dualfeasible;
+         lp->dualchecked = TRUE;
+      }
+      else
+      {
+         /* believe in the dual feasibility of the LP solution */
+         dualfeasible = TRUE;
+         dualfeaspointer = NULL;
+         lp->dualchecked = FALSE;
+      }
+
+      overwritefplp = overwritefplp || (lpexact->lpsolstat != lp->lpsolstat);
+      SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeaspointer, dualfeaspointer, overwritefplp) );
+
+      lpexact->primalfeasible = primalfeasible && lpexact->primalfeasible;
+      lpexact->dualfeasible = dualfeasible && lpexact->dualfeasible;
+
+      if( primalfeasible && dualfeasible )
+      {
+         lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
+         lp->hasprovedbound = TRUE;
+      }
+      else
+      {
+         /* print common begin of message */
+         SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in exact LP %" SCIP_LONGINT_FORMAT " -- ",stat->nnodes, stat->nlps);
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         *lperror = TRUE;
+      }
+      break;
+
+   case SCIP_LPSOLSTAT_INFEASIBLE:
+      SCIPsetDebugMsg(set, " -> LP infeasible\n");
+      if( SCIPlpiExactHasDualRay(lpexact->lpiexact) )
+      {
+         SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &farkasvalid, overwritefplp) );
+         lp->solved = TRUE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+         lp->lpobjval = SCIPsetInfinity(set);
+         lp->hasprovedbound = farkasvalid;
+      }
+      else
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %" SCIP_LONGINT_FORMAT ") infeasibility of LP %" SCIP_LONGINT_FORMAT " could not be proven by dual ray\n", stat->nnodes, stat->nlps);
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         farkasvalid = FALSE;
+         *lperror = TRUE;
+      }
+
+      /* if the LP solver does not provide a Farkas proof we don't want to resolve the LP */
+      if( !farkasvalid && !(*lperror) )
+      {
+         /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems) and nothing
+            * helped forget about the LP at this node and mark it to be unsolved
+            */
+         SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in exakt LP %" SCIP_LONGINT_FORMAT " -- ",stat->nnodes, stat->nlps);
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         *lperror = TRUE;
+      }
+
+      break;
+
+   case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+      /** @todo: exip what do we have to do here?, do we really need this case? */
+      SCIPerrorMessage("Feature exakt unbounded ray not fully implemented yet \n");
+      break;
+
+   case SCIP_LPSOLSTAT_OBJLIMIT:
+      assert(!(set->lp_disablecutoff));
+      /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
+         * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
+         * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
+         * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
+         * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
+         * FASTMIP and solve again. */
+      {
+         SCIP_Rational* objval;
+
+         RatCreateBuffer(set->buffer, &objval);
+         /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
+            * the assert by using !SCIPsetIsFeasNegative()
+            */
+
+         SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, objval) );
+
+         /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
+         if( RatIsLTReal(objval, lpexact->lpiobjlim) )
+         {
+            SCIP_Real tmpcutoff;
+            char tmppricingchar;
+            SCIP_LPSOLSTAT solstat;
+
+            SCIPsetDebugMsg(set, "objval = %f < %f = lp->lpiobjlim, but status objlimit\n", objval, lp->lpiobjlim);
+
+            /* temporarily disable cutoffbound, which also disables the objective limit */
+            tmpcutoff = lpexact->cutoffbound;
+            lpexact->cutoffbound = SCIPsetInfinity(set);
+
+            /* set lp pricing strategy to steepest edge */
+            SCIP_CALL( SCIPsetGetCharParam(set, "lp/pricing", &tmppricingchar) );
+            SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", 's') );
+
+            /* resolve LP with an iteration limit of 1 */
+            SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat, prob, eventqueue, 1, FALSE, lperror) );
+
+            /* reinstall old cutoff bound and lp pricing strategy */
+            lpexact->cutoffbound = tmpcutoff;
+            SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "lp/pricing", tmppricingchar) );
+
+            /* get objective value */
+            SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, objval) );
+
+            /* get solution status for the lp */
+            solstat = lpexact->lpsolstat;
+            assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
+
+            if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
+            {
+               RatDebugMessage(" ---> new objval = %q (solstat: %d, 1 add. step)\n", objval, solstat);
+            }
+
+            /* check for lp errors */
+            if( *lperror || solstat == SCIP_LPSOLSTAT_ERROR || solstat == SCIP_LPSOLSTAT_NOTSOLVED )
+            {
+               SCIPsetDebugMsg(set, "unresolved error while resolving LP in order to exceed the objlimit\n");
+               lp->solved = FALSE;
+               lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+               lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+               lp->hasprovedbound = FALSE;
+
+               retcode = *lperror ? SCIP_OKAY : SCIP_LPERROR;
+               RatFreeBuffer(set->buffer, &objval);
+               goto TERMINATE;
+            }
+
+            lpexact->solved = TRUE;
+            lp->hasprovedbound = TRUE;
+
+            /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
+            if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT
+               || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
+                  &&  RatIsGEReal(objval, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS)) ) )
+            {
+               /* get LP solution and possibly check the solution's feasibility again */
+               if( set->lp_checkprimfeas )
+               {
+                  primalfeaspointer = &primalfeasible;
+                  lp->primalchecked = TRUE;
+               }
+               else
+               {
+                  /* believe in the primal feasibility of the LP solution */
+                  primalfeasible = TRUE;
+                  primalfeaspointer = NULL;
+                  lp->primalchecked = FALSE;
+               }
+               if( set->lp_checkdualfeas )
+               {
+                  dualfeaspointer = &dualfeasible;
+                  lp->dualchecked = TRUE;
+               }
+               else
+               {
+                  /* believe in the dual feasibility of the LP solution */
+                  dualfeasible = TRUE;
+                  dualfeaspointer = NULL;
+                  lp->dualchecked = FALSE;
+               }
+
+               SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeaspointer, dualfeaspointer, TRUE) );
+
+               /* if objective value is larger than the cutoff bound, set solution status to objective
+                  * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
+                  * this was already done in the lpSolve() method
+                  */
+               if( RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS)) )
+               {
+                  lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+                  lp->hasprovedbound = TRUE;
+                  lp->lpobjval = SCIPsetInfinity(set);
+               }
+
+               /* LP solution is not feasible or objective limit was reached without the LP value really exceeding
+                  * the cutoffbound; mark the LP to be unsolved
+                  */
+               if( !primalfeasible || !dualfeasible
+                  || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
+                     !RatIsGEReal(objval, lp->cutoffbound -  RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS))) )
+               {
+                  SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
+                  lp->solved = FALSE;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                  lp->hasprovedbound = FALSE;
+                  *lperror = TRUE;
+               }
+            }
+            /* infeasible solution */
+            else if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
+            {
+               SCIPsetDebugMsg(set, " -> LPexact infeasible\n");
+
+               if( SCIPlpiExactHasDualRay(lpexact->lpiexact) )
+               {
+                  SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &farkasvalid, TRUE) );
+               }
+               /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
+               * with the primal simplex due to numerical problems) - treat this case like an LP error
+               */
+               else
+               {
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                     "(node %" SCIP_LONGINT_FORMAT ") infeasibility of exact LP %" SCIP_LONGINT_FORMAT " could not be proven by dual ray\n", stat->nnodes, stat->nlps);
+                  lp->solved = FALSE;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                  lp->hasprovedbound = FALSE;
+                  farkasvalid = FALSE;
+                  *lperror = TRUE;
+               }
+               if( !farkasvalid )
+               {
+                  /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems) and nothing
+                     * helped forget about the LP at this node and mark it to be unsolved
+                     */
+                  SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
+                  lp->solved = FALSE;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                  lp->hasprovedbound = FALSE;
+                  *lperror = TRUE;
+               }
+            }
+            /* unbounded solution */
+            else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+            {
+               SCIP_Bool rayfeasible;
+
+               /** @todo exip: this case still needs some work */
+               if( set->lp_checkprimfeas )
+               {
+                  /* get unbounded LP solution and check the solution's feasibility again */
+                  SCIP_CALL( SCIPlpExactGetUnboundedSol(lpexact, set, stat, &primalfeasible, &rayfeasible) );
+
+                  lp->primalchecked = TRUE;
+               }
+               else
+               {
+                  /* get unbounded LP solution believing in its feasibility */
+                  SCIP_CALL( SCIPlpExactGetUnboundedSol(lpexact, set, stat, NULL, NULL) );
+
+                  rayfeasible = TRUE;
+                  primalfeasible = TRUE;
+                  lp->primalchecked = FALSE;
+               }
+
+               SCIPsetDebugMsg(set, " -> exact LP has unbounded primal ray\n");
+
+               if( !primalfeasible || !rayfeasible )
+               {
+                  /* unbounded solution is infeasible (this can happen due to numerical problems):
+                     * forget about the LP at this node and mark it to be unsolved
+                     *
+                     * @todo: like in the default LP solving evaluation, solve without fastmip,
+                     * with tighter feasibility tolerance and from scratch
+                     */
+                  SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
+                  lp->solved = FALSE;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                  lp->hasprovedbound = FALSE;
+                  *lperror = TRUE;
+               }
+            }
+
+            assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
+            assert(RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS))
+               || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
+         }
+         else
+         {
+            overwritefplp = overwritefplp || (lpexact->lpsolstat != lp->lpsolstat);
+            SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, overwritefplp) );
+         }
+
+         RatFreeBuffer(set->buffer, &objval);
+      }
+      SCIPsetDebugMsg(set, " -> LP objective limit reached\n");
+      break;
+
+   case SCIP_LPSOLSTAT_ITERLIMIT:
+      SCIPsetDebugMsg(set, " -> LP iteration limit exceeded\n");
+      break;
+
+   case SCIP_LPSOLSTAT_TIMELIMIT:
+      SCIPsetDebugMsg(set, " -> LP time limit exceeded\n");
+
+      /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
+      stat->nclockskipsleft = 0;
+      if( !SCIPsolveIsStopped(set, stat, FALSE) )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
+            "you might consider switching the clock type of SCIP\n");
+         stat->status = SCIP_STATUS_TIMELIMIT;
+      }
+      break;
+
+   case SCIP_LPSOLSTAT_ERROR:
+   case SCIP_LPSOLSTAT_NOTSOLVED:
+      SCIPerrorMessage("error in LP solver\n");
+      retcode = SCIP_LPERROR;
+      goto TERMINATE;
+
+   default:
+      SCIPerrorMessage("unknown LP solution status\n");
+      retcode = SCIP_ERROR;
+      goto TERMINATE;
+   }
+
+   /* stop timing and update number of calls and fails, and proved bound status */
+   if ( usefarkas )
+   {
+      SCIPclockStop(stat->provedinfeaslptime, set);
+      stat->nexlpinf++;
+   }
+   else
+   {
+      SCIPclockStop(stat->provedfeaslptime, set);
+      stat->nexlp++;
+   }
+   assert(!(*lperror) || !lp->solved);
+
+ TERMINATE:
+   return retcode;
 }
 
 /*
@@ -5087,6 +5847,13 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
    SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, lp->lpobjval, primsol, dualsol, activity, redcost) );
+   if( overwritefplp )
+   {
+      lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS);
+      lp->fplp->lpsolstat = lp->lpsolstat;
+      lp->fplp->primalfeasible = lp->primalfeasible;
+      lp->fplp->dualfeasible = lp->dualfeasible;
+   }
    if( lp->solisbasic )
    {
       SCIP_CALL( SCIPlpiExactGetBase(lp->lpiexact, cstat, rstat) );
@@ -5280,7 +6047,12 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            rayfeasible         /**< pointer to store whether the primal ray is a feasible unboundedness proof, or NULL */
-   );
+   )
+{
+   *primalfeasible = FALSE;
+   *rayfeasible = FALSE;
+   return SCIP_OKAY;
+}
 #if 0
 {
    SCIP_COLEXACT** lpicols;
@@ -5596,7 +6368,8 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool*            valid,              /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    )
 {
    SCIP_COLEXACT** lpicols;
@@ -5638,6 +6411,12 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiExactGetDualfarkas(lp->lpiexact, dualfarkas) );
 
+   if( overwritefplp )
+   {
+      lp->fplp->lpobjval = SCIPsetInfinity(set);
+      lp->fplp->lpsolstat = lp->lpsolstat;
+   }
+
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
    nlpicols = lp->nlpicols;
@@ -5653,6 +6432,13 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetReal(lpirows[r]->activity, 0.0);
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+      if( overwritefplp )
+      {
+         lp->fplp->lpirows[r]->dualfarkas = RatApproxReal(dualfarkas[r]);
+         lp->fplp->lpirows[r]->dualsol = SCIPsetInfinity(set);
+         lp->fplp->lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+         lp->fplp->lpirows[r]->validactivitylp = -1L;
+      }
 
       if( checkfarkas )
       {
@@ -5719,6 +6505,14 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetString(lpicols[c]->redcost, "inf");
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
+      if( overwritefplp )
+      {
+         lp->fplp->lpicols[c]->farkascoef = RatApproxReal(lp->lpicols[c]->farkascoef);
+         lp->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
+         lp->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
+         lp->fplp->lpicols[c]->validredcostlp = -1L;
+         lpicols[c]->validfarkaslp = -1L;
+      }
 
       if( checkfarkas )
       {
@@ -5869,7 +6663,6 @@ SCIP_RETCODE SCIPlpExactshrinkRows(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    )
 {
@@ -5959,7 +6752,7 @@ SCIP_RETCODE SCIPlpExactClear(
 
    SCIPsetDebugMsg(set, "clearing LP\n");
    SCIP_CALL( SCIPlpExactshrinkCols(lp, set, 0) );
-   SCIP_CALL( SCIPlpExactshrinkRows(lp, blkmem, set, eventqueue, eventfilter, 0) );
+   SCIP_CALL( SCIPlpExactshrinkRows(lp, blkmem, set, eventqueue, 0) );
 
    return SCIP_OKAY;
 }

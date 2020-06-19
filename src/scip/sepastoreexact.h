@@ -78,8 +78,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lp,                 /**< LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** clears the separation storage without adding the cuts to the LP */
@@ -88,7 +87,6 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LPEXACT*         lp                  /**< LP data */
    );
 

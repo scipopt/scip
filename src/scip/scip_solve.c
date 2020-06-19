@@ -1800,7 +1800,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPsepastoreExactClearCuts(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpexact) );
+      SCIP_CALL( SCIPsepastoreExactClearCuts(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->eventqueue, scip->lpexact) );
       SCIP_CALL( SCIPsepastoreExactFree(&scip->sepastoreexact, scip->mem->probmem) );
    }
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );

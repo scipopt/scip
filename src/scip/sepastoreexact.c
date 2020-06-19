@@ -196,8 +196,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lpexact,            /**< LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_LP* fplp;
@@ -239,7 +238,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
          assert(i == nrowsex - nreleases);
       }
    }
-   SCIPlpExactshrinkRows(lpexact, blkmem, set, eventqueue, eventfilter, lpexact->nrows - nreleases);
+   SCIPlpExactshrinkRows(lpexact, blkmem, set, eventqueue, lpexact->nrows - nreleases);
 
    for( i = 0; i < nrowsfp; ++i )
    {
@@ -251,7 +250,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
          {
             /* add the exact row to the exact lp */
             SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue,
-                eventfilter, rowexact, 0) );
+                rowexact, 0) );
          }
       }
       else
@@ -263,7 +262,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
 
    //assert(SCIPlpExactIsSynced(lpexact, set, SCIPgetMessagehdlr(set->scip)));
 
-   SCIP_CALL( SCIPsepastoreExactClearCuts(sepastoreexact, blkmem, set, eventqueue, eventfilter, lpexact) );
+   SCIP_CALL( SCIPsepastoreExactClearCuts(sepastoreexact, blkmem, set, eventqueue, lpexact) );
 
    return SCIP_OKAY;
 }
@@ -274,7 +273,6 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LPEXACT*         lp                  /**< LP data */
    )
 {

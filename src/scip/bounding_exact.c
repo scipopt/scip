@@ -36,6 +36,7 @@
 #include "scip/clock.h"
 #include "lpi/lpi.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "lpi/lpiexact.h"
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
@@ -211,7 +212,7 @@ SCIP_RETCODE solveLpExact(
    SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
@@ -295,7 +296,7 @@ SCIP_RETCODE solveLpExact(
       SCIP_Bool valid;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
 
-      SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &valid) );
+      SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &valid, FALSE) );
       if( valid )
       {
          lp->hasprovedbound = TRUE;
@@ -460,7 +461,8 @@ SCIP_RETCODE psChooseS(
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval, &primalfeasible, &dualfeasible);
+      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100,
+               &lperror, FALSE) );
 
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
@@ -2173,7 +2175,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -2322,7 +2324,7 @@ SCIP_RETCODE getPSdual(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
@@ -3219,7 +3221,7 @@ SCIP_RETCODE boundShift(
       SCIP_Real cand1, cand2;
       SCIP_Real value;
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue, eventfilter) );
+      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
       SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
       for( j = 0; j < lpexact->nrows; j++ )
       {
@@ -3367,8 +3369,11 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 #endif
       /* exact LP */
       case 'e':
-         SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
+         SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim,
+               lperror, dualfarkas) );
+         *primalfeasible = lpexact->primalfeasible;
+         *dualfeasible = lpexact->dualfeasible;
+
          break;
       default:
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
@@ -3376,10 +3381,12 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
          break;
    }
 
-   if( !lp->hasprovedbound && !lperror )
+   if( !lp->hasprovedbound && !(*lperror) )
    {
-      SCIP_CALL( solveLpExact(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas, safebound, primalfeasible, dualfeasible) );
+      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim,
+               lperror, dualfarkas) );
+      *primalfeasible = lpexact->primalfeasible;
+      *dualfeasible = lpexact->dualfeasible;
    }
 #endif
 

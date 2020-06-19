@@ -307,7 +307,6 @@ SCIP_RETCODE SCIPlpExactAddRow(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
    );
@@ -584,7 +583,8 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool*            valid,              /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    );
 
 /** gets objective value of current LP
@@ -623,7 +623,6 @@ SCIP_RETCODE SCIPlpExactshrinkRows(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    );
 
@@ -663,6 +662,22 @@ SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
 void SCIPlpExactForceExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
+SCIP_RETCODE SCIPlpExactSolveAndEval(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool             usefarkas           /**< are we aiming to prove infeasibility? */
    );
 
 #ifdef __cplusplus

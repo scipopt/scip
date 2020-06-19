@@ -210,9 +210,9 @@ struct SCIP_LpExact
                                               *   ignoring variables, with infinite best bound */
    SCIP_Rational*        pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
-   SCIP_Rational*        cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
-   SCIP_Rational*        lpiobjlim;          /**< current objective limit in LPI */
-   SCIP_LPIEXACT*        lpiexact;              /**< exact LP solver interface */
+   SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
+   SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
+   SCIP_LPIEXACT*        lpiexact;           /**< exact LP solver interface */
    SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROWEXACT**       lpirows;            /**< array with rows currently stored in the LP solver */
    SCIP_COLEXACT**       chgcols;            /**< array of changed columns not yet applied to the LP solver */
