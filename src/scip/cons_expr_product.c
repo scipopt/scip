@@ -1801,10 +1801,13 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
          bndy.inf = SCIPvarGetLbLocal(y);
          bndy.sup = SCIPvarGetUbLocal(y);
 
+         rowprep->coefs[0] = 0.0;
+         rowprep->coefs[1] = 0.0;
+
          /* build estimator */
          SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, (bndx.inf + bndx.sup) / 2.0, bndy.inf,
-               bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overest[i], &(rowprep->coefs[0]), &(rowprep->coefs[1]), &constant,
-               &success);
+               bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overest[i], &(rowprep->coefs[0]), &(rowprep->coefs[1]),
+               &constant, &success);
       }
       else
       {
