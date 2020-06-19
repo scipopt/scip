@@ -1008,7 +1008,6 @@ SCIP_RETCODE buildPowEstimator(
    assert(scip != NULL);
    assert(exprdata != NULL);
    assert(childvar != NULL);
-   assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(success != NULL);
@@ -1862,7 +1861,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    SCIP_Real exponent;
    SCIP_Real refpoint;
    SCIP_Bool isinteger;
-   SCIP_Bool iseven;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1908,7 +1906,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
 
    isinteger = EPSISINT(exponent, 0.0);
-   iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
@@ -2108,7 +2105,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       /* built a cut at refpoint */
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
       /* make sure enough space is available in rowprep arrays */
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
@@ -2731,7 +2728,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
    SCIP_Real childub;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real exponent;
-   SCIP_Bool islocal;
    SCIP_Bool branchcand;
    SCIP_Bool success;
    SCIP_Real* refpointsunder;
@@ -2824,7 +2820,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
          continue;
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
       /* make sure enough space is available in rowprep arrays */
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
@@ -2832,7 +2828,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
 
       if( childlb >= 0 )
       {
-         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, &constant, rowprep->coefs, &islocal, &success);
+         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, &constant, rowprep->coefs,
+               &rowprep->local, &success);
       }
       else
       {
@@ -2843,8 +2840,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
          }
          branchcand = TRUE;
          estimateSignedpower(scip, exponent, exprdata->root, overest[i], childlb, childub, refpoint,
-               SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &constant, rowprep->coefs, &islocal, &branchcand,
-               &success);
+               SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &constant, rowprep->coefs, &rowprep->local,
+               &branchcand, &success);
       }
 
       if( success )
