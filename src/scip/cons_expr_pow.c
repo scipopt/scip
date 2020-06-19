@@ -1164,7 +1164,7 @@ SCIP_RETCODE addSignpowerRefpoints(
       SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
    }
 
-   /* make bounds finite */
+   /* make bounds finite (due to a previous if, only one can be infinite here) */
    if( SCIPisInfinity(scip, -lb) )
       lb = -ub * exprdata->root - 1.0;
    if( SCIPisInfinity(scip,  ub) )

@@ -339,8 +339,14 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
    childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
-   lb = MAX(SCIPvarGetLbLocal(childvar), SCIPepsilon(scip));
+   lb = SCIPvarGetLbLocal(childvar);
    ub = SCIPvarGetUbLocal(childvar);
+
+   if( SCIPisEQ(scip, lb, ub) )
+      return SCIP_OKAY;
+
+   /* adjust lb */
+   lb = MAX(lb, MIN(0.5 * lb + 0.5 * ub, 0.1));
 
    if( overestimate )
    {
