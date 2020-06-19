@@ -35,6 +35,7 @@
 #include "graph.h"
 #include "reduce.h"
 #include "portab.h"
+#include "enumeration.h"
 #include "scip/scip.h"
 
 #ifndef NDEBUG
@@ -648,6 +649,7 @@ void rpcTryFullReduce(
 }
 #endif
 
+
 /** reduces non-terminal of degree 1 for a (rooted) PC/MW problem */
 static
 void pcmwReduceKnotDeg1(
@@ -760,6 +762,101 @@ void pcmwReduceTerm0Prize(
    }
 
    assert(!Is_term(g->term[i]));
+}
+
+
+/** check for possible enumeration */
+static
+void pcmwDeleteNonSolEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            result,             /**< the result */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && nelims);
+   assert(*nelims >= 0);
+   graph_mark(g);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int e;
+      if( !g->mark[i] )
+         continue;
+
+      e = g->outbeg[i];
+      while( e != EAT_LAST )
+      {
+         const int enext = g->oeat[e];
+         const int head = g->head[e];
+
+         if( !g->mark[head] )
+         {
+            e = enext;
+            continue;
+         }
+
+         if( result[e] == CONNECT || result[flipedge(e)] == CONNECT )
+         {
+            e = enext;
+            continue;
+         }
+
+         assert(LT(g->cost[e], FARAWAY));
+         assert(LT(g->cost[flipedge(e)], FARAWAY));
+
+         graph_edge_del(scip, g, e, TRUE);
+         (*nelims)++;
+
+         e = enext;
+      }
+   }
+}
+
+
+/** check for possible enumeration */
+static
+SCIP_RETCODE pcmwEnumerationTry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  nelims,             /**< number of eliminations */
+   SCIP_Bool*            rerun               /**< further eliminations possible? */
+   )
+{
+   if( g->grad[g->source] == 0 )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( enumeration_isPossible(g) )
+   {
+      int nelims_new = 0;
+      const int nedges = graph_get_nEdges(g);
+      int* result = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
+
+      SCIP_CALL( enumeration_findSolPcMw(scip, g, result) );
+
+      pcmwDeleteNonSolEdges(scip, result, g, &nelims_new);
+
+      if( nelims_new > 0 )
+      {
+         *rerun = TRUE;
+         *nelims += nelims_new;
+      }
+
+#ifdef SCIP_DEBUG
+      graph_printInfo(g);
+      printf("enumeriation elimination: %d \n", nelims_new);
+#endif
+
+      SCIPfreeBufferArray(scip, &result);
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -1037,7 +1134,7 @@ SCIP_RETCODE reduce_simple_mw(
    SCIP_CALL( mwContractTerminalsChainWise(scip, g, fixed, solnode, &nelims_local) );
    SCIP_CALL( mwContract0WeightVertices(scip, g, solnode, &nelims_local) );
 
-  // SCIPdebugMessage("chains before: %d \n", mwGetNchains(g));
+   SCIPdebugMessage("chains before: %d \n", mwGetNchains(g));
 
    rerun = TRUE;
 
@@ -1122,13 +1219,15 @@ SCIP_RETCODE reduce_simple_mw(
             }
          }
       } /* i = 1 ... nnodes */
+
+      SCIP_CALL( pcmwEnumerationTry(scip, g, &nelims_local, &rerun) );
    } /* main loop */
 
    SCIP_CALL( mwContractTerminalsSimple(scip, g, fixed, solnode, &nelims_local) );
 
    (*nelims) += nelims_local;
    SCIPdebugMessage("MW basic reduction package has done %d eliminations \n", *nelims);
-//   SCIPdebugMessage("chains after: %d \n", mwGetNchains(g));
+   SCIPdebugMessage("chains after: %d \n", mwGetNchains(g));
 
    assert(!hasAdjacentTerminals(g));
    assert(graph_valid(scip, g));
@@ -1252,6 +1351,8 @@ SCIP_RETCODE reduce_simple_pc(
          }
 
       } /* for i = 1, ..., nnodes */
+
+      SCIP_CALL( pcmwEnumerationTry(scip, g, countnew, &rerun) );
    } /* main loop */
 
    if( !isUnrooted )

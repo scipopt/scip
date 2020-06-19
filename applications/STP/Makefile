@@ -64,6 +64,7 @@ CMAINOBJ	=	cmain.o \
 			completegraph.o \
 			cons_stp.o \
 			dualascent.o \
+			enumeration.o \
 			extreduce_base.o \
 			extreduce_core.o \
 			extreduce_data.o \

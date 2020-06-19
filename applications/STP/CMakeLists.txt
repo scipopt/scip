@@ -13,6 +13,7 @@ add_executable(scipstp
     src/cons_stp.c
     src/dialog_stp.c
     src/dualascent.c
+    src/enumeration.c
     src/event_bestsol.c
     src/extreduce_base.c
     src/extreduce_core.c
