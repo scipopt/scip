@@ -97,7 +97,7 @@ Test(reformbinprods, presolve_single_2)
    assert(cons != NULL);
 
    /* call canonizalize() to replace binary products */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs, NULL) );
    cr_expect(naddconss == 3, "expect 3 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 4, "expect 4 got %d", SCIPgetNConss(scip));
 
@@ -138,7 +138,7 @@ Test(reformbinprods, presolve_two)
    conss[1] = SCIPgetConss(scip)[1];
 
    /* call canonizalize() to replace binary products; note that cannonizalize is called once in presolving to replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs, NULL) );
    cr_expect(naddconss == 4, "expect 4 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 6, "expect 6 got %d", SCIPgetNConss(scip));
 
@@ -192,7 +192,7 @@ Test(reformbinprods, clique)
    conss[0] = SCIPgetConss(scip)[0];
 
    /* call canonizalize() to replace binary products; note that canonicalize is called once in presolving to replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs, NULL) );
    cr_expect(naddconss == 0, "expect 0 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
    cr_expect(nchgcoefs == 4, "expect 4 changed coefs, got %d", nchgcoefs);

@@ -2110,7 +2110,8 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that participate at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
    SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer for participation of nlhdlrs */
-   SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
+   SCIP_Bool*            infeasible,         /**< buffer to indicate whether infeasibility has been detected */
+   int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -2218,19 +2219,43 @@ SCIP_RETCODE detectNlhdlr(
       /* update enforcement flags */
       enforcemethods = enforcemethodsnew;
 
-#if 0 // FIXME I took this out for now, as I removed the corresponding forwardPropExpr call in detectNlhdlrs, but I added one to SCIPregisterConsExprExprUsage(), so it should be ok to activate this again
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && (nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0 )
+      if( nchgbds != NULL && (nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0 )
       {
-         /* call reverse propagation of nlhdlr
-          * This can ensure that just created auxiliary variables take only values that are within the domain of functions that use them,
+         /* call inteval and reverse propagation of nlhdlr
+          * This makes sure that additional activity tightening as provided by the nlhdlr will be applied now and not have to wait until some of
+          * the original variables get a boundtightening.
+          * This can ensure that to be created auxiliary variables take only values that are within the domain of functions that use them,
           * e.g., sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
           * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
           * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
-          * NOTE: This assumes that reverseprop of the nlhdlr can be called before a preceding inteval call.
+          *
+          * During SCIPregisterConsExprExprUsage() we already made sure that all exprs used by this nlhdlr will have a valid activity, so the
+          * inteval call here is to ensure a valid activity for expr, too.
           */
-         SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
+         SCIP_INTERVAL activity;
+
+         /* get a valid activity into expr->activity and activity */
+         if( expr->activitytag < conshdlrdata->lastboundrelax )
+            SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
+         activity = expr->activity;
+
+         /* inteval via nlhdlr and update expr->activity */
+         SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &activity, intEvalVarBoundTightening, TRUE, conshdlrdata) );
+         SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, activity);
+         expr->activitytag = conshdlrdata->curboundstag;
+
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
+         {
+            *infeasible = TRUE;
+         }
+         else
+         {
+            /* propagate activity */
+            int ntightenings = 0;
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
+            *nchgbds += ntightenings;
+         }
       }
-#endif
    }
 
    conshdlrdata->indetect = FALSE;
@@ -2273,7 +2298,8 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
    int                   nconss,             /**< total number of constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
 {
    SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess;   /* buffer for nlhdlrs that had success detecting structure at expression */
@@ -2371,7 +2397,7 @@ SCIP_RETCODE detectNlhdlrs(
           */
          if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible) );
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible, nchgbds) );
 
             if( *infeasible )
                break;
@@ -2392,9 +2418,6 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
-
-      /* make sure we include this constraint into the next propagation round, now that more structure may have been detected */
-      consdata->ispropagated = FALSE;
    }
 
    /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
@@ -2526,14 +2549,15 @@ SCIP_RETCODE initSolve(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
 {
    SCIP_CONSDATA* consdata;
    int c;
 
    /* register non linear handlers */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible, nchgbds) );
 
    /* if detect found problems to be infeasible, e.g., because of bounds, then stop */
    if( *infeasible )
@@ -4747,7 +4771,8 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
    int*                  ndelconss,          /**< counter to add number of deleted constraints, or NULL */
    int*                  naddconss,          /**< counter to add number of added constraints, or NULL */
-   int*                  nchgcoefs           /**< counter to add number of changed coefficients, or NULL */
+   int*                  nchgcoefs,          /**< counter to add number of changed coefficients, or NULL */
+   int*                  nchgbds             /**< counter to add number of bound tightenings found during reverseprop calls in initSolve, set to NULL to disable these calls! */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5012,14 +5037,16 @@ SCIP_RETCODE canonicalizeConstraints(
       SCIP_CALL( addLocks(scip, conss[i], nlockspos[i], nlocksneg[i]) );
    }
 
-   /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
+   /* run nlhdlr detect if in presolving stage (that is, not in exitpre)
+    * TODO can we skip this in presoltiming fast?
+    */
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !*infeasible )
    {
       /* reset one of the number of detections counter to count only current presolving round */
       for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
          conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
 
-      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, infeasible) );
+      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, infeasible, nchgbds) );
    }
 
    /* free allocated memory */
@@ -10454,7 +10481,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       return SCIP_OKAY;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
@@ -10473,7 +10500,6 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool infeasible;
    int i;
 
    /* skip a number of initializations if we have solved already
@@ -10483,7 +10509,13 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
    if( SCIPgetStatus(scip) != SCIP_STATUS_OPTIMAL && SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE &&
       SCIPgetStatus(scip) != SCIP_STATUS_UNBOUNDED && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
    {
-      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, &infeasible) );
+      SCIP_Bool infeasible;
+      int nchgbnds;
+
+      /* run with nchgbnds != NULL to get reverseprop calls on detected nlhdlrs, so that we will have
+       * decent bounds for auxvars that will be added in INITLP soon
+       */
+      SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, &infeasible, &nchgbnds) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -10870,8 +10902,11 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs) );
+   /* simplify constraints and replace common subexpressions, reinit nlhdlrs
+    * if not fast timing, then also do some light boundtightening during detect nlhdlrs
+    */
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs,
+      (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0 ? nchgbds : NULL) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
@@ -11019,7 +11054,7 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( reinitsolve )
    {
       SCIP_Bool infeasible;
-      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible) );
+      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible, NULL) );
    }
 
    return SCIP_OKAY;
@@ -11070,7 +11105,7 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
 
    if( SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && !infeasible )
    {
-      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible) );
+      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible, NULL) );
    }
 
    /* TODO deal with infeasibility */
@@ -16517,7 +16552,7 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    assert(conss != NULL || nconss == 0);
    assert(infeasible != NULL);
 
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible, NULL) );
 
    return SCIP_OKAY;
 }
