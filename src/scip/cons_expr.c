@@ -2148,9 +2148,9 @@ SCIP_RETCODE detectNlhdlr(
       enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
    else
    {
-      if( SCIPgetConsExprExprNLocksPos(expr) == 0)  /* no need for underestimation */
+      if( SCIPgetConsExprExprNLocksPos(expr) == 0 )  /* no need for underestimation */
          enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-      if( SCIPgetConsExprExprNLocksNeg(expr) == 0)  /* no need for overestimation */
+      if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )  /* no need for overestimation */
          enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
    if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
@@ -2640,6 +2640,9 @@ SCIP_RETCODE deinitSolve(
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
+         /* TODO it would be better if we were only decrementing the auxvar and acitivity usage in expr and free only if none is left,
+          *   e.g., when deinitSolve is only called for one constraints that shares expressions with some constraint that are kept active
+          */
          /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
          SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
@@ -10982,6 +10985,7 @@ static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Bool reinitsolve = FALSE;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
@@ -10992,8 +10996,31 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
+   /* check whether we need to initSolve again because
+    * - we have enfo initialized
+    * - and locks appeared (going from zero to nonzero) or disappeared (going from nonzero to zero) now
+    */
+   if( consdata->expr->enfoinitialized )
+   {
+      if( (consdata->nlockspos == 0) != (nlockspos == 0) )
+         reinitsolve = TRUE;
+      if( (consdata->nlocksneg == 0) != (nlocksneg == 0) )
+         reinitsolve = TRUE;
+   }
+
+   if( reinitsolve )
+   {
+      SCIP_CALL( deinitSolve(scip, conshdlr, &cons, 1) );
+   }
+
    /* add locks */
    SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
+
+   if( reinitsolve )
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1, &infeasible) );
+   }
 
    return SCIP_OKAY;
 }
@@ -11003,22 +11030,21 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    SCIP_Bool infeasible = FALSE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    /* store variable expressions */
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
-      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(cons)) );
+      SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
    }
 
    /* simplify root expression if the constraint has been added after presolving */
    if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
    {
-      SCIP_CONSDATA* consdata;
-
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
       if( !consdata->issimplified )
       {
          SCIP_CONSEXPR_EXPR* simplified;
@@ -11036,8 +11062,8 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
    /* add manually locks to constraints that are not checked for feasibility */
    if( !SCIPconsIsChecked(cons) )
    {
-      assert(SCIPconsGetData(cons)->nlockspos == 0);
-      assert(SCIPconsGetData(cons)->nlocksneg == 0);
+      assert(consdata->nlockspos == 0);
+      assert(consdata->nlocksneg == 0);
 
       SCIP_CALL( addLocks(scip, cons, 1, 0) );
    }
