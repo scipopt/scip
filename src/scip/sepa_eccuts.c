@@ -2338,7 +2338,7 @@ SCIP_RETCODE addBilinearTermToCut(
       if( SCIPisPositive(scip, coeff) )
          SCIPaddSquareLinearization(scip, coeff, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconst, success);
       else
-         SCIPaddSquareSecant(scip, coeff, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpoint, &lincoef, &linconst, success);
+         SCIPaddSquareSecant(scip, coeff, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), &lincoef, &linconst, success);
 
       *cutactivity += lincoef * refpoint + linconst;
       *cutconstant += linconst;
