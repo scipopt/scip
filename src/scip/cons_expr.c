@@ -2642,10 +2642,13 @@ SCIP_RETCODE deinitSolve(
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSDATA* consdata;
+   SCIP_INTERVAL activity;
+   SCIP_Bool rootactivityvalid;
    int c;
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -2660,6 +2663,9 @@ SCIP_RETCODE deinitSolve(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
+      /* check and remember whether activity in root is valid */
+      rootactivityvalid = consdata->expr->activitytag >= SCIPconshdlrGetData(conshdlr)->lastboundrelax;
+
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
@@ -2672,6 +2678,16 @@ SCIP_RETCODE deinitSolve(
 
          /* remove quadratic info */
          quadFree(scip, expr);
+
+         if( rootactivityvalid )
+         {
+            /* ensure activity is valid if consdata->expr activity is valid
+             * this is mainly to ensure that we do not leave invalid activities in parts of the expression tree where activity was not used,
+             * e.g., an expr's activity was kept uptodate by a nlhdlr, but without using some childs activity
+             * so this childs activity would be invalid, which can generate confusion
+             */
+            SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, FALSE) );
+         }
       }
 
       if( consdata->nlrow != NULL )
