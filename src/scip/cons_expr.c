@@ -2381,34 +2381,31 @@ SCIP_RETCODE detectNlhdlrs(
             }
          }
 
-         /* skip expression which was already considered by detect */
-         if( expr->enfoinitialized )
+         if( !expr->enfoinitialized )
          {
-            expr = SCIPexpriteratorSkipDFS(it);
-            continue;
+            /* if we have not run looked at this expr yet (expr->enfoinit == FALSE) (or we looked at it but then did a freeEnfoData again)
+             * if there is auxvar usage, then some-one requires that
+             *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
+             *   thus, we need to find nlhdlrs that separate or estimate
+             * if there is activity usage, then there is some-one requiring that
+             *   activity of this expression is updated
+             *   thus, we need to find nlhdlrs that do interval-evaluation
+             */
+            if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
+            {
+               SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible, nchgbds) );
+
+               if( *infeasible )
+                  break;
+            }
+
+            /* remember that we looked at this expression during detectNlhdlrs
+             * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
+             * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
+             * we have not initialized enforcement yet and expressions which are just not used in enforcement
+             */
+            expr->enfoinitialized = TRUE;
          }
-
-         /* if there is auxvar usage, then some-one requires that
-          *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
-          *   thus, we need to find nlhdlrs that separate or estimate
-          * if there is activity usage, then there is some-one requiring that
-          *   activity of this expression is updated
-          *   thus, we need to find nlhdlrs that do interval-evaluation
-          */
-         if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
-         {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible, nchgbds) );
-
-            if( *infeasible )
-               break;
-         }
-
-         /* remember that we looked at this expression during detectNlhdlrs
-          * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
-          * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
-          * we have not initialized enforcement yet and expressions which are just not used in enforcement
-          */
-         expr->enfoinitialized = TRUE;
 
          expr = SCIPexpriteratorGetNext(it);
       }
