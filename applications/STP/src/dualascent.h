@@ -28,19 +28,29 @@
 #include "scip/scip.h"
 #include "graph.h"
 
+
+
+/** reduced cost parameters */
+typedef struct reduce_cost_parameters
+{
+   SCIP_Bool             addcuts;            /**< should dual ascent add Steiner cuts? */
+   SCIP_Bool             ascendandprune;     /**< should the ascent-and-prune heuristic be executed? */
+   int                   root;               /**< the root */
+   SCIP_Bool             is_pseudoroot;      /**< is the root a pseudo root? */
+   SCIP_Real             damaxdeviation;      /**< maximum deviation for dual-ascent ( -1.0 for default) */
+} DAPARAMS;
+
+
 /** dual ascent heuristic */
 SCIP_RETCODE dualascent_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array or NULL */
+   const DAPARAMS*       daparams,           /**< parameter */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
-   const int*            result,             /**< solution array (solution needs to be provided) */
-   int                   root,               /**< the root */
-   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
+   SCIP_Real*            objval              /**< pointer to store objective value */
    );
+
 
 /** dual ascent heuristic for the PCSPG and the MWCSP */
 SCIP_RETCODE dualascent_execPcMw(

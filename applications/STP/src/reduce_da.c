@@ -107,19 +107,21 @@ SCIP_RETCODE computeDualSolutionGuided(
    const int daroot = redcostdata->redCostRoot;
    SCIP_Real* const redcost = redcostdata->redEdgeCost;
    SCIP_Real* dualobjval = &(redcostdata->dualBound);
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = daroot,
+         .is_pseudoroot = FALSE, .damaxdeviation = damaxdeviation };
 
    /* solution might not be valid anymore */
    if( !solstp_isValid(scip, graph, result) )
    {
       SCIPdebugMessage("solution not valid; run normal dual-ascent \n");
-      SCIP_CALL(dualascent_exec(scip, graph, redcost, dualobjval, FALSE, FALSE, NULL, daroot, FALSE, damaxdeviation));
+      SCIP_CALL(dualascent_exec(scip, graph, NULL, &daparams, redcost, dualobjval));
    }
    else
    {
       SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
       SCIP_CALL(solstp_reroot(scip, graph, result, daroot));
 
-      SCIP_CALL(dualascent_exec(scip, graph, redcost, dualobjval, FALSE, FALSE, result, daroot, FALSE, damaxdeviation));
+      SCIP_CALL(dualascent_exec(scip, graph, result, &daparams, redcost, dualobjval));
    }
 
    if( STP_RPCSPG == graph->stp_type )
@@ -145,9 +147,12 @@ SCIP_RETCODE computeDualSolution(
    const int daroot = redcostdata->redCostRoot;
    SCIP_Real* const redcost = redcostdata->redEdgeCost;
    SCIP_Real* dualobjval = &(redcostdata->dualBound);
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = daroot,
+         .is_pseudoroot = FALSE, .damaxdeviation = damaxdeviation };
 
    SCIPdebugMessage("no rerooting, run normal dual-ascent \n");
-   SCIP_CALL( dualascent_exec(scip, graph, redcost, dualobjval, FALSE, FALSE, NULL, daroot, FALSE, damaxdeviation));
+
+   SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, redcost, dualobjval) );
 
    if( STP_RPCSPG == graph->stp_type )
    {
@@ -1653,7 +1658,11 @@ SCIP_RETCODE computePertubedSol(
       }
 
       /* todo use result as guiding solution? */
-      SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lb, FALSE, FALSE, NULL, root, TRUE, -1.0) );
+      {
+         DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
+               .is_pseudoroot = TRUE, .damaxdeviation = -1.0 };
+         SCIP_CALL( dualascent_exec(scip, transgraph, NULL, &daparams, cost, &lb) );
+      }
 
       BMScopyMemoryArray(transgraph->cost, transcost, transnedges);
 
@@ -1704,7 +1713,12 @@ SCIP_RETCODE computePertubedSol(
    assert(graph_valid(scip, transgraph));
    assert(root == transgraph->source);
 
-   SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lb, FALSE, FALSE, transresult, root, TRUE, -1.0) );
+   {
+      DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
+                  .is_pseudoroot = TRUE, .damaxdeviation = -1.0 };
+
+      SCIP_CALL( dualascent_exec(scip, transgraph, transresult, &daparams, cost, &lb) );
+   }
 
    lb += offset;
    *lpobjval = lb;
@@ -2517,14 +2531,19 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    if( solgiven || i == nnodes )
    {
+      DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
+                  .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
       obj = getSolObj(scip, graph, edgearrint);
 
-      SCIP_CALL( dualascent_exec(scip, graph, cost, &lpobjval, FALSE, FALSE, edgearrint, root, FALSE, -1.0) );
+      SCIP_CALL( dualascent_exec(scip, graph, edgearrint, &daparams, cost, &lpobjval) );
    }
    else
    {
+      DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
+                  .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
       obj = FARAWAY;
-      SCIP_CALL( dualascent_exec(scip, graph, cost, &lpobjval, FALSE, FALSE, NULL, root, FALSE, -1.0) );
+
+      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, cost, &lpobjval) );
    }
 
 #if 0
@@ -2892,6 +2911,8 @@ SCIP_RETCODE reduce_daPcMw(
    const SCIP_Bool markroots = paramsda->pcmw_markroots;
    SCIP_Bool varyroot = useDifferentRoots && userec;
    const SCIP_Real damaxdeviation = paramsda->pcmw_fastDa ? DAMAXDEVIATION_FAST : -1.0;
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
+               .is_pseudoroot = TRUE, .damaxdeviation = damaxdeviation };
 
    assert(scip && nelims && nodearrchar);
 
@@ -2933,11 +2954,11 @@ SCIP_RETCODE reduce_daPcMw(
 
       // todo probably we might try to continue from the reduced cost we have already
       if( !dualascent_allTermsReachable(scip, graph, transgraph->source, cost) )
-         SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE, NULL, root, TRUE, damaxdeviation) );
+         SCIP_CALL( dualascent_exec(scip, transgraph, NULL, &daparams, cost, &lpobjval) );
    }
    else
    {
-      SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE, NULL, root, TRUE, damaxdeviation) );
+      SCIP_CALL( dualascent_exec(scip, transgraph, NULL, &daparams, cost, &lpobjval) );
    }
 
    lpobjval += offset;
@@ -3156,13 +3177,19 @@ SCIP_RETCODE reduce_daPcMw(
       {
          BMScopyMemoryArray(transresult, result, graph->edges);
          SCIP_CALL(solstp_reroot(scip, transgraph, transresult, tmproot));
-         SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE,
-               transresult, tmproot, FALSE, -1.0));
+         daparams.root = tmproot;
+         daparams.is_pseudoroot = FALSE;
+         daparams.damaxdeviation = -1.0;
+
+         SCIP_CALL( dualascent_exec(scip, transgraph, transresult, &daparams, cost, &lpobjval) );
       }
       else
       {
-         SCIP_CALL( dualascent_exec(scip, transgraph, cost, &lpobjval, FALSE, FALSE,
-               NULL, tmproot, FALSE, -1.0));
+         daparams.root = tmproot;
+         daparams.is_pseudoroot = FALSE;
+         daparams.damaxdeviation = -1.0;
+
+         SCIP_CALL( dualascent_exec(scip, transgraph, NULL, &daparams, cost, &lpobjval) );
       }
 
       assert(graph_valid(scip, transgraph));

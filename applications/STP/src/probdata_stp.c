@@ -1615,8 +1615,10 @@ SCIP_RETCODE createInitialCuts(
    else
    {
       const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
+      DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,
+                   .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
 
-      SCIP_CALL( dualascent_exec(scip, graph, NULL, &lpobjval, TRUE, doAscendPrune, NULL, graph->source, FALSE, -1.0) );
+      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
    }
 
    return SCIP_OKAY;

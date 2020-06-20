@@ -105,7 +105,7 @@ typedef struct reduction_parameters
 
 
 /** reduced cost reduction parameters */
-typedef struct reduce_costs_parameters
+typedef struct reduce_costs_reduction_parameters
 {
    int                   prevrounds;         /**< number of reduction rounds that have been performed already */
    SCIP_Bool             useRec;             /**< use recombination heuristic? */

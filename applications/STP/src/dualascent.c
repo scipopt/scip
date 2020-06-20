@@ -416,15 +416,11 @@ SCIP_RETCODE initDualAscent(
 SCIP_RETCODE dualascent_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    const int*            result,             /**< solution array or NULL */
-   int                   root,               /**< the root */
-   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
-   )
+   const DAPARAMS*       daparams,           /**< parameter */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval              /**< pointer to store objective value */
+)
 {
    SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
@@ -442,7 +438,7 @@ SCIP_RETCODE dualascent_exec(
    int* RESTRICT active;
    SCIP_Real dualobj;
    SCIP_Real currscore;
-   const SCIP_Real maxdeviation = (damaxdeviation > 0.0) ? damaxdeviation : DEFAULT_DAMAXDEVIATION;
+   const SCIP_Real maxdeviation = (daparams->damaxdeviation > 0.0) ? daparams->damaxdeviation : DEFAULT_DAMAXDEVIATION;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
@@ -451,6 +447,9 @@ SCIP_RETCODE dualascent_exec(
    int stacklength;
    int augmentingcomponent;
    const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+   int root = daparams->root;
+   const SCIP_Bool addcuts = daparams->addcuts;
+   const SCIP_Bool is_pseudoroot = daparams->is_pseudoroot;
 
    /* should currently not  be activated */
    assert(addconss || !addcuts);
@@ -459,7 +458,7 @@ SCIP_RETCODE dualascent_exec(
    assert(objval != NULL);
    assert(Is_term(g->term[root]));
    assert(maxdeviation >= DA_MAXDEVIATION_LOWER && maxdeviation <= DA_MAXDEVIATION_UPPER);
-   assert(damaxdeviation == -1.0 || damaxdeviation > 0.0);
+   assert(daparams->damaxdeviation == -1.0 || daparams->damaxdeviation > 0.0);
 
    if( nnodes == 1 )
       return SCIP_OKAY;
@@ -939,7 +938,7 @@ SCIP_RETCODE dualascent_exec(
    SCIPfreeMemoryArrayNull(scip, &gnodearr);
 
    /* call Ascend-And-Prune? */
-   if( ascendandprune )
+   if( daparams->ascendandprune )
    {
        SCIP_Bool success;
 
