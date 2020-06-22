@@ -41,6 +41,7 @@
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
 #define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
 #define DEFAULT_PROBINGONLYINSEPA TRUE  /**< whether to do probing only in separation loop */
+#define DEFAULT_DOPROBING         2     /**< if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable) */
 
 /*
  * Data structures
@@ -97,6 +98,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Real             mindomreduction;    /**< minimal relative reduction in a variable's domain for applying probing */
    SCIP_Real             minviolprobing;     /**< minimal violation w.r.t. auxiliary variables for applying probing */
    SCIP_Bool             probingonlyinsepa;  /**< whether to do probing only in separation loop */
+   int                   doprobing;          /**< if and when to do probing */
 };
 
 /*
@@ -1836,6 +1838,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          doprobing = TRUE;
    }
 
+   if( nlhdlrdata->doprobing == 0 ||
+      (nlhdlrdata->doprobing == 1 && (int) SCIPgetCurrentNode(scip)->depth > SCIPgetEffectiveRootDepth(scip)) )
+      doprobing = FALSE;
+
+   if( nlhdlrdata->probingonlyinsepa && addbranchscores )
+      doprobing = FALSE;
+
    /* only do probing if tightening the domain of expr is useful (using curvature for now)
     * and we are not in probing or a subscip
     * TODO use (updated) ndomainuses
@@ -1844,9 +1853,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    if( SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) )
-      doprobing = FALSE;
-
-   if( nlhdlrdata->probingonlyinsepa && addbranchscores )
       doprobing = FALSE;
 
    nrowpreps = 0;
@@ -2634,6 +2640,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/probingonlyinsepa",
            "whether to do probing only in separation",
            &nlhdlrdata->probingonlyinsepa, FALSE, DEFAULT_PROBINGONLYINSEPA, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/doprobing",
+           "if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable)",
+           &nlhdlrdata->doprobing, FALSE, DEFAULT_DOPROBING, 0, 2, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
