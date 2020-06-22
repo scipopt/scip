@@ -208,37 +208,35 @@ SCIP_RETCODE freeSepaData(
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
-   assert(sepadata->varssorted != NULL);
 
-   /* release bilinvars that were captured for rlt */
-   for( i = 0; i < sepadata->nbilinvars; ++i )
+   if( sepadata->nbilinvars != 0 )
    {
-      assert(sepadata->varssorted[i] != NULL);
-      SCIP_CALL( SCIPreleaseVar(scip, &(sepadata->varssorted[i])) );
+      /* release bilinvars that were captured for rlt and free all related arrays */
+
+      for( i = 0; i < sepadata->nbilinvars; ++i )
+      {
+         assert(sepadata->varssorted[i] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &(sepadata->varssorted[i])) );
+         SCIPfreeBlockMemoryArray(scip, &sepadata->varbilinvars[i], sepadata->svarbilinvars[i]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->sbilinvars);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->svarbilinvars, sepadata->sbilinvars);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nvarbilinvars, sepadata->sbilinvars);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varbilinvars, sepadata->sbilinvars);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->sbilinvars);
+      sepadata->nbilinvars = 0;
    }
 
-   /* free the remaining arrays */
-   for( i = 0; i < sepadata->nbilinvars; ++i )
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, &sepadata->varbilinvars[i], sepadata->svarbilinvars[i]);
-   }
-
+   /* free the remaining array */
    if( sepadata->nbilinterms > 0 )
    {
       SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->sbilinvars);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->svarbilinvars, sepadata->sbilinvars);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->nvarbilinvars, sepadata->sbilinvars);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->varbilinvars, sepadata->sbilinvars);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->sbilinvars);
-
    /* free the hashmap */
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
-   sepadata->nbilinvars = 0;
 
    return SCIP_OKAY;
 }
@@ -2457,10 +2455,10 @@ SCIP_RETCODE markRowsXj(
        */
       if( bestunderest[idx] == -1 )
       {
-         if( terms[j].nauxexprs == 0 && terms[j].auxvar != NULL )
+         if( terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
          {
-            assert(terms[j].existing);
-            viol_below = SCIPgetSolVal(scip, sol, terms[j].auxvar) - valj * vali;
+            assert(terms[idx].existing);
+            viol_below = SCIPgetSolVal(scip, sol, terms[idx].auxvar) - valj * vali;
          }
          else
          {
@@ -2476,10 +2474,10 @@ SCIP_RETCODE markRowsXj(
 
       if( bestoverest[idx] == -1 )
       {
-         if( terms[j].nauxexprs == 0 && terms[j].auxvar != NULL )
+         if( terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
          {
-            assert(terms[j].existing);
-            viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[j].auxvar);
+            assert(terms[idx].existing);
+            viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[idx].auxvar);
          }
          else
          {
