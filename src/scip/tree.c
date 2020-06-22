@@ -2482,7 +2482,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( SCIPcertificateIsActive(stat->certificate) && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( set->misc_exactsolve && lpobjval > SCIPnodeGetLowerbound(node) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);

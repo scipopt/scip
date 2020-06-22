@@ -31,6 +31,7 @@
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
+#include "lpi/lpiexact.h"
 #include "scip/pub_misc.h"
 #include "scip/prob.h"
 #include "scip/certificate.h"
@@ -1414,7 +1415,15 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          RatDiv(vals[i], vals[i], farkasrhs);
    }
    else
-      RatSet(lowerbound, lpexact->lpobjval);
+   {
+      /* vipr does not accept infinity, so in case of objlimit, get the objval from the lpi */
+      if( !RatIsInfinity(lpexact->lpobjval) )
+         RatSet(lowerbound, lpexact->lpobjval);
+      else
+      {
+         SCIPlpiExactGetObjval(lpexact->lpiexact, lowerbound);
+      }
+   }
 
    SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, len, ind, vals);
    SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);

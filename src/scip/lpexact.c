@@ -2600,7 +2600,7 @@ SCIP_RETCODE lpExactSetObjlim(
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
     * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( set->lp_disablecutoff )
+   if( set->lp_disablecutoff == 1 || (set->nactivepricers > 0 && set->lp_disablecutoff == 2) )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -3916,7 +3916,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_OBJLIMIT:
-      assert(!(set->lp_disablecutoff));
+      assert(!(set->lp_disablecutoff == 0));
       /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
          * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
          * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
@@ -4128,6 +4128,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
          {
             overwritefplp = overwritefplp || (lpexact->lpsolstat != lp->lpsolstat);
             SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, overwritefplp) );
+            lp->hasprovedbound = TRUE;
          }
 
          RatFreeBuffer(set->buffer, &objval);
@@ -5846,7 +5847,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, lp->lpobjval, primsol, dualsol, activity, redcost) );
+   SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, dualsol, activity, redcost) );
    if( overwritefplp )
    {
       lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS);
