@@ -2538,7 +2538,9 @@ SCIP_RETCODE createNlRow(
  * not be modified.
  * In particular, this function
  * - runs the detection method of nlhldrs
- * - collects all bilinear terms
+ * - looks for unlocked linear variables
+ * - checks curvature (if not in presolve)
+ * - creates and add row to NLP (if not in presolve)
  *
  * This function can be called in presolve and solve and can be called several times with different sets of constraints,
  * e.g., it should be called in INITSOL and for constraints that are added during solve.
@@ -2627,9 +2629,11 @@ SCIP_RETCODE initSolve(
  *
  * This removes initialization data in a constraint that was created in initSolve().
  *
- * This function can be called in presolve and solve and can be called several times with different sets of constraints,
- * e.g., it should be called in EXITSOL and for constraints that are deactivated during solve,
- * or it should be called in presolve before modifying constraint data
+ * This function can be called in presolve and solve.
+ * TODO At the moment, it should not be called for a constraint if there are other constraints
+ * that use the same expressions but still require their nlhdlr.
+ * We should probably only decrement the auxvar and acitivity usage for the root expr and then
+ * proceed as in detectNlhdlrs, i.e., free enfo data only where none is used.
  */
 static
 SCIP_RETCODE deinitSolve(
@@ -2670,9 +2674,6 @@ SCIP_RETCODE deinitSolve(
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-         /* TODO it would be better if we were only decrementing the auxvar and acitivity usage in expr and free only if none is left,
-          *   e.g., when deinitSolve is only called for one constraints that shares expressions with some constraint that are kept active
-          */
          /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
          SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
 
