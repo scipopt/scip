@@ -237,7 +237,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(cosexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
-   cr_expect_not_null(SCIPgetConsExprExprNAuxvarUses(quad.expr), "cos expr should have auxiliary variable!\n");
+   cr_expect(SCIPgetConsExprExprNAuxvarUses(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
 
 
    SCIP_CONSEXPR_BILINEXPRTERM bilin;
@@ -293,28 +293,28 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->nauxvaruses);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is abs expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs", "expecting abs got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->nauxvaruses);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is log expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log", "expecting log got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->nauxvaruses);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is sum expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 4);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum", "expecting sum got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->nauxvaruses);
+   cr_assert(expr->nauxvaruses > 0);
 
 #if 0
    /* it should be identified that child should not have aux vars because of locks */
