@@ -675,7 +675,9 @@ SCIP_Real tpathsGetDistNew(
    {
       distnew = path[node].dist + ecost;
    }
-   assert(GE(distnew, 0.0) && LE(distnew, path[node].dist + ecost));
+
+   assert(graph_pc_isMw(g) || GE(distnew, 0.0));
+   assert(LE(distnew, path[node].dist + ecost));
 
    return distnew;
 }
