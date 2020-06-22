@@ -2248,7 +2248,7 @@ SCIP_RETCODE detectNlhdlr(
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
 
       /* remember nlhdlr and its data */
-      SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrenfobuffer[nsuccess]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrenfobuffer[nsuccess]) );  /*lint !e866*/
       nlhdlrenfobuffer[nsuccess]->nlhdlr = nlhdlr;
       nlhdlrenfobuffer[nsuccess]->nlhdlrexprdata = nlhdlrexprdata;
       nlhdlrenfobuffer[nsuccess]->nlhdlrparticipation = nlhdlrparticipating;

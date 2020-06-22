@@ -1232,7 +1232,7 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CALL( SCIPexpriteratorInit(it, nlexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
-   for( ; !SCIPexpriteratorIsEnd(it); SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( ; !SCIPexpriteratorIsEnd(it); (void) SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       SCIP_CONSEXPR_EXPR* child;
       SCIP_CONSEXPR_EXPR* origexpr;
@@ -1756,7 +1756,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 /** init sepa callback that initializes LP */
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
-{
+{ /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
 
    /* setup nlhdlrexprdata->leafexprs */

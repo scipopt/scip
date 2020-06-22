@@ -1584,12 +1584,17 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* if a bilinear term is involved, it is a hyperbolic expression */
    ishyperbolic = (nposbilinterms + nnegbilinterms > 0);
 
-   if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID )
+   if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID )  /*lint !e777*/
    {
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE, TRUE) );
+      lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
+      rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
    }
-   lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
-   rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
+   else
+   {
+      lhs = conslhs;
+      rhs = consrhs;
+   }
 
    /* detect case and store lhs/rhs information */
    if( (ishyperbolic && nnegbilinterms > 0) || (!ishyperbolic && nnegquadterms < 2) )
@@ -2041,12 +2046,17 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
    if( rhsissoc || lhsissoc )
    {
-      if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID )
+      if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE, TRUE) );
+         lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
+         rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
       }
-      lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
-      rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
+      else
+      {
+         lhs = conslhs;
+         rhs = consrhs;
+      }
    }
    else
    {
