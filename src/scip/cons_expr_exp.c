@@ -283,7 +283,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       assert(i == 3 || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb)));
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, overest[i]) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       *(rowprep->coefs) = 0.0;
       constant = 0.0;
       success = TRUE;
