@@ -1457,7 +1457,7 @@ SCIP_RETCODE forwardPropExpr(
             }
             else
             {
-               /* for node without enforcement (before detect?), call the callback of the exprhdlr directly */
+               /* for node without enforcement (before or during detect), call the callback of the exprhdlr directly */
                SCIP_INTERVAL exprhdlrinterval = expr->activity;
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, global, intevalvardata) );
 #ifdef DEBUG_PROP
@@ -1653,9 +1653,7 @@ SCIP_RETCODE reversePropQueue(
       }
       else
       {
-         /* if node without enforcement (before detect?, added due to allexprs=TRUE?), call reverse propagation callback of exprhdlr directly
-          * TODO we should remove this, shouldn't we? for propagation, we should always have run nlhdlr detect before
-          */
+         /* if node without enforcement (before detect), call reverse propagation callback of exprhdlr directly */
          int nreds = 0;
 
 #ifdef SCIP_DEBUG
@@ -1664,6 +1662,9 @@ SCIP_RETCODE reversePropQueue(
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->activity.inf, expr->activity.sup, expr->exprhdlr->name);
 #endif
 
+         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't been initialized yet (detectNlhdlr) */
+         assert(!expr->enfoinitialized);
+
          /* call the reverseprop of the exprhdlr */
          SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, queue, infeasible, &nreds, force) );
          assert(nreds >= 0);
@@ -1671,7 +1672,7 @@ SCIP_RETCODE reversePropQueue(
       }
 
       /* if allexprs is set, then make sure that all children of expr with children are in the queue
-       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability and so we do here (TODO correct, right?; this goes together with TODO above
+       * however, only add children to the queue which have activity usage or are not enfo-initialized
        */
       if( allexprs )
       {
@@ -1767,8 +1768,10 @@ SCIP_RETCODE propConss(
       return SCIP_OKAY;
    }
 
-   /* TODO maybe only do this if first call or simplify or someone else changed the expression graph */
-   allexprs = (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+   /* TODO do we still need to do this sometimes, or is the propagation embedded initSolve sufficient?
+    * this was   allexprs = (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+    */
+   allexprs = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -14314,7 +14317,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and should have a nlhdlr with a reverseprop callback and we see a tightening */
+   /* if a reversepropagation queue is given, then add expression to that queue if it should have a nlhdlr with a reverseprop callback or nlhdlrs are not initialized yet */
    if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !expr->enfoinitialized) )
    {
 #ifdef DEBUG_PROP
