@@ -1254,7 +1254,7 @@ SCIP_RETCODE createNlhdlrExprData(
        * if we are working for the concave nlhdlr, then we also indicate interest on the exprs activity for estimate
        */
       SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, origexpr,
-         SCIPgetConsExprExprNChildren(origexpr) > 0, FALSE, !nlhdlrdata->isnlhdlrconvex) );
+         SCIPgetConsExprExprNChildren(origexpr) > 0, FALSE, !nlhdlrdata->isnlhdlrconvex, !nlhdlrdata->isnlhdlrconvex) );
 
       /* remember that we use an auxvar */
       if( SCIPgetConsExprExprNChildren(origexpr) > 0 )

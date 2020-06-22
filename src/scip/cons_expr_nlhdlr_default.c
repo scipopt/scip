@@ -74,7 +74,8 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-   SCIP_Bool estimateusesactivity = FALSE;
+   SCIP_Bool estimatebelowusesactivity = FALSE;
+   SCIP_Bool estimateaboveusesactivity = FALSE;
    int c;
 
    assert(scip != NULL);
@@ -115,24 +116,32 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    *enforcing |= *participating;
 
    /* increment activity usage counter and create auxiliary variables if necessary
-    * if separating, first guess whether we will use activities in estimate
+    * if separating, first guess whether we will use activities in estimate (distinguish under- and overestimation)
     * we assume that the exprhdlr will use activity on all children iff we are estimating on a nonconvex side
     * TODO it would be better to request this information directly from the exprhdlr than inferring it from curvature, but with the currently available exprhdlr that wouldn't make a difference
     */
    if( (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 )
    {
       SCIP_EXPRCURV* childcurv;
-      SCIP_EXPRCURV requiredcurv;
 
       /* allocate memory to store the required curvature of the children (though we don't use it) */
       SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, SCIPgetConsExprExprNChildren(expr)) );
 
-      /* check whether the expression is convex, if sepabelow, and whether the expression is concave, if sepaabove */
-      requiredcurv = (*participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN;
-      requiredcurv = (SCIP_EXPRCURV)(requiredcurv | ((*participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_UNKNOWN));
-      assert(requiredcurv != SCIP_EXPRCURV_UNKNOWN);  /* because we have sepabelow or sepaabove */
+      if( *participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW )
+      {
+         /* check whether the expression is convex */
+         SCIP_Bool isconvex;
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
+         estimatebelowusesactivity = !isconvex;
+      }
 
-      SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, requiredcurv, &estimateusesactivity, childcurv) );
+      if( *participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE )
+      {
+         /* check whether the expression is concave */
+         SCIP_Bool isconcave;
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
+         estimateaboveusesactivity = !isconcave;
+      }
 
       /* free memory */
       SCIPfreeBufferArray(scip, &childcurv);
@@ -148,7 +157,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       /* todo skip auxvarusage for value-expressions? would then need update in evalExprInAux, too */
       SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c],
          *participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH,
-         *participating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY, estimateusesactivity) );
+         *participating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY, estimatebelowusesactivity, estimateaboveusesactivity) );
    }
 
    return SCIP_OKAY;

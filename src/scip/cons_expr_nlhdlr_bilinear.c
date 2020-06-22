@@ -1004,8 +1004,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          ++nlhdlrdata->nexprs;
 
          /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
       }
    }
 

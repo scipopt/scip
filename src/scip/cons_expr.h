@@ -1081,13 +1081,15 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
 /** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
  *
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
- * - if useactivityforprop or useactivityforsepa is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
  * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
- * - if useactivityforsepa is eanbled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ * - if useactivityforsepabelow or useactivityforsepaabove is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
  *   and also increments this count for all variables in the expression.
  *
- * The distinction into useactivityforprop and useactivityforsepa is to recognize variables which domain influences
+ * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
  * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
+ * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPregisterConsExprExprUsage(
@@ -1096,7 +1098,8 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
    SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
    SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
-   SCIP_Bool             useactivityforsepa  /**< whether activity of expr will be used by estimate or cut generation */
+   SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
+   SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
    );
 
 /** returns the total number of variables in an expression

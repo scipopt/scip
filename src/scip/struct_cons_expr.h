@@ -248,7 +248,8 @@ struct SCIP_ConsExpr_ExprEnfo
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
    SCIP_Real                     auxvalue;        /**< auxiliary value of expression w.r.t. currently enforced solution */
-   SCIP_Bool                     sepausesactivity;/**< whether separation uses activity of some expression */
+   SCIP_Bool                     sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */
+   SCIP_Bool                     sepaaboveusesactivity;/**< whether sepaabove uses activity of some expression */
 };
 
 /** expression tree iterator */

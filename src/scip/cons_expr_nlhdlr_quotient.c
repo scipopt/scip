@@ -320,11 +320,12 @@ SCIP_RETCODE detectExpr(
       SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, xexpr,
          SCIPgetConsExprExprNAuxvarUses(expr) > 0,
          xexpr == yexpr,
+         SCIPgetConsExprExprNAuxvarUses(expr) > 0,
          SCIPgetConsExprExprNAuxvarUses(expr) > 0) );
 
       if( xexpr != yexpr && SCIPgetConsExprExprNAuxvarUses(expr) > 0 )
       {
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, yexpr, TRUE, FALSE, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, yexpr, TRUE, FALSE, TRUE, TRUE) );
       }
 
       a = nomfac * a;

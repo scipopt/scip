@@ -216,7 +216,8 @@ struct SCIP_ConshdlrData
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
    SCIP_Bool                indetect;        /**< whether we are currently in detectNlhdlr */
-   SCIP_Bool                registerusesactivitysepa; /**< a flag that is used only used during \ref @detectNlhdlr() */
+   SCIP_Bool                registerusesactivitysepabelow; /**< a flag that is used only during \ref @detectNlhdlr() */
+   SCIP_Bool                registerusesactivitysepaabove; /**< a flag that is used only during \ref @detectNlhdlr() */
 
    /* constraint upgrades */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -2215,7 +2216,8 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrexprdata = NULL;
       enforcemethodsnew = enforcemethods;
       nlhdlrparticipating = SCIP_CONSEXPR_EXPRENFO_NONE;
-      conshdlrdata->registerusesactivitysepa = FALSE;  /* following SCIPregisterConsExprExprUsage() may set this to TRUE */
+      conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterConsExprExprUsage() as called by detect may set this to TRUE */
+      conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterConsExprExprUsage() as called by detect may set this to TRUE */
       SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to nlhdlrenforcemethods, so previous enforcemethods must still be set */
@@ -2251,7 +2253,8 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenfobuffer[nsuccess]->nlhdlrexprdata = nlhdlrexprdata;
       nlhdlrenfobuffer[nsuccess]->nlhdlrparticipation = nlhdlrparticipating;
       nlhdlrenfobuffer[nsuccess]->issepainit = FALSE;
-      nlhdlrenfobuffer[nsuccess]->sepausesactivity = conshdlrdata->registerusesactivitysepa;
+      nlhdlrenfobuffer[nsuccess]->sepabelowusesactivity = conshdlrdata->registerusesactivitysepabelow;
+      nlhdlrenfobuffer[nsuccess]->sepaaboveusesactivity = conshdlrdata->registerusesactivitysepaabove;
       ++nsuccess;
 
       /* update enforcement flags */
@@ -2379,7 +2382,7 @@ SCIP_RETCODE detectNlhdlrs(
       SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, consdata->expr,
          SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])),
          SCIPconsIsPropagated(conss[i]),
-         FALSE) );
+         FALSE, FALSE) );
 
       /* if a constraint is separated, we currently need it to be initial, too
        * this is because INITLP will create the auxiliary variables that are used for any separation
@@ -15159,13 +15162,15 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
 /** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
  *
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
- * - if useactivityforprop or useactivityforsepa is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
  * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
- * - if useactivityforsepa is eanbled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ * - if useactivityforsepabelow or useactivityforsepaabove is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
  *   and also increments this count for all variables in the expression.
  *
- * The distinction into useactivityforprop and useactivityforsepa is to recognize variables which domain influences
+ * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
  * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
+ * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
  */
 SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP*                 scip,             /**< SCIP data structure */
@@ -15173,7 +15178,8 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
    SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
    SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
-   SCIP_Bool             useactivityforsepa  /**< whether activity of expr will be used by estimate or cut generation */
+   SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
+   SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
    )
 {
    assert(conshdlr != NULL);
@@ -15184,7 +15190,7 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
       useauxvar = FALSE;
 
    if( expr->enfoinitialized &&
-      ( (expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepa)) ||
+      ( (expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepabelow || useactivityforsepaabove)) ||
         (expr->nauxvaruses == 0 && useauxvar)
       ) )
    {
@@ -15202,13 +15208,14 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    if( useactivityforprop )
       ++(expr->nactivityusesprop);
 
-   if( useactivityforsepa )
-   {
+   if( useactivityforsepabelow || useactivityforsepaabove )
       ++(expr->nactivityusessepa);
 
-      /* remember that SCIPregisterConsExprExprUsage() has been called with useactivityforsepa=TRUE, used in detectNlhdlr() */
-      SCIPconshdlrGetData(conshdlr)->registerusesactivitysepa = TRUE;
-   }
+   /* remember that SCIPregisterConsExprExprUsage() has been called with useactivityforsepa{below,above}=TRUE, used in detectNlhdlr() */
+   if( useactivityforsepabelow )
+      SCIPconshdlrGetData(conshdlr)->registerusesactivitysepabelow = TRUE;
+   if( useactivityforsepaabove )
+      SCIPconshdlrGetData(conshdlr)->registerusesactivitysepaabove = TRUE;
 
    if( useactivityforprop )
    {
@@ -15220,8 +15227,8 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
    }
 
-   /* increase the nactivityusedsepa counter for all sub-expressions of the given expression */
-   if( useactivityforsepa && SCIPgetConsExprExprNChildren(expr) > 0 )
+   /* increase the nactivityusedsepa counter for all variables used in the given expression */
+   if(( useactivityforsepabelow || useactivityforsepaabove) && SCIPgetConsExprExprNChildren(expr) > 0 )
    {
       SCIP_CONSEXPR_ITERATOR* it;
 

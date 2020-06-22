@@ -308,12 +308,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
       /* notify children of quadratic that we will need their activity for propagation */
       for( i = 0; i < nlinexprs; ++i )
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], FALSE, TRUE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], FALSE, TRUE, FALSE, FALSE) );
       for( i = 0; i < nquadexprs; ++i )
       {
          SCIP_CONSEXPR_EXPR* argexpr;
          SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, NULL, NULL);
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE, FALSE) );
       }
    }
 
@@ -386,13 +386,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
       for( i = 0; i < nlinexprs; ++i ) /* expressions appearing linearly */
       {
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], TRUE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], TRUE, FALSE, FALSE, FALSE) );
       }
       for( i = 0; i < nquadexprs; ++i ) /* expressions appearing quadratically */
       {
          SCIP_CONSEXPR_EXPR* quadexpr;
          SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &quadexpr, NULL, NULL, NULL, NULL);
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, quadexpr, TRUE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, quadexpr, TRUE, FALSE, FALSE, FALSE) );
       }
 
       SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate and separate\n", (void*)expr);

@@ -1382,7 +1382,7 @@ SCIP_RETCODE detectSocNorm(
          squarearg = SCIPgetConsExprExprChildren(children[i])[0];
          assert(SCIPhashmapGetImageInt(expr2idx, (void*) squarearg) == nextentry);
 
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, squarearg, TRUE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, squarearg, TRUE, FALSE, FALSE, FALSE) );
 
          vars[nextentry] = squarearg;
          ++nextentry;
@@ -1401,7 +1401,7 @@ SCIP_RETCODE detectSocNorm(
          assert(SCIPhashmapExists(expr2idx, (void*) children[i]));
          auxvarpos = SCIPhashmapGetImageInt(expr2idx, (void*) children[i]);
 
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[i], TRUE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[i], TRUE, FALSE, FALSE, FALSE) );
 
          offsets[auxvarpos] = 0.5 * childcoefs[i] / transcoefs[auxvarpos];
       }
@@ -1735,7 +1735,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
          assert(SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr));
 
          /* notify that we will require auxiliary variable */
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[i])[0], TRUE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[i])[0], TRUE, FALSE, FALSE, FALSE) );
          vars[nextentry] = SCIPgetConsExprExprChildren(children[i])[0];
       }
       assert(vars[nextentry] != NULL);
@@ -1778,7 +1778,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( !ishyperbolic )
    {
       /* store rhs term */
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
       vars[nvars - 1] = SCIPgetConsExprExprChildren(children[specialtermidx])[0];
 
       assert(childcoefs[specialtermidx] < 0.0);
@@ -1797,10 +1797,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
    else
    {
       /* store last lhs term and rhs term coming from the bilinear term */
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
       vars[nvars - 2] = SCIPgetConsExprExprChildren(children[specialtermidx])[0];
 
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], TRUE, FALSE, FALSE, FALSE) );
       vars[nvars - 1] = SCIPgetConsExprExprChildren(children[specialtermidx])[1];
 
       /* at this point, vars[nvars - 2] = expr_k and vars[nvars - 1] = expr_l;
@@ -2098,7 +2098,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* register all requests for auxiliary variables */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, occurringexprs[i], TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, occurringexprs[i], TRUE, FALSE, FALSE, FALSE) );
    }
 
 #ifdef SCIP_DEBUG
