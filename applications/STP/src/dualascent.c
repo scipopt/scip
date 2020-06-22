@@ -331,21 +331,31 @@ void daInitRescaps(
 
 /** updates */
 static
-void daUpdateRescaps(
+SCIP_RETCODE daUpdateRescaps(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    const int*            edgemap,            /**< CSR ancestor edge array */
    int                   ncsredges,          /**< number of CSR edges */
    SCIP_Real*            rescap              /**< residual capacity */
 )
 {
+   const int nedges = graph_get_nEdges(g);
+   SCIP_Real* rescaps_org;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &rescaps_org, nedges) );
+   BMScopyMemoryArray(rescaps_org, rescap, nedges);
+
    for( int i = 0; i < ncsredges; i++ )
    {
       const int edgeorg = edgemap[i];
-      assert(edgeorg >= i);
       assert(graph_edge_isInRange(g, edgeorg));
 
-      rescap[i] = rescap[edgeorg];
+      rescap[i] = rescaps_org[edgeorg];
    }
+
+   SCIPfreeBufferArray(scip, &rescaps_org);
+
+   return SCIP_OKAY;
 }
 
 
@@ -506,10 +516,6 @@ SCIP_RETCODE daExec(
 
    stacklength = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &unsattails, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
-
    if( nterms > 1 )
       SCIP_CALL( SCIPallocMemoryArray(scip, &gnodearr, nterms - 1) );
    else
@@ -528,9 +534,18 @@ SCIP_RETCODE daExec(
    graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
 
    if( updateRescaps )
-      daUpdateRescaps(g, edgearr, ncsredges, rescap);
+   {
+      dualobj = *objval;
+      SCIP_CALL( daUpdateRescaps(scip, g, edgearr, ncsredges, rescap) );
+   }
    else
+   {
       daInitRescaps(g, edgearr, ncsredges, rescap, &dualobj);
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &unsattails, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
 
    SCIP_CALL( daInit(scip, g, root, is_pseudoroot, gmark, active, pqueue,
          gnodearr, &augmentingcomponent) );
@@ -963,10 +978,9 @@ SCIP_RETCODE daExec(
 
    SCIPfreeBufferArray(scip, &unsatarcs);
    SCIPfreeBufferArray(scip, &cutverts);
+   SCIPfreeBufferArray(scip, &unsattails);
 
    assert(dualascent_allTermsReachable(scip, g, root, rescap));
-
-   SCIPfreeBufferArray(scip, &unsattails);
 
    return SCIP_OKAY;
 }
