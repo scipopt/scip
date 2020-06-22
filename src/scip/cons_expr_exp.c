@@ -290,8 +290,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
 
       if( !overest[i] )
          SCIPaddExpLinearization(scip, refpointsunder[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
-
-      if( !overest[i] )
+      else
          SCIPaddExpSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
 
       if( success )
