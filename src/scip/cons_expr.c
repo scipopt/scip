@@ -216,6 +216,7 @@ struct SCIP_ConshdlrData
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
    SCIP_Bool                indetect;        /**< whether we are currently in detectNlhdlr */
+   SCIP_Bool                registerusesactivitysepa; /**< a flag that is used only used during \ref @detectNlhdlr() */
 
    /* constraint upgrades */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -810,6 +811,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** compares nonlinear handler by enforcement priority
  *
  * if handlers have same enforcement priority, then compare by detection priority, then by name
@@ -837,6 +839,7 @@ int nlhdlrEnfoCmp(
 
    return strcmp(h1->name, h2->name);
 }
+#endif
 
 /** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
 static
@@ -2103,6 +2106,37 @@ SCIP_RETCODE checkRedundancyConss(
    return SCIP_OKAY;
 }
 
+/** compares enfodata by enforcement priority of nonlinear handler
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+static
+int enfodataCmp(
+   void*                 enfo1,              /**< first enfo data */
+   void*                 enfo2               /**< second enfo data */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(enfo1 != NULL);
+   assert(enfo2 != NULL);
+
+   h1 = ((SCIP_CONSEXPR_EXPRENFO*)enfo1)->nlhdlr;
+   h2 = ((SCIP_CONSEXPR_EXPRENFO*)enfo2)->nlhdlr;
+
+   assert(h1 != NULL);
+   assert(h2 != NULL);
+
+   if( h1->enfopriority != h2->enfopriority )
+      return (int)(h1->enfopriority - h2->enfopriority);
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
 /** install nlhdlrs in one expression */
 static
 SCIP_RETCODE detectNlhdlr(
@@ -2110,9 +2144,7 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
    SCIP_CONS*            cons,               /**< constraint for which expr == consdata->expr, otherwise NULL */
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that participate at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer for participation of nlhdlrs */
+   SCIP_CONSEXPR_EXPRENFO** nlhdlrenfobuffer,/**< buffer for enfodata */
    SCIP_Bool*            infeasible,         /**< buffer to indicate whether infeasibility has been detected */
    int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
@@ -2124,12 +2156,11 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipating;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    int nsuccess;
-   int e, h;
+   int h;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
-   assert(nlhdlrssuccess != NULL);
-   assert(nlhdlrssuccessexprdata != NULL);
+   assert(nlhdlrenfobuffer != NULL);
    assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2184,6 +2215,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrexprdata = NULL;
       enforcemethodsnew = enforcemethods;
       nlhdlrparticipating = SCIP_CONSEXPR_EXPRENFO_NONE;
+      conshdlrdata->registerusesactivitysepa = FALSE;  /* following SCIPregisterConsExprExprUsage() may set this to TRUE */
       SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to nlhdlrenforcemethods, so previous enforcemethods must still be set */
@@ -2214,9 +2246,12 @@ SCIP_RETCODE detectNlhdlr(
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
 
       /* remember nlhdlr and its data */
-      nlhdlrssuccess[nsuccess] = nlhdlr;
-      nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
-      nlhdlrparticipation[nsuccess] = nlhdlrparticipating;
+      SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrenfobuffer[nsuccess]) );
+      nlhdlrenfobuffer[nsuccess]->nlhdlr = nlhdlr;
+      nlhdlrenfobuffer[nsuccess]->nlhdlrexprdata = nlhdlrexprdata;
+      nlhdlrenfobuffer[nsuccess]->nlhdlrparticipation = nlhdlrparticipating;
+      nlhdlrenfobuffer[nsuccess]->issepainit = FALSE;
+      nlhdlrenfobuffer[nsuccess]->sepausesactivity = conshdlrdata->registerusesactivitysepa;
       ++nsuccess;
 
       /* update enforcement flags */
@@ -2277,18 +2312,10 @@ SCIP_RETCODE detectNlhdlr(
 
    /* sort nonlinear handlers by enforcement priority, in decreasing order */
    if( nsuccess > 1 )
-      SCIPsortDownPtrPtr((void**)nlhdlrssuccess, (void**)nlhdlrssuccessexprdata, nlhdlrEnfoCmp, nsuccess);
+      SCIPsortDownPtr((void**)nlhdlrenfobuffer, enfodataCmp, nsuccess);
 
    /* copy collected nlhdlrs into expr->enfos */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
-   for( e = 0; e < nsuccess; ++e )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
-      expr->enfos[e]->nlhdlr = nlhdlrssuccess[e];
-      expr->enfos[e]->nlhdlrexprdata = nlhdlrssuccessexprdata[e];
-      expr->enfos[e]->nlhdlrparticipation = nlhdlrparticipation[e];
-      expr->enfos[e]->issepainit = FALSE;
-   }
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->enfos, nlhdlrenfobuffer, nsuccess) );
    expr->nenfos = nsuccess;
 
    return SCIP_OKAY;
@@ -2305,9 +2332,7 @@ SCIP_RETCODE detectNlhdlrs(
    int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
 {
-   SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess;   /* buffer for nlhdlrs that had success detecting structure at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /* buffer for exprdata of nlhdlrs */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation; /* buffer for participation of nlhdlrs */
+   SCIP_CONSEXPR_EXPRENFO** nlhdlrenfobuffer;   /* buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
@@ -2325,9 +2350,7 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    /* allocate some buffer for temporary storage of nlhdlr detect result */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrparticipation, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrenfobuffer, conshdlrdata->nnlhdlrs) );
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
@@ -2396,7 +2419,7 @@ SCIP_RETCODE detectNlhdlrs(
              */
             if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
             {
-               SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, nlhdlrparticipation, infeasible, nchgbds) );
+               SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrenfobuffer, infeasible, nchgbds) );
 
                if( *infeasible )
                   break;
@@ -2429,9 +2452,7 @@ SCIP_RETCODE detectNlhdlrs(
    }
 
    SCIPexpriteratorFree(&it);
-   SCIPfreeBufferArray(scip, &nlhdlrparticipation);
-   SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
-   SCIPfreeBufferArray(scip, &nlhdlrssuccess);
+   SCIPfreeBufferArray(scip, &nlhdlrenfobuffer);
 
    return SCIP_OKAY;
 }
@@ -15182,7 +15203,12 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
       ++(expr->nactivityusesprop);
 
    if( useactivityforsepa )
+   {
       ++(expr->nactivityusessepa);
+
+      /* remember that SCIPregisterConsExprExprUsage() has been called with useactivityforsepa=TRUE, used in detectNlhdlr() */
+      SCIPconshdlrGetData(conshdlr)->registerusesactivitysepa = TRUE;
+   }
 
    if( useactivityforprop )
    {
