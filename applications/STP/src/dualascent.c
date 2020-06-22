@@ -295,7 +295,7 @@ void dapathsFreeMembers(
 
 /** returns whether node realtail is active or leads to active node other than dfsbase */
 static inline
-SCIP_Bool is_active(
+SCIP_Bool daNodeIsActive(
    const int*            active,             /**< active nodes array */
    int                   realtail,           /**< vertex to start from */
    int                   dfsbase             /**< DFS source vertex */
@@ -312,39 +312,60 @@ SCIP_Bool is_active(
 }
 
 
-/**@} */
+/** initializes */
+static
+void daInitRescaps(
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            edgemap,            /**< CSR ancestor edge array */
+   int                   ncsredges,          /**< number of CSR edges */
+   SCIP_Real* RESTRICT   rescap,             /**< residual capacity */
+   SCIP_Real*            dualobj             /**< dual objective */
+)
+{
+   for( int i = 0; i < ncsredges; i++ )
+      rescap[i] = g->cost[edgemap[i]];
 
-/**@name Interface methods
- *
- * @{
- */
+   *dualobj = 0.0;
+}
+
+
+/** updates */
+static
+void daUpdateRescaps(
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            edgemap,            /**< CSR ancestor edge array */
+   int                   ncsredges,          /**< number of CSR edges */
+   SCIP_Real*            rescap              /**< residual capacity */
+)
+{
+   for( int i = 0; i < ncsredges; i++ )
+   {
+      const int edgeorg = edgemap[i];
+      assert(edgeorg >= i);
+      assert(graph_edge_isInRange(g, edgeorg));
+
+      rescap[i] = rescap[edgeorg];
+   }
+}
+
 
 /** initializes */
 static
-SCIP_RETCODE initDualAscent(
+SCIP_RETCODE daInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
-   const int* RESTRICT   start,              /**< CSR start array [0,...,nnodes] */
-   const int* RESTRICT   edgearr,            /**< CSR ancestor edge array */
    int                   root,               /**< the root */
    SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   int                   ncsredges,          /**< number of CSR edges */
    int*                  gmark,              /**< array for marking nodes */
    int* RESTRICT         active,             /**< active vertices mark */
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    GNODE*                gnodearr,           /**< array containing terminal nodes*/
-   SCIP_Real* RESTRICT   rescap,             /**< residual capacity */
-   SCIP_Real*            dualobj,            /**< dual objective */
    int*                  augmentingcomponent /**< augmenting component */
 )
 {
    const int nnodes = g->knots;
 
-   *dualobj = 0.0;
    *augmentingcomponent = -1;
-
-   for( int i = 0; i < ncsredges; i++ )
-      rescap[i] = g->cost[edgearr[i]];
 
    /* mark terminals as active, add all except root to pqueue */
    for( int i = 0, termcount = 0; i < nnodes; i++ )
@@ -412,20 +433,22 @@ SCIP_RETCODE initDualAscent(
    return SCIP_OKAY;
 }
 
+
 /** dual ascent heuristic */
-SCIP_RETCODE dualascent_exec(
+static
+SCIP_RETCODE daExec(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const int*            result,             /**< solution array or NULL */
    const DAPARAMS*       daparams,           /**< parameter */
-   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Bool             updateRescaps,      /**< update? */
+   SCIP_Real* RESTRICT   rescap,             /**< residual capacities aka reduced costs */
    SCIP_Real*            objval              /**< pointer to store objective value */
 )
 {
    SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
-   SCIP_Real* RESTRICT rescap;
    GNODE* gnodearr;
    int* RESTRICT edgearr;
    int* RESTRICT tailarr;
@@ -451,17 +474,14 @@ SCIP_RETCODE dualascent_exec(
    const SCIP_Bool addcuts = daparams->addcuts;
    const SCIP_Bool is_pseudoroot = daparams->is_pseudoroot;
 
-   /* should currently not  be activated */
-   assert(addconss || !addcuts);
-   assert(g != NULL);
-   assert(scip != NULL);
-   assert(objval != NULL);
-   assert(Is_term(g->term[root]));
+   assert(rescap);
+   assert(addconss || !addcuts);  /* should currently not  be activated */
    assert(maxdeviation >= DA_MAXDEVIATION_LOWER && maxdeviation <= DA_MAXDEVIATION_UPPER);
    assert(daparams->damaxdeviation == -1.0 || daparams->damaxdeviation > 0.0);
 
-   if( nnodes == 1 )
-      return SCIP_OKAY;
+   /* if specified root is not a terminal, take default root */
+   if( root < 0 || !Is_term(g->term[root]) )
+      root = g->source;
 
    if( addcuts )
    {
@@ -479,10 +499,6 @@ SCIP_RETCODE dualascent_exec(
       vars = NULL;
    }
 
-   /* if specified root is not a terminal, take default root */
-   if( root < 0 || !Is_term(g->term[root]) )
-      root = g->source;
-
 #ifdef BITFIELDSARRAY
    u_int32_t* bitarr;
    SCIP_CALL( SCIPallocBufferArray(scip, &bitarr, nedges / ARRLENGTH + 1) );
@@ -491,12 +507,6 @@ SCIP_RETCODE dualascent_exec(
    stacklength = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &unsattails, nedges) );
-
-   if( redcost == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
-   else
-      rescap = redcost;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
 
@@ -517,9 +527,13 @@ SCIP_RETCODE dualascent_exec(
    /* fill auxiliary adjacent vertex/edges arrays */
    graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
 
-   /* initialize priority queue and res. capacity */
-   SCIP_CALL( initDualAscent(scip, g, start, edgearr, root, is_pseudoroot, ncsredges, gmark, active, pqueue,
-         gnodearr, rescap, &dualobj, &augmentingcomponent) );
+   if( updateRescaps )
+      daUpdateRescaps(g, edgearr, ncsredges, rescap);
+   else
+      daInitRescaps(g, edgearr, ncsredges, rescap, &dualobj);
+
+   SCIP_CALL( daInit(scip, g, root, is_pseudoroot, gmark, active, pqueue,
+         gnodearr, &augmentingcomponent) );
 
    /* mark whether an arc is satisfied (has capacity 0) */
    for( int i = 0; i < ncsredges; i++ )
@@ -530,8 +544,10 @@ SCIP_RETCODE dualascent_exec(
       else
          CleanBit(bitarr, i);
 #else
-      if( rescap[i] == 0.0 )
+      if( EQ(rescap[i], 0.0) )
       {
+         rescap[i] = 0.0;
+
          if( active[tailarr[i] - 1] == 0 )
             tailarr[i] = 0;
          else
@@ -621,7 +637,7 @@ SCIP_RETCODE dualascent_exec(
                            continue;
 
                         /* is realtail active or does realtail lead to an active vertex other than v? */
-                        if( is_active(active, realtail, v) )
+                        if( daNodeIsActive(active, realtail, v) )
                         {
                            active[v] = realtail + 1;
                            stacklength = 0;
@@ -786,7 +802,7 @@ SCIP_RETCODE dualascent_exec(
 
                   tailarr[a] *= -1;
 
-                  if( active[tail - 1] >= 0 && is_active(active, tail - 1, v) )
+                  if( active[tail - 1] >= 0 && daNodeIsActive(active, tail - 1, v) )
                   {
                      assert(tail - 1 != v);
                      tailarr[a] = 0;
@@ -948,16 +964,83 @@ SCIP_RETCODE dualascent_exec(
    SCIPfreeBufferArray(scip, &unsatarcs);
    SCIPfreeBufferArray(scip, &cutverts);
 
-
    assert(dualascent_allTermsReachable(scip, g, root, rescap));
-
-   if( redcost == NULL )
-      SCIPfreeBufferArray(scip, &rescap);
 
    SCIPfreeBufferArray(scip, &unsattails);
 
    return SCIP_OKAY;
 }
+
+
+/**@} */
+
+/**@name Interface methods
+ *
+ * @{
+ */
+
+
+
+/** dual ascent heuristic */
+SCIP_RETCODE dualascent_exec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array or NULL */
+   const DAPARAMS*       daparams,           /**< parameter */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval              /**< pointer to store objective value */
+)
+{
+   SCIP_Real* RESTRICT rescap;
+
+   assert(scip && g && daparams && objval);
+
+   if( g->knots == 1 )
+      return SCIP_OKAY;
+
+   if( redcost == NULL )
+      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, g->edges) );
+   else
+      rescap = redcost;
+
+   SCIP_CALL( daExec(scip, g, result, daparams, FALSE, rescap, objval) );
+
+   if( redcost == NULL )
+      SCIPfreeBufferArray(scip, &rescap);
+
+   return SCIP_OKAY;
+}
+
+
+/** updates reduced costs with dual ascent heuristic */
+SCIP_RETCODE dualascent_update(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array or NULL */
+   const DAPARAMS*       daparams,           /**< parameter */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
+   SCIP_Real*            objval              /**< pointer to store objective value */
+)
+{
+   assert(scip && g && daparams && objval && redcost);
+   assert(GE(*objval, 0.0));
+
+   if( g->knots == 1 )
+      return SCIP_OKAY;
+
+   assert(!dualascent_allTermsReachable(scip, g, daparams->root, redcost));
+
+   printf("dual bound before %f \n", *objval);
+
+   SCIP_CALL( daExec(scip, g, result, daparams, TRUE, redcost, objval) );
+
+   printf("dual bound after %f \n", *objval);
+
+   assert(dualascent_allTermsReachable(scip, g, daparams->root, redcost));
+
+   return SCIP_OKAY;
+}
+
 
 /** dual ascent heuristic for PCSPG and MWCSP */
 SCIP_RETCODE dualascent_execPcMw(
@@ -1429,6 +1512,10 @@ SCIP_Bool dualascent_allTermsReachable(
    int qsize;
    const int nnodes = graph_get_nNodes(g);
    int termscount;
+
+   assert(scip && redcost);
+   assert(graph_knot_isInRange(g, root));
+   assert(Is_term(g->term[root]));
 
    SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &queue, nnodes ) );
    SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &scanned, nnodes) );
