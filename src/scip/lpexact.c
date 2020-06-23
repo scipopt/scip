@@ -3639,13 +3639,13 @@ SCIP_RETCODE lpExactFlushAndSolve(
       SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
 
    /* solve with given settings (usually fast but imprecise) */
-   if( SCIPsetIsInfinity(set, lp->cutoffbound) )
+   if( SCIPsetIsInfinity(set, lpexact->cutoffbound) )
    {
-      SCIP_CALL( lpExactSetObjlim(lpexact, set, lp->cutoffbound, &success) );
+      SCIP_CALL( lpExactSetObjlim(lpexact, set, lpexact->cutoffbound, &success) );
    }
    else
    {
-      SCIP_CALL( lpExactSetObjlim(lpexact, set, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS), &success) );
+      SCIP_CALL( lpExactSetObjlim(lpexact, set, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS), &success) );
    }
    SCIP_CALL( lpExactSetIterationLimit(lpexact, harditlim) );
 
