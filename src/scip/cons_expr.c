@@ -15224,10 +15224,9 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    {
       /* if activity will be used for propagation, then make sure there is a valid activity
        * this way, we can do a reversepropcall after detectNlhdlr
-       * TODO should we call with validsufficient = FALSE?
        */
       SCIP_INTERVAL activity;
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, TRUE) );
    }
 
    /* increase the nactivityusedsepa counter for all variables used in the given expression */
