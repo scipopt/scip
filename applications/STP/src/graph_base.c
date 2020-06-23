@@ -3204,26 +3204,28 @@ void graph_mark(
 {
    const int nnodes = graph_get_nNodes(g);
    const int root = g->source;
+   const int* const grad = g->grad;
+   int* RESTRICT isMarked = g->mark;
 
    for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = (g->grad[k] > 0);
+      isMarked[k] = (grad[k] > 0);
 
-   g->mark[root] = TRUE;
+   isMarked[root] = TRUE;
 
    if( graph_pc_isPcMw(g) && !g->extended )
    {
       for( int k = 0; k < nnodes; k++ )
       {
          if( Is_pseudoTerm(g->term[k]) )
-            g->mark[k] = FALSE;
+            isMarked[k] = FALSE;
          else if( Is_term(g->term[k]) )
-            g->mark[k] = TRUE;
+            isMarked[k] = TRUE;
       }
 
       if( graph_pc_isRootedPcMw(g) )
-         g->mark[root] = TRUE;
+         isMarked[root] = TRUE;
       else
-         g->mark[root] = FALSE;
+         isMarked[root] = FALSE;
    }
 
    assert(graph_isMarked(g));
