@@ -65,8 +65,11 @@ Known bugs
 
 @page RN70 Release notes for SCIP 7.0
 
-@section RN701 SCIP 7.0.1
+@section RN000 SCIP 7.0.2
 *************************
+
+Features
+--------
 
 Performance improvements
 ------------------------
@@ -107,6 +110,25 @@ Build system
 
 ### Cmake
 
+### Makefile
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN701 SCIP 7.0.1
+*************************
+
+Build system
+------------
+
+### Cmake
+
 - Fixed cmake module for Ipopt to support Ipopt 3.13
 - Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
 - Added warning to require minimal GCC version 4.8
@@ -134,9 +156,6 @@ Miscellaneous
 
 - Variables that are marked as relaxation-only are no longer checked against debug solutions if
   they are captured by the transformed problem only.
-
-Known bugs
-----------
 
 @section RN700 SCIP 7.0.0
 *************************
