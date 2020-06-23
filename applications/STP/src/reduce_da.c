@@ -2064,6 +2064,44 @@ int reducePcMwTryBest(
    return 0;
 }
 
+
+/** dual ascent path based reductions */
+SCIP_RETCODE reduce_dapaths(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp,            /**< pointer to store offset */
+   int*                  nelims              /**< pointer to store number of reduced edges */
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+   int* RESTRICT result;
+   SCIP_Real* RESTRICT redcosts;
+   SCIP_Real objbound_upper;
+   SCIP_Real objbound_lower;
+
+   assert(scip && offsetp && nelims);
+   assert(*nelims >= 0);
+
+   if( g->terms <= 2 )
+      return SCIP_OKAY;
+
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
+
+
+   SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
+   SCIP_CALL( dualascent_pathsPcMw(scip, g, redcosts, &objbound_lower, NULL) );
+
+// todo do the reudctions here...
+
+   SCIPfreeBufferArray(scip, &redcosts);
+   SCIPfreeBufferArray(scip, &result);
+
+
+   return SCIP_OKAY;
+}
+
 /** dual ascent based reductions */
 SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -37,7 +37,8 @@
 #define DA_MAXDEVIATION_LOWER   0.01  /**< lower bound for max deviation for dual ascent */
 #define DA_MAXDEVIATION_UPPER   0.9   /**< upper bound for max deviation for dual ascent */
 #define DA_EPS                  (5e-7)
-#define DAPATHS_HITLIMIT 20
+#define DAPATHS_HITLIMIT_PCMW 20
+#define DAPATHS_HITLIMIT      10
 
 /* do depth-first search */
 #define DFS
@@ -65,6 +66,7 @@ typedef struct dual_ascent_paths
    SCIP_Real             maxdist;            /**< current max distance */
    int                   nstartnodes;        /**< number of */
    int                   centernode;         /**< node for PC/MW */
+   SCIP_Bool             isUnrootedPcMw;     /**< un-rooted PC or MW? */
 } DAPATHS;
 
 
@@ -83,15 +85,15 @@ typedef struct dual_ascent_paths
 /** sets shortest path parameters: start node and abort nodes */
 static
 void dapathsSetRunParams(
-   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   const GRAPH*          graph,              /**< graph */
    DAPATHS*              dapaths             /**< to be initialized */
    )
 {
    SCIP_Bool* RESTRICT nodes_abort = dapaths->nodes_abort;
    int* RESTRICT startnodes = dapaths->startnodes;
-   const int nnodes = graph_get_nNodes(transgraph);
-   const int root = transgraph->source;
-   int centernode = -1;
+   const int nnodes = graph_get_nNodes(graph);
+   const int root = graph->source;
+   int centernode = UNKNOWN;
    int nstartnodes = 0;
 
    BMSclearMemoryArray(nodes_abort, nnodes);
@@ -99,23 +101,26 @@ void dapathsSetRunParams(
 
    for( int i = 0; i < nnodes; i++ )
    {
-      if( !Is_term(transgraph->term[i]) )
+      if( !Is_term(graph->term[i]) )
          continue;
 
-      if( i == root )
-         continue;
-
-      assert(transgraph->grad[i] == 2);
-
-      if( nstartnodes == 0 )
+      if( dapaths->isUnrootedPcMw )
       {
-         for( int e = transgraph->inpbeg[i]; e != EAT_LAST; e = transgraph->ieat[e] )
+         if( i == root )
+            continue;
+
+         assert(graph->grad[i] == 2);
+
+         if( nstartnodes == 0 )
          {
-            if( GT(transgraph->cost[e], 0.0) )
+            for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
             {
-               centernode = transgraph->tail[e];
-               assert(transgraph->grad[centernode] == 2 * (transgraph->terms - 1));
-               nodes_abort[centernode] = TRUE;
+               if( GT(graph->cost[e], 0.0) )
+               {
+                  centernode = graph->tail[e];
+                  assert(graph->grad[centernode] == 2 * (graph->terms - 1));
+                  nodes_abort[centernode] = TRUE;
+               }
             }
          }
       }
@@ -128,7 +133,7 @@ void dapathsSetRunParams(
    dapaths->nstartnodes = nstartnodes;
    dapaths->maxdist = -FARAWAY;
    dapaths->centernode = centernode;
-   assert(transgraph->outbeg[root] >= 0);
+   assert(graph->outbeg[root] >= 0);
 }
 
 
@@ -136,13 +141,12 @@ void dapathsSetRunParams(
 static
 SCIP_RETCODE dapathsInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   const GRAPH*          graph,              /**< graph */
    DAPATHS*              dapaths             /**< to be initialized */
    )
 {
-   const int nnodes = graph_get_nNodes(transgraph);
-   SCIP_CALL( graph_dijkLimited_init(scip, transgraph, &(dapaths->dijklimited)) );
-
+   const int nnodes = graph_get_nNodes(graph);
+   SCIP_CALL( graph_dijkLimited_init(scip, graph, &(dapaths->dijklimited)) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->nodes_hits), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(dapaths->nodes_abort), nnodes) );
@@ -150,7 +154,7 @@ SCIP_RETCODE dapathsInit(
 
    BMSclearMemoryArray(dapaths->nodes_hits, nnodes);
 
-   dapathsSetRunParams(transgraph, dapaths);
+   dapathsSetRunParams(graph, dapaths);
 
    return SCIP_OKAY;
 }
@@ -159,14 +163,14 @@ SCIP_RETCODE dapathsInit(
 /** initializes reduced costs */
 static
 void dapathsInitRedCosts(
-   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   const GRAPH*          graph,              /**< graph; possibly transformed SAP graph */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
    SCIP_Real*            objval              /**< pointer to store (dual) objective value */
 )
 {
-   const int nedges = graph_get_nEdges(transgraph);
+   const int nedges = graph_get_nEdges(graph);
 
-   BMScopyMemoryArray(redcost, transgraph->cost, nedges);
+   BMScopyMemoryArray(redcost, graph->cost, nedges);
    *objval = 0.0;
 }
 
@@ -174,8 +178,8 @@ void dapathsInitRedCosts(
 /** updates reduced costs and hit count */
 static
 void dapathsUpdate(
-   const GRAPH*          transgraph,         /**< transformed SAP graph */
-   const DAPATHS*        dapaths,            /**< to be initialized */
+   const GRAPH*          g,                  /**< graph */
+   const DAPATHS*        dapaths,            /**< DA paths data */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
    SCIP_Real*            objval              /**< pointer to store (dual) objective value */
 )
@@ -187,12 +191,11 @@ void dapathsUpdate(
    const int nvisits = dijklimited->nvisits;
    int* RESTRICT nodes_hits = dapaths->nodes_hits;
    SCIP_Bool* RESTRICT nodes_abort = dapaths->nodes_abort;
+   const int hitlimit = dapaths->isUnrootedPcMw ? DAPATHS_HITLIMIT_PCMW : DAPATHS_HITLIMIT;
 
    assert(GE(maxdist, 0.0));
    assert(GE(*objval, 0.0));
    assert(nvisits >= 0);
-
-   //printf("update with maxdist=%f: \n", maxdist);
 
    // go over all visited...in and out separated.. todo maybe use visited edge list if slow
    for( int k = 0; k < nvisits; k++ )
@@ -200,9 +203,9 @@ void dapathsUpdate(
       const int node_i = visitlist[k];
       const SCIP_Real dist_i = MIN(node_distance[node_i], maxdist);
 
-      assert(graph_knot_isInRange(transgraph, node_i));
+      assert(graph_knot_isInRange(g, node_i));
 
-      if( nodes_hits[node_i] > DAPATHS_HITLIMIT )
+      if( nodes_hits[node_i] > hitlimit )
       {
          nodes_abort[node_i] = TRUE;
       }
@@ -211,9 +214,9 @@ void dapathsUpdate(
          nodes_hits[node_i]++;
       }
 
-      for( int e = transgraph->outbeg[node_i]; e >= 0; e = transgraph->oeat[e] )
+      for( int e = g->outbeg[node_i]; e >= 0; e = g->oeat[e] )
       {
-         const int node_j = transgraph->head[e];
+         const int node_j = g->head[e];
          const SCIP_Real dist_j = node_distance[node_j];
 
          if( LT(dist_j, maxdist) )
@@ -227,7 +230,7 @@ void dapathsUpdate(
                redcost[e] = 0.0;
 
 #if 0
-            if( !Is_term(transgraph->term[node_i]) && !Is_term(transgraph->term[node_j]) )
+            if( !Is_term(g->term[node_i]) && !Is_term(g->term[node_j]) )
             {
                printf("%d->%d...c=%f \n", node_i, node_j, redcost[e]);
             }
@@ -243,7 +246,7 @@ void dapathsUpdate(
 /** runs */
 static
 void dapathsRunShortestPaths(
-   const GRAPH*          transgraph,         /**< transformed SAP graph */
+   const GRAPH*          graph,              /**< graph; possibly transformed SAP graph */
    DAPATHS*              dapaths,            /**< to be initialized */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
    SCIP_Real*            objval              /**< objective */
@@ -254,28 +257,29 @@ void dapathsRunShortestPaths(
    DIJK* dijklimited = dapaths->dijklimited;
    const int nstarts = dapaths->nstartnodes;
 
-   dapathsInitRedCosts(transgraph, redcost, objval);
+   dapathsInitRedCosts(graph, redcost, objval);
 
    for( int i = 0; i < nstarts; i++ )
    {
       const int start = startnodes[i];
-      assert(graph_knot_isInRange(transgraph, start) && Is_term(transgraph->term[start]));
+      assert(graph_knot_isInRange(graph, start) && Is_term(graph->term[start]));
 
-      graph_pathInLimitedExec(transgraph, redcost, nodes_abort, start, dijklimited, &(dapaths->maxdist));
-      dapathsUpdate(transgraph, dapaths, redcost, objval);
+      graph_pathInLimitedExec(graph, redcost, nodes_abort, start, dijklimited, &(dapaths->maxdist));
+      dapathsUpdate(graph, dapaths, redcost, objval);
 
-      graph_dijkLimited_reset(transgraph, dijklimited);
+      graph_dijkLimited_reset(graph, dijklimited);
    }
 
-   /* finally we make sure that we reach the root */
-#if 1
-   assert(nodes_abort[dapaths->centernode]);
+   /* for PC/MW we make sure that we reach the root */
+   if( dapaths->isUnrootedPcMw )
+   {
+      assert(nodes_abort[dapaths->centernode]);
 
-   BMSclearMemoryArray(dapaths->nodes_abort, transgraph->knots);
-   nodes_abort[transgraph->source] = TRUE;
-   graph_pathInLimitedExec(transgraph, redcost, nodes_abort, dapaths->centernode, dijklimited, &(dapaths->maxdist));
-   dapathsUpdate(transgraph, dapaths, redcost, objval);
-#endif
+      BMSclearMemoryArray(dapaths->nodes_abort, graph->knots);
+      nodes_abort[graph->source] = TRUE;
+      graph_pathInLimitedExec(graph, redcost, nodes_abort, dapaths->centernode, dijklimited, &(dapaths->maxdist));
+      dapathsUpdate(graph, dapaths, redcost, objval);
+   }
 }
 
 
@@ -1499,13 +1503,38 @@ SCIP_RETCODE dualascent_pathsPcMw(
    const int*            result              /**< solution array or NULL */
 )
 {
-   DAPATHS dapaths = { NULL, NULL, NULL, NULL, -1.0, -1, -1 };
+   DAPATHS dapaths = { NULL, NULL, NULL, NULL, -1.0, -1, -1, .isUnrootedPcMw = TRUE };
 
    assert(scip && transgraph && redcost && objval);
 
    SCIP_CALL( dapathsInit(scip, transgraph, &dapaths) );
 
    dapathsRunShortestPaths(transgraph, &dapaths, redcost, objval);
+
+   dapathsFreeMembers(scip, &dapaths);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** path based dual ascent heuristic */
+SCIP_RETCODE dualascent_paths(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
+   SCIP_Real*            objval,             /**< pointer to store (dual) objective value */
+   const int*            result              /**< solution array or NULL */
+)
+{
+   DAPATHS dapaths = { NULL, NULL, NULL, NULL, -1.0, -1, -1, .isUnrootedPcMw = FALSE };
+
+   assert(scip && graph && redcost && objval);
+   assert(!graph_pc_isPcMw(graph) || graph_pc_isRootedPcMw(graph));
+
+   SCIP_CALL( dapathsInit(scip, graph, &dapaths) );
+
+   dapathsRunShortestPaths(graph, &dapaths, redcost, objval);
 
    dapathsFreeMembers(scip, &dapaths);
 
