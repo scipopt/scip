@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -69,7 +69,6 @@ void SCIPaddSquareSecant(
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
    SCIP_Real             lb,                 /**< lower bound on variable */
    SCIP_Real             ub,                 /**< upper bound on variable */
-   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
    SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
    SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */

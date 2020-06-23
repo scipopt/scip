@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +41,7 @@
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
  * - is a framework for branch-and-cut-and-price.
  *
- * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+ * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  *
  * @section TABLEOFCONTENTS Structure of this manual
@@ -58,6 +58,7 @@
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
  *  - @subpage CHG                 Release notes and changelog
  *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
  * @section QUICKSTART Quickstart
@@ -230,7 +231,13 @@
  *
  * A list of all current and former developers as well as contributors can
  * be found on the
- * <a class="el" href="http://scip.zib.de/#developers">Main Web Page</a>.
+ * <a class="el" href="http://scipopt.org/#developers">Main Web Page</a>.
+ *
+ */
+
+/**@page EXTERNALDOC  Links to external documentation
+ *
+ * <a class="el" href="https://www.cgudapati.com/integer-programming/2019/12/15/Getting-Started-With-SCIP-Optimization-Suite.html">Getting Started with SCIP optimization in C++: A toy example</a> by Chaitanya Gudapati.
  *
  */
 
@@ -463,7 +470,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -1266,12 +1273,12 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
@@ -7880,7 +7887,6 @@
  * @brief methods for reoptimization related tasks
  */
 
-
 /** @defgroup DataStructures Data Structures
  *  @ingroup PUBLICCOREAPI
  *  @brief commonly used data structures
@@ -8262,6 +8268,11 @@
  * @ingroup INTERNALAPI
  * @brief headers and methods for the parallel interface of \SCIP
  *
+ */
+
+/**@defgroup PublicSymmetryMethods Symmetry
+ * @ingroup INTERNALAPI
+ * @brief methods for symmetry handling
  */
 
 /**@defgroup EXPRINTS Expression Interpreter

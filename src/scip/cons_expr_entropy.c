@@ -400,7 +400,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
-   SCIP_Real refpoint;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -421,12 +420,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
-
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-   /* reference point is outside the domain of f(x) = -x*log(x) */
-   if( refpoint < 0.0 )
-      return SCIP_OKAY;
 
    /* use secant for underestimate (locally valid) */
    if( !overestimate )
@@ -457,9 +450,20 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
    /* use gradient cut for underestimate (globally valid) */
    else
    {
-      /* no gradient cut possible if reference point is too close at 0 */
-      if( SCIPisZero(scip, refpoint) )
-         return SCIP_OKAY;
+      SCIP_Real refpoint;
+      refpoint = SCIPgetSolVal(scip, sol, childvar);
+
+      if( !SCIPisPositive(scip, refpoint) )
+      {
+         /* if refpoint is 0 (then lb=0 probably) or negative, then slope is infinite (or not defined), then try to move away from 0 */
+         if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
+            return SCIP_OKAY;
+
+         if( SCIPvarGetUbLocal(childvar) < 0.2 )
+            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
+         else
+            refpoint = 0.1;
+      }
 
       /* -x*(1+log(x*)) + x* <= -x*log(x) */
       *coefs = -(1.0 + log(refpoint));

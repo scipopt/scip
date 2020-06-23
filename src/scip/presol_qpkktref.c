@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1871,7 +1871,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* desired structure: matrix associated to quadratic constraint is indefinite; otherwise, the problem usually can be
     * solved faster by standard methods
     */
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
 
    if( !presoldata->updatequadindef && (curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE) )
    {
