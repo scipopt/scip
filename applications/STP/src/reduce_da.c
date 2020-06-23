@@ -454,21 +454,23 @@ SCIP_RETCODE daInitializeDistances(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */
    REDCOST*              redcostdata,        /**< reduced cost data */
-   int*                  pathedge,           /**< path edge */
    int*                  state               /**< state */
    )
 {
+   int* pathedge;
    const int daroot = redcostdata->redCostRoot;
    const SCIP_Real* const redcosts = redcostdata->redEdgeCost;
    PATH* const vnoi = redcostdata->nodeTo3TermsPaths;
    SCIP_Real* const pathdist = redcostdata->rootToNodeDist;
    int* const vbase = redcostdata->nodeTo3TermsBases;
    SCIP_Real* costrev = NULL;
-   const int nedges = g->edges;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
    const SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_NWSPG);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes + 1) );
 
    /* distance from root to all nodes */
    graph_path_execX(scip, g, daroot, redcosts, pathdist, pathedge);
@@ -495,8 +497,6 @@ SCIP_RETCODE daInitializeDistances(
 
 #ifndef NDEBUG
       {
-         const int nnodes = g->knots;
-
          for( int i = 0; i < nnodes; i++ )
          {
             if( !g->mark[i] )
@@ -517,6 +517,7 @@ SCIP_RETCODE daInitializeDistances(
    if( isRpcmw )
       graph_pc_2org(scip, g);
 
+   SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &costrev);
 
    return SCIP_OKAY;
@@ -2113,7 +2114,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  vbase,              /**< array for Voronoi bases */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
-   int*                  pathedge,           /**< array for predecessor edge on a path */
    STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
@@ -2246,7 +2246,7 @@ SCIP_RETCODE reduce_da(
          for( int e = 0; e < nedges; e++ )
             arcsdeleted[e] = FALSE;
 
-         daInitializeDistances(scip, graph, &redcostdata, pathedge, state);
+         SCIP_CALL( daInitializeDistances(scip, graph, &redcostdata, state) );
          updateNodeFixingBounds(nodefixingbounds, graph, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, nedges, (run == 0), TRUE);
 
