@@ -2008,7 +2008,6 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::ABORT_VALUE:
    case SPxSolver::SINGULAR:
    case SPxSolver::REGULAR:
-   case SPxSolver::UNKNOWN:
    case SPxSolver::OPTIMAL:
 #if SOPLEX_APIVERSION >= 3
    case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
@@ -2016,6 +2015,7 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
+   case SPxSolver::UNKNOWN:
    default:
       return SCIP_LPERROR;
    }  /*lint !e788*/

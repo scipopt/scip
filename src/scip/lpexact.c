@@ -3729,10 +3729,12 @@ SCIP_RETCODE lpExactFlushAndSolve(
       else
       {
          SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
-            stat->nnodes, algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
-         lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         lpexact->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-         return SCIP_LPERROR;
+            stat->nnodes, &algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lp->solved = FALSE;
+         *lperror = TRUE;
+         return SCIP_OKAY;
       }
    }
    while( solveagain == TRUE );
@@ -3789,11 +3791,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    needprimalray = TRUE;
    needdualray = TRUE;
 
-   /* we need to overwrite the fp lp solution in the lp if we had, e.g. bound violations before */
-   if( !(lp->primalfeasible) || !(lp->dualfeasible) )
-      overwritefplp = TRUE;
-   else
-      overwritefplp = FALSE;
+   /* to avoid complications, we just always overwrite the fp lp */
+   overwritefplp = TRUE;
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
    harditlim = (int) MIN(itlim, INT_MAX);
