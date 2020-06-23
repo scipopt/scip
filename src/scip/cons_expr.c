@@ -2351,6 +2351,7 @@ SCIP_RETCODE detectNlhdlrs(
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
 
    /* allocate some buffer for temporary storage of nlhdlr detect result */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrenfobuffer, conshdlrdata->nnlhdlrs) );
@@ -2393,19 +2394,18 @@ SCIP_RETCODE detectNlhdlrs(
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
-      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
-      expr = SCIPexpriteratorGetCurrent(it);
-      while( !SCIPexpriteratorIsEnd(it) )
+      /* run detectNlhdlr on all expr where required */
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
       {
          if( expr->nenfos > 0 )
          {
-            assert(expr->enfoinitialized);
-
             /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
              * then also the subtree has been investigated already and we can stop iterating further down
              * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
              * thus, if expr is the root expression, then rerun DETECT
              */
+            assert(expr->enfoinitialized);
+
             if( expr == consdata->expr )
             {
                SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
@@ -2413,33 +2413,31 @@ SCIP_RETCODE detectNlhdlrs(
             }
          }
 
-         if( !expr->enfoinitialized )
+         /* skip exprs that we already looked at (but did not do freeEnfoData again) */
+         if( expr->enfoinitialized )
+            continue;
+
+         /* if there is auxvar usage, then some-one requires that
+          *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
+          *   thus, we need to find nlhdlrs that separate or estimate
+          * if there is activity usage, then there is some-one requiring that
+          *   activity of this expression is updated
+          *   thus, we need to find nlhdlrs that do interval-evaluation
+          */
+         if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
-            /* if we have not run looked at this expr yet (expr->enfoinit == FALSE) (or we looked at it but then did a freeEnfoData again)
-             * if there is auxvar usage, then some-one requires that
-             *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
-             *   thus, we need to find nlhdlrs that separate or estimate
-             * if there is activity usage, then there is some-one requiring that
-             *   activity of this expression is updated
-             *   thus, we need to find nlhdlrs that do interval-evaluation
-             */
-            if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
-            {
-               SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrenfobuffer, infeasible, nchgbds) );
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrenfobuffer, infeasible, nchgbds) );
 
-               if( *infeasible )
-                  break;
-            }
-
-            /* remember that we looked at this expression during detectNlhdlrs
-             * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
-             * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
-             * we have not initialized enforcement yet and expressions which are just not used in enforcement
-             */
-            expr->enfoinitialized = TRUE;
+            if( *infeasible )
+               break;
          }
 
-         expr = SCIPexpriteratorGetNext(it);
+         /* remember that we looked at this expression during detectNlhdlrs
+          * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
+          * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
+          * we have not initialized enforcement yet and expressions which are just not used in enforcement
+          */
+         expr->enfoinitialized = TRUE;
       }
 
       if( *infeasible )
