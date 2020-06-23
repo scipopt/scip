@@ -453,8 +453,7 @@ static
 SCIP_RETCODE daInitializeDistances(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */
-   REDCOST*              redcostdata,        /**< reduced cost data */
-   int*                  state               /**< state */
+   REDCOST*              redcostdata         /**< reduced cost data */
    )
 {
    int* pathedge;
@@ -468,6 +467,7 @@ SCIP_RETCODE daInitializeDistances(
    const int nedges = graph_get_nEdges(g);
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
    const SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_NWSPG);
+   int* state;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes + 1) );
@@ -488,11 +488,15 @@ SCIP_RETCODE daInitializeDistances(
    /* build Voronoi diagram */
    if( directed )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
+
       assert(!isRpcmw);
       graph_add1stTermPaths(g, costrev, vnoi, vbase, state);
    }
    else
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
+
       graph_get4nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
@@ -517,6 +521,7 @@ SCIP_RETCODE daInitializeDistances(
    if( isRpcmw )
       graph_pc_2org(scip, g);
 
+   SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &costrev);
 
@@ -1785,7 +1790,6 @@ SCIP_RETCODE reduceRootedProb(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
-   STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    const PATH*           vnoi,               /**< Voronoi data structure */
    const SCIP_Real*      cost,               /**< dual ascent costs */
    const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
@@ -1800,6 +1804,9 @@ SCIP_RETCODE reduceRootedProb(
    const int nnodes = graph->knots;
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
+
+   STP_Bool* nodearrchar = NULL;
+
 
    if( isRpcmw )
    {
@@ -1819,6 +1826,7 @@ SCIP_RETCODE reduceRootedProb(
 
    if( solgiven )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
       solstp_setVertexFromEdge(graph, result, nodearrchar);
    }
 
@@ -1884,6 +1892,7 @@ SCIP_RETCODE reduceRootedProb(
       }
    }
 
+   SCIPfreeBufferArrayNull(scip, &nodearrchar);
    SCIPfreeBufferArrayNull(scip, &incidents);
 
    return SCIP_OKAY;
@@ -2090,9 +2099,13 @@ SCIP_RETCODE reduce_dapaths(
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
 
+  // SCIP_CALL( daInitializeDistances(scip, g, &redcostdata, state) );
+
 
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
    SCIP_CALL( dualascent_pathsPcMw(scip, g, redcosts, &objbound_lower, NULL) );
+
+   // use a simple constructor method for REDCOST?
 
 // todo do the reudctions here...
 
@@ -2113,8 +2126,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  vbase,              /**< array for Voronoi bases */
-   int*                  state,              /**< int 4 * nnodes array for internal computations */
-   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
@@ -2246,11 +2257,11 @@ SCIP_RETCODE reduce_da(
          for( int e = 0; e < nedges; e++ )
             arcsdeleted[e] = FALSE;
 
-         SCIP_CALL( daInitializeDistances(scip, graph, &redcostdata, state) );
+         SCIP_CALL( daInitializeDistances(scip, graph, &redcostdata) );
          updateNodeFixingBounds(nodefixingbounds, graph, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, nedges, (run == 0), TRUE);
 
-         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, nodearrchar, redcostdata.nodeTo3TermsPaths, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, result, cutoffbound, redcostdata.redCostRoot, havenewsol, &ndeletions) );
+         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, redcostdata.nodeTo3TermsPaths, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, result, cutoffbound, redcostdata.redCostRoot, havenewsol, &ndeletions) );
 
          if( !SCIPisZero(scip, cutoffbound) )
          {
