@@ -2372,23 +2372,26 @@ SCIP_RETCODE detectNlhdlrs(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      /* compute integrality information for all subexpressions */
-      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
-
-      /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
-       *   this way we can treat the root expression like other expression when enforcing via separation
-       * if constraint will be propagated, then register activity usage of root expression
-       */
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, consdata->expr,
-         SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])),
-         SCIPconsIsPropagated(conss[i]),
-         FALSE, FALSE) );
-
       /* if a constraint is separated, we currently need it to be initial, too
        * this is because INITLP will create the auxiliary variables that are used for any separation
        * TODO we may relax this with a little more programming effort when required, see also TODO in INITLP
        */
       assert((!SCIPconsIsSeparated(conss[i]) && !SCIPconsIsEnforced(conss[i])) || SCIPconsIsInitial(conss[i]));
+
+      /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
+       *   this way we can treat the root expression like other expression when enforcing via separation
+       * if constraint will be propagated, then register activity usage of root expression
+       * this can trigger a call to forwardPropExpr, for which we better have the indetect flag set
+       */
+      conshdlrdata->indetect = TRUE;
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, consdata->expr,
+         SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])),
+         SCIPconsIsPropagated(conss[i]),
+         FALSE, FALSE) );
+      conshdlrdata->indetect = FALSE;
+
+      /* compute integrality information for all subexpressions */
+      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
       SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
       expr = SCIPexpriteratorGetCurrent(it);
