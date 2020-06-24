@@ -2088,6 +2088,7 @@ SCIP_RETCODE reduce_dapaths(
    int* RESTRICT result;
    STP_Bool* edges_isDeletable;
    SCIP_Real objbound_upper = FARAWAY;
+   int todo; // try node replacement (new argument!) and also try ordering with best given solution
 
    assert(scip && offsetp && nelims);
    assert(*nelims >= 0);
