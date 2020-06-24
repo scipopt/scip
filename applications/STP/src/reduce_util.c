@@ -1736,7 +1736,7 @@ SCIP_RETCODE reduce_redcostdataInit(
    SCIP*                 scip,               /**< SCIP */
    int                   nnodes,             /**< number of nodes */
    int                   nedges,             /**< number of edges */
-   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or FARAWAY if not used */
    int                   redCostRoot,        /**< graph root for reduced cost calculation */
    REDCOST*              redcostdata         /**< data to initialize */
 )

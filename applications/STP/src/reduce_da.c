@@ -495,9 +495,9 @@ SCIP_RETCODE daInitializeDistances(
    }
    else
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
 
-      graph_get4nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
+      graph_get3nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
       {
@@ -1790,23 +1790,23 @@ SCIP_RETCODE reduceRootedProb(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
-   const PATH*           vnoi,               /**< Voronoi data structure */
-   const SCIP_Real*      cost,               /**< dual ascent costs */
-   const SCIP_Real*      pathdist,           /**< distance array from shortest path calculations */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
    const int*            result,             /**< sol int array */
-   SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
-   int                   root,               /**< the root */
    SCIP_Bool             solgiven,           /**< is sol given? */
    int*                  nfixedp             /**< number of fixed edges pointer */
 )
 {
+   const PATH *vnoi = redcostdata->nodeTo3TermsPaths;
+   const SCIP_Real *cost = redcostdata->redEdgeCost;
+   const SCIP_Real *pathdist = redcostdata->rootToNodeDist;
+   const SCIP_Real cutoffbound = redcostdata->cutoff;
    int* incidents = NULL;
+   STP_Bool* nodearrchar = NULL;
    const int nnodes = graph->knots;
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
-   const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
+   const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, cutoffbound));
 
-   STP_Bool* nodearrchar = NULL;
-
+   assert(GE(cutoffbound, 0.0));
 
    if( isRpcmw )
    {
@@ -1844,7 +1844,7 @@ SCIP_RETCODE reduceRootedProb(
       redcost = pathdist[k] + vnoi[k].dist;
 
       if( isRpcmw && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
-         && SCIPisGT(scip, redcost, minpathcost) )
+         && SCIPisGT(scip, redcost, cutoffbound) )
       {
          daRpcmwDeleteTermIncidents(scip, vnoi, k, graph, incidents, nfixedp);
          continue;
@@ -1852,7 +1852,7 @@ SCIP_RETCODE reduceRootedProb(
 
       /* note: if we want to keep the solution we cannot just delete vertices */
       if( !Is_term(graph->term[k]) && !keepsol &&
-         (SCIPisGT(scip, redcost, minpathcost) || (solgiven && SCIPisEQ(scip, redcost, minpathcost) && !nodearrchar[k])) )
+         (SCIPisGT(scip, redcost, cutoffbound) || (solgiven && SCIPisEQ(scip, redcost, cutoffbound) && !nodearrchar[k])) )
       {
          (*nfixedp) += graph->grad[k];
          graph_knot_del(scip, graph, k, TRUE);
@@ -1875,8 +1875,8 @@ SCIP_RETCODE reduceRootedProb(
 
          redcost = pathdist[k] + cost[e] + vnoi[head].dist;
 
-         if( SCIPisGT(scip, redcost, minpathcost)
-            || (solgiven && SCIPisEQ(scip, redcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT) )
+         if( SCIPisGT(scip, redcost, cutoffbound)
+            || (solgiven && SCIPisEQ(scip, redcost, cutoffbound) && result[e] != CONNECT && result[flipedge(e)] != CONNECT) )
          {
             if( marked[flipedge(e)] )
             {
@@ -2083,11 +2083,11 @@ SCIP_RETCODE reduce_dapaths(
    int*                  nelims              /**< pointer to store number of reduced edges */
    )
 {
+   REDCOST redcostdata;
    const int nedges = graph_get_nEdges(g);
    int* RESTRICT result;
-   SCIP_Real* RESTRICT redcosts;
+   STP_Bool* edges_isDeletable;
    SCIP_Real objbound_upper;
-   SCIP_Real objbound_lower;
 
    assert(scip && offsetp && nelims);
    assert(*nelims >= 0);
@@ -2095,23 +2095,28 @@ SCIP_RETCODE reduce_dapaths(
    if( g->terms <= 2 )
       return SCIP_OKAY;
 
+   graph_mark(g);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isDeletable, nedges) );
+   BMSclearMemoryArray(edges_isDeletable, nedges);
 
-  // SCIP_CALL( daInitializeDistances(scip, g, &redcostdata, state) );
-
+   SCIP_CALL( reduce_redcostdataInit(scip, g->knots, nedges, FARAWAY, g->source, &redcostdata) );
+   SCIP_CALL( daInitializeDistances(scip, g, &redcostdata) );
 
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
-   SCIP_CALL( dualascent_pathsPcMw(scip, g, redcosts, &objbound_lower, NULL) );
+   SCIP_CALL( dualascent_paths(scip, g, redcostdata.redEdgeCost, &(redcostdata.dualBound), NULL) );
 
-   // use a simple constructor method for REDCOST?
+   redcostdata.cutoff = objbound_upper- redcostdata.dualBound;
 
-// todo do the reudctions here...
+   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
 
-   SCIPfreeBufferArray(scip, &redcosts);
+
+   SCIP_CALL( reduceRootedProb(scip, g, edges_isDeletable, &redcostdata, result, TRUE, nelims) );
+   reduce_redcostdataFreeMembers(scip, &redcostdata);
+
+   SCIPfreeBufferArray(scip, &edges_isDeletable);
    SCIPfreeBufferArray(scip, &result);
-
 
    return SCIP_OKAY;
 }
@@ -2152,6 +2157,7 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
    const int prevrounds = paramsda->prevrounds;
+   int todo; // call constructor! 3 should be enough anyway...
    REDCOST redcostdata = { .redEdgeCost = NULL, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
       .nodeTo3TermsBases = vbase, .cutoff = -1.0, .dualBound = FARAWAY, .redCostRoot = -1
 #ifndef NDEBUG
@@ -2261,7 +2267,7 @@ SCIP_RETCODE reduce_da(
          updateNodeFixingBounds(nodefixingbounds, graph, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, nedges, (run == 0), TRUE);
 
-         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, redcostdata.nodeTo3TermsPaths, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, result, cutoffbound, redcostdata.redCostRoot, havenewsol, &ndeletions) );
+         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, &redcostdata, result, havenewsol, &ndeletions) );
 
          if( !SCIPisZero(scip, cutoffbound) )
          {

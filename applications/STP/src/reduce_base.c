@@ -479,6 +479,15 @@ SCIP_RETCODE redLoopStp_inner(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
+#if 0
+      int xxx = 0;
+      reduce_dapaths(scip, g, fixed, &xxx);
+
+      printf("%d \n", xxx);
+      assert(0);
+#endif
+
+
       if( le || extensive )
       {
          SCIP_CALL(reduce_ledge(scip, g, vnoi, heap, state, vbase, &lenelims, NULL));
@@ -587,6 +596,8 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
+
+
 
       ub = -1.0;
 

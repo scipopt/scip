@@ -104,11 +104,11 @@ void dapathsSetRunParams(
       if( !Is_term(graph->term[i]) )
          continue;
 
+      if( i == root )
+         continue;
+
       if( dapaths->isUnrootedPcMw )
       {
-         if( i == root )
-            continue;
-
          assert(graph->grad[i] == 2);
 
          if( nstartnodes == 0 )
@@ -128,7 +128,7 @@ void dapathsSetRunParams(
       startnodes[nstartnodes++] = i;
    }
 
-   assert(centernode >= 0);
+   assert(centernode >= 0 || !dapaths->isUnrootedPcMw);
 
    dapaths->nstartnodes = nstartnodes;
    dapaths->maxdist = -FARAWAY;
