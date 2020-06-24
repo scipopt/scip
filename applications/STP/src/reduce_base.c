@@ -471,7 +471,7 @@ SCIP_RETCODE redLoopStp_inner(
       {
         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
         int extendedelims = 0;
-        SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, &fix, vbase, &extendedelims, randnumgen) );
+        SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, &fix, &extendedelims, randnumgen) );
         printf("debug extendedelims=%d \n", extendedelims);
       }
 #endif
@@ -604,8 +604,7 @@ SCIP_RETCODE redLoopStp_inner(
       if( da )
       {
          const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = FALSE, .nodereplacing = nodereplacing};
-         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase,
-               &danelims, randnumgen));
+         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &danelims, randnumgen));
 
          if( danelims <= STP_RED_EXFACTOR * reductbound )
             da = FALSE;
@@ -746,7 +745,7 @@ SCIP_RETCODE redLoopMw_inner(
 
          if( graph_pc_isRootedPcMw(g) )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase, &daelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &daelims, randnumgen) );
          }
          else
          {
@@ -1484,8 +1483,7 @@ SCIP_RETCODE reduceSap(
 
          ub = -1.0;
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase,
-               &danelims, randnumgen) );
+         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &danelims, randnumgen) );
 
          if( danelims <= 2 * redbound )
             da = FALSE;
@@ -1551,8 +1549,7 @@ SCIP_RETCODE reduceNw(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase,
-            &danelims, randnumgen) );
+      SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
 
       if( danelims <= 2 * redbound )
          da = FALSE;
@@ -1631,7 +1628,7 @@ SCIP_RETCODE redLoopMw(
 
          if( graph_pc_isRootedPcMw(g) )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, fixed, vbase, &daelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &daelims, randnumgen) );
          }
          else
          {
@@ -1854,8 +1851,7 @@ SCIP_RETCODE redLoopPc(
 
             if( rpc )
             {
-               SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, &fix, vbase,
-                     &danelims, randnumgen) );
+               SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, &fix, &danelims, randnumgen) );
             }
             else
             SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, heap,
@@ -1887,8 +1883,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, NULL, &fix, vbase,
-                  &danelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, &fix, &danelims, randnumgen) );
          }
          else
          {
@@ -2008,8 +2003,7 @@ SCIP_RETCODE redLoopStp(
 
          assert(!rerun);
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, vnoi, nodearrreal, &ub, fixed, vbase,
-                     &extendedelims, randnumgen) );
+         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &extendedelims, randnumgen) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 

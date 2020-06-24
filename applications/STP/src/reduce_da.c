@@ -2126,11 +2126,8 @@ SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   PATH*                 vnoi,               /**< Voronoi data structure */
-   SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
-   int*                  vbase,              /**< array for Voronoi bases */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
@@ -2157,13 +2154,7 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
    const int prevrounds = paramsda->prevrounds;
-   int todo; // call constructor! 3 should be enough anyway...
-   REDCOST redcostdata = { .redEdgeCost = NULL, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
-      .nodeTo3TermsBases = vbase, .cutoff = -1.0, .dualBound = FARAWAY, .redCostRoot = -1
-#ifndef NDEBUG
-      , .nnodes = graph->knots, .nedges = graph->edges
-#endif
-   };
+   REDCOST redcostdata;
 
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
@@ -2178,8 +2169,9 @@ SCIP_RETCODE reduce_da(
       return SCIP_OKAY;
 #endif
 
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, -1.0, UNKNOWN, &redcostdata) );
+
    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDelNodes, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(redcostdata.redEdgeCost), nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &arcsdeleted, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, nedges) );
@@ -2381,8 +2373,9 @@ SCIP_RETCODE reduce_da(
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &arcsdeleted);
    SCIPfreeBufferArray(scip, &result);
-   SCIPfreeBufferArray(scip, &(redcostdata.redEdgeCost));
    SCIPfreeBufferArray(scip, &pseudoDelNodes);
+
+   reduce_redcostdataFreeMembers(scip, &redcostdata);
 
    assert(graph_valid(scip, graph));
 

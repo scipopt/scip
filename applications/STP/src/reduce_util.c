@@ -1736,7 +1736,7 @@ SCIP_RETCODE reduce_redcostdataInit(
    SCIP*                 scip,               /**< SCIP */
    int                   nnodes,             /**< number of nodes */
    int                   nedges,             /**< number of edges */
-   SCIP_Real             cutoff,             /**< reduced cost cutoff value or FARAWAY if not used */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
    int                   redCostRoot,        /**< graph root for reduced cost calculation */
    REDCOST*              redcostdata         /**< data to initialize */
 )
@@ -1750,8 +1750,8 @@ SCIP_RETCODE reduce_redcostdataInit(
    assert(nnodes >= 0);
    assert(nedges >= 0);
    assert(nedges % 2 == 0);
-   assert(redCostRoot >= 0);
-   assert(GE(cutoff, 0.0) || EQ(cutoff, 0.0));
+   assert(redCostRoot >= 0 || redCostRoot == UNKNOWN);
+   assert(GE(cutoff, 0.0) || EQ(cutoff, -1.0));
    assert(redcostdata);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &redEdgeCost, nedges) );
