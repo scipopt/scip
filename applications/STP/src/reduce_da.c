@@ -2194,7 +2194,7 @@ SCIP_RETCODE reduce_da(
    for( int e = 0; e < nedges; e++ )
       result[e] = UNKNOWN;
 
-   if( isDirected || isRpcmw )
+   if( isDirected )
    {
       SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
    }
