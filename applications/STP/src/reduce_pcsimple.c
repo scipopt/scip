@@ -856,6 +856,9 @@ SCIP_RETCODE pcmwEnumerationTry(
       SCIPfreeBufferArray(scip, &result);
    }
 
+   if( graph_pc_isRootedPcMw(g) )
+      g->mark[g->source] = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -1251,7 +1254,7 @@ SCIP_RETCODE reduce_simple_pc(
 {
    SCIP_Real maxprize = -1.0;
    const int nnodes = graph_get_nNodes(g);
-   const SCIP_Bool isUnrooted = (g->stp_type == STP_PCSPG);
+   const SCIP_Bool isRooted = (g->stp_type == STP_RPCSPG);
    SCIP_Bool rerun = TRUE;
 
    assert(scip && fixed && countnew);
@@ -1262,7 +1265,7 @@ SCIP_RETCODE reduce_simple_pc(
 
    SCIPdebugMessage("Degree Test: ");
 
-   if( !isUnrooted )
+   if( isRooted )
       g->mark[g->source] = FALSE;
 
    /* main loop */
@@ -1309,7 +1312,7 @@ SCIP_RETCODE reduce_simple_pc(
           */
 
          assert(Is_term(g->term[i]));
-         fixedterm = (!isUnrooted && graph_pc_knotIsFixedTerm(g, i));
+         fixedterm = (isRooted && graph_pc_knotIsFixedTerm(g, i));
 
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) && i != g->source )
@@ -1355,13 +1358,13 @@ SCIP_RETCODE reduce_simple_pc(
       SCIP_CALL( pcmwEnumerationTry(scip, g, countnew, &rerun) );
    } /* main loop */
 
-   if( !isUnrooted )
+   if( isRooted )
       g->mark[g->source] = TRUE;
 
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *countnew);
 
 #if 1
-   if( !isUnrooted )
+   if( isRooted )
       rpcTryFullReduce(scip, g);
 #endif
 

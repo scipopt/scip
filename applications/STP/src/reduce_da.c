@@ -2199,6 +2199,11 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
    }
 
+   if( isRpcmw )
+   {
+	  graph_pc_2trans(scip, graph);
+   }
+
    nruns = MIN(nFixedTerms, DEFAULT_DARUNS);
    assert(nruns > 0);
 
@@ -2207,8 +2212,6 @@ SCIP_RETCODE reduce_da(
 
    // todo maybe inside the loop?
    damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
-
-   assert(!isRpcmw || graph->extended);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
@@ -3360,3 +3363,4 @@ SCIP_RETCODE reduce_daPcMw(
    assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
+}
