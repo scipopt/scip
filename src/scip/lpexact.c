@@ -3321,7 +3321,7 @@ SCIP_Bool SCIPlpExactBSpossible(
 {
    assert(lp != NULL);
 
-   return lp->ninfiniteboundcols == 0;
+   return lp->boundshiftviable;
 }
 
 /** returns whether it is possible to use project and shift bounding method */
@@ -3397,6 +3397,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->solisbasic = FALSE;
    (*lp)->resolvelperror = FALSE;
    (*lp)->projshiftpossible = FALSE;
+   (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
