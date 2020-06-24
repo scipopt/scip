@@ -247,7 +247,6 @@ struct SCIP_LpExact
    int                   lpiscaling;         /**< current SCALING setting in LPI */
    int                   lpirefactorinterval;/**< current refactorization interval */
    int                   interleavedbfreq;   /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
-   int                   ninfiniteboundcols; /**< number of columns with infinity upper or lower bounds (important for safe bounding) */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -268,6 +267,7 @@ struct SCIP_LpExact
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
+   SCIP_Bool             boundshiftviable;   /**< is bound-shift viable? set to FALSE if success rate too low */
    SCIP_Bool             forceexactsolve;    /**< should the next safe bounding step be forced to solve the lp exactly? */
 };
 

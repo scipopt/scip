@@ -2999,10 +2999,6 @@ SCIP_RETCODE SCIPcolExactChgLb(
          /* mark the LP unflushed */
          lp->flushed = FALSE;
       }
-      if( RatIsNegInfinity(col->lb) && !RatIsNegInfinity(newlb) && !RatIsInfinity(col->ub) )
-         lp->ninfiniteboundcols--;
-      if( RatIsNegInfinity(newlb) && !RatIsInfinity(col->ub) )
-         lp->ninfiniteboundcols++;
    }
 
    RatSet(col->lb, newlb);
@@ -3048,10 +3044,6 @@ SCIP_RETCODE SCIPcolExactChgUb(
          /* mark the LP unflushed */
          lp->flushed = FALSE;
       }
-      if( RatIsInfinity(col->ub) && !RatIsInfinity(newub) && !RatIsNegInfinity(col->lb) )
-         lp->ninfiniteboundcols--;
-      if( RatIsInfinity(newub) && !RatIsNegInfinity(col->lb) )
-         lp->ninfiniteboundcols++;
    }
 
    RatSet(col->ub, newub);
@@ -3321,7 +3313,7 @@ SCIP_Bool SCIPlpExactBSpossible(
 {
    assert(lp != NULL);
 
-   return lp->ninfiniteboundcols == 0;
+   return lp->boundshiftviable;
 }
 
 /** returns whether it is possible to use project and shift bounding method */
@@ -3397,6 +3389,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->solisbasic = FALSE;
    (*lp)->resolvelperror = FALSE;
    (*lp)->projshiftpossible = FALSE;
+   (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
@@ -3428,7 +3421,6 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
    (*lp)->interleavedbfreq = 10;
-   (*lp)->ninfiniteboundcols = 0;
    (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpobjval) );
@@ -3529,10 +3521,6 @@ SCIP_RETCODE SCIPlpExactAddCol(
    colExactUpdateAddLP(col, set);
 
    checkLinks(lp);
-
-   /* update bound-shift status */
-   if( RatIsInfinity(col->ub) || RatIsNegInfinity(col->lb) )
-      lp->ninfiniteboundcols++;
 
    return SCIP_OKAY;
 }
@@ -6642,9 +6630,6 @@ SCIP_RETCODE SCIPlpExactshrinkCols(
 
          /* update column arrays of all linked rows */
          colExactUpdateDelLP(col, set);
-
-         if( RatIsInfinity(col->ub) || RatIsNegInfinity(col->lb) )
-            lp->ninfiniteboundcols--;
       }
 
       assert(lp->ncols == newncols);

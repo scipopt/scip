@@ -2819,6 +2819,10 @@ SCIP_RETCODE boundShift(
    assert(lp->solved);
    assert(set != NULL);
    assert(safebound != NULL);
+
+   if( !SCIPlpExactBSpossible(lpexact) )
+      return SCIP_OKAY;
+
    /* start timing */
    if ( usefarkas )
       SCIPclockStart(stat->provedinfeasbstime, set);
@@ -2997,19 +3001,34 @@ SCIP_RETCODE boundShift(
             SCIPintervalSetRational(&obj[j], SCIPvarGetObjExact(SCIPcolGetVar(col)));
          }
       }
-      /** @todo exip: get exact column bounds ? */
-      //SCIPintervalSetBounds(&ublbcol[j],
-      //   RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_ROUND_DOWNWARDS), 
-      //   RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_ROUND_UPWARDS));
+
       assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_ROUND_DOWNWARDS));
       assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
+
+      /* opt out if there are infinity bounds and a non-infinte value */
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
-         SCIPmessagePrintWarning(messagehdlr, "warning: trying bound shift with unbounded column variable. Column %d, lb: %e, ub %e \n",
+         if( productcoldualval[j].inf + obj[j].inf != 0 || productcoldualval[j].sup + obj[j].sup != 0 )
+         {
+            SCIPdebugMessage("trying bound shift with unbounded column variable. Column %d, lb: %e, ub %e \n",
                SCIPcolGetIndex(col), SCIPcolGetLb(col) ,SCIPcolGetUb(col) );
-         SCIPmessagePrintWarning(messagehdlr, "Multiplied with interval: min %e,  max %e \n",
+            SCIPdebugMessage("Multiplied with interval: min %e,  max %e \n",
                productcoldualval[j].inf + obj[j].inf, productcoldualval[j].sup + obj[j].sup);
+
+            lp->hasprovedbound = FALSE;
+            if( usefarkas )
+            {
+               stat->nboundshiftinf++;
+               stat->nfailboundshiftinf++;
+            }
+            else
+            {
+               stat->nboundshift++;
+               stat->nfailboundshift++;
+            }
+            goto CLEANUP;
+         }
       }
    }
    SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
@@ -3086,6 +3105,14 @@ SCIP_RETCODE boundShift(
 
    RatSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
 
+CLEANUP:
+
+   /* if the fail percentage is higher than 20 % we do not want to waste time trying bound shift again and again */
+   if( stat->nboundshift + stat->nboundshiftinf > 10
+      && (1.0 * stat->nfailboundshift + stat->nfailboundshiftinf) / stat->nboundshift + stat->nboundshiftinf > 0.2 )
+   {
+      lpexact->boundshiftviable = FALSE;
+   }
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &ublbcol);
    SCIPsetFreeBufferArray(set, &obj);
@@ -3183,6 +3210,13 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       case 'n':
          SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, dualfarkas, safebound) );
+         if( !lp->hasprovedbound )
+         {
+            SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                        prob, blkmem) );
+            SCIP_CALL( getPSdual(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                        prob, blkmem, dualfarkas, safebound) );
+         }
          break;
       /* basis verification */
       case 'v':
