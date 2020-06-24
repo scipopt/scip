@@ -76,7 +76,7 @@ SCIP_RETCODE trail(
    SCIP_Bool*            nodevisited         /**< marks which node has been visited */
    )
 {
-   int* stackarr;
+   int* RESTRICT stackarr;
    int stacksize;
    const int nnodes = g->knots;
 
@@ -106,7 +106,7 @@ SCIP_RETCODE trail(
 
          if( !nodevisited[head] )
          {
-            if( costAware && SCIPisGE(scip, g->cost[a], FARAWAY) )
+            if( costAware && GE(g->cost[a], FARAWAY) )
                continue;
 
             nodevisited[head] = TRUE;

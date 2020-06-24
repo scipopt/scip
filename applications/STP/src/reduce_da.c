@@ -2087,7 +2087,7 @@ SCIP_RETCODE reduce_dapaths(
    const int nedges = graph_get_nEdges(g);
    int* RESTRICT result;
    STP_Bool* edges_isDeletable;
-   SCIP_Real objbound_upper;
+   SCIP_Real objbound_upper = FARAWAY;
 
    assert(scip && offsetp && nelims);
    assert(*nelims >= 0);
@@ -3360,4 +3360,3 @@ SCIP_RETCODE reduce_daPcMw(
    assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
-}
