@@ -43,7 +43,7 @@
 #include "prop_stp.h"
 
 
-#define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
+#define BND_TMHEUR_NRUNS 20                  /**< number of runs of constructive heuristic */
 
 
 /** bound-based reductions for the (R)PCSTP, the MWCSP and the STP */
