@@ -2102,18 +2102,20 @@ SCIP_RETCODE reduce_dapaths(
    BMSclearMemoryArray(edges_isDeletable, nedges);
 
    SCIP_CALL( reduce_redcostdataInit(scip, g->knots, nedges, FARAWAY, g->source, &redcostdata) );
-   SCIP_CALL( daInitializeDistances(scip, g, &redcostdata) );
 
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
    SCIP_CALL( dualascent_paths(scip, g, redcostdata.redEdgeCost, &(redcostdata.dualBound), NULL) );
+   SCIP_CALL( daInitializeDistances(scip, g, &redcostdata) );
 
    redcostdata.cutoff = objbound_upper- redcostdata.dualBound;
 
-   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
-
+//   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
 
    SCIP_CALL( reduceRootedProb(scip, g, edges_isDeletable, &redcostdata, result, TRUE, nelims) );
    reduce_redcostdataFreeMembers(scip, &redcostdata);
+
+   SCIP_CALL( reduceLevel0(scip, g) );
+
 
    SCIPfreeBufferArray(scip, &edges_isDeletable);
    SCIPfreeBufferArray(scip, &result);
