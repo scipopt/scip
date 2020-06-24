@@ -1632,23 +1632,28 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       }
    }
 
+#ifndef NDEBUG
    if( *success )
    {
-      assert((*nlhdlrexprdata)->nindicators > 0);
-
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
-      SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-      /* if we get here, sepa enforcemethods should have already been set by other handler(s) */
+      /* if detect succeeded, sepa enforcemethods should have already been set by other handler(s) */
       assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
          || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
 
       assert(*nlhdlrexprdata != NULL);
+      assert((*nlhdlrexprdata)->nindicators > 0);
    }
-   else
+#endif
+
+#ifdef SCIP_DEBUG
+   if( *success )
+   {
+      SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
+      SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+#endif
+
+   if( !(*success) )
    {
       SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
       SCIPfreeBlockMemory(scip, nlhdlrexprdata);
