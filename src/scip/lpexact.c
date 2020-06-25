@@ -3716,7 +3716,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
       }
       else
       {
-         SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
+         SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
             stat->nnodes, &algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
          lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
