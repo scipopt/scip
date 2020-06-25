@@ -21,8 +21,6 @@
  *
  * Implementation of the product expression, representing a product of expressions
  * and a constant, i.e., coef * prod_i x_i.
- *
- * @todo initsepaProduct
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1762,7 +1760,17 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(infeasible != NULL);
 
+   *infeasible = FALSE;
    nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_VAR* childvar;
+
+      childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(childvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(childvar)) )
+         return SCIP_OKAY;
+   }
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -1811,50 +1819,51 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
       }
       else
       {
-            SCIP_CALL( estimateVertexPolyhedralProduct(scip, conshdlr, expr, exprdata, NULL, overest[i],
-                  overest[i] ? SCIPinfinity(scip) : -SCIPinfinity(scip), TRUE, rowprep->coefs, &constant, &success) );
+         SCIP_CALL( estimateVertexPolyhedralProduct(scip, conshdlr, expr, exprdata, NULL, overest[i],
+               overest[i] ? SCIPinfinity(scip) : -SCIPinfinity(scip), TRUE, rowprep->coefs, &constant, &success) );
       }
 
-      if( !success )
+      if( success )
       {
+         /* add variables to rowprep */
+         rowprep->nvars = nchildren;
+         for( v = 0; v < nchildren; ++v )
+         {
+            rowprep->vars[v] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[v]);
+            assert(rowprep->vars[v] != NULL);
+         }
+
+         /* add auxiliary variable and side */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+         rowprep->side = -constant;
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+      }
+      else
          SCIPdebugMsg(scip, "failed to compute an estimator in initsepaProduct\n");
-         goto CLEANUP;
-      }
 
-      /* add variables to rowprep */
-      rowprep->nvars = nchildren;
-      for( v = 0; v < nchildren; ++v )
+      if( success )
       {
-         rowprep->vars[v] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[v]);
-         assert(rowprep->vars[v] != NULL);
-      }
-
-      /* add auxiliary variable and side */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
-      rowprep->side = -constant;
-
-      /* straighten out numerics */
-      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
-      if( !success )
-      {
-         SCIPdebugMsg(scip, "failed to cleanup rowprep numerics\n");
-         goto CLEANUP;
-      }
-
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_product%p_initsepa",
-                          overest[i] ? "over" : "under", (void*)expr);
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_product%p_initsepa",
+                             overest[i] ? "over" : "under", (void*)expr);
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\ninitsepa product computed row: ");
+         SCIPinfoMessage(scip, NULL, "\ninitsepa product computed row: ");
       SCIPprintRow(scip, row, NULL);
 #endif
 
-      SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+      else
+         SCIPdebugMsg(scip, "failed to cleanup rowprep numerics\n");
 
- CLEANUP:
       SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
    }
 
    return SCIP_OKAY;
