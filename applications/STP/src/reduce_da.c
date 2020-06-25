@@ -1292,6 +1292,33 @@ SCIP_RETCODE daPcFindRoots(
 }
 
 
+/** computes TM solution and adds it too pool */
+static
+SCIP_RETCODE daPcAddTmSolToPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  result,             /**< solution */
+   STPSOLPOOL*           pool                /**< the pool */
+)
+{
+   SCIP_Bool success;
+   SCIP_Real ub;
+
+   /* compute second solution and add to pool */
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      graph, NULL, NULL, result, BND_TMHEUR_NRUNS_RESTRICT, graph->source, graph->cost, graph->cost, NULL, NULL, &success) );
+   assert(success);
+
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result) );
+   ub = getSolObj(scip, graph, result);
+
+   SCIP_CALL( solpool_addSol(scip, ub, result, pool, &success) );
+   SCIPdebugMessage("added initial TM sol to pool? %d , ub %f \n", success, ub);
+
+   return SCIP_OKAY;
+}
+
+
 /** set prize of marked terminals to blocked */
 static
 void daPcMarkRoots(
@@ -2970,7 +2997,6 @@ SCIP_RETCODE reduce_daPcMw(
    const int extnedges = nedges + 2 * (graph->terms - 1);
    const int root = graph->source;
    SCIP_Bool havenewsol;
-   SCIP_Bool success;
    SCIP_Bool userec = paramsda->useRec;
    const SCIP_Bool solbasedda = paramsda->pcmw_solbasedda;
    const SCIP_Bool useDifferentRoots = paramsda->pcmw_useMultRoots;
@@ -3083,18 +3109,8 @@ SCIP_RETCODE reduce_daPcMw(
       /* with recombination? */
       if( userec && graph->stp_type != STP_MWCSP )
       {
-         SCIP_Real ub;
-
-         /* compute second solution and add to pool */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-            graph, NULL, NULL, result2, BND_TMHEUR_NRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, &success) );
-         assert(success);
-
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-         ub = getSolObj(scip, graph, result2);
-
-         SCIP_CALL( solpool_addSol(scip, ub, result2, pool, &success) );
-         SCIPdebugMessage("added initial TM sol to pool? %d , ub %f \n", success, ub);
+         // todo is that really useful?
+         SCIP_CALL( daPcAddTmSolToPool(scip, graph, result2, pool) );
       }
 
       /* try to improve both dual and primal bound */
