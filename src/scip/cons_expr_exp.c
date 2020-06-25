@@ -18,7 +18,6 @@
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  *
- * @todo initsepaExp
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -272,6 +271,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       refpointsunder[2] = (lbfinite + 7.0 * ubfinite) / 8.0;
    }
 
+   *infeasible = FALSE;
    overest = (SCIP_Bool[4]) {FALSE, FALSE, FALSE, TRUE};
 
    for( i = 0; i < 4; ++i )
@@ -307,17 +307,20 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
                &success) );
+      }
 
-         if( success )
-         {
-            /* add the cut */
-            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         }
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
 
       SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
    }
 
    return SCIP_OKAY;

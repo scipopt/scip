@@ -17,7 +17,6 @@
  * @brief  power expression handler
  * @author Benjamin Mueller
  *
- * @todo initsepaPow
  * @todo signpower for exponent < 1 ?
  */
 
@@ -2088,6 +2087,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
 
    SCIP_CALL( chooseRefpointsPow(scip, exprdata, childlb, childub, exponent, refpointsunder, refpointsover) );
 
+   *infeasible = FALSE;
    overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
 
    for( i = 0; i < 6; ++i )
@@ -2128,18 +2128,21 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
                &success) );
+      }
 
-         if( success )
-         {
-            /* add the cut */
-            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         }
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
 
       if( rowprep != NULL )
          SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
    }
 
    SCIPfreeBufferArrayNull(scip, &refpointsunder);
@@ -2809,6 +2812,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
    }
 
    /* add cuts for all refpoints */
+   *infeasible = FALSE;
    overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
    for( i = 0; i < 6; ++i )
    {
@@ -2856,18 +2860,21 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
                &success) );
+      }
 
-         if( success )
-         {
-            /* add the cut */
-            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         }
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
 
       if( rowprep != NULL )
          SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
    }
 
    SCIPfreeBufferArrayNull(scip, &refpointsunder);

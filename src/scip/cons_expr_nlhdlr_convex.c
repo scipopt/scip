@@ -1773,6 +1773,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
     */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
+   *infeasible = FALSE;
+
    for( k = 0; k < 5; ++k )
    {
       int i;
@@ -1838,6 +1840,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+      if( *infeasible )
+         break;
    }
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
