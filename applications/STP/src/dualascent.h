@@ -88,7 +88,7 @@ SCIP_RETCODE dualascent_pathsPcMw(
 /** path based dual ascent heuristic */
 SCIP_RETCODE dualascent_paths(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph */
+   GRAPH*                graph,              /**< graph */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
    SCIP_Real*            objval,             /**< pointer to store (dual) objective value */
    const int*            result              /**< solution array or NULL */

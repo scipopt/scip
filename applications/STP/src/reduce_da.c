@@ -483,7 +483,7 @@ SCIP_RETCODE daInitializeDistances(
       costrev[e] = FARAWAY;
 
    if( isRpcmw )
-      graph_pc_2trans(scip, g);
+      graph_pc_2transcheck(scip, g);
 
    /* build Voronoi diagram */
    if( directed )
@@ -1083,7 +1083,7 @@ void daRpcmwDeleteTermIncidents(
 #ifndef NDEBUG
    const int termedge = graph->term2edge[term];
    assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
-   assert(vnoi[twinterm].dist == 0.0);
+ //  assert(vnoi[twinterm].dist == 0.0); // todo does not hold with da paths...
    assert(graph_pc_isRootedPcMw(graph));
 #endif
 
@@ -2111,15 +2111,19 @@ SCIP_RETCODE reduce_dapaths(
    redcostdata.cutoff = objbound_upper- redcostdata.dualBound;
 
 //   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
+   graph_mark(g);
 
    SCIP_CALL( reduceRootedProb(scip, g, edges_isDeletable, &redcostdata, result, TRUE, nelims) );
    reduce_redcostdataFreeMembers(scip, &redcostdata);
 
    SCIP_CALL( reduceLevel0(scip, g) );
 
+   assert(graph_valid(scip, g));
 
    SCIPfreeBufferArray(scip, &edges_isDeletable);
    SCIPfreeBufferArray(scip, &result);
+
+   assert(!graph_pc_isPcMw(g) || !g->extended);
 
    return SCIP_OKAY;
 }

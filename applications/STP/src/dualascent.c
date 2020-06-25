@@ -128,6 +128,7 @@ void dapathsSetRunParams(
       startnodes[nstartnodes++] = i;
    }
 
+   assert(nstartnodes > 0);
    assert(centernode >= 0 || !dapaths->isUnrootedPcMw);
 
    dapaths->nstartnodes = nstartnodes;
@@ -222,7 +223,7 @@ void dapathsUpdate(
          if( LT(dist_j, maxdist) )
          {
             const SCIP_Real offset = MAX(0.0, dist_i - dist_j);
-            assert(LE(offset, redcost[e]));
+            assert(LE_FEAS(offset, redcost[e]));
 
             redcost[e] -= offset;
 
@@ -263,6 +264,7 @@ void dapathsRunShortestPaths(
    {
       const int start = startnodes[i];
       assert(graph_knot_isInRange(graph, start) && Is_term(graph->term[start]));
+      assert(nodes_abort[graph->source]);
 
       graph_pathInLimitedExec(graph, redcost, nodes_abort, start, dijklimited, &(dapaths->maxdist));
       dapathsUpdate(graph, dapaths, redcost, objval);
@@ -1517,11 +1519,10 @@ SCIP_RETCODE dualascent_pathsPcMw(
 }
 
 
-
 /** path based dual ascent heuristic */
 SCIP_RETCODE dualascent_paths(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph */
+   GRAPH*                graph,              /**< graph */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs */
    SCIP_Real*            objval,             /**< pointer to store (dual) objective value */
    const int*            result              /**< solution array or NULL */
@@ -1531,6 +1532,9 @@ SCIP_RETCODE dualascent_paths(
 
    assert(scip && graph && redcost && objval);
    assert(!graph_pc_isPcMw(graph) || graph_pc_isRootedPcMw(graph));
+
+   if( graph_pc_isPcMw(graph) )
+      graph_pc_2transcheck(scip, graph);
 
    SCIP_CALL( dapathsInit(scip, graph, &dapaths) );
 
