@@ -85,10 +85,7 @@ if(NOT WIN32)
       list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
     endforeach()
     string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
-    message("old ldflags ${_PC_IPOPT_LDFLAGS}")
-    message("new ldflags ${IPOPT_LDFLAGS}")
     list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
-    message("IPOPT_LIBS ${IPOPT_LIBRARIES}")
 
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
