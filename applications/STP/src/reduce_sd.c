@@ -2224,7 +2224,9 @@ SCIP_RETCODE reduce_sdPc(
    *nelims = 0;
 
    if( nterms <= 1 )
+   {
       return SCIP_OKAY;
+   }
    else
    {
       const SCIP_Longint longedges = (SCIP_Longint) nedges;
@@ -2235,6 +2237,7 @@ SCIP_RETCODE reduce_sdPc(
       else
          maxnedges = ((nterms - 1) * nterms);
    }
+
 
    /* compute nearest four terminals to each non-terminal */
    graph_get4nextTermPaths(g, g->cost, g->cost, vnoi, vbase, state);

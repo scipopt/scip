@@ -3002,8 +3002,7 @@ void graph_tpathsSetAll4(
    assert(cost      != NULL);
    assert(costrev   != NULL);
 
-   if( !graph_pc_isPcMw(g) )
-      graph_mark(g);
+   graph_mark(g);
 
    graph_tpathsAdd1st(g, cost, sdprofit, tpaths);
    graph_tpathsAdd2nd(g, cost, costrev, sdprofit, tpaths);
