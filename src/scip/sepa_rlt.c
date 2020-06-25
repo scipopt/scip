@@ -35,9 +35,6 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_var.h"
-#include "scip/struct_cons_expr.h"
 #include "scip/struct_scip.h"
 
 
@@ -2565,6 +2562,8 @@ SCIP_RETCODE separateRltCuts(
    SCIP_ROW**            rows,               /**< problem rows */
    int                   nrows,              /**< number of problem rows */
    SCIP_Bool             allowlocal,         /**< are local cuts allowed? */
+   int*                  bestunderestimators,/**< indices of linear underestimators with largest violation in sol */
+   int*                  bestoverestimators, /**< indices of linear overestimators with largest violation in sol */
    int*                  ncuts,              /**< buffer to store the number of generated cuts */
    SCIP_RESULT*          result              /**< buffer to store whether separation was successful */
 )
@@ -2584,21 +2583,15 @@ SCIP_RETCODE separateRltCuts(
    SCIP_Bool accepted;
    SCIP_Bool buildeqcut;
    SCIP_Bool iseqrow;
-   int* bestunderestimators;
-   int* bestoverestimators;
 
    assert(!sepadata->useprojection || projlp != NULL);
+   assert(!sepadata->detecthidden || (bestunderestimators != NULL && bestoverestimators != NULL));
 
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestunderestimators, SCIPgetConsExprNBilinTerms(sepadata->conshdlr)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestoverestimators, SCIPgetConsExprNBilinTerms(sepadata->conshdlr)) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &row_marks, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &row_idcs, nrows) );
-
-   /* update best under- and overestimators */
-   getBestEstimators(scip, sepadata, sol, bestunderestimators, bestoverestimators);
 
    /* loop through all variables that appear in bilinear products */
    for( j = 0; j < sepadata->nbilinvars && (sepadata->maxusedvars < 0 || j < sepadata->maxusedvars); ++j )
@@ -2734,7 +2727,7 @@ SCIP_RETCODE separateRltCuts(
             if( (sepadata->maxncuts >= 0 && *ncuts >= sepadata->maxncuts) || *result == SCIP_CUTOFF )
             {
                SCIPdebugMsg(scip, "exit separator because we found enough cuts or a cutoff -> skip\n");
-               SCIPdebugMsg(scip, "maxncuts = %d, ncuts = %d\n", sepadata->maxncuts, *ncuts);
+               SCIPdebugMsg(scip, "or reached maxncuts: maxncuts = %d, ncuts = %d\n", sepadata->maxncuts, *ncuts);
                SCIPdebugMsg(scip, "result = %d\n", *result);
                /* entries of row_marks must be set to 0 before the array is freed */
                for( int r1 = r; r1 < nmarked; ++r1 )
@@ -2754,8 +2747,6 @@ SCIP_RETCODE separateRltCuts(
    TERMINATE:
    SCIPfreeBufferArray(scip, &row_idcs);
    SCIPfreeCleanBufferArray(scip, &row_marks);
-   SCIPfreeBufferArray(scip, &bestoverestimators);
-   SCIPfreeBufferArray(scip, &bestunderestimators);
 
    return SCIP_OKAY;
 }
@@ -2888,6 +2879,136 @@ SCIP_RETCODE storeSuitableRows(
    return SCIP_OKAY;
 }
 
+/** adds McCormick inequalities for implicit products */
+static
+SCIP_RETCODE separateMcCormickImplicit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   int*                  bestunderestimators,/**< indices of linear underestimators with largest violation in sol */
+   int*                  bestoverestimators, /**< indices of linear overestimators with largest violation in sol */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
+   int i;
+   int j;
+   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_ROW* cut;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Bool underestimate;
+   SCIP_Real productval;
+   SCIP_Real auxval;
+   SCIP_Real xcoef;
+   SCIP_Real ycoef;
+   SCIP_Real constant;
+   SCIP_Bool success;
+   SCIP_CONSEXPR_AUXEXPR* auxexpr;
+   SCIP_Bool cutoff;
+
+   assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
+   assert(bestunderestimators != NULL && bestoverestimators != NULL);
+
+   cutoff = FALSE;
+   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+
+   for( i = 0; i < sepadata->nbilinterms; ++i )
+   {
+      if( terms[i].existing )
+         continue;
+
+      assert(terms[i].nauxexprs > 0);
+
+      productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
+
+      /* one iteration for underestimation and one for overestimation */
+      for( j = 0; j < 2; ++j ) {
+         underestimate = j == 0;
+         if (underestimate && bestunderestimators[i] != -1)
+            auxexpr = terms[i].auxexprs[bestunderestimators[i]];
+         else if (!underestimate && bestoverestimators[i] != -1)
+            auxexpr = terms[i].auxexprs[bestoverestimators[i]];
+         else
+            continue;
+
+         auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
+
+         /* skip non-violated terms */
+         if ((underestimate && productval <= auxval) || (!underestimate && productval >= auxval))
+            continue;
+
+         /* create an empty row */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%d",
+                             underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
+                             SCIPgetNLPs(scip));
+
+         SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
+               FALSE, FALSE));
+
+         xcoef = 0.0;
+         ycoef = 0.0;
+         constant = 0.0;
+         success = TRUE;
+
+         /* subtract auxexpr from the cut */
+         SCIP_CALL( addAuxexprToRow(scip, cut, terms[i].x, terms[i].y, auxexpr, -1.0, &constant) );
+
+         /* add McCormick terms: ask for an overestimator if relation is auxexpr <= x*y, and vice versa */
+         SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(terms[i].x), SCIPvarGetUbLocal(terms[i].x),
+                               SCIPgetSolVal(scip, sol, terms[i].x), SCIPvarGetLbLocal(terms[i].y),
+                               SCIPvarGetUbLocal(terms[i].y),
+                               SCIPgetSolVal(scip, sol, terms[i].y), underestimate, &xcoef, &ycoef, &constant,
+                               &success);
+
+         if( REALABS(constant) > MAXVARBOUND )
+            success = FALSE;
+
+         if( success )
+         {
+            assert(!SCIPisInfinity(scip, REALABS(xcoef)));
+            assert(!SCIPisInfinity(scip, REALABS(ycoef)));
+            assert(!SCIPisInfinity(scip, REALABS(constant)));
+
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[i].x, xcoef) );
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[i].y, ycoef) );
+
+            /* set side */
+            if( underestimate )
+               SCIP_CALL( SCIPchgRowLhs(scip, cut, -constant) );
+            else
+               SCIP_CALL( SCIPchgRowRhs(scip, cut, -constant) );
+
+            /* if the cut is violated, add it to SCIP */
+            if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
+            {
+               SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &cutoff) );
+               *result = SCIP_SEPARATED;
+            }
+            else
+            {
+               SCIPdebugMsg(scip, "\nMcCormick cut for hidden product %s*%s was created successfully, but is not violated",
+                            SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y));
+            }
+         }
+
+         /* release the cut */
+         if( cut != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         }
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            SCIPdebugMsg(scip, "exit separator because we found enough cuts or a cutoff -> skip\n");
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
@@ -2901,6 +3022,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    int nrows;
    SCIP_HASHMAP* row_to_pos;
    PROJLP* projlp;
+   int* bestunderestimators;
+   int* bestoverestimators;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
@@ -2946,6 +3069,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       SCIP_CALL( createSepaData(scip, sepadata) );
    }
    assert(sepadata->iscreated || sepadata->nbilinvars == 0);
+   assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
 
    /* no bilinear terms available -> skip */
    if( sepadata->nbilinvars == 0 )
@@ -3011,8 +3135,36 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    }
 
    /* separate the cuts */
-   SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
-         allowlocal, &ncuts, result) );
+   if( sepadata->detecthidden )
+   {
+      /* if we detect implicit products, a term might have more than one estimator in each direction;
+       * save the indices of the most violated estimators
+       */
+      SCIP_CALL( SCIPallocBufferArray(scip, &bestunderestimators, sepadata->nbilinterms) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &bestoverestimators, sepadata->nbilinterms) );
+      getBestEstimators(scip, sepadata, NULL, bestunderestimators, bestoverestimators);
+
+      /* also separate McCormick cuts for implicit products */
+      SCIP_CALL( separateMcCormickImplicit(scip, sepa, sepadata, NULL, bestunderestimators, bestoverestimators,
+            result) );
+
+      if( *result != SCIP_CUTOFF )
+      {
+         SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
+               allowlocal, bestunderestimators, bestoverestimators, &ncuts, result) );
+      }
+   }
+   else
+   {
+      SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
+            allowlocal, NULL, NULL, &ncuts, result) );
+   }
+
+   if( sepadata->detecthidden )
+   {
+      SCIPfreeBufferArray(scip, &bestoverestimators);
+      SCIPfreeBufferArray(scip, &bestunderestimators);
+   }
 
    /* free the projected problem */
    if( sepadata->useprojection )
