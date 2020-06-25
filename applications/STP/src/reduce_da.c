@@ -577,15 +577,10 @@ void updateNodeFixingBounds(
 static
 SCIP_RETCODE updateNodeReplaceBounds(
    SCIP*                 scip,               /**< SCIP */
-   SCIP_Real*            replacebounds,      /**< replacement bounds */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< reduced costs */
-   const SCIP_Real*      pathdist,           /**< shortest path distances  */
-   const PATH*           vnoi,               /**< Voronoi paths  */
-   const int*            vbase,              /**< bases to Voronoi paths */
-   SCIP_Real             lpobjval,           /**< LP objective  */
+   SCIP_Real*            replacebounds,      /**< replacement bounds */
    SCIP_Real             upperbound,         /**< upper bound */
-   int                   root,               /**< DA root */
    SCIP_Bool             initialize,         /**< initialize fixing bounds? */
    SCIP_Bool             extendedsearch      /**< perform extended searching? */
 )
@@ -594,16 +589,24 @@ SCIP_RETCODE updateNodeReplaceBounds(
    SCIP_Bool* eqmark = NULL;
    int outedges[STP_DABD_MAXDEGREE];
    const int nnodes = graph->knots;
+   const SCIP_Real lpobjval = redcostdata->dualBound;
    const SCIP_Real cutoff = upperbound - lpobjval;
    const int halfnedges = graph->edges / 2;
+   const SCIP_Real *cost = redcostdata->redEdgeCost;
+   const SCIP_Real *pathdist = redcostdata->rootToNodeDist;
+   const PATH *vnoi = redcostdata->nodeTo3TermsPaths;
+   const int *vbase = redcostdata->nodeTo3TermsBases;
+   const int root = redcostdata->redCostRoot;
 
    assert(!graph_pc_isMw(graph));
    assert(!SCIPisNegative(scip, cutoff));
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
 
    if( initialize )
+   {
       for( int k = 0; k < nnodes; k++ )
          replacebounds[k] = -FARAWAY;
+   }
 
    if( extendedsearch )
    {
@@ -2109,6 +2112,83 @@ int reducePcMwTryBest(
    return 0;
 }
 
+/** promising? */
+static
+SCIP_Bool dapathsIsPromising(
+   const GRAPH*                g             /**< graph data structure */
+)
+{
+   SCIP_Bool isPromising;
+   int nterms;
+   int nnodes;
+
+   assert(g);
+
+   graph_get_nVET(g, &nnodes, NULL, &nterms);
+
+   isPromising = ((SCIP_Real) nterms / (SCIP_Real) nnodes < 0.1 );
+
+   return isPromising;
+}
+
+
+/** deletes edges */
+static
+SCIP_RETCODE dapathsDeleteEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
+   const int*            result,             /**< solution */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  nelims              /**< pointer to store number of reduced edges */
+   )
+{
+   STP_Bool* edges_isDeletable;
+
+   const int nedges = graph_get_nEdges(g);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isDeletable, nedges) );
+   BMSclearMemoryArray(edges_isDeletable, nedges);
+
+   SCIP_CALL( reduceRootedProb(scip, g, edges_isDeletable, redcostdata, result, TRUE, nelims) );
+
+   SCIPfreeBufferArray(scip, &edges_isDeletable);
+
+   return SCIP_OKAY;
+}
+
+
+/** pseudo-eliminates nodes */
+static
+SCIP_RETCODE dapathsReplaceNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
+   const int*            result,             /**< solution */
+   SCIP_Real             objbound_upper,     /**< objective */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp,            /**< pointer to store offset */
+   int*                  nelims              /**< pointer to store number of reduced edges */
+   )
+{
+   SCIP_Real* nodereplacebounds;
+   SCIP_Bool* pseudoDelNodes;
+   int nreplacings = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodereplacebounds, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDelNodes, g->knots) );
+
+   SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, g, nodereplacebounds, objbound_upper, TRUE, FALSE));
+   markPseudoDeletablesFromBounds(scip, g, nodereplacebounds, objbound_upper, pseudoDelNodes);
+   SCIP_CALL( reduce_applyPseudoDeletions(scip, redcostdata, pseudoDelNodes, g, offsetp, &nreplacings) );
+
+   SCIPfreeBufferArray(scip, &pseudoDelNodes);
+   SCIPfreeBufferArray(scip, &nodereplacebounds);
+
+  // printf("reps =%d \n", nreplacings);
+   *nelims += nreplacings;
+  // exit(1);
+
+   return SCIP_OKAY;
+}
 
 /** dual ascent path based reductions */
 SCIP_RETCODE reduce_dapaths(
@@ -2121,44 +2201,36 @@ SCIP_RETCODE reduce_dapaths(
    REDCOST redcostdata;
    const int nedges = graph_get_nEdges(g);
    int* RESTRICT result;
-   STP_Bool* edges_isDeletable;
    SCIP_Real objbound_upper = FARAWAY;
-   int todo; // try node replacement (new argument!) and also try ordering with best given solution
 
    assert(scip && offsetp && nelims);
    assert(*nelims >= 0);
 
-   if( g->terms <= 2 )
+   if( g->terms <= 2 || !dapathsIsPromising(g) )
       return SCIP_OKAY;
 
    graph_mark(g);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isDeletable, nedges) );
-   BMSclearMemoryArray(edges_isDeletable, nedges);
 
    SCIP_CALL( reduce_redcostdataInit(scip, g->knots, nedges, FARAWAY, g->source, &redcostdata) );
-
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
    SCIP_CALL( dualascent_paths(scip, g, redcostdata.redEdgeCost, &(redcostdata.dualBound), NULL) );
    SCIP_CALL( daInitializeDistances(scip, g, &redcostdata) );
 
    redcostdata.cutoff = objbound_upper- redcostdata.dualBound;
-
 //   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
    graph_mark(g);
 
-   SCIP_CALL( reduceRootedProb(scip, g, edges_isDeletable, &redcostdata, result, TRUE, nelims) );
+   SCIP_CALL( dapathsDeleteEdges(scip, &redcostdata, result, g, nelims) );
+   SCIP_CALL( dapathsReplaceNodes(scip, &redcostdata, result, objbound_upper, g, offsetp, nelims) );
+
    reduce_redcostdataFreeMembers(scip, &redcostdata);
+   SCIPfreeBufferArray(scip, &result);
 
    SCIP_CALL( reduceLevel0(scip, g) );
 
-   assert(graph_valid(scip, g));
-
-   SCIPfreeBufferArray(scip, &edges_isDeletable);
-   SCIPfreeBufferArray(scip, &result);
-
    assert(!graph_pc_isPcMw(g) || !g->extended);
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -2348,8 +2420,9 @@ SCIP_RETCODE reduce_da(
          }
 
          if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
-            SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.nodeTo3TermsBases,
-                  redcostdata.dualBound, upperbound, redcostdata.redCostRoot, (run == 0), extended && !isRpcmw));
+         {
+            SCIP_CALL( updateNodeReplaceBounds(scip, &redcostdata, graph, nodereplacebounds, upperbound, (run == 0), extended && !isRpcmw));
+         }
 
          if( ndeletions > 0 && !isRpcmw )
             reduceLevel0(scip, graph);
