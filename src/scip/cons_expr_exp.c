@@ -276,8 +276,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
 
    for( i = 0; i < 4; ++i )
    {
-      if( (!overest[i] && !underestimate) || (overest[i] &&
-          (!overestimate || SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb))) )
+      if( !overest[i] && !underestimate )
+         continue;
+
+      if( overest[i] && (!overestimate || SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb)) )
          continue;
 
       assert(i == 3 || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb)));
