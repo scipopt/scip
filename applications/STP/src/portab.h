@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   portab.h
- * @brief  Portable defintions
+ * @brief  Portable definitions
  * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  *
  */
 
@@ -60,8 +61,14 @@ typedef unsigned char STP_Bool;
 #define Fsgn(x)   ((((x) > -EPS_ZERO) && ((x) < EPS_ZERO)) ? 0 : (((x) < 0.0) ? -1 : 1))
 #endif /* fsgn */
 
-/* Hi Fortran !
- */
+
+#define RELDIFF(a, b) (((a)-(b))/ MAX(MAX(fabs(a), fabs(b)), 1.0))
+#define EQ_FEAS(a, b)  (fabs(RELDIFF(a, b)) <= EPS_ZERO)
+#define LT_FEAS(a, b)  (RELDIFF(a, b) < -EPS_ZERO)
+#define LE_FEAS(a, b)  (RELDIFF(a, b) < EPS_ZERO)
+#define GT_FEAS(a, b)  (RELDIFF(a, b) > EPS_ZERO)
+#define GE_FEAS(a, b)  (RELDIFF(a, b) > -EPS_ZERO)
+
 #define EQ(a, b)   (fabs((a) - (b)) <= EPS_ZERO)
 #define NE(a, b)   (fabs((a) - (b)) >  EPS_ZERO)
 #define LT(a, b)   (((a) - (b))     < -EPS_ZERO)
