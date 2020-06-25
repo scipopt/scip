@@ -2358,7 +2358,7 @@ SCIP_RETCODE detectNlhdlrs(
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
-      /* ensure that activities are recomputed w.r.t. the global variable bounds if CONSINITLP is called in a local node;
+      /* ensure that activities are recomputed w.r.t. the global variable bounds if CONSACTIVE is called in a local node;
        * for example, this happens if globally valid expression constraints are added during the tree search
        */
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
@@ -2447,7 +2447,7 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSINITLP
+   /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSACTIVE
     * is called in a local node
     */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
