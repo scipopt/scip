@@ -42,6 +42,7 @@
 #include "probdata_stp.h"
 
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
+#define BND_TMHEUR_NRUNS_RESTRICT 10                /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
@@ -184,7 +185,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
 
    /* number of runs should not exceed number of connected vertices */
-   int runstm = BND_TMHEUR_NRUNS / (directed ? 1 : 5);
+   int runstm = directed ? BND_TMHEUR_NRUNS : BND_TMHEUR_NRUNS_RESTRICT;
 
    assert(graph->stp_type != STP_RPCSPG || !graph->extended);
 

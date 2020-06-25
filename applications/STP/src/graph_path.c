@@ -2979,7 +2979,7 @@ void graph_tpathsSetAll3(
       {
          for( int k = 0; k < nnodes; ++k )
          {
-            assert(LE(path3[level * nnodes + k].dist, path3[(level + 1) * nnodes + k].dist));
+            assert(LE_FEAS_EPS(path3[level * nnodes + k].dist, path3[(level + 1) * nnodes + k].dist, EPSILON));
          }
       }
    }

@@ -51,6 +51,8 @@
 #include "scip/scip.h"
 #include "probdata_stp.h"
 #include "prop_stp.h"
+#include "portab.h"
+
 
 
 SCIP_Bool show;
@@ -1750,6 +1752,7 @@ SCIP_RETCODE redLoopPc(
    {
       int ninnerelims = 0;
       SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
+      SCIP_Bool dapaths = TRUE;
       SCIP_Bool da = dualascent;
       SCIP_Bool sd = TRUE;
       SCIP_Bool sdc = TRUE;
@@ -1761,6 +1764,7 @@ SCIP_RETCODE redLoopPc(
       /* inner loop todo outsource! */
       for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
       {
+         int dapathelims = 0;
          int danelims = 0;
          int sdnelims = 0;
          int sdcnelims = 0;
@@ -1793,6 +1797,14 @@ SCIP_RETCODE redLoopPc(
 
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
+         if( (graph_pc_isRootedPcMw(g) && dapaths) || extensive )
+         {
+            reduce_dapaths(scip, g, fixed, &dapathelims);
+
+            if( dapathelims <= reductbound )
+               dapaths = FALSE;
+         }
+
          if( sd || extensive )
          {
             SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
@@ -1800,7 +1812,7 @@ SCIP_RETCODE redLoopPc(
          }
 
          if( sd )
-         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
          if( sdw || extensive )
          {
@@ -1875,7 +1887,7 @@ SCIP_RETCODE redLoopPc(
 
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
-         nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims;
+         nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims + dapathelims;
          ninnerelims += nelims;
 
          if( nelims <= reductbound_global )

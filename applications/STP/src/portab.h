@@ -68,6 +68,11 @@ typedef unsigned char STP_Bool;
 #define LE_FEAS(a, b)  (RELDIFF(a, b) < EPS_ZERO)
 #define GT_FEAS(a, b)  (RELDIFF(a, b) > EPS_ZERO)
 #define GE_FEAS(a, b)  (RELDIFF(a, b) > -EPS_ZERO)
+#define EQ_FEAS_EPS(a, b, eps)  (fabs(RELDIFF(a, b)) <= eps)
+#define LT_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) < -eps)
+#define LE_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) < eps)
+#define GT_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) > eps)
+#define GE_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) > -eps)
 
 #define EQ(a, b)   (fabs((a) - (b)) <= EPS_ZERO)
 #define NE(a, b)   (fabs((a) - (b)) >  EPS_ZERO)

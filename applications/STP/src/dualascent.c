@@ -38,7 +38,7 @@
 #define DA_MAXDEVIATION_UPPER   0.9   /**< upper bound for max deviation for dual ascent */
 #define DA_EPS                  (5e-7)
 #define DAPATHS_HITLIMIT_PCMW 20
-#define DAPATHS_HITLIMIT      10
+#define DAPATHS_HITLIMIT      5
 
 /* do depth-first search */
 #define DFS
@@ -223,7 +223,7 @@ void dapathsUpdate(
          if( LT(dist_j, maxdist) )
          {
             const SCIP_Real offset = MAX(0.0, dist_i - dist_j);
-            assert(LE_FEAS(offset, redcost[e]));
+            assert(LE_FEAS_EPS(offset, redcost[e], EPSILON));
 
             redcost[e] -= offset;
 
