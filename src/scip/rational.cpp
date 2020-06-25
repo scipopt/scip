@@ -486,8 +486,8 @@ void RatSetInt(
       denom *= -1;
    }
 
-   SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%lld/%lld", nom, denom);
-   res->val = Rational(buf);
+   res->val = Rational(nom, denom);
+
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
@@ -1601,21 +1601,24 @@ void RatRound(
       roundint = 0;
       rest = 0;
       divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
-      switch (roundmode)
+      if( rest != 0 )
       {
-      case SCIP_ROUND_DOWNWARDS:
-         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
-         break;
-      case SCIP_ROUND_UPWARDS:
-         roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
-         break;
-      case SCIP_ROUND_NEAREST:
-         roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
-         break;
-      default:
-         SCIPerrorMessage("roundmode not supported for integer-rounding \n");
-         SCIPABORT();
-         break;
+         switch (roundmode)
+         {
+         case SCIP_ROUND_DOWNWARDS:
+            roundint = src->val.sign() > 0 ? roundint : roundint - 1;
+            break;
+         case SCIP_ROUND_UPWARDS:
+            roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
+            break;
+         case SCIP_ROUND_NEAREST:
+            roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
+            break;
+         default:
+            SCIPerrorMessage("roundmode not supported for integer-rounding \n");
+            SCIPABORT();
+            break;
+         }
       }
       res->val = roundint;
    }
@@ -1640,21 +1643,25 @@ SCIP_Bool RatRoundInteger(
    assert(!src->isinf);
 
    divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
-   switch (roundmode)
+
+   if( rest != 0 )
    {
-   case SCIP_ROUND_DOWNWARDS:
-      roundint = src->val.sign() > 0 ? roundint : roundint - 1;
-      break;
-   case SCIP_ROUND_UPWARDS:
-      roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
-      break;
-   case SCIP_ROUND_NEAREST:
-      roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
-      break;
-   default:
-      SCIPerrorMessage("roundmode not supported for integer-rounding \n");
-      SCIPABORT();
-      break;
+      switch (roundmode)
+      {
+      case SCIP_ROUND_DOWNWARDS:
+         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
+         break;
+      case SCIP_ROUND_UPWARDS:
+         roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
+         break;
+      case SCIP_ROUND_NEAREST:
+         roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
+         break;
+      default:
+         SCIPerrorMessage("roundmode not supported for integer-rounding \n");
+         SCIPABORT();
+         break;
+      }
    }
    *res = roundint.convert_to<SCIP_Longint>();
    if( *res == roundint )
