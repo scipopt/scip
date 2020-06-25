@@ -483,7 +483,14 @@ SCIP_RETCODE daInitializeDistances(
       costrev[e] = FARAWAY;
 
    if( isRpcmw )
-      graph_pc_2transcheck(scip, g);
+   {
+      if( !g->extended )
+         graph_pc_2trans(scip, g);
+      else
+         graph_mark(g);
+   }
+
+   assert(graph_isMarked(g));
 
    /* build Voronoi diagram */
    if( directed )
