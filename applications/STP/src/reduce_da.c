@@ -73,6 +73,25 @@ SCIP_Real getSolObj(
    return obj;
 }
 
+/** sets cutoff */
+static
+void setCutoff(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata,        /**< reduced cost data */
+  SCIP_Real*            cutoffbound         /**< cutoff */
+)
+{
+
+   *cutoffbound = upperbound - redcostdata->dualBound;
+
+   assert(GE_FEAS_EPS(*cutoffbound, 0.0, EPSILON));
+
+   if( *cutoffbound < 0.0 )
+      *cutoffbound = 0.0;
+
+   redcostdata->cutoff = *cutoffbound;
+}
+
 
 /** returns maximum allowed deviation for dual-ascent */
 static
@@ -2190,6 +2209,65 @@ SCIP_RETCODE dapathsReplaceNodes(
    return SCIP_OKAY;
 }
 
+/** eliminates RPC/RMW potential-terminals */
+static
+SCIP_RETCODE dapathsFixPotTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp,            /**< pointer to store offset */
+   int*                  nelims              /**< pointer to store number of reduced edges */
+   )
+{
+   int* fixlist;
+   const SCIP_Real* const redEdgeCost = redcostdata->redEdgeCost;
+   const SCIP_Real cutoff = redcostdata->cutoff;
+   int nfixes = 0;
+   const int root = g->source;
+
+   assert(graph_pc_isRootedPcMw(g));
+   assert(!g->extended);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixlist, g->terms) );
+
+   for( int e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int head = g->head[e];
+
+      if( graph_pc_knotIsDummyTerm(g, head) )
+      {
+         if( GT(redEdgeCost[e], cutoff) )
+         {
+            assert(nfixes < g->terms);
+
+            fixlist[nfixes++] = head;
+         }
+      }
+   }
+
+   for( int i = 0; i < nfixes; ++i )
+   {
+      const int pterm = fixlist[i];
+      const int twin = graph_pc_getTwinTerm(g, pterm);
+      assert(g->grad[pterm] == 2);
+      assert(Is_term(g->term[twin]));
+
+#ifdef SCIP_DEBUG
+      printf("dapath fixes: ");
+      graph_knot_printInfo(g, twin);
+#endif
+
+      graph_pc_knotToFixedTerm(scip, g, twin, offsetp);
+   }
+
+   *nelims += nfixes;
+
+   SCIPfreeBufferArray(scip, &fixlist);
+
+   return SCIP_OKAY;
+}
+
+
 /** dual ascent path based reductions */
 SCIP_RETCODE reduce_dapaths(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2223,6 +2301,11 @@ SCIP_RETCODE reduce_dapaths(
 
    SCIP_CALL( dapathsDeleteEdges(scip, &redcostdata, result, g, nelims) );
    SCIP_CALL( dapathsReplaceNodes(scip, &redcostdata, result, objbound_upper, g, offsetp, nelims) );
+
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      SCIP_CALL( dapathsFixPotTerms(scip, &redcostdata, g, offsetp, nelims) );
+   }
 
    reduce_redcostdataFreeMembers(scip, &redcostdata);
    SCIPfreeBufferArray(scip, &result);
@@ -2358,11 +2441,9 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, &redcostdata, userec, pool, result, &havenewsol, &upperbound) );
          }
 
-         cutoffbound = upperbound - redcostdata.dualBound;
-         redcostdata.cutoff = cutoffbound;
+         setCutoff(upperbound, &redcostdata, &cutoffbound);
 
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata.dualBound, run, outerrounds);
-         assert(SCIPisGE(scip, cutoffbound, 0.0));
 
          if( isRpcmw )
             graph_pc_2org(scip, graph);
