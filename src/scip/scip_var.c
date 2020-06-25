@@ -4720,6 +4720,56 @@ SCIP_RETCODE SCIPchgVarObjExact(
    }  /*lint !e788*/
 }
 
+/** changes exact global upper bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarUbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbGlobalExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(!SCIPvarIsTransformed(var));
+   SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+      scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** changes exact global lower bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarLbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbGlobalExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(!SCIPvarIsTransformed(var));
+   SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+      scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+
+   return SCIP_OKAY;
+}
+
 /** adds value to variable's objective value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

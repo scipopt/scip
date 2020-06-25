@@ -3839,6 +3839,38 @@ SCIP_RETCODE SCIPchgVarObjExact(
    SCIP_Rational*        newobj              /**< new objective value */
    );
 
+/** changes exact global upper bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarUbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   );
+
+/** changes exact global lower bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarLbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   );
+
 /** Add exact data to variable
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

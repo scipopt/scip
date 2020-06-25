@@ -2094,8 +2094,8 @@ SCIP_RETCODE SCIPvarAddExactData(
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(var->glbdom.ub == RatApproxReal(ub));
-   assert(var->glbdom.lb == RatApproxReal(lb));
+   assert(var->glbdom.ub == RatRoundReal(ub, SCIP_ROUND_UPWARDS));
+   assert(var->glbdom.lb == RatRoundReal(lb, SCIP_ROUND_DOWNWARDS));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
@@ -6425,6 +6425,88 @@ SCIP_RETCODE SCIPvarChgObjExact(
    return SCIP_OKAY;
 }
 
+/** changes rational objective value of variable */
+SCIP_RETCODE SCIPvarChgUbGlobalExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_Rational*        newbound            /**< new upper bound value for variable */
+   )
+{
+   SCIP_Rational* scipbound;
+
+   assert(var != NULL);
+   assert(set != NULL);
+
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   RatCreateBuffer(set->buffer, &scipbound);
+
+   assert(var->exactdata != NULL);
+
+   /* adjust bound value for integral variables */
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      RatRound(scipbound, newbound, SCIP_ROUND_DOWNWARDS);
+   else
+      RatSet(scipbound, newbound);
+
+   RatSet(var->exactdata->glbdom.ub, scipbound);
+   RatSet(var->exactdata->locdom.ub, scipbound);
+
+   SCIPvarChgUbGlobal(var, blkmem, set, stat, NULL, branchcand, eventqueue, cliquetable, RatRoundReal(scipbound, SCIP_ROUND_UPWARDS));
+
+   RatFreeBuffer(set->buffer, &scipbound);
+
+   return SCIP_OKAY;
+}
+
+/** changes rational objective value of variable */
+SCIP_RETCODE SCIPvarChgLbGlobalExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_Rational*        newbound            /**< new upper bound value for variable */
+   )
+{
+   SCIP_Rational* scipbound;
+
+   assert(var != NULL);
+   assert(set != NULL);
+
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   RatCreateBuffer(set->buffer, &scipbound);
+
+   assert(var->exactdata != NULL);
+
+   /* adjust bound value for integral variables */
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      RatRound(scipbound, newbound, SCIP_ROUND_UPWARDS);
+   else
+      RatSet(scipbound, newbound);
+
+   RatSet(var->exactdata->glbdom.lb, scipbound);
+   RatSet(var->exactdata->locdom.lb, scipbound);
+
+   SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, branchcand, eventqueue, cliquetable, RatRoundReal(scipbound, SCIP_ROUND_DOWNWARDS));
+
+   RatFreeBuffer(set->buffer, &scipbound);
+
+   return SCIP_OKAY;
+}
+
 /** adds value to objective value of variable */
 SCIP_RETCODE SCIPvarAddObj(
    SCIP_VAR*             var,                /**< variable to change */
@@ -7777,7 +7859,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    if( set->misc_exactsolve )
    {
       assert(var->exactdata != NULL);
-      RatSetReal(var->exactdata->locdom.lb, newbound);
+
+      if( RatIsLTReal(var->exactdata->locdom.lb, newbound) )
+         RatSetReal(var->exactdata->locdom.lb, newbound);
    }
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -7950,7 +8034,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    if( set->misc_exactsolve )
    {
       assert(var->exactdata != NULL);
-      RatSetReal(var->exactdata->locdom.ub, newbound);
+
+      if( RatIsGTReal(var->exactdata->locdom.ub, newbound) )
+         RatSetReal(var->exactdata->locdom.ub, newbound);
    }
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic

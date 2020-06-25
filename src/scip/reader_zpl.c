@@ -139,7 +139,7 @@ SCIP_RETCODE RcreateNumb(
    const Numb*           numb
    )
 {
-   SCIP_CALL( RatCreateBlock(mem, rational) ); 
+   SCIP_CALL( RatCreateBlock(mem, rational) );
    RatSetReal(*rational, numb_todbl(numb));
    return SCIP_OKAY;
 }
@@ -226,7 +226,7 @@ void xlp_free(
    /* nothing to be done here */
 }
 
-/** does there already exists a constraint with the given name? */ 
+/** does there already exists a constraint with the given name? */
 bool xlp_conname_exists(
    const Lps*            data,               /**< pointer to reader data */
    const char*           name                /**< constraint name to check */
@@ -484,27 +484,72 @@ SCIP_RETCODE addConsTerm(
       {
          if( SCIPisExactSolve(scip) )
          {
-            // todo: (exip) create exact constraint and add to SCIP
-            SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
-                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_VAR* scipvar;
+            SCIP_Real scipval;
+            SCIP_Rational* scipvalrat;
 
-            for( i = 0; i < term_get_elements(term); i++ )
+            /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
+            /** @todo exip: rework this into presolving of cons_exactlp */
+            if( term_get_elements(term) == 1 )
             {
-               SCIP_VAR* scipvar;
-               SCIP_Real scipval;
-               SCIP_Rational* scipvalrat;
+               SCIP_Rational* quotient;
+               SCIP_Bool isupper;
+               assert(!numb_equal(mono_get_coeff(term_get_element(term, 0)), numb_zero()));
+               assert(mono_is_linear(term_get_element(term, 0)));
 
-               assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-               assert(mono_is_linear(term_get_element(term, i)));
+               scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, 0), 0);
+               SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, 0))) );
+               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &quotient) );
 
-               scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-               SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i))) );
+               if( !RatIsInfinity(ratrhs) )
+               {
+                  isupper = RatIsPositive(scipvalrat);
+                  RatDiv(quotient, ratrhs, scipvalrat);
 
-               //RatPrint(scipvalrat);
+                  if( isupper && RatIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                  {
+                     SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                  }
+                  else if( !isupper && RatIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                  {
+                     SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                  }
+               }
+               if( !RatIsNegInfinity(ratlhs) )
+               {
+                  isupper = !RatIsPositive(scipvalrat);
+                  RatDiv(quotient, ratlhs, scipvalrat);
 
-               SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
+                  if( isupper && RatIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                  {
+                     SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                  }
+                  else if( !isupper && RatIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                  {
+                     SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                  }
+               }
+
                RatFreeBlock(SCIPblkmem(scip), &scipvalrat);
+               RatFreeBuffer(SCIPbuffer(scip), &quotient);
+            }
+            else
+            {
+               SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+               for( i = 0; i < term_get_elements(term); i++ )
+               {
+                  assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+                  assert(mono_is_linear(term_get_element(term, i)));
+
+                  scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+                  SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i))) );
+
+                  SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
+                  RatFreeBlock(SCIPblkmem(scip), &scipvalrat);
+               }
             }
          }
          else
@@ -1018,7 +1063,7 @@ SCIP_RETCODE addVar(
       {
       case BOUND_VALUE:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &lbrat, bound_get_value(lower)) );
-         lb = RatApproxReal(lbrat);
+         lb = RatRoundReal(lbrat, SCIP_ROUND_DOWNWARDS);
          break;
       case BOUND_INFTY:
          SCIP_CALL( RatCreateString(SCIPblkmem(scip), &lbrat, "inf") );
@@ -1041,7 +1086,7 @@ SCIP_RETCODE addVar(
       {
       case BOUND_VALUE:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ubrat, bound_get_value(upper)) );
-         ub = RatApproxReal(ubrat);
+         ub = RatRoundReal(ubrat, SCIP_ROUND_UPWARDS);
          break;
       case BOUND_INFTY:
          SCIP_CALL( RatCreateString(SCIPblkmem(scip), &ubrat, "inf") );
