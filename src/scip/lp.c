@@ -33,7 +33,7 @@
 
 
 #include "lpi/lpi.h"
-#include "lpi/lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/event.h"

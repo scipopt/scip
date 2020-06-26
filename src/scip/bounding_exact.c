@@ -37,7 +37,7 @@
 #include "lpi/lpi.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
-#include "lpi/lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
 #include "scip/scip.h"

@@ -29,7 +29,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
-#include "lpi/type_lpiexact.h"
+#include "lpiexact/type_lpiexact.h"
 #include "scip/rational.h"
 
 #ifdef __cplusplus

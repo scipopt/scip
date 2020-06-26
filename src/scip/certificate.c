@@ -31,7 +31,7 @@
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
-#include "lpi/lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/pub_misc.h"
 #include "scip/prob.h"
 #include "scip/certificate.h"

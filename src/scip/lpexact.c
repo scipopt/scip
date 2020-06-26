@@ -26,7 +26,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "lpi/lpi.h"
-#include "lpi/lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/event.h"

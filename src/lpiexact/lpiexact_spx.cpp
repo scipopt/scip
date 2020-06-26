@@ -28,8 +28,8 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
-#include "lpi/type_lpiexact.h"
-#include "lpi/lpiexact.h"
+#include "lpiexact/type_lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/rational.h"
 #include "scip/config.h"
 
@@ -527,7 +527,7 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-#include "lpi/lpiexact.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/bitencode.h"
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */

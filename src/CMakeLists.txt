@@ -400,9 +400,12 @@ set(blockmemshellheader
 
 set(lpiheaders
     lpi/lpi.h
-    lpi/lpiexact.h
     lpi/type_lpi.h
-    lpi/type_lpiexact.h
+)
+
+set(lpiexactheaders
+    lpiexact/lpiexact.h
+    lpiexact/type_lpiexact.h
 )
 
 set(rectluheaders
@@ -1063,6 +1066,7 @@ set_target_properties(scip PROPERTIES
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
+install(FILES ${lpiexactheaders} DESTINATION include/lpiexact)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)

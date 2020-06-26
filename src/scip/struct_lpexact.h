@@ -74,7 +74,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
-#include "lpi/type_lpiexact.h"
+#include "lpiexact/type_lpiexact.h"
 #include "scip/rational.h"
 #include "rectlu/rectlu.h"
 
