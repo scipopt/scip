@@ -998,7 +998,7 @@ SCIP_RETCODE buildPowEstimator(
    SCIP_Real*            constant,           /**< pointer to store the constant of the estimator */
    SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
    SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is local */
-   SCIP_Bool*            branchcand          /**< array to indicate which children (not) to consider for branching */
+   SCIP_Bool*            branchcand          /**< pointer to indicate whether to consider child for branching (initialized to TRUE) */
 )
 {
    SCIP_Bool isinteger;
