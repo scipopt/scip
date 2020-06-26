@@ -2099,7 +2099,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
 
       refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i];
 
-      if( refpoint == SCIP_INVALID )
+      if( refpoint == SCIP_INVALID )  /*lint !e777*/
          continue;
 
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
