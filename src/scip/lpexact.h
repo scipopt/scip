@@ -213,8 +213,7 @@ SCIP_ROWEXACT* SCIProwGetExRow(
    );
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
-SCIP_COLEXACT* SCIPcolGetExCol(
-   SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
+SCIP_COLEXACT* SCIPcolGetColExact(
    SCIP_COL*             col                 /**< SCIP col */
    );
 

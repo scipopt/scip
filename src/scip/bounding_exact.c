@@ -2841,6 +2841,11 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
+   /** @todo exip: actually we only need to link the rows and cols in the exact lp. So possible performance improvement if we don't
+    * flush it to the lpiexact */
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
 
@@ -2901,39 +2906,43 @@ SCIP_RETCODE boundShift(
    SCIPintervalSetRoundingModeDownwards();
    for( j = 0; j < lp->ncols; ++j )
    {
+      SCIP_COLEXACT* colexact;
+
       col = lp->cols[j];
       assert(col != NULL);
       assert(col->nunlinked == 0);
 
+      colexact = SCIPcolGetColExact(col);
+
+      assert(colexact != NULL);
+
       /* create -Matrix.j vector in interval arithmetic and corresponding dual vector and compute infimum of vector -Matrix.j^Tdual */
-      for( i = 0; i < col->nlprows; ++i )
+      for( i = 0; i < colexact->nlprows; ++i )
       {
          SCIP_INTERVAL val;
          SCIP_ROWEXACT* rowexact;
 
-         assert(col->rows[i] != NULL);
-         assert(col->rows[i]->lppos >= 0);
-         assert(col->linkpos[i] >= 0);
+         assert(colexact->rows[i] != NULL);
+         assert(colexact->rows[i]->lppos >= 0);
+         assert(colexact->linkpos[i] >= 0);
 
-         rowexact = SCIProwGetExRow(lpexact, col->rows[i]);
+         rowexact = colexact->rows[i];
 
-         val = rowexact->valsinterval[col->linkpos[i]];
-         assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
+         val = rowexact->valsinterval[colexact->linkpos[i]];
+         assert(RatIsGEReal(colexact->vals[i], val.inf) && RatIsLEReal(colexact->vals[i], val.sup));
 
          SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
-         fpdualcolwise[i] = fpdual[col->rows[i]->lppos];
+         fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
       }
       productcoldualval[j].inf = 0.0;
       SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
-      for( i = col->nlprows; i < col->len; ++i )
+      for( i = colexact->nlprows; i < col->len; ++i )
       {
-         assert(col->rows[i] != NULL);
-         assert(col->rows[i]->lppos == -1);
-         assert(col->rows[i]->dualsol == 0.0);
-         assert(col->rows[i]->dualfarkas == 0.0);
-         assert(col->linkpos[i] >= 0);
+         assert(colexact->rows[i] != NULL);
+         assert(colexact->rows[i]->lppos == -1);
+         assert(colexact->linkpos[i] >= 0);
       }
 #endif
    }
@@ -2942,28 +2951,35 @@ SCIP_RETCODE boundShift(
    SCIPintervalSetRoundingModeUpwards();
    for( j = 0; j < lp->ncols; ++j )
    {
+      SCIP_COLEXACT* colexact;
+
       col = lp->cols[j];
       assert(col != NULL);
       assert(col->nunlinked == 0);
 
+      /* colexact can be longer than col (epsilon entries) so we have to work with colexact */
+      colexact = SCIPcolGetColExact(col);
+
+      assert(colexact->nlprows >= col->nlprows);
+
       /* create -Matrix.j vector in interval arithmetic and corresponding dual vector and compute supremums of vector -a.j^Ty */
-      for( i = 0; i < col->nlprows; ++i )
+      for( i = 0; i < colexact->nlprows; ++i )
       {
          SCIP_INTERVAL val;
          SCIP_ROWEXACT* rowexact;
 
-         assert(col->rows[i] != NULL);
-         assert(col->rows[i]->lppos >= 0);
-         assert(col->linkpos[i] >= 0);
+         assert(colexact->rows[i] != NULL);
+         assert(colexact->rows[i]->lppos >= 0);
+         assert(colexact->linkpos[i] >= 0);
 
-         rowexact = SCIProwGetExRow(lpexact, col->rows[i]);
+         rowexact = colexact->rows[i];
 
-         val = rowexact->valsinterval[col->linkpos[i]];
+         val = rowexact->valsinterval[colexact->linkpos[i]];
 
-         assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
+         assert(RatIsGEReal(colexact->vals[i], val.inf) && RatIsLEReal(colexact->vals[i], val.sup));
 
          SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
-         fpdualcolwise[i] = fpdual[col->rows[i]->lppos];
+         fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
       }
       productcoldualval[j].sup = 0.0;
       SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
@@ -2973,8 +2989,6 @@ SCIP_RETCODE boundShift(
       {
          assert(col->rows[i] != NULL);
          assert(col->rows[i]->lppos == -1);
-         assert(col->rows[i]->dualsol == 0.0);
-         assert(col->rows[i]->dualfarkas == 0.0);
          assert(col->linkpos[i] >= 0);
       }
 #endif
