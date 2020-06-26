@@ -1018,12 +1018,12 @@ SCIP_RETCODE buildPowEstimator(
 
    if( exponent == 2.0 )
    {
+      /* important special case: quadratic case */
       /* initialize, because SCIPaddSquareXyz only adds to existing values */
       *success = TRUE;
       *coefs = 0.0;
       *constant = 0.0;
 
-      /* important special case: quadratic case */
       if( overestimate )
       {
          SCIPaddSquareSecant(scip, 1.0, childlb, childub, coefs, constant, success);
